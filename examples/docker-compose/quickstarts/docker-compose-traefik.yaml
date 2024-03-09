@@ -2,19 +2,29 @@ version: '3.7'
 
 services:
   proxy:
-    image: traefik:2.9.8
+    image: traefik:2.11.0
     ports:
-      - 9090:9090
+    - "9090:9090"
     command: >
       --providers.docker=true 
       --providers.docker.exposedbydefault=false 
       --entryPoints.http.address=":9090" 
       --accesslog --api=true --api.insecure=true
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    - "/var/run/docker.sock:/var/run/docker.sock:ro"
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.traefik_http.service=api@internal
-      - traefik.http.routers.traefik_http.entrypoints=http
-      - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456
-      - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization
+    - traefik.enable=true
+    - traefik.http.routers.traefik_http.service=api@internal
+    - traefik.http.routers.traefik_http.entrypoints=http
+    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456
+    - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization
+
+  heimdall:
+    command: -c /etc/heimdall/config.yaml serve decision
+
+  upstream:
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.upstream.loadbalancer.server.port=8081
+    - traefik.http.routers.upstream.rule=PathPrefix("/")
+    - traefik.http.routers.upstream.middlewares=heimdall

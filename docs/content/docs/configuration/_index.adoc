@@ -1,9 +1,10 @@
 ---
-title: "Configuration"
+title: "Configuration Reference"
 date: 2022-06-09T18:55:36+02:00
 draft: false
-weight: 50
-menu: docs
+menu:
+  docs:
+    weight: 45
 ---
 
 

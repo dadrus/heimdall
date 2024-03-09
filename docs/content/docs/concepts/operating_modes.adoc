@@ -1,0 +1,168 @@
+---
+title: "Operating Modes"
+date: 2022-11-29T22:29:36+02:00
+draft: false
+weight: 15
+menu:
+  docs:
+    parent: "Concepts"
+    weight: 5
+description: To support different deployment scenarios, heimdall supports two operating modes.
+---
+
+:toc:
+
+== Decision Mode
+
+In this mode you can integrate heimdall with existing reverse proxies, or API gateways (like https://konghq.com/[Kong], https://nginx.org[NGNIX], https://www.envoyproxy.io/[Envoy], https://traefik.io/[Traefik] and much more)
+
+[[_fig_heimdall_decision_deployment]]
+.Decision Deployment
+[ditaa, format=svg]
+....
+                                                                                -----------------+
+                                                                             ------------------+ |
++------------+                    +---------------------+                 +------------------+ | |
+|            |                    |                     |                 |                  | | |
+|            |                    |                     |                 |                  | | |
+|   Client   |----- request ----->|      API Gateway    |---- request --->|   Your Service   | | |
+|            |                    |                     |     + header    |                  | | +
+|            |                    |                     |                 |                  | +
++------------+                    +---------------------+                 +------------------+
+                                         |       ^                                  |
+                                         |       |                                  |
+                           ok to forward |  ok / not ok                             |
+                           request?      |   + header                               |
+                                         |       |                                  |
+                                         v       |                                  |
+                                  +---------------------+                           |
+                                  |                     |                           |
+                                  |       Heimdall      |                           |
+                                  |                     |                           |
+                                  +---------------------+                           |
+                                             |                                      |
+                                        uses :                                      |
+                                             v                                      |
+                                      -----------------+                            |
+                                    -----------------+ |                            |
+                                  +----------------+ | |                            :
+                                  |                | | |<----=-- defined by>  ------+
+                                  |   Rule Set     | | |
+                                  |                | | +
+                                  |                | +
+                                  +----------------+
+....
+
+In this mode heimdall can be integrated with most probably all modern API gateways and reverse proxies as a so-called "authentication middleware". Here the reverse proxy, respectively API gateway integrating with heimdall, will forward requests to heimdall by making use of its decision service endpoint for authentication and authorization purposes. As in the link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] mode, heimdall will check if these requests match and satisfy the conditions defined in the available rules. If not, heimdall returns an error to its client (here API gateway/reverse proxy). If the rule execution was successful, it also responds to the API gateway/reverse proxy with `200 OK` (can be overridden if required) and sets headers/cookies, specified in the matched rule, which are then forwarded to the upstream service.
+
+Starting heimdall in this mode happens via the `serve decision` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/services/decision.adoc" >}}[decision service configuration options] for more details.
+
+.Decision Service Example
+====
+Imagine following request hits heimdall (sent to it by an API gateway)
+
+[source, bash]
+----
+GET /my-service/api HTTP/1.1
+Host: heimdall:4455
+X-Forwarded-Host: my-backend-service
+
+Some payload
+----
+
+And there is a rule, which allows anonymous requests and sets a header with subject id set to `anonymous` like this
+
+[source, yaml]
+----
+id: rule:my-service:anonymous-api-access
+match:
+  url: http://my-backend-service/my-service/api
+methods:
+  - GET
+execute:
+  - authenticator: anonymous-authn
+  - finalizer: id-header
+----
+
+Then heimdall will respond with:
+
+[source, bash]
+----
+HTTP/1.1 200 OK
+X-User-ID: anonymous
+----
+
+====
+
+== Proxy Mode
+
+In this operation mode you can use heimdall as a reverse proxy in front of your upstream API or web server.
+
+[[_fig_heimdall_proxy_deployment]]
+.Proxy Deployment
+[ditaa, format=svg]
+....
++------------+                    +---------------------+                 +------------------+
+|            |                    |                     |                 |                  |
+|   Client   |                    |                     |                 |                  |
+|            |----- request ----->|      Heimdall       |---- request --->|   Your Service   |
+|            |                    |                     |     + header    |                  |
+|            |                    |                     |                 |                  |
++------------+                    +---------------------+                 +------------------+
+                                             :                                      |
+                                        uses |                                      |
+                                             v                                      |
+                                      -----------------+                            |
+                                    -----------------+ |                            |
+                                  +----------------+ | |                            :
+                                  |                | | |<----=-- defined by>  ------+
+                                  |   Rule Set     | | |
+                                  |                | | +
+                                  |                | +
+                                  +----------------+
+....
+
+In this mode heimdall forwards requests to the upstream service if these satisfy the conditions defined in matched rules. Otherwise, heimdall returns an error to the client. If the execution of the rule was successful, it also forwards additional headers, specified in the rule to the upstream service.
+
+Starting heimdall in this mode happens via the `serve proxy` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/services/proxy.adoc" >}}[proxy service configuration options] for more details.
+
+.Reverse Proxy Example
+====
+Imagine following request hits heimdall
+
+[source, bash]
+----
+GET /my-service/api HTTP/1.1
+Host: heimdall:4455
+
+Some payload
+----
+
+And there is a rule, which allows anonymous requests and sets a header with subject id set to `anonymous` like this
+
+[source, yaml]
+----
+id: rule:my-service:anonymous-api-access
+match:
+  url: <**>/my-service/api
+forward_to:
+  host: my-backend-service:8888
+methods:
+  - GET
+execute:
+  - authenticator: anonymous-authn
+  - finalizer: id-header
+----
+
+Then the request will be forwarded as follows:
+
+[source, bash]
+----
+GET /my-service/api HTTP/1.1
+Host: my-backend-service:8888
+X-User-ID: anonymous
+
+Some payload
+----
+
+====

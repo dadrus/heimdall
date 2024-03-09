@@ -1,0 +1,215 @@
+---
+title: "Envoy Integration"
+date: 2022-12-18T00:13:59+02:00
+draft: false
+weight: 13
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: Explains how to integrate heimdall with Envoy, a high performance distributed proxy.
+---
+
+:toc:
+
+https://www.envoyproxy.io/[Envoy] is a high performance distributed proxy designed for single services and applications, as well as a communication bus and “universal data plane” designed for large microservice “service mesh” architectures. When operating heimdall in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode], integration with Envoy can be achieved by making use of an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] filter. In such setup, Envoy delegates authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
+
+To achieve this, configure Envoy
+
+* to have heimdall instances referenced in a `cluster`
++
+Following snippet provides an example on how to create a `cluster` instance referencing heimdall. It assumes, you have just one heimdall instance deployed, which is also available via `heimdall` DNS name.
++
+[source, yaml]
+----
+clusters:
+  # other cluster entries
+  - name: ext-authz
+    type: strict_dns
+    load_assignment:
+      cluster_name: ext-authz
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: heimdall
+                    port_value: 4456
+  # other cluster entries
+----
++
+If you want to integrate via Envoy's `grpc_service` (see below), the cluster entry from above must have `http2_protocol_options` configured, as otherwise envoy will use HTTP 1 for GRPC communication, which is actually not allowed by GRPC (only HTTP 2 is supported). Here is an updated snipped:
++
+[source, yaml]
+----
+clusters:
+  # other cluster entries
+  - name: ext-authz
+    type: strict_dns
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http2_protocol_options: {}
+    load_assignment:
+      cluster_name: ext-authz
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: heimdall
+                    port_value: 4456
+  # other cluster entries
+----
+* to include an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] HTTP filter in the definition of the HTTP connection manager and depending on the used configuration, either configure the `http_service` and let it contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration), or configure the `grpc_service`.
++
+The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] can be defined using `http_service` to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as forwarding all request headers to heimdall and to let it forward headers, set by heimdall in its responses (here the `Authorization` header) to the upstream services.
++
+[source, yaml]
+----
+http_filters:
+  # other http filter
+  - name: envoy.filters.http.ext_authz
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+      transport_api_version: V3
+      http_service:
+        server_uri:
+          uri: heimdall:4456
+          cluster: ext-authz
+          timeout: 0.25s
+        authorization_request:
+          allowed_headers:
+            patterns:
+              - safe_regex:
+                  google_re2: {}
+                  regex: ".*"
+        authorization_response:
+          allowed_upstream_headers:
+            patterns:
+              - exact: authorization
+  # other http filter
+----
++
+The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] can be defined using `grpc_service` to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above). In that configuration envoy by default forwards all request header to heimdall and also forwards headers, set by heimdall in its responses to the upstream services.
++
+[source, yaml]
+----
+http_filters:
+  # other http filter
+  - name: envoy.filters.http.ext_authz
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+      transport_api_version: V3
+      grpc_service:
+        envoy_grpc:
+          cluster_name: ext-authz
+  # other http filter
+----
+
+[NOTE]
+====
+Envoy does not set `X-Forwarded-\*` headers, as long as the `envoy.filters.http.dynamic_forward_proxy` is not configured. In such cases matching of URLs happens based on those URLs, used by Envoy while communicating with heimdall. That means your rules should ignore the scheme and host parts, respectively use the values specific for heimdall and not of the domain. Please follow link:{{< relref "/docs/operations/security.adoc#_http_headers_security_considerations" >}}[Security Considerations] if your rules rely on any of the `X-Forwarded-*` headers, and you integrate heimdall with envoy using `http_service`.
+
+If you integrate heimdall with envoy via `grpc_service`, spoofing of the aforesaid headers is not possible.
+====
+
+== Demo Setup
+
+The Envoy configuration file shown below can be used to create a fully working setup based on the quickstart described in link:{{< relref "/docs/getting_started/protect_an_app.adoc" >}}[Protect an Application] and set up to implement Edge-level Authorization Architecture. Just update the `docker-compose.yaml` file used in that guide and replace the entry for `proxy` service, with the one shown below. You can also remove all `labels` configurations, as these will have no effect.
+
+[source, yaml]
+----
+# docker-compose.yaml
+
+services:
+  proxy:
+    image: envoyproxy/envoy:v1.24.1
+    volumes:
+      - ./envoy.yaml:/envoy.yaml:ro
+    ports:
+      - 9090:9090
+    command: -c /envoy.yaml
+
+  # other services from the guide
+----
+
+[source, yaml]
+----
+# envoy.yaml
+
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 9090
+      filter_chains:
+        - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              stat_prefix: edge
+              http_filters:
+                - name: envoy.filters.http.ext_authz
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                    transport_api_version: V3
+                    http_service:
+                      server_uri:
+                        uri: heimdall:4456
+                        cluster: ext-authz
+                        timeout: 0.25s
+                      authorization_request:
+                        allowed_headers:
+                          patterns:
+                            - safe_regex:
+                                google_re2: {}
+                                regex: ".*"
+                      authorization_response:
+                        allowed_upstream_headers:
+                          patterns:
+                            - exact: authorization
+                - name: envoy.filters.http.router
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              route_config:
+                virtual_hosts:
+                  - name: direct_response_service
+                    domains: ["*"]
+                    routes:
+                      - match:
+                          prefix: "/"
+                        route:
+                          cluster: services
+
+  clusters:
+    - name: ext-authz
+      type: strict_dns
+      load_assignment:
+        cluster_name: ext-authz
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: heimdall
+                      port_value: 4456
+    - name: services
+      connect_timeout: 5s
+      type: strict_dns
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: services
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: upstream
+                      port_value: 80
+----
+
+After starting the docker compose environment, you can run the curl commands shown in the referenced guide. This time however against envoy by using port 9090. E.g. `$ curl -v 127.0.0.1:9090/anonymous`. By the way, this setup is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
+

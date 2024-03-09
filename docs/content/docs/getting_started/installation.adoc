@@ -1,0 +1,189 @@
+---
+title: "Install heimdall"
+date: 2022-07-25T18:22:50+02:00
+draft: false
+weight: 2
+menu:
+  docs:
+    weight: 2
+    parent: "Getting Started"
+description: Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. The following chapters describe the available installation options.
+---
+
+:toc:
+
+== Source Code
+
+You can always build a copy of heimdall by following the following instructions for your OS/environment.
+
+=== Prerequisites
+
+* https://git-scm.com/[git]
+* The https://go.dev/dl/[Go] programming language >= 1.25
+
+=== Download
+Retrieve the latest copy of heimdall source code by cloning the git repository
+
+[source, bash]
+----
+$ git clone git@github.com:dadrus/heimdall.git
+----
+
+=== Build with go
+Build using a single line with `go build`
+
+[source, bash]
+----
+$ CGO_ENABLED=0 go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version==my-custom-build"
+----
+
+The flags are set by intention. Using `-trimpath` and `-buildid=` as part of the `-ldflags` argument ensures the build is reproducible (See also https://reproducible-builds.org/[Reproducible Builds]). Other flags remove unused symbols and debug information.
+
+== Binary
+
+Prebuild binaries are available with every released version on https://github.com/dadrus/heimdall/releases/latest[GitHub], as well as for every merged PR to the main branch. The version of the latter is set to the git SHA1. Supported operating systems/architectures are:
+
+* `darwin/amd64`
+* `darwin/arm64`
+* `linux/amd64`
+* `linux/arm64`
+* `linux/armv6`
+* `linux/armv7`
+* `windows/amd64`
+
+For Linux and Darwin the binaries are archived with tar.gz and for Windows with zip. All archives are signed (see also link:{{< relref "security.adoc#_verifying_heimdall_binaries_and_container_images" >}}[Verifying Heimdall Binaries and Container Images] section on how to verify the signatures).
+
+=== Download
+Retrieve the desired released version of heimdall binary for your operating system/architecture
+
+[source, bash]
+----
+ARCH=[your arch]
+OS=[your os]
+VERSION=[desired version]
+curl -L https://github.com/dadrus/heimdall/releases/download/${VERSION}/heimdall-${VERSION}-${OS}-${ARCH}.tar.gz \
+    | tar -z -x
+----
+
+== Container Image
+
+Heimdall utilizes a minimal container multi-arch image which you can find on https://hub.docker.com/r/dadrus/heimdall[DockerHub], or on https://github.com/users/dadrus/packages?repo_name=heimdall[GHCR]. As with link:{{< relref "#_binary" >}}[Binary] releases, heimdall can be pulled in several flavors. These are however currently limited to the Linux OS. Supported architectures are:
+
+* `amd64`
+* `arm64`
+* `arm/v7`
+
+All container images are rootless - so heimdall will always run as a non-root user within the container. Since Heimdall does not have any dependencies, the images are distroless as well and contain only the binary of heimdall and the settings related to the OS user and group permissions, heimdall is running with.
+
+As with the binary distribution, all container images are signed (see also link:{{< relref "security.adoc#_verifying_heimdall_binaries_and_container_images" >}}[Verifying Heimdall Binaries and Container Images] section on how to verify the signatures).
+
+=== Prerequisites
+
+* https://docs.docker.com/install/[Docker], https://podman.io/[Podman], or other container runtime of your choice (examples are however using docker).
+
+=== Pull Image
+
+The steps below will pull the images from https://hub.docker.com/r/dadrus/heimdall[DockerHub]. If you want to pull them from https://github.com/users/dadrus/packages?repo_name=heimdall[GHCR], specify the `ghcr.io` registry in front of the repository.
+
+Following tag patterns exist:
+
+* `x.y.z[-<prerelease-identifier>]` - will pull a specific tagged release.
++
+[source, bash]
+----
+$ docker pull dadrus/heimdall:0.13.0-alpha && docker run dadrus/heimdall:0.13.0-alpha --version
+heimdall version v0.13.0-alpha
+----
+
+* `latest` - will pull the most recent tagged release.
++
+[source, bash]
+----
+$ docker pull dadrus/heimdall:latest && docker run dadrus/heimdall:latest --version
+heimdall version v0.13.0-alpha
+----
+
+== Helm Chart
+
+Heimdall can be installed via a Helm chart with a few simple steps, depending on if you are deploying for the first time, or upgrading from an existing installation.
+
+=== Prerequisites
+
+* A Kubernetes version >= 1.19 or >= 1.23 if you would like to use HPA
+* https://helm.sh/docs/intro/install/[Helm] 3.0+
+
+=== Adding the Helm Repository
+
+The heimdall Helm Chart is published at `\https://dadrus.github.io/heimdall/charts`. You can add this repo with the following command:
+
+[source,bash]
+----
+$ helm repo add dadrus https://dadrus.github.io/heimdall/charts
+$ helm repo update
+----
+
+=== Installing the Chart
+
+This chart expects a link:{{< relref "/docs/operations/configuration.adoc#_configuration_file" >}}[heimdall configuration file] with authentication, authorization and so on mechanisms, required for your particular setup, which can be passed by using the `-f heimdall.yaml` flag during the installation.
+
+If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
+
+By default, heimdall requires custom resource definitions (CRDs) installed in the cluster. The Helm client will install it for you.
+
+To install the chart with the release name `my-release` (`my-release` is the name that you choose) and configure heimdall to operate in decision mode:
+
+[source,bash]
+----
+$ helm install my-release -f heimdall.yaml dadrus/heimdall
+----
+
+If you need proxy mode, install it with:
+
+[source,bash]
+----
+$ helm install my-release -f heimdall.yaml --set operationMode=proxy dadrus/heimdall
+----
+
+For more advanced configuration and details about helm values, https://github.com/dadrus/heimdall/tree/main/charts/heimdall[please see the helm chart].
+
+=== Post-Install Steps
+
+==== Integration with Ingress
+
+After having installed heimdall, you have to integrate it with your ingress controller. For decision mode that means setting corresponding annotations on Ingress resources to let the traffic first be verified by heimdall before it is forwarded to the upstream services by the Ingress Controller.
+
+==== Metrics Collection
+
+Since heimdall is able to exposes a comprehensive set of Prometheus style metrics (See link:{{< relref "/docs/operations/observability.adoc#_metrics" >}}[Metrics] for details), you can, assuming you are running a https://github.com/prometheus-operator/prometheus-operator[Prometheus Operator] in your cluster, create the following `PodMonitor` resource to enable metrics collection.
+
+[source, yaml]
+----
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: heimdall-pod-monitor
+  labels:
+    release: prometheus
+    app.kubernetes.io/instance: my-release
+    app.kubernetes.io/name: heimdall
+    app.kubernetes.io/part-of: heimdall
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: my-release
+      app.kubernetes.io/name: heimdall
+  podMetricsEndpoints:
+    - path: /metrics
+      port: http-metrics
+      scheme: http
+      interval: 30s
+  jobLabel: heimdall-pod-monitor
+  namespaceSelector:
+    matchNames:
+      - default
+----
+
+The definition of the `PodMonitor` above assumes, you've installed heimdall in the default namespace as shown in the link:{{< relref "#_installing_the_chart" >}}[Installing the Chart] section. If this is not the case, you need to adjust the `metadata` property by adding the corresponding `namespace` information, as well as the `namespaceSelector`.
+
+If your Prometheus deployment is not done through the operator, you don't need to do anything, as the chart already sets the relevant annotations: `prometheus.io/scrape`, `prometheus.io/path` and `prometheus.io/port`.
+

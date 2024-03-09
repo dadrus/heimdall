@@ -1,0 +1,22 @@
+worker_processes  1;
+user       nginx;
+pid        /var/run/nginx.pid;
+
+events {
+  worker_connections  1024;
+}
+
+http {
+    keepalive_timeout  65;
+
+    server {
+        listen 8080;
+
+        location /.well-known/jwks {
+            default_type  application/json;
+
+            root /var/www/nginx;
+            try_files /jwks.json =404;
+        }
+    }
+}

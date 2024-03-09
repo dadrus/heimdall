@@ -7,7 +7,7 @@ draft: false
 {{% seo title="Verify access all the time and everywhere with Heimdall" alignment="right" %}}
 Adopt Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks. Just how to glue them with heimdall.
 
-link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Get Started]
+link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Learn about heimdall's pipelines]
 {{% /seo %}}
 
 {{% seo title="Define rules reflecting your requirements" %}}
@@ -31,7 +31,7 @@ spec:
 
 Create rules for each upstream and path you want to secure, respectively, which deviates from your defaults, loading them from a variety of sources such as Kubernetes custom resources, S3 buckets, any HTTPs endpoints or regular files.
 
-link:{{< relref "/docs/configuration/rules/overview.adoc" >}}"[Learn more about rules]
+link:{{< relref "/docs/concepts/rules.adoc" >}}"[Learn more about rules]
 {{% /seo %}}
 
 {{% seo title="The value you get" %}}

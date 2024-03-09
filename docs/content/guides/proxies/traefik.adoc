@@ -1,0 +1,52 @@
+---
+title: "Traefik Proxy Integration"
+date: 2022-06-09T18:59:49+02:00
+draft: false
+weight: 16
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: Explains how to integrate heimdall with Traefik Proxy, a modern HTTP proxy and load balancer for microservices.
+---
+
+:toc:
+
+https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth Middleware] while operated in the link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode]. In such setup, traefik delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.
+
+To achieve this, configure traefik
+
+* to make use of the aforesaid ForwardAuth middleware by setting the `address` property to the decision service endpoint and
+* configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration).
+* Configure the route of your service to make use of this middleware.
+
+[CAUTION]
+====
+Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
+====
+
+NOTE: Since traefik makes use of those `X-Forwarded-*` headers, which heimdall also handles with precedence, there is no need to drop any headers to prevent spoofing (see also link:{{< relref "/docs/operations/security.adoc#_http_headers_security_considerations" >}}[Security Considerations] for details.
+
+.Using Docker labels
+====
+
+[source, yaml]
+----
+edge-router:
+  image: traefik
+  # further configuration
+  labels:
+    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456
+    - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=X-Id-Token,Authorization
+    # further labels
+
+service:
+  image: my-service
+  # further configuration
+  labels:
+    - traefik.http.routers.service.middlewares=heimdall
+    # further labels
+----
+
+A fully working example with Traefik is shown in the link:{{< relref "/docs/getting_started/protect_an_app.adoc" >}}[Protect an Application] quickstart and is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
+
+====

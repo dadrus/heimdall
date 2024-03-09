@@ -1,0 +1,158 @@
+---
+title: "NGINX Integration"
+date: 2022-07-29T00:14:49+02:00
+draft: false
+weight: 15
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: Explains how to integrate heimdall with NGINX, an HTTP and reverse proxy server which became famous as one of the fastest web servers out there.
+---
+
+:toc:
+
+https://nginx.org/[NGINX] is an HTTP and reverse proxy server which became famous as one of the fastest web servers out there, heimdall can be integrated with by making use of the https://nginx.org/en/docs/http/ngx_http_auth_request_module.html[ngx_http_auth_request_module]. In such setup, NGINX delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, NGINX grants access and forwards the original request to the upstream service. If heimdall returns 401 or 403, the access is denied with the corresponding error code. Any other response code returned by heimdall is considered an error.
+
+NOTE: If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which is anyway recommended to have secure defaults, which, depending on the configuration, would then respond either with 401 or 403, or still 405 if you do not allow a specific HTTP method. To overcome 500 responses returned by nginx in such cases (when heimdall returns 405), you can configure heimdall to respond with another HTTP response code using the `respond` property on the level of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] or link:{{< relref "/docs/services/proxy.adoc" >}}[proxy service] configuration.
+
+Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.
+
+In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision, respectively Proxy service. Exceptions are described in the sections below.
+
+[#_first_option]
+== Forward only the path and query information
+
+With this method you don't set any headers. That means, you cannot rely on the used HTTP scheme, or the host and port in your rules. Here NGINX uses the same HTTP method, used in the original request to it and add the path and query to the path/query URL used for communication with heimdall. That integration method does not require the configuration of `trusted_proxies` in heimdall.
+
+.Possible Configuration
+====
+[source, nginx]
+----
+# nginx.conf
+...
+
+location / {
+  auth_request             /_auth;  <1>
+  auth_request_set         $auth_cookie $upstream_http_set_cookie;  <2>
+  add_header               Set-Cookie $auth_cookie;
+  auth_request_set         $authHeader0 $upstream_http_authorization;  <3>
+  proxy_set_header         'Authorization' $authHeader0;
+  # mitigate HTTPoxy Vulnerability
+  # https://www.nginx.com/blog/mitigating-the-httpoxy-vulnerability-with-nginx/
+  proxy_set_header Proxy   "";
+  ...
+}
+
+location = /_auth {  <4>
+  internal;
+  access_log               off;
+  proxy_method             $request_method; <5>
+  proxy_pass               http://heimdall:4456$request_uri; <6>
+  proxy_pass_request_body  off; <7>
+  proxy_set_header         Content-Length   "";
+  proxy_set_header         Host $http_host; <8>
+}
+----
+<1> Configures NGINX to forward every request to the internal `/_auth` endpoint (this is where the actual heimdall integration happens - see below).
+<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration)
+<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration)
+<4> This is where the "magic" happens
+<5> Configure NGINX to use the HTTP method used by its client. Without this setting the implementation of `proxy_path` will use the HTTP GET method.
+<6> Configures NGINX to pass the request to heimdall and sets the request path and queries from the original request
+<7> Disables sending of the request body. If your heimdall rules make use of the body, you should set this to `on` and remove the next line.
+<8> Lets the NGINX setting the `Host` header, so it is accessible to heimdall.
+====
+
+[#_second_option]
+== Forward all information in `X-Forwarded-*` headers
+
+With this method you set the `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Uri` to let heimdall know the host, respectively domain url and the used HTTP method.
+
+Compared to the link:{{< relref "#_first_option" >}}[previous integration] option, the configuration only differs in the definition of the internal `/_auth` endpoint. So, the example configuration is limited to that part only.
+
+NOTE: Proper configuration of `trusted_proxies` is mandatory if using this option.
+
+.Possible Configuration
+====
+[source, nginx]
+----
+# nginx.conf
+...
+
+location = /_auth {
+  internal;
+  proxy_pass               http://heimdall:4456;  <1>
+  proxy_pass_request_body  off;
+  proxy_set_header         Content-Length         "";
+  proxy_set_header         X-Forwarded-Method     $request_method;  <2>
+  proxy_set_header         X-Forwarded-Proto      $scheme;  <3>
+  proxy_set_header         X-Forwarded-Host       $http_host;  <4>
+  proxy_set_header         X-Forwarded-Uri        $request_uri;  <5>
+  proxy_set_header         X-Forwarded-For        $remote_addr;
+}
+----
+<1> Configures NGINX to pass the request to heimdall.
+<2> Let NGINX forward the used HTTP method to heimdall.
+<3> Let NGINX forward the used HTTP scheme to heimdall.
+<4> Let NGINX forward the used host to heimdall.
+<5> Let NGINX forward the used path and query parameter to heimdall.
+====
+
+== Integration with NGINX Ingress Controller.
+
+To integrate heimdall with the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller] you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
+
+NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies`.
+
+.Possible Configuration
+====
+[source, yaml]
+----
+nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" <1>
+nginx.ingress.kubernetes.io/auth-response-headers: Authorization <2>
+nginx.ingress.kubernetes.io/auth-snippet: | <3>
+  proxy_set_header    X-Forwarded-Method   $request_method;
+  proxy_set_header    X-Forwarded-Proto    $scheme;
+  proxy_set_header    X-Forwarded-Host     $http_host;
+  proxy_set_header    X-Forwarded-Uri      $request_uri;
+# other annotations required
+----
+<1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
+<2> Let NGINX forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
+your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration. If not configured, NGINX will only react on `Set-Cookie` headers in responses from heimdall by default.
+<3> Configures the required headers to pass the information about the used HTTP scheme, host and port, request path and used query parameters to be forwarded to heimdall.
++
+NOTE: Without that, heimdall will not be able extracting relevant information from the NGINX request as it does not support NGINX proprietary `X-Original-Method` and `X-Original-Uri` used by it for the same purposes.
+====
+
+Alternatively, if you don't want configuring `trusted_proxies` and do not rely on the used HTTP scheme, host and port in your rules, you can also use the `nginx.ingress.kubernetes.io/configuration-snippet` and `nginx.ingress.kubernetes.io/server-snippet` annotations and use the configuration shown below.
+
+.Possible Configuration
+====
+
+This example is an exact copy of the configuration used in the very first link:{{< relref "#_first_option" >}}[integration option] described above.
+
+[source, yaml]
+----
+nginx.ingress.kubernetes.io/configuration-snippet: |
+  auth_request               /_auth;
+  auth_request_set           $auth_cookie $upstream_http_set_cookie;
+  add_header                 Set-Cookie $auth_cookie;
+  auth_request_set           $auth_header $upstream_http_authorization;
+  proxy_set_header           'Authorization' $auth_header;
+  proxy_set_header Proxy     "";
+nginx.ingress.kubernetes.io/server-snippet: |
+  location = /_auth {
+    internal;
+    access_log               off;
+    proxy_method             $request_method;
+    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>$request_uri;
+    proxy_pass_request_body  off;
+    proxy_set_header         Content-Length   "";
+    proxy_set_header         Host $http_host;
+  }
+# other annotations required
+----
+====
+
+Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.

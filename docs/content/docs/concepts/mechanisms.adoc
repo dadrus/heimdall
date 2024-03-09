@@ -1,0 +1,36 @@
+---
+title: "Mechanisms "
+date: 2022-11-29T22:31:36+02:00
+draft: false
+weight: 12
+menu:
+  docs:
+    parent: "Concepts"
+    weight: 2
+description: Mechanisms are the building blocks for rule specific pipelines and define the required behavior for these.
+---
+
+:toc:
+
+== Mechanism Categories
+
+All supported mechanisms fall into the following five categories, each implementing different mechanisms types (addressing different protocols or scenarios):
+
+* link:{{< relref "/docs/mechanisms/authenticators.adoc">}}[Authenticators], which inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
+* link:{{< relref "/docs/mechanisms/authorizers.adoc">}}[Authorizers], which ensure that the subject obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
+* link:{{< relref "/docs/mechanisms/contextualizers.adoc">}}[Contextualizers], which enrich the information about the subject obtained via an authenticator with further contextual information, required either by the upstream service itself or an authorizer. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
+* link:{{< relref "/docs/mechanisms/finalizers.adoc">}}[Finalizers], which, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from doing nothing, adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
+* link:{{< relref "/docs/mechanisms/error_handlers.adoc">}}[Error Handlers], which are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.
+
+NOTE: All mechanisms are stateless. Even some of them support caching, the corresponding data is not stored on the mechanisms level. An in-memory key-value store is used instead.
+
+== Mechanisms Catalogue
+
+Those mechanisms, which should be available for usage in rules, must be defined/configured first. That suits the following purposes:
+
+* Mechanisms are per se generic and must be configured for usage in particular use cases.
+* That configuration provides useful default behavior addressing your particular requirements, like which identity management system to use, etc.
+* Only those mechanisms, which are defined can be used in rules. With other words, if you do not define any mechanism, you cannot define any rule.
+* That makes the definition of rules also very simple - just reference the required mechanisms and "tune" the configuration, specified in the catalogue only if required. Not everything can be tuned though.
+* It also provides secure defaults. E.g. that way you can ensure heimdall communicates only to those systems, you allowed.
+

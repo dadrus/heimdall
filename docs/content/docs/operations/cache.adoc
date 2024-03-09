@@ -1,0 +1,50 @@
+---
+title: "Cache"
+date: 2023-11-06T13:16:34Z+01:00
+draft: false
+weight: 40
+menu:
+  docs:
+    weight: 20
+    parent: "Operations"
+---
+
+Heimdall can cache responses for a certain TTL. Currently supported cache types are; noop-cahce, in-memory-cache and Redis.
+
+== Configuration
+
+The configuration of the cache can be adjusted in the `cache` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+
+* *`type`*: _string_ (optional)
++
+Sets the cache type. Allowed options are `disabled`, `memory` and `redis`. Defaults to `in-memory` if left empty
+
+* *`redis_config`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_redis_cache" >}}[RedisCache]_ (optional)
++
+The configuration of the Redis cache
+
+
+.Complex proxy service configuration.
+====
+[source, yaml]
+----
+cache:
+  type: redis
+  redis:
+    addr: cache:6379
+    username: default
+    password: secret
+    db: 0
+    tls:
+      key_store:
+        path: ./certificates/tests/tls/redis_client_keystore.pem
+      key_id: bf5d129a7fec8b1fde11eab459784cc2f14e6c1d
+      min_version: TLS1.2
+      cipher_suites:
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    additional_ca: ./certificates/tests/tls/ca.crt
+----
+====
