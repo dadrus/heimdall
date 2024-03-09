@@ -6,6 +6,13 @@
 
   <main class="docs-main">
     <div class="docs-intro pt-3 pe-3">
+      <nav class="d-md-none" style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item fw-bold">{{ .Parent.Name }}</li>
+          <li class="breadcrumb-item active" aria-current="page">{{ .Title }}</li>
+        </ol>
+      </nav>
+
       <h1>{{ .Title }}</h1>
       <p>{{ .Description }}</p>
     </div>
