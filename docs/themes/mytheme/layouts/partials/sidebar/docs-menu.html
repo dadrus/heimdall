@@ -16,7 +16,7 @@
     {{ $active := in $currentPage.RelPermalink .URL }}
     {{ if .HasChildren -}}
     <strong class="d-md-block fs-6">{{ .Title }}</strong>
-    <ul class="nav flex-column mb-2">
+    <ul class="nav flex-column mb-2 ps-0">
       {{ range .Children -}}
       <li class="nav-item">
         {{ $active := in $currentPage.RelPermalink .URL }}
