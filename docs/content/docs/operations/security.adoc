@@ -2,10 +2,10 @@
 title: "Security"
 date: 2022-08-15T08:33:35+02:00
 draft: false
-weight: 35
+weight: 36
 menu:
   docs:
-    weight: 5
+    weight: 6
     parent: "Operations"
 description: To operate heimdall in a secure way, you should configure heimdall accordingly. Following sections address the corresponding areas.
 ---
