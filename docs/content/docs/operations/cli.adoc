@@ -2,17 +2,17 @@
 title: "CLI"
 date: 2022-06-09T18:57:50+02:00
 draft: false
-weight: 20
+weight: 33
 menu:
   docs:
-    weight: 20
-    identifier: cli_overview
+    weight: 3
     parent: "Operations"
+description: Here, you can find the description of heimdall's command line interface.
 ---
 
-Heimdall's Command Line Interface
+:toc:
 
-== General
+== Usage Patterns
 
 [source, bash]
 ----

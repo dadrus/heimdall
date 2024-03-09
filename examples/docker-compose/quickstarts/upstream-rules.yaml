@@ -1,26 +1,29 @@
 version: "1alpha3"
-
 rules:
-- id: rule1
+- id: demo:public
   match:
-    url: http://<**>/pub/<**>
+    url: http://<**>/public
   forward_to:
-    host: upstream:80
-    rewrite:
-      strip_path_prefix: /pub
-      add_path_prefix: /v1
+    host: upstream:8081
   execute:
-    - authenticator: anon
+  - authenticator: anon
+  - finalizer: noop
 
-- id: rule2
+- id: demo:protected
   match:
-    url: http://<**>/anon/<**>
+    url: http://<**>/<{user,admin}>
   forward_to:
-    host: upstream:80
-    rewrite:
-      strip_path_prefix: /anon
-      add_path_prefix: /v1
+    host: upstream:8081
   execute:
-    - authenticator: anon
-    - finalizer: create_jwt
-
+  - authenticator: jwt_auth
+  - authorizer: opa
+    config:
+      values:
+        policy: demo/can_access
+      payload: |
+        {
+          "input": {
+            "role": {{ quote .Subject.Attributes.role }},
+            "path": {{ quote .Request.URL.Path }}
+          }
+        }

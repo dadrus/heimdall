@@ -11,8 +11,8 @@ class SingleResult {
     render() {
         return `
         <a class="list-group-item list-group-item-action" href="${this.url}">
+            <div class="fw-bold mb-0 text-secondary">${this.title}</div>
             <div class="text-muted">${this.snippet}</div>
-            <div class="fw-bold mb-0 text-primary">${this.title}</div>
         </a>`
     }
 }
@@ -27,7 +27,7 @@ class SearchResult {
 
     render() {
         return `
-        <div class="mb-4">
+        <div class="p-2">
           <div class="mb-1 fw-bold" >${this.sections.join(" / ")} / ${this.title}</div>
           <div class="list-group">${this.items.reduce((prev, cur) => prev + cur.render(), "")}</div>
         </div>`
@@ -39,37 +39,18 @@ class DocSearch extends HTMLElement {
         new HugoFlexSearch({
             indexUrl: this.indexFile,
             indexedFields: ["title", "content", "url"],
-            limit: 10,
+            limit: 30,
             suggestions: true,
             searchLogic: "and",
             resultTemplate: this.resultTemplate.bind(this),
             emptyTemplate: this.emptyTemplate.bind(this),
         });
 
-        const searchForm = document.getElementById("docs-search");
-        const searchSuggestions = bs.Collapse.getOrCreateInstance(
-             document.getElementById("search-suggestions"), {toggle: false});
-
-        searchForm.addEventListener("keydown", (ev) => {
-            if (["Esc", "Escape"].includes(ev.key)) {
-                searchSuggestions.hide();
-            }
-        });
-
-        function checkFocus(ev) {
-            if (searchForm.contains(ev.relatedTarget)) {
-                return; // Special case for tab key
-            }
-
-            if (searchForm.contains(document.activeElement)) {
-                searchSuggestions.show();
-            } else {
-                searchSuggestions.hide();
-            }
-        }
-
-        window.addEventListener("blur", checkFocus, true);
-        window.addEventListener("focus", checkFocus, true);
+        const searchDialogue = document.getElementById("docSearch");
+        const searchInput = document.getElementById("search-input")
+        searchDialogue.addEventListener('shown.bs.modal', event => {
+            searchInput.focus()
+        })
     }
 
     get indexFile() {
@@ -87,7 +68,7 @@ class DocSearch extends HTMLElement {
     }
 
     resultTemplate(post) {
-        const searchValue = document.getElementById("search").value
+        const searchValue = document.getElementById("search-input").value
         const pathPrefix = this.pathPrefix
 
         const parser = new DOMParser()
@@ -134,7 +115,7 @@ class DocSearch extends HTMLElement {
     }
 
     emptyTemplate() {
-        return `<div class="p-3"><p>No results found.</p></div>`
+        return `<p class="text-center mt-5">No results found</p>`
     }
 }
 

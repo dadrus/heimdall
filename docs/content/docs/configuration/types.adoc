@@ -1,0 +1,958 @@
+---
+title: "Type Definitions"
+date: 2022-06-09T18:56:56+02:00
+draft: false
+weight: 81
+menu:
+  docs:
+    weight: 1
+    parent: "Configuration Reference"
+---
+
+:toc:
+
+== Assertions
+
+This type enables configuration of required token and claim assertions. Depending on the object type (JWT or introspection response), the assertions apply to different parts of such objects.
+
+* *`scopes`*: _link:{{< relref "#_scopes_matcher" >}}[Scopes Matcher]_ (optional)
++
+Required scopes given to the client.
+
+* *`audience`*: _string array_ (optional)
++
+Required entries in the `aud` claim. Both cases, either as whitespace separated string, or a JSON array are considered.
+
+* *`issuers`*: _string array_ (optional)
++
+Issuers to trust.
+
+* *`allowed_algorithms`*: _string array_ (optional)
++
+Algorithms, which are trusted (according to https://datatracker.ietf.org/doc/html/rfc7518[RFC 7518]). Defaults to the following list: ES256, ES384, ES512, PS256, PS384, PS512.
+
+* *`validity_leeway`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+The time leeway to consider while verifying the `iat`, `exp` and the `nbf`. Defaults to 10 seconds.
+
+.Assertions configuration
+====
+
+[source, yaml]
+----
+issuers:
+ - foo
+ - bar
+audience:
+ - zap
+scopes:
+ - baz
+allowed_algorithms:
+ - ES512
+validity_leeway: 5s
+----
+
+Here we say, the token must have been issued either by the issuer `foo`, or the issuer `bar`, the `aud` claim must contain `zap`, the scope claim (either `scp` or `scope`) must be present and contain the scope `baz`, if the token or the introspection response is signed, it must have been signed by using the `ES512` algorithm (ECDSA using P-521 and SHA-512) and if the information about token validity is present, we respect a deviation of 5 seconds.
+
+====
+
+== Authentication Data Source
+
+An authentication data source is actually a list of possible strategies for subject authentication data retrieval. The entries following the first one are fallbacks and are only executed if the previous strategy could not retrieve the required authentication data from the request.
+
+This fallback mechanism can become handy, if different clients of your application send the authentication data using different methods. https://datatracker.ietf.org/doc/html/rfc6750[RFC 6750] describes for example how to use bearer tokens in HTTP requests to access OAuth 2.0 protected resources. This RFC says, a token can either be sent in the `Authorization` header, or in a query parameter, or even as part of the HTTP body. So you can define the following list to let Heimdall try to extract the access token from all three places:
+
+[source, yaml]
+----
+- header: Authorization
+  scheme: Bearer
+- query_parameter: access_token
+- body_parameter: access_token
+----
+
+The available strategies are described in the following sections.
+
+=== Cookie Strategy
+
+This strategy can retrieve authentication data from a specific HTTP cookie. Following properties are supported:
+
+* *`cookie`*: _string_ (mandatory)
++
+The name of the cookie to use.
+
+.Cookie Strategy usage
+====
+
+Imagine you want Heimdall to verify an authentication session, which is represented by a specific cookie before the request hits your upstream service. If the client of your upstream application, which is case of a cookie would usually be a browser sends a cookie named "session", you can inform Heimdall to extract and use it by configuring this strategy as follows:
+
+[source, yaml]
+----
+- cookie: my_session_cookie
+----
+====
+
+=== Header Strategy
+
+This strategy can retrieve authentication data from a specific HTTP header. Following properties are supported:
+
+* *`header`*: _string_ (mandatory)
++
+The name of the header to use.
+
+* *`scheme`*: _string_ (optional)
++
+Scheme, which should be present in the header value. If specified, but not present in the header value, the authentication data cannot be retrieved, effectively making the affected authenticator feel not responsible for the request.
+
+.Header Strategy usage
+====
+
+Imagine you want Heimdall to verify an access token used to protect your upstream service. If the client of your upstream application sends the access token in the HTTP `Authorization` header, you can inform Heimdall to extract it from there by configuring this strategy as follows:
+
+[source, yaml]
+----
+- header: Authorization
+  scheme: Bearer
+----
+====
+
+=== Query Parameter Strategy
+
+* *`query_parameter`*: _string_ (mandatory)
++
+The name of the query parameter to use.
+
+.Query Parameter Strategy usage
+====
+
+Imagine you want Heimdall to verify an access token used to protect your upstream service. If the client of your upstream application sends the access token in the query parameter named "access_token", you can inform Heimdall to extract it from there by configuring this strategy as follows:
+
+[source, yaml]
+----
+- query_parameter: access_token
+----
+====
+
+=== Body Parameter Strategy
+
+The usage of this strategy is only possible when the request payload is either JSON or `application/x-www-form-urlencoded` encoded. The `Content-Type` of the request must also either be set to `application/x-www-form-urlencoded` or to a MIME type, which contains `json`.
+
+* *`body_parameter`*: _string_ (mandatory)
++
+The name of the body parameter to use.
+
+.Body Parameter Strategy usage
+====
+
+Imagine you want Heimdall to verify an access token used to protect your upstream service. If the client of your upstream application sends the access token in the body parameter named "access_token", you can inform Heimdall to extract it from there by configuring this strategy as follows:
+
+[source, yaml]
+----
+- body_parameter: access_token
+----
+====
+
+== Authentication Data Forward Strategy
+
+Authentication data strategy defines the way how heimdall should forward the authentication data extracted from the request to the used identity management system.
+
+An Authentication Data Forward Strategy configuration entry must contain the following two properties:
+
+* `type` - The type of the strategy. Available types are described in the following sections.
+* `config` - The strategy specific configuration.
+
+=== Body Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a body parameter of the request to the identity management system.
+
+`type` must be set to `body`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the property for the authentication data.
+
+.Body strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a property named "idToken".
+
+[source, yaml]
+----
+type: body
+config:
+  name: idToken
+----
+
+Depending on the configured "Content-Type" header for the request (see link:{{< relref "#_endpoint" >}}[`Endpoint`] `headers`) the result might look like
+[source, text]
+----
+idToken=<whatever the token value is>
+----
+if the "Content-Type" header was set to `application/x-www-form-urlencoded`, or
+
+[source, json]
+----
+{ "idToken": "<whatever the token value is>" }
+----
+otherwise
+====
+
+=== Cookie Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a cookie of the request to the identity management system.
+
+`type` must be set to `cookie`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the cookie for the authentication data.
+
+.Cookie strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a cookie named "it_token".
+
+[source, yaml]
+----
+type: cookie
+config:
+  name: it_token
+----
+====
+
+=== Header Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a header of the request to the identity management system.
+
+`type` must be set to `header`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the header for the authentication data.
+
+* *`scheme`*: _string_ (optional)
++
+The scheme for the header added in front of the authentication data value.
+
+.Header strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a header named "X-ID-Token" with scheme "Bearer".
+
+[source, yaml]
+----
+type: header
+config:
+  name: X-ID-Token
+  scheme: Bearer
+----
+====
+
+=== Query Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a query parameter of the request to the identity management system.
+
+WARNING: Using this strategy is discouraged, as it will expose the authentication data to access logs, metrics and tracing.
+
+`type` must be set to `query`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the query parameter for the authentication data.
+
+.Query strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a query named "token".
+
+[source, yaml]
+----
+type: query
+config:
+  name: token
+----
+====
+
+== Authentication Strategy
+
+Authentication strategy is kind of abstract type, so you have to define which specific type to use. Each type has its own configuration options.
+
+An AuthStrategy configuration entry must contain the following two properties:
+
+* `type` - The type of the strategy. Available types are described in the following sections.
+* `config` - The strategy specific configuration.
+
+Available strategies are described in the following sections.
+
+=== API Key Strategy
+
+This strategy can be used if your endpoint expects a specific api key be sent in a header, a cookie or query.
+
+`type` must be set to `api_key`. `config` supports the following properties:
+
+* *`in`*: _string_ (mandatory)
++
+Where to put the api key. Can be either `header`, `cookie`, or `query`.
++
+WARNING: Using `query` strategy will expose the api key to access logs and tracing.
+
+* *`name`*: _string_ (mandatory)
++
+The name of either the header or the cookie.
+
+* *`value`*: _string_ (mandatory)
++
+The value of the api key.
+
+.API Key Strategy configuration
+====
+The following snippet shows how to configure this strategy to send an api key in the `X-My-API-Key` HTTP header.
+
+[source, yaml]
+----
+type: api_key
+config:
+  in: header
+  name: X-My-API-Key
+  value: super-duper-secret-key
+----
+====
+
+=== Basic Auth Strategy
+
+This strategy can be used if your endpoint is protected by HTTP basic authentication and expects the HTTP `Authorization` header with required values.
+
+`type` must be set to `basic_auth`. `config` supports the following properties:
+
+* *`user`*: _string_ (mandatory)
++
+The user-id.
+
+* *`password`*: _string_ (mandatory)
++
+The password.
+
+.Basic Auth Strategy configuration
+====
+
+The following snippet shows how to configure this strategy with user set to "Alladin" and password set to "open sesame"
+
+[source, yaml]
+----
+type: basic_auth
+config:
+  user: Alladin
+  password: open sesame
+----
+====
+
+=== OAuth2 Client Credentials Grant Flow Strategy
+
+This strategy implements the https://datatracker.ietf.org/doc/html/rfc6749#section-4.4[OAuth2 Client Credentials Grant Flow] to obtain an access token expected by the endpoint. Heimdall caches the received access token.
+
+`type` must be set to `oauth2_client_credentials`. `config` supports the following properties:
+
+
+* *`token_url`*: _string_ (mandatory)
++
+The token endpoint of the authorization server.
+
+* *`client_id`*: _string_ (mandatory)
++
+The client identifier for heimdall.
+
+* *`client_secret`*: _string_ (mandatory)
++
+The client secret for heimdall.
+
+* *`auth_method`*: _string_ (optional)
++
+The authentication method to be used according to https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1[RFC 6749, Client Password]. Can be one of
+
+** `basic_auth` (default if `auth_method` is not set): With that authentication method, the `"application/x-www-form-urlencoded"` encoded values of `client_id` and `client_secret` are sent to the authorization server via the `Authorization` header using the `Basic` scheme.
+
+** `request_body`: With that authentication method the `client_id` and `client_secret` are sent in the request body together with the other parameters (e.g. `scopes`) defined by the flow.
++
+WARNING: Usage of `request_body` authentication method is not recommended and should be avoided.
+
+* *`scopes`*: _string array_ (optional)
++
+The scopes required for the access token.
+
+* *`cache_ttl`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration inforation is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the values of `token_url`, `client_id`, `client_secret` and the `scopes` properties.
+
+* *`header`*: _object_ (optional, overridable)
++
+Defines the `name` and `scheme` to be used for the header. Defaults to `Authorization` with scheme `Bearer`. If defined, the `name` property must be set. If `scheme` is not defined, no scheme will be prepended to the resulting JWT.
+
+
+.Strategy configuration
+====
+
+[source, yaml]
+----
+type: oauth2_client_credentials
+config:
+  header:
+    name: X-My-Token
+  token_url: https://my-auth.provider/token
+  client_id: foo
+  client_secret: bar
+  auth_method: basic_auth
+  ttl: 10m
+  scopes:
+    - baz
+    - zap
+----
+====
+
+== Authorization Expression
+
+Authorization expressions define, as the name implies expressions for authorization purposes and have the following properties:
+
+* *`expression`* _string_ (mandatory)
++
+The expression to execute.
+
+* *`message`* _string_ (optional)
++
+The message to include into the error if the expression fails.
+
+.Example expression using https://github.com/google/cel-spec[CEL]
+====
+
+The expression below determine whether `attributes` property of a `subject` object (also shown below) has at least one key that starts with the `group` prefix, and ensure that all group-like keys have list values containing only strings that end with `@acme.co`.
+
+.subject
+[source, yaml,line-comment=#]
+----
+id: "foobar"
+attributes:
+  group1: ["admin@acme.co", "analyst@acme.co"]
+  labels: ["metadata", "prod", "pii"]
+  groupN: ["forever@acme.co"]
+----
+
+[source, yaml]
+----
+expression: |
+  subject.attributes.exists(c, c.startsWith('group')) &&
+  subject.attributes
+      .filter(c, c.startsWith('group'))
+      .all(c, subject.attributes[c]
+      .all(g, g.endsWith('@acme.co')))
+message: No groups ending with @acme.co present
+----
+====
+
+== ByteSize
+
+ByteSize is actually a string type, which adheres to the following pattern: `^[0-9]+(B|KB|MB)$`
+
+So with `10B` you can define the byte size of 10 bytes and with `2MB` you can say 2 megabytes.
+
+== CORS
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this type. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly. Following properties are supported:
+
+* *`allowed_origins`*: _string array_ (optional)
++
+List of origins that may access the resource. Defaults to all, if not set, but any of the other CORS options are configured.
+
+* *`allowed_methods`*: _string array_ (optional)
++
+List of methods allowed when accessing the resource. This is used in response to a preflight request. Defaults to `GET`, `POST`, `HEAD`, `PUT`, `DELETE` and `PATCH` if not set, but any of the other CORS options are configured.
+
+* *`allowed_headers`*: _string array_ (optional)
++
+List of request headers that can be used when making the actual request.
+
+* *`exposed_headers`*: _string array_ (optional)
++
+"Allow-List" of headers that clients are allowed to access.
+
+* *`allow_credentials`*: _boolean_ (optional)
++
+Indicates whether the response to the request can be exposed when the credentials flag is true. When used as part of a response to a preflight request, this indicates whether the actual request can be made using credentials. Defaults to `false` if not set, but any of the other CORS options are configured.
+
+* *`max_age`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Indicates how long the results of a preflight request can be cached. Defaults to 0 seconds if not set, but any of the other CORS options are configured.
+
+.Possible configuration
+====
+[source, yaml]
+----
+allowed_origins:
+  - example.org
+allowed_methods:
+  - HEAD
+  - PATCH
+allow_credentials: true
+max_age: 10s
+----
+====
+
+== Duration
+
+Duration is actually a string type, which adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
+
+So with `10s` you can define the duration of 10 seconds and with `2h` you can say 2 hours.
+
+== Endpoint
+
+The Endpoint type defines properties required for the communication with an endpoint.
+
+If only the URL is required to be set, you can specify it by using just a string. If more than the URL is required to be specified, following properties are available:
+
+* *`url`* _string_ (mandatory)
++
+The actual url of the endpoint. Depending on the mechanism, a URL can be templated
++
+NOTE: If templating is used, user info, scheme and host parts of the URL cannot be templated. Attempts to do so will result in runtime errors.
+
+* *`method`* _string_ (optional)
++
+The HTTP method to use while communicating with the endpoint. If not set `POST` is used.
+
+* *`retry`* _link:{{< relref "#_retry" >}}[Retry]_ (optional)
++
+What to do if the communication fails. If not configured, no retry attempts are done.
+
+* *`auth`* _link:{{< relref "#_authentication_strategy" >}}[Authentication Strategy]_ (optional)
++
+Authentication strategy to apply, if the endpoint requires authentication.
+
+* *`headers`* _map of strings_ (optional)
++
+HTTP headers to be sent to the endpoint.
++
+CAUTION: These headers are not analyzed by heimdall and are just forwarded to the endpoint. E.g. if you configure the `Content-Encoding` to something like `gzip`, the service behind the used endpoint might fail to answer, as it would expect the body to be compressed.
+
+* *`http_cache`* _object_ (optional)
++
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. To support this, that object defines the following properties:
+
+** *`enabled`* _boolean_ (optional)
++
+Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the `endpoint` property. If set to `true` heimdall will strictly follow the requirements from RFC 7234 and cache the responses if possible and reuse these if still valid.
+
+** *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Specifies how long heimdall should cache the response if the endpoint referenced by the URL does not provide any explicit expiration time (no heuristic freshness lifetime is calculated). Without configuring this property, heimdall treats such responses as not cacheable. Defaults to `0s` if not otherwise stated in the description of the configuration type making use of the `endpoint` property.
+
+.Endpoint configuration as string
+====
+[source, text]
+----
+http://foo.bar
+----
+====
+
+.Structured Endpoint configuration
+====
+
+[source, yaml]
+----
+url: http://foo.bar
+method: GET
+retry:
+  give_up_after: 5s
+  max_delay: 1s
+auth:
+  type: api_key
+  config:
+    name: foo
+    value: bar
+    in: cookie
+headers:
+  X-My-First-Header: foobar
+  X-My-Second-Header: barfoo
+enable_http_cache: true
+----
+
+====
+
+== Error/State Type
+
+Heimdall defines a couple of error/state types, which it uses to signal errors. Those, which are marked with (*) are available in CEL expressions. All can be used to define overrides for the HTTP response codes.
+
+Following types are available:
+
+* `accepted` - this is the only state type in this list and is used to signal, the matched decision pipeline has been executed successfully, so the request can be forwarded to the upstream service. The response of that type results by default in a `200 OK` response.
+* `authentication_error` (*) - used if an authenticator failed to verify authentication data available in the request. E.g. an authenticator was configured to verify a JWT and the signature of it was invalid. If none of the authenticators used in a pipeline were able to authenticate the user, and the default error handler was used to handle such error, it will by default result in a `401 Unauthorized` response.
+* `authorization_error` (*) - used if an authorizer failed to authorize the subject. E.g. an authorizer is configured to use an expression on the given subject and request context, but that expression returned with an error. Error of this type results by default in `403 Forbidden` response if the default error handler was used to handle such error.
+* `communication_error` (*) - this error is used to signal a communication error while communicating to a remote system during the execution of the pipeline of the matched rule. Timeouts of DNSs errors result in such an error. Error of this type results by default in `502 Bad Gateway` HTTP code if handled by the default error handler.
+* `internal_error` - used if heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc. Results by default in `500 Internal Server Error` response to the caller.
+* `method_error` - this error is used to signal that a matched rule does not allow usage of the HTTP method used to submit the request. Error of this type results by default in `405 Method Not Allowed` HTTP code.
+* `no_rule_error` - this error is used to signal, there is no matching rule to handle the given request. Error of this type results by default in `404 Not Found` HTTP code.
+* `precondition_error` (*) - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured. Error of this type results by default in `400 Bad Request` HTTP code if handled by the default error handler.
+
+== Key Store
+
+This type configures a key store holding keys and corresponding certificate chains. PKCS#1, as well as PKCS#8 encodings are supported for private keys.
+
+While loading a key store following verifications are done:
+
+. Uniqueness of key ids and rejection of key stores which violate this condition (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup])
+. Correlation of keys and certificates to build a valid certificate chain for every given key if certificates are present. If the correlation fails, an error is raised and heimdall will refuse to start.
+. Certificate chain validation. If the chain is invalid, an error is raised and heimdall will refuse to start.
+
+Following configuration properties are available:
+
+* *`path`*: _string_ (mandatory)
++
+The path to the PEM file with the cryptographic material.
+
+* *`password`*: _string_ (optional)
++
+If the key material is protected with a password, this property can be set to decipher it. Password protection is only supported for PKCS#8 encoded keys
++
+CAUTION: If the key store contains multiple keys and these keys are password protected, same password must be used for all of these.
+
+
+.Example configuration
+====
+[source, yaml]
+----
+path: /path/to/keystore.pem
+password: VeryInsecure!
+----
+====
+
+== Respond
+
+This type enables instructing heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use. The configuration, which can be done using this type affects only the behavior of the default error handler.
+
+Following properties are supported:
+
+* *`verbose`*: _boolean_ (optional)
++
+By making use of this property you can instruct heimdall to preserve error information and provide it in the response body to the caller. Defaults to `false`.
++
+Heimdall supports MIME type negotiation. So, if the client sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose` has been set to `true`.
++
+[source, json]
+----
+{
+  "code": "internal error",
+  "message": "whatever led to the error"
+}
+----
++
+The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
+
+* *`with`*: _ResponseOverride set_ (optional)
++
+This property enables mapping between response/error types used by heimdall and the corresponding HTTP status codes. Each entry must be from the list of the supported link:{{< relref "#_errorstate_type" >}}[Error/State Types] and contain exactly one property named `code`, which then defines the desired mapping.
++
+.Making error responses verbose and changing the HTTP codes for some errors
+====
+[source, yaml]
+----
+verbose: true
+with:
+  authentication_error:
+    code: 404
+  authorization_error:
+    code: 404
+----
+====
+
+== Retry
+
+Implements an exponential backoff strategy for endpoint communication. It increases the backoff exponentially by multiplying the `max_delay` with 2^(attempt count)
+
+* *`give_up_after`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Sets an upper bound on the maximum time to wait between two requests. Default to 0, which means no upper bound.
+
+* *`max_delay`*: _link:{{< relref "#_duration" >}}[Duration]_ (mandatory)
++
+The initial backoff.
+
+.Retry configuration
+====
+In this example the backoff will be 1, 2, 4, 8, 16, 32, 60, ...
+
+[source, yaml]
+----
+give_up_after: 60s
+max_delay: 1s
+----
+====
+
+== Scopes Matcher
+
+Scopes matcher is a configuration type allowing configuration of different strategies to match required scopes. In its simplest shape it can be just an array of strings (implemented by the link:{{< relref "#_exact">}}[Exact]) scope matcher. To cover many use cases, different strategies are available and described in the following sections.
+
+Regardless of the strategy, each matcher can explicitly be configured and supports the following configuration properties:
+
+* `matching_strategy` - the type of the mathing strategy.
+* `values` - the list of scope patterns
+
+=== Exact
+
+This the simplest matcher and is automatically selected, if just an array of strings is configured as shown in the following snippet:
+
+[source, yaml]
+----
+- foo
+- bar
+----
+
+However, as written in the link:{{< relref "#_scopes_matcher">}}[Scopes Matcher] section, it can also explicitly be selected by setting `matching_strategy` to `exact` and defining the required scopes in the `values` property.
+
+.Essentially same configurations
+====
+
+[source, yaml]
+----
+matching_strategy: exact
+values:
+  - foo
+  - bar
+----
+
+[source, yaml]
+----
+  - foo
+  - bar
+----
+====
+
+=== Hierarchic
+
+This matcher enables matching hierarchical scopes, which use `.` as separator. Imagine your system is organized that way, that it defines namespaces for different services like this:
+
+* `my-service` being the top namespace
+* `my-service.booking` - being the namespace of the booking service
+* `my-service.orders` - being the namespace of the orders service
+* `my-service.orders.partners` - being the namespace of the order service for partners and
+* `my-service.orders.customers` - being the namespace of the order service for customers
+
+Basically you've established an identity for each of your services (this is comparable to how https://spiffe.io/docs/latest/spiffe-about/spiffe-concepts/#spiffe-id[SPIFFE IDs] are organized and also used for).
+
+Now, imagine you use these namespaces as scope values to limit the usage of the issued tokens. In such situations the hierarchic scope matcher can become handy if you would like to assert any scope of the token must be in e.g. the `my-service` or the `my-service.orders` namespace.
+
+This matcher can only be used by explicitly setting the `matching_strategy` to `hierarchic` and defining the required patterns in the `values` property.
+
+.Matching of hierarchic scopes
+====
+
+[source, yaml]
+----
+matching_strategy: hierarchic
+values:
+  - my-service
+----
+
+This configuration will ensure all scopes withing the scope or scp claim are within the `my-service` namespace. So scope claim like
+
+[source, json]
+----
+{
+  "scope": ["my-service.orders", "my-service.orders.customers"]
+}
+----
+
+would match, but
+
+[source , json]
+----
+{
+  "scope": ["not-my-service", "my-service.orders.customers"]
+}
+----
+
+would not match.
+====
+
+=== Wildcard
+
+This matcher enables matching scopes using wildcards. It goes beyond the link:{{< relref "#_hierarchic">}}[Hierarchic] scope matcher by enabling usage of wildcards.
+
+This matcher can only be used by explicitly setting the `matching_strategy` to `wildcard` and defining the required patterns in the `values` property.
+
+== Subject
+
+This configuration type enables extraction of subject information from responses received by Heimdall from authentication services. Following properties are available.
+
+* *`id`*: _string_ (mandatory)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the id of the subject in the JSON object.
+
+* *`attributes`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the subject in the JSON object. Defaults to `@this`.
+
+.Extracting subject id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response.
+====
+
+This example shows how to extract the subject id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response and set the subject attributes to the entire response
+
+[source, yaml]
+----
+id: sub
+attributes: @this
+----
+
+Setting `attributes` was actually not required, as `@this` would be set by default anyway.
+====
+
+.Extracting subject id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
+====
+
+This example shows how to extract the subject id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response and set the subject attributes to the entire response. `attributes` is not configured, so default is used.
+
+[source, yaml]
+----
+id: identity.id
+----
+====
+
+== Session Lifespan
+This configuration type enables the configuration of session lifespans, used for session validation for those authenticators, which act on non-standard protocols. Following properties are available.
+
+* *`active`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field describing the "active" status of the session in the corresponding JSON object. The actual value in that field should be convertable to a `bool` type. If not provided, or not found in the session object, the session is considered to be "active". "active" means it can be used and represent a valid session between the authentication system and the subject, the session has been issued to.
+
+* *`issued_at`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field in the corresponding JSON object, describing the time, when the session object has been issued. If not provided or not found, the issuance time is not considered during session validation.
+
+* *`not_before`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field in the corresponding JSON object describing the time, until which the session object is not allowed to be used. If not provided or not found, the corresponding time is not considered during session validation.
+
+* *`not_after`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field in the corresponding JSON object describing the time, after which the session object is not allowed to be used. If not provided or not found, the corresponding time is not considered during session validation.
+
+* *`time_format`*: _string_ (optional)
++
+Since different authentication system use different representations for time strings, this property allows the definition of the https://pkg.go.dev/time#pkg-constants[time format/layout] used by the authentication system. Defaults to Unix Epoch time stamp.
++
+NOTE: You can use the following https://go.dev/play/p/VjtvWMmp-Ua[Go Playground] link to test your time format settings.
+
+* *`validity_leeway`*: link:{{< relref "#_duration" >}}[Duration] (optional)
++
+Enables definition of an allowed time drift between the authentication system and heimdall for the validation of the session validity. Defaults to 0.
+
+.Making use of session information received from Ory's Kratos
+====
+A typical response from Kratos' `whoami` endpoint looks like follows (stripped to the most interesting parts):
+
+[source, json]
+----
+{
+  "id": "1338410d-c473-4503-a96a-53efa06e2531",
+  "active": true,
+  "expires_at": "2021-10-15T15:58:57.683338Z",
+  "authenticated_at": "2021-10-14T15:58:57.683338Z",
+  "issued_at": "2021-10-14T15:58:57.683338Z",
+  "identity": {
+    "id": "9496bbd5-f426-473f-b087-c7df853f274a",
+    ...
+  }
+}
+----
+
+To enable usage of these properties in Heimdall, you can configure the Session Lifespan as follows:
+
+[source, yaml]
+----
+active: active
+issued_at: issued_at
+not_before: authenticated_at
+not_after: expires_at
+time_format: "2006-01-02T15:04:05.999999Z07"
+validity_leeway: 10s
+----
+====
+
+.Making use of session information received from a compliant OAuth2 authorization service
+====
+A typical response from a token `introspection` endpoint looks like follows:
+
+[source, json]
+----
+{
+  "active": true,
+  "client_id": "l238j323ds-23ij4",
+  "username": "jdoe",
+  "scope": "read write dolphin",
+  "sub": "Z5O3upPC88QrAjx00dis",
+  "aud": "https://protected.example.net/resource",
+  "iss": "https://server.example.com/",
+  "exp": 1419356238,
+  "iat": 1419350238,
+  "extension_field": "twenty-seven"
+ }
+----
+
+To enable usage of these properties in Heimdall, you can configure the Session Lifespan as follows:
+
+[source, yaml]
+----
+active: active
+issued_at: iat
+not_after: exp
+validity_leeway: 10s
+----
+
+As you see, there is no need to define the time format as the times values appearing in the responses from an introspection endpoint are Unix Epoch time stamps.
+
+====
+
+== TLS
+Following are the supported TLS configuration properties:
+
+* *`key_store`*: _link:{{< relref "#_key_store" >}}[Key Store]_ (mandatory)
++
+The key store containing the cryptographic material. At least one private key and the corresponding certificate must be present.
+
+* *`key_id`*: _string_ (optional)
++
+If the `key_store` contains multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
+
+* *`min_version`*: _string_ (optional)
++
+The minimal TLS version to support. Can be either `TLS1.2` or `TLS1.3`. Defaults to `TLS1.3`.
+
+* *`cipher_suites`*: _string array_ (optional)
++
+Can be configured if `min_version` is set to `TLS1.2`. If `min_version` is set to `TLS1.3` the configured values are ignored. Only the following PFS cipher suites are supported:
+
+** `TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`
+** `TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
+** `TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384`
+** `TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256`
+** `TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256`
+
++
+Defaults to the last six cipher suites if `min_version` is set to `TLS1.2` and `cipher_suites` is not configured.
+
+.Example configuration
+====
+[source, yaml]
+----
+key_store:
+  path: /path/to/keystore.pem
+  password: VeryInsecure!
+key_id: foobar
+min_version: TLS1.2
+cipher_suites:
+  - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+  - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+----
+====
+
+== Key-Id Lookup
+
+When heimdall loads a key store, following algorithm is used to get the key id for the key:
+
+* if the PEM entry with the private key has `X-Key-ID` header specified, this value is used as key id
+* Otherwise, if an X.509 certificate is present for the private key, and it has the `Subject Key Identifier` extension set, the hex representation of it is used as key id.
+* Otherwise, heimdall calculates the value for the `Subject Key Identifier` according to https://www.ietf.org/rfc/rfc3280.html#section-4.2.1.2[RFC 3280, Section 4.2.1.2] and uses hex representation of it as key id.

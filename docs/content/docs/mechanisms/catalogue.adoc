@@ -1,0 +1,132 @@
+---
+title: "Catalogue"
+date: 2024-01-11T15:01:21+02:00
+draft: false
+weight: 51
+menu:
+  docs:
+    weight: 1
+    parent: "Mechanisms"
+description: Defines and configures those mechanisms, which should be available for usage in rules.
+---
+
+:toc:
+
+As described in link:{{< relref "/docs/concepts/mechanisms.adoc" >}}[Concepts] section, mechanisms must be defined and configured before these can be used in rules. That is happening in the so-called mechanisms catalogue. On start up heimdall instantiates all defined and configured mechanisms and makes these available for usage in rules.
+
+== Catalogue Configuration
+
+The corresponding mechanisms catalogue resides under the `mechanisms` property of heimdall static configuration and is organized based on mechanism categories as also shown in the snippet below.
+
+[source, yaml]
+----
+mechanisms:
+  authenticators:
+    <list of authenticator definitions>
+  authorizers:
+    <list of authorizer definitions>
+  contextualizers:
+    <list of contextualizer definitions>
+  finalizers:
+    <list of finalizer definitions>
+  error_handlers:
+    <list of error handler definitions>
+----
+
+== General Mechanism Configuration
+
+Each mechanism definition entry in the catalogue contains the following properties:
+
+* `id` - A mandatory unique identifier of the mechanism. Identifiers are used to reference the required mechanism within a rule, respectively its pipelines. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined mechanisms of a particular mechanism category (like authenticator, authorizer, etc.).
+* `type` - The mandatory specific type of the mechanism in the given category.
+* `config` - The mechanism's specific configuration if required by the type.
+
+Every mechanism type can be configured as many times as needed. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
+
+For example, your authenticator definitions could look like this:
+
+[source, yaml]
+----
+mechanisms:
+  authenticators:
+  - id: anon1
+    type: anonymous
+  - id: anon2
+    type: anonymous
+  - id: anon3
+    type: anonymous
+    config:
+      subject: anon
+  - id: anon4
+    type: anonymous
+    config:
+      subject: bla
+----
+
+The above snippet configures four different instances of the anonymous authenticator mechanism, with `anon1` and `anon2` being configured identically (as no configuration is provided), and `anon3` and `anon4` being different in their configuration. Since the first two mentioned behave the same way (both will set the Subject ID to `anonymous`), there is actually no need to define two instances of them.
+
+== Example
+
+Here is an example which defines a mechanism catalogue using some of the available types:
+
+[source, yaml]
+----
+mechanisms:
+  authenticators:
+  - id: anon_authn
+    type: anonymous
+  - id: opaque_auth_token_authn
+    type: oauth2_introspection
+    config:
+      introspection_endpoint:
+        url: http://hydra:4445/oauth2/introspect
+    assertions:
+      issuers:
+        - http://127.0.0.1:4444/
+  authorizers:
+  - id: deny_all_authz
+    type: deny
+  - id: local_authz
+    type: cel
+    config:
+      expressions:
+        - expression:
+            "manager" in Subject.Attributes.groups
+          message: user is not in the expected group
+  contextualizers:
+  - id: group_manager
+    type: generic
+    config:
+      endpoint:
+        url: http://group-manager.local/groups
+        method: GET
+      forward_headers:
+        - Authorization
+      cache_ttl: 1m
+  finalizers:
+  - id: jwt_finalizer
+    type: jwt
+    config:
+      ttl: 5m
+      claims: |
+          {
+            {{ $user_name := .Subject.Attributes.identity.user_name -}}
+            "email": {{ quote .Subject.Attributes.identity.email }},
+            "email_verified": {{ .Subject.Attributes.identity.email_verified }},
+            {{ if $user_name -}}
+            "name": {{ quote $user_name }}
+            {{ else -}}
+            "name": {{ quote $email }}
+            {{ end -}}
+          }
+  error_handlers:
+  - id: default
+    type: default
+  - id: authenticate_with_kratos
+    if: |
+      type(Error) in [authentication_error, authorization_error] &&
+      Request.Header("Accept").contains("text/html")
+    type: redirect
+    config:
+      to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+----

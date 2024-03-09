@@ -1,66 +1,35 @@
 {{ $currentPage := . -}}
 {{ $section := $currentPage.Section -}}
-<ul class="nav flex-column">
+
+<div class="docs-search-button">
+  <button type="button" class="btn btn-outline-secondary mb-3 d-none d-md-block w-100 text-start" data-bs-toggle="modal" data-bs-target="#docSearch"
+          aria-controls="docSearch" aria-expanded="false" aria-label="Open search">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 20 20">
+      <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+    </svg>
+    <span>Quick search...</span>
+  </button>
+</div>
+
+<nav id="SideBarToc">
+  <ul>
   {{ range (index .Site.Menus $section) -}}
-  {{ $active := in $currentPage.RelPermalink .URL }}
-  <li class="nav-item">
+    <li>
     {{ $active := in $currentPage.RelPermalink .URL }}
     {{ if .HasChildren -}}
-    <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
-            data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
-            aria-expanded="{{ if $active }}true{{ else }}false{{ end }}">
-      {{ .Title }}
-    </button>
-    <div id="section-{{ sha1 .Title }}" class="collapse{{ if $active }} show{{ end }}">
-      <ul class="nav flex-column">
-        {{ range .Children -}}
-        <li class="nav-item">
-          {{ $active := in $currentPage.RelPermalink .URL }}
-          {{ if .HasChildren -}}
-          <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
-                  data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
-                  aria-expanded="{{ if $active }}true{{ else }}false{{ end }}">
-            {{ .Title }}
-          </button>
-          <div id="section-{{ sha1 .Title }}" class="collapse{{ if $active }} show{{ end }}">
-            <ul class="nav flex-column">
-              {{ range .Children -}}
-              <li class="nav-item">
-                {{ $active := in $currentPage.RelPermalink .URL }}
-                {{ if .HasChildren -}}
-                <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
-                        data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
-                        aria-expanded="{{ if $active }}true{{ else }}false{{ end }}">
-                  {{ .Title }}
-                </button>
-                <div id="section-{{ sha1 .Title }}" class="collapse{{ if $active }} show{{ end }}">
-                  <ul class="nav flex-column">
-                    {{ if and .URL (not (eq .Page.WordCount 0)) }}
-                    <li class="nav-item"><a class="nav-link" href="{{ .URL }}">Overview</a></li>
-                    {{ end }}
-                    {{ range .Children -}}
-                    {{ $active := in $currentPage.RelPermalink .URL }}
-                    <li class="nav-item"><a class="nav-link {{ if $active }}fw-bold{{ end }}" href="{{ .URL }}">{{ .Title }}</a></li>
-                    {{ end }}
-                  </ul>
-                </div>
-                {{ else }}
-                <a class="nav-link {{ if $active }}fw-bold{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
-                {{ end }}
-              </li>
-              {{ end }}
-            </ul>
-          </div>
-          {{ else }}
-          <a class="nav-link {{ if $active }}fw-bold{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
-          {{ end }}
+      <span>{{ .Title }}</span>
+      <ul>
+      {{ range .Children -}}
+        <li>
+        {{ $active := in $currentPage.RelPermalink .URL }}
+          <a class="{{ if $active }}active{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
         </li>
-        {{ end }}
+      {{ end }}
       </ul>
-    </div>
     {{- else -}}
-    <a class="nav-link {{ if $active }}fw-bold{{ end }}"  href="{{ .URL }}">{{- .Title -}}</a>
+      <a class="{{ if $active }}active{{ end }}" href="{{ .URL }}">{{- .Title -}}</a>
     {{- end -}}
-  </li>
+    </li>
   {{ end }}
-</ul>
+  </ul>
+</nav>

@@ -1,22 +1,56 @@
 ---
-title: "Observability"
+title: "Observability "
 date: 2022-08-03T18:53:31+02:00
 draft: false
-weight: 21
+weight: 34
 menu:
   docs:
-    weight: 30
-    identifier: observability_and_operations
+    weight: 4
     parent: "Operations"
+description: To support easier operation and integration in diverse APM products heimdall implements different observability mechanisms. The following sections provide insights about what can be expected.
 ---
 
-Hemdall implements different observability mechanisms to support easier operation and integration in different APM products. The following sections provide insights about what can be expected.
+:toc:
 
-== Logging in Heimdall
+== Logging
 
 Heimdall's implementation uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.
 
-Available Logging configuration options are described in link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[Logging Configuration].
+=== Configuration
+
+Logging configuration can be adjusted in the `log` property of heimdall's configuration and supports following properties.
+
+* *`format`*: _string_ (optional)
++
+With `text` and `gelf` being the available formats. `text` is the default format. And `gelf` defines a JSON format adhering to https://docs.graylog.org/v1/docs/gelf[GELF].
++
+WARNING: Usage of `text` (default) format is not recommended for production deployments as it requires more computational resources and is hence slow.
++
+.Configuring logging to emit logs using GELD format.
+====
+[source, yaml]
+----
+log:
+  format: gelf
+----
+====
+
+* *`level`*: _string_ (optional)
++
+Following log levels are available: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `panic` and `disabled`. The last one effectively disables logging. You usually do not want to do this. By default, the level is set to `error`.
++
+WARNING: `debug` and `trace` log levels are not meant for production as setting log level to one of these will result in a high log verbosity and also affect performance pretty much. Both are only meant for setup analysis and debugging! `trace` log level will also dump all incoming and outgoing HTTP requests and responses, as well as the contents of objects used in templates. That dump is unedited. That means sensitive data will be available in logs.
++
+NOTE: Due to some limitations of the GRPC framework capabilities, setting log level to `trace` will not dump GRPC requests and responses. If you need these for analysis purposes (e.g. when debugging the integration with envoy proxy), you'll have to set https://pkg.go.dev/net/http?utm_source=godoc#hdr-HTTP_2[`GODEBUG`] as well as the https://pkg.go.dev/google.golang.org/grpc/examples/features/debugging#section-readme[`GRPC_GO_LOG_VERBOSITY_LEVEL`] and https://pkg.go.dev/google.golang.org/grpc/examples/features/debugging#section-readme[`GRPC_GO_LOG_SEVERITY_LEVEL`] environment variables.
++
+.Configuring logging to emit logs in debug level.
+====
+[source, yaml]
+----
+log:
+  level: debug
+----
+====
 
 === Regular Log Events
 
@@ -113,7 +147,7 @@ If the event has been emitted for a GRPC request, following fields are set:
 
 * `_grpc_method` - The full GRPC method used.
 
-If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/configuration/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
+If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
@@ -181,13 +215,44 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
  "short_message": "TX finished"}
 ----
 
-== Tracing in Heimdall
+== Tracing
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described in link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described below and can be used to tune the behaviour.
 
-NOTE: Tracing is enabled by default.
+=== Configuration
 
-On one hand, this chapter serves the purpose of a quick introduction to distributed tracing with heimdall and on the other hand to list the options that go beyond the standard OTEL definitions.
+By default, tracing is enabled and can be disabled or slightly tuned in the `tracing` property of heimdall's configuration supporting the following properties.
+
+* *`enabled`*: _boolean_ (optional)
++
+By making use of this property, you can configure heimdall to enable or disable tracing. Defaults to `true` (tracing enabled).
++
+.Disabling tracing.
+====
+[source, yaml]
+----
+tracing:
+  enabled: false
+----
+====
+
+* *`span_processor`*: _string_ (optional)
++
+With `simple` and `batch` being the available options. By setting this property, you can define how heimdall shall process the created spans. Defaults to `batch`. This property is only there, as there is no corresponding setting option via OTEL tracing environment variables available.
++
+.Setting the span processor to export completed spans in batches.
+====
+[source, yaml]
+----
+tracing:
+  span_processor: batch
+----
+====
++
+Description of the options:
++
+** `simple` - Configures heimdall to synchronously export the created spans via configured exporters. This is not recommended for production use as it is slow and has a high computation resource usage overhead. It might be however good for testing, debugging, or showing examples of other features.
+** `batch` - Configures heimdall to send completed span batches to the exporter. Recommended setting for production use.
 
 === Tracing Context Propagation
 
@@ -236,21 +301,38 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://collector:4317
 
 If your environment supports OpenTelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
 
-== Metrics in Heimdall
+== Metrics
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported. As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall allows disabling collection and exposure of metrics if required, which is described under link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration].
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported.
 
-NOTE: Metric exposure is enabled by default.
+=== Configuration
 
-This chapter serves the purpose of a quick introduction to metrics collected and exposed by heimdall.
+As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. The generated metrics can either be exported by pushing these to an OTEL collector (the default behavior). Alternatively, the available metrics can be pulled and are then exported in the (https://grafana.com/oss/prometheus/[Prometheus] style).
 
-=== Metric Exporters
+Metrics are generated and exported by default. If this is not desired, you can explicitly disable this behavior within the `metrics` property of heimdall's configuration by making use of the following property:
+
+* *`enabled`*: _boolean_ (optional)
++
+By making use of this property, you can configure heimdall to enable or disable the metrics collection. Defaults to `true` (metrics exposure is enabled).
++
+.Disabling metrics.
+====
+[source, yaml]
+----
+metrics:
+  enabled: false
+----
+====
+
+==== Metric Exporters
 
 By default, metrics are pushed to the OTEL collector using the `http/protobuf` transport protocol. You can change that behavior by making use of either the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_protocol[`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`], or the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_protocol[`OTEL_EXPORTER_OTLP_PROTOCOL`] environment variable.
 
 To let heimdall know where to push the metrics to, either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_endpoint[`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`], or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_endpoint[`OTEL_EXPORTER_OTLP_ENDPOINT`] must be defined.
 
 To let heimdall expose metrics over a pull based service (https://grafana.com/oss/prometheus/[Prometheus] style), the https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_metrics_exporter[`OTEL_METRICS_EXPORTER`] environment variable must be set to `"prometheus"`. In that case heimdall will expose the `127.0.0.1:9464/metrics` endpoint which can be queried using the HTTP GET verb. You can change the host and port of that service by making use of the https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_HOST`] and https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_PORT`] environment variables.
+
+You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` environment variable to `none`.
 
 === Available Metrics
 
@@ -291,10 +373,9 @@ Number of seconds until a certificate used by a particular service (decision, pr
 
 |===
 
-== Runtime Profiling in Heimdall
+== Runtime Profiling
 
-If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also link:{{< relref "/docs/configuration/observability/profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
-
+If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also the configuration options below) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
 
 * `allocs` - A sampling of all past memory allocations.
 * `block` - Stack traces that led to blocking on synchronization primitives.
@@ -308,3 +389,48 @@ If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See
 * `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
 
 See also the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for the documentation of the actual API.
+
+=== Configuration
+
+Configuration for this service can be adjusted in the `profiling` property of heimdall's configuration by making use of the following properties.
+
+* *`enabled`*: _boolean_ (optional)
++
+By making use of this property, you can configure heimdall to enable or disable runtime profiling. Defaults to `false` (profiling disabled).
++
+.Enabling profiling.
+====
+[source, yaml]
+----
+profiling:
+  enabled: true
+----
+====
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications interested in profiling data. The entry `0.0.0.0` allows listening for all IPv4 addresses. Defaults to `127.0.0.1`, which allow only local TCP/IP “loopback” connections to be made.
++
+NOTE: If you operate heimdall in a container, you should set this property to a value, which would allow your APM system to scrape this information.
++
+.Configure heimdall to listen on `192.168.2.10`.
+====
+[source, yaml]
+----
+profiling:
+  host: 192.168.2.10
+----
+====
+
+* *`port`*: _integer_ (optional)
++
+By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `10251`.
++
+.Configure heimdall to listen on port `9999` for runtime profiling requests.
+====
+[source, yaml]
+----
+metrics:
+  port: 9999
+----
+====

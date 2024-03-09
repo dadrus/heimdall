@@ -1,0 +1,85 @@
+---
+title: "Management Service"
+date: 2022-06-09T18:55:36+02:00
+draft: false
+weight: 43
+menu:
+  docs:
+    weight: 3
+    parent: "Services"
+description: When heimdall is started, the management service is always exposed and offers endpoints for health monitoring and to retrieve keys and certificates used by heimdall for JWT creation purposes.
+---
+
+:toc:
+
+By default, Heimdall listens on `0.0.0.0:4457` endpoint for incoming requests and also configures useful default timeouts as well as buffer limits. No other options are configured. You can however adjust the configuration for your needs.
+
+This service exposes the health and the JWKS endpoints.
+
+== Configuration
+
+The configuration for of the Management endpoint can be adjusted in the `management` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
+
+* *`port`*: _integer_ (optional)
++
+By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `4457`.
+
+* *`timeout`*: _Timeout_ (optional)
++
+By using this property you can override the default timeouts used by heimdall. Following properties are supported:
+
+** *`idle`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The maximum amount of time to wait for the next request when keep-alive is enabled. If set to 0, the value of the `read` timeout is used. Defaults to 2 minutes.
+
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The absolute amount of time allowed to read the entire request, including body. Defaults to 5 seconds. Setting this property to 0s will disable the timeout.
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The maximum duration before timing out writes of the response. Defaults to 10 seconds. Setting this property to 0s will disable the timeout.
+
+* *`buffer_limit`*: _BufferLimit_ (optional)
++
+Buffer limits for inbound requests and outbound responses. Following configuration properties are supported:
+
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the read buffer allowed to read the full request including body. Defaults to 4KB.
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the write buffer of the response. Defaults to 4KB.
+
+* *`cors`*: _link:{{< relref "/docs/configuration/types.adoc#_cors" >}}[CORS]_ (optional)
++
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+By default, the Management endpoint accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPs requests only (which is highly recommended). You can do so by making use of this option.
+
+.Complex management service configuration.
+====
+[source, yaml]
+----
+management:
+  host: 127.0.0.1
+  tls:
+    key_store:
+      path: /path/to/keystore.pem
+      password: VerySecure!
+  timeout:
+    read: 1s
+    write: 2s
+    idle: 30s
+  buffer_limit:
+    read: 4KB
+    write: 10KB
+----
+====

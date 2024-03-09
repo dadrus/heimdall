@@ -1,0 +1,103 @@
+---
+title: "Error Handlers"
+date: 2022-06-09T18:57:29+02:00
+draft: false
+weight: 57
+menu:
+  docs:
+    weight: 7
+    parent: "Mechanisms"
+description: Error handlers kick in when any of the stages of the regular rule pipeline fail and let you define logic to handle such situations. This page describes the available error handler types in detail.
+---
+
+:toc:
+
+Some of the error handlers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+
+== Default
+
+This mechanism is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
+
+To enable the usage of this mechanism, you have to set the `type` property to `default`.
+
+.Configuring Default error handler to enable referencing it from rules
+====
+
+[source, yaml]
+----
+id: foo
+type: default
+----
+
+====
+
+== Redirect
+
+This error handler mechanism allows redirecting the client to another endpoint, e.g. to let the user authenticate. Technically this error handler returns e.g. a HTTP `302 Found` response code and sets the HTTP `Location` header.
+
+To enable the usage of this mechanism, you have to set the `type` property to `redirect`.
+
+Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
+
+* *`to`*: _URL_ (mandatory, not overridable)
++
+The url to redirect the client to via the `Location` header. Can be templated and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] object.
++
+NOTE: When creating query parameters by making use of templates, don't forget to encode the values using the `urlenc` function. See also examples below.
+
+* *`code`*: _int_ (optional, not overridable)
++
+The code to be used for the redirect. Defaults to `302 Found`.
++
+WARNING: Heimdall does not check the configured code for HTTP redirect validity!
+
+.Redirect error handler configuration
+====
+
+The redirect error handler below is configured to kick in if the error is either `authentication_error` or `authorization_error` and the request come from a browser (HTTP `Accept` header contains `text/html`). If this condition holds true it will redirect the client to `\http://127.0.0.1:4433/self-service/login/browser` and add the `return_to` query parameter set to the URL encoded value of the current url as well.
+
+So, e.g. if heimdall was handling the request for `\http://my-service.local/foo` and run into an error like described above, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\http://127.0.0.1:4433/self-service/login/browser?return_to=http%3A%2F%2Fmy-service.local%2Ffoo`
+
+[source, yaml]
+----
+id: authenticate_with_kratos
+type: redirect
+if: |
+  type(Error) in [authentication_error, authorization_error] &&
+  Request.Header("Accept").contains("text/html")
+config:
+  to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+----
+
+====
+
+
+== WWW-Authenticate
+
+This error handler mechanism responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms heimdall into an authentication system, a very simple one though. By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#_basic_auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
+
+To enable the usage of this error handler, you have to set the `type` property to `www_authenticate`.
+
+Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
+
+* *`realm`*: _string_ (optional, overridable)
++
+The "realm" according to https://datatracker.ietf.org/doc/html/rfc7235#section-2.2[RFC 7235, section 2.2]. Defaults to "Please authenticate".
+
+.Configuration of WWW-Authenticate error handler
+====
+
+The www authenticate error handler below is configured to kick in if an `authentication_error` error occurred (an error raised by authenticators) and has been raised by an authenticator with id equal to `basic_auth_authenticator`. In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
+
+[source, yaml]
+----
+id: basic_authenticate
+type: www_authenticate
+if: |
+  Error.Source == "basic_auth_authenticator" &&
+  type(Error) == authentication_error
+config:
+  realm: "My fancy app"
+----
+
+====
