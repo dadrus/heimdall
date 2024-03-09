@@ -2,9 +2,12 @@ version: '3.7'
 
 services:
   edge-router:
-    image: envoyproxy/envoy:v1.25.1
+    image: envoyproxy/envoy:v1.29.1
     volumes:
-      - ./envoy-config-http.yaml:/envoy.yaml:ro
+    - ./envoy-config-http.yaml:/envoy.yaml:ro
     ports:
-      - 9090:9090
+      - "9090:9090"
     command: -c /envoy.yaml
+
+  heimdall:
+    command: -c /etc/heimdall/config.yaml serve decision

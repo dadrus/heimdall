@@ -4,15 +4,22 @@ services:
   heimdall:
     image: dadrus/heimdall:latest
     volumes:
-      - ./heimdall-config.yaml:/heimdall/conf/heimdall.yaml:ro
-      - ./upstream-rules.yaml:/heimdall/conf/rules.yaml:ro
-    command: -c /heimdall/conf/heimdall.yaml serve decision
+    - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
+    - ./upstream-rules.yaml:/etc/heimdall/rules.yaml:ro
 
   upstream:
     image: containous/whoami:latest
-    labels:
-      - traefik.enable=true
-      - traefik.http.services.whoami.loadbalancer.server.port=80
-      - traefik.http.routers.whoami.rule=PathPrefix("/")
-      - traefik.http.routers.whoami.middlewares=heimdall
+    command: --port=8081
+
+  idp:
+    image: nginx:1.25.4
+    volumes:
+    - ./idp.nginx:/etc/nginx/nginx.conf:ro
+    - ./jwks.json:/var/www/nginx/jwks.json:ro
+
+  opa:
+    image: openpolicyagent/opa:0.62.1
+    command: run --server /etc/opa/policies
+    volumes:
+    - ./policy.rego:/etc/opa/policies/policy.rego:ro
 

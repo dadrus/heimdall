@@ -1,0 +1,101 @@
+---
+title: "Decision Service"
+date: 2022-06-09T18:55:36+02:00
+draft: false
+weight: 41
+menu: 
+  docs:
+    weight: 1
+    parent: "Services"
+description: Decision service implements the decision operating mode using which you can integrate heimdall with existing reverse proxies, or API gateways.
+---
+
+:toc:
+
+To make use of this service you have to start heimdall with `heimdall serve decision` or `heimdall serve decision --envoy-grpc`. By default, heimdall listens on `0.0.0.0:4456` endpoint for incoming requests in this mode of operation and also configures useful default timeouts, as well as buffer limits. No other options are configured. You can, and should however adjust the configuration for your needs.
+
+== Configuration
+
+The configuration of the Decision service can be adjusted in the `decision` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
+
+* *`port`*: _integer_ (optional)
++
+By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `4456`.
+
+* *`timeout`*: _Timeout_ (optional)
++
+By using this property you can override the default timeouts used by heimdall. Following properties are supported:
+
+** *`idle`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The maximum amount of time to wait for the next request when keep-alive is enabled. If set to 0, the value of the `read` timeout is used. Defaults to 2 minutes.
+
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The absolute amount of time allowed to read the entire request, including body. Defaults to 5 seconds. Setting this property to 0s will disable the timeout.
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The maximum duration before timing out writes of the response. Defaults to 10 seconds. Setting this property to 0s will disable the timeout.
+
+* *`buffer_limit`*: _BufferLimit_ (optional)
++
+Buffer limits for inbound requests and outbound responses. Following configuration properties are supported:
+
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the read buffer allowed to read the full request including body. Defaults to 4KB.
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the write buffer of the response. Defaults to 4KB.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+By default, the Decision service accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPs requests only (which is highly recommended). You can do so by making use of this option.
+
+[#_trusted_proxies]
+* *`trusted_proxies`*: _string array_ (optional)
++
+The usage of the Decision service makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using e.g. special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to set the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
++
+Depending on the integration options offered by those systems, which are used to integrate heimdall with, you may need to rely on the aforesaid headers. In such cases, you have to configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which integrate with heimdall. If not configured, heimdall will not accept those headers from any client to prevent spoofing as it might result in privilege escalation.
++
+CAUTION: Please consider link:{{< relref "/docs/operations/security.adoc#_http_header_security_considerations" >}}[security implications] when making use of this property.
+
+* *`respond`*: _link:{{< relref "/docs/configuration/types.adoc#_respond" >}}[Respond]_ (optional)
++
+By making use of this property you can instruct heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use.
+
+.Complex decision service configuration.
+====
+[source, yaml]
+----
+decision:
+  host: 127.0.0.1
+  tls:
+    key_store:
+      path: /path/to/keystore.pem
+      password: VerySecure!
+  timeout:
+    read: 1s
+    write: 2s
+    idle: 30s
+  buffer_limit:
+    read: 4KB
+    write: 10KB
+  trusted_proxies:
+    - 192.168.1.0/24
+  respond:
+    verbose: true
+    with:
+      authentication_error:
+        code: 404
+      authorization_error:
+        code: 404
+----
+====

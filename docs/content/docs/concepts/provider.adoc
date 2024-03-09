@@ -1,0 +1,49 @@
+---
+title: "Rule Provider"
+date: 2022-11-29T22:31:36+02:00
+draft: false
+weight: 14
+menu:
+  docs:
+    parent: "Concepts"
+    weight: 4
+description: When rules define the behavior in sense of the desired authentication and authorization aspects, then the providers are those entities, which manage the lifecycle of these. That are the providers, which load, reload or remove rules when new rules appears, changes are detected, or rules are deleted.
+---
+
+:toc:
+
+== Rules Sets
+
+Regular, respectively upstream specific rules must somehow be organized, versioned and also loaded. So, there must be some structure allowing all of that. That structure is defined by the so-called rule sets.
+
+A rule set can be considered to be just a file containing a list of rules and some additional meta information, like format version, name of the rule set and alike. Rule sets do also allow ordering of rules, e.g. with most specific matching expressions first allowing simpler matching expressions.
+
+The actual format of the rule set is provider specific.
+
+== Provider Types
+
+While all providers are different in the sense that they support different sources to load rule sets from, respectively monitor them, most of the providers use the same rule set format.
+
+The following table gives an overview about existing providers
+
+[cols="2,2,5"]
+|===
+| **Provider** | **Rule Set Format** | **Short Description**
+
+| link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[File-System]
+| YAML or JSON
+| Loads rule set files from the local file system
+
+| link:{{< relref "/docs/rules/providers.adoc#_http_endpoint" >}}[HTTP Endpoint]
+| YAML or JSON
+| Loads rule sets from an HTTP(s) endpoint
+
+| link:{{< relref "/docs/rules/providers.adoc#_cloud_blob" >}}[Cloud Blob]
+| YAML or JSON
+| Loads rule sets from cloud blobs, like AWS S3, Google Cloud Storage, Azure Cloud Storage and alike.
+
+| link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[Kubernetes]
+| Custom Resource
+| Loads rule sets made available to a kubernetes cluster as customer resources.
+
+|===

@@ -1,0 +1,106 @@
+---
+title: "Contextualizers"
+date: 2022-06-09T18:57:10+02:00
+draft: false
+weight: 55
+menu:
+  docs:
+    weight: 5
+    parent: "Mechanisms"
+description: Contextualizers allow you enriching the information about the request and the authenticated subject. This page describes the available contextualizer types in detail.
+---
+
+:toc:
+
+Some of the contextualizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+
+== Generic
+
+This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject's`] `Attributes` property. If the API responses with a 2xx HTTP response code, the payload is made available in the `Attributes` property of the `Subject`, otherwise, if not overridden, an error is thrown and the execution of the authentication & authorization pipeline stops. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
+
+To enable the usage of this contextualizer, you have to set the `type` property to `generic`.
+
+Configuration using the `config` property is mandatory. Following properties are available:
+
+* *`endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
++
+The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this contextualizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of the system, this contextualizer should communicate to, you might need to configure further properties, like headers, etc.
+
+* *`forward_headers`*: _string array_ (optional, overridable)
++
+If the API requires any headers from the request to heimdall, you can forward these unchanged by making use of this property
+
+* *`forward_cookies`*: _string array_ (optional, overridable)
++
+If the API requires any cookies from the request to heimdall, you can forward these unchanged by making use of this property.
+
+* *`payload`*: _string_ (optional, overridable)
++
+Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
++
+Allows caching of the API responses. Defaults to 10 seconds. The cache key is calculated from the entire configuration of the contextualizer instance and the available information about the current subject.
+
+* *`continue_pipeline_on_error`*: _boolean_ (optional, overridable)
++
+If set to `true`, allows the pipeline to continue with the execution of the next mechanisms. So the error, if thrown, is ignored. Defaults to `false`, which means the execution of the authentication & authorization pipeline is stopped and the execution of the error pipeline is started.
+
+* *`values`* _map of strings_ (optional, overridable)
++
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+
+.Contextualizer configuration without payload
+====
+
+In this example the contextualizer is configured to call an endpoint using the HTTP `GET` method with the subject id being part of the url path. As the endpoint requires the `X-My-Session-Cookie` cookie for subject authentication purposes, `forward_cookies` is used to achieve this.
+
+[source, yaml]
+----
+id: foo
+type: generic
+config:
+  endpoint:
+    url: https://some-other.service/users/{{.Subject.ID}}
+    method: GET
+  forward_cookies:
+    - X-My-Session-Cookie
+----
+====
+
+.Contextualizer configuration with payload
+====
+
+In this example the contextualizer is configured to call an endpoint using the HTTP `POST` and send some data.
+
+[source, yaml]
+----
+id: foo
+type: generic
+config:
+  endpoint:
+    url: https://some-other.service/users
+    method: POST
+  payload: |
+    {
+      "user_id": {{ quote .Values.user_id }}
+      "whatever": {{ quote .Values.whatever }}
+    }
+----
+
+Since the `values` property is not defined but used in the payload, it must be specified in a rule making use of this contextualzer, e.g. in the following way:
+
+[source, yaml]
+----
+- id: rule1
+  # other rule properties
+  execute:
+  - # other mechanisms
+  - contextualizer: foo
+    config: # overriding with rule specifics
+      values:
+        user_id: "{{ .Subject.ID }}"
+        whatever: "some value"
+  - # other mechanisms
+----
+====

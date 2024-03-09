@@ -1,0 +1,188 @@
+---
+title: "Finalizers"
+date: 2022-06-09T18:57:16+02:00
+draft: false
+weight: 56
+menu:
+  docs:
+    weight: 6
+    parent: "Mechanisms"
+description: Finalizers are the last steps executed in a rule pipeline and can e.g. create a special representation of the subject to be made available to the upstream service. This page describes the available finalizer types in detail.
+---
+
+:toc:
+
+Some finalizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+
+== Noop
+
+As the name implies, this finalizer does nothing. This finalizer type also doesn't have any configuration options.
+
+To enable the usage of this finalizer, you have to set the `type` property to `noop`.
+
+.Noop finalizer configuration
+====
+[source, yaml]
+----
+id: foo
+type: noop
+----
+====
+
+== Header
+
+This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] into HTTP headers. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into headers expected by the upstream service.
+
+To enable the usage of this finalizer, you have to set the `type` property to `header`.
+
+Configuration using the `config` property is mandatory. Following properties are available:
+
+* *`headers`*: _string map_ (mandatory, overridable)
++
+Enables configuration of arbitrary headers with any values build from available subject and request information (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
+
+.Header finalizer configuration
+====
+[source, yaml]
+----
+id: foo
+type: header
+config:
+  headers:
+    X-User-ID: '{{ quote .Subject.ID }}'
+    X-User-Email: '{{ index .Subject.Attributes "email" | quote }}'
+    Host: '{{ .Request.Header "Host" | quote  }}'
+----
+====
+
+== Cookie
+
+This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] into cookies. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into cookies expected by the upstream service.
+
+To enable the usage of this finalizer, you have to set the `type` property to `cookie`.
+
+Configuration using the `config` property is mandatory. Following properties are available:
+
+* *`cookies`*: _string map_ (mandatory, overridable)
++
+Enables configuration of arbitrary cookies with any values build from available subject information (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
+
+.Cookie finalizer configuration
+====
+[source, yaml]
+----
+id: foo
+type: cookies
+config:
+  cookies:
+    user_id_cookie: '{{ quote .Subject.ID }}'
+    user_email_cookie: '{{ index .Subject.Attributes "email" | quote }}'
+----
+====
+
+== JWT
+
+This finalizer enables transformation of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object into a token in a https://www.rfc-editor.org/rfc/rfc7519[JWT] format, which is then made available to your upstream service in either the HTTP `Authorization` header with `Bearer` scheme set, or in a custom header. In addition to setting the JWT specific claims, it allows setting custom claims as well. Your upstream service can then verify the signature of the JWT by making use of heimdall's JWKS endpoint to retrieve the required public keys/certificates from.
+
+To enable the usage of this finalizer, you have to set the `type` property to `jwt`.
+
+NOTE: The usage of this finalizer type requires a configured link:{{< relref "/docs/operations/security.adoc#_signatures" >}}[Signer] as well. At least it is a must in production environments.
+
+Configuration using the `config` property is optional. Following properties are available:
+
+* *`claims`*: _string_ (optional, overridable)
++
+Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
+
+* *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
++
+Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets the `iat` and the `nbf` claims to the current system time. The value of the `exp` claim is then influenced by the `ttl` property.
+
+* *`header`*: _object_ (optional, not overridable)
++
+Defines the `name` and `scheme` to be used for the header. Defaults to `Authorization` with scheme `Bearer`. If defined, the `name` property must be set. If `scheme` is not defined, no scheme will be prepended to the resulting JWT.
+
+The generated JWT is always cached until 5 seconds before its expiration. The cache key is calculated from the entire configuration of the finalizer instance and the available information about the current subject.
+
+.JWT finalizer configuration
+====
+[source, yaml]
+----
+id: jwt_finalizer
+type: jwt
+config:
+  ttl: 5m
+  header:
+    name: X-Token
+  claims: |
+    {
+      {{ $user_name := .Subject.Attributes.identity.user_name -}}
+      "email": {{ quote .Subject.Attributes.identity.email }},
+      "email_verified": {{ .Subject.Attributes.identity.email_verified }},
+      "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }}
+    }
+----
+====
+
+== OAuth2 Client Credentials
+
+This finalizer drives the https://www.rfc-editor.org/rfc/rfc6749#section-4.4[OAuth2 Client Credentials Grant] flow to obtain a token, which should be used for communication with the upstream service. By default, as long as not otherwise configured (see the options below), the obtained token is made available to your upstream service in the HTTP `Authorization` header with `Bearer` scheme set. Unlike the other finalizers, it does not have access to any objects created by the rule execution pipeline.
+
+To enable the usage of this finalizer, you have to set the `type` property to `oauth2_client_credentials`.
+
+Configuration using the `config` property is mandatory. Following properties are available:
+
+* *`token_url`*: _string_ (mandatory, not overridable)
++
+The token endpoint of the authorization server.
+
+* *`client_id`*: _string_ (mandatory, not overridable)
++
+The client identifier for heimdall.
+
+* *`client_secret`*: _string_ (mandatory, not overridable)
++
+The client secret for heimdall.
+
+* *`auth_method`*: _string_ (optional, not overridable)
++
+The authentication method to be used according to https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1[RFC 6749, Client Password]. Can be one of
+
+** `basic_auth` (default if `auth_method` is not set): With that authentication method, the `"application/x-www-form-urlencoded"` encoded values of `client_id` and `client_secret` are sent to the authorization server via the `Authorization` header using the `Basic` scheme.
+
+** `request_body`: With that authentication method the `client_id` and `client_secret` are sent in the request body together with the other parameters (e.g. `scopes`) defined by the flow.
++
+WARNING: Usage of `request_body` authentication method is not recommended and should be avoided.
+
+* *`scopes`*: _string array_ (optional, overridable)
++
+The scopes required for the access token.
+
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
++
+How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration inforation is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the entire `oauth2_client_credentials` configuration without considering the `header` property.
+
+* *`header`*: _object_ (optional, overridable)
++
+Defines the `name` and `scheme` to be used for the header. Defaults to `Authorization` with scheme `Bearer`. If defined, the `name` property must be set. If `scheme` is not defined, no scheme will be prepended to the resulting JWT.
+
+.OAuth2 Client Credentials finalizer configuration
+====
+[source, yaml]
+----
+id: get_token
+type: oauth2_client_credentials
+config:
+  cache_ttl: 5m
+  header:
+    name: X-Token
+    scheme: MyScheme
+  token_url: https://my-oauth-provider.com/token
+  client_id: my_client
+  client_secret: VerySecret!
+  auth_method: basic_auth
+  scopes:
+    - foo
+    - bar
+----
+====
