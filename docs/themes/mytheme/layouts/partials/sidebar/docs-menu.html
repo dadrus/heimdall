@@ -10,23 +10,26 @@
     <span>Quick search...</span>
   </button>
 </div>
-<ul class="nav flex-column">
+
+<nav id="SideBarToc">
+  <ul>
   {{ range (index .Site.Menus $section) -}}
-  <li class="nav-item">
+    <li>
     {{ $active := in $currentPage.RelPermalink .URL }}
     {{ if .HasChildren -}}
-    <strong class="d-md-block fs-6 pt-2">{{ .Title }}</strong>
-    <ul class="nav flex-column mb-2 ps-0">
+      <span>{{ .Title }}</span>
+      <ul>
       {{ range .Children -}}
-      <li class="nav-item">
+        <li>
         {{ $active := in $currentPage.RelPermalink .URL }}
-        <a class="nav-link {{ if $active }} link-primary fw-medium {{ else }} link-secondary {{ end }}" href="{{ .URL }}">{{ .Title }}</a>
-      </li>
+          <a class="{{ if $active }}active{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
+        </li>
       {{ end }}
-    </ul>
+      </ul>
     {{- else -}}
-    <a class="nav-link {{ if $active }} link-primary fw-medium {{ else }} link-secondary {{ end }}"  href="{{ .URL }}">{{- .Title -}}</a>
+      <a class="{{ if $active }}active{{ end }}" href="{{ .URL }}">{{- .Title -}}</a>
     {{- end -}}
-  </li>
+    </li>
   {{ end }}
-</ul>
+  </ul>
+</nav>

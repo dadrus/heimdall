@@ -1,21 +1,11 @@
 {{- define "main" -}}
-<nav class="offcanvas offcanvas-start" tabindex="-1" id="docsMenuContent" data-bs-scroll="true" aria-labelledby="docsMenuContentLabel">
-  <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="docsMenuContentLabel">Browse docs</h5>
-    <button type="button" class="btn btn-close" data-bs-dismiss="offcanvas" aria-label="Close docs menu"></button>
-  </div>
-  <div class="offcanvas-body">
-    {{ partial "sidebar/docs-menu.html" . }}
-  </div>
-</nav>
-
 <div class="container-xxl docs-layout px-4">
   <aside class="d-none pe-3 docs-sidebar">
     {{ partial "sidebar/docs-menu.html" . }}
   </aside>
 
   <main class="docs-main">
-    <div class="docs-intro pt-3">
+    <div class="docs-intro pt-3 pe-3">
       <h1>{{ .Title }}</h1>
       <p>{{ .Description }}</p>
     </div>

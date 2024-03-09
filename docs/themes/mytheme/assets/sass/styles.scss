@@ -288,7 +288,42 @@ doc-version-select {
   }
 }
 
-.docs-sidebar { grid-area: sidebar; }
+.docs-sidebar {
+  grid-area: sidebar;
+
+  nav {
+
+    span {
+      display: block;
+      font-size: 1rem;
+      padding-top: .5rem;
+      padding-bottom: .5rem;
+      font-weight: bolder;
+    }
+
+    ul {
+        padding-left: 0;
+        margin-bottom: .5rem;
+        list-style: none;
+    }
+
+    a {
+      display: block;
+      padding: .125rem 0 .125rem .75rem;
+      color: inherit;
+      text-decoration: none;
+      border-left: .125rem solid transparent;
+
+      &:hover {
+        color: var(--bs-link-color);
+      }
+      &.active {
+        color: var(--bs-link-color);
+        font-weight: 500;
+      }
+    }
+  }
+}
 .docs-main { grid-area: main; }
 
 .docs-intro { grid-area: intro; }

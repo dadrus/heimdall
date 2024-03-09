@@ -8,9 +8,20 @@
         <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
       </svg>
     </button>
+
+    <nav class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="docsMenuContent" data-bs-scroll="true" aria-labelledby="docsMenuContentLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="docsMenuContentLabel">Browse docs</h5>
+        <button type="button" class="btn btn-close" data-bs-dismiss="offcanvas" aria-label="Close docs menu"></button>
+      </div>
+      <div class="offcanvas-body docs-sidebar">
+        {{ partial "sidebar/docs-menu.html" . }}
+      </div>
+    </nav>
+
     {{ end }}
     <div class="d-flex align-items-center px-4">
-      <a class="navbar-brand navbar-brand-highlight text-white me-0 {{- if .IsHome -}} active {{- end -}}" href="{{ .Site.Home.RelPermalink }}" style="font-weight: 500; font-size: 1.5rem;">
+      <a class="navbar-brand navbar-brand-highlight text-white me-0 {{ if .IsHome -}} active {{ end }}" href="{{ .Site.Home.RelPermalink }}" style="font-weight: 500; font-size: 1.5rem;">
       {{ .Site.Title }}
     </a>
       <ul class="navbar-nav d-none d-md-flex ms-3">
