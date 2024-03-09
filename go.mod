@@ -77,7 +77,7 @@ require (
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240221002015-b0ce06bbee7c
 	google.golang.org/grpc v1.62.1
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.29.2
 	k8s.io/apimachinery v0.29.2
