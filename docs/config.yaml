@@ -53,10 +53,6 @@ menu:
       url: docs/getting_started/discover_heimdall
       weight: 100
 
-    - identifier: guides
-      title: Integration Guides
-      weight: 400
-
 frontmatter:
   date:
     - date
