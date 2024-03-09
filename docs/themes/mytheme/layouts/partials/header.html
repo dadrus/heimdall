@@ -1,32 +1,72 @@
 <header class="navbar navbar-expand-md navbar-dark bg-dark sticky-top">
-  <nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation">
-    <a class="navbar-brand navbar-brand-highlight text-white {{- if .IsHome -}} active {{- end -}}" href="{{ .Site.Home.RelPermalink }}" style="font-weight: 500; font-size: 1.5rem;">
-      {{ .Site.Title }}
-    </a>
+  <nav class="container-xxl flex-wrap flex-lg-nowrap px-0" aria-label="Main navigation">
     {{ if not .IsHome }}
-    <button class="d-md-none navbar-toggler mw-25" type="button" data-bs-toggle="collapse"
-      data-bs-target="#docsMenuContent" aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
-      <span class="navbar-toggler-icon"></span>
+    <button class="btn btn-outline-dark d-lg-none navbar-toggler border-0 shadow-none ps-3" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#docsMenuContent"
+            aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
+      </svg>
     </button>
     {{ end }}
+    <div class="d-flex align-items-center px-4">
+      <a class="navbar-brand navbar-brand-highlight text-white me-0 {{- if .IsHome -}} active {{- end -}}" href="{{ .Site.Home.RelPermalink }}" style="font-weight: 500; font-size: 1.5rem;">
+      {{ .Site.Title }}
+    </a>
+      <ul class="navbar-nav d-none d-md-flex ms-3">
+      {{ $currentPage := . }}
+      {{- range .Site.Menus.main.ByWeight -}}
+      {{ if .HasChildren }}
+      <li class="nav-item dropdown">
+        <a class='nav-link dropdown-toggle text-white{{- if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }} active {{ end -}}'
+           href="#" id="{{ .Title }}-navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="align-self: center">
+          {{ .Title }}
+        </a>
 
-    <div class="d-flex order-2">
-      <button class="navbar-toggler" type="button"
+        <ul class="dropdown-menu bg-dark" aria-labelledby="{{ .Title }}-navbarDropdown">
+          {{- range .Children }}
+          <li>
+            <a class='dropdown-item {{- if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }} active {{ end -}}'
+               href="{{ .URL }}">{{ .Title }}</a>
+          </li>
+          {{- end }}
+        </ul>
+      </li>
+      {{ else }}
+      <li class="nav-item">
+        <a class='nav-link text-white {{- if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }} active {{ end -}}'
+           href="{{ relURL .URL }}">
+          {{ .Title }}
+        </a>
+      </li>
+      {{ end }}
+      {{ end }}
+    </ul>
+    </div>
+    <div class="d-flex">
+      {{ if not .IsHome }}
+      <button type="button" class="btn btn-outline-dark navbar-toggler border-0 shadow-none" data-bs-toggle="modal" data-bs-target="#docSearch"
+              aria-controls="docSearch" aria-expanded="false" aria-label="Open search">
+        <span class="bi bi-search"></span>
+      </button>
+      {{ end }}
+
+      <button class="btn btn-outline-dark navbar-toggler border-0 shadow-none pe-3" type="button"
               data-bs-toggle="offcanvas" data-bs-target="#mainMenuContent"
               aria-controls="mainMenuContent" aria-expanded="false" aria-label="Open main menu">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots"
-          viewBox="0 0 16 16">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-three-dots"
+             viewBox="0 0 16 16">
           <path
-            d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3" />
+                  d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3" />
         </svg>
       </button>
       <div class="offcanvas offcanvas-end bg-dark" tabindex="-1" id="mainMenuContent" data-bs-scroll="true" aria-labelledby="mainMenuContentLabel">
         <div class="offcanvas-header">
           <h5 class="offcanvas-title text-white" id="mainMenuContentLabel">{{ .Site.Title }}</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close main menu"></button>
+          <button type="button" class="btn btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close main menu"></button>
         </div>
         <div class="offcanvas-body">
-          <ul class="navbar-nav flex-column flex-md-row">
+          <ul class="navbar-nav flex-column d-md-none d-lg-none d-xl-none">
             {{ $currentPage := . }}
             {{- range .Site.Menus.main.ByWeight -}}
             {{ if .HasChildren }}
@@ -54,7 +94,7 @@
             </li>
             {{ end }}
             {{ end }}
-            </ul>
+          </ul>
           <hr class="text-white-50 d-md-none">
           <ul class="navbar-nav flex-column ms-auto">
             <doc-version-select class="nav-item dropdown"
@@ -68,7 +108,7 @@
           </ul>
           {{ if .Site.Params.github }}
           <ul class="navbar-nav flex-column">
-            <li class="nav-item mb-1">
+            <li class="nav-item mb-1 pe-4">
               <a class="nav-link text-white" style="align-self: center"
                  href="https://github.com/{{.Site.Params.github.user}}/{{.Site.Params.github.project}}">
                 <svg xmlns="http://www.w3.org/2000/svg" role="img" width="20" height="20" fill="currentColor"
@@ -84,13 +124,6 @@
           {{ end }}
         </div>
       </div>
-
-      {{ if not .IsHome }}
-      <button type="button" class="navbar-toggler" data-bs-toggle="modal" data-bs-target="#docSearch"
-        aria-controls="docSearch" aria-expanded="false" aria-label="Open search">
-        <span class="bi bi-search"></span>
-      </button>
-      {{ end }}
     </div>
   </nav>
 </header>
@@ -100,7 +133,7 @@
               path-prefix="{{ .Site.Params.path_prefix }}">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-          <div class="modal-header">
+          <div class="modal-header p-2">
             <div class="input-group">
               <div class="input-group-text bg-body border-0 fs-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search text-secondary my-0" viewBox="0 0 16 16">

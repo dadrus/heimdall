@@ -1,41 +1,47 @@
 {{- define "main" -}}
-<nav class="navbar navbar-expand-lg" aria-label="Docs menu">
-  <div class="container-xxl">
-    <div class="row d-md-none">
-      <div class="col-2 collapse navbar-collapse" id="docsMenuContent">
-        {{ partial "sidebar/docs-menu.html" . }}
-      </div>
-    </div>
+<nav class="offcanvas offcanvas-start" tabindex="-1" id="docsMenuContent" data-bs-scroll="true" aria-labelledby="docsMenuContentLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="docsMenuContentLabel">Browse docs</h5>
+    <button type="button" class="btn btn-close" data-bs-dismiss="offcanvas" aria-label="Close docs menu"></button>
+  </div>
+  <div class="offcanvas-body">
+    {{ partial "sidebar/docs-menu.html" . }}
   </div>
 </nav>
 
-<div class="container-md d-md-flex container-xxl d-xxl-flex">
-  <aside class="d-none d-md-block pe-4 flex-xxl-shrink-0 docs-side-toc">
+<div class="container-xxl docs-layout px-4">
+  <aside class="d-none pe-3 docs-sidebar">
     {{ partial "sidebar/docs-menu.html" . }}
   </aside>
 
-  <main class="container order-1">
-    <div class="row">
-      <article class="docs-content col-xl-10 col-md-12">
-        <h1>{{ .Title }}</h1>
-        <p>{{ .Description }}</p>
+  <main class="docs-main">
+    <div class="docs-intro pt-3">
+      <h1>{{ .Title }}</h1>
+      <p>{{ .Description }}</p>
+    </div>
 
-        {{ if .TableOfContents }}
-        <button class="btn btn-outline-secondary text-decoration-none d-xl-none collapsed" type="button" data-bs-toggle="collapse"
-                data-bs-target="#page-content-toc-collapsible" aria-expanded="false" aria-controls="page-content-toc-collapsible">
-          On this page
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M3.646 9.146a.5.5 0 0 1 .708 0L8 12.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708m0-2.292a.5.5 0 0 0 .708 0L8 3.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708"/>
-          </svg>
-        </button>
-
-        <div id="page-content-toc-collapsible" class="mt-1 mb-3 d-xl-none collapse text-muted docs-page-toc">
-          <div class="card card-body">
-            {{ .TableOfContents }}
-          </div>
+    {{ if .TableOfContents }}
+    <aside class="text-muted docs-toc">
+      <strong class="d-md-block h6 pb-2 my-2 ms-2 border-bottom d-none d-md-none d-lg-block">On this page</strong>
+      <div id="page-content-toc" class="mt-1 mb-3 text-muted d-none d-md-none d-lg-block docs-toc-content">
+        {{ .TableOfContents }}
+      </div>
+      <button class="btn btn-outline-secondary text-decoration-none d-lg-none collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#page-content-toc-collapsible" aria-expanded="false" aria-controls="page-content-toc-collapsible">
+        On this page
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M3.646 9.146a.5.5 0 0 1 .708 0L8 12.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708m0-2.292a.5.5 0 0 0 .708 0L8 3.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708"/>
+        </svg>
+      </button>
+      <div id="page-content-toc-collapsible" class="mt-1 mb-3 text-muted d-lg-none collapse docs-toc-content">
+        <div class="card card-body">
+          {{ .TableOfContents }}
         </div>
-        {{ end }}
+      </div>
+    </aside>
+    {{ end }}
 
+    <div class="docs-content pe-3">
         <div data-bs-spy="scroll" data-bs-target="#page-content-toc" class="mt-3">
           <linkable-headline-area>
             {{ .Content }}
@@ -43,15 +49,7 @@
         </div>
         {{ partial "last-updated-info.html" . }}
         {{ partial "bottom-navigation.html" . }}
-      </article>
-
-      {{ if .TableOfContents }}
-      <aside id="page-content-toc" class="docs-page-toc text-muted d-none d-md-block col-xl-2">
-        <strong class="d-md-block h6 pb-2 my-2 ms-2 border-bottom">On this page</strong>
-        {{ .TableOfContents }}
-      </aside>
-      {{ end }}
-    </div>
+      </div>
   </main>
 </div>
 {{ end }}

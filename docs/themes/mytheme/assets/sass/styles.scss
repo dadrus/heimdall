@@ -83,6 +83,9 @@ div[id] {
 }
 
 .listingblock {
+  overflow-y: scroll;
+  word-break: break-word;
+
   pre {
     border-radius: .4rem;
     padding: .75rem;
@@ -128,9 +131,16 @@ div[id] {
 
 p {
   code {
-    //background-color: #f8f8f8;
-    //padding: .2rem .5rem;
-    color: #f92672; //#6610f2; //#f92672;
+    color: #f92672;
+  }
+}
+
+pre {
+  code {
+    display: block;
+    max-width: 30rem;
+    overflow-wrap: break-word;
+    word-break: break-all;
   }
 }
 
@@ -261,8 +271,6 @@ doc-version-select {
     margin-left: 0.5rem;
     text-decoration: none;
     color: black;
-    //font-size: 0.8em;
-    // align-self: center;
   }
 
   &:hover {
@@ -280,11 +288,14 @@ doc-version-select {
   }
 }
 
-  .navbar-brand-highlight {
-    order: 1;
-  }
+.docs-sidebar { grid-area: sidebar; }
+.docs-main { grid-area: main; }
 
-.docs-page-toc {
+.docs-intro { grid-area: intro; }
+.docs-toc { grid-area: toc; }
+.docs-content { grid-area: content; }
+
+.docs-toc-content {
   nav {
     font-size: .875rem;
 
@@ -326,33 +337,32 @@ doc-version-select {
   max-width: 75%;
 }
 
+// breakpoint sm
 @media (min-width: 576px) {
   linkable-headline-area .gridcol {
     width: calc(100% / 2 - 0.5rem);
   }
 }
 
+// breakpoint md
 @media (min-width: 768px) {
-  linkable-headline-area .gridcol {
-    width: calc(100% / 3 - 0.5rem);
+  .docs-layout {
+    display: grid;
+    grid-template-areas: "sidebar main";
+    grid-template-columns: 2fr 9fr;
+    gap: 1.5rem;
   }
 
-  .navbar-brand-highlight {
-    order: 0;
+  .docs-main {
+    display: grid;
+    grid-template-areas:
+          "intro"
+          "toc"
+          "content";
+    grid-template-rows: auto;
   }
 
-  .listingblock {
-    max-width: 32rem;
-  }
-}
-
-@media (min-width: 993px) {
-  linkable-headline-area .gridcol {
-    flex: none;
-    width: calc(100% / 4 - 0.5rem);
-  }
-
-  .docs-side-toc {
+  .docs-sidebar {
     position: sticky;
     top: 5rem;
     display: block !important;
@@ -360,6 +370,7 @@ doc-version-select {
     padding-left: .25rem;
     margin-left: -.25rem;
     overflow-y: auto;
+    min-width: 13rem;
 
     .docs-search-button {
       position: sticky;
@@ -370,13 +381,23 @@ doc-version-select {
     }
   }
 
-  .listingblock {
-    max-width: 44rem;
+  linkable-headline-area .gridcol {
+    width: calc(100% / 3 - 0.5rem);
   }
 }
 
-@media (min-width: 1200px) {
-  .docs-page-toc {
+// breakpoot lg
+@media (min-width: 992px) {
+  .docs-main {
+    display: grid;
+    grid-template-areas:
+          "intro   toc"
+          "content toc";
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 5fr 1fr;
+  }
+
+  .docs-toc {
     position: sticky;
     top: 5rem;
     right: 0;
@@ -385,8 +406,9 @@ doc-version-select {
     height: calc(100vh - 7rem);
   }
 
-  .listingblock {
-    max-width: 53rem;
+  linkable-headline-area .gridcol {
+    flex: none;
+    width: calc(100% / 4 - 0.5rem);
   }
 }
 
