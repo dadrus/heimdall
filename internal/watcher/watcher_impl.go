@@ -109,6 +109,6 @@ func (w *watcher) fireOnChange(evt fsnotify.Event) {
 	w.mut.Unlock()
 
 	for _, listener := range listeners {
-		go listener.OnChanged(w.l)
+		go listener.OnChanged(w.l.Level(zerolog.InfoLevel))
 	}
 }
