@@ -57,5 +57,4 @@ func decodeCredentialsHookFunc(from reflect.Type, to reflect.Type, data any) (an
 	}
 
 	return &staticCredentials{Username: username, Password: password}, nil
-
 }
