@@ -62,19 +62,28 @@ All Redis cache backend types support the following configuration options:
 
 * *`credentials`*: _Credentials_ (optional)
 +
-Herewith you can define the credentials to be used for connection purposes. This property can either contain a
+Herewith you can define the credentials to be used for connection purposes. Following settings are possible
 
 ** *`path`*: _string_ (mandatory)
 +
-which can be used to specify a path to a file with credentials, or
+Path to a JSON/YAML file with credentials (supports watching for secrets rotation) specifying the `username` and `password` as shown below.
++
+[source, yaml]
+----
+# contents of a credentials file
+username: Aladdin
+password: SesameOpen!
+----
++
+If used no other properties can be configured for credentials.
 
 ** *`username`*: _string_(optional)
 +
-the username to use to connect to the Redis DB/Cluster, and
+The username to use to connect to the Redis DB/Cluster, and
 
 ** *`password`*: _string_(mandatory)
 +
-the password to be used
+The password to be used
 
 * *`client_cache`*: _ClientCache_ (optional)
 +
@@ -124,6 +133,33 @@ TLS settings. By default, the communication to Redis happens over TLS. This requ
 +
 Disables TLS. Defaults to `false`.
 
+Here an example:
+
+[source, yaml]
+----
+credentials:
+  path: /path/to/credentials.yaml
+
+client_cache:
+  ttl: 10m
+  size_per_connection: 128MB
+
+buffer_limit:
+  read: 1MB
+  write: 1MB
+
+timeout:
+  write: 150s
+
+max_flush_delay: 20us
+
+tls:
+  key_store:
+    path: /path/to/keystore/file.pem
+    password: VerySecret!
+  min_version: TLS1.2
+----
+
 === Redis Single Instance
 
 As the name implies, this type supports configuration of a single instance Redis DB.
@@ -146,7 +182,22 @@ cache:
   type: redis
   config:
     address: foo:12345
-    db: 0
+    credentials:
+      path: /path/to/credentials.yaml
+    client_cache:
+      ttl: 10m
+      size_per_connection: 128MB
+    buffer_limit:
+      read: 1MB
+      write: 1MB
+    timeout:
+      write: 150s
+    max_flush_delay: 20us
+    tls:
+      key_store:
+        path: /path/to/keystore/file.pem
+        password: {MY_REDIS_CLIENT_KEYSTORE}
+      min_version: TLS1.2
 ----
 
 === Redis Cluster
@@ -169,6 +220,9 @@ cache:
     nodes:
     - foo:1234
     - bar:1234
+    credentials:
+      username: {MY-REDIS-USER}
+      password: {MY-REDIS-PASSWORD}
 ----
 
 === Redis Sentinel
