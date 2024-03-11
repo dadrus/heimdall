@@ -119,7 +119,8 @@ func (s *jwtSigner) load(logger zerolog.Logger) error {
 	}
 
 	if err != nil {
-		return err
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
+			CausedBy(err)
 	}
 
 	if len(s.keyID) == 0 {
@@ -129,7 +130,8 @@ func (s *jwtSigner) load(logger zerolog.Logger) error {
 	}
 
 	if err != nil {
-		return err
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed retrieving key from key store").CausedBy(err)
 	}
 
 	if len(kse.CertChain) != 0 {
