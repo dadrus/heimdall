@@ -39,6 +39,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -304,7 +305,8 @@ func TestNewJWTSigner(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			signer, err := NewJWTSigner(&config.Configuration{Signer: tc.config}, log.Logger, nil)
+			wm := mocks.NewWatcherMock(t)
+			signer, err := NewJWTSigner(&config.Configuration{Signer: tc.config}, log.Logger, wm)
 
 			// THEN
 			var (
@@ -318,6 +320,7 @@ func TestNewJWTSigner(t *testing.T) {
 			}
 
 			tc.assert(t, err, impl)
+			wm.AssertExpectations(t)
 		})
 	}
 }
@@ -511,4 +514,93 @@ func TestJwtSignerKeys(t *testing.T) {
 
 	assert.Equal(t, "PS256", keys[0].Algorithm)
 	assert.Equal(t, "ES256", keys[1].Algorithm)
+}
+
+func TestJWTSignerOnChanged(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	testDir := t.TempDir()
+
+	privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	cert1, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "test cert 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSelfSigned(),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
+		testsupport.WithSignaturePrivKey(privKey1)).
+		Build()
+	require.NoError(t, err)
+
+	cert2, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "test cert 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithSubjectPubKey(&privKey2.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSelfSigned(),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
+		testsupport.WithSignaturePrivKey(privKey2)).
+		Build()
+	require.NoError(t, err)
+
+	pemBytes1, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key1")),
+		pemx.WithX509Certificate(cert1),
+	)
+	require.NoError(t, err)
+
+	pemBytes2, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey2, pemx.WithHeader("X-Key-ID", "key1")),
+		pemx.WithX509Certificate(cert2),
+	)
+	require.NoError(t, err)
+
+	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
+	require.NoError(t, err)
+
+	_, err = pemFile.Write(pemBytes1)
+	require.NoError(t, err)
+
+	signer := &jwtSigner{path: pemFile.Name(), keyID: "key1"}
+	err = signer.load(log.Logger)
+	require.NoError(t, err)
+
+	require.Equal(t, cert1, signer.jwk.Certificates[0])
+	require.Equal(t, privKey1, signer.key)
+
+	// WHEN
+	_, err = pemFile.Seek(0, 0)
+	require.NoError(t, err)
+
+	_, err = pemFile.Write(pemBytes2)
+	require.NoError(t, err)
+
+	signer.OnChanged(log.Logger)
+
+	// THEN
+	require.Equal(t, cert2, signer.jwk.Certificates[0])
+	require.Equal(t, privKey2, signer.key)
+
+	// WHEN
+	err = os.Truncate(pemFile.Name(), 0)
+	require.NoError(t, err)
+
+	signer.OnChanged(log.Logger)
+
+	// THEN
+	require.Equal(t, cert2, signer.jwk.Certificates[0])
+	require.Equal(t, privKey2, signer.key)
 }
