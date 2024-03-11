@@ -23,6 +23,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -30,10 +31,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -77,13 +80,18 @@ func TestToTLSConfig(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc         string
-		conf       config.TLS
+		conf       func(t *testing.T, wm *mocks.WatcherMock) config.TLS
 		serverAuth bool
 		clientAuth bool
 		assert     func(t *testing.T, err error, conf *tls.Config)
 	}{
 		{
 			uc: "empty config",
+			conf: func(t *testing.T, _ *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				return config.TLS{}
+			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
 
@@ -100,7 +108,11 @@ func TestToTLSConfig(t *testing.T) {
 		{
 			uc:         "fails due to not existent key store for TLS usage",
 			serverAuth: true,
-			conf:       config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
+			conf: func(t *testing.T, _ *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				return config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}}
+			},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
 
@@ -112,10 +124,14 @@ func TestToTLSConfig(t *testing.T) {
 		{
 			uc:         "fails due to not existent key for the given key id for TLS usage",
 			serverAuth: true,
-			conf: config.TLS{
-				KeyStore:   config.KeyStore{Path: pemFile.Name()},
-				KeyID:      "foo",
-				MinVersion: tls.VersionTLS12,
+			conf: func(t *testing.T, _ *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				return config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					KeyID:      "foo",
+					MinVersion: tls.VersionTLS12,
+				}
 			},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
@@ -128,10 +144,14 @@ func TestToTLSConfig(t *testing.T) {
 		{
 			uc:         "fails due to not present certificates for the given key id",
 			serverAuth: true,
-			conf: config.TLS{
-				KeyStore:   config.KeyStore{Path: pemFile.Name()},
-				KeyID:      "key2",
-				MinVersion: tls.VersionTLS12,
+			conf: func(t *testing.T, _ *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				return config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					KeyID:      "key2",
+					MinVersion: tls.VersionTLS12,
+				}
 			},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
@@ -142,11 +162,37 @@ func TestToTLSConfig(t *testing.T) {
 			},
 		},
 		{
+			uc:         "fails due to failing watcher registration",
+			serverAuth: true,
+			conf: func(t *testing.T, wm *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(errors.New("test error"))
+
+				return config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					MinVersion: tls.VersionTLS12,
+				}
+			},
+			assert: func(t *testing.T, err error, _ *tls.Config) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "test error")
+			},
+		},
+		{
 			uc:         "successful with default key for TLS server auth",
 			serverAuth: true,
-			conf: config.TLS{
-				KeyStore:   config.KeyStore{Path: pemFile.Name()},
-				MinVersion: tls.VersionTLS12,
+			conf: func(t *testing.T, wm *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					MinVersion: tls.VersionTLS12,
+				}
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -164,9 +210,15 @@ func TestToTLSConfig(t *testing.T) {
 		{
 			uc:         "successful with default key for TLS client auth",
 			clientAuth: true,
-			conf: config.TLS{
-				KeyStore:   config.KeyStore{Path: pemFile.Name()},
-				MinVersion: tls.VersionTLS12,
+			conf: func(t *testing.T, wm *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					MinVersion: tls.VersionTLS12,
+				}
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -184,10 +236,16 @@ func TestToTLSConfig(t *testing.T) {
 		{
 			uc:         "successful with specified key id for TLS server auth",
 			serverAuth: true,
-			conf: config.TLS{
-				KeyStore:   config.KeyStore{Path: pemFile.Name()},
-				KeyID:      "key1",
-				MinVersion: tls.VersionTLS12,
+			conf: func(t *testing.T, wm *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					KeyID:      "key1",
+					MinVersion: tls.VersionTLS12,
+				}
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -205,10 +263,16 @@ func TestToTLSConfig(t *testing.T) {
 		{
 			uc:         "successful with specified key id for TLS client auth",
 			clientAuth: true,
-			conf: config.TLS{
-				KeyStore:   config.KeyStore{Path: pemFile.Name()},
-				KeyID:      "key1",
-				MinVersion: tls.VersionTLS12,
+			conf: func(t *testing.T, wm *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					KeyID:      "key1",
+					MinVersion: tls.VersionTLS12,
+				}
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -226,17 +290,21 @@ func TestToTLSConfig(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// WHEN
-			tlsCfg := tc.conf
+			wm := mocks.NewWatcherMock(t)
+
+			tlsCfg := tc.conf(t, wm)
 
 			conf, err := ToTLSConfig(
 				&tlsCfg,
 				WithServerAuthentication(tc.serverAuth),
 				WithClientAuthentication(tc.clientAuth),
-				WithSecretsWatcher(nil),
+				WithSecretsWatcher(wm),
 			)
 
 			// THEN
 			tc.assert(t, err, conf)
+
+			wm.AssertExpectations(t)
 		})
 	}
 }
