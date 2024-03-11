@@ -218,6 +218,9 @@ func readPEMContents(data []byte) []*pem.Block {
 	)
 
 	next := data
+	if len(next) == 0 {
+		return blocks
+	}
 
 	for {
 		block, next = pem.Decode(next)

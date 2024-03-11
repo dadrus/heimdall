@@ -14,11 +14,32 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package watcher
+package tlsx
 
-import "context"
+import "github.com/dadrus/heimdall/internal/watcher"
 
-type controller interface {
-	start(ctx context.Context)
-	stop(ctx context.Context) error
+type options struct {
+	serverAuthRequired bool
+	clientAuthRequired bool
+	secretsWatcher     watcher.Watcher
+}
+
+type Option func(*options)
+
+func WithServerAuthentication(flag bool) Option {
+	return func(o *options) {
+		o.serverAuthRequired = flag
+	}
+}
+
+func WithClientAuthentication(flag bool) Option {
+	return func(o *options) {
+		o.clientAuthRequired = flag
+	}
+}
+
+func WithSecretsWatcher(cw watcher.Watcher) Option {
+	return func(o *options) {
+		o.secretsWatcher = cw
+	}
 }

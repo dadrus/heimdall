@@ -148,7 +148,7 @@ func TestNewListener(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no tls server key and certificate")
+				assert.Contains(t, err.Error(), "no path to tls key store")
 			},
 		},
 		{
@@ -179,7 +179,7 @@ func TestNewListener(t *testing.T) {
 			tc.serviceConf.Port = port
 
 			// WHEN
-			ln, err := New(tc.network, tc.serviceConf.Address(), tc.serviceConf.TLS)
+			ln, err := New(tc.network, tc.serviceConf.Address(), tc.serviceConf.TLS, nil)
 
 			// THEN
 			defer func() {

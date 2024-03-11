@@ -71,15 +71,13 @@ func (w *watcher) startWatching() {
 	}
 }
 
-func (w *watcher) Start(_ context.Context) error {
+func (w *watcher) start(_ context.Context) {
 	w.l.Debug().Msg("Starting watching config files for changes")
 
 	go w.startWatching()
-
-	return nil
 }
 
-func (w *watcher) Stop(_ context.Context) error {
+func (w *watcher) stop(_ context.Context) error {
 	w.l.Debug().Msg("Stopping watching config files for changes")
 
 	return w.w.Close()
@@ -92,7 +90,8 @@ func (w *watcher) Add(path string, cl ChangeListener) error {
 	list, ok := w.m[path]
 	if !ok {
 		if err := w.w.Add(path); err != nil {
-			return err
+			return errorchain.NewWithMessage(heimdall.ErrInternal,
+				"registration of file change listener failed").CausedBy(err)
 		}
 
 		w.m[path] = []ChangeListener{cl}

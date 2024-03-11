@@ -24,7 +24,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
 
 type conn struct {
@@ -89,7 +91,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	return &conn{Conn: con}, nil
 }
 
-func New(network, address string, tlsConf *config.TLS) (net.Listener, error) {
+func New(network, address string, tlsConf *config.TLS, cw watcher.Watcher) (net.Listener, error) {
 	listnr, err := net.Listen(network, address)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating listener").
@@ -99,21 +101,19 @@ func New(network, address string, tlsConf *config.TLS) (net.Listener, error) {
 	wrapped := &listener{Listener: listnr}
 
 	if tlsConf != nil {
-		return newTLSListener(tlsConf, wrapped)
+		return newTLSListener(tlsConf, wrapped, cw)
 	}
 
 	return wrapped, nil
 }
 
-func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, error) {
-	cfg, err := tlsConf.TLSConfig()
+func newTLSListener(tlsConf *config.TLS, listener net.Listener, cw watcher.Watcher) (net.Listener, error) {
+	cfg, err := tlsx.ToTLSConfig(tlsConf,
+		tlsx.WithServerAuthentication(true),
+		tlsx.WithSecretsWatcher(cw),
+	)
 	if err != nil {
 		return nil, err
-	}
-
-	if len(cfg.Certificates) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"no tls server key and certificate available")
 	}
 
 	return tls.NewListener(listener, cfg), nil

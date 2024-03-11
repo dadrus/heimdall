@@ -908,7 +908,7 @@ Following are the supported TLS configuration properties:
 
 * *`key_store`*: _link:{{< relref "#_key_store" >}}[Key Store]_ (mandatory)
 +
-The key store containing the cryptographic material. At least one private key and the corresponding certificate must be present.
+The key store containing the cryptographic material. At least one private key and the corresponding certificate must be present. Supports watching for secrets rotation.
 
 * *`key_id`*: _string_ (optional)
 +
