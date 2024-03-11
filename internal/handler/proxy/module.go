@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 var Module = fx.Invoke( // nolint: gochecknoglobals
@@ -43,6 +44,7 @@ func newLifecycleManager(
 	cch cache.Cache,
 	executor rule.Executor,
 	signer heimdall.JWTSigner,
+	cw watcher.Watcher,
 ) *fxlcm.LifecycleManager {
 	cfg := conf.Serve.Proxy
 
@@ -52,5 +54,6 @@ func newLifecycleManager(
 		Server:         newService(conf, cch, logger, executor, signer),
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
+		FileWatcher:    cw,
 	}
 }

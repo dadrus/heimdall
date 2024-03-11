@@ -123,7 +123,7 @@ func (suite *ServiceTestSuite) SetupTest() {
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
 
-	listener, err := listener.New("tcp", conf.Serve.Management.Address(), conf.Serve.Management.TLS)
+	listener, err := listener.New("tcp", conf.Serve.Management.Address(), conf.Serve.Management.TLS, nil)
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()
 

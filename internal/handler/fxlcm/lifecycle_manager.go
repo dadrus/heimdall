@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 //go:generate mockery --name Server --structname ServerMock
@@ -41,10 +42,11 @@ type LifecycleManager struct {
 	Server         Server
 	Logger         zerolog.Logger
 	TLSConf        *config.TLS
+	FileWatcher    watcher.Watcher
 }
 
 func (m *LifecycleManager) Start(_ context.Context) error {
-	ln, err := listener.New("tcp", m.ServiceAddress, m.TLSConf)
+	ln, err := listener.New("tcp", m.ServiceAddress, m.TLSConf, m.FileWatcher)
 	if err != nil {
 		m.Logger.Fatal().Err(err).Str("_service", m.ServiceName).Msg("Could not create listener")
 
