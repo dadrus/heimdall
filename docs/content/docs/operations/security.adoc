@@ -152,7 +152,7 @@ When configuring heimdall, there are many places requiring secrets, like passwor
 
 Usage of external files can even allow you to rotate the configured secrets without the need to restart heimdall. Watching for secrets rotation is however disabled by default and can be enabled by setting the `secrets_reload_enabled` property to `true` on the top level of heimdall's configuration.
 
-NOTE: Secret reloading is not supported at any places where secrets are used. Please consider the documentation of the corresponding configuration option for details.
+NOTE: As of today secret reloading is only supported for link:{{< relref "/docs/configuration/types.adoc#_key_store" >}}[key stores] and link:{{< relref "/docs/operations/cache.adoc#_common_settings" >}}[Redis cache backend credentials].
 
 == Verifying Heimdall Binaries and Container Images
 
