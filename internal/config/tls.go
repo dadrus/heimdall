@@ -18,10 +18,6 @@ package config
 
 import (
 	"crypto/tls"
-
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type TLSCipherSuites []uint16
@@ -65,49 +61,4 @@ type TLS struct {
 	KeyID        string          `koanf:"key_id"        mapstructure:"key_id"`
 	CipherSuites TLSCipherSuites `koanf:"cipher_suites" mapstructure:"cipher_suites"`
 	MinVersion   TLSMinVersion   `koanf:"min_version"   mapstructure:"min_version"`
-}
-
-func (t *TLS) TLSConfig() (*tls.Config, error) {
-	var eeCerts []tls.Certificate
-
-	if len(t.KeyStore.Path) != 0 { //nolint:nestif
-		ks, err := keystore.NewKeyStoreFromPEMFile(t.KeyStore.Path, t.KeyStore.Password)
-		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
-				CausedBy(err)
-		}
-
-		var entry *keystore.Entry
-
-		if len(t.KeyID) != 0 {
-			if entry, err = ks.GetKey(t.KeyID); err != nil {
-				return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"failed retrieving key from key store").CausedBy(err)
-			}
-		} else {
-			entry = ks.Entries()[0]
-		}
-
-		cert, err := entry.TLSCertificate()
-		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"key store entry is not suitable for TLS").CausedBy(err)
-		}
-
-		eeCerts = []tls.Certificate{cert}
-	}
-
-	// nolint:gosec
-	// configuration ensures, TLS versions below 1.2 are not possible
-	cfg := &tls.Config{
-		Certificates: eeCerts,
-		MinVersion:   t.MinVersion.OrDefault(),
-		NextProtos:   []string{"h2", "http/1.1"},
-	}
-
-	if cfg.MinVersion != tls.VersionTLS13 {
-		cfg.CipherSuites = t.CipherSuites.OrDefault()
-	}
-
-	return cfg, nil
 }
