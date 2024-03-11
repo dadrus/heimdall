@@ -92,7 +92,8 @@ func (w *watcher) Add(path string, cl ChangeListener) error {
 	list, ok := w.m[path]
 	if !ok {
 		if err := w.w.Add(path); err != nil {
-			return err
+			return errorchain.NewWithMessage(heimdall.ErrInternal,
+				"registration of file change listener failed").CausedBy(err)
 		}
 
 		w.m[path] = []ChangeListener{cl}
