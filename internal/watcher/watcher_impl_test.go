@@ -35,8 +35,8 @@ func TestWatcherLifeCycle(t *testing.T) {
 	cw, err := newWatcher(log.Logger)
 	require.NoError(t, err)
 
-	cw.Start(context.TODO())
-	defer cw.Stop(context.TODO())
+	cw.start(context.TODO())
+	defer cw.stop(context.TODO())
 
 	testDir := t.TempDir()
 	f1, err := os.Create(filepath.Join(testDir, "file1"))
