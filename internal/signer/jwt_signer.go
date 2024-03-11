@@ -64,7 +64,7 @@ func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger, fw watcher.
 		}
 	}
 
-	logger.Info().Str("_key_id", signer.keyID).Msg("Signer configured")
+	logger.Info().Msg("Signer configured")
 
 	return signer, nil
 }

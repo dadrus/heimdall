@@ -23,6 +23,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -34,6 +35,7 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -121,11 +123,16 @@ func TestNewJWTSigner(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		config config.SignerConfig
+		config func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig
 		assert func(t *testing.T, err error, signer *jwtSigner)
 	}{
 		{
 			uc: "without configuration",
+			config: func(t *testing.T, _ *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				return config.SignerConfig{}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -137,8 +144,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "no key id configured",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}},
+			uc: "no key id configured",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -151,8 +164,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with key id configured",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key2"},
+			uc: "with key id configured",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key2"}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -165,8 +184,12 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with error while retrieving key from key store",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "baz"},
+			uc: "with error while retrieving key from key store",
+			config: func(t *testing.T, _ *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "baz"}
+			},
 			assert: func(t *testing.T, err error, _ *jwtSigner) {
 				t.Helper()
 
@@ -175,8 +198,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with rsa 2048 key",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key1"},
+			uc: "with rsa 2048 key",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key1"}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -189,8 +218,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with rsa 3072 key",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key2"},
+			uc: "with rsa 3072 key",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key2"}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -203,8 +238,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with rsa 4096 key",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key3"},
+			uc: "with rsa 4096 key",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key3"}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -217,8 +258,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with P256 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key4"},
+			uc: "with P256 ecdsa key",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key4"}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -231,8 +278,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with P384 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key5"},
+			uc: "with P384 ecdsa key",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key5"}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -245,8 +298,14 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with P512 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key6"},
+			uc: "with P512 ecdsa key",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key6"}
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -259,8 +318,12 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with not existing key store",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: "/does/not/exist"}},
+			uc: "with not existing key store",
+			config: func(t *testing.T, _ *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				return config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: "/does/not/exist"}}
+			},
 			assert: func(t *testing.T, err error, _ *jwtSigner) {
 				t.Helper()
 
@@ -271,10 +334,14 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc: "with certificate, which cannot be used for signature due to missing key usage",
-			config: config.SignerConfig{
-				Name:     "foo",
-				KeyStore: config.KeyStore{Path: keyFile.Name()},
-				KeyID:    "missing_key_usage",
+			config: func(t *testing.T, _ *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				return config.SignerConfig{
+					Name:     "foo",
+					KeyStore: config.KeyStore{Path: keyFile.Name()},
+					KeyID:    "missing_key_usage",
+				}
 			},
 			assert: func(t *testing.T, err error, _ *jwtSigner) {
 				t.Helper()
@@ -286,10 +353,16 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc: "with self-signed certificate usable for JWT signing",
-			config: config.SignerConfig{
-				Name:     "foo",
-				KeyStore: config.KeyStore{Path: keyFile.Name()},
-				KeyID:    "self_signed",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return config.SignerConfig{
+					Name:     "foo",
+					KeyStore: config.KeyStore{Path: keyFile.Name()},
+					KeyID:    "self_signed",
+				}
 			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
@@ -302,11 +375,31 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, string(jose.ES512), signer.jwk.Algorithm)
 			},
 		},
+		{
+			uc: "fails due to error while registering with file watcher",
+			config: func(t *testing.T, wm *mocks.WatcherMock) config.SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(errors.New("test error"))
+
+				return config.SignerConfig{
+					Name:     "foo",
+					KeyStore: config.KeyStore{Path: keyFile.Name()},
+					KeyID:    "self_signed",
+				}
+			},
+			assert: func(t *testing.T, err error, _ *jwtSigner) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "test error")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
 			wm := mocks.NewWatcherMock(t)
-			signer, err := NewJWTSigner(&config.Configuration{Signer: tc.config}, log.Logger, wm)
+			signer, err := NewJWTSigner(&config.Configuration{Signer: tc.config(t, wm)}, log.Logger, wm)
 
 			// THEN
 			var (
