@@ -48,11 +48,11 @@ NOTE: By default, heimdall makes use of this backend.
 
 == Radis Backends
 
-As the name of this chapter implies, there are multiple backend types, you can configure to make use of Radis as distributed cache:
+As the name of this chapter implies, there are multiple backend types, you can configure to make use of https://redis.io/[Radis] as distributed cache:
 
-* a single instance,
-* a Redis cluster and
-* a Redis sentinel.
+* a link:{{< relref "#_redis_single_instance" >}}[Redis single instance],
+* a link:{{< relref "#_redis_cluster" >}}[Redis cluster] and
+* a link:{{< relref "#_redis_sentinel" >}}[Redis sentinel].
 
 All types use pipelining to increase performance and do also make use of client side caching if not disabled (see also below).
 
@@ -127,38 +127,11 @@ Data flush delay. When greater than zero, pauses pipeline write loop for some ti
 
 * *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
-TLS settings. By default, the communication to Redis happens over TLS. This requires however a properly configured truststore, as otherwise heimdall won't trust the certificates used by the Redis services. In addition to the referenced configuration options, you can also make use of the following properties:
+TLS settings. By default, the communication to Redis happens over TLS. This requires however a properly configured link:{{< relref "/docs/operations/security.adoc#_tls_trust_store" >}}[trust store], as otherwise heimdall won't trust the certificates used by the Redis services. In addition to the referenced configuration options, you can also make use of the following properties:
 
 ** *`disabled`*: _boolean_ (optional)
 +
 Disables TLS. Defaults to `false`.
-
-Here an example:
-
-[source, yaml]
-----
-credentials:
-  path: /path/to/credentials.yaml
-
-client_cache:
-  ttl: 10m
-  size_per_connection: 128MB
-
-buffer_limit:
-  read: 1MB
-  write: 1MB
-
-timeout:
-  write: 150s
-
-max_flush_delay: 20us
-
-tls:
-  key_store:
-    path: /path/to/keystore/file.pem
-    password: VerySecret!
-  min_version: TLS1.2
-----
 
 === Redis Single Instance
 
@@ -170,7 +143,7 @@ To use it, you have to specify `redis` as type. Configuration is mandatory with 
 +
 The Redis instance address to connect to.
 
-* *`db`*: _int_ (optional)
+* *`db`*: _integer_ (optional)
 +
 Redis DB ID to use. Defaults to 0.
 
@@ -196,7 +169,7 @@ cache:
     tls:
       key_store:
         path: /path/to/keystore/file.pem
-        password: {MY_REDIS_CLIENT_KEYSTORE}
+        password: ${MY_REDIS_CLIENT_KEYSTORE}
       min_version: TLS1.2
 ----
 
@@ -221,8 +194,8 @@ cache:
     - foo:1234
     - bar:1234
     credentials:
-      username: {MY-REDIS-USER}
-      password: {MY-REDIS-PASSWORD}
+      username: ${MY_REDIS_USER}
+      password: ${MY_REDIS_PASSWORD}
 ----
 
 === Redis Sentinel
@@ -235,7 +208,7 @@ To use it, you have to specify `redis-sentinel` as type. Configuration is mandat
 +
 The addresses of Redis sentinel nodes to connect to.
 
-* *`db`*: _int_ (optional)
+* *`db`*: _integer_ (optional)
 +
 Redis DB ID to use. Defaults to 0.
 

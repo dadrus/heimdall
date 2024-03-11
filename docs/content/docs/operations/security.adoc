@@ -35,9 +35,9 @@ The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Gui
 
 Logs, metrics and profiling information is very valuable for operating heimdall. These are however also very valuable for any adversary. For this reason, the corresponding services, exposing such information are by default, if enabled, listening only on the loopback (`127.0.0.1`) interface. If you have to configure them to listen to other interfaces, e.g. because you operate heimdall in a container, make sure, you don't expose them publicly.
 
-== TLS
+== TLS Trust Store
 
-As documented in link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, the execution of heimdall's pipeline typically includes communication to other systems. The endpoints of the corresponding systems should be TLS protected. This is however actually out of scope for heimdall. What is in scope, is the verification of the used TLS server certificate, if TLS is used. This happens by making use of the operating system-wide trust store, containing the certificates of Root and Intermediate CAs (trust anchors) shipped with the OS. That means, you should
+As documented in link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, the execution of heimdall's pipeline typically includes communication to other systems. The endpoints of the corresponding systems should be TLS protected. This is however actually out of scope for heimdall. What is in scope, is the verification of the used TLS server certificate if TLS is used. This happens by making use of the operating system-wide trust store, containing the certificates of Root and Intermediate CAs (trust anchors) shipped with the OS. That means, you should
 
 1. ensure this trust store contains the certificates of the Root CAs of your PKI hierarchy and
 2. ensure the endpoints, heimdall communicates with over TLS, provide not only their own certificates, but also the intermediate certificates and cross certificates not included within the OS trust store
