@@ -293,8 +293,10 @@ func TestNewStandaloneCache(t *testing.T) {
 		},
 		{
 			uc: "successful cache creation with mutual TLS",
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
 				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
 
 				rootCertPool = x509.NewCertPool()
 				rootCertPool.AddCert(cert)

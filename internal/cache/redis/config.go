@@ -33,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
 
 // for test purposes only.
@@ -144,7 +145,10 @@ func (c baseConfig) clientOptions(cw watcher.Watcher) (rueidis.ClientOption, err
 	)
 
 	if !c.TLS.Disabled {
-		tlsCfg, err = c.TLS.TLSConfig()
+		tlsCfg, err = tlsx.ToTLSConfig(&c.TLS.TLS,
+			tlsx.WithClientAuthentication(len(c.TLS.KeyStore.Path) != 0),
+			tlsx.WithSecretsWatcher(cw),
+		)
 		if err != nil {
 			return rueidis.ClientOption{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed creating tls configuration for Redis client").CausedBy(err)
