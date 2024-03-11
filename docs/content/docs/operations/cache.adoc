@@ -167,6 +167,7 @@ cache:
       write: 150s
     max_flush_delay: 20us
     tls:
+      # TLS client auth is used here
       key_store:
         path: /path/to/keystore/file.pem
         password: ${MY_REDIS_CLIENT_KEYSTORE}
@@ -216,6 +217,8 @@ Redis DB ID to use. Defaults to 0.
 +
 Sentinel master set name
 
+NOTE: Same credentials are used to connect to the sentinel service and to the Redis DB instances. This is also true if TLS client authentication is used.
+
 Here an example:
 
 [source, yaml]
@@ -228,4 +231,6 @@ cache:
     - bar:1234
     db: 0
     master: whatever
+    credentials:
+      path: /path/to/credentials.yaml
 ----
