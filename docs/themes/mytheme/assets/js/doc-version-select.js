@@ -73,7 +73,7 @@ const linkList = (elements = [], currentVersion, currentPath) => {
     const linkItem = linkListItem(currentVersion, currentPath)
 
     return html(`
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu  bg-dark">
       ${linkItem(elements[0])}
       <li><hr class="dropdown-divider"></li>
       ${elements.slice(1).map(linkItem).sort(semanticCompare).reverse().join('\n')}
