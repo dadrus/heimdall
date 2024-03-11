@@ -71,7 +71,7 @@ func (w *watcher) startWatching() {
 	}
 }
 
-func (w *watcher) Start(_ context.Context) error {
+func (w *watcher) start(_ context.Context) error {
 	w.l.Debug().Msg("Starting watching config files for changes")
 
 	go w.startWatching()
@@ -79,7 +79,7 @@ func (w *watcher) Start(_ context.Context) error {
 	return nil
 }
 
-func (w *watcher) Stop(_ context.Context) error {
+func (w *watcher) stop(_ context.Context) error {
 	w.l.Debug().Msg("Stopping watching config files for changes")
 
 	return w.w.Close()

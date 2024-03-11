@@ -19,6 +19,6 @@ package watcher
 import "context"
 
 type controller interface {
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
+	start(ctx context.Context) error
+	stop(ctx context.Context) error
 }
