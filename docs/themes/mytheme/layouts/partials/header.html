@@ -9,10 +9,10 @@
       </svg>
     </button>
 
-    <nav class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="docsMenuContent" data-bs-scroll="true" aria-labelledby="docsMenuContentLabel">
+    <nav class="offcanvas offcanvas-start d-md-none text-bg-light" tabindex="-1" id="docsMenuContent" aria-labelledby="docsMenuContentLabel">
       <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="docsMenuContentLabel">Browse docs</h5>
-        <button type="button" class="btn btn-close" data-bs-dismiss="offcanvas" aria-label="Close docs menu"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close docs menu"></button>
       </div>
       <div class="offcanvas-body docs-sidebar">
         {{ partial "sidebar/docs-menu.html" . }}
@@ -71,10 +71,10 @@
                   d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3" />
         </svg>
       </button>
-      <div class="offcanvas offcanvas-end bg-dark" tabindex="-1" id="mainMenuContent" data-bs-scroll="true" aria-labelledby="mainMenuContentLabel">
+      <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="mainMenuContent" aria-labelledby="mainMenuContentLabel">
         <div class="offcanvas-header">
           <h5 class="offcanvas-title text-white" id="mainMenuContentLabel">{{ .Site.Title }}</h5>
-          <button type="button" class="btn btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close main menu"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close main menu"></button>
         </div>
         <div class="offcanvas-body">
           <ul class="navbar-nav flex-column d-md-none d-lg-none d-xl-none">
