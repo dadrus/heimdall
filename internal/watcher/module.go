@@ -38,7 +38,11 @@ var Module = fx.Options(
 				return &noopWatcher{}, nil
 			},
 			// nolint: forcetypeassert
-			fx.OnStart(func(ctx context.Context, w Watcher) error { return w.(controller).start(ctx) }),
+			fx.OnStart(func(ctx context.Context, w Watcher) error {
+				w.(controller).start(ctx)
+
+				return nil
+			}),
 			// nolint: forcetypeassert
 			fx.OnStop(func(ctx context.Context, w Watcher) error { return w.(controller).stop(ctx) }),
 		),
