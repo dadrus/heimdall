@@ -22,7 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestTLSConfig(t *testing.T) {
+func TestToTLSConfig(t *testing.T) {
 	t.Parallel()
 
 	testDir := t.TempDir()
@@ -216,6 +216,7 @@ func TestTLSConfig(t *testing.T) {
 				&tlsCfg,
 				WithServerAuthentication(tc.serverAuth),
 				WithClientAuthentication(tc.clientAuth),
+				WithSecretsWatcher(nil),
 			)
 
 			// THEN
