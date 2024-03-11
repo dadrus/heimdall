@@ -19,12 +19,12 @@ func ToTLSConfig(tlsCfg *config.TLS, opts ...Option) (*tls.Config, error) {
 	}
 
 	if args.serverAuthRequired || args.clientAuthRequired {
-		if ks, err = newTLSKeyStore(tlsCfg.KeyStore, tlsCfg.KeyID); err != nil {
+		if ks, err = newTLSKeyStore(tlsCfg.KeyStore.Path, tlsCfg.KeyID, tlsCfg.KeyStore.Password); err != nil {
 			return nil, err
 		}
 
 		if args.secretsWatcher != nil {
-			if err = args.secretsWatcher.Add(ks.keyStore.Path, ks); err != nil {
+			if err = args.secretsWatcher.Add(ks.path, ks); err != nil {
 				return nil, err
 			}
 		}

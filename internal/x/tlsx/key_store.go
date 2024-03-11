@@ -6,7 +6,6 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -17,17 +16,19 @@ type compatibilityChecker interface {
 }
 
 type keyStore struct {
-	keyStore config.KeyStore
+	path     string
+	password string
 	keyID    string
 
 	tlsCert *tls.Certificate
 	mut     sync.Mutex
 }
 
-func newTLSKeyStore(cks config.KeyStore, keyID string) (*keyStore, error) {
+func newTLSKeyStore(path, keyID, password string) (*keyStore, error) {
 	ks := &keyStore{
-		keyStore: cks,
+		path:     path,
 		keyID:    keyID,
+		password: password,
 	}
 
 	if err := ks.load(); err != nil {
@@ -38,11 +39,11 @@ func newTLSKeyStore(cks config.KeyStore, keyID string) (*keyStore, error) {
 }
 
 func (cr *keyStore) load() error {
-	if len(cr.keyStore.Path) == 0 {
+	if len(cr.path) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no path to tls key store specified")
 	}
 
-	ks, err := keystore.NewKeyStoreFromPEMFile(cr.keyStore.Path, cr.keyStore.Password)
+	ks, err := keystore.NewKeyStoreFromPEMFile(cr.path, cr.password)
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
 			CausedBy(err)
@@ -90,11 +91,11 @@ func (cr *keyStore) OnChanged(log zerolog.Logger) {
 	err := cr.load()
 	if err != nil {
 		log.Warn().Err(err).
-			Str("_file", cr.keyStore.Path).
+			Str("_file", cr.path).
 			Msg("TLS key store reload failed")
 	} else {
 		log.Info().
-			Str("_file", cr.keyStore.Path).
+			Str("_file", cr.path).
 			Msg("TLS key store reloaded")
 	}
 }
