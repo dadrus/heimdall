@@ -23,36 +23,39 @@ import (
 func decodeCredentialsHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
 	var cred credentials
 
+	if from.Kind() != reflect.Map {
+		return data, nil
+	}
+
 	dect := reflect.ValueOf(&cred).Elem().Type()
 	if !dect.AssignableTo(to) {
 		return data, nil
 	}
 
-	if from.Kind() == reflect.String {
-		creds := &fileCredentials{Path: data.(string)} // nolint: forcetypeassert
+	vals := data.(map[string]any) // nolint: forcetypeassert
+
+	if un, ok := vals["path"]; ok {
+		creds := &fileCredentials{Path: un.(string)} // nolint: forcetypeassert
 		if err := creds.load(); err != nil {
 			return nil, err
 		}
 
 		return creds, nil
-	} else if from.Kind() == reflect.Map {
-		vals := data.(map[string]any) // nolint: forcetypeassert
-
-		var (
-			username string
-			password string
-		)
-
-		if un, ok := vals["username"]; ok {
-			username = un.(string) // nolint: forcetypeassert
-		}
-
-		if pass, ok := vals["password"]; ok {
-			password = pass.(string) // nolint: forcetypeassert
-		}
-
-		return &staticCredentials{Username: username, Password: password}, nil
 	}
 
-	return data, nil
+	var (
+		username string
+		password string
+	)
+
+	if un, ok := vals["username"]; ok {
+		username = un.(string) // nolint: forcetypeassert
+	}
+
+	if pass, ok := vals["password"]; ok {
+		password = pass.(string) // nolint: forcetypeassert
+	}
+
+	return &staticCredentials{Username: username, Password: password}, nil
+
 }

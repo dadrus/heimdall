@@ -117,8 +117,7 @@ cache:
     address: foo:12345
     db: 1
     credentials:
-      username: foo
-      password: foobar
+      path: /path/to/credentials.yaml
     client_cache:
       disabled: false
       ttl: 5m

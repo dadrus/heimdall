@@ -115,7 +115,7 @@ credentials:
 		},
 		{
 			uc:     "existing externally managed credentials with all fields",
-			config: []byte(`credentials: ` + cf1.Name()),
+			config: []byte(`credentials: { path: ` + cf1.Name() + `}`),
 			assert: func(t *testing.T, err error, creds credentials) {
 				t.Helper()
 
@@ -130,7 +130,7 @@ credentials:
 		},
 		{
 			uc:     "existing externally managed credentials with username only",
-			config: []byte(`credentials: ` + cf2.Name()),
+			config: []byte(`credentials: { path: ` + cf2.Name() + `}`),
 			assert: func(t *testing.T, err error, creds credentials) {
 				t.Helper()
 
@@ -145,7 +145,7 @@ credentials:
 		},
 		{
 			uc:     "existing externally managed credentials with password only",
-			config: []byte(`credentials: ` + cf3.Name()),
+			config: []byte(`credentials: { path: ` + cf3.Name() + `}`),
 			assert: func(t *testing.T, err error, creds credentials) {
 				t.Helper()
 
@@ -160,7 +160,7 @@ credentials:
 		},
 		{
 			uc:     "not existing externally managed credentials",
-			config: []byte(`credentials: ` + testDir + "/foo.bar"),
+			config: []byte(`credentials: { path: ` + testDir + "/foo.bar }"),
 			assert: func(t *testing.T, err error, _ credentials) {
 				t.Helper()
 
@@ -170,7 +170,7 @@ credentials:
 		},
 		{
 			uc:     "existing externally managed credentials file with bad content",
-			config: []byte(`credentials: ` + cf4.Name()),
+			config: []byte(`credentials: { path: ` + cf4.Name() + `}`),
 			assert: func(t *testing.T, err error, _ credentials) {
 				t.Helper()
 

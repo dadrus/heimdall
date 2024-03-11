@@ -110,7 +110,13 @@
               "oneOf": [
                 {
                   "description": "Path to the file with credentials in the format defined below",
-                  "type": "string"
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "description": "Path to the actual credentials file",
+                      "type": "string"
+                    }
+                  }
                 },
                 {
                   "description": "Credentials for Cache connection purposes",

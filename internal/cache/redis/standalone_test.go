@@ -201,7 +201,7 @@ func TestNewStandaloneCache(t *testing.T) {
 				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(errors.New("test error"))
 
 				return []byte(fmt.Sprintf(
-					"{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: %s}",
+					"{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: { path: %s }}",
 					cf.Name(),
 				))
 			},
@@ -258,7 +258,7 @@ func TestNewStandaloneCache(t *testing.T) {
 
 				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(nil)
 
-				return []byte(fmt.Sprintf("{address: %s, client_cache: {disabled: true}, credentials: %s}", db.Addr(), cf.Name()))
+				return []byte(fmt.Sprintf("{address: %s, client_cache: {disabled: true}, credentials: { path: %s }}", db.Addr(), cf.Name()))
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
