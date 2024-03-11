@@ -14,19 +14,33 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package watcher
 
 import (
 	"context"
-	"time"
+
+	"github.com/rs/zerolog"
+	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/config"
 )
 
-//go:generate mockery --name Cache --structname CacheMock
+// Module is used on app bootstrap.
+// nolint: gochecknoglobals
+var Module = fx.Options(
+	fx.Provide(
+		fx.Annotate(
+			func(cfg *config.Configuration, logger zerolog.Logger) (Watcher, error) {
+				if cfg.SecretsReloadEnabled {
+					return newWatcher(logger)
+				}
 
-type Cache interface {
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
-
-	Get(ctx context.Context, key string) ([]byte, error)
-	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
-}
+				return &noopWatcher{}, nil
+			},
+			// nolint: forcetypeassert
+			fx.OnStart(func(ctx context.Context, w Watcher) error { return w.(controller).Start(ctx) }),
+			// nolint: forcetypeassert
+			fx.OnStop(func(ctx context.Context, w Watcher) error { return w.(controller).Stop(ctx) }),
+		),
+	),
+)

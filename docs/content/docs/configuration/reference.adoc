@@ -114,6 +114,32 @@ serve:
         path: /path/to/key/store.pem
       min_version: TLS1.2
 
+cache:
+  type: redis-sentinel
+  config:
+    db: 2
+    master: whatever
+    nodes:
+    - foo:1234
+    - bar:1234
+    credentials:
+      path: /path/to/credentials.yaml
+    tls:
+      key_store:
+        path: /path/to/redis_client_keystore.pem
+      key_id: bf5d129a7fec8b1fde11eab459784cc2f14e6c1d
+      min_version: TLS1.2
+      cipher_suites:
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    client_cache:
+      ttl: 10m
+    max_flush_delay: 20us
+
+secrets_reload_enabled: true
+
 log:
   level: debug
   format: text

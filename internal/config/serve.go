@@ -24,14 +24,14 @@ import (
 )
 
 type BufferLimit struct {
-	Read  bytesize.ByteSize `koanf:"read"`
-	Write bytesize.ByteSize `koanf:"write"`
+	Read  bytesize.ByteSize `koanf:"read"  mapstructure:"read"`
+	Write bytesize.ByteSize `koanf:"write" mapstructure:"write"`
 }
 
 type Timeout struct {
-	Read  time.Duration `koanf:"read,string"`
-	Write time.Duration `koanf:"write,string"`
-	Idle  time.Duration `koanf:"idle,string"`
+	Read  time.Duration `koanf:"read,string"  mapstructure:"read"`
+	Write time.Duration `koanf:"write,string" mapstructure:"write"`
+	Idle  time.Duration `koanf:"idle,string"  mapstructure:"idle"`
 }
 
 type ConnectionsLimit struct {

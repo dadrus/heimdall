@@ -2,10 +2,10 @@
 title: "Security"
 date: 2022-08-15T08:33:35+02:00
 draft: false
-weight: 35
+weight: 36
 menu:
   docs:
-    weight: 5
+    weight: 6
     parent: "Operations"
 description: To operate heimdall in a secure way, you should configure heimdall accordingly. Following sections address the corresponding areas.
 ---
@@ -35,9 +35,9 @@ The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Gui
 
 Logs, metrics and profiling information is very valuable for operating heimdall. These are however also very valuable for any adversary. For this reason, the corresponding services, exposing such information are by default, if enabled, listening only on the loopback (`127.0.0.1`) interface. If you have to configure them to listen to other interfaces, e.g. because you operate heimdall in a container, make sure, you don't expose them publicly.
 
-== TLS
+== TLS Trust Store
 
-As documented in link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, the execution of heimdall's pipeline typically includes communication to other systems. The endpoints of the corresponding systems should be TLS protected. This is however actually out of scope for heimdall. What is in scope, is the verification of the used TLS server certificate, if TLS is used. This happens by making use of the operating system-wide trust store, containing the certificates of Root and Intermediate CAs (trust anchors) shipped with the OS. That means, you should
+As documented in link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, the execution of heimdall's pipeline typically includes communication to other systems. The endpoints of the corresponding systems should be TLS protected. This is however actually out of scope for heimdall. What is in scope, is the verification of the used TLS server certificate if TLS is used. This happens by making use of the operating system-wide trust store, containing the certificates of Root and Intermediate CAs (trust anchors) shipped with the OS. That means, you should
 
 1. ensure this trust store contains the certificates of the Root CAs of your PKI hierarchy and
 2. ensure the endpoints, heimdall communicates with over TLS, provide not only their own certificates, but also the intermediate certificates and cross certificates not included within the OS trust store
@@ -145,6 +145,14 @@ In a typical production scenario, there is a need for proper key and certificate
 +
 The cryptographic material for the above said verification purposes is available via the link:{{< relref "/openapi/#tag/Well-Known/operation/well_known_jwks" >}}[JWKS endpoint] for the upstream services.
 * you can configure multiple keys in heimdall's `key_store` and specify the `key_id` of the key to use. The easiest way to let heimdall use the key id, you need, is to set `X-Key-ID` header in the PEM block of the corresponding private key (as also shown in the example above). With that in place you can perform key roll over without down-times by first updating the key stores of all heimdall instances to include the new key and certificates, and when this is done, by updating the key id to reference the new key material instance by instance. This way all upstream services can verify the signatures of the objects issued by heimdall, regardless of the used key material, as all heimdall instances, are able to serve the new and the old cryptographic material.
+
+== Secret Management & Rotation
+
+When configuring heimdall, there are many places requiring secrets, like passwords, tokens, key material, etc. While you can directly configure these in heimdall's config file, there is a huge chance for leaking them. Please reference the secrets in the config file via link:{{< relref "/docs/operations/configuration.adoc#_configuration_file" >}}[environment variables], or make use of external files where possible instead, and let the contents of these be managed by a secret management system.
+
+Usage of external files can even allow you to rotate the configured secrets without the need to restart heimdall. Watching for secrets rotation is however disabled by default and can be enabled by setting the `secrets_reload_enabled` property to `true` on the top level of heimdall's configuration.
+
+NOTE: Secret reloading is not yet supported at any places where secrets are used. Please consider the documentation of the corresponding configuration option for details.
 
 == Verifying Heimdall Binaries and Container Images
 

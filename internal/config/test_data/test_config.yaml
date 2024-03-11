@@ -111,6 +111,42 @@ serve:
       key_store:
         path: /path/to/keystore/file.pem
 
+cache:
+  type: redis
+  config:
+    address: foo:12345
+    db: 1
+    credentials:
+      path: /path/to/credentials.yaml
+    client_cache:
+      disabled: false
+      ttl: 5m
+      size_per_connection: 128MB
+    buffer_limit:
+      read: 4KB
+      write: 4KB
+    timeout:
+      write: 120s
+    max_flush_delay: 20us
+    tls:
+      disabled: true
+      key_store:
+        path: /path/to/keystore/file.pem
+        password: VerySecret!
+      key_id: foo
+      min_version: TLS1.2
+      cipher_suites:
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+        - "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+
+secrets_reload_enabled: true
+
 log:
   level: debug
   format: text

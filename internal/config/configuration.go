@@ -25,16 +25,17 @@ import (
 )
 
 type Configuration struct { //nolint:musttag
-	Serve      ServeConfig          `koanf:"serve"`
-	Log        LoggingConfig        `koanf:"log"`
-	Tracing    TracingConfig        `koanf:"tracing"`
-	Metrics    MetricsConfig        `koanf:"metrics"`
-	Profiling  ProfilingConfig      `koanf:"profiling"`
-	Signer     SignerConfig         `koanf:"signer"`
-	Cache      CacheConfig          `koanf:"cache"`
-	Prototypes *MechanismPrototypes `koanf:"mechanisms,omitempty"`
-	Default    *DefaultRule         `koanf:"default_rule,omitempty"`
-	Providers  RuleProviders        `koanf:"providers,omitempty"`
+	Serve                ServeConfig          `koanf:"serve"`
+	Log                  LoggingConfig        `koanf:"log"`
+	Tracing              TracingConfig        `koanf:"tracing"`
+	Metrics              MetricsConfig        `koanf:"metrics"`
+	Profiling            ProfilingConfig      `koanf:"profiling"`
+	Signer               SignerConfig         `koanf:"signer"`
+	Cache                CacheConfig          `koanf:"cache"`
+	Prototypes           *MechanismPrototypes `koanf:"mechanisms,omitempty"`
+	Default              *DefaultRule         `koanf:"default_rule,omitempty"`
+	Providers            RuleProviders        `koanf:"providers,omitempty"`
+	SecretsReloadEnabled bool                 `koanf:"secrets_reload_enabled"`
 }
 
 func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {
@@ -44,7 +45,7 @@ func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Co
 	opts := []parser.Option{
 		parser.WithDecodeHookFunc(mapstructure.StringToTimeDurationHookFunc()),
 		parser.WithDecodeHookFunc(mapstructure.StringToSliceHookFunc(",")),
-		parser.WithDecodeHookFunc(stringToByteSizeHookFunc()),
+		parser.WithDecodeHookFunc(StringToByteSizeHookFunc()),
 		parser.WithDecodeHookFunc(logLevelDecodeHookFunc),
 		parser.WithDecodeHookFunc(logFormatDecodeHookFunc),
 		parser.WithDecodeHookFunc(DecodeTLSCipherSuiteHookFunc),

@@ -22,31 +22,39 @@ import (
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
+
+	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 var ErrNoCacheEntry = errors.New("no cache entry")
 
-type InMemoryCache struct {
+// by intention. Used only during application bootstrap.
+func init() { // nolint: gochecknoinits
+	cache.Register("in-memory", cache.FactoryFunc(NewCache))
+}
+
+func NewCache(_ map[string]any, _ watcher.Watcher) (cache.Cache, error) {
+	return &Cache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}, nil
+}
+
+type Cache struct {
 	c *ttlcache.Cache[string, []byte]
 }
 
-func New() *InMemoryCache {
-	return &InMemoryCache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}
-}
-
-func (c *InMemoryCache) Start(_ context.Context) error {
+func (c *Cache) Start(_ context.Context) error {
 	go c.c.Start()
 
 	return nil
 }
 
-func (c *InMemoryCache) Stop(_ context.Context) error {
+func (c *Cache) Stop(_ context.Context) error {
 	c.c.Stop()
 
 	return nil
 }
 
-func (c *InMemoryCache) Get(_ context.Context, key string) ([]byte, error) {
+func (c *Cache) Get(_ context.Context, key string) ([]byte, error) {
 	item := c.c.Get(key)
 	if item == nil || item.IsExpired() {
 		return nil, ErrNoCacheEntry
@@ -55,7 +63,7 @@ func (c *InMemoryCache) Get(_ context.Context, key string) ([]byte, error) {
 	return item.Value(), nil
 }
 
-func (c *InMemoryCache) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
+func (c *Cache) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
 	c.c.Set(key, value, ttl)
 
 	return nil

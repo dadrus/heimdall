@@ -16,17 +16,14 @@
 
 package cache
 
-import (
-	"context"
-	"time"
-)
+import "github.com/dadrus/heimdall/internal/watcher"
 
-//go:generate mockery --name Cache --structname CacheMock
+type Factory interface {
+	Create(conf map[string]any, cw watcher.Watcher) (Cache, error)
+}
 
-type Cache interface {
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
+type FactoryFunc func(conf map[string]any, cw watcher.Watcher) (Cache, error)
 
-	Get(ctx context.Context, key string) ([]byte, error)
-	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
+func (f FactoryFunc) Create(conf map[string]any, cw watcher.Watcher) (Cache, error) {
+	return f(conf, cw)
 }

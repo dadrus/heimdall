@@ -1,0 +1,236 @@
+---
+title: "Caching"
+date: 2023-11-06T13:16:34Z+01:00
+draft: false
+weight: 35
+menu:
+  docs:
+    weight: 5
+    parent: "Operations"
+description: To increase performance, you can configure heimdall to make use of caching. Indeed, caching is even done by default in some places.
+---
+
+:toc:
+
+Even some default caching is in place, and you can instruct heimdall to cache particular data for some amount of time, like e.g how long to cache the response from the JWKS endpoint when using the link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[JWT Authenticator], all these options require a caching backend to be available. Otherwise, the corresponding configurations do not have any effect.
+
+Configuration of that backend happens by making use of the `cache` property in heimdall's configuration, which supports the following options:
+
+* `type` - The mandatory specific type of the cache backend.
+* `config` - A cache backend specific configuration if required by the type.
+
+== Noop Backend
+
+With that backend configured, caching is disabled entirely. That means any cache settings on any mechanism do not have any effect. Even those, applied by heimdall by default are disabled.
+
+To configure this backend, you have to specify `noop` as type. No further configuration is supported. Here an example:
+
+[source, yaml]
+----
+cache:
+  type: noop
+----
+
+== In-Memory Backend
+
+This backend manages the cached items in memory of heimdall's process.
+
+To configure it, you have to specify `in-memory` as type. No further configuration is supported. Here an example:
+
+[source, yaml]
+----
+cache:
+  type: in-memory
+----
+
+NOTE: By default, heimdall makes use of this backend.
+
+
+== Radis Backends
+
+As the name of this chapter implies, there are multiple backend types, you can configure to make use of https://redis.io/[Radis] as distributed cache:
+
+* a link:{{< relref "#_redis_single_instance" >}}[Redis single instance],
+* a link:{{< relref "#_redis_cluster" >}}[Redis cluster] and
+* a link:{{< relref "#_redis_sentinel" >}}[Redis sentinel].
+
+All types use pipelining to increase performance and do also make use of client side caching if not disabled (see also below).
+
+=== Common Settings
+
+All Redis cache backend types support the following configuration options:
+
+* *`credentials`*: _Credentials_ (optional)
++
+Herewith you can define the credentials to be used for connection purposes. Following settings are possible
+
+** *`path`*: _string_ (mandatory)
++
+Path to a JSON/YAML file with credentials (supports watching for secrets rotation) specifying the `username` and `password` as shown below.
++
+[source, yaml]
+----
+# contents of a credentials file
+username: Aladdin
+password: SesameOpen!
+----
++
+If used no other properties can be configured for credentials.
+
+** *`username`*: _string_(optional)
++
+The username to use to connect to the Redis DB/Cluster, and
+
+** *`password`*: _string_(mandatory)
++
+The password to be used
+
+* *`client_cache`*: _ClientCache_ (optional)
++
+Configurs the client cache to reduce roundtrip time. Following settings are possible:
+
+** *`disabled`*: _boolean_ (optional)
++
+Whether the client cache should be disabled. Defaults to `false`.
+
+** *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Specifies the maximum TTL on the client side for all used keys. If the key's TTL on the server is smaller than the client side TTL, the client side TTL will be capped.
+
+** *`size_per_connection`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+Client side cache size that bind to each TCP connection to a single redis instance. Defaults to 128MB.
+
+* *`buffer_limit`*: _BufferLimit_ (optional)
++
+Read and write buffer limits for established connections. Following configuration properties are supported:
+
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the read buffer allowed to read the full request including body. Defaults to 0.5MB.
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the write buffer of the response. Defaults to 0.5MB.
+
+* *`timeout`*: _Timeout_ (optional)
++
+By using this property you can override the default connection timeouts. Following properties are supported:
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The maximum duration before timing out writes of the response. Defaults to 150s.
+
+* *`max_flush_delay`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Data flush delay. When greater than zero, pauses pipeline write loop for some time (not larger than the specified delay) after each flushing of data to the connection. This gives pipeline a chance to collect more commands to send to Redis. Adding this delay increases latency, reduces throughput, but in most cases may significantly reduce application and Redis CPU utilization due to less executed system calls. By default, the data is flushed to the connection without extra delays. Depending on network latency and application-specific conditions the value of max_flush_delay may vary, something like 20 µs should not affect latency/throughput a lot but still produce notable CPU usage reduction under load. Defaults to 0s.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+TLS settings. By default, the communication to Redis happens over TLS. This requires however a properly configured link:{{< relref "/docs/operations/security.adoc#_tls_trust_store" >}}[trust store], as otherwise heimdall won't trust the certificates used by the Redis services. In addition to the referenced configuration options, you can also make use of the following properties:
+
+** *`disabled`*: _boolean_ (optional)
++
+Disables TLS. Defaults to `false`.
+
+=== Redis Single Instance
+
+As the name implies, this type supports configuration of a single instance Redis DB.
+
+To use it, you have to specify `redis` as type. Configuration is mandatory with following options in addition to the configuration options described in link:{{< relref "#_common_settings" >}}[Common Settings].
+
+* *`address`*: _string_ (mandatory)
++
+The Redis instance address to connect to.
+
+* *`db`*: _integer_ (optional)
++
+Redis DB ID to use. Defaults to 0.
+
+Here an example:
+
+[source, yaml]
+----
+cache:
+  type: redis
+  config:
+    address: foo:12345
+    credentials:
+      path: /path/to/credentials.yaml
+    client_cache:
+      ttl: 10m
+      size_per_connection: 128MB
+    buffer_limit:
+      read: 1MB
+      write: 1MB
+    timeout:
+      write: 150s
+    max_flush_delay: 20us
+    tls:
+      # TLS client auth is used here
+      key_store:
+        path: /path/to/keystore/file.pem
+        password: ${MY_REDIS_CLIENT_KEYSTORE}
+      min_version: TLS1.2
+----
+
+=== Redis Cluster
+
+As the name implies, this type supports configuration of a Redis cluster.
+
+To use it, you have to specify `redis-cluster` as type. Configuration is mandatory with following options in addition to the configuration options described in link:{{< relref "#_common_settings" >}}[Common Settings].
+
+* *`nodes`*: _array of strings_ (mandatory)
++
+The addresses of Redis nodes to connect to.
+
+Here an example:
+
+[source, yaml]
+----
+cache:
+  type: redis-cluster
+  config:
+    nodes:
+    - foo:1234
+    - bar:1234
+    credentials:
+      username: ${MY_REDIS_USER}
+      password: ${MY_REDIS_PASSWORD}
+----
+
+=== Redis Sentinel
+
+As the name implies, this type supports configuration of a Redis sentinel.
+
+To use it, you have to specify `redis-sentinel` as type. Configuration is mandatory with following options in addition to the configuration options described in link:{{< relref "#_common_settings" >}}[Common Settings].
+
+* *`nodes`*: _array of strings_ (mandatory)
++
+The addresses of Redis sentinel nodes to connect to.
+
+* *`db`*: _integer_ (optional)
++
+Redis DB ID to use. Defaults to 0.
+
+* *`master`*: _string_ (mandatory)
++
+Sentinel master set name
+
+NOTE: Same credentials are used to connect to the sentinel service and to the Redis DB instances. This is also true if TLS client authentication is used.
+
+Here an example:
+
+[source, yaml]
+----
+cache:
+  type: redis-sentinel
+  config:
+    nodes:
+    - foo:1234
+    - bar:1234
+    db: 0
+    master: whatever
+    credentials:
+      path: /path/to/credentials.yaml
+----

@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,35 +14,47 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package memory
+package redis
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
 )
 
-func TestMemoryCacheUsage(t *testing.T) {
+func TestCacheUsage(t *testing.T) {
 	t.Parallel()
+
+	db := miniredis.RunT(t)
+	cch, err := NewStandaloneCache(map[string]any{
+		"address":      db.Addr(),
+		"client_cache": map[string]any{"disabled": true},
+		"tls":          map[string]any{"disabled": true},
+	}, nil)
+	require.NoError(t, err)
+
+	cch.Start(context.TODO())
+	defer cch.Stop(context.TODO())
 
 	for _, tc := range []struct {
 		uc             string
 		key            string
-		configureCache func(t *testing.T, cache cache.Cache)
+		configureCache func(*testing.T, cache.Cache)
 		assert         func(t *testing.T, err error, data []byte)
 	}{
 		{
 			uc:  "can retrieve not expired value",
 			key: "foo",
-			configureCache: func(t *testing.T, cache cache.Cache) {
+			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				err := cache.Set(context.TODO(), "foo", []byte("bar"), 10*time.Minute)
+				err := cch.Set(context.Background(), "foo", []byte("bar"), 10*time.Minute)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, data []byte) {
@@ -55,19 +67,19 @@ func TestMemoryCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve expired value",
 			key: "bar",
-			configureCache: func(t *testing.T, cache cache.Cache) {
+			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				err := cache.Set(context.TODO(), "bar", []byte("baz"), 1*time.Microsecond)
+				err := cch.Set(context.Background(), "bar", []byte("baz"), 1*time.Millisecond)
 				require.NoError(t, err)
 
-				time.Sleep(200 * time.Millisecond)
+				db.FastForward(200 * time.Millisecond)
 			},
-			assert: func(t *testing.T, err error, _ []byte) {
+			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, ErrNoCacheEntry)
+				assert.Nil(t, data)
 			},
 		},
 		{
@@ -76,47 +88,22 @@ func TestMemoryCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, _ cache.Cache) {
 				t.Helper()
 			},
-			assert: func(t *testing.T, err error, _ []byte) {
+			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, ErrNoCacheEntry)
+				assert.Nil(t, data)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			cache, _ := NewCache(nil, nil)
-
 			// WHEN
-			tc.configureCache(t, cache)
+			tc.configureCache(t, cch)
 
-			value, err := cache.Get(context.TODO(), tc.key)
+			data, err := cch.Get(context.Background(), tc.key)
 
 			// THEN
-			tc.assert(t, err, value)
+			tc.assert(t, err, data)
 		})
 	}
-}
-
-func TestMemoryCacheExpiration(t *testing.T) {
-	t.Parallel()
-
-	cache, _ := NewCache(nil, nil)
-	cache.Set(context.TODO(), "baz", []byte("bar"), 1*time.Second)
-
-	hits := 0
-
-	for i := 0; i < 8; i++ {
-		time.Sleep(250 * time.Millisecond)
-
-		value, err := cache.Get(context.TODO(), "baz")
-		if err == nil {
-			hits++
-
-			assert.Equal(t, []byte("bar"), value)
-		}
-	}
-
-	assert.LessOrEqual(t, hits, 4)
 }

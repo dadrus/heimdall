@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/cache/memory"
+	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/cache/noop"
 )
 
 func TestContextNoCacheConfigured(t *testing.T) {
@@ -34,29 +35,30 @@ func TestContextNoCacheConfigured(t *testing.T) {
 
 	// THEN
 	require.NotNil(t, cch)
-	assert.IsType(t, noopCache{}, cch)
+	assert.IsType(t, &noop.Cache{}, cch)
 }
 
 func TestContextCacheConfigured(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := WithContext(context.Background(), memory.New())
+	cache := mocks.NewCacheMock(t)
+	ctx := WithContext(context.Background(), cache)
 
 	// WHEN
 	cch := Ctx(ctx)
 
 	// THEN
 	require.NotNil(t, cch)
-	assert.IsType(t, &memory.InMemoryCache{}, cch)
+	assert.IsType(t, &mocks.CacheMock{}, cch)
 }
 
 func TestContextCacheIsNotConfiguredTwice(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	cch1 := memory.New()
-	cch2 := memory.New()
+	cch1 := mocks.NewCacheMock(t)
+	cch2 := mocks.NewCacheMock(t)
 
 	ctx := context.Background()
 

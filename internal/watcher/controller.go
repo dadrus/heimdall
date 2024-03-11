@@ -14,19 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package watcher
 
-import (
-	"context"
-	"time"
-)
+import "context"
 
-//go:generate mockery --name Cache --structname CacheMock
-
-type Cache interface {
+type controller interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
-
-	Get(ctx context.Context, key string) ([]byte, error)
-	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 }

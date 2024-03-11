@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,5 +17,6 @@
 package config
 
 type CacheConfig struct {
-	Type string `koanf:"type"`
+	Type   string         `koanf:"type"`
+	Config map[string]any `koanf:"config"`
 }

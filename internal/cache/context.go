@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package cache
 
 import (
 	"context"
+
+	"github.com/dadrus/heimdall/internal/cache/noop"
 )
 
 type ctxKey struct{}
@@ -42,5 +44,5 @@ func Ctx(ctx context.Context) Cache {
 		return c
 	}
 
-	return noopCache{}
+	return &noop.Cache{}
 }

@@ -104,15 +104,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0
       - name: Review code
         uses: reviewdog/action-golangci-lint@v2
         with:
           go_version: "${{ env.GO_VERSION }}"
           golangci_lint_version: "${{ env.GOLANGCI_LINT_VERSION }}"
-          golangci_lint_flags: --out-format=checkstyle
           reporter: github-pr-review
           fail_on_error: true
-          reviewdog_flags: -f=checkstyle
 
   lint-api:
     runs-on: ubuntu-22.04

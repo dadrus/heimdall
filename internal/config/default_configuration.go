@@ -85,6 +85,10 @@ func defaultConfig() Configuration {
 				},
 			},
 		},
+		Cache: CacheConfig{
+			Type:   "in-memory",
+			Config: map[string]any{},
+		},
 		Log: LoggingConfig{
 			Level:  zerolog.ErrorLevel,
 			Format: LogTextFormat,

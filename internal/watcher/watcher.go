@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,19 +14,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package watcher
 
-import (
-	"context"
-	"errors"
-	"time"
-)
+import "github.com/rs/zerolog"
 
-var ErrNoCacheEntry = errors.New("no cache entry present")
+//go:generate mockery --name ChangeListener --structname ChangeListenerMock --inpackage --testonly
 
-type noopCache struct{}
+type ChangeListener interface {
+	OnChanged(logger zerolog.Logger)
+}
 
-func (noopCache) Get(_ context.Context, _ string) ([]byte, error)                  { return nil, ErrNoCacheEntry }
-func (noopCache) Set(_ context.Context, _ string, _ []byte, _ time.Duration) error { return nil }
-func (noopCache) Start(_ context.Context) error                                    { return nil }
-func (noopCache) Stop(_ context.Context) error                                     { return nil }
+//go:generate mockery --name Watcher --structname WatcherMock
+
+type Watcher interface {
+	Add(path string, cl ChangeListener) error
+}

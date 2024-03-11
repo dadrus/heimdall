@@ -14,35 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package noop
 
 import (
 	"context"
-
-	"github.com/rs/zerolog"
-	"go.uber.org/fx"
-
-	"github.com/dadrus/heimdall/internal/cache/memory"
-	"github.com/dadrus/heimdall/internal/config"
+	"errors"
+	"time"
 )
 
-//nolint:gochecknoglobals
-var Module = fx.Provide(
-	fx.Annotate(
-		newCache,
-		fx.OnStart(func(ctx context.Context, cch Cache) error { return cch.Start(ctx) }),
-		fx.OnStop(func(ctx context.Context, cch Cache) error { return cch.Stop(ctx) }),
-	),
-)
+var ErrNoCacheEntry = errors.New("no cache entry present")
 
-func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
-	if len(conf.Cache.Type) == 0 {
-		logger.Info().Msg("Instantiating in memory cache")
+type Cache struct{}
 
-		return memory.New()
-	}
-
-	logger.Info().Msg("Cache is disabled")
-
-	return noopCache{}
-}
+func (*Cache) Get(_ context.Context, _ string) ([]byte, error)                  { return nil, ErrNoCacheEntry }
+func (*Cache) Set(_ context.Context, _ string, _ []byte, _ time.Duration) error { return nil }
+func (*Cache) Start(_ context.Context) error                                    { return nil }
+func (*Cache) Stop(_ context.Context) error                                     { return nil }
