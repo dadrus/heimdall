@@ -70,12 +70,14 @@ func (cr *keyStore) load() error {
 	var entry *keystore.Entry
 
 	if len(cr.keyID) != 0 {
-		if entry, err = ks.GetKey(cr.keyID); err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"failed retrieving key from key store").CausedBy(err)
-		}
+		entry, err = ks.GetKey(cr.keyID)
 	} else {
-		entry = ks.Entries()[0]
+		entry, err = ks.Entries()[0], nil
+	}
+
+	if err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed retrieving key from key store").CausedBy(err)
 	}
 
 	cert, err := entry.TLSCertificate()

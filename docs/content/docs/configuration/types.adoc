@@ -599,7 +599,7 @@ Following configuration properties are available:
 
 * *`path`*: _string_ (mandatory)
 +
-The path to the PEM file with the cryptographic material.
+The path to the PEM file with the cryptographic material. Watching for secrets rotation is supported.
 
 * *`password`*: _string_ (optional)
 +
@@ -908,7 +908,7 @@ Following are the supported TLS configuration properties:
 
 * *`key_store`*: _link:{{< relref "#_key_store" >}}[Key Store]_ (mandatory)
 +
-The key store containing the cryptographic material. At least one private key and the corresponding certificate must be present. Supports watching for secrets rotation.
+The key store containing the cryptographic material. At least one private key and the corresponding certificate must be present.
 
 * *`key_id`*: _string_ (optional)
 +
