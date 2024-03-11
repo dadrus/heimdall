@@ -106,6 +106,22 @@ func TestToTLSConfig(t *testing.T) {
 			},
 		},
 		{
+			uc:         "empty config, but requires server auth",
+			serverAuth: true,
+			conf: func(t *testing.T, _ *mocks.WatcherMock) config.TLS {
+				t.Helper()
+
+				return config.TLS{}
+			},
+			assert: func(t *testing.T, err error, _ *tls.Config) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no path to tls key")
+			},
+		},
+		{
 			uc:         "fails due to not existent key store for TLS usage",
 			serverAuth: true,
 			conf: func(t *testing.T, _ *mocks.WatcherMock) config.TLS {
