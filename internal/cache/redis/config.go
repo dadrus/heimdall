@@ -150,8 +150,7 @@ func (c baseConfig) clientOptions(cw watcher.Watcher) (rueidis.ClientOption, err
 			tlsx.WithSecretsWatcher(cw),
 		)
 		if err != nil {
-			return rueidis.ClientOption{}, errorchain.NewWithMessage(heimdall.ErrInternal,
-				"failed creating tls configuration for Redis client").CausedBy(err)
+			return rueidis.ClientOption{}, err
 		}
 
 		tlsCfg.RootCAs = rootCertPool
