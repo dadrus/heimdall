@@ -21,7 +21,7 @@ Required scopes given to the client.
 
 * *`audience`*: _string array_ (optional)
 +
-Required entries in the `aud` claim. Both cases, either as whitespace separated string, or a JSON array are considered.
+Values to be matched in the `aud` claim. This assertion evaluates to `true` if at least one entry in the given `audience` array is present in the `aud` claim. Both cases, either as whitespace separated string, or a JSON array are considered.
 
 * *`issuers`*: _string array_ (optional)
 +
