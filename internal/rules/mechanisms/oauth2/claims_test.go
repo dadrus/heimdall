@@ -58,8 +58,8 @@ func TestClaimsValidate(t *testing.T) {
 				Audience: Audience{"bar"},
 			},
 			expectations: Expectation{
-				TrustedIssuers:  []string{"foo"},
-				TargetAudiences: []string{"foo"},
+				TrustedIssuers: []string{"foo"},
+				Audiences:      []string{"foo"},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -76,8 +76,8 @@ func TestClaimsValidate(t *testing.T) {
 				NotBefore: &dateInTheFuture,
 			},
 			expectations: Expectation{
-				TrustedIssuers:  []string{"foo"},
-				TargetAudiences: []string{"bar"},
+				TrustedIssuers: []string{"foo"},
+				Audiences:      []string{"bar"},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -95,8 +95,8 @@ func TestClaimsValidate(t *testing.T) {
 				IssuedAt:  &dateInTheFuture,
 			},
 			expectations: Expectation{
-				TrustedIssuers:  []string{"foo"},
-				TargetAudiences: []string{"bar"},
+				TrustedIssuers: []string{"foo"},
+				Audiences:      []string{"bar"},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -115,9 +115,9 @@ func TestClaimsValidate(t *testing.T) {
 				Scp:       Scopes{"foo", "bar"},
 			},
 			expectations: Expectation{
-				TrustedIssuers:  []string{"foo"},
-				TargetAudiences: []string{"bar"},
-				ScopesMatcher:   ExactScopeStrategyMatcher{"bar", "baz"},
+				TrustedIssuers: []string{"foo"},
+				Audiences:      []string{"bar"},
+				ScopesMatcher:  ExactScopeStrategyMatcher{"bar", "baz"},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -136,9 +136,9 @@ func TestClaimsValidate(t *testing.T) {
 				Scope:     Scopes{"foo", "bar"},
 			},
 			expectations: Expectation{
-				TrustedIssuers:  []string{"foo"},
-				TargetAudiences: []string{"bar"},
-				ScopesMatcher:   ExactScopeStrategyMatcher{"bar", "baz"},
+				TrustedIssuers: []string{"foo"},
+				Audiences:      []string{"bar"},
+				ScopesMatcher:  ExactScopeStrategyMatcher{"bar", "baz"},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -157,9 +157,9 @@ func TestClaimsValidate(t *testing.T) {
 				Scope:     Scopes{"foo", "bar"},
 			},
 			expectations: Expectation{
-				TrustedIssuers:  []string{"foo"},
-				TargetAudiences: []string{"bar"},
-				ScopesMatcher:   ExactScopeStrategyMatcher{"foo"},
+				TrustedIssuers: []string{"foo"},
+				Audiences:      []string{"bar"},
+				ScopesMatcher:  ExactScopeStrategyMatcher{"foo"},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -177,9 +177,9 @@ func TestClaimsValidate(t *testing.T) {
 				Scp:       Scopes{"foo", "bar"},
 			},
 			expectations: Expectation{
-				TrustedIssuers:  []string{"foo"},
-				TargetAudiences: []string{"bar"},
-				ScopesMatcher:   ExactScopeStrategyMatcher{"foo"},
+				TrustedIssuers: []string{"foo"},
+				Audiences:      []string{"bar"},
+				ScopesMatcher:  ExactScopeStrategyMatcher{"foo"},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

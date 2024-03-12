@@ -189,7 +189,7 @@ assertions:
 
 				// assertions settings
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
-				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
 				assert.Len(t, auth.a.AllowedAlgorithms, 6)
@@ -255,7 +255,7 @@ cache_ttl: 5s`),
 
 				// assertions settings
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
-				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
 				assert.Len(t, auth.a.AllowedAlgorithms, 6)
@@ -343,7 +343,7 @@ trust_store: ` + trustStorePath),
 				// assertions settings
 				assert.NotNil(t, auth.a.ScopesMatcher)
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
-				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
 				assert.Len(t, auth.a.AllowedAlgorithms, 1)
@@ -412,7 +412,7 @@ cache_ttl: 5s`),
 
 				// assertions settings
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
-				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.Audiences)
 				assert.Empty(t, auth.a.TrustedIssuers)
 				assert.Len(t, auth.a.AllowedAlgorithms, 6)
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
@@ -549,7 +549,7 @@ assertions:
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
-				assert.Empty(t, configured.a.TargetAudiences)
+				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
@@ -591,7 +591,7 @@ cache_ttl: 5s`),
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
-				assert.Empty(t, configured.a.TargetAudiences)
+				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
@@ -632,7 +632,7 @@ assertions:
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
-				assert.Empty(t, configured.a.TargetAudiences)
+				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
@@ -705,7 +705,7 @@ assertions:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 
 				assert.Equal(t, prototype.a.TrustedIssuers, configured.a.TrustedIssuers)
-				assert.Equal(t, prototype.a.TargetAudiences, configured.a.TargetAudiences)
+				assert.Equal(t, prototype.a.Audiences, configured.a.Audiences)
 				assert.Equal(t, prototype.a.AllowedAlgorithms, configured.a.AllowedAlgorithms)
 				assert.Equal(t, prototype.a.ValidityLeeway, configured.a.ValidityLeeway)
 				assert.NotEqual(t, prototype.a.ScopesMatcher, configured.a.ScopesMatcher)
