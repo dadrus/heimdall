@@ -185,7 +185,7 @@ func TestNewClusterCache(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.ErrorContains(t, err, "failed creating tls configuration")
+				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
 		{
