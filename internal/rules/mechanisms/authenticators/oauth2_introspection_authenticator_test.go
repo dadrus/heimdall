@@ -161,7 +161,7 @@ assertions:
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
-				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.Audiences)
 
 				// assert ttl
 				assert.Nil(t, auth.ttl)
@@ -240,7 +240,7 @@ allow_fallback_on_error: true
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
-				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.Audiences)
 
 				// assert ttl
 				assert.Equal(t, 5*time.Second, *auth.ttl)
@@ -302,7 +302,7 @@ metadata_endpoint:
 				assert.Empty(t, auth.a.TrustedIssuers, 1)
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
-				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.Audiences)
 
 				// assert ttl
 				assert.Nil(t, auth.ttl)
@@ -430,7 +430,7 @@ assertions:
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
-				assert.ElementsMatch(t, configured.a.TargetAudiences, []string{"baz"})
+				assert.ElementsMatch(t, configured.a.Audiences, []string{"baz"})
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
@@ -502,7 +502,7 @@ cache_ttl: 5s`),
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
-				assert.Empty(t, configured.a.TargetAudiences)
+				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 

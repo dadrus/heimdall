@@ -23,6 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 const defaultLeeway = 10 * time.Second
@@ -32,7 +33,7 @@ var ErrAssertion = errors.New("assertion error")
 type Expectation struct {
 	TrustedIssuers    []string      `mapstructure:"issuers"`
 	ScopesMatcher     ScopesMatcher `mapstructure:"scopes"`
-	TargetAudiences   []string      `mapstructure:"audience"`
+	Audiences         []string      `mapstructure:"audience"`
 	AllowedAlgorithms []string      `mapstructure:"allowed_algorithms"`
 	ValidityLeeway    time.Duration `mapstructure:"validity_leeway"`
 }
@@ -44,7 +45,7 @@ func (e *Expectation) Merge(other *Expectation) Expectation {
 
 	e.TrustedIssuers = x.IfThenElse(len(e.TrustedIssuers) != 0, e.TrustedIssuers, other.TrustedIssuers)
 	e.ScopesMatcher = x.IfThenElse(e.ScopesMatcher != nil, e.ScopesMatcher, other.ScopesMatcher)
-	e.TargetAudiences = x.IfThenElse(len(e.TargetAudiences) != 0, e.TargetAudiences, other.TargetAudiences)
+	e.Audiences = x.IfThenElse(len(e.Audiences) != 0, e.Audiences, other.Audiences)
 	e.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
 	e.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
 
@@ -68,10 +69,12 @@ func (e *Expectation) AssertIssuer(issuer string) error {
 }
 
 func (e *Expectation) AssertAudience(audience []string) error {
-	for _, aud := range e.TargetAudiences {
-		if !slices.Contains(audience, aud) {
-			return errorchain.NewWithMessagef(ErrAssertion, "audience %s is not expected", aud)
-		}
+	if len(e.Audiences) == 0 {
+		return nil
+	}
+
+	if !slicex.Intersects(e.Audiences, audience) {
+		return errorchain.NewWithMessage(ErrAssertion, "no expected audience present")
 	}
 
 	return nil

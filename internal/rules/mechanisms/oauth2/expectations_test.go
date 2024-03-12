@@ -115,7 +115,7 @@ func TestExpectationAssertAudience(t *testing.T) {
 	}{
 		{
 			uc:       "assertion fails",
-			exp:      Expectation{TargetAudiences: []string{"bar"}},
+			exp:      Expectation{Audiences: []string{"bar"}},
 			audience: []string{"foo", "baz"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -124,9 +124,29 @@ func TestExpectationAssertAudience(t *testing.T) {
 			},
 		},
 		{
-			uc:       "assertion succeeds",
-			exp:      Expectation{TargetAudiences: []string{"foo", "bar"}},
+			uc:       "assertion succeeds (full intersection)",
+			exp:      Expectation{Audiences: []string{"foo", "bar"}},
 			audience: []string{"foo", "bar"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		{
+			uc:       "assertion succeeds (partial intersection 1)",
+			exp:      Expectation{Audiences: []string{"bar"}},
+			audience: []string{"foo", "bar"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		{
+			uc:       "assertion succeeds (partial intersection 2)",
+			exp:      Expectation{Audiences: []string{"foo", "bar"}},
+			audience: []string{"foo"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -526,7 +546,7 @@ func TestMergeExpectations(t *testing.T) {
 			uc: "with empty target",
 			source: &Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
-				TargetAudiences:   []string{"foo"},
+				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
 				AllowedAlgorithms: []string{"RS512"},
 				ValidityLeeway:    10 * time.Second,
@@ -542,7 +562,7 @@ func TestMergeExpectations(t *testing.T) {
 			uc: "with target having only scopes configured",
 			source: &Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
-				TargetAudiences:   []string{"foo"},
+				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
 				AllowedAlgorithms: []string{"RS512"},
 				ValidityLeeway:    10 * time.Second,
@@ -554,7 +574,7 @@ func TestMergeExpectations(t *testing.T) {
 				assert.NotEqual(t, source, merged)
 				assert.NotEqual(t, source.ScopesMatcher, merged.ScopesMatcher)
 				assert.Equal(t, target.ScopesMatcher, merged.ScopesMatcher)
-				assert.Equal(t, source.TargetAudiences, merged.TargetAudiences)
+				assert.Equal(t, source.Audiences, merged.Audiences)
 				assert.Equal(t, source.TrustedIssuers, merged.TrustedIssuers)
 				assert.Equal(t, source.AllowedAlgorithms, merged.AllowedAlgorithms)
 				assert.Equal(t, source.ValidityLeeway, merged.ValidityLeeway)
@@ -564,14 +584,14 @@ func TestMergeExpectations(t *testing.T) {
 			uc: "with target having scopes and audience configured",
 			source: &Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
-				TargetAudiences:   []string{"foo"},
+				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
 				AllowedAlgorithms: []string{"RS512"},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: &Expectation{
-				ScopesMatcher:   HierarchicScopeStrategyMatcher{},
-				TargetAudiences: []string{"baz"},
+				ScopesMatcher: HierarchicScopeStrategyMatcher{},
+				Audiences:     []string{"baz"},
 			},
 			assert: func(t *testing.T, merged *Expectation, source *Expectation, target *Expectation) {
 				t.Helper()
@@ -579,8 +599,8 @@ func TestMergeExpectations(t *testing.T) {
 				assert.NotEqual(t, source, merged)
 				assert.NotEqual(t, source.ScopesMatcher, merged.ScopesMatcher)
 				assert.Equal(t, target.ScopesMatcher, merged.ScopesMatcher)
-				assert.NotEqual(t, source.TargetAudiences, merged.TargetAudiences)
-				assert.Equal(t, target.TargetAudiences, merged.TargetAudiences)
+				assert.NotEqual(t, source.Audiences, merged.Audiences)
+				assert.Equal(t, target.Audiences, merged.Audiences)
 				assert.Equal(t, source.TrustedIssuers, merged.TrustedIssuers)
 				assert.Equal(t, source.AllowedAlgorithms, merged.AllowedAlgorithms)
 				assert.Equal(t, source.ValidityLeeway, merged.ValidityLeeway)
@@ -590,15 +610,15 @@ func TestMergeExpectations(t *testing.T) {
 			uc: "with target having scopes, audience and trusted issuers configured",
 			source: &Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
-				TargetAudiences:   []string{"foo"},
+				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
 				AllowedAlgorithms: []string{"RS512"},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: &Expectation{
-				ScopesMatcher:   HierarchicScopeStrategyMatcher{},
-				TargetAudiences: []string{"baz"},
-				TrustedIssuers:  []string{"zab"},
+				ScopesMatcher:  HierarchicScopeStrategyMatcher{},
+				Audiences:      []string{"baz"},
+				TrustedIssuers: []string{"zab"},
 			},
 			assert: func(t *testing.T, merged *Expectation, source *Expectation, target *Expectation) {
 				t.Helper()
@@ -606,8 +626,8 @@ func TestMergeExpectations(t *testing.T) {
 				assert.NotEqual(t, source, merged)
 				assert.NotEqual(t, source.ScopesMatcher, merged.ScopesMatcher)
 				assert.Equal(t, target.ScopesMatcher, merged.ScopesMatcher)
-				assert.NotEqual(t, source.TargetAudiences, merged.TargetAudiences)
-				assert.Equal(t, target.TargetAudiences, merged.TargetAudiences)
+				assert.NotEqual(t, source.Audiences, merged.Audiences)
+				assert.Equal(t, target.Audiences, merged.Audiences)
 				assert.NotEqual(t, source.TrustedIssuers, merged.TrustedIssuers)
 				assert.Equal(t, target.TrustedIssuers, merged.TrustedIssuers)
 				assert.Equal(t, source.AllowedAlgorithms, merged.AllowedAlgorithms)
@@ -618,14 +638,14 @@ func TestMergeExpectations(t *testing.T) {
 			uc: "with target having scopes, audience, trusted issuers and allowed algorithms configured",
 			source: &Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
-				TargetAudiences:   []string{"foo"},
+				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
 				AllowedAlgorithms: []string{"RS512"},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: &Expectation{
 				ScopesMatcher:     HierarchicScopeStrategyMatcher{},
-				TargetAudiences:   []string{"baz"},
+				Audiences:         []string{"baz"},
 				TrustedIssuers:    []string{"zab"},
 				AllowedAlgorithms: []string{"BAR128"},
 			},
@@ -635,8 +655,8 @@ func TestMergeExpectations(t *testing.T) {
 				assert.NotEqual(t, source, merged)
 				assert.NotEqual(t, source.ScopesMatcher, merged.ScopesMatcher)
 				assert.Equal(t, target.ScopesMatcher, merged.ScopesMatcher)
-				assert.NotEqual(t, source.TargetAudiences, merged.TargetAudiences)
-				assert.Equal(t, target.TargetAudiences, merged.TargetAudiences)
+				assert.NotEqual(t, source.Audiences, merged.Audiences)
+				assert.Equal(t, target.Audiences, merged.Audiences)
 				assert.NotEqual(t, source.TrustedIssuers, merged.TrustedIssuers)
 				assert.Equal(t, target.TrustedIssuers, merged.TrustedIssuers)
 				assert.NotEqual(t, source.AllowedAlgorithms, merged.AllowedAlgorithms)
@@ -648,14 +668,14 @@ func TestMergeExpectations(t *testing.T) {
 			uc: "with target having everything reconfigured",
 			source: &Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
-				TargetAudiences:   []string{"foo"},
+				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
 				AllowedAlgorithms: []string{"RS512"},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: &Expectation{
 				ScopesMatcher:     HierarchicScopeStrategyMatcher{},
-				TargetAudiences:   []string{"baz"},
+				Audiences:         []string{"baz"},
 				TrustedIssuers:    []string{"zab"},
 				AllowedAlgorithms: []string{"BAR128"},
 				ValidityLeeway:    20 * time.Minute,
@@ -666,8 +686,8 @@ func TestMergeExpectations(t *testing.T) {
 				assert.NotEqual(t, source, merged)
 				assert.NotEqual(t, source.ScopesMatcher, merged.ScopesMatcher)
 				assert.Equal(t, target.ScopesMatcher, merged.ScopesMatcher)
-				assert.NotEqual(t, source.TargetAudiences, merged.TargetAudiences)
-				assert.Equal(t, target.TargetAudiences, merged.TargetAudiences)
+				assert.NotEqual(t, source.Audiences, merged.Audiences)
+				assert.Equal(t, target.Audiences, merged.Audiences)
 				assert.NotEqual(t, source.TrustedIssuers, merged.TrustedIssuers)
 				assert.Equal(t, target.TrustedIssuers, merged.TrustedIssuers)
 				assert.NotEqual(t, source.AllowedAlgorithms, merged.AllowedAlgorithms)
