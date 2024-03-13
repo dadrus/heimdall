@@ -107,8 +107,7 @@ func TestNewListener(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed creating listener")
+				assert.Contains(t, err.Error(), "foo")
 			},
 		},
 		{

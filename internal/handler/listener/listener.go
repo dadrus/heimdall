@@ -23,9 +23,7 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/watcher"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
 
@@ -94,17 +92,16 @@ func (l *listener) Accept() (net.Conn, error) {
 func New(network, address string, tlsConf *config.TLS, cw watcher.Watcher) (net.Listener, error) {
 	listnr, err := net.Listen(network, address)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating listener").
-			CausedBy(err)
+		return nil, err
 	}
 
-	wrapped := &listener{Listener: listnr}
+	listnr = &listener{Listener: listnr}
 
 	if tlsConf != nil {
-		return newTLSListener(tlsConf, wrapped, cw)
+		return newTLSListener(tlsConf, listnr, cw)
 	}
 
-	return wrapped, nil
+	return listnr, nil
 }
 
 func newTLSListener(tlsConf *config.TLS, listener net.Listener, cw watcher.Watcher) (net.Listener, error) {
