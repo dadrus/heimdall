@@ -6,7 +6,7 @@ weight: 15
 menu:
   guides:
     parent: "API Gateways & Proxies"
-description: Explains how to integrate heimdall with NGINX, an HTTP and reverse proxy server which became famous as one of the fastest web servers out there.
+description: Explains how to integrate heimdall with NGINX.
 ---
 
 :toc:
@@ -98,7 +98,7 @@ location = /_auth {
 <5> Let NGINX forward the used path and query parameter to heimdall.
 ====
 
-== Integration with NGINX Ingress Controller.
+== NGINX Ingress Controller
 
 To integrate heimdall with the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller] you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
 
