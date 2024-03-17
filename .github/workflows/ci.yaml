@@ -54,7 +54,7 @@ jobs:
         id: image-config-changes
         uses: technote-space/get-diff-action@v6
         with:
-          FILES: |
+          PATTERNS: |
             docker/Dockerfile
       - name: Check helm chart changes
         id: helm-chart-changes
