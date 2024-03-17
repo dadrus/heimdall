@@ -5,7 +5,7 @@ ARG USER=heimdall
 FROM --platform=$BUILDPLATFORM golang:1.22.1-bookworm as builder
 ARG USER
 ARG TARGETARCH
-ARG VERSION="unknow"
+ARG VERSION="unknown"
 
 LABEL maintainer=dadrus@gmx.de
 
