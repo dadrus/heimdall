@@ -133,7 +133,7 @@ install-haproxy-ingress-controller:
   helm install haproxy-ingress-controller haproxy-ingress/haproxy-ingress \
     -n haproxy-ingress-controller --create-namespace \
     --version {{haproxy_version}} \
-    -f haproxy/helm-values.yaml \
+    --set controller.ingressClassResource.enabled=true \
     --wait
 
 install-lb:
