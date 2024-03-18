@@ -6,26 +6,56 @@ weight: 15
 menu:
   guides:
     parent: "API Gateways & Proxies"
-description: Explains how to integrate heimdall with NGINX.
+description: This guide explains how to integrate heimdall with NGINX as well as with the NGINX Ingress Controller.
 ---
 
 :toc:
 
 https://nginx.org/[NGINX] is an HTTP and reverse proxy server which became famous as one of the fastest web servers out there, heimdall can be integrated with by making use of the https://nginx.org/en/docs/http/ngx_http_auth_request_module.html[ngx_http_auth_request_module]. In such setup, NGINX delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, NGINX grants access and forwards the original request to the upstream service. If heimdall returns 401 or 403, the access is denied with the corresponding error code. Any other response code returned by heimdall is considered an error.
 
-NOTE: If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which is anyway recommended to have secure defaults, which, depending on the configuration, would then respond either with 401 or 403, or still 405 if you do not allow a specific HTTP method. To overcome 500 responses returned by nginx in such cases (when heimdall returns 405), you can configure heimdall to respond with another HTTP response code using the `respond` property on the level of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] or link:{{< relref "/docs/services/proxy.adoc" >}}[proxy service] configuration.
+== Prerequisites
+
+* Integration with NGINX requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode] exposing its HTTP(s) endpoint.
+
+== Limitations
+
+NGINX https://nginx.org/en/docs/http/ngx_http_auth_request_module.html[ngx_http_auth_request_module] responsible for communication with external authentication & authorization services, like heimdall, has a few limitations. As written above, it only supports 200, 401 and 403 response codes. That means:
+
+* You'll not be able to drive redirects from heimdall, as 3xx error codes will result in 500 error returned by NGINX. You can partially overcome that limitation by letting heimdall respond with a 401 or 403 error code and mapping that to a redirect in NGINX itself, e.g. like shown below. This definitely not DRY and will not allow you using multiple identity provider if you need to
++
+[source, nginx]
+----
+# nginx.conf
+...
+
+# if the ext auth server, like heimdall returns `401 not authorized`
+# then forward the request to the error401 block
+error_page 401 = @error401;
+
+location @error401 {
+  # redirect to the IdP for login
+  return 302 https://your-idp-service/login;
+  # you usually want your IdP to redirect back upon successful authentication
+  # typically, you can achieve that by adding such query parameters like
+  # return_to set to the value of the current request
+}
+----
+
+* If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which is anyway recommended to have secure defaults
+
+* If a heimdall rule is matched, but is configured to not allow a particular HTTP method, `405 Method Not Allowed` response code is returned. That will result in `500` returned by NGINX due to the reasons written above. To overcome that, you can configure heimdall to respond with another HTTP response code using the `respond` property on the level of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] configuration.
+
+== Vanilla NGINX
 
 Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.
 
 In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision, respectively Proxy service. Exceptions are described in the sections below.
 
 [#_first_option]
-== Forward only the path and query information
+=== Forward only the path and query information
 
 With this method you don't set any headers. That means, you cannot rely on the used HTTP scheme, or the host and port in your rules. Here NGINX uses the same HTTP method, used in the original request to it and add the path and query to the path/query URL used for communication with heimdall. That integration method does not require the configuration of `trusted_proxies` in heimdall.
 
-.Possible Configuration
-====
 [source, nginx]
 ----
 # nginx.conf
@@ -61,10 +91,9 @@ location = /_auth {  <4>
 <6> Configures NGINX to pass the request to heimdall and sets the request path and queries from the original request
 <7> Disables sending of the request body. If your heimdall rules make use of the body, you should set this to `on` and remove the next line.
 <8> Lets the NGINX setting the `Host` header, so it is accessible to heimdall.
-====
 
 [#_second_option]
-== Forward all information in `X-Forwarded-*` headers
+=== Forward all information in `X-Forwarded-*` headers
 
 With this method you set the `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Uri` to let heimdall know the host, respectively domain url and the used HTTP method.
 
@@ -72,8 +101,6 @@ Compared to the link:{{< relref "#_first_option" >}}[previous integration] optio
 
 NOTE: Proper configuration of `trusted_proxies` is mandatory if using this option.
 
-.Possible Configuration
-====
 [source, nginx]
 ----
 # nginx.conf
@@ -96,21 +123,22 @@ location = /_auth {
 <3> Let NGINX forward the used HTTP scheme to heimdall.
 <4> Let NGINX forward the used host to heimdall.
 <5> Let NGINX forward the used path and query parameter to heimdall.
-====
 
 == NGINX Ingress Controller
 
-To integrate heimdall with the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller] you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
+Even one can configure an external auth server globally with vanilla NGINX, there is no way to achieve that with the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller]. Only route based configuration/integration is possible.
+
+=== Using `X-Forwarded-*` headers
+
+To integrate heimdall with the NGINX Ingress Controller you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
 
 NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies`.
 
-.Possible Configuration
-====
 [source, yaml]
 ----
-nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" <1>
-nginx.ingress.kubernetes.io/auth-response-headers: Authorization <2>
-nginx.ingress.kubernetes.io/auth-snippet: | <3>
+nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" # <1>
+nginx.ingress.kubernetes.io/auth-response-headers: Authorization # <2>
+nginx.ingress.kubernetes.io/auth-snippet: | # <3>
   proxy_set_header    X-Forwarded-Method   $request_method;
   proxy_set_header    X-Forwarded-Proto    $scheme;
   proxy_set_header    X-Forwarded-Host     $http_host;
@@ -123,12 +151,10 @@ your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers
 <3> Configures the required headers to pass the information about the used HTTP scheme, host and port, request path and used query parameters to be forwarded to heimdall.
 +
 NOTE: Without that, heimdall will not be able extracting relevant information from the NGINX request as it does not support NGINX proprietary `X-Original-Method` and `X-Original-Uri` used by it for the same purposes.
-====
+
+=== Alternative Configuration
 
 Alternatively, if you don't want configuring `trusted_proxies` and do not rely on the used HTTP scheme, host and port in your rules, you can also use the `nginx.ingress.kubernetes.io/configuration-snippet` and `nginx.ingress.kubernetes.io/server-snippet` annotations and use the configuration shown below.
-
-.Possible Configuration
-====
 
 This example is an exact copy of the configuration used in the very first link:{{< relref "#_first_option" >}}[integration option] described above.
 
@@ -153,6 +179,7 @@ nginx.ingress.kubernetes.io/server-snippet: |
   }
 # other annotations required
 ----
-====
+
+== Additional Resources
 
 Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.
