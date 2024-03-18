@@ -1,0 +1,5 @@
+configInline:
+  globalExtAuth:
+    extensionService: heimdall/heimdall
+    failOpen: false
+    responseTimeout: 1s

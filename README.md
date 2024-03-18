@@ -8,7 +8,7 @@
 
 ## Background
 
-Heimdall is inspired by the Zero Trust idea and also by [Promerium](https://www.pomerium.com/docs) and [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with both and my inability to update the latter one to include the desired functionality and behavior was Heimdall's born hour. 
+Heimdall is inspired by the Zero Trust idea and also by [Pomerium](https://www.pomerium.com/docs) and [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with both and my inability to update the latter one to include the desired functionality and behavior was Heimdall's born hour. 
 
 ## What is heimdall
 
