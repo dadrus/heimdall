@@ -4,7 +4,7 @@ loki_version := '2.8.9'
 tempo_version := '0.16.8'
 phlare_version := '0.1.2'
 nginx_version := '9.7.7'
-contour_version := '12.2.4'
+contour_version := '17.0.0'
 emissary_version := '8.7.2'
 haproxy_version := '0.14.4'
 metallb_version := '0.13.10'
@@ -99,7 +99,7 @@ install-contour-ingress-controller:
   helm upgrade --install contour-ingress-controller bitnami/contour \
     -n contour-ingress-controller --create-namespace \
     --version {{contour_version}} \
-    --wait
+    -f contour/helm-values.yaml # used only to configure a global auth server
 
 install-emissary-ingress-controller:
   #!/usr/bin/env bash
