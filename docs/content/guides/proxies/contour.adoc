@@ -6,24 +6,26 @@ weight: 11
 menu:
   guides:
     parent: "API Gateways & Proxies"
-description: Explains how to integrate heimdall with Contour, an open source, high performance ingress controller for Kubernetes.
+description: This guide explains how to integrate heimdall with Contour, an open source, high performance ingress controller for Kubernetes.
 ---
 
 :toc:
 
-https://projectcontour.io/[Contour] is an open source, high performance ingress controller for Kubernetes, implementing a control plane for https://www.envoyproxy.io/[Envoy] edge and a service proxy.
+https://projectcontour.io/[Contour] is an ingress controller for Kubernetes, implementing a control plane for https://www.envoyproxy.io/[Envoy] edge and a service proxy.
 
-When operating heimdall in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode] exposing Envoy's external authorization https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto[GRPC protocol], integration with Contour can be achieved by creating an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1alpha1.ExtensionService[`ExtensionService`] resource for heimdall and either an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resource for the upstream service, referencing the aforesaid `ExtensionService`, or configure Contour to use it globally (for all routes).
+== Prerequisites
 
-The `ExtensionService` resource definition tells Contour to program Envoy with an upstream cluster directing traffic to heimdall. That way, as also described in the link:{{< relref "envoy.adoc" >}}[Envoy Integration Guide], Envoy will delegate authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
+* Integration with Contour requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode] exposing Envoy's external authorization https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto[GRPC protocol].
 
-Being security first ingress controller, Contour enforces TLS for communication between Envoy and any external authorization service. For that reason, heimdall must be configured with an appropriate key material and certificate. Same is actually also true for the http route definition of the actual upstream service.
+* Being security first ingress controller, Contour enforces TLS for communication between Envoy and any external authorization service. For that reason, heimdall must be configured with an appropriate key material and certificate. Same is actually also true for the http route definition of the actual upstream service. The only exception is when configuring Contour using heimdall as a global external auth service.
 
-The official https://projectcontour.io/docs/main/guides/external-authorization/[External Authorization Guide] from Contour describes the required steps in great detail. While following it, please make attention to the following details specific to heimdall:
+== General Configuration
 
-* If you use https://cert-manager.io/[cert-manager], ensure the feature gate `AdditionalCertificateOutputFormats` is set to `true`. This let cert-manager creating secrets with a property named `tls-combined.pem`, combining both the key and the certificate in one object, as also typically provided by any other CA and expected by heimdall.
+The official https://projectcontour.io/docs/main/guides/external-authorization/[External Authorization Guide] from Contour describes the required steps in great detail. While following it, please make attention to the following details specific to heimdall as described below.
 
-* When you configure the `Certificte` resource to let cert-manager issue a TLS certificate for heimdall, configure the `additionalOutputFormats` property with the type `CombinedPEM` to make use of the aforesaid feature gate and have the `tls-combined.pem` property set in the resulting secret. Here a small snippet showing the relevant parts:
+* If you use https://cert-manager.io/[cert-manager], ensure the feature gate `AdditionalCertificateOutputFormats` is set to `true`. This lets cert-manager creating secrets with a property named `tls-combined.pem`, combining both the key and the certificate in one object, as also typically provided by any other CA and expected by heimdall.
+
+* When you configure the `Certificate` resource to let cert-manager issue a TLS certificate for heimdall, configure the `additionalOutputFormats` property with the type `CombinedPEM` to make use of the aforesaid feature gate and have the `tls-combined.pem` property set in the resulting secret. Here a small snippet showing the relevant parts:
 +
 [source, yaml]
 ----
@@ -68,5 +70,71 @@ deployment:
     readOnly: true
     mountPath: /certs
 ----
+
+* Define an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1alpha1.ExtensionService[`ExtensionService`] as described in the referenced Contour guide for heimdall and also shown below
++
+[source, yaml]
+----
+apiVersion: projectcontour.io/v1alpha1
+kind: ExtensionService
+metadata:
+  namespace: <namespace in which heimdall is installed>
+  name: heimdall-ext-service
+spec:
+  protocol: h2
+  services:
+    - name: heimdall
+      port: 4456
+----
++
+The `ExtensionService` resource definition tells Contour to program Envoy with an upstream cluster directing traffic to heimdall. That way, as also described in the link:{{< relref "envoy.adoc" >}}[Envoy Integration Guide], Envoy will delegate authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
+
+== Global Configuration
+
+A global configuration allows you to setup a single external authorization configuration for all your virtual hosts (HTTP and HTTPS). The only thing you have to do is to reference the `ExtensionService`, defined above in your Contour config. This is achieved with the following snippet:
+
+[source, yaml]
+----
+globalExtAuth:
+  extensionService: <namespace in which heimdall is installed>/<name of the extention service>
+  failOpen: false
+  responseTimeout: 1s
+----
+
+You can now define your https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource[Ingress Rules]. When using https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resources instead, Contour allows overriding or disabling of the external auth service on the route level for HTTPs routes.
+
+== Route-based Configuration
+
+The only way to have route based external auth service configuration in Contour, is the usage of https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resource instead of the regular Ingress rules, allowing referencing the `ExtensionService`. Here an example:
+
+[source, yaml]
+----
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: echo-app
+  namespace: quickstarts
+  labels:
+    app.kubernetes.io/name: echo-app
+spec:
+  virtualhost:
+    fqdn: echo-app.local
+    tls:
+      secretName: echo-app
+    authorization: # <1>
+      extensionRef:
+        namespace: heimdall
+        name: heimdall-ext-service
+  routes:
+    - conditions:
+        - prefix: /
+      services:
+        - name: echo-app
+          port: 8080
+----
+<1> Reference to the `ExtensionService`.
+
+
+== Additional Resources
 
 Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.

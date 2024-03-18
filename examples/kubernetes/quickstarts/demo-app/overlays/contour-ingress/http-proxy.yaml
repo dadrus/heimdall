@@ -10,10 +10,12 @@ spec:
     fqdn: echo-app.local
     tls:
       secretName: echo-app
-    authorization:
-      extensionRef:
-        name: heimdall
-        namespace: heimdall
+# if you want to override the globally defined
+# ext auth server, uncomment the following lines
+#    authorization:
+#      extensionRef:
+#        name: heimdall
+#        namespace: heimdall
   routes:
     - conditions:
         - prefix: /
