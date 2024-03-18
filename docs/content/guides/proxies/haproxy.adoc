@@ -6,40 +6,31 @@ weight: 14
 menu:
   guides:
     parent: "API Gateways & Proxies"
-description: Explains how to integrate heimdall with HAProxy.
+description: Explains how to integrate heimdall with HAProxy, a popular open source, fast, and reliable solution providing load balancer and reverse proxy features.
 ---
 
 :toc:
 
 https://www.haproxy.com/[HAProxy] (High Availability Proxy) is a popular open source, fast, and reliable solution providing load balancer and reverse proxy features for TCP- and HTTP-based applications, capable handling heavy load traffic and rerouting requests seamlessly across multiple workloads (e.g. web, application, database).
 
-== Vanilla HAProxy
-
 HAProxy is highly extensible thanks to Lua scripting support. For that reason the vanilla HAProxy does not implement any means of external authorization support and requires custom Lua code to achieve integration with heimdall.
 
-== HAProxy Ingress Controller
+The https://haproxy-ingress.github.io/[HAProxy Ingress Controller] has the required https://haproxy-ingress.github.io/docs/configuration/keys/#auth-external[integration options] however in place. That way, delegation of authentication and authorization to heimdall operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Mode] is easily possible using the Ingress rule annotations, which you can see below. Alternatively, configuring the HAProxy Ingress Controller https://haproxy-ingress.github.io/docs/configuration/keys/#configmap[globally] to perform the aforesaid delegation to heimdall is possible as well. With that global configuration you can implement secure defaults for all your workloads.
 
-The https://haproxy-ingress.github.io/[HAProxy Ingress Controller] has the required https://haproxy-ingress.github.io/docs/configuration/keys/#auth-external[integration options] however in place. That way, delegation of authentication and authorization to heimdall operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Mode] is easily possible using the Ingress rule annotations as well as globally, with latter allowing implementation of secure defaults for all your workloads
-
-In both cases, if heimdall answers with a 2XX code, HAProxy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.
+If heimdall answers with a 2XX code, HAProxy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.
 
 NOTE: This integration requires proper configuration of `trusted_proxies`.
 
-=== Global integration
-
-To have the integration configured globally and used for all workloads, you have to add the keys shown in the snipped below to the `data` of the configmap used by the haproxy ingress controller.
-
+.Ingress annotations
+====
 [source, yaml]
 ----
-apiVersion: v1
-kind: ConfigMap
-data:
-  auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" # <1>
-  auth-headers-succeed: "authorization" # <2>
-  headers: | # <3>
-    X-Forwarded-Uri: %[baseq]
-    X-Forwarded-Method: %[method]
-    X-Forwarded-Host: %[req.hdr(host)]
+haproxy-ingress.github.io/auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" <1>
+haproxy-ingress.github.io/auth-headers-succeed: "authorization" <2>
+haproxy-ingress.github.io/headers: | <3>
+  X-Forwarded-Uri: %[baseq]
+  X-Forwarded-Method: %[method]
+  X-Forwarded-Host: %[req.hdr(host)]
 ----
 <1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
 <2> Let HAProxy forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
@@ -47,24 +38,6 @@ your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers
 +
 NOTE: There is currently a limitation in HAProxy Ingress Controller regarding the case-insensitivity for headers. Since heimdall returns the header in lower-case, it is important to set the names of the required to be forwarded headers in lower case as well.
 <3> Configures the required headers to pass the information about the used HTTP scheme, host and port, request path and used query parameters to be forwarded to heimdall. `X-Forwarded-Proto` is not used, as it is already set by HAProxy by default.
-
-If the installation of haproxy ingress controller happens using helm, these keys can easily be added by making use of the `controller.config` property (see also https://github.com/haproxy-ingress/charts/blob/release-0.14/haproxy-ingress/README.md#configuration[Helm chart configuration options] for details).
-
-
-=== Ingress Rule based integration
-
-The code snipped below shows the required annotations on the ingress rule. It uses the same configuration keys as the global configuration prefixed with `haproxy-ingress.github.io/`
-
-[source, yaml]
-----
-annotations:
-  haproxy-ingress.github.io/auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>"
-  haproxy-ingress.github.io/auth-headers-succeed: "authorization"
-  haproxy-ingress.github.io/headers: |
-    X-Forwarded-Uri: %[baseq]
-    X-Forwarded-Method: %[method]
-    X-Forwarded-Host: %[req.hdr(host)]
-----
+====
 
 Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.
-
