@@ -129,9 +129,20 @@ div[id] {
   content: attr(data-value)
 }
 
-p {
+code {
+  font-size: .85em;
+  font-family: var(--bs-font-monospace);
+  color: var(--bs-gray-900);
+  overflow-wrap: break-word;
+  //word-break: break-all;
+}
+
+p, td {
   code {
-    color: #f92672;
+    background-color: rgba(0, 0, 0, .03);
+    border-radius: .375rem;
+    border: solid 1px var(--bs-gray-400);
+    padding: .125rem .25em;
   }
 }
 
@@ -139,8 +150,12 @@ pre {
   code {
     display: block;
     max-width: 30rem;
-    overflow-wrap: break-word;
-    word-break: break-all;
+  }
+}
+
+.highlight {
+  code {
+    border: none;
   }
 }
 
@@ -254,8 +269,8 @@ doc-version-select {
   top: 3rem;
 
   &:has(div:nth-last-child(n + 3)) {
-      height: calc(100vh - 10rem);
-    }
+    height: calc(100vh - 10rem);
+  }
 }
 
 .search-result:last-of-type {
@@ -302,9 +317,9 @@ doc-version-select {
     }
 
     ul {
-        padding-left: 0;
-        margin-bottom: .5rem;
-        list-style: none;
+      padding-left: 0;
+      margin-bottom: .5rem;
+      list-style: none;
     }
 
     a {
@@ -317,6 +332,7 @@ doc-version-select {
       &:hover {
         color: var(--bs-link-color);
       }
+
       &.active {
         color: var(--bs-link-color);
         font-weight: 500;
@@ -324,24 +340,27 @@ doc-version-select {
     }
   }
 }
-.docs-main { grid-area: main; }
+
+.docs-main {
+  grid-area: main;
+}
 
 .docs-location {
   grid-area: location;
   padding-top: 1rem;
-
-//  position: sticky;
-//  top: 3rem;
-//
-//  nav {
-//    padding-top: 1rem;
-//    padding-bottom: .25rem;
-//  }
 }
 
-.docs-intro { grid-area: intro; }
-.docs-toc { grid-area: toc; }
-.docs-content { grid-area: content; }
+.docs-intro {
+  grid-area: intro;
+}
+
+.docs-toc {
+  grid-area: toc;
+}
+
+.docs-content {
+  grid-area: content;
+}
 
 .docs-toc-content {
   nav {
@@ -367,6 +386,7 @@ doc-version-select {
       &:hover {
         color: var(--bs-link-color);
       }
+
       &.active {
         color: var(--bs-link-color);
         font-weight: 500;
@@ -378,9 +398,11 @@ doc-version-select {
 .mw-25 {
   max-width: 25%;
 }
+
 .mw-50 {
   max-width: 50%;
 }
+
 .mw-75 {
   max-width: 75%;
 }
@@ -468,7 +490,7 @@ doc-version-select {
 
 .offcanvas-body .dropdown-item:hover {
   color: #fff;
-  background: rgba(255,255,255, .2);
+  background: rgba(255, 255, 255, .2);
 }
 
 .modal {
