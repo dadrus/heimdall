@@ -28,8 +28,6 @@ markup:
     workingFolderCurrent: true
     attributes:
       source-highlighter: rouge
-      rouge-css: style
-      rouge-style: monokai.sublime
       icons: font
 
 outputs:
