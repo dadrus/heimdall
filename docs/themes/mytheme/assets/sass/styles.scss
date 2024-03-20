@@ -488,6 +488,7 @@ doc-version-select {
   }
 }
 
+// fix for invisible close button in deployed docs
 .btn-close {
   background: var(--bs-btn-close-bg)50%/1em no-repeat;
 }
