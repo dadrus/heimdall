@@ -1,25 +1,22 @@
 {{ if or .Prev .Next -}}
-<div class="d-flex justify-content-between">
+<hr>
+<div class="d-flex justify-content-between py-3">
   <!-- https://www.feliciano.tech/blog/custom-sort-hugo-single-pages/ -->
   {{ $pages := where site.RegularPages "Section" .Section -}}
   {{ with $pages.Next . -}}
-  <a href="{{ .RelPermalink }}">
-    <div class="fs-6 mb-3">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
-        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
-      </svg>
-      {{ .Title }}
-    </div>
+  <a href="{{ .RelPermalink }}" class="fs-6 fw-bold link-primary link-underline-opacity-0">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+    </svg>
+    {{ .Title }}
   </a>
   {{ end -}}
   {{ with $pages.Prev . -}}
-  <a class="ms-auto" href="{{ .RelPermalink }}">
-    <div class="fs-6 mb-3">
-      {{ .Title }}
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
-        <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-      </svg>
-    </div>
+  <a class="ms-auto fs-6 fw-bold link-primary link-underline-opacity-0" href="{{ .RelPermalink }}">
+    {{ .Title }}
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+    </svg>
   </a>
   {{ end -}}
 </div>
