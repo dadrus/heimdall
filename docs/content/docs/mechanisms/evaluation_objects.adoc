@@ -123,7 +123,7 @@ If the `Content-Type` header is set to `application/json` and the actual request
 { "context": "heimdall" }
 ----
 The call to the `Body()` function will return exactly this representation as a map.
-+
+
 
 If the `Content-Type` header is set to `application/yaml` and the actual request body is a valid YAML object, shown below
 [source, yaml]
@@ -131,7 +131,7 @@ If the `Content-Type` header is set to `application/yaml` and the actual request
 context: heimdall
 ----
 The call to the `Body()` function will return `{ "context": "heimdall" }` representation as a map.
-+
+
 
 If the `Content-Type` header is set to `application/x-www-form-urlencoded` and the actual request body is a valid object, shown below
 [source, yaml]
