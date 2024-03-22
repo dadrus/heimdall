@@ -22,11 +22,9 @@ https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load b
 Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
 ====
 
-== Vanilla Traefik
+Traefik can be configured statically, but also load dynamic configuration from many sources managed by so-called providers. The following sections describe how to integrate with heimdall using some of them.
 
-Traefik can be configured statically, but also load dynamic configuration from many sources managed by so-called providers. The two following sections describe how to integrate with heimdall using both approaches.
-
-=== Global Configuration
+== Global Configuration
 
 To let Traefik forward all incoming requests to heimdall, there is a need
 
@@ -58,9 +56,9 @@ http:
 <4> Configures this middleware to forward requests to a service available under "heimdall" DNS name
 <5> Configures this middleware to forward the `Authorization` header from heimdall's response to the upstream service
 
-=== Route-based Configuration
+== Route-based Configuration with Docker
 
-The integration options, described here makes use of the https://doc.traefik.io/traefik/providers/docker/[Docker Provider] for configuration discovery.
+The integration option, described here makes use of the https://doc.traefik.io/traefik/providers/docker/[Docker Provider] for configuration discovery.
 
 The following `docker-compose.yaml` file shows a minimal required configuration.
 
@@ -101,7 +99,7 @@ services:
 <4> Configuration of the ForwardAuth middleware to forward the `Authorization` header from heimdall's response to the upstream service
 <5> Configuration of the required middlewares on the route level of a particular service. Here only the middleware named "heimdall" is referenced. Without that label, traefik will not forward requests to heimdall before routing them to that upstream service.
 
-== Traefik Ingress Controller
+== Traefik as Ingress Controller
 
 If you have Traefik as Ingress Controller in your Kubernetes cluster, you can simply integrate heimdall globally as descibed in link:{{< relref "#_global_configuration" >}}[Global Configuration] chapter above and make use of the standard https://kubernetes.io/docs/concepts/services-networking/ingress/[Ingress resource].
 
@@ -111,4 +109,3 @@ There is also an option to have a route based configuration. In that case, you'l
 
 A fully working example with Traefik is shown in the link:{{< relref "/docs/getting_started/protect_an_app.adoc" >}}[Protect an Application] quickstart and is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
 
-====
