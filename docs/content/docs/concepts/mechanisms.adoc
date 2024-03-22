@@ -22,7 +22,7 @@ All supported mechanisms fall into the following five categories, each implement
 * link:{{< relref "/docs/mechanisms/finalizers.adoc">}}[Finalizers], which, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from doing nothing, adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
 * link:{{< relref "/docs/mechanisms/error_handlers.adoc">}}[Error Handlers], which are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.
 
-NOTE: All mechanisms are stateless. Even some of them support caching, the corresponding data is not stored on the mechanisms level. An in-memory key-value store is used instead.
+NOTE: All mechanisms are stateless. Even some of them support caching, the corresponding data is not stored on the mechanisms level. A link:{{<relref "/docs/operations/cache.adoc" >}}[cache backend] is used instead, defaulting to an in-memory key-value store.
 
 == Mechanisms Catalogue
 
