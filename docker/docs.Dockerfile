@@ -1,4 +1,4 @@
-FROM asciidoctor/docker-asciidoctor:1.68.0
+FROM asciidoctor/docker-asciidoctor:1.69.0
 LABEL maintainer=dadrus@gmx.de
 
 ENV CHROME_BIN="/usr/bin/chromium-browser" \
