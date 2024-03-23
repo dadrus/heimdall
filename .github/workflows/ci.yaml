@@ -587,6 +587,8 @@ jobs:
 
   build-dev-documentation:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     needs:
       - prepare-release
       - check-changes
@@ -642,6 +644,8 @@ jobs:
 
   release-documentation:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     needs:
       - prepare-release
     if: needs.prepare-release.outputs.release_created
