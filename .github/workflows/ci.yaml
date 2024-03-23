@@ -151,7 +151,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
-        run: npm i -g @redocly/cli@1.0.0-beta.108
+        run: npm i -g @redocly/cli@1.10.5
       - name: Run Redocly Lint
         run: redocly lint
 
