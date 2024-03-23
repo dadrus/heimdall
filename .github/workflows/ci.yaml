@@ -102,7 +102,7 @@ jobs:
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Get google/go-licenses package
-        run: go install github.com/google/go-licenses@latest
+        run: go install github.com/google/go-licenses@v1.6.0
       - name: Check the licenses
         run: go-licenses check --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown .
 
@@ -670,7 +670,7 @@ jobs:
         with:
           node-version: 17.7
       - name: Install mermaid
-        run: npm install -g @mermaid-js/mermaid-cli
+        run: npm install -g @mermaid-js/mermaid-cli@10.8.0
       - name: Setup ruby
         uses: ruby/setup-ruby@5f19ec79cedfadb78ab837f95b87734d0003c899 # v1.173.0
         with:
