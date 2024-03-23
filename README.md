@@ -1,6 +1,7 @@
 # Heimdall
 [![CI](https://github.com/dadrus/heimdall/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/dadrus/heimdall/actions/workflows/ci.yml)
 [![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/security.yaml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/security.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/7738/badge)](https://www.bestpractices.dev/projects/7738)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall)
 [![codecov](https://codecov.io/gh/dadrus/heimdall/branch/main/graph/badge.svg)](https://codecov.io/gh/dadrus/heimdall)
 [![Docker](https://img.shields.io/docker/v/dadrus/heimdall/latest?color=lightblue&label=docker&logo=docker)](https://hub.docker.com/r/dadrus/heimdall)
