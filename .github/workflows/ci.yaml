@@ -19,6 +19,8 @@ env:
   CYCLONEDX_GOMOD_VERSION: "v1.4.1"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
+permissions: read-all
+
 jobs:
   check-changes:
     runs-on: ubuntu-22.04
@@ -336,7 +338,6 @@ jobs:
   build-dev-container-images:
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
       packages: write
       id-token: write
     needs:
@@ -454,7 +455,6 @@ jobs:
     if: needs.prepare-release.outputs.release_created
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
       packages: write
       id-token: write
     needs:

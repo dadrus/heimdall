@@ -13,16 +13,13 @@ on:
   schedule:
     - cron: '34 0 * * 6'
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   trivy-scan:
     runs-on: ubuntu-22.04
 
     permissions:
-      actions: read
-      contents: read
       security-events: write
 
     steps:
@@ -51,8 +48,6 @@ jobs:
     runs-on: ubuntu-22.04
 
     permissions:
-      actions: read
-      contents: read
       security-events: write
 
     steps:
