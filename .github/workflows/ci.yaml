@@ -242,6 +242,9 @@ jobs:
   prepare-release:
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/main'
+    permissions:
+      pull-requests: write
+      contents: write
     outputs:
       release_created: ${{ steps.release_prepare.outputs.release_created }}
       tag_name: ${{ steps.release_prepare.outputs.tag_name }}
