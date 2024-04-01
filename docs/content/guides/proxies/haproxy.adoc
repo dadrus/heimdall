@@ -27,7 +27,9 @@ NOTE: This integration requires proper configuration of `trusted_proxies`.
 
 === Global integration
 
-To have the integration configured globally and used for all workloads, you have to add the keys shown in the snipped below to the `data` of the configmap used by the haproxy ingress controller.
+WARNING: There seems to be a bug in the implementation of the HAProxy Ingress controller. Even the below description is based on the official documentation, it does not work. Corresponding ticket has been filed: https://github.com/jcmoraisjr/haproxy-ingress/issues/1105. Please check the status of this ticket first.
+
+To have the integration configured globally and used for all workloads, you have to add the keys shown in the snipped below to the `data` of the https://haproxy-ingress.github.io/docs/configuration/keys/#configmap[ConfigMap] used by the haproxy ingress controller.
 
 [source, yaml]
 ----
@@ -65,6 +67,8 @@ annotations:
     X-Forwarded-Method: %[method]
     X-Forwarded-Host: %[req.hdr(host)]
 ----
+
+== Additional Resources
 
 Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.
 
