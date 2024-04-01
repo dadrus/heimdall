@@ -5,13 +5,14 @@ metadata:
   namespace: quickstarts
   labels:
     app.kubernetes.io/name: echo-app
-#  annotations:
-#    haproxy-ingress.github.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
-#    haproxy-ingress.github.io/auth-headers-succeed: "authorization"
-#    haproxy-ingress.github.io/headers: |
-#      X-Forwarded-Uri: %[baseq]
-#      X-Forwarded-Method: %[method]
-#      X-Forwarded-Host: %[req.hdr(host)]
+  # Comment the following annotations if you configure external auth globally
+  annotations:
+    haproxy-ingress.github.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
+    haproxy-ingress.github.io/auth-headers-succeed: "authorization"
+    haproxy-ingress.github.io/headers: |
+      X-Forwarded-Uri: %[baseq]
+      X-Forwarded-Method: %[method]
+      X-Forwarded-Host: %[req.hdr(host)]
 spec:
   ingressClassName: "haproxy"
   tls:
