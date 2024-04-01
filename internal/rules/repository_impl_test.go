@@ -180,20 +180,20 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 		&ruleImpl{id: "1", srcID: "bar"},
 		&ruleImpl{id: "2", srcID: "baz"},
 		&ruleImpl{id: "3", srcID: "bar"},
+		&ruleImpl{id: "4", srcID: "bar"},
 		&ruleImpl{id: "4", srcID: "foo"},
 	})
 
 	// THEN
-	assert.Len(t, repo.rules, 4)
+	assert.Len(t, repo.rules, 5)
 
 	// WHEN
-	repo.deleteRuleSet("baz")
+	repo.deleteRuleSet("bar")
 
 	// THEN
-	assert.Len(t, repo.rules, 3)
+	assert.Len(t, repo.rules, 2)
 	assert.ElementsMatch(t, repo.rules, []rule.Rule{
-		&ruleImpl{id: "1", srcID: "bar"},
-		&ruleImpl{id: "3", srcID: "bar"},
+		&ruleImpl{id: "2", srcID: "baz"},
 		&ruleImpl{id: "4", srcID: "foo"},
 	})
 
@@ -201,14 +201,13 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	repo.deleteRuleSet("foo")
 
 	// THEN
-	assert.Len(t, repo.rules, 2)
+	assert.Len(t, repo.rules, 1)
 	assert.ElementsMatch(t, repo.rules, []rule.Rule{
-		&ruleImpl{id: "1", srcID: "bar"},
-		&ruleImpl{id: "3", srcID: "bar"},
+		&ruleImpl{id: "2", srcID: "baz"},
 	})
 
 	// WHEN
-	repo.deleteRuleSet("bar")
+	repo.deleteRuleSet("baz")
 
 	// THEN
 	assert.Empty(t, repo.rules)
@@ -306,7 +305,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 					Source:     "test2",
 					ChangeType: event.Create,
 					Rules: []rule.Rule{
-						&ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{1}},
+						&ruleImpl{id: "rule:bar", srcID: "test2", hash: []byte{1}},
 						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}},
 						&ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}},
 						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}},
@@ -316,7 +315,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 					Source:     "test2",
 					ChangeType: event.Update,
 					Rules: []rule.Rule{
-						&ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{5}}, // updated
+						&ruleImpl{id: "rule:bar", srcID: "test2", hash: []byte{5}},  // updated
 						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}}, // as before
 						// &ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}}, // deleted
 						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}}, // as before
@@ -327,10 +326,12 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				t.Helper()
 
 				require.Len(t, repo.rules, 4)
-				assert.Equal(t, &ruleImpl{id: "rule:bar", srcID: "test1"}, repo.rules[0])
-				assert.Equal(t, &ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{5}}, repo.rules[1])
-				assert.Equal(t, &ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}}, repo.rules[2])
-				assert.Equal(t, &ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}}, repo.rules[3])
+				assert.ElementsMatch(t, repo.rules, []rule.Rule{
+					&ruleImpl{id: "rule:bar", srcID: "test1"},
+					&ruleImpl{id: "rule:bar", srcID: "test2", hash: []byte{5}},
+					&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}},
+					&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}},
+				})
 			},
 		},
 	} {
