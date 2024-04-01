@@ -5,6 +5,7 @@ metadata:
   namespace: quickstarts
   labels:
     app.kubernetes.io/name: echo-app
+  # Comment the following annotations if you configure external auth globally
   annotations:
     haproxy-ingress.github.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
     haproxy-ingress.github.io/auth-headers-succeed: "authorization"

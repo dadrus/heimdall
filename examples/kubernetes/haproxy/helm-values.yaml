@@ -1,0 +1,13 @@
+controller:
+  ingressClassResource:
+    enabled: true
+
+# Uncomment the below lines for a global configuration.metrics:
+# See also https://github.com/jcmoraisjr/haproxy-ingress/issues/1105
+#  config:
+#    auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
+#    auth-headers-succeed: "authorization"
+#    headers: |
+#      X-Forwarded-Uri: %[baseq]
+#      X-Forwarded-Method: %[method]
+#      X-Forwarded-Host: %[req.hdr(host)]
