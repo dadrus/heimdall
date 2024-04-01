@@ -1,0 +1,421 @@
+---
+title: "Integration with OpenFGA"
+date: 2024-03-25T12:32:07+02:00
+draft: false
+weight: 22
+menu:
+  guides:
+    parent: "Authorization Services"
+description: This guide explains how to integrate heimdall with the OpenFGA, a scalable open source authorization system.
+---
+
+:toc:
+
+https://openfga.dev[OpenFGA] is inspired by https://zanzibar.academy/[Google’s Zanzibar], Google's Relationship Based Access Control system and allows easily implementing authorization for any kind of application relying on Role-Based Access Control with additional Attribute-Based Access Control capabilities.
+
+This guide is based on the OpenFGA's official https://openfga.dev/docs/getting-started[Getting Started] guide and highlights the relevant differences. It mimics a RESTful document management API, allowing listing, creating, reading, updating, and deleting documents. The API consists of two endpoints:
+
+* `/document/<id>` with `id` being the id of the document and the HTTP verbs reflecting the actual operations. E.g. a `GET /document/1234` request should read the document with the id `1234`.
+* `/documents` which supports the HTTP `GET` verb only and allows the user to list the documents it can access.
+
+The identity of the user will be taken from a JWT.
+
+NOTE: Even this guide addresses OpenFGA, it actually covers integration with any ReBAC system, be it Ory's https://www.ory.sh/keto/[Keto], https://authzed.com/spicedb[SpiceDB] from AuthZed, or any other system inspired by Google's Zanzibar.
+
+== Prerequisites
+
+To be able to follow this guide, you'll need the following tools installed locally:
+
+* https://docs.docker.com/install/[Docker],
+* https://docs.docker.com/compose/install/[docker-compose], and
+* a text editor of your choice.
+
+== Configure the Base Setup
+
+. Create a directory in which we're going to create further directories and files required for the setup and switch to it.
+
+. Create a directory named `rules`. We'll add the heimdall rule to it after our setup is started.
+
+. Create a `docker-compose.yaml` file with the following contents
++
+[source, yaml]
+----
+version: '3.7'
+
+services:
+  heimdall: # <1>
+    image: dadrus/heimdall:latest
+    container_name: heimdall
+    ports:
+    - "9090:4455"
+    volumes:
+    - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
+    - ./rules:/etc/heimdall/rules:ro
+    command: -c /etc/heimdall/config.yaml serve proxy
+
+  upstream: # <2>
+    image: containous/whoami:latest
+    container_name: upstream
+    command:
+    - --port=8081
+
+  openfga: # <3>
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    ports:
+      - "8080:8080"
+
+  idp: # <4>
+    image: nginx:1.25.4
+    volumes:
+    - ./idp.nginx:/etc/nginx/nginx.conf:ro
+    - ./jwks.json:/var/www/nginx/jwks.json:ro
+----
+<1> These lines configure heimdall to use a config file, we're going to configure next and a rule directory, we'll add our rules to.
+<2> Here, we define the "upstream" service, which just echoes back everything it receives.
+<3> And these lines configure our OpenFGA instance. It is the simplest setup, described in https://openfga.dev/docs/getting-started/setup-openfga/docker[Setup OpenFGA with Docker]
+<4> This is an NGINX service, which mimics an IDP system and exposes an JWKS endpoint with key material, heimdall is going to use to validate the JWT you're going to use.
+
+. Create a configuration file for heimdall, named `heimdall-config.yaml` with the following contents.
++
+[source, yaml]
+----
+mechanisms:
+  authenticators:
+    - id: jwt_auth # <1>
+      type: jwt
+      config:
+        jwks_endpoint: http://idp:8080/.well-known/jwks
+        assertions:
+          issuers:
+            - demo_issuer
+  authorizers:
+    - id: openfga_check # <2>
+      type: remote
+      config:
+        endpoint: http://openfga:8080/stores/{{ .Values.store_id }}/check # <3>
+        payload: | # <4>
+          {
+            "authorization_model_id": "{{ .Values.model_id }}",
+            "tuple_key": {
+              "user": "user:{{ .Subject.ID }}",
+              "relation":"{{ .Values.relation }}",
+              "object":"{{ .Values.object }}"
+            }
+          }
+        expressions:
+          - expression: |
+              Payload.allowed == true # <5>
+  contextualizers:
+    - id: openfga_list # <6>
+      type: generic
+      config:
+        endpoint: http://openfga:8080/stores/{{ .Values.store_id }}/list-objects # <7>
+        payload: | # <8>
+          {
+            "authorization_model_id": "{{ .Values.model_id }}",
+            "user": "user:{{ .Subject.ID }}",
+            "relation":"{{ .Values.relation }}",
+            "type":"document"
+          }
+  finalizers:
+    - id: create_jwt # <9>
+      type: jwt
+
+providers:
+  file_system: # <10>
+    src: /etc/heimdall/rules
+    watch: true
+----
+<1> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With the given configuration it will check whether a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint.
+<2> Here we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `openfga_check`, which we're going to use for the actual authorization purposes in our rules.
+<3> Here we define the endpoint to be used for the authorization checks. Most probably, you'll want to hard code your OpenFGA model id. Since, we're going to create the model, when we start our setup, we'll reference it in our rule via `store_id`.
++
+NOTE: We use a very simple `link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[endpoint]` configuration here by just specifying the actual url. If required, you can specify API keys, and many more. Take a look at the linked documentation of this property.
++
+<4> This is the definition of our payload to be sent to the check endpoint. As we don't know the model id as well, we'll configure it in our rule. The user will be taken from the `Subject` create by heimdall, and the relation and object will be specified in our rule.
+<5> In case of a successful response, the response from the check endpoint will look like `{"allowed": true}`. Otherwise, it will be `{"allowed": false}`. With the expression here, we perform the required verification.
+<6> Here we define and configure a `link:{{< relref "/docs/mechanisms/contextualizers.adoc#_generic" >}}[generic]` contextualizer named `openfga_list`.
+<7> As with the authorization mechanism, defined above, here we configure the endpoint to list the allowed objects.
+<8> The payload configuration used while communicating to the configured endpoint.
+<9> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. Without any configuration, as used here, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID.
+<10> The last few lines of the configure the `link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[file_system]` provider, which allows loading of regular rules from the file system.
+
+. Configure NGINX to expose a static endpoint serving a JWKS document under the `.well-known` path, so heimdall is able to verify the JWT, we're going to use. Create a file named `idp.nginx` with the following content:
++
+[source, bash]
+----
+worker_processes  1;
+user       nginx;
+pid        /var/run/nginx.pid;
+
+events {
+  worker_connections  1024;
+}
+
+http {
+    keepalive_timeout  65;
+
+    server {
+        listen 8080;
+
+        location /.well-known/jwks {
+            default_type  application/json;
+            root /var/www/nginx;
+            try_files /jwks.json =404;
+        }
+    }
+}
+----
++
+In addition, create a file named `jwks.json` with the public key required to verify the tokens we're going to use.
++
+[source, json]
+----
+{
+  "keys": [
+    {
+      "use": "sig",
+      "kty": "EC",
+      "kid": "key-2",
+      "crv": "P-256",
+      "alg": "ES256",
+      "x": "NnU0iWRq7szZP_8Ir3D4BShUEtcW1dHpuvlCgB6ecE0",
+      "y": "X71tZm51ovUPFNKE0bsi5XF-FtIykEfk1O83EHNkSdo"
+    }
+  ]
+}
+----
+
+== Create Authorization Model & Rules
+
+The static configuration of our services is in place. Let us now create the actual authorization model and based on it the required heimdall rules.
+
+. Start our setup with `docker-compose up` and wait until all services are up and running.
+
+. Create the OpenFGA store as also described in https://openfga.dev/docs/getting-started/create-store[Create Store] with
++
+[source, bash]
+----
+curl -X POST http://127.0.0.1:8080/stores \
+  -H "content-type: application/json" \
+  -d '{"name": "FGA Demo Store"}'
+----
++
+This call should result in an output similar to
++
+[source, json]
+----
+{
+  "id":"01HSXG2XSZJMQG99EVXB4QQX8P",
+  "name":"FGA Demo Store",
+  "created_at":"2024-03-26T13:44:37.439559338Z",
+  "updated_at":"2024-03-26T13:44:37.439559338Z"
+}
+----
++
+Note or write down the value of the store `id` returned.
+
+. Configure the authorization model as also described in https://openfga.dev/docs/getting-started/configure-model[Configure Model] with
++
+[source, bash]
+----
+curl -X POST http://127.0.0.1:8080/stores/<the id from above>/authorization-models \
+  -H "content-type: application/json" \
+  -d '{"schema_version":"1.1","type_definitions":[{"type":"user"},{"type":"document","relations":{"reader":{"this":{}},"writer":{"this":{}},"owner":{"this":{}}},"metadata":{"relations":{"reader":{"directly_related_user_types":[{"type":"user"}]},"writer":{"directly_related_user_types":[{"type":"user"}]},"owner":{"directly_related_user_types":[{"type":"user"}]}}}}]}'
+----
++
+This call should result in an output similar to
++
+[source, json]
+----
+{
+  "authorization_model_id":"01HSXG7TBQEJ7GBPKQR2VYH24G"
+}
+----
++
+Note or write down the value of `authorization_model_id`.
+
+. Let us now create a rule set for heimdall. Create a file named `demo.yaml` with the following contents in the `rules` directory
++
+[source, yaml]
+----
+version: "1alpha3"
+rules:
+- id: access_document  # <1>
+  match:
+    url: http://<**>/document/<**> # <2>
+  forward_to: # <3>
+    host: upstream:8081
+  methods:
+  - GET
+  - POST
+  - DELETE
+  execute:
+  - authenticator: jwt_auth # <4>
+  - authorizer: openfga_check # <5>
+    config:
+      values:
+        store_id: 01HSXG2XSZJMQG99EVXB4QQX8P # <6>
+        model_id: 01HSXG7TBQEJ7GBPKQR2VYH24G # <7>
+        relation: > # <8>
+          {{- if eq .Request.Method "GET" -}} reader
+          {{- else if eq .Request.Method "POST" -}} creator
+          {{- else if eq .Request.Method "DELETE" -}} deleter
+          {{- else -}} unknown
+          {{- end -}}
+        object: >
+          document:{{- splitList "/" .Request.URL.Path | last -}} # <9>
+  - finalizer: create_jwt # <10>
+
+- id: list_documents  # <11>
+  match:
+    url: http://<**>/documents # <12>
+  forward_to: # <13>
+    host: upstream:8081
+  methods:
+  - GET # <14>
+  execute: # <15>
+  - authenticator: jwt_auth
+  - contextualizer: openfga_list
+    config:
+      values:
+        store_id: 01HSXG2XSZJMQG99EVXB4QQX8P
+        model_id: 01HSXG7TBQEJ7GBPKQR2VYH24G
+        relation: reader
+  - finalizer: create_jwt
+    config:
+      claims: |
+        {{ toJson .Subject.Attributes.openfga_list }} # <16>
+----
+<1> Our rule set consists of two rules. The first one has the id `access_document`
+<2> This rule should match urls of the following form `/document/<id>`, with id being the identifier of a document.
+<3> If the execution of the authentication & authorization pipeline was successful, the request should be forwarded to the `upstream:8081` host.
+<4> The authentication & authorization pipeline starts with the reference to the previously defined authenticator `jwt_auth`
+<5> Next, we specify the `openfga_check` authorizer and also configure the rule specific settings
+<6> Replace the value here with the store id, you've received in step 6
+<7> Replace the value here with the authorization model id, you've received in step 7
+<8> Here, we set the relation depending on the used HTTP request method
+<9> Our object reference. We use the last URL path fragment as the id of the document
+<10> Reference to the previously configured finalizer to create a JWT to be forwarded to our upstream service
+<11> This is our second rule. It has the id `list_documents`.
+<12> And matches any request of the form `/documents`
+<13> As the previous rule, this one forwards the request to the `upstream:8081` host on successful completion of the authentication & authorization pipeline
+<14> Unlike the `access_document` rule, this one allows only HTTP GET methods for the matched urls.
+<15> The authentication & authorization pipeline is pretty similar to the previous rule. The main difference is the usage of the `openfga_list` contextualizer instead of the `openfga_check` authorizer and the reconfiguration of the `create_jwt` finalizer. As with the previous rule, replace the `store_id` and `model_id` with the values, you've received above.
+<16> Here, we reconfigure our finalizer to include the results from the `openfga_list` contextualizer into the created JWT.
+
+== Update Relationship Tuples
+
+Having everything in place, time to configure the actual permissions. As with the previous steps, this one is based on https://openfga.dev/docs/getting-started/update-tuples[Update Relationship Tuples] from the official OpenFGA guide. So, let us give our user `anne` at least the `read` permission.
+
+NOTE: If you skip this step and directly continue with link:{{< relref "#_use_the_setup" >}}[Use the Setup], you'll always receive a `403 Forbidden` response.
+
+. Call the OpenFGA write endpoint as also described in https://openfga.dev/docs/getting-started/update-tuples#02-calling-write-api-to-add-new-relationship-tuples[Calling Write API To Add New Relationship Tuples] to create a reader relationship between our user `anne` and the document with the id `1234`. Replace the store id and the authorization model id with those, you've received while following the steps above:
++
+[source, bash]
+----
+curl -X POST http://127.0.0.1:8080/stores/<the store id from above>/write \
+     -H "content-type: application/json" \
+     -d '{
+            "authorization_model_id": "<the authorization model id from above>",
+            "writes": {
+              "tuple_keys" : [
+                {
+                  "user":"user:anne",
+                  "relation":"reader",
+                  "object":"document:1234"
+                }
+              ]
+            }
+        }'
+----
+
+. Verify `anne` has the required permissions
++
+[source, bash]
+----
+curl -X POST http://127.0.0.1:8080/stores/<the store id from above>/check  \
+     -H "content-type: application/json" \
+     -d '{
+          "authorization_model_id": "<the authorization model id from above>",
+          "tuple_key": {
+            "user": "user:anne",
+            "relation": "reader",
+            "object": "document:1234"
+          }
+        }'
+----
++
+You should receive the following response:
++
+[source, json]
+----
+{"allowed":true, "resolution":""}
+----
+
+== Use the Setup
+
+We have now definitely everything in place to allow our user `anne` to at least read the document with the id `1234` and also list the documents `anne` has access to.
+
+. Try executing the following command:
++
+[source, bash]
+----
+$ curl -X GET -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0yIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjcyMzUxODUsImlhdCI6MTcxMTg3NTE4NSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiI1ZDJjM2E3OC1hM2Y5LTRlNmYtOTExYi0xZjZmZWQ5ODE3YTciLCJuYmYiOjE3MTE4NzUxODUsInN1YiI6ImFubmUifQ.wH7HOs-w8YbsOLJcZ9bHBuY5lCBZmYUhQGLJyEbePJZ_WlyR7aa0QmCc3Yx9JsSs3HDmnIbD2wUaFTe2rZWtqA" \
+       127.0.0.1:9090/document/1234
+----
++
+You should see an output similar to the one shown below. Since our upstream does just echo everything back it receives, it represents a successful response to read the document with the id `1234`.
++
+[source, bash]
+----
+Hostname: 94e60bba8498
+IP: 127.0.0.1
+IP: 172.19.0.2
+RemoteAddr: 172.19.0.4:43688
+GET /admin HTTP/1.1
+Host: upstream:8081
+User-Agent: curl/8.2.1
+Accept: */*
+Accept-Encoding: gzip
+Authorization: Bearer eyJhbGciOiJFUzM4NCIsImtpZCI6ImRiMzliZGI3ZmIyNWMyNTgxMTI4ZDdlMzc0M2Y2MjkxY2E5YzBkZDIiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE3MTE5Nzc1NDEsImlhdCI6MTcxMTk3NzI0MSwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiJjNGMyZWMxZC02MTMxLTQ2NWYtYjYwZC01ZTYwZDJhMGNiMTgiLCJuYmYiOjE3MTE5NzcyNDEsInN1YiI6ImFubmUifQ.x03GYY2yPvItoYDY-YWlnrVlI1NUZs81Zr1yGHnR0sDPiCamzzWX2YcQFZkXCXO8EkwPLesvjZeISCs0RjuCT85UnQF8mavh2Q2j1By9zGfYobOVsaoSrIA8anR4I1hL
+Forwarded: for=172.19.0.1;host=127.0.0.1:9090;proto=http
+----
+
+. Let us list the documents our user has access to
++
+[source, bash]
+----
+$ curl -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0yIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjcyMzUxODUsImlhdCI6MTcxMTg3NTE4NSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiI1ZDJjM2E3OC1hM2Y5LTRlNmYtOTExYi0xZjZmZWQ5ODE3YTciLCJuYmYiOjE3MTE4NzUxODUsInN1YiI6ImFubmUifQ.wH7HOs-w8YbsOLJcZ9bHBuY5lCBZmYUhQGLJyEbePJZ_WlyR7aa0QmCc3Yx9JsSs3HDmnIbD2wUaFTe2rZWtqA" \
+       127.0.0.1:9090/documents
+----
++
+You should again see an output similar to the one shown below. However, if you take a closer look at the JWT from the `Authorization` header by e.g. making use of https://www.jstoolset.com/jwt, you'll see it contains also a list of documents `anne` has access to.
++
+[source, bash]
+----
+Hostname: 94e60bba8498
+IP: 127.0.0.1
+IP: 172.19.0.2
+RemoteAddr: 172.19.0.4:43688
+GET /admin HTTP/1.1
+Host: upstream:8081
+User-Agent: curl/8.2.1
+Accept: */*
+Accept-Encoding: gzip
+Authorization: Bearer eyJhbGciOiJFUzM4NCIsImtpZCI6ImRiMzliZGI3ZmIyNWMyNTgxMTI4ZDdlMzc0M2Y2MjkxY2E5YzBkZDIiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE3MTE5Nzc1OTksImlhdCI6MTcxMTk3NzI5OSwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiI5OTBkOTM5Ny1mMjAwLTQ4ODgtOGE0Ny0zZjZmM2Q2YmNmMmIiLCJuYmYiOjE3MTE5NzcyOTksIm9iamVjdHMiOlsiZG9jdW1lbnQ6MTIzNCJdLCJzdWIiOiJhbm5lIn0.NA2PBmdLNICDjbauIeZwKrFglNKPaddKkNOww4vUCcmWwhQX0cyKMtUILN4cypgR7Bfu_Hr9VOIgbau2IbVIYe51hEwH5jvWCUbInXDnLkdfwAdDWGpAVGtNHcMj3CRG
+Forwarded: for=172.19.0.1;host=127.0.0.1:9090;proto=http
+----
+
+. Try accessing a document with the id `1235` or delete a document using the `DELETE` HTTP verb. Useless :). Heimdall won't let you through. But you can add new relations as you did in link:{{< relref "#_update_relationship_tuples" >}}[Update Relationship Tuples] to allow `anne` accessing further documents, or delete, or modify existing documents. Try that.
+
+== Cleanup
+
+Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with
+
+[source, bash]
+----
+$ docker-compose down
+----

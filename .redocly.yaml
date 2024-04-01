@@ -2,20 +2,23 @@
 apis:
   heimdall:
     root: docs/openapi/specification.yaml
-styleguide:
-  extends:
-    - recommended
-  rules:
-    no-unused-components: error
-    no-identical-paths: warn
-features.openapi:
-  disableSearch: true
-  showConsole: false
-  hideTryItPanel: true
-  expandResponses: 200,201,202
-  generateCodeSamples:
-    languages:  # Array of language config objects; indicates in which languages to generate code samples.
-      - lang: curl
-      - lang: Node.js
-      - lang: Go
-      - lang: Python
+
+extends:
+  - recommended
+
+rules:
+  no-unused-components: error
+  no-identical-paths: warn
+
+theme:
+  openapi:
+    disableSearch: true
+    showConsole: false
+    hideTryItPanel: true
+    expandResponses: 200,201,202
+    generateCodeSamples:
+      languages:  # Array of language config objects; indicates in which languages to generate code samples.
+        - lang: curl
+        - lang: Node.js
+        - lang: Go
+        - lang: Python

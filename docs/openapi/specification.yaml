@@ -194,6 +194,8 @@ components:
     InternalServerError:
       description: Internal Server Error. Returned if the service run in a bad condition and cannot serve the request.
 
+security: []
+
 paths:
   /metrics:
     servers:

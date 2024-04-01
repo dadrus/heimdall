@@ -183,7 +183,11 @@ If you let heimdall care about most of the existing authentication and authoriza
 
 ....
 
-This way you let heimdall orchestrate existing authentication and authorization systems and also provide the information about the authenticated and authorized subjects to your microservice in a unified format completely independent of the used authentication strategy or protocol. There is however still the need to perform some type of authorization logic in your microservice code. Especially if we talk about read requests (most probably you want to provide different representation of the requested resource based on the authorization status). But it is much simpler, and it gives you much more freedom compared to all previous approaches.
+This way you let heimdall orchestrate existing authentication and authorization systems and also provide the information about the authenticated and authorized subjects to your microservice in a unified format completely independent of the used authentication strategy or protocol.
+
+There is however still the need to perform some type of authorization logic in your microservice code. Especially if we talk about read requests (most probably you want to provide different representation of the requested resource based on the authorization status). But it is much simpler, and it gives you much more freedom compared to all previous approaches.
+
+NOTE: You don't necessary need to replace proxies, gateways, ingress controller, or alike currently in place in your infrastructure with heimdall. You can easily integrate heimdall with them to achieve the functionality depicted above.
 
 == How it works
 

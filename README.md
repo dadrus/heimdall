@@ -1,6 +1,9 @@
 # Heimdall
 [![CI](https://github.com/dadrus/heimdall/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/dadrus/heimdall/actions/workflows/ci.yml)
 [![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/security.yaml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/security.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/7738/badge)](https://www.bestpractices.dev/projects/7738)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/dadrus/heimdall/badge)](https://securityscorecards.dev/viewer/?uri=github.com/dadrus/heimdall)
+[![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall)
 [![codecov](https://codecov.io/gh/dadrus/heimdall/branch/main/graph/badge.svg)](https://codecov.io/gh/dadrus/heimdall)
 [![Docker](https://img.shields.io/docker/v/dadrus/heimdall/latest?color=lightblue&label=docker&logo=docker)](https://hub.docker.com/r/dadrus/heimdall)
@@ -8,7 +11,7 @@
 
 ## Background
 
-Heimdall is inspired by the Zero Trust idea and also by [Promerium](https://www.pomerium.com/docs) and [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with both and my inability to update the latter one to include the desired functionality and behavior was Heimdall's born hour. 
+Heimdall is inspired by the Zero Trust idea and also by [Pomerium](https://www.pomerium.com/docs) and [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with both and my inability to update the latter one to include the desired functionality and behavior was Heimdall's born hour. 
 
 ## What is heimdall
 

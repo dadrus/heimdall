@@ -171,19 +171,19 @@ HEIMDALLCFG_MECHANISMS_AUTHENTICATORS_0_TYPE=anonymous
 
 * If a name of a property has `\_` it must be escaped with an additional `_`.
 +
-E.g. the service name, appearing for heimdall for your tracing backend can be configured in a configuration file with
+E.g. by setting the span processor to `simple`, you can instruct heimdall to synchronously export the created spans via configured exporters.
 +
 [source,yaml]
 ----
 tracing:
-  service_name: foobar
+  span_processor: simple
 ----
 +
 and using the environment variables with
 +
 [source,bash]
 ----
-HEIMDALLCFG_TRACING_SERVICE__NAME=foobar
+HEIMDALLCFG_TRACING_SPAN__PROCESSOR=simple
 ----
 
 

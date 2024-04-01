@@ -46,9 +46,9 @@ cache:
 NOTE: By default, heimdall makes use of this backend.
 
 
-== Radis Backends
+== Redis Backends
 
-As the name of this chapter implies, there are multiple backend types, you can configure to make use of https://redis.io/[Radis] as distributed cache:
+As the name of this chapter implies, there are multiple backend types, you can configure to make use of https://redis.io/[Redis] as distributed cache:
 
 * a link:{{< relref "#_redis_single_instance" >}}[Redis single instance],
 * a link:{{< relref "#_redis_cluster" >}}[Redis cluster] and

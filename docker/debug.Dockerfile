@@ -1,9 +1,9 @@
-FROM golang:1.22.1-bookworm
+FROM golang:1.22.1-bookworm@sha256:d996c645c9934e770e64f05fc2bc103755197b43fd999b3aa5419142e1ee6d78
 ENV CGO_ENABLED 1
 
 RUN apt-get update && apt-get install -y --no-install-recommends inotify-tools=3.14-7 psmisc=23.2-1+deb10u1 \
     && rm -rf /var/lib/apt/lists/*
-RUN go get github.com/go-delve/delve/cmd/dlv
+RUN go get github.com/go-delve/delve/cmd/dlv@v1.22.1
 
 COPY scripts/debug-entrypoint.sh /entrypoint.sh
 
