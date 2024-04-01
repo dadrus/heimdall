@@ -156,7 +156,7 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 		return !known
 	})
 
-	// find update rules
+	// find updated rules
 	updatedRules := slicex.Filter(rules, func(r rule.Rule) bool {
 		loaded := r.(*ruleImpl) // nolint: forcetypeassert
 
@@ -232,7 +232,7 @@ func (r *repository) removeRules(rules []rule.Rule) {
 
 	for idx, rul := range r.rules {
 		for _, tbd := range rules {
-			if rul.ID() == tbd.ID() {
+			if rul.SrcID() == tbd.SrcID() && rul.ID() == tbd.ID() {
 				idxs = append(idxs, idx)
 
 				r.logger.Debug().Str("_src", rul.SrcID()).Str("_id", rul.ID()).Msg("Rule removed")
@@ -266,7 +266,7 @@ func (r *repository) removeRules(rules []rule.Rule) {
 func (r *repository) replaceRules(rules []rule.Rule) {
 	for _, updated := range rules {
 		for idx, existing := range r.rules {
-			if existing.ID() == updated.ID() {
+			if updated.SrcID() == existing.SrcID() && existing.ID() == updated.ID() {
 				r.rules[idx] = updated
 
 				r.logger.Debug().
