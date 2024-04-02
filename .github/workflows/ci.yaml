@@ -732,10 +732,10 @@ jobs:
         if: steps.update-version-json.outcome == 'success'
         uses: peter-evans/create-pull-request@v6
         with:
-          title: 'chore(${{ github.ref_name }}): data.json updated for next iteration'
-          commit-message: 'chore(${{ github.ref_name }}): data.json updated for next iteration'
+          title: 'chore: Update to data.json to include the new released documentation version'
+          commit-message: 'chore: Update to data.json to include the new released documentation version'
           body: >
             data.json updated by the release-documentation job to include the entry 
-            created to reference the released ${{ needs.prepare-release.outputs.tag_name }} version
+            referencing the released ${{ needs.prepare-release.outputs.tag_name }} documentation version
           add-paths: |
             docs/versions/*.json
