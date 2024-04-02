@@ -32,7 +32,7 @@ import (
 func New(eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			defer func() {
+			defer func() { //nolint:contextcheck
 				if rec := recover(); rec != nil {
 					zerolog.Ctx(req.Context()).Error().Msg(fmt.Sprintf("%v\n%s", rec, stringx.ToString(debug.Stack())))
 
