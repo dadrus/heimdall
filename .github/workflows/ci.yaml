@@ -727,10 +727,10 @@ jobs:
           publish_dir: ./docs/versions
           keep_files: true
       - name: Setup GitSign
-        uses: chainguard-dev/actions/setup-gitsign@main
+        uses: chainguard-dev/actions/setup-gitsign@2cadca168a422313df94f6169691a86498ae51b1 # main
       - name: Create a PR for the updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@70a41aba780001da0a30141984ae2a0c95d8704e # v6.0.2
         with:
           title: 'chore: Update to data.json to include the new released documentation version'
           commit-message: 'chore: Update to data.json to include the new released documentation version'
