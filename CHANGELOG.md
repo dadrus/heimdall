@@ -1,5 +1,78 @@
 # Changelog
 
+## [0.14.0-alpha](https://github.com/dadrus/heimdall/compare/v0.13.0-alpha...v0.14.0-alpha) (2024-04-02)
+
+
+### Features
+
+* `env` settings in helm chart extended to support ConfigMaps, Secrets and Pod configuration in addition to string literals ([#1128](https://github.com/dadrus/heimdall/issues/1128)) by [@martin31821](https://github.com/martin31821) ([bf75c97](https://github.com/dadrus/heimdall/commit/bf75c97de9346169acbc2a9496fb7756814a5e60))
+* Helm chart supports setting environment variables by referencing either a ConfigMap or a Secret via `envFrom` ([#1128](https://github.com/dadrus/heimdall/issues/1128)) by [@martin31821](https://github.com/martin31821)  ([bf75c97](https://github.com/dadrus/heimdall/commit/bf75c97de9346169acbc2a9496fb7756814a5e60))
+* Hot reloading of Signer keys store ([#1232](https://github.com/dadrus/heimdall/issues/1232)) ([36076e1](https://github.com/dadrus/heimdall/commit/36076e1de864d969b1a23d9c4cd3e7cbfab4a38e))
+* Hot reloading of TLS key stores ([#1230](https://github.com/dadrus/heimdall/issues/1230)) ([9abf723](https://github.com/dadrus/heimdall/commit/9abf7232725534afca0aa62b48d3aef70a3a9ea5))
+* Redis as (distributed) cache ([#999](https://github.com/dadrus/heimdall/issues/999)) by [@tk-innoq](https://github.com/tk-innoq) ([2f9ba81](https://github.com/dadrus/heimdall/commit/2f9ba816b37268c1348ffa6632d6a038905c8474))
+
+
+### Bug Fixes
+
+* `audience` assertion adheres to RFC-7519, section 4.1.3 ([#1237](https://github.com/dadrus/heimdall/issues/1237)) ([560a470](https://github.com/dadrus/heimdall/commit/560a470c5ce89e964065918b9369780ab0a6ba36))
+* Rule set, the rule is loaded from, is considered while updating or deleting rules ([#1298](https://github.com/dadrus/heimdall/issues/1298)) ([e571248](https://github.com/dadrus/heimdall/commit/e5712485d52b0c169964a634ab1ac33631075c84))
+
+
+### Documentation
+
+* Contour integration guide updated to cover global configuration in addition to the route based one ([#1253](https://github.com/dadrus/heimdall/issues/1253)) ([74bcebd](https://github.com/dadrus/heimdall/commit/74bcebd2cafb93c609c17b16c626cfa2148ad8ea))
+* Documentation restructured to make it more comprehensive ([#1075](https://github.com/dadrus/heimdall/issues/1075)) by [@godrin](https://github.com/godrin), @REABMAX, @Ebano and @KieronWiltshire ([6612633](https://github.com/dadrus/heimdall/commit/66126336e34a388bceb82d9c79bde84bc0735918))
+* HAProxy guide updated to cover global integration with the Ingress Controller ([#1240](https://github.com/dadrus/heimdall/issues/1240)) ([ed27797](https://github.com/dadrus/heimdall/commit/ed27797fc2be0c804c7da28dad3c0b6203193b13))
+* Integration guide for OpenFGA ([#1299](https://github.com/dadrus/heimdall/issues/1299)) ([1d8bea2](https://github.com/dadrus/heimdall/commit/1d8bea2b2945f895467e0e28e4f16df5c5942f47))
+* Traefik integration guide updated to cover global configuration in addition to the route based one ([#1269](https://github.com/dadrus/heimdall/issues/1269)) ([73b1d4c](https://github.com/dadrus/heimdall/commit/73b1d4cc0a9242597a700054271ef5d0c006855b))
+
+
+### Dependencies
+
+* update golang to 1.22.1 ([#1219](https://github.com/dadrus/heimdall/issues/1219)) ([4449cb7](https://github.com/dadrus/heimdall/commit/4449cb7384c4b76aec596d06ec64477ebc1b5fa3))
+* update golang.org/x/exp digest to a685a6e ([#1245](https://github.com/dadrus/heimdall/issues/1245)) ([41ba4a2](https://github.com/dadrus/heimdall/commit/41ba4a2a9b2737e11f4f455cb68fa353a0bbff9a))
+* update google.golang.org/genproto/googleapis/rpc digest to c3f9821 ([#1301](https://github.com/dadrus/heimdall/issues/1301)) ([4ccf593](https://github.com/dadrus/heimdall/commit/4ccf5932cc49176dd7de520dc9da583ddaab6b29))
+* update kubernetes packages to v0.29.3 ([#1249](https://github.com/dadrus/heimdall/issues/1249)) ([43f3233](https://github.com/dadrus/heimdall/commit/43f32335752c8d85cba61eb2a74827274e2a6d84))
+* update module github.com/dlclark/regexp2 to v1.11.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module github.com/evanphx/json-patch/v5 to v5.9.0 ([#1156](https://github.com/dadrus/heimdall/issues/1156)) ([3770509](https://github.com/dadrus/heimdall/commit/377050997851d2360948484def70916c1771ff60))
+* update module github.com/go-co-op/gocron/v2 to v2.2.9 ([#1292](https://github.com/dadrus/heimdall/issues/1292)) ([3555329](https://github.com/dadrus/heimdall/commit/35553294290871fe13ae078b46894114be615a2a))
+* update module github.com/go-jose/go-jose/v4 to v4.0.1 [security] ([#1225](https://github.com/dadrus/heimdall/issues/1225)) ([45e5a46](https://github.com/dadrus/heimdall/commit/45e5a46aea979cc5dfe6d85369e600c01b032e7d))
+* update module github.com/go-playground/validator/v10 to v10.19.0 ([#1217](https://github.com/dadrus/heimdall/issues/1217)) ([564d256](https://github.com/dadrus/heimdall/commit/564d256a44f25e464dcfbee35d93b512b92fcbe3))
+* update module github.com/google/cel-go to v0.20.1 ([#1224](https://github.com/dadrus/heimdall/issues/1224)) ([a0669a8](https://github.com/dadrus/heimdall/commit/a0669a818b0454f9e5f675502e41402acf991daf))
+* update module github.com/google/uuid to v1.6.0 ([#1151](https://github.com/dadrus/heimdall/issues/1151)) ([5f9dc9c](https://github.com/dadrus/heimdall/commit/5f9dc9c819a7a3454dc2b1f13ffb1c6c41648114))
+* update module github.com/grpc-ecosystem/go-grpc-middleware/v2 to v2.1.0 ([#1241](https://github.com/dadrus/heimdall/issues/1241)) ([bff3874](https://github.com/dadrus/heimdall/commit/bff38740dd16d63b11a1ff4f2df4db647a43511a))
+* update module github.com/jellydator/ttlcache/v3 to v3.2.0 ([#1198](https://github.com/dadrus/heimdall/issues/1198)) ([7c560d2](https://github.com/dadrus/heimdall/commit/7c560d21835527537afcb8704cd882220a14d61d))
+* update module github.com/knadh/koanf/v2 to v2.1.0 ([#1178](https://github.com/dadrus/heimdall/issues/1178)) ([1e344d3](https://github.com/dadrus/heimdall/commit/1e344d383954cdd2daecce5ea190983f4fcb8d89))
+* update module github.com/ory/ladon to v1.3.0 ([#1222](https://github.com/dadrus/heimdall/issues/1222)) ([3ca9ec4](https://github.com/dadrus/heimdall/commit/3ca9ec4b594d620428fa8fd2af7c31a8152d55c4))
+* update module github.com/prometheus/client_golang to v1.19.0 ([#1212](https://github.com/dadrus/heimdall/issues/1212)) ([256932f](https://github.com/dadrus/heimdall/commit/256932fea84666bb1814661f18cf0448bbd52190))
+* update module github.com/rs/zerolog to v1.32.0 ([#1165](https://github.com/dadrus/heimdall/issues/1165)) ([d4678f6](https://github.com/dadrus/heimdall/commit/d4678f60e95d82e2066f1195fd66dadac469b597))
+* update module github.com/tidwall/gjson to v1.17.1 ([#1187](https://github.com/dadrus/heimdall/issues/1187)) ([a1680a1](https://github.com/dadrus/heimdall/commit/a1680a13db5d3edd9d3c24ab86951a1960e70922))
+* update module github.com/tonglil/opentelemetry-go-datadog-propagator to v0.1.2 ([#1215](https://github.com/dadrus/heimdall/issues/1215)) ([0d2a6ce](https://github.com/dadrus/heimdall/commit/0d2a6cefef99b7b49ecf6f14c6677e574b07e69f))
+* update module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc to v0.49.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/contrib/instrumentation/host to v0.49.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.49.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/contrib/instrumentation/runtime to v0.49.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/contrib/propagators/autoprop to v0.49.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/bridge/opentracing to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/exporters/otlp/otlptrace to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/exporters/prometheus to v0.46.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/exporters/zipkin to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/metric to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/sdk to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/sdk/metric to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.opentelemetry.io/otel/trace to v1.24.0 ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module go.uber.org/fx to v1.21.0 ([#1244](https://github.com/dadrus/heimdall/issues/1244)) ([99963e0](https://github.com/dadrus/heimdall/commit/99963e0232a4246fb37a61dd2500fdc7efac08ac))
+* update module gocloud.dev to v0.37.0 ([#1236](https://github.com/dadrus/heimdall/issues/1236)) ([8d1c7fe](https://github.com/dadrus/heimdall/commit/8d1c7feaeefac6109b8c7c01188dfea268a251a7))
+* update module google.golang.org/genproto/googleapis/rpc to b0ce06b ([#1209](https://github.com/dadrus/heimdall/issues/1209)) ([c51eda9](https://github.com/dadrus/heimdall/commit/c51eda927d4587560cd1cf17f1547488c01d15dd))
+* update module google.golang.org/grpc to v1.62.1 ([#1220](https://github.com/dadrus/heimdall/issues/1220)) ([d22d0d2](https://github.com/dadrus/heimdall/commit/d22d0d2626a8c67c8e3b728fd82e1aa298746b9c))
+* update module google.golang.org/protobuf to v1.33.0 ([#1221](https://github.com/dadrus/heimdall/issues/1221)) ([e2dab94](https://github.com/dadrus/heimdall/commit/e2dab9456fd4f1f5a265a6106858610da33fb995))
+* update module k8s.io/klog/v2 to v2.120.1 ([#1139](https://github.com/dadrus/heimdall/issues/1139)) ([541828b](https://github.com/dadrus/heimdall/commit/541828bbcfd0d838a1349a27951514a2c439bab4))
+
 ## [0.13.0-alpha](https://github.com/dadrus/heimdall/compare/v0.12.0-alpha...v0.13.0-alpha) (2024-01-03)
 
 
