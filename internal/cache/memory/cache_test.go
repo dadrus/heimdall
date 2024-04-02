@@ -107,7 +107,7 @@ func TestMemoryCacheExpiration(t *testing.T) {
 
 	hits := 0
 
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		time.Sleep(250 * time.Millisecond)
 
 		value, err := cache.Get(context.TODO(), "baz")

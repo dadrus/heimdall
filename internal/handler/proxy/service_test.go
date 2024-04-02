@@ -1100,7 +1100,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 		rc := http.NewResponseController(rw) // nolint: bodyclose
 
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			_, err := rw.Write(stringx.ToBytes(strconv.Itoa(i)))
 			require.NoError(t, err)
 
@@ -1172,7 +1172,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	data := make([]byte, 1)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		_, err = resp.Body.Read(data)
 		require.NoError(t, err)
 		val, err := strconv.Atoi(stringx.ToString(data))
