@@ -70,7 +70,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 
 			activeRequests.Add(req.Context(), 1, opt)
 
-			defer func() {
+			defer func() { //nolint:contextcheck
 				activeRequests.Add(req.Context(), -1, opt)
 			}()
 
