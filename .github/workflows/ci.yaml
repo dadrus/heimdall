@@ -563,6 +563,8 @@ jobs:
 
   release-helm-chart:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     needs:
       - prepare-release
       - release-container-images
@@ -636,7 +638,7 @@ jobs:
           include: docs/**
       - name: Build documentation
         working-directory: ./docs
-        run: npm run build
+        run: hugo --minify -d ./public
       - name: Deploy documentation
         if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
@@ -649,6 +651,8 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+      id-token: write
+      pull-requests: write
     needs:
       - prepare-release
     if: needs.prepare-release.outputs.release_created
@@ -722,12 +726,16 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/versions
           keep_files: true
-      - name: Commit updated versions JSON document
+      - name: Setup GitSign
+        uses: chainguard-dev/actions/setup-gitsign@main
+      - name: Create a PR for the updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
-        run: |
-          git config --local user.email "${{ github.sha }}+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add ./docs/versions/data.json
-          git commit -m "chore(${{ github.ref_name }}): Preparing for next iteration"
-      - name: Push changes
-        uses: ad-m/github-push-action@9870d48124da805820c70ebc6ba563c715551019 # master
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: 'chore: Update to data.json to include the new released documentation version'
+          commit-message: 'chore: Update to data.json to include the new released documentation version'
+          body: >
+            data.json updated by the release-documentation job to include the entry 
+            referencing the released ${{ needs.prepare-release.outputs.tag_name }} documentation version
+          add-paths: |
+            docs/versions/*.json
