@@ -1,6 +1,6 @@
 ignore:
 - "**/*generated.go"
-- "**/mocks"
+- "**/mocks/**"
 - "**/*_test.go"
 - "**/testsupport/**"
 - "**/zz_generated.*"
