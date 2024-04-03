@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - release
   pull_request:
     branches:
       - main
+      - release
 
 env:
   GO_VERSION: "1.22.1"
@@ -36,7 +38,6 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Check code changes
@@ -241,7 +242,7 @@ jobs:
 
   prepare-release:
     runs-on: ubuntu-22.04
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release'
     permissions:
       pull-requests: write
       contents: write
@@ -253,10 +254,11 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Prepare Release
         id: release_prepare
         uses: google-github-actions/release-please-action@a37ac6e4f6449ce8b3f7607e4d97d0146028dc0b # v4.1.0
+        with:
+          target-branch: ${{ github.ref_name }}
 
   build-binaries:
     runs-on: ubuntu-22.04
@@ -281,7 +283,6 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
@@ -310,7 +311,6 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
@@ -348,7 +348,7 @@ jobs:
       - check-changes
       - prepare-release
     if: >
-      always() && 
+      github.ref == 'refs/heads/main' &&
       needs.prepare-release.outputs.release_created == false && 
       (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true'))
     steps:
@@ -467,7 +467,6 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Prepare image version
@@ -574,7 +573,6 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Prepare image version
@@ -598,6 +596,7 @@ jobs:
       - prepare-release
       - check-changes
     if: >
+      github.ref == 'refs/heads/main' &&
       needs.prepare-release.outputs.release_created == false && 
       (needs.check-changes.outputs.docs_changed == 'true' || needs.check-changes.outputs.ci_config_changed == 'true')
     steps:
@@ -605,7 +604,6 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
@@ -661,7 +659,6 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
@@ -732,8 +729,8 @@ jobs:
         if: steps.update-version-json.outcome == 'success'
         uses: peter-evans/create-pull-request@70a41aba780001da0a30141984ae2a0c95d8704e # v6.0.2
         with:
-          title: 'chore: Update to data.json to include the new released documentation version'
-          commit-message: 'chore: Update to data.json to include the new released documentation version'
+          title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
+          commit-message: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
           body: >
             data.json updated by the release-documentation job to include the entry 
             referencing the released ${{ needs.prepare-release.outputs.tag_name }} documentation version
