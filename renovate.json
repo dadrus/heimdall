@@ -5,6 +5,7 @@
     ":semanticCommitTypeAll(deps)",
     ":semanticCommitScopeDisabled"
   ],
+  "baseBranches": ["release"],
   "assigneesFromCodeOwners": true,
   "addLabels": ["dependency"],
   "automerge": false,
