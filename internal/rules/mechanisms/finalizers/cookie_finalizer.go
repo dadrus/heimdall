@@ -20,8 +20,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -62,20 +62,14 @@ func newCookieFinalizer(id string, rawConfig map[string]any) (*cookieFinalizer, 
 	}, nil
 }
 
-func (u *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (u *cookieFinalizer) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", u.id).Msg("Finalizing using cookie finalizer")
-
-	if sub == nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute cookie finalizer due to 'nil' subject").
-			WithErrorContext(u)
-	}
 
 	for name, tmpl := range u.cookies {
 		value, err := tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
-			"Subject": sub,
+			"Subject": sub["Subject"],
 		})
 		if err != nil {
 			return errorchain.

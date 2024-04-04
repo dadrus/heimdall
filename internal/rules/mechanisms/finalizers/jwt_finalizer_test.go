@@ -30,7 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -123,7 +123,7 @@ claims:
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				require.NotNil(t, finalizer.claims)
 				val, err := finalizer.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": &subject.Principal{ID: "bar"},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
@@ -150,7 +150,7 @@ claims:
 				assert.Equal(t, expectedTTL, finalizer.ttl)
 				require.NotNil(t, finalizer.claims)
 				val, err := finalizer.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": &subject.Principal{ID: "bar"},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
@@ -328,7 +328,7 @@ claims:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				val, err := configured.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": &subject.Principal{ID: "bar"},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
@@ -357,7 +357,7 @@ claims:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				val, err := configured.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": &subject.Principal{ID: "bar"},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
@@ -416,34 +416,21 @@ func TestJWTFinalizerExecute(t *testing.T) {
 		uc             string
 		id             string
 		config         []byte
-		subject        *subject.Subject
+		subject        subject.Subject
 		configureMocks func(t *testing.T,
 			ctx *heimdallmocks.ContextMock,
 			signer *heimdallmocks.JWTSignerMock,
 			cch *mocks.CacheMock,
-			sub *subject.Subject)
+			sub subject.Subject)
 		assert func(t *testing.T, err error)
 	}{
 		{
-			uc: "with 'nil' subject",
-			id: "jun1",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "'nil' subject")
-
-				var identifier interface{ ID() string }
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "jun1", identifier.ID())
+			uc: "with used prefilled cache",
+			subject: subject.Subject{
+				"Subject": &subject.Principal{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			},
-		},
-		{
-			uc:      "with used prefilled cache",
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, sub *subject.Subject,
+				cch *mocks.CacheMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -464,16 +451,18 @@ func TestJWTFinalizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc:      "with no cache hit and without custom claims",
-			config:  []byte(`ttl: 1m`),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			uc:     "with no cache hit and without custom claims",
+			config: []byte(`ttl: 1m`),
+			subject: subject.Subject{
+				"Subject": &subject.Principal{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, sub *subject.Subject,
+				cch *mocks.CacheMock, sub subject.Subject,
 			) {
 				t.Helper()
 
 				signer.EXPECT().Hash().Return([]byte("foobar"))
-				signer.EXPECT().Sign(sub.ID, configuredTTL, map[string]any{}).
+				signer.EXPECT().Sign(sub["Subject"].ID, configuredTTL, map[string]any{}).
 					Return("barfoo", nil)
 
 				ctx.EXPECT().Signer().Return(signer)
@@ -499,14 +488,16 @@ claims: '{
   "sub_id": {{ quote .Subject.ID }}, 
   {{ quote $val }}: "baz"
 }'`),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"Subject": &subject.Principal{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, sub *subject.Subject,
+				cch *mocks.CacheMock, sub subject.Subject,
 			) {
 				t.Helper()
 
 				signer.EXPECT().Hash().Return([]byte("foobar"))
-				signer.EXPECT().Sign(sub.ID, defaultJWTTTL, map[string]any{
+				signer.EXPECT().Sign(sub["Subject"].ID, defaultJWTTTL, map[string]any{
 					"sub_id": "foo",
 					"bar":    "baz",
 				}).Return("barfoo", nil)
@@ -524,12 +515,14 @@ claims: '{
 			},
 		},
 		{
-			uc:      "with custom claims template, which does not result in a JSON object",
-			id:      "jun2",
-			config:  []byte(`claims: "foo: bar"`),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			uc:     "with custom claims template, which does not result in a JSON object",
+			id:     "jun2",
+			config: []byte(`claims: "foo: bar"`),
+			subject: subject.Subject{
+				"Subject": &subject.Principal{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -552,12 +545,14 @@ claims: '{
 			},
 		},
 		{
-			uc:      "with custom claims template, which fails during rendering",
-			id:      "jun3",
-			config:  []byte(`claims: "{{ len .foobar }}"`),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			uc:     "with custom claims template, which fails during rendering",
+			id:     "jun3",
+			config: []byte(`claims: "{{ len .foobar }}"`),
+			subject: subject.Subject{
+				"Subject": &subject.Principal{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -585,7 +580,7 @@ claims: '{
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T, _ *heimdallmocks.ContextMock, _ *heimdallmocks.JWTSignerMock,
-					_ *mocks.CacheMock, _ *subject.Subject,
+					_ *mocks.CacheMock, _ subject.Subject,
 				) {
 					t.Helper()
 				})

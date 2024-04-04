@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 // by intention. Used only during application bootstrap
@@ -45,7 +45,7 @@ func newAllowAuthorizer(id string) *allowAuthorizer {
 	return &allowAuthorizer{id: id}
 }
 
-func (a *allowAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (a *allowAuthorizer) Execute(ctx heimdall.Context, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using allow authorizer")
 

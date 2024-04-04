@@ -34,9 +34,9 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -113,7 +113,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 }
 
 //nolint:cyclop
-func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (h *genericContextualizer) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", h.id).Msg("Updating using generic contextualizer")
 
@@ -164,7 +164,7 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	}
 
 	if response.Payload != nil {
-		sub.Attributes[h.id] = response.Payload
+		sub["Subject"].Attributes[h.id] = response.Payload
 	}
 
 	return nil
@@ -211,7 +211,7 @@ func (h *genericContextualizer) ContinueOnError() bool { return h.continueOnErro
 
 func (h *genericContextualizer) callEndpoint(
 	ctx heimdall.Context,
-	sub *subject.Subject,
+	sub subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*contextualizerData, error) {
@@ -251,7 +251,7 @@ func (h *genericContextualizer) callEndpoint(
 
 func (h *genericContextualizer) createRequest(
 	ctx heimdall.Context,
-	sub *subject.Subject,
+	sub subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*http.Request, error) {
@@ -266,7 +266,7 @@ func (h *genericContextualizer) createRequest(
 		}
 
 		return tpl.Render(map[string]any{
-			"Subject": sub,
+			"Subject": sub["Subject"],
 			"Values":  values,
 		})
 	})
@@ -346,7 +346,7 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 }
 
 func (h *genericContextualizer) calculateCacheKey(
-	sub *subject.Subject,
+	sub subject.Subject,
 	values map[string]string,
 	payload string,
 ) string {
@@ -374,7 +374,7 @@ func (h *genericContextualizer) calculateCacheKey(
 
 func (h *genericContextualizer) renderTemplates(
 	ctx heimdall.Context,
-	sub *subject.Subject,
+	sub subject.Subject,
 ) (map[string]string, string, error) {
 	var (
 		values  map[string]string
@@ -384,7 +384,7 @@ func (h *genericContextualizer) renderTemplates(
 
 	if values, err = h.v.Render(map[string]any{
 		"Request": ctx.Request(),
-		"Subject": sub,
+		"Subject": sub["Subject"],
 	}); err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the contextualization endpoint").
@@ -395,7 +395,7 @@ func (h *genericContextualizer) renderTemplates(
 	if h.payload != nil {
 		if payload, err = h.payload.Render(map[string]any{
 			"Request": ctx.Request(),
-			"Subject": sub,
+			"Subject": sub["Subject"],
 			"Values":  values,
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,

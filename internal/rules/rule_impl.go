@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 type ruleImpl struct {
@@ -54,8 +55,10 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		logger.Info().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
 	}
 
+	sub := subject.Subject{}
+
 	// authenticators
-	sub, err := r.sc.Execute(ctx)
+	err := r.sc.Execute(ctx, sub)
 	if err != nil {
 		return nil, r.eh.Execute(ctx, err)
 	}

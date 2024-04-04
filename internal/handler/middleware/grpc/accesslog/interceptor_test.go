@@ -46,6 +46,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/grpc/mocks"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -76,7 +77,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				m.On("Check",
 					mock.MatchedBy(
 						func(ctx context.Context) bool {
-							accesscontext.SetSubject(ctx, "foo")
+							accesscontext.SetSubject(ctx, subject.Subject{"Subject": &subject.Principal{ID: "foo"}})
 
 							return true
 						},
@@ -112,7 +113,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
 				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 				assert.Equal(t, true, logEvent2["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "foo", logEvent2["_subject"])
+				assert.Equal(t, map[string]any{"id": "foo"}, logEvent2["_subject"])
 				assert.InDelta(t, float64(codes.OK), logEvent2["_grpc_status_code"], 0.001)
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
@@ -184,7 +185,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				m.On("Check",
 					mock.MatchedBy(
 						func(ctx context.Context) bool {
-							accesscontext.SetSubject(ctx, "bar")
+							accesscontext.SetSubject(ctx, subject.Subject{"Subject": &subject.Principal{ID: "bar"}})
 							accesscontext.SetError(ctx, errors.New("test error"))
 
 							return true
@@ -221,7 +222,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
 				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "bar", logEvent2["_subject"])
+				assert.Equal(t, map[string]any{"id": "bar"}, logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.InDelta(t, float64(codes.OK), logEvent2["_grpc_status_code"], 0.001)
 				assert.Equal(t, "TX finished", logEvent2["message"])
@@ -275,11 +276,11 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			// THEN
 			srv.Stop()
 
-			events := strings.Split(tb.CollectedLog(), "}")
-			require.Len(t, events, 3)
+			events := strings.Split(tb.CollectedLog(), "}{")
+			require.Len(t, events, 2)
 
 			require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine1))
-			require.NoError(t, json.Unmarshal([]byte(events[1]+"}"), &logLine2))
+			require.NoError(t, json.Unmarshal([]byte("{"+events[1]), &logLine2))
 
 			tc.assert(t, logLine1, logLine2)
 			handler.AssertExpectations(t)

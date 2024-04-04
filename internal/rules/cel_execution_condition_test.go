@@ -26,7 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 func TestNewCelExecutionCondition(t *testing.T) {
@@ -61,12 +61,14 @@ func TestNewCelExecutionCondition(t *testing.T) {
 func TestCelExecutionConditionCanExecute(t *testing.T) {
 	t.Parallel()
 
-	sub := &subject.Subject{
-		ID: "foobar",
-		Attributes: map[string]any{
-			"group1": []string{"admin@acme.co", "analyst@acme.co"},
-			"labels": []string{"metadata", "prod", "pii"},
-			"groupN": []string{"forever@acme.co"},
+	sub := subject.Subject{
+		"Subject": &subject.Principal{
+			ID: "foobar",
+			Attributes: map[string]any{
+				"group1": []string{"admin@acme.co", "analyst@acme.co"},
+				"labels": []string{"metadata", "prod", "pii"},
+				"groupN": []string{"forever@acme.co"},
+			},
 		},
 	}
 

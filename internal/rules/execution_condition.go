@@ -18,11 +18,11 @@ package rules
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 //go:generate mockery --name executionCondition --structname ExecutionConditionMock
 
 type executionCondition interface {
-	CanExecute(ctx heimdall.Context, sub *subject.Subject) (bool, error)
+	CanExecute(ctx heimdall.Context, sub subject.Subject) (bool, error)
 }

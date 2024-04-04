@@ -23,25 +23,22 @@ import (
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
-type compositeSubjectCreator []subjectCreator
+type compositeSubjectCreator []subjectHandler
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (ca compositeSubjectCreator) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 
-	var (
-		sub *subject.Subject
-		err error
-	)
+	var err error
 
 	for idx, a := range ca {
-		sub, err = a.Execute(ctx)
+		err = a.Execute(ctx, sub)
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
 
-			if (errors.Is(err, heimdall.ErrArgument) || a.IsFallbackOnErrorAllowed()) && idx < len(ca) {
+			if (errors.Is(err, heimdall.ErrArgument) || a.ContinueOnError()) && idx < len(ca) {
 				logger.Info().Msg("Falling back to next configured one.")
 
 				continue
@@ -50,10 +47,10 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 			break
 		}
 
-		accesscontext.SetSubject(ctx.AppContext(), sub.ID)
+		accesscontext.SetSubject(ctx.AppContext(), sub)
 
-		return sub, nil
+		return nil
 	}
 
-	return nil, err
+	return err
 }

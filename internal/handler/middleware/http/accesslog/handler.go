@@ -74,7 +74,12 @@ func logAccessStatus(ctx context.Context, event *zerolog.Event, statusCode int) 
 	err := accesscontext.Error(ctx)
 
 	if len(subject) != 0 {
-		event.Str("_subject", subject)
+		dict := zerolog.Dict()
+		for _, v := range subject {
+			dict = dict.Str("id", v.ID)
+		}
+
+		event.Dict("_subject", dict)
 	}
 
 	if err != nil || statusCode >= 300 {

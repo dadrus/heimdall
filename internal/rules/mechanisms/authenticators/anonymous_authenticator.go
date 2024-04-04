@@ -19,8 +19,9 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/subject"
+
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 // by intention. Used only during application bootstrap.
@@ -58,11 +59,13 @@ type anonymousAuthenticator struct {
 	Subject string `mapstructure:"subject"`
 }
 
-func (a *anonymousAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using anonymous authenticator")
 
-	return &subject.Subject{ID: a.Subject, Attributes: make(map[string]any)}, nil
+	sub.AddPrincipal(a.id, &subject.Principal{ID: a.Subject, Attributes: make(map[string]any)})
+
+	return nil
 }
 
 func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
@@ -74,7 +77,7 @@ func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticato
 	return newAnonymousAuthenticator(a.id, config)
 }
 
-func (a *anonymousAuthenticator) IsFallbackOnErrorAllowed() bool {
+func (a *anonymousAuthenticator) ContinueOnError() bool {
 	// not allowed, as no error can happen when this authenticator is executed
 	return false
 }

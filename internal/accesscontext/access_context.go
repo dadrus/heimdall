@@ -18,13 +18,15 @@ package accesscontext
 
 import (
 	"context"
+
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 type ctxKey struct{}
 
 type accessContext struct {
 	err     error
-	subject string
+	subject subject.Subject
 }
 
 func New(ctx context.Context) context.Context {
@@ -45,16 +47,16 @@ func SetError(ctx context.Context, err error) {
 	}
 }
 
-func Subject(ctx context.Context) string {
+func Subject(ctx context.Context) subject.Subject {
 	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
 		return c.subject
 	}
 
-	return ""
+	return subject.Subject{}
 }
 
-func SetSubject(ctx context.Context, subject string) {
+func SetSubject(ctx context.Context, sub subject.Subject) {
 	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
-		c.subject = subject
+		c.subject = sub
 	}
 }

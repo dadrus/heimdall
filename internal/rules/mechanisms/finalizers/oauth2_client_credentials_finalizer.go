@@ -23,8 +23,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -124,7 +124,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Finalizing using oauth2_client_credentials finalizer")
 

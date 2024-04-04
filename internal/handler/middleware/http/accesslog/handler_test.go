@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -63,7 +64,7 @@ func TestHandlerExecution(t *testing.T) {
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetSubject(req.Context(), "foo")
+				accesscontext.SetSubject(req.Context(), subject.Subject{"Subject": &subject.Principal{ID: "foo"}})
 				rw.WriteHeader(http.StatusOK)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
@@ -100,7 +101,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
 				assert.InDelta(t, float64(http.StatusOK), logEvent2["_http_status_code"], 0.001)
 				assert.Equal(t, true, logEvent2["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "foo", logEvent2["_subject"])
+				assert.Equal(t, map[string]any{"id": "foo"}, logEvent2["_subject"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
@@ -182,7 +183,7 @@ func TestHandlerExecution(t *testing.T) {
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetSubject(req.Context(), "bar")
+				accesscontext.SetSubject(req.Context(), subject.Subject{"Subject": &subject.Principal{ID: "foo"}})
 				accesscontext.SetError(req.Context(), errors.New("test error"))
 				rw.WriteHeader(http.StatusUnauthorized)
 			},
@@ -220,7 +221,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
 				assert.InDelta(t, float64(http.StatusUnauthorized), logEvent2["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "bar", logEvent2["_subject"])
+				assert.Equal(t, map[string]any{"id": "foo"}, logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent2["message"])
@@ -233,7 +234,7 @@ func TestHandlerExecution(t *testing.T) {
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetSubject(req.Context(), "bar")
+				accesscontext.SetSubject(req.Context(), subject.Subject{"Subject": &subject.Principal{ID: "bar"}})
 				rw.WriteHeader(http.StatusSeeOther)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
@@ -270,7 +271,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
 				assert.InDelta(t, float64(http.StatusSeeOther), logEvent2["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "bar", logEvent2["_subject"])
+				assert.Equal(t, map[string]any{"id": "bar"}, logEvent2["_subject"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
@@ -320,8 +321,8 @@ func TestHandlerExecution(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, resp.Body.Close())
 
-			events := strings.Split(tb.CollectedLog(), "}")
-			require.Len(t, events, 3)
+			events := strings.Split(tb.CollectedLog(), "}{")
+			require.Len(t, events, 2)
 
 			var (
 				logLine1 map[string]any
@@ -329,7 +330,7 @@ func TestHandlerExecution(t *testing.T) {
 			)
 
 			require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine1))
-			require.NoError(t, json.Unmarshal([]byte(events[1]+"}"), &logLine2))
+			require.NoError(t, json.Unmarshal([]byte("{"+events[1]), &logLine2))
 
 			tc.assert(t, req, logLine1, logLine2)
 		})

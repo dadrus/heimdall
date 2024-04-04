@@ -32,8 +32,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -62,7 +62,7 @@ type genericAuthenticator struct {
 	payload              template.Template
 	fwdHeaders           []string
 	fwdCookies           []string
-	sf                   SubjectFactory
+	sf                   PrincipalFactory
 	ttl                  time.Duration
 	sessionLifespanConf  *SessionLifespanConfig
 	allowFallbackOnError bool
@@ -71,7 +71,7 @@ type genericAuthenticator struct {
 func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
 		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"required"` //nolint:lll
-		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                    validate:"required"` //nolint:lll
+		SubjectInfo           PrincipalInfo                       `mapstructure:"subject"                    validate:"required"` //nolint:lll
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source" validate:"required"` //nolint:lll
 		ForwardHeaders        []string                            `mapstructure:"forward_headers"`
 		ForwardCookies        []string                            `mapstructure:"forward_cookies"`
@@ -102,13 +102,13 @@ func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthe
 	}, nil
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using generic authenticator")
 
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to get authentication data from request").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -116,18 +116,20 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, 
 
 	payload, err := a.getSubjectInformation(ctx, authData)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreateSubject(payload)
+	principal, err := a.sf.CreatePrincipal(payload)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub.AddPrincipal(a.id, principal)
+
+	return nil
 }
 
 func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
@@ -164,7 +166,7 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}, nil
 }
 
-func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
+func (a *genericAuthenticator) ContinueOnError() bool {
 	return a.allowFallbackOnError
 }
 

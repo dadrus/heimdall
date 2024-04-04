@@ -22,7 +22,7 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/ext"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 type heimdallLibrary struct{}
@@ -46,7 +46,7 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		Requests(),
 		Errors(),
 		Networks(),
-		ext.NativeTypes(reflect.TypeOf(&subject.Subject{})),
+		ext.NativeTypes(reflect.TypeOf(&subject.Principal{})),
 		cel.Variable("Payload", cel.DynType),
 		cel.Variable("Subject", cel.DynType),
 	}

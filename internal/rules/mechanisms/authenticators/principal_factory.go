@@ -14,16 +14,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
-//go:generate mockery --name subjectCreator --structname SubjectCreatorMock
-
-type subjectCreator interface {
-	Execute(ctx heimdall.Context) (*subject.Subject, error)
-	IsFallbackOnErrorAllowed() bool
+type PrincipalFactory interface {
+	CreatePrincipal(rawData []byte) (*subject.Principal, error)
 }

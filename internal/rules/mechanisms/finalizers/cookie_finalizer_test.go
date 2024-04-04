@@ -25,7 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -109,7 +109,7 @@ cookies:
 				assert.Equal(t, "bar", val)
 
 				val, err = finalizer.cookies["bar"].Render(map[string]any{
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": &subject.Principal{ID: "baz"},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
@@ -232,29 +232,9 @@ func TestCookieFinalizerExecute(t *testing.T) {
 		id               string
 		config           []byte
 		configureContext func(t *testing.T, ctx *mocks.ContextMock)
-		createSubject    func(t *testing.T) *subject.Subject
+		createSubject    func(t *testing.T) subject.Subject
 		assert           func(t *testing.T, err error)
 	}{
-		{
-			uc: "with nil subject",
-			id: "cun1",
-			config: []byte(`
-cookies:
-  foo: bar
-  bar: "{{ .Subject.ID }}"
-`),
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "'nil' subject")
-
-				var identifier interface{ ID() string }
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "cun1", identifier.ID())
-			},
-		},
 		{
 			uc: "with all preconditions satisfied",
 			config: []byte(`
@@ -276,10 +256,12 @@ cookies:
 				ctx.EXPECT().AddCookieForUpstream("x_foo", "Bar")
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 			},
-			createSubject: func(t *testing.T) *subject.Subject {
+			createSubject: func(t *testing.T) subject.Subject {
 				t.Helper()
 
-				return &subject.Subject{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}
+				return subject.Subject{
+					"Subject": &subject.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}},
+				}
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -292,10 +274,10 @@ cookies:
 			// GIVEN
 			createSubject := x.IfThenElse(tc.createSubject != nil,
 				tc.createSubject,
-				func(t *testing.T) *subject.Subject {
+				func(t *testing.T) subject.Subject {
 					t.Helper()
 
-					return nil
+					return subject.Subject{}
 				})
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,

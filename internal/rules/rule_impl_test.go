@@ -22,12 +22,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -239,7 +239,7 @@ func TestRuleExecute(t *testing.T) {
 		configureMocks func(
 			t *testing.T,
 			ctx *heimdallmocks.ContextMock,
-			authenticator *mocks.SubjectCreatorMock,
+			authenticator *mocks.SubjectHandlerMock,
 			authorizer *mocks.SubjectHandlerMock,
 			finalizer *mocks.SubjectHandlerMock,
 			errHandler *mocks.ErrorHandlerMock,
@@ -248,14 +248,14 @@ func TestRuleExecute(t *testing.T) {
 	}{
 		{
 			uc: "authenticator fails, but error handler succeeds",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
-				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(testsupport.ErrTestPurpose)
+				authenticator.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 			},
@@ -268,14 +268,14 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator fails, and error handler fails",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
-				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(testsupport.ErrTestPurpose)
+				authenticator.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
 			},
@@ -289,16 +289,14 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer fails, but error handler succeeds",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(testsupport.ErrTestPurpose)
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
@@ -312,16 +310,14 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer fails and error handler fails",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(testsupport.ErrTestPurpose)
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
@@ -336,17 +332,15 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer succeeds, finalizer fails, but error handler succeeds",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(testsupport.ErrTestPurpose)
 				finalizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
@@ -360,17 +354,15 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer succeeds, finalizer fails and error handler fails",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(testsupport.ErrTestPurpose)
 				finalizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
@@ -388,17 +380,15 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
@@ -418,17 +408,15 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
@@ -448,17 +436,15 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
@@ -478,17 +464,15 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
@@ -508,17 +492,15 @@ func TestRuleExecute(t *testing.T) {
 				Host:        "foo.bar",
 				URLRewriter: &config.URLRewriter{PathPrefixToCut: "/api/v1"},
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectHandlerMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
@@ -538,7 +520,7 @@ func TestRuleExecute(t *testing.T) {
 			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().AppContext().Return(context.Background())
 
-			authenticator := mocks.NewSubjectCreatorMock(t)
+			authenticator := mocks.NewSubjectHandlerMock(t)
 			authorizer := mocks.NewSubjectHandlerMock(t)
 			finalizer := mocks.NewSubjectHandlerMock(t)
 			errHandler := mocks.NewErrorHandlerMock(t)

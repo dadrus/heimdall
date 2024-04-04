@@ -76,6 +76,15 @@ func (f *ruleFactory) createExecutePipeline(
 		finalizers      compositeSubjectHandler
 	)
 
+	authenticatorsCheck := func() error {
+		if len(subjectHandlers) != 0 || len(finalizers) != 0 {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"an authenticator is defined after some other non authenticator type")
+		}
+
+		return nil
+	}
+
 	contextualizersCheck := func() error {
 		if len(finalizers) != 0 {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
@@ -97,24 +106,20 @@ func (f *ruleFactory) createExecutePipeline(
 	finalizersCheck := func() error { return nil }
 
 	for _, pipelineStep := range pipeline {
-		id, found := pipelineStep["authenticator"]
-		if found {
-			if len(subjectHandlers) != 0 || len(finalizers) != 0 {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"an authenticator is defined after some other non authenticator type")
-			}
 
-			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), getConfig(pipelineStep["config"]))
-			if err != nil {
-				return nil, nil, nil, err
-			}
-
-			authenticators = append(authenticators, authenticator)
+		// create authentication stage
+		handler, err := createHandler(version, "authenticator", false, pipelineStep, authenticatorsCheck,
+			f.hf.CreateAuthenticator)
+		if err != nil && !errors.Is(err, errHandlerNotFound) {
+			return nil, nil, nil, err
+		} else if handler != nil {
+			authenticators = append(authenticators, handler)
 
 			continue
 		}
 
-		handler, err := createHandler(version, "authorizer", pipelineStep, authorizersCheck,
+		// create authorization stage
+		handler, err = createHandler(version, "authorizer", true, pipelineStep, authorizersCheck,
 			f.hf.CreateAuthorizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
@@ -124,7 +129,7 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		handler, err = createHandler(version, "contextualizer", pipelineStep, contextualizersCheck,
+		handler, err = createHandler(version, "contextualizer", true, pipelineStep, contextualizersCheck,
 			f.hf.CreateContextualizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
@@ -134,7 +139,8 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		handler, err = createHandler(version, "finalizer", pipelineStep, finalizersCheck,
+		// create finalization stage
+		handler, err = createHandler(version, "finalizer", true, pipelineStep, finalizersCheck,
 			f.hf.CreateFinalizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
@@ -398,6 +404,7 @@ var errHandlerNotFound = errors.New("handler not found")
 func createHandler[T subjectHandler](
 	version string,
 	handlerType string,
+	conditional bool,
 	configMap map[string]any,
 	check CheckFunc,
 	creteHandler func(version, id string, conf config.MechanismConfig) (T, error),
@@ -411,12 +418,16 @@ func createHandler[T subjectHandler](
 		return nil, err
 	}
 
-	condition, err := getExecutionCondition(configMap["if"])
+	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"]))
 	if err != nil {
 		return nil, err
 	}
 
-	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"]))
+	if !conditional {
+		return handler, nil
+	}
+
+	condition, err := getExecutionCondition(configMap["if"])
 	if err != nil {
 		return nil, err
 	}

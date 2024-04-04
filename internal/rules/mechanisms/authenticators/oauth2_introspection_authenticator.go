@@ -37,8 +37,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -64,7 +64,7 @@ type oauth2IntrospectionAuthenticator struct {
 	id                   string
 	r                    oauth2.ServerMetadataResolver
 	a                    oauth2.Expectation
-	sf                   SubjectFactory
+	sf                   PrincipalFactory
 	ads                  extractors.AuthDataExtractStrategy
 	ttl                  *time.Duration
 	allowFallbackOnError bool
@@ -77,7 +77,7 @@ func newOAuth2IntrospectionAuthenticator( // nolint: funlen
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
 		Assertions            oauth2.Expectation                  `mapstructure:"assertions"              validate:"required_with=IntrospectionEndpoint"`                                        //nolint:lll,tagalign
-		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
+		SubjectInfo           PrincipalInfo                       `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
@@ -156,33 +156,35 @@ func newOAuth2IntrospectionAuthenticator( // nolint: funlen
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using OAuth2 introspect authenticator")
 
 	accessToken, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "no access token present").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	rawResp, err := a.getSubjectInformation(ctx, accessToken)
+	rawResp, err := a.getPrincipalInformation(ctx, accessToken)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreateSubject(rawResp)
+	principal, err := a.sf.CreatePrincipal(rawResp)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrInternal,
 				"failed to extract subject information from introspection response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub.AddPrincipal(a.id, principal)
+
+	return nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) (Authenticator, error) {
@@ -215,7 +217,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) IsFallbackOnErrorAllowed() bool {
+func (a *oauth2IntrospectionAuthenticator) ContinueOnError() bool {
 	return a.allowFallbackOnError
 }
 
@@ -259,7 +261,7 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
-func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {
+func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(ctx heimdall.Context, token string) ([]byte, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
 

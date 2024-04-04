@@ -25,6 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -173,18 +174,22 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	subjectID := "anon"
 	auth := anonymousAuthenticator{Subject: subjectID, id: "anon_auth"}
 
+	sub := subject.Subject{}
+
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().AppContext().Return(context.Background())
 
 	// WHEN
-	sub, err := auth.Execute(ctx)
+	err := auth.Execute(ctx, sub)
 
 	// THEN
 	require.NoError(t, err)
-	assert.NotNil(t, sub)
-	assert.Equal(t, subjectID, sub.ID)
-	assert.Empty(t, sub.Attributes)
-	assert.NotNil(t, sub.Attributes)
+	assert.Len(t, sub, 1)
+
+	principal := sub["anon_auth"]
+	assert.Equal(t, subjectID, principal.ID)
+	assert.Empty(t, principal.Attributes)
+	assert.NotNil(t, principal.Attributes)
 }
 
 func TestAnonymousAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
@@ -194,7 +199,7 @@ func TestAnonymousAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 	auth := anonymousAuthenticator{Subject: "foo"}
 
 	// WHEN
-	isAllowed := auth.IsFallbackOnErrorAllowed()
+	isAllowed := auth.ContinueOnError()
 
 	// THEN
 	require.False(t, isAllowed)
