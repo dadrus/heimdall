@@ -62,19 +62,19 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.49.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.49.0
-	go.opentelemetry.io/otel v1.24.0
-	go.opentelemetry.io/otel/bridge/opentracing v1.24.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.24.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.24.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.24.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.24.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.24.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.46.0
-	go.opentelemetry.io/otel/exporters/zipkin v1.24.0
-	go.opentelemetry.io/otel/metric v1.24.0
-	go.opentelemetry.io/otel/sdk v1.24.0
-	go.opentelemetry.io/otel/sdk/metric v1.24.0
-	go.opentelemetry.io/otel/trace v1.24.0
+	go.opentelemetry.io/otel v1.25.0
+	go.opentelemetry.io/otel/bridge/opentracing v1.25.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.25.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.25.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.25.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.25.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.25.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.47.0
+	go.opentelemetry.io/otel/exporters/zipkin v1.25.0
+	go.opentelemetry.io/otel/metric v1.25.0
+	go.opentelemetry.io/otel/sdk v1.25.0
+	go.opentelemetry.io/otel/sdk/metric v1.25.0
+	go.opentelemetry.io/otel/trace v1.25.0
 	go.uber.org/fx v1.21.0
 	gocloud.dev v0.37.0
 	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
@@ -126,7 +126,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.4 // indirect
 	github.com/aws/smithy-go v1.20.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -168,7 +168,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus/client_model v0.6.0 // indirect
+	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
