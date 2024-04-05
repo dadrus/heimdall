@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -70,7 +70,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 
 			activeRequests.Add(req.Context(), 1, opt)
 
-			defer func() {
+			defer func() { //nolint:contextcheck
 				activeRequests.Add(req.Context(), -1, opt)
 			}()
 
@@ -104,12 +104,14 @@ func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue
 
 	attrs := make([]attribute.KeyValue, 0, attrsCount)
 	attrs = append(attrs, methodMetric(req.Method))
-	attrs = append(attrs, x.IfThenElse(req.TLS != nil, semconv.HTTPSchemeHTTPS, semconv.HTTPSchemeHTTP))
+	attrs = append(attrs, x.IfThenElse(req.TLS != nil,
+		semconv.HTTPSchemeKey.String("https"), // nolint: staticcheck
+		semconv.HTTPSchemeKey.String("http"))) // nolint: staticcheck
 	attrs = append(attrs, flavor(req.Proto))
-	attrs = append(attrs, semconv.NetHostNameKey.String(host))
+	attrs = append(attrs, semconv.NetHostNameKey.String(host)) // nolint: staticcheck
 
 	if hostPort > 0 {
-		attrs = append(attrs, semconv.NetHostPortKey.Int(hostPort))
+		attrs = append(attrs, semconv.NetHostPortKey.Int(hostPort)) // nolint: staticcheck
 	}
 
 	return attrs
@@ -137,15 +139,15 @@ func methodMetric(method string) attribute.KeyValue {
 func flavor(proto string) attribute.KeyValue {
 	switch proto {
 	case "HTTP/1.0":
-		return semconv.HTTPFlavorKey.String("1.0")
+		return semconv.HTTPFlavorHTTP10 // nolint: staticcheck
 	case "HTTP/1.1":
-		return semconv.HTTPFlavorKey.String("1.1")
+		return semconv.HTTPFlavorHTTP11 // nolint: staticcheck
 	case "HTTP/2":
-		return semconv.HTTPFlavorKey.String("2.0")
+		return semconv.HTTPFlavorHTTP20 // nolint: staticcheck
 	case "HTTP/3":
-		return semconv.HTTPFlavorKey.String("3.0")
+		return semconv.HTTPFlavorHTTP30 // nolint: staticcheck
 	default:
-		return semconv.HTTPFlavorKey.String(proto)
+		return semconv.HTTPFlavorKey.String(proto) // nolint: staticcheck
 	}
 }
 
