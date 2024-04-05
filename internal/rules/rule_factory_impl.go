@@ -106,7 +106,6 @@ func (f *ruleFactory) createExecutePipeline(
 	finalizersCheck := func() error { return nil }
 
 	for _, pipelineStep := range pipeline {
-
 		// create authentication stage
 		handler, err := createHandler(version, "authenticator", false, pipelineStep, authenticatorsCheck,
 			f.hf.CreateAuthenticator)

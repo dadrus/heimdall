@@ -19,9 +19,8 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/subject"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 // by intention. Used only during application bootstrap.
