@@ -26,6 +26,8 @@ Please disclose vulnerabilities by making use of [Security Advisories](https://g
 
 Unless you are fixing a known bug, we strongly recommend discussing it with the core team via a GitHub issue or in [heimdall's Discussions](https://github.com/dadrus/heimdall/discussions) or [Discord](https://discord.gg/qQgg8xKuyb) (preferred) before getting started.
 
+**Important:** Only PRs with [signed commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits) will be accepted.
+
 The general process is as follows:
 
 Set up your local development environment to contribute to heimdall:
