@@ -639,7 +639,7 @@ jobs:
         run: hugo --minify -d ./public
       - name: Deploy documentation
         if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/public
@@ -706,19 +706,19 @@ jobs:
         run: |
           cat ./docs/versions/data.json | jq '. + [{ "version": "${{ needs.prepare-release.outputs.tag_name }}", "path": "/heimdall/${{ needs.prepare-release.outputs.tag_name }}" }]' | tee ./docs/versions/data.json
       - name: Deploy documentation
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/public
           destination_dir: ${{ needs.prepare-release.outputs.tag_name }}
       - name: Deploy redirect to new released version
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/redirect
           keep_files: true
       - name: Deploy versions JSON document
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/versions
