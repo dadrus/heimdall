@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -32,6 +32,8 @@ import (
 
 //nolint:revive // ignoring missing comments for unexported global variables in an internal package.
 var (
+	ComponentKey     = attribute.Key("component")      //nolint:gochecknoglobals
+	ServiceKey       = attribute.Key("service")        //nolint:gochecknoglobals
 	StatusCodeKey    = attribute.Key("status.code")    //nolint:gochecknoglobals
 	StatusMessageKey = attribute.Key("status.message") //nolint:gochecknoglobals
 	ErrorKey         = attribute.Key("error")          //nolint:gochecknoglobals
@@ -222,6 +224,11 @@ type MockEvent struct {
 	Attributes []attribute.KeyValue
 }
 
+type MockLink struct {
+	SpanContext trace.SpanContext
+	Attributes  []attribute.KeyValue
+}
+
 type MockSpan struct {
 	embedded.Span
 
@@ -236,6 +243,7 @@ type MockSpan struct {
 	EndTime      time.Time
 	ParentSpanID trace.SpanID
 	Events       []MockEvent
+	Links        []MockLink
 }
 
 var (
@@ -335,6 +343,13 @@ func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 		Timestamp:  c.Timestamp(),
 		Name:       name,
 		Attributes: c.Attributes(),
+	})
+}
+
+func (s *MockSpan) AddLink(link trace.Link) {
+	s.Links = append(s.Links, MockLink{
+		SpanContext: link.SpanContext,
+		Attributes:  link.Attributes,
 	})
 }
 

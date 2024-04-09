@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 
@@ -131,10 +131,10 @@ func peerAttr(addr string) []attribute.KeyValue {
 	}
 
 	if ip := net.ParseIP(host); ip != nil {
-		return []attribute.KeyValue{semconv.NetSockPeerAddr(host), semconv.NetSockPeerPort(port)}
+		return []attribute.KeyValue{semconv.NetSockPeerAddr(host), semconv.NetSockPeerPort(port)} // nolint: staticcheck
 	}
 
-	return []attribute.KeyValue{semconv.NetPeerName(host), semconv.NetPeerPort(port)}
+	return []attribute.KeyValue{semconv.NetPeerName(host), semconv.NetPeerPort(port)} // nolint: staticcheck
 }
 
 func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {

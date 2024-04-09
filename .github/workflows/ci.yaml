@@ -11,7 +11,7 @@ on:
       - release
 
 env:
-  GO_VERSION: "1.22.1"
+  GO_VERSION: "1.22.2"
   GOLANGCI_LINT_VERSION: "v1.57.2"
   HELM_VERSION: "3.14.1"
   KUBECONFORM_VERSION: "0.6.4"
@@ -193,7 +193,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Setup k8s tools
-        uses: yokawasa/action-setup-kube-tools@dc0754a9a47b40f22f9bd52ffb082bbe6d142b22 # v0.11.0
+        uses: yokawasa/action-setup-kube-tools@5fe385031665158529decddddb51d6224422836e # v0.11.1
         with:
           setup-tools: |
             helm
@@ -234,7 +234,7 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
       - name: Code Coverage
-        uses: codecov/codecov-action@c16abc29c95fcf9174b58eb7e1abf4c866893bc8 # v4.1.1
+        uses: codecov/codecov-action@7afa10ed9b269c561c2336fd862446844e0cbf71 # v4.2.0
         with:
           files: coverage.cov
           verbose: true
@@ -377,7 +377,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@2b51285047da1547ffb1b2203d8be4c0af6b1f20 # v3.2.0
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
       - name: Collect container meta-info
         id: meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
@@ -490,7 +490,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@2b51285047da1547ffb1b2203d8be4c0af6b1f20 # v3.2.0
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
       - name: Login to DockerHub
         uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
@@ -639,7 +639,7 @@ jobs:
         run: hugo --minify -d ./public
       - name: Deploy documentation
         if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/public
@@ -706,19 +706,19 @@ jobs:
         run: |
           cat ./docs/versions/data.json | jq '. + [{ "version": "${{ needs.prepare-release.outputs.tag_name }}", "path": "/heimdall/${{ needs.prepare-release.outputs.tag_name }}" }]' | tee ./docs/versions/data.json
       - name: Deploy documentation
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/public
           destination_dir: ${{ needs.prepare-release.outputs.tag_name }}
       - name: Deploy redirect to new released version
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/redirect
           keep_files: true
       - name: Deploy versions JSON document
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/versions
