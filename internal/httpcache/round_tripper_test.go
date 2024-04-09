@@ -80,7 +80,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, nil)
 			require.NoError(t, err)
 
-			for c := 0; c < 4; c++ {
+			for range 4 {
 				resp, err := client.Do(req)
 				require.NoError(t, err)
 
