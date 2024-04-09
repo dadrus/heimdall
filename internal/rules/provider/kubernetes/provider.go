@@ -142,7 +142,7 @@ func (p *provider) newController(ctx context.Context, namespace string) (cache.S
 	)
 }
 
-func (p *provider) Start(ctx context.Context) error {
+func (p *provider) Start(ctx context.Context) error { //nolint:contextcheck
 	if !p.configured {
 		return nil
 	}

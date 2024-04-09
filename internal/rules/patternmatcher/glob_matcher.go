@@ -84,7 +84,7 @@ func delimiterIndices(value string, delimiterStart, delimiterEnd rune) ([]int, e
 
 	idxs := make([]int, 0)
 
-	for ind := 0; ind < len(value); ind++ {
+	for ind := range len(value) {
 		switch value[ind] {
 		case byte(delimiterStart):
 			if level++; level == 1 {
