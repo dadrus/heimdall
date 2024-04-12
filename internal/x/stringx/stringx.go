@@ -25,3 +25,12 @@ func ToString(b []byte) string {
 func ToBytes(str string) []byte {
 	return unsafe.Slice(unsafe.StringData(str), len(str))
 }
+
+func CommonPrefixLen(a, b string) int {
+	n := 0
+	for n < len(a) && n < len(b) && a[n] == b[n] {
+		n++
+	}
+
+	return n
+}
