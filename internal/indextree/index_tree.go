@@ -1,7 +1,5 @@
 package indextree
 
-import "errors"
-
 func NewIndexTree[V any]() *IndexTree[V] {
 	return &IndexTree[V]{tree: &domainNode[V]{}}
 }
@@ -19,7 +17,7 @@ func (t *IndexTree[V]) Find(domain, path string, matcher Matcher[V]) (V, map[str
 
 	dn := t.tree.find(domain)
 	if dn == nil {
-		return def, nil, errors.New("not found")
+		return def, nil, ErrNotFound
 	}
 
 	return dn.pathRoot.find(path, matcher)
@@ -28,15 +26,15 @@ func (t *IndexTree[V]) Find(domain, path string, matcher Matcher[V]) (V, map[str
 func (t *IndexTree[V]) Delete(domain, path string, matcher Matcher[V]) error {
 	dn := t.tree.find(domain)
 	if dn == nil {
-		return errors.New("not found")
+		return ErrNotFound
 	}
 
 	if !dn.pathRoot.delete(path, matcher) {
-		return errors.New("failed to delete")
+		return ErrFailedToDelete
 	}
 
 	if dn.pathRoot.empty() && !t.tree.delete(domain) {
-		return errors.New("failed to delete")
+		return ErrFailedToDelete
 	}
 
 	return nil

@@ -13,7 +13,7 @@ type Tree[V any] pathNode[V]
 // end of a path matches anything.
 //
 // If the path segment has to start with : or *, it must be escaped
-// with \ to be not confused with a wildcard
+// with \ to be not confused with a wildcard.
 func (t *Tree[V]) Add(path string, value V) error {
 	return (*pathNode[V])(t).add(path[1:], value)
 }

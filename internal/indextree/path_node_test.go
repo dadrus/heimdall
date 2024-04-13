@@ -8,9 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testMatcher[V any](matches bool) MatcherFunc[V] {
-	return func(value V) bool { return matches }
-}
+func testMatcher[V any](matches bool) MatcherFunc[V] { return func(_ V) bool { return matches } }
 
 func TestNodeSearch(t *testing.T) {
 	t.Parallel()

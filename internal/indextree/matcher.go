@@ -1,6 +1,6 @@
 package indextree
 
-// Matcher is used for additional checks while performing the lookup in the spanned tree
+// Matcher is used for additional checks while performing the lookup in the spanned tree.
 type Matcher[V any] interface {
 	// Match should return true if the value should be returned by the lookup. If it returns false, it
 	// instructs the lookup to continue with backtracking from the current tree position.

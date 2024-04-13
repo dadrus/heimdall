@@ -7,18 +7,12 @@ This package is a fork of https://github.com/dimfeld/httptreemux.
 package indextree
 
 import (
-	"errors"
 	"net/url"
 	"slices"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
-)
-
-var (
-	ErrInvalidPath = errors.New("invalid path")
-	ErrNotFound    = errors.New("not found")
 )
 
 type pathNode[V any] struct {
@@ -174,6 +168,7 @@ func (n *pathNode[V]) addNode(path string, wildcardKeys []string, inStaticToken 
 	return child.addNode(remainingPath, wildcardKeys, token != '/')
 }
 
+//nolint:cyclop
 func (n *pathNode[V]) delNode(path string, matcher Matcher[V]) bool {
 	pathLen := len(path)
 	if pathLen == 0 {
@@ -248,6 +243,7 @@ func (n *pathNode[V]) delNode(path string, matcher Matcher[V]) bool {
 	return false
 }
 
+//nolint:cyclop
 func (n *pathNode[V]) deleteChild(child *pathNode[V], token uint8) {
 	if len(child.staticIndices) == 1 && child.staticIndices[0] != '/' && child.path != "/" {
 		if len(child.staticChildren) == 1 {
