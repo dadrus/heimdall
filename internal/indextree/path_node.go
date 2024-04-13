@@ -424,12 +424,12 @@ func (n *pathNode[V]) find(path string, m Matcher[V]) (V, map[string]string, err
 	}
 
 	keys := make(map[string]string, len(params))
-	if len(found.wildcardKeys) == 1 && found.wildcardKeys[0] == "*" {
-		return found.values[idx], keys, nil
-	}
 
 	for i, param := range params {
-		keys[found.wildcardKeys[len(params)-1-i]] = param
+		key := found.wildcardKeys[len(params)-1-i]
+		if key != "*" {
+			keys[found.wildcardKeys[len(params)-1-i]] = param
+		}
 	}
 
 	return found.values[idx], keys, nil
