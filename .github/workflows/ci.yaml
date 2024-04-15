@@ -724,7 +724,7 @@ jobs:
           publish_dir: ./docs/versions
           keep_files: true
       - name: Setup GitSign
-        uses: chainguard-dev/actions/setup-gitsign@2cadca168a422313df94f6169691a86498ae51b1 # main
+        uses: chainguard-dev/actions/setup-gitsign@270ade799074159556b920914b8c54665ed2b7cd # main
       - name: Create a PR for the updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
         uses: peter-evans/create-pull-request@c55203cfde3e5c11a452d352b4393e68b85b4533 # v6.0.3
