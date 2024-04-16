@@ -17,12 +17,13 @@
 package cellib
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"net/url"
 	"testing"
 
 	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestUrls(t *testing.T) {

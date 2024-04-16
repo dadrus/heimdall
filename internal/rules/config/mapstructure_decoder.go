@@ -29,5 +29,6 @@ func pathExpressionDecodeHookFunc(from reflect.Type, to reflect.Type, data any) 
 		return data, nil
 	}
 
+	//nolint: forcetypeassert
 	return Path{Expression: data.(string)}, nil
 }

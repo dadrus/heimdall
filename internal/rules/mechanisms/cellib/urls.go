@@ -17,7 +17,6 @@
 package cellib
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
@@ -25,6 +24,8 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/ext"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func Urls() cel.EnvOption {

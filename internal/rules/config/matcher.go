@@ -17,13 +17,15 @@
 package config
 
 import (
-	"github.com/dadrus/heimdall/internal/x/stringx"
-	"github.com/goccy/go-json"
 	"slices"
+
+	"github.com/goccy/go-json"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type Path struct {
-	Expression string `json:"expression" yaml:"expression" validate:"required"`
+	Expression string `json:"expression" yaml:"expression" validate:"required"` //nolint:tagalign
 	Glob       string `json:"glob"       yaml:"glob"`
 	Regex      string `json:"regex"      yaml:"regex"`
 }
