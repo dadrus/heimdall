@@ -44,19 +44,23 @@ An imaginary rule set file defining two rules could look like shown below.
 
 [source, yaml]
 ----
-version: "1alpha3"
+version: "1alpha4"
 name: my-rule-set
 rules:
 - id: rule:1
   match:
-    url: https://my-service1.local/<**>
-  methods: [ "GET" ]
+    scheme: https
+    host_glob: my-service1.local
+    path: /**
+    methods: [ "GET" ]
   execute:
     - authorizer: foobar
 - id: rule:2
   match:
-    url: https://my-service2.local/<**>
-  methods: [ "GET" ]
+    scheme: https
+    host_glob: my-service2.local
+    path: /**
+    methods: [ "GET" ]
   execute:
     - authorizer: barfoo
 ----
@@ -108,7 +112,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts
 ====
 [source, yaml]
 ----
-apiVersion: heimdall.dadrus.github.com/v1alpha3
+apiVersion: heimdall.dadrus.github.com/v1alpha4
 kind: RuleSet
 metadata:
   name: "<some name>"
@@ -117,7 +121,10 @@ spec:
   rules:
     - id: "<identifier of a rule 1>"
       match:
-        url: http://127.0.0.1:9090/foo/<**>
+        scheme: https
+        host_glob: 127.0.0.1:9090
+        path:
+          expression: /foo/**
       execute:
         - authenticator: foo
         - authorizer: bar

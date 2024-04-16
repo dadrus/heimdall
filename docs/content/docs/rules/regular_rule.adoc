@@ -26,46 +26,39 @@ The unique identifier of a rule. It must be unique across all rules loaded by th
 +
 Defines how to match a rule and supports the following properties:
 
-** *`url`*: _string_ (mandatory)
+** *`scheme`*: _string_ (optional)
 +
-Glob or Regex pattern of the endpoints of your upstream service, which this rule should apply to. Query parameters are ignored.
+Which HTTP scheme is allowed. If not specified, both http and https are accepted.
 
-** *`strategy`*: _string_ (optional)
+** *`host_glob`*: _string_ (optional)
 +
-Which strategy to use for matching of the value, provided in the `url` property. Can be one of:
-
-*** `regex` - to match `url` expressions by making use of regular expressions. Internally, heimdall makes use of Heimdall uses https://github.com/dlclark/regexp2[dlclark/regexp2] to implement this strategy. Head over to linked resource to get more insights about possible options.
+Glob expression to match the host. Used after the rule is matched with the `path` definition (see below). Mutually exclusive with `host_regex`.
 +
-.Regular expressions patterns
-====
-* `\https://mydomain.com/` matches `\https://mydomain.com/` and doesn't match `\https://mydomain.com/foo` or `\https://mydomain.com`.
-* `<https|http>://mydomain.com/<.*>` matches `\https://mydomain.com/` and `\http://mydomain.com/foo`. Doesn't match `\https://other-domain.com/` or `\https://mydomain.com`.
-* `\http://mydomain.com/<[[:digit:]]+>` matches `\http://mydomain.com/123`, but doesn't match `\http://mydomain/abc`.
-* `\http://mydomain.com/<(?!protected).*>` matches `\http://mydomain.com/resource`, but doesn't match `\http://mydomain.com/protected`.
-====
+Head over to https://github.com/gobwas/glob[gobwas/glob] to get more insights about possible options.
 
-*** `glob` - to match `url` expressions by making use of glob expressions. Internally, heimdall makes use of Heimdall uses https://github.com/gobwas/glob[gobwas/glob] to implement this strategy. Head over to linked resource to get more insights about possible options.
+** *`host_regex`*: _string_ (optional)
 +
-.Glob patterns
-====
-* `\https://mydomain.com/<m?n>` matches `\https://mydomain.com/man` and does not match `\http://mydomain.com/foo`.
-* `\https://mydomain.com/<{foo*,bar*}>` matches `\https://mydomain.com/foo` or `\https://mydomain.com/bar` and doesn't match `\https://mydomain.com/any`.
-====
+Regular expression to match the host. Used after the rule is matched with the `path` definition (see below). Mutually exclusive with `host_glob`.
 
-* *`allow_encoded_slashes`*: _string_ (optional)
+** *`path`*: _PathExpression_ (mandatory)
 +
-Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests. Can be set to the one of the following values, defaulting to `off`:
+Definitions on how to match the path.
 
-** *`off`* - Reject requests containing encoded slashes. Means, if the request URL contains an url-encoded slash (`%2F`), the rule will not match it.
-** *`on`* - Accept requests using encoded slashes, decoding them and making it transparent for the rules and the upstream url. That is, the `%2F` becomes a `/` and will be treated as such in all places.
-** *`no_decode`* - Accept requests using encoded slashes, but not touching them and showing them to the rules and the upstream. That is, the `%2F` just remains as is.
-
+*** *`expression`*: _string_ (mandatory)
 +
-CAUTION: Since the proxy integrating with heimdall, heimdall by itself, and the upstream service, all may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities resulting in privilege escalations.
+The actual matching expression. Simple and free (named and unnamed) wildcards can be used
 
-* *`methods`*: _string array_ (optional)
+*** *`glob`*: _string_ (optional)
 +
-Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from heimdall. If all methods should be allowed, one can use a special `ALL` placeholder. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
+An additional glob expression, which should be satisfied after the request has been matched by the `expression` value. Mutually exclusive with `regex`.
+
+*** *`regex`*: _string_ (optional)
++
+An additional regular expression, which should be satisfied after the request has been matched by the `expression` value. Mutually exclusive with `glob`.
+
+** *`methods`*: _string array_ (optional)
++
+Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, no rule will feel responsible resulting in `404 Not Found` response from heimdall. If all methods should be allowed, one can use a special `ALL` placeholder. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
 +
 .Methods list which effectively expands to all HTTP methods
 ====
@@ -86,6 +79,17 @@ methods:
   - "!OPTIONS"
 ----
 ====
+
+* *`allow_encoded_slashes`*: _string_ (optional)
++
+Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests. Can be set to the one of the following values, defaulting to `off`:
+
+** *`off`* - Reject requests containing encoded slashes. Means, if the request URL contains an url-encoded slash (`%2F`), the rule will not match it.
+** *`on`* - Accept requests using encoded slashes, decoding them and making it transparent for the rules and the upstream url. That is, the `%2F` becomes a `/` and will be treated as such in all places.
+** *`no_decode`* - Accept requests using encoded slashes, but not touching them and showing them to the rules and the upstream. That is, the `%2F` just remains as is.
+
++
+CAUTION: Since the proxy integrating with heimdall, heimdall by itself, and the upstream service, all may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities resulting in privilege escalations.
 
 * *`forward_to`*: _RequestForwarder_ (mandatory in Proxy operation mode)
 +
