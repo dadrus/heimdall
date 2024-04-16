@@ -290,6 +290,7 @@ expressions:
   - expression: Request.Cookie("FooCookie") == "barfoo"
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
   - expression: Request.URL.Path.split("/").last() == "test"
+  - expression: Request.URL.Captures.foo == "bar"
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
 				t.Helper()
@@ -308,11 +309,14 @@ expressions:
 				ctx.EXPECT().Request().Return(&heimdall.Request{
 					RequestFunctions: reqf,
 					Method:           http.MethodGet,
-					URL: &url.URL{
-						Scheme:   "http",
-						Host:     "localhost",
-						Path:     "/test",
-						RawQuery: "foo=bar&baz=zab",
+					URL: &heimdall.URL{
+						URL: url.URL{
+							Scheme:   "http",
+							Host:     "localhost",
+							Path:     "/test",
+							RawQuery: "foo=bar&baz=zab",
+						},
+						Captures: map[string]string{"foo": "bar"},
 					},
 					ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 				})

@@ -134,6 +134,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 				require.NoError(t, err)
 			},
@@ -182,6 +184,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `))
 				require.NoError(t, err)
 			},
@@ -212,7 +216,7 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo" }
+		{ "id": "foo", "match": { "path": "/foo"} }
 	]
 }`))
 				require.NoError(t, err)
@@ -245,7 +249,7 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo", "match":"/bar/foo/<**>" }
+		{ "id": "foo", "match": { "path": "/bar/foo/<**>" }}
 	]
 }`))
 				require.NoError(t, err)
@@ -275,7 +279,16 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo", "match":"<**>://moobar.local:9090/bar/foo/<**>" }
+	  { 
+	    "id": "foo",
+        "match": {
+          "path": {
+		    "expression": "/bar/foo/:*",
+		    "glob": "/bar/foo/**"
+		  },
+		  "host_glob": "moobar.local:9090"
+	    }
+	  }
 	]
 }`))
 				require.NoError(t, err)
@@ -305,7 +318,16 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo", "match":"<**>://moobar.local:9090/foo/bar/<**>" }
+      { 
+	    "id": "foo",
+        "match": {
+          "path": {
+		    "expression": "/foo/bar/:*",
+		    "glob": "/foo/bar/**"
+		  },
+		  "host_glob": "moobar.local:9090"
+	    }
+	  }
 	]
 }`))
 				require.NoError(t, err)

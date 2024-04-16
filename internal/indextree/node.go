@@ -15,20 +15,20 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type pathNode[V any] struct {
+type node[V any] struct {
 	path string
 
 	priority int
 
 	// The list of static children to check.
 	staticIndices  []byte
-	staticChildren []*pathNode[V]
+	staticChildren []*node[V]
 
 	// If none of the above match, check the wildcard children
-	wildcardChild *pathNode[V]
+	wildcardChild *node[V]
 
 	// If none of the above match, then we use the catch-all, if applicable.
-	catchAllChild *pathNode[V]
+	catchAllChild *node[V]
 
 	isCatchAll bool
 	isWildcard bool
@@ -37,7 +37,7 @@ type pathNode[V any] struct {
 	wildcardKeys []string
 }
 
-func (n *pathNode[V]) sortStaticChildren(i int) {
+func (n *node[V]) sortStaticChildren(i int) {
 	for i > 0 && n.staticChildren[i].priority > n.staticChildren[i-1].priority {
 		n.staticChildren[i], n.staticChildren[i-1] = n.staticChildren[i-1], n.staticChildren[i]
 		n.staticIndices[i], n.staticIndices[i-1] = n.staticIndices[i-1], n.staticIndices[i]
@@ -46,7 +46,7 @@ func (n *pathNode[V]) sortStaticChildren(i int) {
 	}
 }
 
-func (n *pathNode[V]) nextSeparator(path string) int {
+func (n *node[V]) nextSeparator(path string) int {
 	if idx := strings.IndexByte(path, '/'); idx != -1 {
 		return idx
 	}
@@ -55,7 +55,7 @@ func (n *pathNode[V]) nextSeparator(path string) int {
 }
 
 //nolint:funlen,gocognit,cyclop
-func (n *pathNode[V]) addNode(path string, wildcardKeys []string, inStaticToken bool) (*pathNode[V], error) {
+func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool) (*node[V], error) {
 	if len(path) == 0 {
 		// we have a leaf node
 		if len(wildcardKeys) != 0 {
@@ -104,7 +104,7 @@ func (n *pathNode[V]) addNode(path string, wildcardKeys []string, inStaticToken 
 			}
 
 			if n.catchAllChild == nil {
-				n.catchAllChild = &pathNode[V]{
+				n.catchAllChild = &node[V]{
 					path:       thisToken,
 					isCatchAll: true,
 				}
@@ -121,7 +121,7 @@ func (n *pathNode[V]) addNode(path string, wildcardKeys []string, inStaticToken 
 			return n.catchAllChild, nil
 		case ':':
 			if n.wildcardChild == nil {
-				n.wildcardChild = &pathNode[V]{path: "wildcard", isWildcard: true}
+				n.wildcardChild = &node[V]{path: "wildcard", isWildcard: true}
 			}
 
 			return n.wildcardChild.addNode(remainingPath, append(wildcardKeys, thisToken[1:]), false)
@@ -158,7 +158,7 @@ func (n *pathNode[V]) addNode(path string, wildcardKeys []string, inStaticToken 
 		}
 	}
 
-	child := &pathNode[V]{path: thisToken}
+	child := &node[V]{path: thisToken}
 
 	n.staticIndices = append(n.staticIndices, token)
 	n.staticChildren = append(n.staticChildren, child)
@@ -169,21 +169,22 @@ func (n *pathNode[V]) addNode(path string, wildcardKeys []string, inStaticToken 
 }
 
 //nolint:cyclop
-func (n *pathNode[V]) delNode(path string, matcher Matcher[V]) bool {
+func (n *node[V]) delNode(path string, matcher Matcher[V]) bool {
 	pathLen := len(path)
 	if pathLen == 0 {
-		if n.values != nil && matcher.Match(n.values[0]) {
-			n.values = nil
-
-			return true
+		if len(n.values) == 0 {
+			return false
 		}
 
-		return false
+		oldSize := len(n.values)
+		n.values = slices.DeleteFunc(n.values, matcher.Match)
+
+		return oldSize != len(n.values)
 	}
 
 	var (
 		nextPath string
-		child    *pathNode[V]
+		child    *node[V]
 	)
 
 	token := path[0]
@@ -206,12 +207,16 @@ func (n *pathNode[V]) delNode(path string, matcher Matcher[V]) bool {
 		nextPath = ""
 	}
 
-	if child != nil && child.delNode(nextPath, matcher) {
-		if child.values == nil {
-			n.deleteChild(child, token)
+	if child != nil {
+		if child.delNode(nextPath, matcher) {
+			if len(child.values) == 0 {
+				n.deleteChild(child, token)
+			}
+
+			return true
 		}
 
-		return true
+		return false
 	}
 
 	if len(path) >= 2 &&
@@ -229,7 +234,7 @@ func (n *pathNode[V]) delNode(path string, matcher Matcher[V]) bool {
 
 			if pathLen >= childPathLen && child.path == path[:childPathLen] &&
 				child.delNode(path[childPathLen:], matcher) {
-				if child.values == nil {
+				if len(child.values) == 0 {
 					n.deleteChild(child, token)
 				}
 
@@ -244,7 +249,7 @@ func (n *pathNode[V]) delNode(path string, matcher Matcher[V]) bool {
 }
 
 //nolint:cyclop
-func (n *pathNode[V]) deleteChild(child *pathNode[V], token uint8) {
+func (n *node[V]) deleteChild(child *node[V], token uint8) {
 	if len(child.staticIndices) == 1 && child.staticIndices[0] != '/' && child.path != "/" {
 		if len(child.staticChildren) == 1 {
 			grandChild := child.staticChildren[0]
@@ -253,7 +258,7 @@ func (n *pathNode[V]) deleteChild(child *pathNode[V], token uint8) {
 		}
 
 		// new leaf created
-		if child.values != nil {
+		if len(child.values) != 0 {
 			return
 		}
 	}
@@ -271,7 +276,7 @@ func (n *pathNode[V]) deleteChild(child *pathNode[V], token uint8) {
 	}
 }
 
-func (n *pathNode[V]) delEdge(token byte) {
+func (n *node[V]) delEdge(token byte) {
 	for i, index := range n.staticIndices {
 		if token == index {
 			n.staticChildren = append(n.staticChildren[:i], n.staticChildren[i+1:]...)
@@ -283,9 +288,9 @@ func (n *pathNode[V]) delEdge(token byte) {
 }
 
 //nolint:funlen,gocognit,cyclop
-func (n *pathNode[V]) findNode(path string, matcher Matcher[V]) (*pathNode[V], int, []string) {
+func (n *node[V]) findNode(path string, matcher Matcher[V]) (*node[V], int, []string) {
 	var (
-		found  *pathNode[V]
+		found  *node[V]
 		params []string
 		idx    int
 		value  V
@@ -364,7 +369,7 @@ func (n *pathNode[V]) findNode(path string, matcher Matcher[V]) (*pathNode[V], i
 	return nil, 0, nil
 }
 
-func (n *pathNode[V]) splitCommonPrefix(existingNodeIndex int, path string) (*pathNode[V], int) {
+func (n *node[V]) splitCommonPrefix(existingNodeIndex int, path string) (*node[V], int) {
 	childNode := n.staticChildren[existingNodeIndex]
 
 	if strings.HasPrefix(path, childNode.path) {
@@ -384,19 +389,19 @@ func (n *pathNode[V]) splitCommonPrefix(existingNodeIndex int, path string) (*pa
 
 	// Create a new intermediary node in the place of the existing node, with
 	// the existing node as a child.
-	newNode := &pathNode[V]{
+	newNode := &node[V]{
 		path:     commonPrefix,
 		priority: childNode.priority,
 		// Index is the first byte of the non-common part of the path.
 		staticIndices:  []byte{childNode.path[0]},
-		staticChildren: []*pathNode[V]{childNode},
+		staticChildren: []*node[V]{childNode},
 	}
 	n.staticChildren[existingNodeIndex] = newNode
 
 	return newNode, i
 }
 
-func (n *pathNode[V]) add(path string, value V) error {
+func (n *node[V]) Add(path string, value V) error {
 	res, err := n.addNode(path, nil, false)
 	if err != nil {
 		return err
@@ -407,10 +412,10 @@ func (n *pathNode[V]) add(path string, value V) error {
 	return nil
 }
 
-func (n *pathNode[V]) find(path string, m Matcher[V]) (V, map[string]string, error) {
+func (n *node[V]) Find(path string, matcher Matcher[V]) (V, map[string]string, error) {
 	var def V
 
-	found, idx, params := n.findNode(path, m)
+	found, idx, params := n.findNode(path, matcher)
 	if found == nil {
 		return def, nil, ErrNotFound
 	}
@@ -431,10 +436,21 @@ func (n *pathNode[V]) find(path string, m Matcher[V]) (V, map[string]string, err
 	return found.values[idx], keys, nil
 }
 
-func (n *pathNode[V]) empty() bool {
+func (n *node[V]) Empty() bool {
 	return len(n.values) == 0 && len(n.staticChildren) == 0 && n.wildcardChild == nil && n.catchAllChild == nil
 }
 
-func (n *pathNode[V]) delete(path string, matcher Matcher[V]) bool {
+func (n *node[V]) Delete(path string, matcher Matcher[V]) bool {
 	return n.delNode(path, matcher)
+}
+
+func (n *node[V]) Update(path string, value V, matcher Matcher[V]) bool {
+	found, idx, _ := n.findNode(path, matcher)
+	if found == nil {
+		return false
+	}
+
+	found.values[idx] = value
+
+	return true
 }

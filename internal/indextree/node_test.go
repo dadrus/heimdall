@@ -14,7 +14,7 @@ func TestNodeSearch(t *testing.T) {
 	t.Parallel()
 
 	// Setup & populate tree
-	tree := &pathNode[string]{}
+	tree := &node[string]{}
 
 	for _, path := range []string{
 		"/",
@@ -57,7 +57,7 @@ func TestNodeSearch(t *testing.T) {
 		"/マ",
 		"/カ",
 	} {
-		err := tree.add(path, path)
+		err := tree.Add(path, path)
 		require.NoError(t, err)
 	}
 
@@ -127,7 +127,7 @@ func TestNodeSearch(t *testing.T) {
 				matcher = tc.matcher
 			}
 
-			resValue, paramList, err := tree.find(tc.path, matcher)
+			resValue, paramList, err := tree.Find(tc.path, matcher)
 			if tc.expErr != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.expErr)
@@ -145,23 +145,23 @@ func TestNodeSearch(t *testing.T) {
 func TestNodeAddPathDuplicates(t *testing.T) {
 	t.Parallel()
 
-	tree := &pathNode[string]{}
+	tree := &node[string]{}
 	path := "/date/:year/:month/abc"
 
-	err := tree.add(path, "first")
+	err := tree.Add(path, "first")
 	require.NoError(t, err)
 
-	err = tree.add(path, "second")
+	err = tree.Add(path, "second")
 	require.NoError(t, err)
 
-	value, params, err := tree.find("/date/2024/04/abc", MatcherFunc[string](func(value string) bool {
+	value, params, err := tree.Find("/date/2024/04/abc", MatcherFunc[string](func(value string) bool {
 		return value == "first"
 	}))
 	require.NoError(t, err)
 	assert.Equal(t, "first", value)
 	assert.Equal(t, map[string]string{"year": "2024", "month": "04"}, params)
 
-	value, params, err = tree.find("/date/2024/04/abc", MatcherFunc[string](func(value string) bool {
+	value, params, err = tree.Find("/date/2024/04/abc", MatcherFunc[string](func(value string) bool {
 		return value == "second"
 	}))
 	require.NoError(t, err)
@@ -194,12 +194,12 @@ func TestNodeAddPath(t *testing.T) {
 		{"katakana /カ", []string{"/カ"}, false},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
-			tree := &pathNode[string]{}
+			tree := &node[string]{}
 
 			var err error
 
 			for _, path := range tc.paths {
-				err = tree.add(path, path)
+				err = tree.Add(path, path)
 				if err != nil {
 					break
 				}
@@ -229,16 +229,16 @@ func TestNodeDeleteStaticPaths(t *testing.T) {
 		"/app/les/or/bananas",
 	}
 
-	tree := &pathNode[int]{}
+	tree := &node[int]{}
 
 	for idx, path := range paths {
-		err := tree.add(path, idx)
+		err := tree.Add(path, idx)
 		require.NoError(t, err)
 	}
 
 	for i := len(paths) - 1; i >= 0; i-- {
-		require.True(t, tree.delete(paths[i], testMatcher[int](true)))
-		require.False(t, tree.delete(paths[i], testMatcher[int](true)))
+		require.True(t, tree.Delete(paths[i], testMatcher[int](true)))
+		require.False(t, tree.Delete(paths[i], testMatcher[int](true)))
 	}
 }
 
@@ -257,10 +257,10 @@ func TestNodeDeleteStaticAndWildcardPaths(t *testing.T) {
 		"/abc/:les/bananas",
 	}
 
-	tree := &pathNode[int]{}
+	tree := &node[int]{}
 
 	for idx, path := range paths {
-		err := tree.add(path, idx+1)
+		err := tree.Add(path, idx+1)
 		require.NoError(t, err)
 	}
 
@@ -268,13 +268,13 @@ func TestNodeDeleteStaticAndWildcardPaths(t *testing.T) {
 
 	for i := len(paths) - 1; i >= 0; i-- {
 		tbdPath := paths[i]
-		require.Truef(t, tree.delete(tbdPath, testMatcher[int](true)), "Should be able to delete %s", paths[i])
-		require.Falsef(t, tree.delete(tbdPath, testMatcher[int](true)), "Should not be able to delete %s", paths[i])
+		require.Truef(t, tree.Delete(tbdPath, testMatcher[int](true)), "Should be able to delete %s", paths[i])
+		require.Falsef(t, tree.Delete(tbdPath, testMatcher[int](true)), "Should not be able to delete %s", paths[i])
 
 		deletedPaths = append(deletedPaths, tbdPath)
 
 		for idx, path := range paths {
-			val, _, err := tree.find(path, testMatcher[int](true))
+			val, _, err := tree.Find(path, testMatcher[int](true))
 
 			if slices.Contains(deletedPaths, path) {
 				require.Errorf(t, err, "Should not be able to find %s after deleting %s", path, tbdPath)
@@ -299,25 +299,27 @@ func TestNodeDeleteMixedPaths(t *testing.T) {
 		"/abc/cba",
 		"/abc/:les",
 		"/abc/les/bananas",
-		"/abc/:les/bananas",
 		"/abc/\\:les/bananas",
+		"/abc/:les/bananas",
+		"/abc/:les/\\*all",
 		"/abc/:les/*all",
+		"/abb/\\:ba/*all",
 		"/abb/:ba/*all",
 		"/abb/\\*all",
 		"/abb/*all",
 	}
 
-	tree := &pathNode[int]{}
+	tree := &node[int]{}
 
 	for idx, path := range paths {
-		err := tree.add(path, idx+1)
+		err := tree.Add(path, idx+1)
 		require.NoError(t, err)
 	}
 
 	for i := len(paths) - 1; i >= 0; i-- {
-		require.Truef(t, tree.delete(paths[i], testMatcher[int](true)), "Should be able to delete %s", paths[i])
-		require.Falsef(t, tree.delete(paths[i], testMatcher[int](true)), "Should not be able to delete %s", paths[i])
+		require.Truef(t, tree.Delete(paths[i], testMatcher[int](true)), "Should be able to delete %s", paths[i])
+		require.Falsef(t, tree.Delete(paths[i], testMatcher[int](true)), "Should not be able to delete %s", paths[i])
 	}
 
-	require.True(t, tree.empty())
+	require.True(t, tree.Empty())
 }

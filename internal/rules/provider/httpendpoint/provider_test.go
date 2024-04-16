@@ -262,6 +262,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `))
 				require.NoError(t, err)
 			},
@@ -304,6 +306,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 				require.NoError(t, err)
 			},
@@ -351,6 +355,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `))
 						require.NoError(t, err)
 					case 2:
@@ -362,6 +368,8 @@ version: "2"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 						require.NoError(t, err)
 					}
@@ -427,6 +435,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 						require.NoError(t, err)
 					case 2:
@@ -436,6 +446,8 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    path: /baz
 `))
 						require.NoError(t, err)
 					case 3:
@@ -445,6 +457,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `))
 						require.NoError(t, err)
 					default:
@@ -454,6 +468,8 @@ version: "1"
 name: test
 rules:
 - id: foz
+  match:
+    path: /foz
 `))
 						require.NoError(t, err)
 					}
@@ -524,6 +540,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 				require.NoError(t, err)
 			},
@@ -569,6 +587,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 				require.NoError(t, err)
 			},
@@ -612,6 +632,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `))
 				require.NoError(t, err)
 			},
@@ -649,6 +671,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 						require.NoError(t, err)
 					} else {
@@ -658,6 +682,8 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    path: /baz
 `))
 						require.NoError(t, err)
 					}
@@ -700,6 +726,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `))
 						require.NoError(t, err)
 					} else {

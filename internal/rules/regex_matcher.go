@@ -14,25 +14,32 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package patternmatcher
+package rules
 
 import (
 	"errors"
+	"regexp"
 )
 
-var ErrUnsupportedPatternMatcher = errors.New("unsupported pattern matcher")
+var ErrNoRegexPatternDefined = errors.New("no regex pattern defined")
 
-type PatternMatcher interface {
-	Match(value string) bool
+type regexpMatcher struct {
+	compiled *regexp.Regexp
 }
 
-func NewPatternMatcher(typ, pattern string) (PatternMatcher, error) {
-	switch typ {
-	case "glob":
-		return newGlobMatcher(pattern)
-	case "regex":
-		return newRegexMatcher(pattern)
-	default:
-		return nil, ErrUnsupportedPatternMatcher
+func newRegexMatcher(pattern string) (PatternMatcher, error) {
+	if len(pattern) == 0 {
+		return nil, ErrNoRegexPatternDefined
 	}
+
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return &regexpMatcher{compiled: compiled}, nil
+}
+
+func (m *regexpMatcher) Match(matchAgainst string) bool {
+	return m.compiled.MatchString(matchAgainst)
 }

@@ -210,9 +210,11 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 			Rules: []config2.Rule{
 				{
 					ID: "test",
-					RuleMatcher: config2.Matcher{
-						URL:      "http://foo.bar",
-						Strategy: "glob",
+					Matcher: config2.Matcher{
+						Scheme:   "http",
+						HostGlob: "foo.bar",
+						Methods:  []string{http.MethodGet},
+						Path:     config2.Path{Expression: "/"},
 					},
 					Backend: &config2.Backend{
 						Host: "baz",
@@ -223,7 +225,6 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 							QueryParamsToRemove: []string{"baz"},
 						},
 					},
-					Methods: []string{http.MethodGet},
 					Execute: []config.MechanismConfig{
 						{"authenticator": "authn"},
 						{"authorizer": "authz"},
@@ -367,11 +368,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				rule := ruleSet.Rules[0]
 				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
+				assert.Equal(t, "http", rule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", rule.Matcher.HostGlob)
+				assert.Equal(t, "/", rule.Matcher.Path.Expression)
+				assert.Len(t, rule.Matcher.Methods, 1)
+				assert.Contains(t, rule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", rule.Backend.Host)
-				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
-				assert.Len(t, rule.Methods, 1)
-				assert.Contains(t, rule.Methods, http.MethodGet)
 				assert.Empty(t, rule.ErrorHandler)
 				assert.Len(t, rule.Execute, 2)
 				assert.Equal(t, "authn", rule.Execute[0]["authenticator"])
@@ -466,11 +468,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.HostGlob)
+				assert.Equal(t, "/", createdRule.Matcher.Path.Expression)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
-				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
-				assert.Len(t, createdRule.Methods, 1)
-				assert.Contains(t, createdRule.Methods, http.MethodGet)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
@@ -529,11 +532,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.HostGlob)
+				assert.Equal(t, "/", createdRule.Matcher.Path.Expression)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
-				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
-				assert.Len(t, createdRule.Methods, 1)
-				assert.Contains(t, createdRule.Methods, http.MethodGet)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
@@ -596,11 +600,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.HostGlob)
+				assert.Equal(t, "/", createdRule.Matcher.Path.Expression)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
-				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
-				assert.Len(t, createdRule.Methods, 1)
-				assert.Contains(t, createdRule.Methods, http.MethodGet)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
@@ -672,9 +677,11 @@ func TestProviderLifecycle(t *testing.T) {
 						Rules: []config2.Rule{
 							{
 								ID: "test",
-								RuleMatcher: config2.Matcher{
-									URL:      "http://foo.bar",
-									Strategy: "glob",
+								Matcher: config2.Matcher{
+									Scheme:   "http",
+									HostGlob: "foo.bar",
+									Path:     config2.Path{Expression: "/"},
+									Methods:  []string{http.MethodGet},
 								},
 								Backend: &config2.Backend{
 									Host: "bar",
@@ -685,7 +692,6 @@ func TestProviderLifecycle(t *testing.T) {
 										QueryParamsToRemove: []string{"baz"},
 									},
 								},
-								Methods: []string{http.MethodGet},
 								Execute: []config.MechanismConfig{
 									{"authenticator": "test_authn"},
 									{"authorizer": "test_authz"},
@@ -724,11 +730,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.HostGlob)
+				assert.Equal(t, "/", createdRule.Matcher.Path.Expression)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
-				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
-				assert.Len(t, createdRule.Methods, 1)
-				assert.Contains(t, createdRule.Methods, http.MethodGet)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
@@ -742,11 +749,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				updatedRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", updatedRule.ID)
-				assert.Equal(t, "http://foo.bar", updatedRule.RuleMatcher.URL)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.HostGlob)
+				assert.Equal(t, "/", createdRule.Matcher.Path.Expression)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "bar", updatedRule.Backend.Host)
-				assert.Equal(t, "glob", updatedRule.RuleMatcher.Strategy)
-				assert.Len(t, updatedRule.Methods, 1)
-				assert.Contains(t, updatedRule.Methods, http.MethodGet)
 				assert.Empty(t, updatedRule.ErrorHandler)
 				assert.Len(t, updatedRule.Execute, 2)
 				assert.Equal(t, "test_authn", updatedRule.Execute[0]["authenticator"])
@@ -813,11 +821,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.HostGlob)
+				assert.Equal(t, "/", createdRule.Matcher.Path.Expression)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
-				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
-				assert.Len(t, createdRule.Methods, 1)
-				assert.Contains(t, createdRule.Methods, http.MethodGet)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
@@ -831,11 +840,12 @@ func TestProviderLifecycle(t *testing.T) {
 
 				deleteRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", deleteRule.ID)
-				assert.Equal(t, "http://foo.bar", deleteRule.RuleMatcher.URL)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.HostGlob)
+				assert.Equal(t, "/", createdRule.Matcher.Path.Expression)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", deleteRule.Backend.Host)
-				assert.Equal(t, "glob", deleteRule.RuleMatcher.Strategy)
-				assert.Len(t, deleteRule.Methods, 1)
-				assert.Contains(t, deleteRule.Methods, http.MethodGet)
 				assert.Empty(t, deleteRule.ErrorHandler)
 				assert.Len(t, deleteRule.Execute, 2)
 				assert.Equal(t, "authn", deleteRule.Execute[0]["authenticator"])
@@ -867,9 +877,11 @@ func TestProviderLifecycle(t *testing.T) {
 						Rules: []config2.Rule{
 							{
 								ID: "test",
-								RuleMatcher: config2.Matcher{
-									URL:      "http://foo.bar",
-									Strategy: "glob",
+								Matcher: config2.Matcher{
+									Scheme:   "http",
+									Methods:  []string{http.MethodGet},
+									HostGlob: "foo.bar",
+									Path:     config2.Path{Expression: "/"},
 								},
 								Backend: &config2.Backend{
 									Host: "bar",
@@ -880,7 +892,6 @@ func TestProviderLifecycle(t *testing.T) {
 										QueryParamsToRemove: []string{"baz"},
 									},
 								},
-								Methods: []string{http.MethodGet},
 								Execute: []config.MechanismConfig{
 									{"authenticator": "test_authn"},
 									{"authorizer": "test_authz"},

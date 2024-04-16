@@ -63,7 +63,7 @@ func TestParseRules(t *testing.T) {
 			content: []byte(`{
 "version": "1",
 "name": "foo",
-"rules": [{"id": "bar"}]
+"rules": [{"id": "bar", "match": {"path": "foobar"}}]
 }`),
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -73,6 +73,11 @@ func TestParseRules(t *testing.T) {
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "foo", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
+
+				rul := ruleSet.Rules[0]
+				require.NotNil(t, rul)
+				assert.Equal(t, "bar", rul.ID)
+				assert.Equal(t, "foobar", rul.Matcher.Path.Expression)
 			},
 		},
 		{
@@ -108,7 +113,9 @@ version: "1"
 name: foo
 rules:
 - id: bar
-  allow_encoded_slashes: off
+  allow_encoded_slashes: no_decode
+  match:
+    path: foo
 `),
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -118,6 +125,12 @@ rules:
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "foo", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
+
+				rul := ruleSet.Rules[0]
+				require.NotNil(t, rul)
+				assert.Equal(t, "bar", rul.ID)
+				assert.Equal(t, EncodedSlashesNoDecode, rul.EncodedSlashesHandling)
+				assert.Equal(t, "foo", rul.Matcher.Path.Expression)
 			},
 		},
 		{
@@ -191,6 +204,8 @@ version: "1"
 name: foo
 rules:
 - id: bar
+  match:
+    path: foo
 `),
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -200,7 +215,11 @@ rules:
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "foo", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
-				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
+
+				rul := ruleSet.Rules[0]
+				require.NotNil(t, rul)
+				assert.Equal(t, "bar", rul.ID)
+				assert.Equal(t, "foo", rul.Matcher.Path.Expression)
 			},
 		},
 		{
@@ -229,6 +248,8 @@ version: "1"
 name: ${FOO}
 rules:
 - id: bar
+  match:
+    path: foo
 `),
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -238,7 +259,11 @@ rules:
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "bar", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
-				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
+
+				rul := ruleSet.Rules[0]
+				require.NotNil(t, rul)
+				assert.Equal(t, "bar", rul.ID)
+				assert.Equal(t, "foo", rul.Matcher.Path.Expression)
 			},
 		},
 		{
@@ -248,6 +273,8 @@ version: "1"
 name: ${FOO}
 rules:
 - id: bar
+  match:
+    path: foo
 `),
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -257,7 +284,11 @@ rules:
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "${FOO}", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
-				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
+
+				rul := ruleSet.Rules[0]
+				require.NotNil(t, rul)
+				assert.Equal(t, "bar", rul.ID)
+				assert.Equal(t, "foo", rul.Matcher.Path.Expression)
 			},
 		},
 	} {

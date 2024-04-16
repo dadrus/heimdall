@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"fmt"
 	"net/url"
 	"slices"
 	"strings"
@@ -26,16 +25,18 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 type ruleImpl struct {
 	id                     string
 	encodedSlashesHandling config.EncodedSlashesHandling
-	urlMatcher             patternmatcher.PatternMatcher
+	pathExpression         string
+	allowedScheme          string
+	hostMatcher            PatternMatcher
+	pathMatcher            PatternMatcher
+	allowedMethods         []string
 	backend                *config.Backend
-	methods                []string
 	srcID                  string
 	isDefault              bool
 	hash                   []byte
@@ -73,51 +74,58 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	var upstream rule.Backend
 
 	if r.backend != nil {
-		targetURL := *ctx.Request().URL
+		targetURL := ctx.Request().URL
 		if r.encodedSlashesHandling == config.EncodedSlashesOn && len(targetURL.RawPath) != 0 {
 			targetURL.RawPath = ""
 		}
 
 		upstream = &backend{
-			targetURL: r.backend.CreateURL(&targetURL),
+			targetURL: r.backend.CreateURL(&targetURL.URL),
 		}
 	}
 
 	return upstream, nil
 }
 
-func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
-	var path string
-
-	switch r.encodedSlashesHandling {
-	case config.EncodedSlashesOff:
-		if strings.Contains(requestURL.RawPath, "%2F") {
-			return false
-		}
-
-		path = requestURL.Path
-	case config.EncodedSlashesNoDecode:
-		if len(requestURL.RawPath) != 0 {
-			path = strings.ReplaceAll(requestURL.RawPath, "%2F", "$$$escaped-slash$$$")
-			path, _ = url.PathUnescape(path)
-			path = strings.ReplaceAll(path, "$$$escaped-slash$$$", "%2F")
-
-			break
-		}
-
-		fallthrough
-	default:
-		path = requestURL.Path
+func (r *ruleImpl) Matches(request *heimdall.Request) bool {
+	// fastest checks first
+	// match scheme
+	if len(r.allowedScheme) != 0 && r.allowedScheme != request.URL.Scheme {
+		return false
 	}
 
-	return r.urlMatcher.Match(fmt.Sprintf("%s://%s%s", requestURL.Scheme, requestURL.Host, path))
-}
+	// match methods
+	if !slices.Contains(r.allowedMethods, request.Method) {
+		return false
+	}
 
-func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }
+	// check encoded slash handling
+	if r.encodedSlashesHandling == config.EncodedSlashesOff && strings.Contains(request.URL.RawPath, "%2F") {
+		return false
+	}
+
+	// match host
+	if !r.hostMatcher.Match(request.URL.Host) {
+		return false
+	}
+
+	// match path
+	if !r.pathMatcher.Match(request.URL.Path) {
+		return false
+	}
+
+	return true
+}
 
 func (r *ruleImpl) ID() string { return r.id }
 
 func (r *ruleImpl) SrcID() string { return r.srcID }
+
+func (r *ruleImpl) PathExpression() string { return r.pathExpression }
+
+func (r *ruleImpl) SameAs(other rule.Rule) bool {
+	return r.ID() == other.ID() && r.SrcID() == other.SrcID()
+}
 
 type backend struct {
 	targetURL *url.URL

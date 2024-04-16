@@ -21,7 +21,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ruleExecutor struct {
@@ -41,15 +40,9 @@ func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		Str("_url", req.URL.String()).
 		Msg("Analyzing request")
 
-	rul, err := e.r.FindRule(req.URL)
+	rul, err := e.r.FindRule(req)
 	if err != nil {
 		return nil, err
-	}
-
-	method := ctx.Request().Method
-	if !rul.MatchesMethod(method) {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), method)
 	}
 
 	return rul.Execute(ctx)

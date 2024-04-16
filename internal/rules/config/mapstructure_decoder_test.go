@@ -29,121 +29,64 @@ func TestMatcherDecodeHookFunc(t *testing.T) {
 	t.Parallel()
 
 	type Typ struct {
-		Matcher Matcher `json:"match"`
+		Path Path `json:"path"`
 	}
 
 	for _, tc := range []struct {
 		uc     string
 		config []byte
-		assert func(t *testing.T, err error, matcher *Matcher)
+		assert func(t *testing.T, err error, path *Path)
 	}{
 		{
 			uc:     "specified as string",
-			config: []byte(`match: foo.bar`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			config: []byte(`path: foo.bar`),
+			assert: func(t *testing.T, err error, path *Path) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo.bar", matcher.URL)
-				assert.Equal(t, "glob", matcher.Strategy)
+				assert.Equal(t, "foo.bar", path.Expression)
+				assert.Empty(t, path.Glob)
+				assert.Empty(t, path.Regex)
 			},
 		},
 		{
-			uc: "specified as structured type without url",
+			uc: "specified as structured type without path expression",
 			config: []byte(`
-match: 
-  strategy: foo
+path: 
+  glob: foo
 `),
-			assert: func(t *testing.T, err error, _ *Matcher) {
+			assert: func(t *testing.T, err error, _ *Path) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), ErrURLMissing.Error())
+				assert.Contains(t, err.Error(), "'path'.'expression' is a required field")
 			},
 		},
 		{
 			uc: "specified as structured type with bad url type",
 			config: []byte(`
-match: 
-  url: 1
+path: 
+  expression: 1
 `),
-			assert: func(t *testing.T, err error, _ *Matcher) {
+			assert: func(t *testing.T, err error, _ *Path) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), ErrURLType.Error())
+				assert.Contains(t, err.Error(), "unconvertible type 'int'")
 			},
 		},
 		{
-			uc: "specified as structured type with bad strategy type",
+			uc: "specified as structured type with unsupported property",
 			config: []byte(`
-match: 
-  url: foo.bar
+path: 
+  expression: foo.bar
   strategy: true
 `),
-			assert: func(t *testing.T, err error, _ *Matcher) {
+			assert: func(t *testing.T, err error, _ *Path) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), ErrStrategyType.Error())
-			},
-		},
-		{
-			uc: "specified as structured type with unsupported strategy",
-			config: []byte(`
-match: 
-  url: foo.bar
-  strategy: foo
-`),
-			assert: func(t *testing.T, err error, _ *Matcher) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), ErrUnsupportedStrategy.Error())
-			},
-		},
-		{
-			uc: "specified as structured type without strategy specified",
-			config: []byte(`
-match: 
-  url: foo.bar
-`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, "foo.bar", matcher.URL)
-				assert.Equal(t, "glob", matcher.Strategy)
-			},
-		},
-		{
-			uc: "specified as structured type with glob strategy specified",
-			config: []byte(`
-match: 
-  url: foo.bar
-  strategy: glob
-`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, "foo.bar", matcher.URL)
-				assert.Equal(t, "glob", matcher.Strategy)
-			},
-		},
-		{
-			uc: "specified as structured type with regex strategy specified",
-			config: []byte(`
-match: 
-  url: foo.bar
-  strategy: regex
-`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, "foo.bar", matcher.URL)
-				assert.Equal(t, "regex", matcher.Strategy)
+				assert.Contains(t, err.Error(), "invalid keys: strategy")
 			},
 		},
 	} {
@@ -158,7 +101,7 @@ match:
 			err = DecodeConfig(raw, &typ)
 
 			// THEN
-			tc.assert(t, err, &typ.Matcher)
+			tc.assert(t, err, &typ.Path)
 		})
 	}
 }

@@ -31,12 +31,15 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
-	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
+
+type alwaysMatcher struct{}
+
+func (alwaysMatcher) Match(_ string) bool { return true }
 
 func NewRuleFactory(
 	hf mechanisms.Factory,
@@ -163,18 +166,59 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
+	if len(ruleConfig.Matcher.Path.Expression) == 0 {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"no path matching expression defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
+	if len(ruleConfig.Matcher.HostGlob) != 0 && len(ruleConfig.Matcher.HostRegex) != 0 {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"host glob and regex expressions are defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
+	if len(ruleConfig.Matcher.Path.Glob) != 0 && len(ruleConfig.Matcher.Path.Regex) != 0 {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"path glob and regex expressions are defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
 	if f.mode == config.ProxyMode {
 		if err := checkProxyModeApplicability(srcID, ruleConfig); err != nil {
 			return nil, err
 		}
 	}
 
-	matcher, err := patternmatcher.NewPatternMatcher(
-		ruleConfig.RuleMatcher.Strategy, ruleConfig.RuleMatcher.URL)
+	var (
+		hostMatcher PatternMatcher
+		pathMatcher PatternMatcher
+		err         error
+	)
+
+	switch {
+	case len(ruleConfig.Matcher.HostGlob) != 0:
+		hostMatcher, err = newGlobMatcher(ruleConfig.Matcher.HostGlob, '.')
+	case len(ruleConfig.Matcher.HostRegex) != 0:
+		hostMatcher, err = newRegexMatcher(ruleConfig.Matcher.HostRegex)
+	default:
+		hostMatcher = alwaysMatcher{}
+	}
+
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"bad URL pattern for %s strategy defined for rule ID=%s from %s",
-			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).CausedBy(err)
+			"filed to compile host pattern defined for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
+	}
+
+	switch {
+	case len(ruleConfig.Matcher.Path.Glob) != 0:
+		pathMatcher, err = newGlobMatcher(ruleConfig.Matcher.Path.Glob, '/')
+	case len(ruleConfig.Matcher.Path.Regex) != 0:
+		pathMatcher, err = newRegexMatcher(ruleConfig.Matcher.Path.Regex)
+	default:
+		pathMatcher = alwaysMatcher{}
+	}
+
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"filed to compile path pattern defined for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
 	}
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
@@ -187,7 +231,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, err
 	}
 
-	methods, err := expandHTTPMethods(ruleConfig.Methods)
+	methods, err := expandHTTPMethods(ruleConfig.Matcher.Methods)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed to expand allowed HTTP methods for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
@@ -198,7 +242,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
 		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
-		methods = x.IfThenElse(len(methods) != 0, methods, f.defaultRule.methods)
+		methods = x.IfThenElse(len(methods) != 0, methods, f.defaultRule.allowedMethods)
 	}
 
 	if len(authenticators) == 0 {
@@ -218,22 +262,25 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	return &ruleImpl{
-		id: ruleConfig.ID,
+		id:        ruleConfig.ID,
+		srcID:     srcID,
+		isDefault: false,
 		encodedSlashesHandling: x.IfThenElse(
 			len(ruleConfig.EncodedSlashesHandling) != 0,
 			ruleConfig.EncodedSlashesHandling,
 			config2.EncodedSlashesOff,
 		),
-		urlMatcher: matcher,
-		backend:    ruleConfig.Backend,
-		methods:    methods,
-		srcID:      srcID,
-		isDefault:  false,
-		hash:       hash,
-		sc:         authenticators,
-		sh:         subHandlers,
-		fi:         finalizers,
-		eh:         errorHandlers,
+		allowedScheme:  ruleConfig.Matcher.Scheme,
+		allowedMethods: methods,
+		hostMatcher:    hostMatcher,
+		pathMatcher:    pathMatcher,
+		pathExpression: ruleConfig.Matcher.Path.Expression,
+		backend:        ruleConfig.Backend,
+		hash:           hash,
+		sc:             authenticators,
+		sh:             subHandlers,
+		fi:             finalizers,
+		eh:             errorHandlers,
 	}, nil
 }
 
@@ -353,7 +400,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	f.defaultRule = &ruleImpl{
 		id:                     "default",
 		encodedSlashesHandling: config2.EncodedSlashesOff,
-		methods:                methods,
+		allowedMethods:         methods,
 		srcID:                  "config",
 		isDefault:              true,
 		sc:                     authenticators,

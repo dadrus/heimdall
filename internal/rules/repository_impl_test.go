@@ -18,6 +18,7 @@ package rules
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 	"testing"
 	"time"
@@ -28,12 +29,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/indextree"
 	"github.com/dadrus/heimdall/internal/rules/event"
-	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
+
+type testMatcher bool
+
+func (m testMatcher) Match(_ string) bool { return bool(m) }
 
 func TestRepositoryAddAndRemoveRulesFromSameRuleSet(t *testing.T) {
 	t.Parallel()
@@ -43,20 +48,22 @@ func TestRepositoryAddAndRemoveRulesFromSameRuleSet(t *testing.T) {
 
 	// WHEN
 	repo.addRuleSet("bar", []rule.Rule{
-		&ruleImpl{id: "1", srcID: "bar"},
-		&ruleImpl{id: "2", srcID: "bar"},
-		&ruleImpl{id: "3", srcID: "bar"},
-		&ruleImpl{id: "4", srcID: "bar"},
+		&ruleImpl{id: "1", srcID: "bar", pathExpression: "/foo/1"},
+		&ruleImpl{id: "2", srcID: "bar", pathExpression: "/foo/2"},
+		&ruleImpl{id: "3", srcID: "bar", pathExpression: "/foo/3"},
+		&ruleImpl{id: "4", srcID: "bar", pathExpression: "/foo/4"},
 	})
 
 	// THEN
-	assert.Len(t, repo.rules, 4)
+	assert.Len(t, repo.knownRules, 4)
+	assert.False(t, repo.rulesTree.Empty())
 
 	// WHEN
 	repo.deleteRuleSet("bar")
 
 	// THEN
-	assert.Empty(t, repo.rules)
+	assert.Empty(t, repo.knownRules)
+	assert.True(t, repo.rulesTree.Empty())
 }
 
 func TestRepositoryFindRule(t *testing.T) {
@@ -70,7 +77,7 @@ func TestRepositoryFindRule(t *testing.T) {
 		assert           func(t *testing.T, err error, rul rule.Rule)
 	}{
 		{
-			uc:         "no matching rule without default rule",
+			uc:         "no matching rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -85,7 +92,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			},
 		},
 		{
-			uc:         "no matching rule with default rule",
+			uc:         "matches default rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -101,7 +108,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			},
 		},
 		{
-			uc:         "matching rule",
+			uc:         "matches upstream rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -111,28 +118,33 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				repo.rules = append(repo.rules,
-					&ruleImpl{
-						id:    "test1",
-						srcID: "bar",
-						urlMatcher: func() patternmatcher.PatternMatcher {
-							matcher, _ := patternmatcher.NewPatternMatcher("glob",
-								"http://heimdall.test.local/baz")
+				fooBarMatcher, err := newGlobMatcher("foo.bar", '.')
+				require.NoError(t, err)
 
-							return matcher
-						}(),
-					},
-					&ruleImpl{
-						id:    "test2",
-						srcID: "baz",
-						urlMatcher: func() patternmatcher.PatternMatcher {
-							matcher, _ := patternmatcher.NewPatternMatcher("glob",
-								"http://foo.bar/baz")
+				exampleComMatcher, err := newGlobMatcher("example.com", '.')
+				require.NoError(t, err)
 
-							return matcher
-						}(),
+				repo.addRuleSet("bar", []rule.Rule{
+					&ruleImpl{
+						id:             "test1",
+						srcID:          "bar",
+						pathExpression: "/baz",
+						hostMatcher:    exampleComMatcher,
+						pathMatcher:    testMatcher(true),
+						allowedMethods: []string{http.MethodGet},
 					},
-				)
+				})
+
+				repo.addRuleSet("baz", []rule.Rule{
+					&ruleImpl{
+						id:             "test2",
+						srcID:          "baz",
+						pathExpression: "/baz",
+						hostMatcher:    fooBarMatcher,
+						pathMatcher:    testMatcher(true),
+						allowedMethods: []string{http.MethodGet},
+					},
+				})
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
 				t.Helper()
@@ -160,8 +172,10 @@ func TestRepositoryFindRule(t *testing.T) {
 
 			addRules(t, repo)
 
+			req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *tc.requestURL}}
+
 			// WHEN
-			rul, err := repo.FindRule(tc.requestURL)
+			rul, err := repo.FindRule(req)
 
 			// THEN
 			tc.assert(t, err, rul)
@@ -175,42 +189,77 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	// GIVEN
 	repo := newRepository(nil, &ruleFactory{}, *zerolog.Ctx(context.Background()))
 
+	rules := []rule.Rule{
+		&ruleImpl{
+			id: "1", srcID: "bar", pathExpression: "/bar/1",
+			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
+		},
+		&ruleImpl{
+			id: "2", srcID: "baz", pathExpression: "/baz/2",
+			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
+		},
+		&ruleImpl{
+			id: "3", srcID: "bar", pathExpression: "/bar/3",
+			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
+		},
+		&ruleImpl{
+			id: "4", srcID: "bar", pathExpression: "/bar/4",
+			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
+		},
+		&ruleImpl{
+			id: "4", srcID: "foo", pathExpression: "/foo/4",
+			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
+		},
+	}
+
 	// WHEN
-	repo.addRules([]rule.Rule{
-		&ruleImpl{id: "1", srcID: "bar"},
-		&ruleImpl{id: "2", srcID: "baz"},
-		&ruleImpl{id: "3", srcID: "bar"},
-		&ruleImpl{id: "4", srcID: "bar"},
-		&ruleImpl{id: "4", srcID: "foo"},
-	})
+	repo.addRules(rules)
 
 	// THEN
-	assert.Len(t, repo.rules, 5)
+	assert.Len(t, repo.knownRules, 5)
+	assert.False(t, repo.rulesTree.Empty())
 
 	// WHEN
 	repo.deleteRuleSet("bar")
 
 	// THEN
-	assert.Len(t, repo.rules, 2)
-	assert.ElementsMatch(t, repo.rules, []rule.Rule{
-		&ruleImpl{id: "2", srcID: "baz"},
-		&ruleImpl{id: "4", srcID: "foo"},
-	})
+	assert.Len(t, repo.knownRules, 2)
+	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules[1], rules[4]})
+
+	_, _, err := repo.rulesTree.Find("/bar/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	assert.Error(t, err) //nolint:testifylint
+
+	_, _, err = repo.rulesTree.Find("/bar/3", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	assert.Error(t, err) //nolint:testifylint
+
+	_, _, err = repo.rulesTree.Find("/bar/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	assert.Error(t, err) //nolint:testifylint
+
+	_, _, err = repo.rulesTree.Find("/baz/2", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	assert.NoError(t, err) //nolint:testifylint
+
+	_, _, err = repo.rulesTree.Find("/foo/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
 	repo.deleteRuleSet("foo")
 
 	// THEN
-	assert.Len(t, repo.rules, 1)
-	assert.ElementsMatch(t, repo.rules, []rule.Rule{
-		&ruleImpl{id: "2", srcID: "baz"},
-	})
+	assert.Len(t, repo.knownRules, 1)
+	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules[1]})
+
+	_, _, err = repo.rulesTree.Find("/foo/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	assert.Error(t, err) //nolint:testifylint
+
+	_, _, err = repo.rulesTree.Find("/baz/2", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
 	repo.deleteRuleSet("baz")
 
 	// THEN
-	assert.Empty(t, repo.rules)
+	assert.Empty(t, repo.knownRules)
+	assert.True(t, repo.rulesTree.Empty())
 }
 
 func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
@@ -227,7 +276,8 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				assert.Empty(t, repo.rules)
+				assert.Empty(t, repo.knownRules)
+				assert.True(t, repo.rulesTree.Empty())
 			},
 		},
 		{
@@ -236,14 +286,23 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Source:     "test",
 					ChangeType: event.Create,
-					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test"}},
+					Rules: []rule.Rule{
+						&ruleImpl{id: "rule:foo", srcID: "test", pathExpression: "/foo/1"},
+					},
 				},
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				assert.Len(t, repo.rules, 1)
-				assert.Equal(t, &ruleImpl{id: "rule:foo", srcID: "test"}, repo.rules[0])
+				assert.Len(t, repo.knownRules, 1)
+				assert.False(t, repo.rulesTree.Empty())
+
+				rul, _, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+
+				assert.Equal(t, repo.knownRules[0], rul)
+				assert.Equal(t, "rule:foo", rul.ID())
+				assert.Equal(t, "test", rul.SrcID())
 			},
 		},
 		{
@@ -252,20 +311,30 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Source:     "test1",
 					ChangeType: event.Create,
-					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1"}},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1", pathExpression: "/bar/1"}},
 				},
 				{
 					Source:     "test2",
 					ChangeType: event.Create,
-					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test2"}},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test2", pathExpression: "/foo/1"}},
 				},
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				assert.Len(t, repo.rules, 2)
-				assert.Equal(t, &ruleImpl{id: "rule:bar", srcID: "test1"}, repo.rules[0])
-				assert.Equal(t, &ruleImpl{id: "rule:foo", srcID: "test2"}, repo.rules[1])
+				assert.Len(t, repo.knownRules, 2)
+
+				rul1, _, err := repo.rulesTree.Find("/bar/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, repo.knownRules[0], rul1)
+				assert.Equal(t, "rule:bar", rul1.ID())
+				assert.Equal(t, "test1", rul1.SrcID())
+
+				rul2, _, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, repo.knownRules[1], rul2)
+				assert.Equal(t, "rule:foo", rul2.ID())
+				assert.Equal(t, "test2", rul2.SrcID())
 			},
 		},
 		{
@@ -274,23 +343,30 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Source:     "test1",
 					ChangeType: event.Create,
-					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1"}},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1", pathExpression: "/bar/1"}},
 				},
 				{
 					Source:     "test2",
 					ChangeType: event.Create,
-					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test2"}},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test2", pathExpression: "/foo/1"}},
 				},
 				{
-					Source:     "test2",
+					Source:     "test1",
 					ChangeType: event.Remove,
 				},
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				assert.Len(t, repo.rules, 1)
-				assert.Equal(t, &ruleImpl{id: "rule:bar", srcID: "test1"}, repo.rules[0])
+				assert.Len(t, repo.knownRules, 1)
+				assert.False(t, repo.rulesTree.Empty())
+
+				rul, _, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+
+				assert.Equal(t, repo.knownRules[0], rul)
+				assert.Equal(t, "rule:foo", rul.ID())
+				assert.Equal(t, "test2", rul.SrcID())
 			},
 		},
 		{
@@ -299,39 +375,61 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Source:     "test1",
 					ChangeType: event.Create,
-					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1"}},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1", pathExpression: "/bar/1"}},
 				},
 				{
 					Source:     "test2",
 					ChangeType: event.Create,
 					Rules: []rule.Rule{
-						&ruleImpl{id: "rule:bar", srcID: "test2", hash: []byte{1}},
-						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}},
-						&ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}},
-						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}},
+						&ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{1}, pathExpression: "/foo/1"},
+						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}, pathExpression: "/foo/2"},
+						&ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}, pathExpression: "/foo/3"},
+						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}, pathExpression: "/foo/4"},
 					},
 				},
 				{
 					Source:     "test2",
 					ChangeType: event.Update,
 					Rules: []rule.Rule{
-						&ruleImpl{id: "rule:bar", srcID: "test2", hash: []byte{5}},  // updated
-						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}}, // as before
-						// &ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}}, // deleted
-						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}}, // as before
+						&ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{5}, pathExpression: "/foo/1"}, // updated
+						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}, pathExpression: "/foo/2"}, // as before
+						// &ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}, pathExpression: "/foo/3"}, // deleted
+						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}, pathExpression: "/foo/4"}, // as before
 					},
 				},
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				require.Len(t, repo.rules, 4)
-				assert.ElementsMatch(t, repo.rules, []rule.Rule{
-					&ruleImpl{id: "rule:bar", srcID: "test1"},
-					&ruleImpl{id: "rule:bar", srcID: "test2", hash: []byte{5}},
-					&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}},
-					&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}},
-				})
+				require.Len(t, repo.knownRules, 4)
+				assert.False(t, repo.rulesTree.Empty())
+
+				rulBar, _, err := repo.rulesTree.Find("/bar/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, repo.knownRules[0], rulBar)
+				assert.Equal(t, "rule:bar", rulBar.ID())
+				assert.Equal(t, "test1", rulBar.SrcID())
+
+				rulFoo1, _, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, repo.knownRules[1], rulFoo1)
+				assert.Equal(t, "rule:foo1", rulFoo1.ID())
+				assert.Equal(t, "test2", rulFoo1.SrcID())
+				assert.Equal(t, []byte{5}, rulFoo1.(*ruleImpl).hash) //nolint: forcetypeassert
+
+				rulFoo2, _, err := repo.rulesTree.Find("/foo/2", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, repo.knownRules[2], rulFoo2)
+				assert.Equal(t, "rule:foo2", rulFoo2.ID())
+				assert.Equal(t, "test2", rulFoo2.SrcID())
+				assert.Equal(t, []byte{2}, rulFoo2.(*ruleImpl).hash) //nolint: forcetypeassert
+
+				rulFoo4, _, err := repo.rulesTree.Find("/foo/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, repo.knownRules[3], rulFoo4)
+				assert.Equal(t, "rule:foo4", rulFoo4.ID())
+				assert.Equal(t, "test2", rulFoo4.SrcID())
+				assert.Equal(t, []byte{4}, rulFoo4.(*ruleImpl).hash) //nolint: forcetypeassert
 			},
 		},
 	} {

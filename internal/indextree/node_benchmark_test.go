@@ -6,54 +6,54 @@ import (
 
 func BenchmarkNodeSearchNoPaths(b *testing.B) {
 	tm := testMatcher[string](true)
-	tree := &pathNode[string]{path: "/"}
+	tree := &node[string]{}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.find("", tm)
+		tree.Find("", tm)
 	}
 }
 
 func BenchmarkNodeSearchOneStaticPath(b *testing.B) {
 	tm := testMatcher[string](true)
-	tree := &pathNode[string]{path: "/"}
+	tree := &node[string]{}
 
-	tree.add("abc", "foo")
+	tree.Add("/abc", "foo")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.find("abc", tm)
+		tree.Find("/abc", tm)
 	}
 }
 
 func BenchmarkNodeSearchOneWildcardPath(b *testing.B) {
 	tm := testMatcher[string](true)
-	tree := &pathNode[string]{path: "/"}
+	tree := &node[string]{}
 
-	tree.add(":abc", "foo")
+	tree.Add("/:abc", "foo")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.find("abc", tm)
+		tree.Find("/abc", tm)
 	}
 }
 
 func BenchmarkNodeSearchOneLongWildcards(b *testing.B) {
 	tm := testMatcher[string](true)
-	tree := &pathNode[string]{path: "/"}
+	tree := &node[string]{}
 
-	tree.add(":abc/:def/:ghi", "foo")
+	tree.Add("/:abc/:def/:ghi", "foo")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.find("abcdefghijklmnop/aaaabbbbccccddddeeeeffffgggg/hijkl", tm)
+		tree.Find("/abcdefghijklmnop/aaaabbbbccccddddeeeeffffgggg/hijkl", tm)
 	}
 }

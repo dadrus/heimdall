@@ -14,37 +14,33 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package patternmatcher
+package rules
 
 import (
 	"errors"
 
-	"github.com/dlclark/regexp2"
-	"github.com/ory/ladon/compiler"
+	"github.com/gobwas/glob"
 )
 
-var ErrNoRegexPatternDefined = errors.New("no glob pattern defined")
+var ErrNoGlobPatternDefined = errors.New("no glob pattern defined")
 
-type regexpMatcher struct {
-	compiled *regexp2.Regexp
+type globMatcher struct {
+	compiled glob.Glob
 }
 
-func newRegexMatcher(pattern string) (*regexpMatcher, error) {
+func (m *globMatcher) Match(value string) bool {
+	return m.compiled.Match(value)
+}
+
+func newGlobMatcher(pattern string, separator rune) (PatternMatcher, error) {
 	if len(pattern) == 0 {
-		return nil, ErrNoRegexPatternDefined
+		return nil, ErrNoGlobPatternDefined
 	}
 
-	compiled, err := compiler.CompileRegex(pattern, '<', '>')
+	compiled, err := glob.Compile(pattern, separator)
 	if err != nil {
 		return nil, err
 	}
 
-	return &regexpMatcher{compiled: compiled}, nil
-}
-
-func (m *regexpMatcher) Match(matchAgainst string) bool {
-	// ignoring error as it will be set on timeouts, which basically is the same as match miss
-	ok, _ := m.compiled.MatchString(matchAgainst)
-
-	return ok
+	return &globMatcher{compiled: compiled}, nil
 }

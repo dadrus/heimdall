@@ -17,21 +17,21 @@
 package config
 
 import (
-	"github.com/goccy/go-json"
-
 	"github.com/dadrus/heimdall/internal/x/stringx"
+	"github.com/goccy/go-json"
+	"slices"
 )
 
-type Matcher struct {
-	URL      string `json:"url"      yaml:"url"`
-	Strategy string `json:"strategy" yaml:"strategy"`
+type Path struct {
+	Expression string `json:"expression" yaml:"expression" validate:"required"`
+	Glob       string `json:"glob"       yaml:"glob"`
+	Regex      string `json:"regex"      yaml:"regex"`
 }
 
-func (m *Matcher) UnmarshalJSON(data []byte) error {
+func (p *Path) UnmarshalJSON(data []byte) error {
 	if data[0] == '"' {
-		// data contains just the url matching value
-		m.URL = stringx.ToString(data[1 : len(data)-1])
-		m.Strategy = "glob"
+		// data contains just the path expression
+		p.Expression = stringx.ToString(data[1 : len(data)-1])
 
 		return nil
 	}
@@ -42,5 +42,18 @@ func (m *Matcher) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	return DecodeConfig(rawData, m)
+	return DecodeConfig(rawData, p)
+}
+
+type Matcher struct {
+	Scheme    string   `json:"scheme"     yaml:"scheme"`
+	Methods   []string `json:"methods"    yaml:"methods"`
+	HostGlob  string   `json:"host_glob"  yaml:"host_glob"`
+	HostRegex string   `json:"host_regex" yaml:"host_regex"`
+	Path      Path     `json:"path"       yaml:"path"`
+}
+
+func (m *Matcher) DeepCopyInto(out *Matcher) {
+	*out = *m
+	out.Methods = slices.Clone(m.Methods)
 }

@@ -18,6 +18,7 @@ package rules
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 	"testing"
 
@@ -29,202 +30,94 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
-	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestRuleMatchMethod(t *testing.T) {
+func TestRuleMatches(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc          string
-		methods     []string
-		toBeMatched string
-		assert      func(t *testing.T, matched bool)
-	}{
-		{
-			uc:          "matches",
-			methods:     []string{"FOO", "BAR"},
-			toBeMatched: "BAR",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.True(t, matched)
-			},
-		},
-		{
-			uc:          "doesn't match",
-			methods:     []string{"FOO", "BAR"},
-			toBeMatched: "BAZ",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.False(t, matched)
-			},
-		},
-	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			rul := &ruleImpl{methods: tc.methods}
-
-			// WHEN
-			matched := rul.MatchesMethod(tc.toBeMatched)
-
-			// THEN
-			tc.assert(t, matched)
-		})
-	}
-}
-
-func TestRuleMatchURL(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc            string
-		slashHandling config.EncodedSlashesHandling
-		matcher       func(t *testing.T) patternmatcher.PatternMatcher
-		toBeMatched   string
-		assert        func(t *testing.T, matched bool)
+		uc      string
+		rule    *ruleImpl
+		toMatch *heimdall.Request
+		matches bool
 	}{
 		{
 			uc: "matches",
-			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
-				t.Helper()
-
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/baz")
-				require.NoError(t, err)
-
-				return matcher
+			rule: &ruleImpl{
+				hostMatcher:            testMatcher(true),
+				pathMatcher:            testMatcher(true),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOn,
 			},
-			toBeMatched: "http://foo.bar/baz",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.True(t, matched)
-			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
+			matches: true,
 		},
 		{
-			uc: "matches with urlencoded path fragments",
-			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
-				t.Helper()
-
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/[id]/baz")
-				require.NoError(t, err)
-
-				return matcher
+			uc: "doesn't match scheme",
+			rule: &ruleImpl{
+				hostMatcher:            testMatcher(true),
+				pathMatcher:            testMatcher(true),
+				allowedScheme:          "https",
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOn,
 			},
-			toBeMatched: "http://foo.bar/%5Bid%5D/baz",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.True(t, matched)
-			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
+			matches: false,
 		},
 		{
-			uc: "doesn't match with urlencoded slash in path",
-			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
-				t.Helper()
-
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/foo%2Fbaz")
-				require.NoError(t, err)
-
-				return matcher
+			uc: "doesn't match method",
+			rule: &ruleImpl{
+				hostMatcher:            testMatcher(true),
+				pathMatcher:            testMatcher(true),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOn,
 			},
-			toBeMatched: "http://foo.bar/foo%2Fbaz",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.False(t, matched)
-			},
+			toMatch: &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{}},
+			matches: false,
 		},
 		{
-			uc:            "matches with urlencoded slash in path if allowed with decoding",
-			slashHandling: config.EncodedSlashesOn,
-			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
-				t.Helper()
-
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/foo/baz/[id]")
-				require.NoError(t, err)
-
-				return matcher
+			uc: "doesn't match due to not allowed encoded slash",
+			rule: &ruleImpl{
+				hostMatcher:            testMatcher(true),
+				pathMatcher:            testMatcher(true),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOff,
 			},
-			toBeMatched: "http://foo.bar/foo%2Fbaz/%5Bid%5D",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.True(t, matched)
-			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{RawPath: "/foo%2Fbar"}}},
+			matches: false,
 		},
 		{
-			uc:            "matches with urlencoded slash in path if allowed without decoding",
-			slashHandling: config.EncodedSlashesNoDecode,
-			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
-				t.Helper()
-
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/foo%2Fbaz/[id]")
-				require.NoError(t, err)
-
-				return matcher
+			uc: "doesn't match host",
+			rule: &ruleImpl{
+				hostMatcher:            testMatcher(false),
+				pathMatcher:            testMatcher(true),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOn,
 			},
-			toBeMatched: "http://foo.bar/foo%2Fbaz/%5Bid%5D",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.True(t, matched)
-			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
+			matches: false,
 		},
 		{
-			uc: "doesn't match",
-			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
-				t.Helper()
-
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/baz")
-				require.NoError(t, err)
-
-				return matcher
+			uc: "doesn't match path",
+			rule: &ruleImpl{
+				hostMatcher:            testMatcher(true),
+				pathMatcher:            testMatcher(false),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOn,
 			},
-			toBeMatched: "https://foo.bar/baz",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.False(t, matched)
-			},
-		},
-		{
-			uc: "query params are ignored while matching",
-			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
-				t.Helper()
-
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/baz")
-				require.NoError(t, err)
-
-				return matcher
-			},
-			toBeMatched: "https://foo.bar/baz?foo=bar",
-			assert: func(t *testing.T, matched bool) {
-				t.Helper()
-
-				assert.False(t, matched)
-			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
+			matches: false,
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			rul := &ruleImpl{
-				urlMatcher:             tc.matcher(t),
-				encodedSlashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, config.EncodedSlashesOff),
-			}
-
-			tbmu, err := url.Parse(tc.toBeMatched)
-			require.NoError(t, err)
-
 			// WHEN
-			matched := rul.MatchesURL(tbmu)
+			matched := tc.rule.Matches(tc.toMatch)
 
 			// THEN
-			tc.assert(t, matched)
+			assert.Equal(t, tc.matches, matched)
 		})
 	}
 }
@@ -401,7 +294,7 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -431,7 +324,7 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -461,7 +354,7 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -491,7 +384,7 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -521,7 +414,7 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: targetURL})
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()

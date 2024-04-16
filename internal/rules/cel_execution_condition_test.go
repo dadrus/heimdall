@@ -104,12 +104,12 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 
 			ctx.EXPECT().Request().Return(&heimdall.Request{
 				Method: http.MethodGet,
-				URL: &url.URL{
+				URL: &heimdall.URL{URL: url.URL{
 					Scheme:   "http",
 					Host:     "localhost",
 					Path:     "/test",
 					RawQuery: "foo=bar&baz=zab",
-				},
+				}},
 				ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 			})
 

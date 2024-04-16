@@ -19,12 +19,12 @@ package rules
 import (
 	"bytes"
 	"context"
-	"net/url"
 	"sync"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/indextree"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -41,9 +41,10 @@ func newRepository(
 		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
 			func() rule.Rule { return ruleFactory.DefaultRule() },
 			func() rule.Rule { return nil }),
-		logger: logger,
-		queue:  queue,
-		quit:   make(chan bool),
+		logger:    logger,
+		queue:     queue,
+		quit:      make(chan bool),
+		rulesTree: indextree.NewIndexTree[rule.Rule](),
 	}
 }
 
@@ -51,29 +52,35 @@ type repository struct {
 	dr     rule.Rule
 	logger zerolog.Logger
 
-	rules []rule.Rule
-	mutex sync.RWMutex
+	knownRules []rule.Rule
+
+	rulesTree *indextree.IndexTree[rule.Rule]
+	mutex     sync.RWMutex
 
 	queue event.RuleSetChangedEventQueue
 	quit  chan bool
 }
 
-func (r *repository) FindRule(requestURL *url.URL) (rule.Rule, error) {
+func (r *repository) FindRule(request *heimdall.Request) (rule.Rule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	for _, rul := range r.rules {
-		if rul.MatchesURL(requestURL) {
-			return rul, nil
+	rul, params, err := r.rulesTree.Find(
+		request.URL.Path,
+		indextree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(request) }),
+	)
+	if err != nil {
+		if r.dr != nil {
+			return r.dr, nil
 		}
+
+		return nil, errorchain.NewWithMessagef(heimdall.ErrNoRuleFound,
+			"no applicable rule found for %s", request.URL.String())
 	}
 
-	if r.dr != nil {
-		return r.dr, nil
-	}
+	request.URL.Captures = params
 
-	return nil, errorchain.NewWithMessagef(heimdall.ErrNoRuleFound,
-		"no applicable rule found for %s", requestURL.String())
+	return rul, nil
 }
 
 func (r *repository) Start(_ context.Context) error {
@@ -119,11 +126,7 @@ func (r *repository) watchRuleSetChanges() {
 }
 
 func (r *repository) addRuleSet(srcID string, rules []rule.Rule) {
-	// create rules
 	r.logger.Info().Str("_src", srcID).Msg("Adding rule set")
-
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
 
 	// add them
 	r.addRules(rules)
@@ -134,12 +137,7 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 	r.logger.Info().Str("_src", srcID).Msg("Updating rule set")
 
 	// find all rules for the given src id
-	applicable := func() []rule.Rule {
-		r.mutex.Lock()
-		defer r.mutex.Unlock()
-
-		return slicex.Filter(r.rules, func(r rule.Rule) bool { return r.SrcID() == srcID })
-	}()
+	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
 
 	// find new rules
 	newRules := slicex.Filter(rules, func(r rule.Rule) bool {
@@ -191,9 +189,6 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 	})
 
 	func() {
-		r.mutex.Lock()
-		defer r.mutex.Unlock()
-
 		// remove deleted rules
 		r.removeRules(deletedRules)
 
@@ -208,11 +203,8 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 func (r *repository) deleteRuleSet(srcID string) {
 	r.logger.Info().Str("_src", srcID).Msg("Deleting rule set")
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
 	// find all rules for the given src id
-	applicable := slicex.Filter(r.rules, func(r rule.Rule) bool { return r.SrcID() == srcID })
+	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
 
 	// remove them
 	r.removeRules(applicable)
@@ -220,9 +212,23 @@ func (r *repository) deleteRuleSet(srcID string) {
 
 func (r *repository) addRules(rules []rule.Rule) {
 	for _, rul := range rules {
-		r.rules = append(r.rules, rul)
+		r.knownRules = append(r.knownRules, rul)
 
-		r.logger.Debug().Str("_src", rul.SrcID()).Str("_id", rul.ID()).Msg("Rule added")
+		r.mutex.Lock()
+		err := r.rulesTree.Add(rul.PathExpression(), rul)
+		r.mutex.Unlock()
+
+		if err != nil {
+			r.logger.Error().Err(err).
+				Str("_src", rul.SrcID()).
+				Str("_id", rul.ID()).
+				Msg("Failed to add rule")
+		} else {
+			r.logger.Debug().
+				Str("_src", rul.SrcID()).
+				Str("_id", rul.ID()).
+				Msg("Rule added")
+		}
 	}
 }
 
@@ -230,49 +236,88 @@ func (r *repository) removeRules(rules []rule.Rule) {
 	// find all indexes for affected rules
 	var idxs []int
 
-	for idx, rul := range r.rules {
+	for idx, rul := range r.knownRules {
 		for _, tbd := range rules {
 			if rul.SrcID() == tbd.SrcID() && rul.ID() == tbd.ID() {
 				idxs = append(idxs, idx)
-
-				r.logger.Debug().Str("_src", rul.SrcID()).Str("_id", rul.ID()).Msg("Rule removed")
 			}
 		}
 	}
 
-	// if all rules should be dropped, just create a new slice
-	if len(idxs) == len(r.rules) {
-		r.rules = nil
+	// if all rules should be dropped, just create a new slice and new tree
+	if len(idxs) == len(r.knownRules) {
+		r.knownRules = nil
+
+		r.mutex.Lock()
+		r.rulesTree = indextree.NewIndexTree[rule.Rule]()
+		r.mutex.Unlock()
 
 		return
+	}
+
+	for _, rul := range rules {
+		r.mutex.Lock()
+		err := r.rulesTree.Delete(
+			rul.PathExpression(),
+			indextree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(rul) }),
+		)
+		r.mutex.Unlock()
+
+		if err != nil {
+			r.logger.Error().Err(err).
+				Str("_src", rul.SrcID()).
+				Str("_id", rul.ID()).
+				Msg("Failed to remove rule")
+			// TODO: remove idx of the failed rule from the idxs slice
+		} else {
+			r.logger.Debug().
+				Str("_src", rul.SrcID()).
+				Str("_id", rul.ID()).
+				Msg("Rule removed")
+		}
 	}
 
 	// move the elements from the end of the rules slice to the found positions
 	// and set the corresponding "emptied" values to nil
 	for i, idx := range idxs {
-		tailIdx := len(r.rules) - (1 + i)
+		tailIdx := len(r.knownRules) - (1 + i)
 
-		r.rules[idx] = r.rules[tailIdx]
+		r.knownRules[idx] = r.knownRules[tailIdx]
 
 		// the below re-slice preserves the capacity of the slice.
 		// this is required to avoid memory leaks
-		r.rules[tailIdx] = nil
+		r.knownRules[tailIdx] = nil
 	}
 
 	// re-slice
-	r.rules = r.rules[:len(r.rules)-len(idxs)]
+	r.knownRules = r.knownRules[:len(r.knownRules)-len(idxs)]
 }
 
 func (r *repository) replaceRules(rules []rule.Rule) {
 	for _, updated := range rules {
-		for idx, existing := range r.rules {
-			if updated.SrcID() == existing.SrcID() && existing.ID() == updated.ID() {
-				r.rules[idx] = updated
+		r.mutex.Lock()
+		err := r.rulesTree.Update(
+			updated.PathExpression(),
+			updated,
+			indextree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(updated) }),
+		)
+		r.mutex.Unlock()
 
-				r.logger.Debug().
-					Str("_src", existing.SrcID()).
-					Str("_id", existing.ID()).
-					Msg("Rule updated")
+		if err != nil {
+			r.logger.Error().Err(err).
+				Str("_src", updated.SrcID()).
+				Str("_id", updated.ID()).
+				Msg("Failed to replace rule")
+		} else {
+			r.logger.Debug().
+				Str("_src", updated.SrcID()).
+				Str("_id", updated.ID()).
+				Msg("Rule replaced")
+		}
+
+		for idx, existing := range r.knownRules {
+			if updated.SameAs(existing) {
+				r.knownRules[idx] = updated
 
 				break
 			}

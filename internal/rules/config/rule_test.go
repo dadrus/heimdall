@@ -33,9 +33,16 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 
 	in := Rule{
 		ID: "foo",
-		RuleMatcher: Matcher{
-			URL:      "bar",
-			Strategy: "glob",
+		Matcher: Matcher{
+			Scheme:    "https",
+			HostGlob:  "**.example.com",
+			HostRegex: ".*\\.example.com",
+			Methods:   []string{"GET", "PATCH"},
+			Path: Path{
+				Expression: "bar",
+				Regex:      ".*\\.css",
+				Glob:       "**.css",
+			},
 		},
 		Backend: &Backend{
 			Host: "baz",
@@ -46,7 +53,6 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 				QueryParamsToRemove: []string{"baz"},
 			},
 		},
-		Methods:      []string{"GET", "PATCH"},
 		Execute:      []config.MechanismConfig{{"foo": "bar"}},
 		ErrorHandler: []config.MechanismConfig{{"bar": "foo"}},
 	}
@@ -56,10 +62,14 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 
 	// THEN
 	assert.Equal(t, in.ID, out.ID)
-	assert.Equal(t, in.RuleMatcher.URL, out.RuleMatcher.URL)
+	assert.Equal(t, in.Matcher.Scheme, out.Matcher.Scheme)
+	assert.Equal(t, in.Matcher.HostGlob, out.Matcher.HostGlob)
+	assert.Equal(t, in.Matcher.HostRegex, out.Matcher.HostRegex)
+	assert.Equal(t, in.Matcher.Methods, out.Matcher.Methods)
+	assert.Equal(t, in.Matcher.Path.Expression, out.Matcher.Path.Expression)
+	assert.Equal(t, in.Matcher.Path.Glob, out.Matcher.Path.Glob)
+	assert.Equal(t, in.Matcher.Path.Regex, out.Matcher.Path.Regex)
 	assert.Equal(t, in.Backend, out.Backend)
-	assert.Equal(t, in.RuleMatcher.Strategy, out.RuleMatcher.Strategy)
-	assert.Equal(t, in.Methods, out.Methods)
 	assert.Equal(t, in.Execute, out.Execute)
 	assert.Equal(t, in.ErrorHandler, out.ErrorHandler)
 }
@@ -70,9 +80,16 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 	// GIVEN
 	in := Rule{
 		ID: "foo",
-		RuleMatcher: Matcher{
-			URL:      "bar",
-			Strategy: "glob",
+		Matcher: Matcher{
+			Scheme:    "https",
+			HostGlob:  "**.example.com",
+			HostRegex: ".*\\.example.com",
+			Methods:   []string{"GET", "PATCH"},
+			Path: Path{
+				Expression: "bar",
+				Regex:      ".*\\.css",
+				Glob:       "**.css",
+			},
 		},
 		Backend: &Backend{
 			Host: "baz",
@@ -83,7 +100,6 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 				QueryParamsToRemove: []string{"baz"},
 			},
 		},
-		Methods:      []string{"GET", "PATCH"},
 		Execute:      []config.MechanismConfig{{"foo": "bar"}},
 		ErrorHandler: []config.MechanismConfig{{"bar": "foo"}},
 	}
@@ -97,10 +113,14 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 
 	// but same contents
 	assert.Equal(t, in.ID, out.ID)
-	assert.Equal(t, in.RuleMatcher.URL, out.RuleMatcher.URL)
+	assert.Equal(t, in.Matcher.Scheme, out.Matcher.Scheme)
+	assert.Equal(t, in.Matcher.HostGlob, out.Matcher.HostGlob)
+	assert.Equal(t, in.Matcher.HostRegex, out.Matcher.HostRegex)
+	assert.Equal(t, in.Matcher.Methods, out.Matcher.Methods)
+	assert.Equal(t, in.Matcher.Path.Expression, out.Matcher.Path.Expression)
+	assert.Equal(t, in.Matcher.Path.Glob, out.Matcher.Path.Glob)
+	assert.Equal(t, in.Matcher.Path.Regex, out.Matcher.Path.Regex)
 	assert.Equal(t, in.Backend, out.Backend)
-	assert.Equal(t, in.RuleMatcher.Strategy, out.RuleMatcher.Strategy)
-	assert.Equal(t, in.Methods, out.Methods)
 	assert.Equal(t, in.Execute, out.Execute)
 	assert.Equal(t, in.ErrorHandler, out.ErrorHandler)
 }

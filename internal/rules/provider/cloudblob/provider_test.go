@@ -243,6 +243,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `
 
 				_, err := backend.PutObject(bucketName, "test-rule",
@@ -287,6 +289,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `
 
 				_, err := backend.PutObject(bucketName, "test-rule",
@@ -336,6 +340,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule1",
@@ -350,6 +356,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule2",
@@ -422,6 +430,8 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule",
@@ -434,6 +444,8 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule",
@@ -446,6 +458,8 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    path: /baz
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule",

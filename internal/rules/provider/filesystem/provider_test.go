@@ -202,6 +202,8 @@ func TestProviderLifecycle(t *testing.T) {
 version: "1"
 rules:
 - id: foo
+  match:
+    path: /foo/bar
 `)
 				require.NoError(t, err)
 
@@ -251,6 +253,8 @@ rules:
 version: "2"
 rules:
 - id: foo
+  match:
+    path: /foo/bar
 `)
 				require.NoError(t, err)
 
@@ -290,6 +294,8 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    path: /foo/bar
 `)
 				require.NoError(t, err)
 
@@ -322,6 +328,8 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    path: /foo/bar
 `)
 				require.NoError(t, err)
 
@@ -369,6 +377,8 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    path: /foo
 `)
 				require.NoError(t, err)
 
@@ -381,6 +391,8 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    path: /foo
 `)
 				require.NoError(t, err)
 
@@ -393,6 +405,8 @@ rules:
 version: "2"
 rules:
 - id: bar
+  match:
+    path: /bar
 `)
 				require.NoError(t, err)
 

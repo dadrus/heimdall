@@ -3,11 +3,9 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    url: http://foo.bar/<**>
-    strategy: glob
-#  methods: # reuses default
-#    - GET
-#    - POST
+    scheme: http
+    host_glob: foo.bar
+    path: /**
   execute:
     - authenticator: unauthorized_authenticator
     - authenticator: jwt_authenticator1

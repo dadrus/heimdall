@@ -132,7 +132,7 @@ func (r *RequestContext) Request() *heimdall.Request {
 		r.hmdlReq = &heimdall.Request{
 			RequestFunctions:  r,
 			Method:            r.reqMethod,
-			URL:               r.reqURL,
+			URL:               &heimdall.URL{URL: *r.reqURL},
 			ClientIPAddresses: r.requestClientIPs(),
 		}
 	}

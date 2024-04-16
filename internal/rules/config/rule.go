@@ -31,28 +31,22 @@ const (
 type Rule struct {
 	ID                     string                   `json:"id"                    yaml:"id"`
 	EncodedSlashesHandling EncodedSlashesHandling   `json:"allow_encoded_slashes" yaml:"allow_encoded_slashes" validate:"omitempty,oneof=off on no_decode"` //nolint:lll,tagalign
-	RuleMatcher            Matcher                  `json:"match"                 yaml:"match"`
+	Matcher                Matcher                  `json:"match"                 yaml:"match"`
 	Backend                *Backend                 `json:"forward_to"            yaml:"forward_to"`
-	Methods                []string                 `json:"methods"               yaml:"methods"`
 	Execute                []config.MechanismConfig `json:"execute"               yaml:"execute"`
 	ErrorHandler           []config.MechanismConfig `json:"on_error"              yaml:"on_error"`
 }
 
 func (in *Rule) DeepCopyInto(out *Rule) {
 	*out = *in
-	out.RuleMatcher = in.RuleMatcher
+
+	inm, outm := &in.Matcher, &out.Matcher
+	inm.DeepCopyInto(outm)
 
 	if in.Backend != nil {
 		in, out := in.Backend, out.Backend
 
 		in.DeepCopyInto(out)
-	}
-
-	if in.Methods != nil {
-		in, out := &in.Methods, &out.Methods
-
-		*out = make([]string, len(*in))
-		copy(*out, *in)
 	}
 
 	if in.Execute != nil {

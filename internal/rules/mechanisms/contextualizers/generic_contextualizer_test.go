@@ -873,7 +873,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					&heimdall.Request{
 						RequestFunctions: reqf,
 						Method:           http.MethodPost,
-						URL:              &url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"},
+						URL:              &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
 					})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {

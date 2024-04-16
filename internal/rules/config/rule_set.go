@@ -40,12 +40,7 @@ type RuleSet struct {
 
 func (rs RuleSet) VerifyPathPrefix(prefix string) error {
 	for _, rule := range rs.Rules {
-		if strings.HasPrefix(rule.RuleMatcher.URL, "/") &&
-			// only path is specified
-			!strings.HasPrefix(rule.RuleMatcher.URL, prefix) ||
-			// patterns are specified before the path
-			// There should be a better way to check it
-			!strings.Contains(rule.RuleMatcher.URL, prefix) {
+		if !strings.HasPrefix(rule.Matcher.Path.Expression, prefix) {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"path prefix validation failed for rule ID=%s")
 		}

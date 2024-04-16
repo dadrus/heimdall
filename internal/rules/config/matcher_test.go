@@ -24,37 +24,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMatcherUnmarshalJSON(t *testing.T) {
+func TestPathUnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	type Typ struct {
-		Matcher Matcher `json:"match"`
+		Path Path `json:"path"`
 	}
 
 	for _, tc := range []struct {
 		uc     string
 		config []byte
-		assert func(t *testing.T, err error, matcher *Matcher)
+		assert func(t *testing.T, err error, path *Path)
 	}{
 		{
 			uc:     "specified as string",
-			config: []byte(`{ "match": "foo.bar" }`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			config: []byte(`{ "path": "foo.bar" }`),
+			assert: func(t *testing.T, err error, path *Path) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo.bar", matcher.URL)
-				assert.Equal(t, "glob", matcher.Strategy)
+				assert.Equal(t, "foo.bar", path.Expression)
+				assert.Empty(t, path.Glob)
+				assert.Empty(t, path.Regex)
 			},
 		},
 		{
 			uc: "specified as structured type with invalid json structure",
 			config: []byte(`{
-"match": {
-  strategy: foo
-}
+  "path": {
+    expression: foo
+  }
 }`),
-			assert: func(t *testing.T, err error, _ *Matcher) {
+			assert: func(t *testing.T, err error, _ *Path) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -62,32 +63,35 @@ func TestMatcherUnmarshalJSON(t *testing.T) {
 			},
 		},
 		{
-			uc: "specified as structured type without url",
+			uc: "specified as structured type without expression",
 			config: []byte(`{
-"match": {
-  "strategy": "foo"
-}
+  "path": {
+    "regex": "foo"
+  }
 }`),
-			assert: func(t *testing.T, err error, _ *Matcher) {
+			assert: func(t *testing.T, err error, _ *Path) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), ErrURLMissing.Error())
+				assert.Contains(t, err.Error(), "'expression' is a required field")
 			},
 		},
 		{
-			uc: "specified as structured type without strategy specified",
+			uc: "specified as structured type with everything specified",
 			config: []byte(`{
-"match": {
-  "url": "foo.bar"
-}
+  "path": {
+    "expression": "foo.bar",
+    "glob": "**.css",
+    "regex": ".*\\.css"
+  }
 }`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			assert: func(t *testing.T, err error, path *Path) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo.bar", matcher.URL)
-				assert.Equal(t, "glob", matcher.Strategy)
+				assert.Equal(t, "foo.bar", path.Expression)
+				assert.Equal(t, "**.css", path.Glob)
+				assert.Equal(t, ".*\\.css", path.Regex)
 			},
 		},
 	} {
@@ -98,7 +102,7 @@ func TestMatcherUnmarshalJSON(t *testing.T) {
 			err := json.Unmarshal(tc.config, &typ)
 
 			// THEN
-			tc.assert(t, err, &typ.Matcher)
+			tc.assert(t, err, &typ.Path)
 		})
 	}
 }

@@ -6,4 +6,5 @@ var (
 	ErrInvalidPath    = errors.New("invalid path")
 	ErrNotFound       = errors.New("not found")
 	ErrFailedToDelete = errors.New("failed to delete")
+	ErrFailedToUpdate = errors.New("failed to delete")
 )

@@ -271,9 +271,10 @@ func TestControllerLifecycle(t *testing.T) {
 						Rules: []config2.Rule{
 							{
 								ID: "test",
-								RuleMatcher: config2.Matcher{
-									URL:      "http://foo.bar",
-									Strategy: "glob",
+								Matcher: config2.Matcher{
+									Scheme:  "http",
+									Path:    config2.Path{Expression: "/foo.bar"},
+									Methods: []string{http.MethodGet},
 								},
 								Backend: &config2.Backend{
 									Host: "baz",
@@ -284,7 +285,6 @@ func TestControllerLifecycle(t *testing.T) {
 										QueryParamsToRemove: []string{"baz"},
 									},
 								},
-								Methods: []string{http.MethodGet},
 								Execute: []config.MechanismConfig{
 									{"authenticator": "authn"},
 									{"authorizer": "authz"},
@@ -364,9 +364,10 @@ func TestControllerLifecycle(t *testing.T) {
 						Rules: []config2.Rule{
 							{
 								ID: "test",
-								RuleMatcher: config2.Matcher{
-									URL:      "http://foo.bar",
-									Strategy: "glob",
+								Matcher: config2.Matcher{
+									Scheme:  "http",
+									Path:    config2.Path{Expression: "/foo.bar"},
+									Methods: []string{http.MethodGet},
 								},
 								Backend: &config2.Backend{
 									Host: "baz",
@@ -377,7 +378,6 @@ func TestControllerLifecycle(t *testing.T) {
 										QueryParamsToRemove: []string{"baz"},
 									},
 								},
-								Methods: []string{http.MethodGet},
 								Execute: []config.MechanismConfig{
 									{"authenticator": "authn"},
 									{"authorizer": "authz"},
