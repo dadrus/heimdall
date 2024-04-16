@@ -10,7 +10,7 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha3 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha3"
+	v1alpha3 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -184,7 +184,7 @@ type RuleSetRepositoryMock_PatchStatus_Call struct {
 
 // PatchStatus is a helper method to define mock.On call
 //   - ctx context.Context
-//   - patch v1alpha3.Patch
+//   - patch v1alpha4.Patch
 //   - opts v1.PatchOptions
 func (_e *RuleSetRepositoryMock_Expecter) PatchStatus(ctx interface{}, patch interface{}, opts interface{}) *RuleSetRepositoryMock_PatchStatus_Call {
 	return &RuleSetRepositoryMock_PatchStatus_Call{Call: _e.mock.On("PatchStatus", ctx, patch, opts)}

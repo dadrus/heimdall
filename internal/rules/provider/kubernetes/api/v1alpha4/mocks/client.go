@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	v1alpha3 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha3"
+	v1alpha3 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
 	mock "github.com/stretchr/testify/mock"
 )
 

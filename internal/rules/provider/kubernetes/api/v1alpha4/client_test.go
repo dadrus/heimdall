@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1alpha3
+package v1alpha4
 
 import (
 	"context"
@@ -38,9 +38,9 @@ const watchResponse = `{
 `
 
 const response = `{
-  "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
+  "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
   "items": [{
-      "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
+      "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
       "kind": "RuleSet",
       "metadata": {
         "name": "test-rule-set",
@@ -133,7 +133,7 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 	ruleSet := rls.Items[0]
 	assert.Equal(t, "RuleSet", ruleSet.Kind)
-	assert.Equal(t, "heimdall.dadrus.github.com/v1alpha3", ruleSet.APIVersion)
+	assert.Equal(t, "heimdall.dadrus.github.com/v1alpha4", ruleSet.APIVersion)
 	assert.Equal(t, "test-rule-set", ruleSet.Name)
 	assert.Equal(t, "foo", ruleSet.Namespace)
 	assert.Equal(t, "foobar", ruleSet.Spec.AuthClassName)
