@@ -8,11 +8,12 @@ metadata:
 immutable: true
 data:
   rules.yaml: |
-    version: "1alpha3"
+    version: "1alpha4"
     rules:
       - id: public-access
         match:
-          url: <**>://<**>/pub/<**>
+          path:
+            expression: /pub/<**>
         forward_to:
           host: localhost:8080
           rewrite:
@@ -22,7 +23,8 @@ data:
 
       - id: anonymous-access
         match:
-          url: <**>://<**>/anon/<**>
+          path:
+            expression: /anon/<**>
         forward_to:
           host: localhost:8080
           rewrite:
@@ -33,7 +35,8 @@ data:
 
       - id: redirect
         match:
-          url: <**>://<**>/redir/<**>
+          path:
+            expression: /redir/<**>
         forward_to:
           host: localhost:8080
           rewrite:

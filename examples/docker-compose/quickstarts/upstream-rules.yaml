@@ -1,8 +1,8 @@
-version: "1alpha3"
+version: "1alpha4"
 rules:
 - id: demo:public
   match:
-    url: http://<**>/public
+    path: /public
   forward_to:
     host: upstream:8081
   execute:
@@ -11,7 +11,8 @@ rules:
 
 - id: demo:protected
   match:
-    url: http://<**>/<{user,admin}>
+    path: /:user
+    regex: ^/(user|admin)
   forward_to:
     host: upstream:8081
   execute:
