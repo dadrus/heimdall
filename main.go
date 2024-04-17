@@ -23,3 +23,5 @@ import (
 func main() {
 	cmd.Execute()
 }
+
+// TODO: just for test purposes
