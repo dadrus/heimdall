@@ -109,6 +109,8 @@ jobs:
 
   lint-code:
     runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
     needs:
       - check-changes
     if: >
