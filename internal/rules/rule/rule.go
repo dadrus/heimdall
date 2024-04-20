@@ -26,7 +26,7 @@ type Rule interface {
 	ID() string
 	SrcID() string
 	Execute(ctx heimdall.Context) (Backend, error)
-	Matches(request *heimdall.Request) bool
+	Matches(ctx heimdall.Context) bool
 	PathExpression() string
 	SameAs(other Rule) bool
 }

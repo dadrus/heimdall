@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/exp/maps"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/indextree"
@@ -61,13 +62,15 @@ type repository struct {
 	quit  chan bool
 }
 
-func (r *repository) FindRule(request *heimdall.Request) (rule.Rule, error) {
+func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
+	request := ctx.Request()
+
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
 	rul, params, err := r.rulesTree.Find(
 		request.URL.Path,
-		indextree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(request) }),
+		indextree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(ctx) }),
 	)
 	if err != nil {
 		if r.dr != nil {
@@ -232,14 +235,16 @@ func (r *repository) addRules(rules []rule.Rule) {
 	}
 }
 
-func (r *repository) removeRules(rules []rule.Rule) {
+func (r *repository) removeRules(tbdRules []rule.Rule) {
 	// find all indexes for affected rules
-	var idxs []int
+	idxs := make(map[int]int, len(tbdRules))
 
 	for idx, rul := range r.knownRules {
-		for _, tbd := range rules {
+		for i, tbd := range tbdRules {
 			if rul.SrcID() == tbd.SrcID() && rul.ID() == tbd.ID() {
-				idxs = append(idxs, idx)
+				idxs[i] = idx
+
+				break
 			}
 		}
 	}
@@ -255,7 +260,7 @@ func (r *repository) removeRules(rules []rule.Rule) {
 		return
 	}
 
-	for _, rul := range rules {
+	for i, rul := range tbdRules {
 		r.mutex.Lock()
 		err := r.rulesTree.Delete(
 			rul.PathExpression(),
@@ -268,7 +273,7 @@ func (r *repository) removeRules(rules []rule.Rule) {
 				Str("_src", rul.SrcID()).
 				Str("_id", rul.ID()).
 				Msg("Failed to remove rule")
-			// TODO: remove idx of the failed rule from the idxs slice
+			delete(idxs, i)
 		} else {
 			r.logger.Debug().
 				Str("_src", rul.SrcID()).
@@ -279,7 +284,7 @@ func (r *repository) removeRules(rules []rule.Rule) {
 
 	// move the elements from the end of the rules slice to the found positions
 	// and set the corresponding "emptied" values to nil
-	for i, idx := range idxs {
+	for i, idx := range maps.Values(idxs) {
 		tailIdx := len(r.knownRules) - (1 + i)
 
 		r.knownRules[idx] = r.knownRules[tailIdx]

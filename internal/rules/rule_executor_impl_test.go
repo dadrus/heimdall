@@ -52,7 +52,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(req)
-				repo.EXPECT().FindRule(req).Return(nil, heimdall.ErrNoRuleFound)
+				repo.EXPECT().FindRule(ctx).Return(nil, heimdall.ErrNoRuleFound)
 			},
 		},
 		{
@@ -65,7 +65,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(req)
-				repo.EXPECT().FindRule(req).Return(rule, nil)
+				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
 			},
 		},
@@ -79,7 +79,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(req)
-				repo.EXPECT().FindRule(req).Return(rule, nil)
+				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(upstream, nil)
 			},
 		},

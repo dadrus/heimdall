@@ -23,5 +23,5 @@ import (
 //go:generate mockery --name Repository --structname RepositoryMock
 
 type Repository interface {
-	FindRule(request *heimdall.Request) (Rule, error)
+	FindRule(ctx heimdall.Context) (Rule, error)
 }

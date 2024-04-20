@@ -32,15 +32,16 @@ func newRuleExecutor(repository rule.Repository) rule.Executor {
 }
 
 func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.Backend, error) {
-	req := ctx.Request()
+	request := ctx.Request()
+	reqCtx := ctx.AppContext()
 
 	//nolint:contextcheck
-	zerolog.Ctx(ctx.AppContext()).Debug().
-		Str("_method", req.Method).
-		Str("_url", req.URL.String()).
+	zerolog.Ctx(reqCtx).Debug().
+		Str("_method", request.Method).
+		Str("_url", request.URL.String()).
 		Msg("Analyzing request")
 
-	rul, err := e.r.FindRule(req)
+	rul, err := e.r.FindRule(ctx)
 	if err != nil {
 		return nil, err
 	}

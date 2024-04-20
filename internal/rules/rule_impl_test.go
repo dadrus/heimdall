@@ -113,8 +113,12 @@ func TestRuleMatches(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			ctx := heimdallmocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.TODO())
+			ctx.EXPECT().Request().Return(tc.toMatch)
+
 			// WHEN
-			matched := tc.rule.Matches(tc.toMatch)
+			matched := tc.rule.Matches(ctx)
 
 			// THEN
 			assert.Equal(t, tc.matches, matched)

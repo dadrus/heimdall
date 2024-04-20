@@ -125,17 +125,17 @@ func (_c *RuleMock_ID_Call) RunAndReturn(run func() string) *RuleMock_ID_Call {
 	return _c
 }
 
-// Matches provides a mock function with given fields: request
-func (_m *RuleMock) Matches(request *heimdall.Request) bool {
-	ret := _m.Called(request)
+// Matches provides a mock function with given fields: ctx
+func (_m *RuleMock) Matches(ctx heimdall.Context) bool {
+	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Matches")
 	}
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(*heimdall.Request) bool); ok {
-		r0 = rf(request)
+	if rf, ok := ret.Get(0).(func(heimdall.Context) bool); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
@@ -149,14 +149,14 @@ type RuleMock_Matches_Call struct {
 }
 
 // Matches is a helper method to define mock.On call
-//   - request *heimdall.Request
-func (_e *RuleMock_Expecter) Matches(request interface{}) *RuleMock_Matches_Call {
-	return &RuleMock_Matches_Call{Call: _e.mock.On("Matches", request)}
+//   - ctx heimdall.Context
+func (_e *RuleMock_Expecter) Matches(ctx interface{}) *RuleMock_Matches_Call {
+	return &RuleMock_Matches_Call{Call: _e.mock.On("Matches", ctx)}
 }
 
-func (_c *RuleMock_Matches_Call) Run(run func(request *heimdall.Request)) *RuleMock_Matches_Call {
+func (_c *RuleMock_Matches_Call) Run(run func(ctx heimdall.Context)) *RuleMock_Matches_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*heimdall.Request))
+		run(args[0].(heimdall.Context))
 	})
 	return _c
 }
@@ -166,7 +166,7 @@ func (_c *RuleMock_Matches_Call) Return(_a0 bool) *RuleMock_Matches_Call {
 	return _c
 }
 
-func (_c *RuleMock_Matches_Call) RunAndReturn(run func(*heimdall.Request) bool) *RuleMock_Matches_Call {
+func (_c *RuleMock_Matches_Call) RunAndReturn(run func(heimdall.Context) bool) *RuleMock_Matches_Call {
 	_c.Call.Return(run)
 	return _c
 }

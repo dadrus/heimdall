@@ -87,32 +87,49 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	return upstream, nil
 }
 
-func (r *ruleImpl) Matches(request *heimdall.Request) bool {
+func (r *ruleImpl) Matches(ctx heimdall.Context) bool {
+	request := ctx.Request()
+	logger := zerolog.Ctx(ctx.AppContext()).With().Str("_source", r.srcID).Str("_id", r.id).Logger()
+
+	logger.Debug().Msg("Matching rule")
+
 	// fastest checks first
 	// match scheme
 	if len(r.allowedScheme) != 0 && r.allowedScheme != request.URL.Scheme {
+		logger.Debug().Msg("Allowed scheme mismatch")
+
 		return false
 	}
 
 	// match methods
 	if !slices.Contains(r.allowedMethods, request.Method) {
+		logger.Debug().Msg("Allowed method mismatch")
+
 		return false
 	}
 
 	// check encoded slash handling
 	if r.encodedSlashesHandling == config.EncodedSlashesOff && strings.Contains(request.URL.RawPath, "%2F") {
+		logger.Debug().Msg("Path contains encoded slashes, which is not allowed")
+
 		return false
 	}
 
 	// match host
 	if !r.hostMatcher.Match(request.URL.Host) {
+		logger.Debug().Msg("Host does not satisfy configured expression")
+
 		return false
 	}
 
 	// match path
 	if !r.pathMatcher.Match(request.URL.Path) {
+		logger.Debug().Msgf("Path %s does not satisfy configured expression", request.URL.Path)
+
 		return false
 	}
+
+	logger.Debug().Msg("Rule matched")
 
 	return true
 }

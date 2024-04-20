@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/indextree"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -173,9 +174,12 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules(t, repo)
 
 			req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *tc.requestURL}}
+			ctx := mocks2.NewContextMock(t)
+			ctx.EXPECT().AppContext().Maybe().Return(context.TODO())
+			ctx.EXPECT().Request().Return(req)
 
 			// WHEN
-			rul, err := repo.FindRule(req)
+			rul, err := repo.FindRule(ctx)
 
 			// THEN
 			tc.assert(t, err, rul)

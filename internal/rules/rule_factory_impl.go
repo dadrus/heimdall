@@ -193,11 +193,18 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		err         error
 	)
 
+	spaceReplacer := strings.NewReplacer("\t", "", "\n", "", "\v", "", "\f", "", "\r", "", " ", "")
+
+	hostGlob := spaceReplacer.Replace(ruleConfig.Matcher.HostGlob)
+	hostRegex := spaceReplacer.Replace(ruleConfig.Matcher.HostRegex)
+	pathGlob := spaceReplacer.Replace(ruleConfig.Matcher.Path.Glob)
+	pathRegex := spaceReplacer.Replace(ruleConfig.Matcher.Path.Regex)
+
 	switch {
-	case len(ruleConfig.Matcher.HostGlob) != 0:
-		hostMatcher, err = newGlobMatcher(ruleConfig.Matcher.HostGlob, '.')
-	case len(ruleConfig.Matcher.HostRegex) != 0:
-		hostMatcher, err = newRegexMatcher(ruleConfig.Matcher.HostRegex)
+	case len(hostGlob) != 0:
+		hostMatcher, err = newGlobMatcher(hostGlob, '.')
+	case len(hostRegex) != 0:
+		hostMatcher, err = newRegexMatcher(hostRegex)
 	default:
 		hostMatcher = alwaysMatcher{}
 	}
@@ -208,10 +215,10 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	switch {
-	case len(ruleConfig.Matcher.Path.Glob) != 0:
-		pathMatcher, err = newGlobMatcher(ruleConfig.Matcher.Path.Glob, '/')
-	case len(ruleConfig.Matcher.Path.Regex) != 0:
-		pathMatcher, err = newRegexMatcher(ruleConfig.Matcher.Path.Regex)
+	case len(pathGlob) != 0:
+		pathMatcher, err = newGlobMatcher(pathGlob, '/')
+	case len(pathRegex) != 0:
+		pathMatcher, err = newRegexMatcher(pathRegex)
 	default:
 		pathMatcher = alwaysMatcher{}
 	}
