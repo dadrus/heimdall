@@ -436,10 +436,6 @@ func (n *node[V]) Find(path string, matcher Matcher[V]) (V, map[string]string, e
 	return found.values[idx], keys, nil
 }
 
-func (n *node[V]) Empty() bool {
-	return len(n.values) == 0 && len(n.staticChildren) == 0 && n.wildcardChild == nil && n.catchAllChild == nil
-}
-
 func (n *node[V]) Delete(path string, matcher Matcher[V]) bool {
 	return n.delNode(path, matcher)
 }
@@ -453,4 +449,8 @@ func (n *node[V]) Update(path string, value V, matcher Matcher[V]) bool {
 	found.values[idx] = value
 
 	return true
+}
+
+func (n *node[V]) Empty() bool {
+	return len(n.values) == 0 && len(n.staticChildren) == 0 && n.wildcardChild == nil && n.catchAllChild == nil
 }
