@@ -142,7 +142,8 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 	// find all rules for the given src id
 	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
 
-	// find new rules
+	// find new rules - these are completely new ones, as well as those, which have their path expressions
+	// updated, so that the old ones must be removed and the updated ones must be inserted into the tree.
 	newRules := slicex.Filter(rules, func(newRule rule.Rule) bool {
 		ruleIsNew := !slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
 			return existingRule.ID() == newRule.ID()
@@ -155,7 +156,8 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 		return ruleIsNew || pathExpressionChanged
 	})
 
-	// find updated rules with same path expression
+	// find updated rules - those, which have the same ID and same path expression. These can be just updated
+	// in the tree without the need to remove the old ones first and insert the updated ones afterwards.
 	updatedRules := slicex.Filter(rules, func(r rule.Rule) bool {
 		loaded := r.(*ruleImpl) // nolint: forcetypeassert
 
@@ -168,7 +170,8 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 		})
 	})
 
-	// find deleted rules
+	// find deleted rules - those, which are gone, or still present, but have a different path
+	// expression. Latter means, the old ones needs to be removed and the updated ones inserted
 	deletedRules := slicex.Filter(applicable, func(existingRule rule.Rule) bool {
 		ruleGone := !slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
 			return newRule.ID() == existingRule.ID()
