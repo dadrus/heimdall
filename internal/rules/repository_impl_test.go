@@ -18,7 +18,6 @@ package rules
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/x/radixtree"
 	"net/http"
 	"net/url"
 	"testing"
@@ -35,6 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/radixtree"
 )
 
 type testMatcher bool

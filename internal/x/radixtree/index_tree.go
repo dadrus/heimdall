@@ -5,7 +5,7 @@ type Entry[V any] struct {
 	Parameters map[string]string
 }
 
-type IndexTree[V any] interface {
+type Tree[V any] interface {
 	Add(path string, value V) error
 	Find(path string, matcher Matcher[V]) (*Entry[V], error)
 	Delete(path string, matcher Matcher[V]) error
@@ -13,7 +13,7 @@ type IndexTree[V any] interface {
 	Empty() bool
 }
 
-func New[V any](opts ...Option[V]) IndexTree[V] {
+func New[V any](opts ...Option[V]) Tree[V] {
 	root := &node[V]{
 		canAdd: func(_ []V, _ V) bool { return true },
 	}
