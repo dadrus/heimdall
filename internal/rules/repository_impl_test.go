@@ -398,7 +398,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 						&ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{5}, pathExpression: "/foo/1"}, // updated
 						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}, pathExpression: "/foo/2"}, // as before
 						// &ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}, pathExpression: "/foo/3"}, // deleted
-						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}, pathExpression: "/foo/4"}, // as before
+						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{6}, pathExpression: "/foo/6"}, // updated path
 					},
 				},
 			},
@@ -428,12 +428,12 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				assert.Equal(t, "test2", rulFoo2.SrcID())
 				assert.Equal(t, []byte{2}, rulFoo2.(*ruleImpl).hash) //nolint: forcetypeassert
 
-				rulFoo4, _, err := repo.rulesTree.Find("/foo/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				rulFoo4, _, err := repo.rulesTree.Find("/foo/6", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, repo.knownRules[3], rulFoo4)
 				assert.Equal(t, "rule:foo4", rulFoo4.ID())
 				assert.Equal(t, "test2", rulFoo4.SrcID())
-				assert.Equal(t, []byte{4}, rulFoo4.(*ruleImpl).hash) //nolint: forcetypeassert
+				assert.Equal(t, []byte{6}, rulFoo4.(*ruleImpl).hash) //nolint: forcetypeassert
 			},
 		},
 	} {

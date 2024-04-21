@@ -19,10 +19,10 @@ package rules
 import (
 	"bytes"
 	"context"
+	"slices"
 	"sync"
 
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/maps"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/indextree"
@@ -143,64 +143,52 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
 
 	// find new rules
-	newRules := slicex.Filter(rules, func(r rule.Rule) bool {
-		var known bool
+	newRules := slicex.Filter(rules, func(newRule rule.Rule) bool {
+		ruleIsNew := !slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
+			return existingRule.ID() == newRule.ID()
+		})
 
-		for _, existing := range applicable {
-			if existing.ID() == r.ID() {
-				known = true
+		pathExpressionChanged := slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
+			return existingRule.ID() == newRule.ID() && existingRule.PathExpression() != newRule.PathExpression()
+		})
 
-				break
-			}
-		}
-
-		return !known
+		return ruleIsNew || pathExpressionChanged
 	})
 
-	// find updated rules
+	// find updated rules with same path expression
 	updatedRules := slicex.Filter(rules, func(r rule.Rule) bool {
 		loaded := r.(*ruleImpl) // nolint: forcetypeassert
 
-		var updated bool
-
-		for _, existing := range applicable {
+		return slices.ContainsFunc(applicable, func(existing rule.Rule) bool {
 			known := existing.(*ruleImpl) // nolint: forcetypeassert
 
-			if known.id == loaded.id && !bytes.Equal(known.hash, loaded.hash) {
-				updated = true
-
-				break
-			}
-		}
-
-		return updated
+			return known.id == loaded.id && // same id
+				!bytes.Equal(known.hash, loaded.hash) && // different hash
+				known.pathExpression == loaded.pathExpression // same path expressions
+		})
 	})
 
 	// find deleted rules
-	deletedRules := slicex.Filter(applicable, func(r rule.Rule) bool {
-		var present bool
+	deletedRules := slicex.Filter(applicable, func(existingRule rule.Rule) bool {
+		ruleGone := !slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
+			return newRule.ID() == existingRule.ID()
+		})
 
-		for _, loaded := range rules {
-			if loaded.ID() == r.ID() {
-				present = true
+		pathExpressionChanged := slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
+			return existingRule.ID() == newRule.ID() && existingRule.PathExpression() != newRule.PathExpression()
+		})
 
-				break
-			}
-		}
-
-		return !present
+		return ruleGone || pathExpressionChanged
 	})
 
-	func() {
-		// remove deleted rules
-		r.removeRules(deletedRules)
+	// remove deleted rules
+	r.removeRules(deletedRules)
 
-		// replace updated rules
-		r.replaceRules(updatedRules)
+	// replace updated rules
+	r.replaceRules(updatedRules)
 
-		// add new rules
-		r.addRules(newRules)
-	}()
+	// add new rules
+	r.addRules(newRules)
 }
 
 func (r *repository) deleteRuleSet(srcID string) {
@@ -215,8 +203,6 @@ func (r *repository) deleteRuleSet(srcID string) {
 
 func (r *repository) addRules(rules []rule.Rule) {
 	for _, rul := range rules {
-		r.knownRules = append(r.knownRules, rul)
-
 		r.mutex.Lock()
 		err := r.rulesTree.Add(rul.PathExpression(), rul)
 		r.mutex.Unlock()
@@ -231,36 +217,16 @@ func (r *repository) addRules(rules []rule.Rule) {
 				Str("_src", rul.SrcID()).
 				Str("_id", rul.ID()).
 				Msg("Rule added")
+
+			r.knownRules = append(r.knownRules, rul)
 		}
 	}
 }
 
 func (r *repository) removeRules(tbdRules []rule.Rule) {
-	// find all indexes for affected rules
-	idxs := make(map[int]int, len(tbdRules))
+	var failed []rule.Rule
 
-	for idx, rul := range r.knownRules {
-		for i, tbd := range tbdRules {
-			if rul.SrcID() == tbd.SrcID() && rul.ID() == tbd.ID() {
-				idxs[i] = idx
-
-				break
-			}
-		}
-	}
-
-	// if all rules should be dropped, just create a new slice and new tree
-	if len(idxs) == len(r.knownRules) {
-		r.knownRules = nil
-
-		r.mutex.Lock()
-		r.rulesTree = indextree.NewIndexTree[rule.Rule]()
-		r.mutex.Unlock()
-
-		return
-	}
-
-	for i, rul := range tbdRules {
+	for _, rul := range tbdRules {
 		r.mutex.Lock()
 		err := r.rulesTree.Delete(
 			rul.PathExpression(),
@@ -272,8 +238,9 @@ func (r *repository) removeRules(tbdRules []rule.Rule) {
 			r.logger.Error().Err(err).
 				Str("_src", rul.SrcID()).
 				Str("_id", rul.ID()).
-				Msg("Failed to remove rule")
-			delete(idxs, i)
+				Msg("Failed to remove rule. Please file a bug report!")
+
+			failed = append(failed, rul)
 		} else {
 			r.logger.Debug().
 				Str("_src", rul.SrcID()).
@@ -282,23 +249,14 @@ func (r *repository) removeRules(tbdRules []rule.Rule) {
 		}
 	}
 
-	// move the elements from the end of the rules slice to the found positions
-	// and set the corresponding "emptied" values to nil
-	for i, idx := range maps.Values(idxs) {
-		tailIdx := len(r.knownRules) - (1 + i)
-
-		r.knownRules[idx] = r.knownRules[tailIdx]
-
-		// the below re-slice preserves the capacity of the slice.
-		// this is required to avoid memory leaks
-		r.knownRules[tailIdx] = nil
-	}
-
-	// re-slice
-	r.knownRules = r.knownRules[:len(r.knownRules)-len(idxs)]
+	r.knownRules = slices.DeleteFunc(r.knownRules, func(r rule.Rule) bool {
+		return !slices.Contains(failed, r) && slices.Contains(tbdRules, r)
+	})
 }
 
 func (r *repository) replaceRules(rules []rule.Rule) {
+	var failed []rule.Rule
+
 	for _, updated := range rules {
 		r.mutex.Lock()
 		err := r.rulesTree.Update(
@@ -312,16 +270,20 @@ func (r *repository) replaceRules(rules []rule.Rule) {
 			r.logger.Error().Err(err).
 				Str("_src", updated.SrcID()).
 				Str("_id", updated.ID()).
-				Msg("Failed to replace rule")
+				Msg("Failed to replace rule. Please file a bug report!")
+
+			failed = append(failed, updated)
 		} else {
 			r.logger.Debug().
 				Str("_src", updated.SrcID()).
 				Str("_id", updated.ID()).
 				Msg("Rule replaced")
 		}
+	}
 
-		for idx, existing := range r.knownRules {
-			if updated.SameAs(existing) {
+	for idx, existing := range r.knownRules {
+		for _, updated := range rules {
+			if updated.SameAs(existing) && !slices.Contains(failed, updated) {
 				r.knownRules[idx] = updated
 
 				break
