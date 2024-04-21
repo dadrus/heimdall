@@ -1,4 +1,4 @@
-package indextree
+package radixtree
 
 import (
 	"testing"

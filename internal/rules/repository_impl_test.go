@@ -30,7 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/indextree"
+	"github.com/dadrus/heimdall/internal/radixtree"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
@@ -230,19 +230,19 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 2)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules[1], rules[4]})
 
-	_, err := repo.rulesTree.Find("/bar/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err := repo.rulesTree.Find("/bar/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.rulesTree.Find("/bar/3", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.rulesTree.Find("/bar/3", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.rulesTree.Find("/bar/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.rulesTree.Find("/bar/4", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.rulesTree.Find("/baz/2", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.rulesTree.Find("/baz/2", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
-	_, err = repo.rulesTree.Find("/foo/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.rulesTree.Find("/foo/4", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -252,10 +252,10 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 1)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules[1]})
 
-	_, err = repo.rulesTree.Find("/foo/4", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.rulesTree.Find("/foo/4", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.rulesTree.Find("/baz/2", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.rulesTree.Find("/baz/2", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -301,7 +301,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				assert.Len(t, repo.knownRules, 1)
 				assert.False(t, repo.rulesTree.Empty())
 
-				entry, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entry, err := repo.rulesTree.Find("/foo/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 
 				assert.Equal(t, repo.knownRules[0], entry.Value)
@@ -328,13 +328,13 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 
 				assert.Len(t, repo.knownRules, 2)
 
-				entry1, err := repo.rulesTree.Find("/bar/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entry1, err := repo.rulesTree.Find("/bar/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, repo.knownRules[0], entry1.Value)
 				assert.Equal(t, "rule:bar", entry1.Value.ID())
 				assert.Equal(t, "test1", entry1.Value.SrcID())
 
-				entry2, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entry2, err := repo.rulesTree.Find("/foo/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, repo.knownRules[1], entry2.Value)
 				assert.Equal(t, "rule:foo", entry2.Value.ID())
@@ -365,7 +365,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				assert.Len(t, repo.knownRules, 1)
 				assert.False(t, repo.rulesTree.Empty())
 
-				entry, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entry, err := repo.rulesTree.Find("/foo/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 
 				assert.Equal(t, repo.knownRules[0], entry.Value)
@@ -408,27 +408,27 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				require.Len(t, repo.knownRules, 4)
 				assert.False(t, repo.rulesTree.Empty())
 
-				entryBar, err := repo.rulesTree.Find("/bar/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entryBar, err := repo.rulesTree.Find("/bar/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, repo.knownRules[0], entryBar.Value)
 				assert.Equal(t, "rule:bar", entryBar.Value.ID())
 				assert.Equal(t, "test1", entryBar.Value.SrcID())
 
-				entryFoo1, err := repo.rulesTree.Find("/foo/1", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entryFoo1, err := repo.rulesTree.Find("/foo/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, repo.knownRules[1], entryFoo1.Value)
 				assert.Equal(t, "rule:foo1", entryFoo1.Value.ID())
 				assert.Equal(t, "test2", entryFoo1.Value.SrcID())
 				assert.Equal(t, []byte{5}, entryFoo1.Value.(*ruleImpl).hash) //nolint: forcetypeassert
 
-				entryFoo2, err := repo.rulesTree.Find("/foo/2", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entryFoo2, err := repo.rulesTree.Find("/foo/2", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, repo.knownRules[2], entryFoo2.Value)
 				assert.Equal(t, "rule:foo2", entryFoo2.Value.ID())
 				assert.Equal(t, "test2", entryFoo2.Value.SrcID())
 				assert.Equal(t, []byte{2}, entryFoo2.Value.(*ruleImpl).hash) //nolint: forcetypeassert
 
-				entryFoo4, err := repo.rulesTree.Find("/foo/6", indextree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+				entryFoo4, err := repo.rulesTree.Find("/foo/6", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, repo.knownRules[3], entryFoo4.Value)
 				assert.Equal(t, "rule:foo4", entryFoo4.Value.ID())

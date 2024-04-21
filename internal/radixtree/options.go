@@ -1,4 +1,4 @@
-package indextree
+package radixtree
 
 type Option[V any] func(n *node[V])
 

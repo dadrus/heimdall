@@ -1,4 +1,4 @@
-package indextree
+package radixtree
 
 type Entry[V any] struct {
 	Value      V

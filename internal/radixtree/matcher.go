@@ -1,4 +1,4 @@
-package indextree
+package radixtree
 
 // Matcher is used for additional checks while performing the lookup in the spanned tree.
 type Matcher[V any] interface {
