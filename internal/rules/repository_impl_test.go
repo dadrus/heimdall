@@ -122,20 +122,6 @@ func TestRepositoryFindRule(t *testing.T) {
 				fooBarMatcher, err := newGlobMatcher("foo.bar", '.')
 				require.NoError(t, err)
 
-				exampleComMatcher, err := newGlobMatcher("example.com", '.')
-				require.NoError(t, err)
-
-				repo.addRuleSet("bar", []rule.Rule{
-					&ruleImpl{
-						id:             "test1",
-						srcID:          "bar",
-						pathExpression: "/baz",
-						hostMatcher:    exampleComMatcher,
-						pathMatcher:    testMatcher(true),
-						allowedMethods: []string{http.MethodGet},
-					},
-				})
-
 				repo.addRuleSet("baz", []rule.Rule{
 					&ruleImpl{
 						id:             "test2",

@@ -42,10 +42,15 @@ func newRepository(
 		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
 			func() rule.Rule { return ruleFactory.DefaultRule() },
 			func() rule.Rule { return nil }),
-		logger:    logger,
-		queue:     queue,
-		quit:      make(chan bool),
-		rulesTree: radixtree.New[rule.Rule](),
+		logger: logger,
+		queue:  queue,
+		quit:   make(chan bool),
+		rulesTree: radixtree.New[rule.Rule](
+			radixtree.WithValuesConstraints(func(oldValues []rule.Rule, newValue rule.Rule) bool {
+				// only rules from the same rule set can be placed in one node
+				return len(oldValues) == 0 || oldValues[0].SrcID() == newValue.SrcID()
+			}),
+		),
 	}
 }
 
