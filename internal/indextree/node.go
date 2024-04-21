@@ -7,13 +7,23 @@ This package is a fork of https://github.com/dimfeld/httptreemux.
 package indextree
 
 import (
-	"net/url"
+	"errors"
 	"slices"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
+
+var (
+	ErrInvalidPath          = errors.New("invalid path")
+	ErrNotFound             = errors.New("not found")
+	ErrFailedToDelete       = errors.New("failed to delete")
+	ErrFailedToUpdate       = errors.New("failed to delete")
+	ErrConstraintsViolation = errors.New("constraints violation")
+)
+
+type ConstraintsFunc[V any] func(oldValues []V, newValue V) bool
 
 type node[V any] struct {
 	path string
@@ -35,6 +45,8 @@ type node[V any] struct {
 
 	values       []V
 	wildcardKeys []string
+
+	canAdd ConstraintsFunc[V]
 }
 
 func (n *node[V]) sortStaticChildren(i int) {
@@ -340,26 +352,27 @@ func (n *node[V]) findNode(path string, matcher Matcher[V]) (*node[V], int, []st
 		if len(thisToken) > 0 { // Don't match on empty tokens.
 			found, idx, params = n.wildcardChild.findNode(nextToken, matcher)
 			if found != nil {
-				unescaped, err := url.PathUnescape(thisToken)
-				if err != nil {
-					unescaped = thisToken
+				if params == nil {
+					// we don't expect more than 3 parameters to be defined for a path
+					// even 3 is already too much
+					params = make([]string, 0, 3) //nolint:gomnd
 				}
 
-				return found, idx, append(params, unescaped)
+				return found, idx, append(params, thisToken)
 			}
 		}
 	}
 
 	if n.catchAllChild != nil {
 		// Hit the catchall, so just assign the whole remaining path.
-		unescaped, err := url.PathUnescape(path)
-		if err != nil {
-			unescaped = path
-		}
-
 		for idx, value = range n.catchAllChild.values {
 			if match := matcher.Match(value); match {
-				return n.catchAllChild, idx, []string{unescaped}
+				// we don't expect more than 3 parameters to be defined for a path
+				// even 3 is already too much
+				params = make([]string, 1, 3) //nolint:gomnd
+				params[0] = path
+
+				return n.catchAllChild, idx, params
 			}
 		}
 
@@ -407,48 +420,58 @@ func (n *node[V]) Add(path string, value V) error {
 		return err
 	}
 
+	if !n.canAdd(res.values, value) {
+		return ErrConstraintsViolation
+	}
+
 	res.values = append(res.values, value)
 
 	return nil
 }
 
-func (n *node[V]) Find(path string, matcher Matcher[V]) (V, map[string]string, error) {
-	var def V
-
+func (n *node[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 	found, idx, params := n.findNode(path, matcher)
 	if found == nil {
-		return def, nil, ErrNotFound
+		return nil, ErrNotFound
 	}
 
-	if len(found.wildcardKeys) == 0 {
-		return found.values[idx], nil, nil
+	entry := &Entry[V]{
+		Value: found.values[idx],
 	}
 
-	keys := make(map[string]string, len(params))
+	if len(params) == 0 {
+		return entry, nil
+	}
+
+	entry.Parameters = make(map[string]string, len(params))
 
 	for i, param := range params {
 		key := found.wildcardKeys[len(params)-1-i]
 		if key != "*" {
-			keys[found.wildcardKeys[len(params)-1-i]] = param
+			entry.Parameters[key] = param
 		}
 	}
 
-	return found.values[idx], keys, nil
+	return entry, nil
 }
 
-func (n *node[V]) Delete(path string, matcher Matcher[V]) bool {
-	return n.delNode(path, matcher)
+func (n *node[V]) Delete(path string, matcher Matcher[V]) error {
+	if !n.delNode(path, matcher) {
+		return ErrFailedToDelete
+	}
+
+	return nil
 }
 
-func (n *node[V]) Update(path string, value V, matcher Matcher[V]) bool {
+func (n *node[V]) Update(path string, value V, matcher Matcher[V]) error {
 	found, idx, _ := n.findNode(path, matcher)
 	if found == nil {
-		return false
+		return ErrFailedToUpdate
 	}
 
 	found.values[idx] = value
 
-	return true
+	return nil
 }
 
 func (n *node[V]) Empty() bool {
