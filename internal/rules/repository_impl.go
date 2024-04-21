@@ -45,7 +45,7 @@ func newRepository(
 		logger:    logger,
 		queue:     queue,
 		quit:      make(chan bool),
-		rulesTree: indextree.NewIndexTree[rule.Rule](),
+		rulesTree: indextree.New[rule.Rule](),
 	}
 }
 
@@ -55,7 +55,7 @@ type repository struct {
 
 	knownRules []rule.Rule
 
-	rulesTree *indextree.IndexTree[rule.Rule]
+	rulesTree indextree.IndexTree[rule.Rule]
 	mutex     sync.RWMutex
 
 	queue event.RuleSetChangedEventQueue
@@ -68,7 +68,7 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	rul, params, err := r.rulesTree.Find(
+	entry, err := r.rulesTree.Find(
 		request.URL.Path,
 		indextree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(ctx) }),
 	)
@@ -81,9 +81,9 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 			"no applicable rule found for %s", request.URL.String())
 	}
 
-	request.URL.Captures = params
+	request.URL.Captures = entry.Parameters
 
-	return rul, nil
+	return entry.Value, nil
 }
 
 func (r *repository) Start(_ context.Context) error {
