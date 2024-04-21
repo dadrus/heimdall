@@ -19,13 +19,13 @@ package rules
 import (
 	"bytes"
 	"context"
+	radixtree2 "github.com/dadrus/heimdall/internal/x/radixtree"
 	"slices"
 	"sync"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/radixtree"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -45,7 +45,7 @@ func newRepository(
 		logger:    logger,
 		queue:     queue,
 		quit:      make(chan bool),
-		rulesTree: radixtree.New[rule.Rule](),
+		rulesTree: radixtree2.New[rule.Rule](),
 	}
 }
 
@@ -55,7 +55,7 @@ type repository struct {
 
 	knownRules []rule.Rule
 
-	rulesTree radixtree.IndexTree[rule.Rule]
+	rulesTree radixtree2.IndexTree[rule.Rule]
 	mutex     sync.RWMutex
 
 	queue event.RuleSetChangedEventQueue
@@ -70,7 +70,7 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 
 	entry, err := r.rulesTree.Find(
 		request.URL.Path,
-		radixtree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(ctx) }),
+		radixtree2.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(ctx) }),
 	)
 	if err != nil {
 		if r.dr != nil {
@@ -233,7 +233,7 @@ func (r *repository) removeRules(tbdRules []rule.Rule) {
 		r.mutex.Lock()
 		err := r.rulesTree.Delete(
 			rul.PathExpression(),
-			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(rul) }),
+			radixtree2.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(rul) }),
 		)
 		r.mutex.Unlock()
 
@@ -265,7 +265,7 @@ func (r *repository) replaceRules(rules []rule.Rule) {
 		err := r.rulesTree.Update(
 			updated.PathExpression(),
 			updated,
-			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(updated) }),
+			radixtree2.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(updated) }),
 		)
 		r.mutex.Unlock()
 
