@@ -132,10 +132,11 @@ func (r *ruleImpl) Matches(ctx heimdall.Context) bool {
 
 	// match path
 	var path string
-	if len(request.URL.RawPath) == 0 {
+	if len(request.URL.RawPath) == 0 || r.encodedSlashesHandling == config.EncodedSlashesOn {
 		path = request.URL.Path
 	} else {
-		path = unescape(request.URL.RawPath, r.encodedSlashesHandling)
+		unescaped, _ := url.PathUnescape(strings.ReplaceAll(request.URL.RawPath, "%2F", "$$$escaped-slash$$$"))
+		path = strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
 	}
 
 	if !r.pathMatcher.Match(path) {
@@ -172,8 +173,7 @@ func unescape(value string, handling config.EncodedSlashesHandling) string {
 		return unescaped
 	}
 
-	unescaped := strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$")
-	unescaped, _ = url.PathUnescape(unescaped)
+	unescaped, _ := url.PathUnescape(strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$"))
 
 	return strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
 }
