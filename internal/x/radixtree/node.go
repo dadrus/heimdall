@@ -8,18 +8,16 @@ package radixtree
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
-
-	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var (
 	ErrInvalidPath          = errors.New("invalid path")
 	ErrNotFound             = errors.New("not found")
 	ErrFailedToDelete       = errors.New("failed to delete")
-	ErrFailedToUpdate       = errors.New("failed to delete")
+	ErrFailedToUpdate       = errors.New("failed to update")
 	ErrConstraintsViolation = errors.New("constraints violation")
 )
 
@@ -73,8 +71,7 @@ func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 		if len(wildcardKeys) != 0 {
 			// Ensure the current wildcard keys are the same as the old ones.
 			if len(n.wildcardKeys) != 0 && !slices.Equal(n.wildcardKeys, wildcardKeys) {
-				return nil, errorchain.NewWithMessage(ErrInvalidPath,
-					"ambiguous path detected - wildcard keys differ")
+				return nil, fmt.Errorf("%w: %s is ambigous - wildcard keys differ", ErrInvalidPath, path)
 			}
 
 			n.wildcardKeys = wildcardKeys
@@ -112,7 +109,7 @@ func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 			thisToken = thisToken[1:]
 
 			if nextSlash != -1 {
-				return nil, errorchain.NewWithMessagef(ErrInvalidPath, "/ after catch-all found in %s", path)
+				return nil, fmt.Errorf("%w: %s has '/' after a free wildcard", ErrInvalidPath, path)
 			}
 
 			if n.catchAllChild == nil {
@@ -123,8 +120,8 @@ func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 			}
 
 			if path[1:] != n.catchAllChild.path {
-				return nil, errorchain.NewWithMessagef(ErrInvalidPath,
-					"catch-all name in %s doesn't match %s", path, n.catchAllChild.path)
+				return nil, fmt.Errorf("%w: free wildcard name in %s doesn't match %s",
+					ErrInvalidPath, path, n.catchAllChild.path)
 			}
 
 			wildcardKeys = append(wildcardKeys, thisToken)
@@ -395,7 +392,7 @@ func (n *node[V]) splitCommonPrefix(existingNodeIndex int, path string) (*node[V
 	}
 
 	// Find the length of the common prefix of the child node and the new path.
-	i := stringx.CommonPrefixLen(childNode.path, path)
+	i := commonPrefixLen(childNode.path, path)
 
 	commonPrefix := path[0:i]
 	childNode.path = childNode.path[i:]
@@ -421,7 +418,7 @@ func (n *node[V]) Add(path string, value V) error {
 	}
 
 	if !n.canAdd(res.values, value) {
-		return ErrConstraintsViolation
+		return fmt.Errorf("%w: %s", ErrConstraintsViolation, path)
 	}
 
 	res.values = append(res.values, value)
@@ -432,7 +429,7 @@ func (n *node[V]) Add(path string, value V) error {
 func (n *node[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 	found, idx, params := n.findNode(path, matcher)
 	if found == nil {
-		return nil, ErrNotFound
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
 	}
 
 	entry := &Entry[V]{
@@ -457,7 +454,7 @@ func (n *node[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 
 func (n *node[V]) Delete(path string, matcher Matcher[V]) error {
 	if !n.delNode(path, matcher) {
-		return ErrFailedToDelete
+		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
 	}
 
 	return nil
@@ -466,7 +463,7 @@ func (n *node[V]) Delete(path string, matcher Matcher[V]) error {
 func (n *node[V]) Update(path string, value V, matcher Matcher[V]) error {
 	found, idx, _ := n.findNode(path, matcher)
 	if found == nil {
-		return ErrFailedToUpdate
+		return fmt.Errorf("%w: %s", ErrFailedToUpdate, path)
 	}
 
 	found.values[idx] = value
