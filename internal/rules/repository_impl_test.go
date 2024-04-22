@@ -18,7 +18,6 @@ package rules
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -484,11 +483,4 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			tc.assert(t, repo)
 		})
 	}
-}
-
-func TestFoo(t *testing.T) {
-	uri, err := url.Parse("http://localhost/foo%2fbar/baz?d=1")
-	require.NoError(t, err)
-
-	fmt.Println(uri.String())
 }
