@@ -18,6 +18,7 @@ package rules
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -109,8 +110,8 @@ func TestRepositoryFindRule(t *testing.T) {
 			},
 		},
 		{
-			uc:         "matches upstream rule",
-			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
+			uc:         "matches upstream rule having path without escaped parts",
+			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
@@ -126,7 +127,44 @@ func TestRepositoryFindRule(t *testing.T) {
 					&ruleImpl{
 						id:             "test2",
 						srcID:          "baz",
-						pathExpression: "/baz",
+						pathExpression: "/baz/bar",
+						hostMatcher:    fooBarMatcher,
+						pathMatcher:    testMatcher(true),
+						allowedMethods: []string{http.MethodGet},
+					},
+				})
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				impl, ok := rul.(*ruleImpl)
+				require.True(t, ok)
+
+				require.Equal(t, "test2", impl.id)
+				require.Equal(t, "baz", impl.srcID)
+			},
+		},
+		{
+			uc:         "matches upstream rule having path with escaped parts",
+			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar", RawPath: "/baz%2Fbar"},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo *repository) {
+				t.Helper()
+
+				fooBarMatcher, err := newGlobMatcher("foo.bar", '.')
+				require.NoError(t, err)
+
+				repo.addRuleSet("baz", []rule.Rule{
+					&ruleImpl{
+						id:             "test2",
+						srcID:          "baz",
+						pathExpression: "/baz%2Fbar",
 						hostMatcher:    fooBarMatcher,
 						pathMatcher:    testMatcher(true),
 						allowedMethods: []string{http.MethodGet},
@@ -446,4 +484,11 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			tc.assert(t, repo)
 		})
 	}
+}
+
+func TestFoo(t *testing.T) {
+	uri, err := url.Parse("http://localhost/foo%2fbar/baz?d=1")
+	require.NoError(t, err)
+
+	fmt.Println(uri.String())
 }

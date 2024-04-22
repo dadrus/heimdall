@@ -74,7 +74,7 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	defer r.mutex.RUnlock()
 
 	entry, err := r.rulesTree.Find(
-		request.URL.Path,
+		x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path),
 		radixtree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(ctx) }),
 	)
 	if err != nil {
@@ -162,7 +162,7 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 	})
 
 	// find updated rules - those, which have the same ID and same path expression. These can be just updated
-	// in the tree without the need to remove the old ones first and insert the updated ones afterwards.
+	// in the tree without the need to remove the old ones first and insert the updated ones afterward.
 	updatedRules := slicex.Filter(rules, func(r rule.Rule) bool {
 		loaded := r.(*ruleImpl) // nolint: forcetypeassert
 
