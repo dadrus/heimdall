@@ -53,7 +53,7 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.2
 	github.com/undefinedlabs/go-mpatch v1.0.7
-	github.com/wI2L/jsondiff v0.5.1
+	github.com/wI2L/jsondiff v0.5.2
 	github.com/ybbus/httpretry v1.0.2
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
@@ -182,7 +182,7 @@ require (
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
