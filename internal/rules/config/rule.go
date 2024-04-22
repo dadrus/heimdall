@@ -23,9 +23,9 @@ import (
 type EncodedSlashesHandling string
 
 const (
-	EncodedSlashesOff      EncodedSlashesHandling = "off"
-	EncodedSlashesOn       EncodedSlashesHandling = "on"
-	EncodedSlashesNoDecode EncodedSlashesHandling = "no_decode"
+	EncodedSlashesOff        EncodedSlashesHandling = "off"
+	EncodedSlashesOn         EncodedSlashesHandling = "on"
+	EncodedSlashesOnNoDecode EncodedSlashesHandling = "no_decode"
 )
 
 type Rule struct {

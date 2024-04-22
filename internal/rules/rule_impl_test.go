@@ -151,6 +151,8 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+
 				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
@@ -170,6 +172,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
 				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
@@ -191,6 +195,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
 				sub := &subject.Subject{ID: "Foo"}
 
@@ -214,6 +220,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
 				sub := &subject.Subject{ID: "Foo"}
 
@@ -239,6 +247,8 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+
 				sub := &subject.Subject{ID: "Foo"}
 
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
@@ -262,6 +272,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
 				sub := &subject.Subject{ID: "Foo"}
 
@@ -371,7 +383,7 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc:            "all handler succeed with urlencoded slashes on with urlencoded slash but without decoding it",
-			slashHandling: config.EncodedSlashesNoDecode,
+			slashHandling: config.EncodedSlashesOnNoDecode,
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},

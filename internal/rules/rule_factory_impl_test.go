@@ -969,7 +969,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 						Regex:      "^/foo/(bar|baz)",
 					},
 				},
-				EncodedSlashesHandling: config2.EncodedSlashesNoDecode,
+				EncodedSlashesHandling: config2.EncodedSlashesOnNoDecode,
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},
@@ -1010,7 +1010,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesNoDecode, rul.encodedSlashesHandling)
+				assert.Equal(t, config2.EncodedSlashesOnNoDecode, rul.encodedSlashesHandling)
 				assert.Equal(t, "https", rul.allowedScheme)
 				assert.Equal(t, "/foo/:resource", rul.PathExpression())
 				require.IsType(t, &globMatcher{}, rul.hostMatcher)

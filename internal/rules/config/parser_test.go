@@ -129,7 +129,7 @@ rules:
 				rul := ruleSet.Rules[0]
 				require.NotNil(t, rul)
 				assert.Equal(t, "bar", rul.ID)
-				assert.Equal(t, EncodedSlashesNoDecode, rul.EncodedSlashesHandling)
+				assert.Equal(t, EncodedSlashesOnNoDecode, rul.EncodedSlashesHandling)
 				assert.Equal(t, "foo", rul.Matcher.Path.Expression)
 			},
 		},

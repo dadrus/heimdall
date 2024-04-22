@@ -26,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 type ruleImpl struct {
@@ -55,6 +56,20 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		logger.Info().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
 	}
 
+	request := ctx.Request()
+	if len(request.URL.RawPath) != 0 {
+		// unescape captures
+		captures := request.URL.Captures
+		for k, v := range captures {
+			captures[k] = unescape(v, r.encodedSlashesHandling)
+		}
+
+		// unescape path
+		if r.encodedSlashesHandling == config.EncodedSlashesOn {
+			request.URL.RawPath = ""
+		}
+	}
+
 	// authenticators
 	sub, err := r.sc.Execute(ctx)
 	if err != nil {
@@ -74,13 +89,8 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	var upstream rule.Backend
 
 	if r.backend != nil {
-		targetURL := ctx.Request().URL
-		if r.encodedSlashesHandling == config.EncodedSlashesOn && len(targetURL.RawPath) != 0 {
-			targetURL.RawPath = ""
-		}
-
 		upstream = &backend{
-			targetURL: r.backend.CreateURL(&targetURL.URL),
+			targetURL: r.backend.CreateURL(&request.URL.URL),
 		}
 	}
 
@@ -123,7 +133,14 @@ func (r *ruleImpl) Matches(ctx heimdall.Context) bool {
 	}
 
 	// match path
-	if !r.pathMatcher.Match(request.URL.Path) {
+	var path string
+	if r.encodedSlashesHandling == config.EncodedSlashesOn {
+		path = request.URL.Path
+	} else {
+		path = x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path)
+	}
+
+	if !r.pathMatcher.Match(path) {
 		logger.Debug().Msgf("Path %s does not satisfy configured expression", request.URL.Path)
 
 		return false
@@ -149,3 +166,19 @@ type backend struct {
 }
 
 func (b *backend) URL() *url.URL { return b.targetURL }
+
+func unescape(value string, handling config.EncodedSlashesHandling) string {
+	switch handling {
+	case config.EncodedSlashesOn:
+		unescaped, _ := url.PathUnescape(value)
+
+		return unescaped
+	case config.EncodedSlashesOnNoDecode:
+		unescaped := strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$")
+		unescaped, _ = url.PathUnescape(unescaped)
+
+		return strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
+	default:
+		return value
+	}
+}
