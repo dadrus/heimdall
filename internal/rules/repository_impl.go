@@ -58,10 +58,11 @@ type repository struct {
 	dr     rule.Rule
 	logger zerolog.Logger
 
-	knownRules []rule.Rule
+	knownRules      []rule.Rule
+	knownRulesMutex sync.Mutex
 
-	rulesTree radixtree.Tree[rule.Rule]
-	mutex     sync.RWMutex
+	rulesTree      radixtree.Tree[rule.Rule]
+	rulesTreeMutex sync.RWMutex
 
 	queue event.RuleSetChangedEventQueue
 	quit  chan bool
@@ -70,8 +71,8 @@ type repository struct {
 func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	request := ctx.Request()
 
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.rulesTreeMutex.RLock()
+	defer r.rulesTreeMutex.RUnlock()
 
 	entry, err := r.rulesTree.Find(
 		x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path),
@@ -134,6 +135,9 @@ func (r *repository) watchRuleSetChanges() {
 }
 
 func (r *repository) addRuleSet(srcID string, rules []rule.Rule) {
+	r.knownRulesMutex.Lock()
+	defer r.knownRulesMutex.Unlock()
+
 	r.logger.Info().Str("_src", srcID).Msg("Adding rule set")
 
 	// add them
@@ -142,6 +146,9 @@ func (r *repository) addRuleSet(srcID string, rules []rule.Rule) {
 
 func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 	// create rules
+	r.knownRulesMutex.Lock()
+	defer r.knownRulesMutex.Unlock()
+
 	r.logger.Info().Str("_src", srcID).Msg("Updating rule set")
 
 	// find all rules for the given src id
@@ -200,6 +207,9 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 }
 
 func (r *repository) deleteRuleSet(srcID string) {
+	r.knownRulesMutex.Lock()
+	defer r.knownRulesMutex.Unlock()
+
 	r.logger.Info().Str("_src", srcID).Msg("Deleting rule set")
 
 	// find all rules for the given src id
@@ -211,9 +221,9 @@ func (r *repository) deleteRuleSet(srcID string) {
 
 func (r *repository) addRules(rules []rule.Rule) {
 	for _, rul := range rules {
-		r.mutex.Lock()
+		r.rulesTreeMutex.Lock()
 		err := r.rulesTree.Add(rul.PathExpression(), rul)
-		r.mutex.Unlock()
+		r.rulesTreeMutex.Unlock()
 
 		if err != nil {
 			r.logger.Error().Err(err).
@@ -235,12 +245,12 @@ func (r *repository) removeRules(tbdRules []rule.Rule) {
 	var failed []rule.Rule
 
 	for _, rul := range tbdRules {
-		r.mutex.Lock()
+		r.rulesTreeMutex.Lock()
 		err := r.rulesTree.Delete(
 			rul.PathExpression(),
 			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(rul) }),
 		)
-		r.mutex.Unlock()
+		r.rulesTreeMutex.Unlock()
 
 		if err != nil {
 			r.logger.Error().Err(err).
@@ -266,13 +276,13 @@ func (r *repository) replaceRules(rules []rule.Rule) {
 	var failed []rule.Rule
 
 	for _, updated := range rules {
-		r.mutex.Lock()
+		r.rulesTreeMutex.Lock()
 		err := r.rulesTree.Update(
 			updated.PathExpression(),
 			updated,
 			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(updated) }),
 		)
-		r.mutex.Unlock()
+		r.rulesTreeMutex.Unlock()
 
 		if err != nil {
 			r.logger.Error().Err(err).
