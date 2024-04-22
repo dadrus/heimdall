@@ -45,17 +45,6 @@ func TestRuleMatches(t *testing.T) {
 		matches bool
 	}{
 		{
-			uc: "matches",
-			rule: &ruleImpl{
-				hostMatcher:            testMatcher(true),
-				pathMatcher:            testMatcher(true),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOn,
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
-			matches: true,
-		},
-		{
 			uc: "doesn't match scheme",
 			rule: &ruleImpl{
 				hostMatcher:            testMatcher(true),
@@ -86,7 +75,7 @@ func TestRuleMatches(t *testing.T) {
 				allowedMethods:         []string{http.MethodGet},
 				encodedSlashesHandling: config.EncodedSlashesOff,
 			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{RawPath: "/foo%2Fbar"}}},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
 			matches: false,
 		},
 		{
@@ -101,7 +90,7 @@ func TestRuleMatches(t *testing.T) {
 			matches: false,
 		},
 		{
-			uc: "doesn't match path",
+			uc: "doesn't match path with allowed encoded slashes",
 			rule: &ruleImpl{
 				hostMatcher:            testMatcher(true),
 				pathMatcher:            testMatcher(false),
@@ -110,6 +99,49 @@ func TestRuleMatches(t *testing.T) {
 			},
 			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
 			matches: false,
+		},
+		{
+			uc: "doesn't match path with encoded slash with allowed encoded slashes without decoding them",
+			rule: &ruleImpl{
+				hostMatcher:            testMatcher(true),
+				pathMatcher:            testMatcher(false),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOnNoDecode,
+			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
+			matches: false,
+		},
+		{
+			uc: "match path with encoded slash with allowed encoded slashes without decoding them",
+			rule: &ruleImpl{
+				hostMatcher: testMatcher(true),
+				pathMatcher: func() PatternMatcher {
+					matcher := &mocks.PatternMatcherMock{}
+					matcher.EXPECT().Match("/foo%2Fbar").Return(true)
+
+					return matcher
+				}(),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOnNoDecode,
+			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
+			matches: true,
+		},
+		{
+			uc: "match path with encoded slash with allowed encoded slashes with decoding them",
+			rule: &ruleImpl{
+				hostMatcher: testMatcher(true),
+				pathMatcher: func() PatternMatcher {
+					matcher := &mocks.PatternMatcherMock{}
+					matcher.EXPECT().Match("/foo/bar").Return(true)
+
+					return matcher
+				}(),
+				allowedMethods:         []string{http.MethodGet},
+				encodedSlashesHandling: config.EncodedSlashesOn,
+			},
+			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
+			matches: true,
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
@@ -141,7 +173,7 @@ func TestRuleExecute(t *testing.T) {
 			finalizer *mocks.SubjectHandlerMock,
 			errHandler *mocks.ErrorHandlerMock,
 		)
-		assert func(t *testing.T, err error, backend rule.Backend)
+		assert func(t *testing.T, err error, backend rule.Backend, captures map[string]string)
 	}{
 		{
 			uc: "authenticator fails, but error handler succeeds",
@@ -158,7 +190,7 @@ func TestRuleExecute(t *testing.T) {
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -180,7 +212,7 @@ func TestRuleExecute(t *testing.T) {
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -206,7 +238,7 @@ func TestRuleExecute(t *testing.T) {
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -231,7 +263,7 @@ func TestRuleExecute(t *testing.T) {
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -258,7 +290,7 @@ func TestRuleExecute(t *testing.T) {
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -284,7 +316,7 @@ func TestRuleExecute(t *testing.T) {
 				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -310,15 +342,24 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					URL: &heimdall.URL{
+						URL:      *targetURL,
+						Captures: map[string]string{"first": "api", "second": "v1", "third": "foo%5Bid%5D"},
+					},
+				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
 				assert.Equal(t, expectedURL, backend.URL())
+
+				assert.Equal(t, "api", captures["first"])
+				assert.Equal(t, "v1", captures["second"])
+				assert.Equal(t, "foo[id]", captures["third"])
 			},
 		},
 		{
@@ -340,15 +381,24 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					URL: &heimdall.URL{
+						URL:      *targetURL,
+						Captures: map[string]string{"first": "api", "second": "v1", "third": "foo%5Bid%5D"},
+					},
+				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
 				assert.Equal(t, expectedURL, backend.URL())
+
+				assert.Equal(t, "api", captures["first"])
+				assert.Equal(t, "v1", captures["second"])
+				assert.Equal(t, "foo[id]", captures["third"])
 			},
 		},
 		{
@@ -370,15 +420,23 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					URL: &heimdall.URL{
+						URL:      *targetURL,
+						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
+					},
+				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
 				assert.Equal(t, expectedURL, backend.URL())
+
+				assert.Equal(t, "api/v1", captures["first"])
+				assert.Equal(t, "foo[id]", captures["second"])
 			},
 		},
 		{
@@ -400,15 +458,23 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					URL: &heimdall.URL{
+						URL:      *targetURL,
+						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
+					},
+				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				expectedURL, _ := url.Parse("http://foo.bar/api%2Fv1/foo%5Bid%5D")
 				assert.Equal(t, expectedURL, backend.URL())
+
+				assert.Equal(t, "api%2Fv1", captures["first"])
+				assert.Equal(t, "foo[id]", captures["second"])
 			},
 		},
 		{
@@ -432,7 +498,7 @@ func TestRuleExecute(t *testing.T) {
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend) {
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -467,7 +533,7 @@ func TestRuleExecute(t *testing.T) {
 			upstream, err := rul.Execute(ctx)
 
 			// THEN
-			tc.assert(t, err, upstream)
+			tc.assert(t, err, upstream, ctx.Request().URL.Captures)
 		})
 	}
 }

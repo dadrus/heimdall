@@ -26,7 +26,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 type ruleImpl struct {
@@ -57,17 +56,16 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	}
 
 	request := ctx.Request()
-	if len(request.URL.RawPath) != 0 {
-		// unescape captures
-		captures := request.URL.Captures
-		for k, v := range captures {
-			captures[k] = unescape(v, r.encodedSlashesHandling)
-		}
 
-		// unescape path
-		if r.encodedSlashesHandling == config.EncodedSlashesOn {
-			request.URL.RawPath = ""
-		}
+	// unescape captures
+	captures := request.URL.Captures
+	for k, v := range captures {
+		captures[k] = unescape(v, r.encodedSlashesHandling)
+	}
+
+	// unescape path
+	if r.encodedSlashesHandling == config.EncodedSlashesOn {
+		request.URL.RawPath = ""
 	}
 
 	// authenticators
@@ -134,10 +132,10 @@ func (r *ruleImpl) Matches(ctx heimdall.Context) bool {
 
 	// match path
 	var path string
-	if r.encodedSlashesHandling == config.EncodedSlashesOn {
+	if len(request.URL.RawPath) == 0 {
 		path = request.URL.Path
 	} else {
-		path = x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path)
+		path = unescape(request.URL.RawPath, r.encodedSlashesHandling)
 	}
 
 	if !r.pathMatcher.Match(path) {
@@ -168,17 +166,14 @@ type backend struct {
 func (b *backend) URL() *url.URL { return b.targetURL }
 
 func unescape(value string, handling config.EncodedSlashesHandling) string {
-	switch handling {
-	case config.EncodedSlashesOn:
+	if handling == config.EncodedSlashesOn {
 		unescaped, _ := url.PathUnescape(value)
 
 		return unescaped
-	case config.EncodedSlashesOnNoDecode:
-		unescaped := strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$")
-		unescaped, _ = url.PathUnescape(unescaped)
-
-		return strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
-	default:
-		return value
 	}
+
+	unescaped := strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$")
+	unescaped, _ = url.PathUnescape(unescaped)
+
+	return strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
 }
