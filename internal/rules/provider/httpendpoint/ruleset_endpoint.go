@@ -33,8 +33,6 @@ import (
 
 type ruleSetEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
-
-	RulesPathPrefix string `mapstructure:"rule_path_match_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }

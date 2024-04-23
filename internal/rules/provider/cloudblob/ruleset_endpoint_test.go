@@ -177,7 +177,6 @@ func TestFetchRuleSets(t *testing.T) {
 					Host:     bucketName,
 					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
-				RulesPathPrefix: "/foo/bar",
 			},
 			setup: func(t *testing.T) {
 				t.Helper()

@@ -239,7 +239,6 @@ rules:
 					URL:    srv.URL,
 					Method: http.MethodGet,
 				},
-				RulesPathPrefix: "/foo/bar",
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()

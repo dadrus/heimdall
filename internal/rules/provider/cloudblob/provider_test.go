@@ -110,7 +110,6 @@ buckets:
   - url: s3://foobar
   - url: s3://barfoo/foo&foo=bar
     prefix: bar
-    rule_path_match_prefix: baz
 `),
 			assert: func(t *testing.T, err error, prov *provider) {
 				t.Helper()
