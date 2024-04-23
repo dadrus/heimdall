@@ -148,18 +148,7 @@ func (r *repository) UpdateRuleSet(srcID string, rules []rule.Rule) error {
 
 	tmp := r.index.Clone()
 
-	// remove deleted rules
-	if err := r.removeRulesFrom(tmp, deletedRules); err != nil {
-		return err
-	}
-
-	// replace updated rules
-	if err := r.replaceRulesIn(tmp, updatedRules); err != nil {
-		return err
-	}
-
-	// add new rules
-	if err := r.addRulesTo(tmp, newRules); err != nil {
+	if err := r.updateRulesIn(tmp, newRules, updatedRules, deletedRules); err != nil {
 		return err
 	}
 
@@ -236,8 +225,16 @@ func (r *repository) removeRulesFrom(tree *radixtree.Tree[rule.Rule], tbdRules [
 	return nil
 }
 
-func (r *repository) replaceRulesIn(tree *radixtree.Tree[rule.Rule], rules []rule.Rule) error {
-	for _, updated := range rules {
+func (r *repository) updateRulesIn(
+	tree *radixtree.Tree[rule.Rule], newRules, updatedRules, deletedRules []rule.Rule,
+) error {
+	// remove deleted rules
+	if err := r.removeRulesFrom(tree, deletedRules); err != nil {
+		return err
+	}
+
+	// replace updated rules
+	for _, updated := range updatedRules {
 		if err := tree.Update(
 			updated.PathExpression(),
 			updated,
@@ -248,6 +245,11 @@ func (r *repository) replaceRulesIn(tree *radixtree.Tree[rule.Rule], rules []rul
 			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed replacing rule ID='%s'", updated.ID()).
 				CausedBy(err)
 		}
+	}
+
+	// add new rules
+	if err := r.addRulesTo(tree, newRules); err != nil {
+		return err
 	}
 
 	return nil

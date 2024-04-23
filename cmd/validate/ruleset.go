@@ -18,17 +18,17 @@ package validate
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"os"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 // NewValidateRulesCommand represents the "validate rules" command.
