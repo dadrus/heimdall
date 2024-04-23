@@ -21,33 +21,52 @@ var (
 	ErrConstraintsViolation = errors.New("constraints violation")
 )
 
-type ConstraintsFunc[V any] func(oldValues []V, newValue V) bool
+type (
+	ConstraintsFunc[V any] func(oldValues []V, newValue V) bool
 
-type node[V any] struct {
-	path string
+	Entry[V any] struct {
+		Value      V
+		Parameters map[string]string
+	}
 
-	priority int
+	Tree[V any] struct {
+		path string
 
-	// The list of static children to check.
-	staticIndices  []byte
-	staticChildren []*node[V]
+		priority int
 
-	// If none of the above match, check the wildcard children
-	wildcardChild *node[V]
+		// The list of static children to check.
+		staticIndices  []byte
+		staticChildren []*Tree[V]
 
-	// If none of the above match, then we use the catch-all, if applicable.
-	catchAllChild *node[V]
+		// If none of the above match, check the wildcard children
+		wildcardChild *Tree[V]
 
-	isCatchAll bool
-	isWildcard bool
+		// If none of the above match, then we use the catch-all, if applicable.
+		catchAllChild *Tree[V]
 
-	values       []V
-	wildcardKeys []string
+		isCatchAll bool
+		isWildcard bool
 
-	canAdd ConstraintsFunc[V]
+		values       []V
+		wildcardKeys []string
+
+		canAdd ConstraintsFunc[V]
+	}
+)
+
+func New[V any](opts ...Option[V]) *Tree[V] {
+	root := &Tree[V]{
+		canAdd: func(_ []V, _ V) bool { return true },
+	}
+
+	for _, opt := range opts {
+		opt(root)
+	}
+
+	return root
 }
 
-func (n *node[V]) sortStaticChildren(i int) {
+func (n *Tree[V]) sortStaticChildren(i int) {
 	for i > 0 && n.staticChildren[i].priority > n.staticChildren[i-1].priority {
 		n.staticChildren[i], n.staticChildren[i-1] = n.staticChildren[i-1], n.staticChildren[i]
 		n.staticIndices[i], n.staticIndices[i-1] = n.staticIndices[i-1], n.staticIndices[i]
@@ -56,7 +75,7 @@ func (n *node[V]) sortStaticChildren(i int) {
 	}
 }
 
-func (n *node[V]) nextSeparator(path string) int {
+func (n *Tree[V]) nextSeparator(path string) int {
 	if idx := strings.IndexByte(path, '/'); idx != -1 {
 		return idx
 	}
@@ -65,7 +84,7 @@ func (n *node[V]) nextSeparator(path string) int {
 }
 
 //nolint:funlen,gocognit,cyclop
-func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool) (*node[V], error) {
+func (n *Tree[V]) addNode(path string, wildcardKeys []string, inStaticToken bool) (*Tree[V], error) {
 	if len(path) == 0 {
 		// we have a leaf node
 		if len(wildcardKeys) != 0 {
@@ -113,7 +132,7 @@ func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 			}
 
 			if n.catchAllChild == nil {
-				n.catchAllChild = &node[V]{
+				n.catchAllChild = &Tree[V]{
 					path:       thisToken,
 					isCatchAll: true,
 				}
@@ -130,7 +149,7 @@ func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 			return n.catchAllChild, nil
 		case ':':
 			if n.wildcardChild == nil {
-				n.wildcardChild = &node[V]{path: "wildcard", isWildcard: true}
+				n.wildcardChild = &Tree[V]{path: "wildcard", isWildcard: true}
 			}
 
 			return n.wildcardChild.addNode(remainingPath, append(wildcardKeys, thisToken[1:]), false)
@@ -167,7 +186,7 @@ func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 		}
 	}
 
-	child := &node[V]{path: thisToken}
+	child := &Tree[V]{path: thisToken}
 
 	n.staticIndices = append(n.staticIndices, token)
 	n.staticChildren = append(n.staticChildren, child)
@@ -178,7 +197,7 @@ func (n *node[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 }
 
 //nolint:cyclop
-func (n *node[V]) delNode(path string, matcher Matcher[V]) bool {
+func (n *Tree[V]) delNode(path string, matcher Matcher[V]) bool {
 	pathLen := len(path)
 	if pathLen == 0 {
 		if len(n.values) == 0 {
@@ -193,7 +212,7 @@ func (n *node[V]) delNode(path string, matcher Matcher[V]) bool {
 
 	var (
 		nextPath string
-		child    *node[V]
+		child    *Tree[V]
 	)
 
 	token := path[0]
@@ -258,7 +277,7 @@ func (n *node[V]) delNode(path string, matcher Matcher[V]) bool {
 }
 
 //nolint:cyclop
-func (n *node[V]) deleteChild(child *node[V], token uint8) {
+func (n *Tree[V]) deleteChild(child *Tree[V], token uint8) {
 	if len(child.staticIndices) == 1 && child.staticIndices[0] != '/' && child.path != "/" {
 		if len(child.staticChildren) == 1 {
 			grandChild := child.staticChildren[0]
@@ -285,7 +304,7 @@ func (n *node[V]) deleteChild(child *node[V], token uint8) {
 	}
 }
 
-func (n *node[V]) delEdge(token byte) {
+func (n *Tree[V]) delEdge(token byte) {
 	for i, index := range n.staticIndices {
 		if token == index {
 			n.staticChildren = append(n.staticChildren[:i], n.staticChildren[i+1:]...)
@@ -297,9 +316,9 @@ func (n *node[V]) delEdge(token byte) {
 }
 
 //nolint:funlen,gocognit,cyclop
-func (n *node[V]) findNode(path string, matcher Matcher[V]) (*node[V], int, []string) {
+func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []string) {
 	var (
-		found  *node[V]
+		found  *Tree[V]
 		params []string
 		idx    int
 		value  V
@@ -379,7 +398,7 @@ func (n *node[V]) findNode(path string, matcher Matcher[V]) (*node[V], int, []st
 	return nil, 0, nil
 }
 
-func (n *node[V]) splitCommonPrefix(existingNodeIndex int, path string) (*node[V], int) {
+func (n *Tree[V]) splitCommonPrefix(existingNodeIndex int, path string) (*Tree[V], int) {
 	childNode := n.staticChildren[existingNodeIndex]
 
 	if strings.HasPrefix(path, childNode.path) {
@@ -399,19 +418,19 @@ func (n *node[V]) splitCommonPrefix(existingNodeIndex int, path string) (*node[V
 
 	// Create a new intermediary node in the place of the existing node, with
 	// the existing node as a child.
-	newNode := &node[V]{
+	newNode := &Tree[V]{
 		path:     commonPrefix,
 		priority: childNode.priority,
 		// Index is the first byte of the non-common part of the path.
 		staticIndices:  []byte{childNode.path[0]},
-		staticChildren: []*node[V]{childNode},
+		staticChildren: []*Tree[V]{childNode},
 	}
 	n.staticChildren[existingNodeIndex] = newNode
 
 	return newNode, i
 }
 
-func (n *node[V]) Add(path string, value V) error {
+func (n *Tree[V]) Add(path string, value V) error {
 	res, err := n.addNode(path, nil, false)
 	if err != nil {
 		return err
@@ -426,7 +445,7 @@ func (n *node[V]) Add(path string, value V) error {
 	return nil
 }
 
-func (n *node[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
+func (n *Tree[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 	found, idx, params := n.findNode(path, matcher)
 	if found == nil {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
@@ -452,7 +471,7 @@ func (n *node[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 	return entry, nil
 }
 
-func (n *node[V]) Delete(path string, matcher Matcher[V]) error {
+func (n *Tree[V]) Delete(path string, matcher Matcher[V]) error {
 	if !n.delNode(path, matcher) {
 		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
 	}
@@ -460,7 +479,7 @@ func (n *node[V]) Delete(path string, matcher Matcher[V]) error {
 	return nil
 }
 
-func (n *node[V]) Update(path string, value V, matcher Matcher[V]) error {
+func (n *Tree[V]) Update(path string, value V, matcher Matcher[V]) error {
 	found, idx, _ := n.findNode(path, matcher)
 	if found == nil {
 		return fmt.Errorf("%w: %s", ErrFailedToUpdate, path)
@@ -471,6 +490,48 @@ func (n *node[V]) Update(path string, value V, matcher Matcher[V]) error {
 	return nil
 }
 
-func (n *node[V]) Empty() bool {
+func (n *Tree[V]) Empty() bool {
 	return len(n.values) == 0 && len(n.staticChildren) == 0 && n.wildcardChild == nil && n.catchAllChild == nil
+}
+
+func (n *Tree[V]) Clone() *Tree[V] {
+	root := &Tree[V]{}
+
+	n.cloneInto(root)
+
+	return root
+}
+
+func (n *Tree[V]) cloneInto(out *Tree[V]) {
+	*out = *n
+
+	if len(n.wildcardKeys) != 0 {
+		out.wildcardKeys = slices.Clone(n.wildcardKeys)
+	}
+
+	if len(n.values) != 0 {
+		out.values = slices.Clone(n.values)
+	}
+
+	if n.catchAllChild != nil {
+		out.catchAllChild = &Tree[V]{}
+		n.catchAllChild.cloneInto(out.catchAllChild)
+	}
+
+	if n.wildcardChild != nil {
+		out.wildcardChild = &Tree[V]{}
+		n.wildcardChild.cloneInto(out.wildcardChild)
+	}
+
+	if len(n.staticChildren) != 0 {
+		out.staticIndices = slices.Clone(n.staticIndices)
+		out.staticChildren = make([]*Tree[V], len(n.staticChildren))
+
+		for idx, child := range n.staticChildren {
+			newChild := &Tree[V]{}
+
+			child.cloneInto(newChild)
+			out.staticChildren[idx] = newChild
+		}
+	}
 }

@@ -22,6 +22,99 @@ func (_m *RepositoryMock) EXPECT() *RepositoryMock_Expecter {
 	return &RepositoryMock_Expecter{mock: &_m.Mock}
 }
 
+// AddRuleSet provides a mock function with given fields: srcID, rules
+func (_m *RepositoryMock) AddRuleSet(srcID string, rules []rule.Rule) error {
+	ret := _m.Called(srcID, rules)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddRuleSet")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, []rule.Rule) error); ok {
+		r0 = rf(srcID, rules)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RepositoryMock_AddRuleSet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddRuleSet'
+type RepositoryMock_AddRuleSet_Call struct {
+	*mock.Call
+}
+
+// AddRuleSet is a helper method to define mock.On call
+//   - srcID string
+//   - rules []rule.Rule
+func (_e *RepositoryMock_Expecter) AddRuleSet(srcID interface{}, rules interface{}) *RepositoryMock_AddRuleSet_Call {
+	return &RepositoryMock_AddRuleSet_Call{Call: _e.mock.On("AddRuleSet", srcID, rules)}
+}
+
+func (_c *RepositoryMock_AddRuleSet_Call) Run(run func(srcID string, rules []rule.Rule)) *RepositoryMock_AddRuleSet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].([]rule.Rule))
+	})
+	return _c
+}
+
+func (_c *RepositoryMock_AddRuleSet_Call) Return(_a0 error) *RepositoryMock_AddRuleSet_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *RepositoryMock_AddRuleSet_Call) RunAndReturn(run func(string, []rule.Rule) error) *RepositoryMock_AddRuleSet_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteRuleSet provides a mock function with given fields: srcID
+func (_m *RepositoryMock) DeleteRuleSet(srcID string) error {
+	ret := _m.Called(srcID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteRuleSet")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(srcID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RepositoryMock_DeleteRuleSet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteRuleSet'
+type RepositoryMock_DeleteRuleSet_Call struct {
+	*mock.Call
+}
+
+// DeleteRuleSet is a helper method to define mock.On call
+//   - srcID string
+func (_e *RepositoryMock_Expecter) DeleteRuleSet(srcID interface{}) *RepositoryMock_DeleteRuleSet_Call {
+	return &RepositoryMock_DeleteRuleSet_Call{Call: _e.mock.On("DeleteRuleSet", srcID)}
+}
+
+func (_c *RepositoryMock_DeleteRuleSet_Call) Run(run func(srcID string)) *RepositoryMock_DeleteRuleSet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *RepositoryMock_DeleteRuleSet_Call) Return(_a0 error) *RepositoryMock_DeleteRuleSet_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *RepositoryMock_DeleteRuleSet_Call) RunAndReturn(run func(string) error) *RepositoryMock_DeleteRuleSet_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindRule provides a mock function with given fields: ctx
 func (_m *RepositoryMock) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	ret := _m.Called(ctx)
@@ -76,6 +169,53 @@ func (_c *RepositoryMock_FindRule_Call) Return(_a0 rule.Rule, _a1 error) *Reposi
 }
 
 func (_c *RepositoryMock_FindRule_Call) RunAndReturn(run func(heimdall.Context) (rule.Rule, error)) *RepositoryMock_FindRule_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateRuleSet provides a mock function with given fields: srcID, rules
+func (_m *RepositoryMock) UpdateRuleSet(srcID string, rules []rule.Rule) error {
+	ret := _m.Called(srcID, rules)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateRuleSet")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, []rule.Rule) error); ok {
+		r0 = rf(srcID, rules)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RepositoryMock_UpdateRuleSet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateRuleSet'
+type RepositoryMock_UpdateRuleSet_Call struct {
+	*mock.Call
+}
+
+// UpdateRuleSet is a helper method to define mock.On call
+//   - srcID string
+//   - rules []rule.Rule
+func (_e *RepositoryMock_Expecter) UpdateRuleSet(srcID interface{}, rules interface{}) *RepositoryMock_UpdateRuleSet_Call {
+	return &RepositoryMock_UpdateRuleSet_Call{Call: _e.mock.On("UpdateRuleSet", srcID, rules)}
+}
+
+func (_c *RepositoryMock_UpdateRuleSet_Call) Run(run func(srcID string, rules []rule.Rule)) *RepositoryMock_UpdateRuleSet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].([]rule.Rule))
+	})
+	return _c
+}
+
+func (_c *RepositoryMock_UpdateRuleSet_Call) Return(_a0 error) *RepositoryMock_UpdateRuleSet_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *RepositoryMock_UpdateRuleSet_Call) RunAndReturn(run func(string, []rule.Rule) error) *RepositoryMock_UpdateRuleSet_Call {
 	_c.Call.Return(run)
 	return _c
 }

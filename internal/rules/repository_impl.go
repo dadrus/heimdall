@@ -18,14 +18,10 @@ package rules
 
 import (
 	"bytes"
-	"context"
 	"slices"
 	"sync"
 
-	"github.com/rs/zerolog"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -33,19 +29,22 @@ import (
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
-func newRepository(
-	queue event.RuleSetChangedEventQueue,
-	ruleFactory rule.Factory,
-	logger zerolog.Logger,
-) *repository {
+type repository struct {
+	dr rule.Rule
+
+	knownRules      []rule.Rule
+	knownRulesMutex sync.Mutex
+
+	index          *radixtree.Tree[rule.Rule]
+	rulesTreeMutex sync.RWMutex
+}
+
+func newRepository(ruleFactory rule.Factory) rule.Repository {
 	return &repository{
 		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
 			func() rule.Rule { return ruleFactory.DefaultRule() },
 			func() rule.Rule { return nil }),
-		logger: logger,
-		queue:  queue,
-		quit:   make(chan bool),
-		rulesTree: radixtree.New[rule.Rule](
+		index: radixtree.New[rule.Rule](
 			radixtree.WithValuesConstraints(func(oldValues []rule.Rule, newValue rule.Rule) bool {
 				// only rules from the same rule set can be placed in one node
 				return len(oldValues) == 0 || oldValues[0].SrcID() == newValue.SrcID()
@@ -54,27 +53,13 @@ func newRepository(
 	}
 }
 
-type repository struct {
-	dr     rule.Rule
-	logger zerolog.Logger
-
-	knownRules      []rule.Rule
-	knownRulesMutex sync.Mutex
-
-	rulesTree      radixtree.Tree[rule.Rule]
-	rulesTreeMutex sync.RWMutex
-
-	queue event.RuleSetChangedEventQueue
-	quit  chan bool
-}
-
 func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	request := ctx.Request()
 
 	r.rulesTreeMutex.RLock()
 	defer r.rulesTreeMutex.RUnlock()
 
-	entry, err := r.rulesTree.Find(
+	entry, err := r.index.Find(
 		x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path),
 		radixtree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(ctx) }),
 	)
@@ -92,64 +77,29 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	return entry.Value, nil
 }
 
-func (r *repository) Start(_ context.Context) error {
-	r.logger.Info().Msg("Starting rule definition loader")
-
-	go r.watchRuleSetChanges()
-
-	return nil
-}
-
-func (r *repository) Stop(_ context.Context) error {
-	r.logger.Info().Msg("Tearing down rule definition loader")
-
-	r.quit <- true
-
-	close(r.quit)
-
-	return nil
-}
-
-func (r *repository) watchRuleSetChanges() {
-	for {
-		select {
-		case evt, ok := <-r.queue:
-			if !ok {
-				r.logger.Debug().Msg("Rule set definition queue closed")
-			}
-
-			switch evt.ChangeType {
-			case event.Create:
-				r.addRuleSet(evt.Source, evt.Rules)
-			case event.Update:
-				r.updateRuleSet(evt.Source, evt.Rules)
-			case event.Remove:
-				r.deleteRuleSet(evt.Source)
-			}
-		case <-r.quit:
-			r.logger.Info().Msg("Rule definition loader stopped")
-
-			return
-		}
-	}
-}
-
-func (r *repository) addRuleSet(srcID string, rules []rule.Rule) {
+func (r *repository) AddRuleSet(_ string, rules []rule.Rule) error {
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
-	r.logger.Info().Str("_src", srcID).Msg("Adding rule set")
+	tmp := r.index.Clone()
 
-	// add them
-	r.addRules(rules)
+	if err := r.addRulesTo(tmp, rules); err != nil {
+		return err
+	}
+
+	r.knownRules = append(r.knownRules, rules...)
+
+	r.rulesTreeMutex.Lock()
+	r.index = tmp
+	r.rulesTreeMutex.Unlock()
+
+	return nil
 }
 
-func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
+func (r *repository) UpdateRuleSet(srcID string, rules []rule.Rule) error {
 	// create rules
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
-
-	r.logger.Info().Str("_src", srcID).Msg("Updating rule set")
 
 	// find all rules for the given src id
 	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
@@ -196,116 +146,109 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 		return ruleGone || pathExpressionChanged
 	})
 
+	tmp := r.index.Clone()
+
 	// remove deleted rules
-	r.removeRules(deletedRules)
+	if err := r.removeRulesFrom(tmp, deletedRules); err != nil {
+		return err
+	}
 
 	// replace updated rules
-	r.replaceRules(updatedRules)
+	if err := r.replaceRulesIn(tmp, updatedRules); err != nil {
+		return err
+	}
 
 	// add new rules
-	r.addRules(newRules)
-}
-
-func (r *repository) deleteRuleSet(srcID string) {
-	r.knownRulesMutex.Lock()
-	defer r.knownRulesMutex.Unlock()
-
-	r.logger.Info().Str("_src", srcID).Msg("Deleting rule set")
-
-	// find all rules for the given src id
-	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
-
-	// remove them
-	r.removeRules(applicable)
-}
-
-func (r *repository) addRules(rules []rule.Rule) {
-	for _, rul := range rules {
-		r.rulesTreeMutex.Lock()
-		err := r.rulesTree.Add(rul.PathExpression(), rul)
-		r.rulesTreeMutex.Unlock()
-
-		if err != nil {
-			r.logger.Error().Err(err).
-				Str("_src", rul.SrcID()).
-				Str("_id", rul.ID()).
-				Msg("Failed to add rule")
-		} else {
-			r.logger.Debug().
-				Str("_src", rul.SrcID()).
-				Str("_id", rul.ID()).
-				Msg("Rule added")
-
-			r.knownRules = append(r.knownRules, rul)
-		}
-	}
-}
-
-func (r *repository) removeRules(tbdRules []rule.Rule) {
-	var failed []rule.Rule
-
-	for _, rul := range tbdRules {
-		r.rulesTreeMutex.Lock()
-		err := r.rulesTree.Delete(
-			rul.PathExpression(),
-			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(rul) }),
-		)
-		r.rulesTreeMutex.Unlock()
-
-		if err != nil {
-			r.logger.Error().Err(err).
-				Str("_src", rul.SrcID()).
-				Str("_id", rul.ID()).
-				Msg("Failed to remove rule. Please file a bug report!")
-
-			failed = append(failed, rul)
-		} else {
-			r.logger.Debug().
-				Str("_src", rul.SrcID()).
-				Str("_id", rul.ID()).
-				Msg("Rule removed")
-		}
+	if err := r.addRulesTo(tmp, newRules); err != nil {
+		return err
 	}
 
-	r.knownRules = slices.DeleteFunc(r.knownRules, func(r rule.Rule) bool {
-		return !slices.Contains(failed, r) && slices.Contains(tbdRules, r)
+	r.knownRules = slices.DeleteFunc(r.knownRules, func(loaded rule.Rule) bool {
+		return slices.Contains(deletedRules, loaded)
 	})
-}
-
-func (r *repository) replaceRules(rules []rule.Rule) {
-	var failed []rule.Rule
-
-	for _, updated := range rules {
-		r.rulesTreeMutex.Lock()
-		err := r.rulesTree.Update(
-			updated.PathExpression(),
-			updated,
-			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(updated) }),
-		)
-		r.rulesTreeMutex.Unlock()
-
-		if err != nil {
-			r.logger.Error().Err(err).
-				Str("_src", updated.SrcID()).
-				Str("_id", updated.ID()).
-				Msg("Failed to replace rule. Please file a bug report!")
-
-			failed = append(failed, updated)
-		} else {
-			r.logger.Debug().
-				Str("_src", updated.SrcID()).
-				Str("_id", updated.ID()).
-				Msg("Rule replaced")
-		}
-	}
 
 	for idx, existing := range r.knownRules {
-		for _, updated := range rules {
-			if updated.SameAs(existing) && !slices.Contains(failed, updated) {
+		for _, updated := range updatedRules {
+			if updated.SameAs(existing) {
 				r.knownRules[idx] = updated
 
 				break
 			}
 		}
 	}
+
+	r.knownRules = append(r.knownRules, newRules...)
+
+	r.rulesTreeMutex.Lock()
+	r.index = tmp
+	r.rulesTreeMutex.Unlock()
+
+	return nil
+}
+
+func (r *repository) DeleteRuleSet(srcID string) error {
+	r.knownRulesMutex.Lock()
+	defer r.knownRulesMutex.Unlock()
+
+	// find all rules for the given src id
+	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
+
+	tmp := r.index.Clone()
+
+	// remove them
+	if err := r.removeRulesFrom(tmp, applicable); err != nil {
+		return err
+	}
+
+	r.knownRules = slices.DeleteFunc(r.knownRules, func(r rule.Rule) bool {
+		return slices.Contains(applicable, r)
+	})
+
+	r.rulesTreeMutex.Lock()
+	r.index = tmp
+	r.rulesTreeMutex.Unlock()
+
+	return nil
+}
+
+func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Rule], rules []rule.Rule) error {
+	for _, rul := range rules {
+		if err := tree.Add(rul.PathExpression(), rul); err != nil {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed adding rule ID='%s'", rul.ID()).
+				CausedBy(err)
+		}
+	}
+
+	return nil
+}
+
+func (r *repository) removeRulesFrom(tree *radixtree.Tree[rule.Rule], tbdRules []rule.Rule) error {
+	for _, rul := range tbdRules {
+		if err := tree.Delete(
+			rul.PathExpression(),
+			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(rul) }),
+		); err != nil {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed deleting rule ID='%s'", rul.ID()).
+				CausedBy(err)
+		}
+	}
+
+	return nil
+}
+
+func (r *repository) replaceRulesIn(tree *radixtree.Tree[rule.Rule], rules []rule.Rule) error {
+	for _, updated := range rules {
+		if err := tree.Update(
+			updated.PathExpression(),
+			updated,
+			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool {
+				return existing.SameAs(updated)
+			}),
+		); err != nil {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed replacing rule ID='%s'", updated.ID()).
+				CausedBy(err)
+		}
+	}
+
+	return nil
 }

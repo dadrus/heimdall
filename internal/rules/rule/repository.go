@@ -24,4 +24,8 @@ import (
 
 type Repository interface {
 	FindRule(ctx heimdall.Context) (Rule, error)
+
+	AddRuleSet(srcID string, rules []Rule) error
+	UpdateRuleSet(srcID string, rules []Rule) error
+	DeleteRuleSet(srcID string) error
 }

@@ -162,27 +162,26 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	rule.Rule, error,
 ) {
 	if len(ruleConfig.ID) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no ID defined")
 	}
 
 	if len(ruleConfig.Matcher.Path.Expression) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no path matching expression defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"no path matching expression defined")
 	}
 
 	if len(ruleConfig.Matcher.HostGlob) != 0 && len(ruleConfig.Matcher.HostRegex) != 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"host glob and regex expressions are defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"host glob and regex expressions are defined")
 	}
 
 	if len(ruleConfig.Matcher.Path.Glob) != 0 && len(ruleConfig.Matcher.Path.Regex) != 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"path glob and regex expressions are defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"path glob and regex expressions are defined")
 	}
 
 	if f.mode == config.ProxyMode {
-		if err := checkProxyModeApplicability(srcID, ruleConfig); err != nil {
+		if err := checkProxyModeApplicability(ruleConfig); err != nil {
 			return nil, err
 		}
 	}
@@ -210,8 +209,8 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"filed to compile host pattern defined for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"filed to compile host pattern defined").CausedBy(err)
 	}
 
 	switch {
@@ -224,8 +223,8 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"filed to compile path pattern defined for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"filed to compile path pattern defined").CausedBy(err)
 	}
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
@@ -240,8 +239,8 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 
 	methods, err := expandHTTPMethods(ruleConfig.Matcher.Methods)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed to expand allowed HTTP methods for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to expand allowed HTTP methods").CausedBy(err)
 	}
 
 	if f.defaultRule != nil {
@@ -253,19 +252,16 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	if len(authenticators) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
 	}
 
 	if len(methods) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no methods defined")
 	}
 
 	hash, err := f.createHash(ruleConfig)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed to create hash for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to create hash")
 	}
 
 	return &ruleImpl{
@@ -291,17 +287,13 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}, nil
 }
 
-func checkProxyModeApplicability(srcID string, ruleConfig config2.Rule) error {
+func checkProxyModeApplicability(ruleConfig config2.Rule) error {
 	if ruleConfig.Backend == nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"heimdall is operated in proxy mode, but no forward_to is defined in rule ID=%s from %s",
-			ruleConfig.ID, srcID)
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
 	if len(ruleConfig.Backend.Host) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"missing host definition in forward_to in rule ID=%s from %s",
-			ruleConfig.ID, srcID)
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "missing host definition in forward_to")
 	}
 
 	urlRewriter := ruleConfig.Backend.URLRewriter
@@ -313,8 +305,7 @@ func checkProxyModeApplicability(srcID string, ruleConfig config2.Rule) error {
 		len(urlRewriter.PathPrefixToAdd) == 0 &&
 		len(urlRewriter.PathPrefixToCut) == 0 &&
 		len(urlRewriter.QueryParamsToRemove) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"rewrite is defined in forward_to in rule ID=%s from %s, but is empty", ruleConfig.ID, srcID)
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "rewrite is defined in forward_to, but is empty")
 	}
 
 	return nil
