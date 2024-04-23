@@ -1,12 +1,12 @@
 package radixtree
 
 import (
-	"golang.org/x/exp/maps"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/maps"
 )
 
 func testMatcher[V any](matches bool) MatcherFunc[V] { return func(_ V) bool { return matches } }
