@@ -125,10 +125,6 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 			CausedBy(err)
 	}
 
-	if err = contents.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
-		return nil, err
-	}
-
 	contents.Hash = attrs.MD5
 	contents.Source = fmt.Sprintf("%s@%s", key, e.ID())
 	contents.ModTime = attrs.ModTime

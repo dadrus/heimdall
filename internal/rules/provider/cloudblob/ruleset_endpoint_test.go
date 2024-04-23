@@ -170,50 +170,6 @@ func TestFetchRuleSets(t *testing.T) {
 			},
 		},
 		{
-			uc: "rule set with path prefix validation error",
-			endpoint: ruleSetEndpoint{
-				URL: &url.URL{
-					Scheme:   "s3",
-					Host:     bucketName,
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
-				},
-				RulesPathPrefix: "/foo",
-			},
-			setup: func(t *testing.T) {
-				t.Helper()
-
-				data := `
-{
-	"version": "1",
-	"name": "test",
-	"rules": [{
-		"id": "foobar",
-		"match": {
-          "scheme": "http",
-          "host_glob": "**",
-          "path": "/bar/foo/api",
-		  "methods": ["GET", "POST"]
-        },
-		"execute": [
-			{ "authenticator": "foobar" }
-		]
-	}]
-}`
-
-				_, err := backend.PutObject(bucketName, "test-rule",
-					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(data), int64(len(data)))
-				require.NoError(t, err)
-			},
-			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "path prefix validation")
-			},
-		},
-		{
 			uc: "multiple valid rule sets in yaml and json formats",
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{

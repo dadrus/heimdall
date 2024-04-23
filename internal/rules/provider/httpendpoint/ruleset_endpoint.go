@@ -78,10 +78,6 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, er
 			CausedBy(err)
 	}
 
-	if err = ruleSet.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
-		return nil, err
-	}
-
 	ruleSet.Hash = md.Sum(nil)
 	ruleSet.Source = "http_endpoint:" + e.ID()
 	ruleSet.ModTime = time.Now()

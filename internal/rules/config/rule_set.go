@@ -17,11 +17,7 @@
 package config
 
 import (
-	"strings"
 	"time"
-
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type MetaData struct {
@@ -36,15 +32,4 @@ type RuleSet struct {
 	Version string `json:"version" yaml:"version"`
 	Name    string `json:"name"    yaml:"name"`
 	Rules   []Rule `json:"rules"   validate:"dive" yaml:"rules"`
-}
-
-func (rs RuleSet) VerifyPathPrefix(prefix string) error {
-	for _, rule := range rs.Rules {
-		if !strings.HasPrefix(rule.Matcher.Path.Expression, prefix) {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"path prefix validation failed for rule ID=%s")
-		}
-	}
-
-	return nil
 }
