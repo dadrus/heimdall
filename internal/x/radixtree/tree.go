@@ -424,21 +424,6 @@ func (n *Tree[V]) splitCommonPrefix(existingNodeIndex int, path string) (*Tree[V
 	return newNode, i
 }
 
-func (n *Tree[V]) Add(path string, value V) error {
-	res, err := n.addNode(path, nil, false)
-	if err != nil {
-		return err
-	}
-
-	if !n.canAdd(res.values, value) {
-		return fmt.Errorf("%w: %s", ErrConstraintsViolation, path)
-	}
-
-	res.values = append(res.values, value)
-
-	return nil
-}
-
 func (n *Tree[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 	found, idx, params := n.findNode(path, matcher)
 	if found == nil {
@@ -465,21 +450,25 @@ func (n *Tree[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 	return entry, nil
 }
 
-func (n *Tree[V]) Delete(path string, matcher Matcher[V]) error {
-	if !n.delNode(path, matcher) {
-		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
+func (n *Tree[V]) Add(path string, value V) error {
+	res, err := n.addNode(path, nil, false)
+	if err != nil {
+		return err
 	}
+
+	if !n.canAdd(res.values, value) {
+		return fmt.Errorf("%w: %s", ErrConstraintsViolation, path)
+	}
+
+	res.values = append(res.values, value)
 
 	return nil
 }
 
-func (n *Tree[V]) Update(path string, value V, matcher Matcher[V]) error {
-	found, idx, _ := n.findNode(path, matcher)
-	if found == nil {
-		return fmt.Errorf("%w: %s", ErrFailedToUpdate, path)
+func (n *Tree[V]) Delete(path string, matcher Matcher[V]) error {
+	if !n.delNode(path, matcher) {
+		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
 	}
-
-	found.values[idx] = value
 
 	return nil
 }
