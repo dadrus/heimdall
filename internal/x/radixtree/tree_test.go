@@ -1,6 +1,7 @@
 package radixtree
 
 import (
+	"golang.org/x/exp/maps"
 	"slices"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 
 func testMatcher[V any](matches bool) MatcherFunc[V] { return func(_ V) bool { return matches } }
 
-func TestNodeSearch(t *testing.T) {
+func TestTreeSearch(t *testing.T) {
 	t.Parallel()
 
 	// Setup & populate tree
@@ -142,7 +143,29 @@ func TestNodeSearch(t *testing.T) {
 	}
 }
 
-func TestNodeAddPathDuplicates(t *testing.T) {
+func TestTreeSearchWithBacktracking(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tree := New[string]()
+
+	err := tree.Add("/date/:year/abc", "first")
+	require.NoError(t, err)
+
+	err = tree.Add("/date/:year", "second")
+	require.NoError(t, err)
+
+	// WHEN
+	entry, err := tree.Find("/date/2024", MatcherFunc[string](func(value string) bool {
+		return value != "first"
+	}))
+
+	// THEN
+	require.NoError(t, err)
+	assert.Equal(t, "second", entry.Value)
+}
+
+func TestTreeAddPathDuplicates(t *testing.T) {
 	t.Parallel()
 
 	tree := New[string]()
@@ -169,7 +192,7 @@ func TestNodeAddPathDuplicates(t *testing.T) {
 	assert.Equal(t, map[string]string{"year": "2024", "month": "04"}, entry.Parameters)
 }
 
-func TestNodeAddPath(t *testing.T) {
+func TestTreeAddPath(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -214,7 +237,7 @@ func TestNodeAddPath(t *testing.T) {
 	}
 }
 
-func TestNodeDeleteStaticPaths(t *testing.T) {
+func TestTreeDeleteStaticPaths(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{
@@ -245,7 +268,7 @@ func TestNodeDeleteStaticPaths(t *testing.T) {
 	}
 }
 
-func TestNodeDeleteStaticAndWildcardPaths(t *testing.T) {
+func TestTreeDeleteStaticAndWildcardPaths(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{
@@ -293,7 +316,7 @@ func TestNodeDeleteStaticAndWildcardPaths(t *testing.T) {
 	}
 }
 
-func TestNodeDeleteMixedPaths(t *testing.T) {
+func TestTreeDeleteMixedPaths(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{
@@ -334,4 +357,32 @@ func TestNodeDeleteMixedPaths(t *testing.T) {
 	}
 
 	require.True(t, tree.Empty())
+}
+
+func TestTreeClone(t *testing.T) {
+	t.Parallel()
+
+	tree := New[string]()
+	paths := map[string]string{
+		"/abc/bca/bbb":   "/abc/bca/bbb",
+		"/abb/abc/bbb":   "/abb/abc/bbb",
+		"/**":            "/foo",
+		"/abc/*foo":      "/abc/bar/baz",
+		"/:foo/abc":      "/bar/abc",
+		"/:foo/:bar/**":  "/bar/baz/foo",
+		"/:foo/:bar/abc": "/bar/baz/abc",
+	}
+
+	for expr, path := range paths {
+		require.NoError(t, tree.Add(expr, path))
+	}
+
+	clone := tree.Clone()
+
+	for _, path := range maps.Values(paths) {
+		entry, err := clone.Find(path, MatcherFunc[string](func(_ string) bool { return true }))
+
+		require.NoError(t, err)
+		assert.Equal(t, path, entry.Value)
+	}
 }
