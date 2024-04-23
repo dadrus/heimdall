@@ -104,69 +104,56 @@ func (r *repository) UpdateRuleSet(srcID string, rules []rule.Rule) error {
 	// find all rules for the given src id
 	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
 
-	// find new rules - these are completely new ones, as well as those, which have their path expressions
-	// updated, so that the old ones must be removed and the updated ones must be inserted into the tree.
-	newRules := slicex.Filter(rules, func(newRule rule.Rule) bool {
+	// find new rules, as well as those, which have been changed.
+	toBeAdded := slicex.Filter(rules, func(newRule rule.Rule) bool {
+		candidate := newRule.(*ruleImpl) //nolint: forcetypeassert
+
 		ruleIsNew := !slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
 			return existingRule.ID() == newRule.ID()
 		})
 
-		pathExpressionChanged := slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
-			return existingRule.ID() == newRule.ID() && existingRule.PathExpression() != newRule.PathExpression()
+		ruleChanged := slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
+			existing := existingRule.(*ruleImpl) //nolint: forcetypeassert
+
+			return existing.ID() == candidate.ID() && !bytes.Equal(existing.hash, candidate.hash)
 		})
 
-		return ruleIsNew || pathExpressionChanged
+		return ruleIsNew || ruleChanged
 	})
 
-	// find updated rules - those, which have the same ID and same path expression. These can be just updated
-	// in the tree without the need to remove the old ones first and insert the updated ones afterward.
-	updatedRules := slicex.Filter(rules, func(r rule.Rule) bool {
-		loaded := r.(*ruleImpl) // nolint: forcetypeassert
+	// find deleted rules, as well as those, which have been changed.
+	toBeDeleted := slicex.Filter(applicable, func(existingRule rule.Rule) bool {
+		existing := existingRule.(*ruleImpl) //nolint: forcetypeassert
 
-		return slices.ContainsFunc(applicable, func(existing rule.Rule) bool {
-			known := existing.(*ruleImpl) // nolint: forcetypeassert
-
-			return known.id == loaded.id && // same id
-				!bytes.Equal(known.hash, loaded.hash) && // different hash
-				known.pathExpression == loaded.pathExpression // same path expressions
-		})
-	})
-
-	// find deleted rules - those, which are gone, or still present, but have a different path
-	// expression. Latter means, the old ones needs to be removed and the updated ones inserted
-	deletedRules := slicex.Filter(applicable, func(existingRule rule.Rule) bool {
 		ruleGone := !slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
 			return newRule.ID() == existingRule.ID()
 		})
 
-		pathExpressionChanged := slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
-			return existingRule.ID() == newRule.ID() && existingRule.PathExpression() != newRule.PathExpression()
+		ruleChanged := slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
+			candidate := newRule.(*ruleImpl) //nolint: forcetypeassert
+
+			return existing.ID() == candidate.ID() && !bytes.Equal(existing.hash, candidate.hash)
 		})
 
-		return ruleGone || pathExpressionChanged
+		return ruleGone || ruleChanged
 	})
 
 	tmp := r.index.Clone()
 
-	if err := r.updateRulesIn(tmp, newRules, updatedRules, deletedRules); err != nil {
+	// delete rules
+	if err := r.removeRulesFrom(tmp, toBeDeleted); err != nil {
+		return err
+	}
+
+	// add rules
+	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
 		return err
 	}
 
 	r.knownRules = slices.DeleteFunc(r.knownRules, func(loaded rule.Rule) bool {
-		return slices.Contains(deletedRules, loaded)
+		return slices.Contains(toBeDeleted, loaded)
 	})
-
-	for idx, existing := range r.knownRules {
-		for _, updated := range updatedRules {
-			if updated.SameAs(existing) {
-				r.knownRules[idx] = updated
-
-				break
-			}
-		}
-	}
-
-	r.knownRules = append(r.knownRules, newRules...)
+	r.knownRules = append(r.knownRules, toBeAdded...)
 
 	r.rulesTreeMutex.Lock()
 	r.index = tmp
@@ -220,36 +207,6 @@ func (r *repository) removeRulesFrom(tree *radixtree.Tree[rule.Rule], tbdRules [
 			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed deleting rule ID='%s'", rul.ID()).
 				CausedBy(err)
 		}
-	}
-
-	return nil
-}
-
-func (r *repository) updateRulesIn(
-	tree *radixtree.Tree[rule.Rule], newRules, updatedRules, deletedRules []rule.Rule,
-) error {
-	// remove deleted rules
-	if err := r.removeRulesFrom(tree, deletedRules); err != nil {
-		return err
-	}
-
-	// replace updated rules
-	for _, updated := range updatedRules {
-		if err := tree.Update(
-			updated.PathExpression(),
-			updated,
-			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool {
-				return existing.SameAs(updated)
-			}),
-		); err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed replacing rule ID='%s'", updated.ID()).
-				CausedBy(err)
-		}
-	}
-
-	// add new rules
-	if err := r.addRulesTo(tree, newRules); err != nil {
-		return err
 	}
 
 	return nil
