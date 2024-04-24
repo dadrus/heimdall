@@ -44,7 +44,11 @@ type (
 		values       []V
 		wildcardKeys []string
 
+		// global options
 		canAdd ConstraintsFunc[V]
+
+		// node local options
+		backtrackingDisabled bool
 	}
 )
 
@@ -310,7 +314,7 @@ func (n *Tree[V]) delEdge(token byte) {
 }
 
 //nolint:funlen,gocognit,cyclop
-func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []string) {
+func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []string, bool) {
 	var (
 		found  *Tree[V]
 		params []string
@@ -318,19 +322,21 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 		value  V
 	)
 
+	backtrack := true
+
 	pathLen := len(path)
 	if pathLen == 0 {
 		if len(n.values) == 0 {
-			return nil, 0, nil
+			return nil, 0, nil, true
 		}
 
 		for idx, value = range n.values {
 			if match := matcher.Match(value); match {
-				return n, idx, nil
+				return n, idx, nil, false
 			}
 		}
 
-		return nil, 0, nil
+		return nil, 0, nil, !n.backtrackingDisabled
 	}
 
 	// First see if this matches a static token.
@@ -342,15 +348,15 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 
 			if pathLen >= childPathLen && child.path == path[:childPathLen] {
 				nextPath := path[childPathLen:]
-				found, idx, params = child.findNode(nextPath, matcher)
+				found, idx, params, backtrack = child.findNode(nextPath, matcher)
 			}
 
 			break
 		}
 	}
 
-	if found != nil {
-		return found, idx, params
+	if found != nil || !backtrack {
+		return found, idx, params, backtrack
 	}
 
 	if n.wildcardChild != nil { //nolint:nestif
@@ -360,7 +366,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 		nextToken := path[nextSeparator:]
 
 		if len(thisToken) > 0 { // Don't match on empty tokens.
-			found, idx, params = n.wildcardChild.findNode(nextToken, matcher)
+			found, idx, params, backtrack = n.wildcardChild.findNode(nextToken, matcher)
 			if found != nil {
 				if params == nil {
 					// we don't expect more than 3 parameters to be defined for a path
@@ -368,7 +374,11 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 					params = make([]string, 0, 3) //nolint:gomnd
 				}
 
-				return found, idx, append(params, thisToken)
+				return found, idx, append(params, thisToken), backtrack
+			}
+
+			if !backtrack {
+				return nil, 0, nil, false
 			}
 		}
 	}
@@ -382,14 +392,14 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 				params = make([]string, 1, 3) //nolint:gomnd
 				params[0] = path
 
-				return n.catchAllChild, idx, params
+				return n.catchAllChild, idx, params, false
 			}
 		}
 
-		return nil, 0, nil
+		return nil, 0, nil, !n.backtrackingDisabled
 	}
 
-	return nil, 0, nil
+	return nil, 0, nil, true
 }
 
 func (n *Tree[V]) splitCommonPrefix(existingNodeIndex int, path string) (*Tree[V], int) {
@@ -425,7 +435,7 @@ func (n *Tree[V]) splitCommonPrefix(existingNodeIndex int, path string) (*Tree[V
 }
 
 func (n *Tree[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
-	found, idx, params := n.findNode(path, matcher)
+	found, idx, params, _ := n.findNode(path, matcher)
 	if found == nil {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
 	}
@@ -450,17 +460,21 @@ func (n *Tree[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 	return entry, nil
 }
 
-func (n *Tree[V]) Add(path string, value V) error {
-	res, err := n.addNode(path, nil, false)
+func (n *Tree[V]) Add(path string, value V, opts ...AddOption[V]) error {
+	node, err := n.addNode(path, nil, false)
 	if err != nil {
 		return err
 	}
 
-	if !n.canAdd(res.values, value) {
+	if !n.canAdd(node.values, value) {
 		return fmt.Errorf("%w: %s", ErrConstraintsViolation, path)
 	}
 
-	res.values = append(res.values, value)
+	for _, apply := range opts {
+		apply(node)
+	}
+
+	node.values = append(node.values, value)
 
 	return nil
 }

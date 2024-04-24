@@ -165,6 +165,29 @@ func TestTreeSearchWithBacktracking(t *testing.T) {
 	assert.Equal(t, "second", entry.Value)
 }
 
+func TestTreeSearchWithoutBacktracking(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tree := New[string]()
+
+	err := tree.Add("/date/:year/abc", "first", WithoutBacktracking[string](true))
+	require.NoError(t, err)
+
+	err = tree.Add("/date/**", "second")
+	require.NoError(t, err)
+
+	// WHEN
+	entry, err := tree.Find("/date/2024/abc", MatcherFunc[string](func(value string) bool {
+		return value != "first"
+	}))
+
+	// THEN
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotFound)
+	require.Nil(t, entry)
+}
+
 func TestTreeAddPathDuplicates(t *testing.T) {
 	t.Parallel()
 
