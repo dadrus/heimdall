@@ -152,11 +152,11 @@ func TestTreeSearchWithBacktracking(t *testing.T) {
 	err := tree.Add("/date/:year/abc", "first")
 	require.NoError(t, err)
 
-	err = tree.Add("/date/:year", "second")
+	err = tree.Add("/date/**", "second")
 	require.NoError(t, err)
 
 	// WHEN
-	entry, err := tree.Find("/date/2024", MatcherFunc[string](func(value string) bool {
+	entry, err := tree.Find("/date/2024/abc", MatcherFunc[string](func(value string) bool {
 		return value != "first"
 	}))
 
