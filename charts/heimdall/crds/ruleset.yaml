@@ -78,36 +78,10 @@ spec:
                           - path
                           - methods
                         properties:
-                          scheme:
-                            description: The HTTP scheme, which should be matched. If not set, http and https are matched
-                            type: string
-                            maxLength: 5
-                          host_glob:
-                            description: Glob expression to match the host if required. If not set, all hosts are matched. Mutually exclusive with 'host_regex'.
-                            type: string
-                            maxLength: 512
-                          host_regex:
-                            description: Regular expression to match the host if required. If not set, all hosts are matched. Mutually exclusive with 'host_glob'.
-                            type: string
-                            maxLength: 512
                           path:
                             description: The path to match
-                            type: object
-                            required:
-                              - expression
-                            properties:
-                              expression:
-                                description: The actual path expression to match. Simple and free (named) wildcards can be used
-                                type: string
-                                maxLength: 256
-                              glob:
-                                description: Additional glob expression the matched path should be matched against. Mutual exclusive with 'regex'.
-                                type: string
-                                maxLength: 256
-                              regex:
-                                description: Additional regular expression the matched path should be matched against. Mutual exclusive with 'glob'
-                                type: string
-                                maxLength: 256
+                            type: string
+                            maxLength: 256
                           methods:
                             description: The HTTP methods to match
                             type: array
@@ -135,6 +109,30 @@ spec:
                                 - "TRACE"
                                 - "!TRACE"
                                 - "ALL"
+                          with:
+                            description: Additional constraints during request matching
+                            type: object
+                            properties:
+                              scheme:
+                                description: The HTTP scheme, which should be matched. If not set, http and https are matched
+                                type: string
+                                maxLength: 5
+                              host_glob:
+                                description: Glob expression to match the host if required. If not set, all hosts are matched. Mutually exclusive with 'host_regex'.
+                                type: string
+                                maxLength: 512
+                              host_regex:
+                                description: Regular expression to match the host if required. If not set, all hosts are matched. Mutually exclusive with 'host_glob'.
+                                type: string
+                                maxLength: 512
+                              path_glob:
+                                description: Additional glob expression the matched path should be matched against. Mutual exclusive with 'regex'.
+                                type: string
+                                maxLength: 256
+                              path_regex:
+                                description: Additional regular expression the matched path should be matched against. Mutual exclusive with 'glob'
+                                type: string
+                                maxLength: 256
                       forward_to:
                         description: Where to forward the request to. Required only if heimdall is used in proxy operation mode.
                         type: object
