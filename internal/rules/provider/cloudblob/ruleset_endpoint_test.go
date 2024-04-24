@@ -188,10 +188,12 @@ func TestFetchRuleSets(t *testing.T) {
 	"rules": [{
 		"id": "foobar",
         "match": {
-          "scheme": "http",
-          "host_glob": "**",
           "path": "/foo/bar/api1",
-		  "methods": ["GET", "POST"]
+		  "methods": ["GET", "POST"],
+          "with": {
+            "scheme": "http",
+            "host_glob": "**"
+          }
         },
 		"execute": [
 			{ "authenticator": "foobar" }
@@ -204,13 +206,14 @@ version: "1"
 name: test2
 rules:
 - id: barfoo
-  match: 
-    scheme: http
-    host_glob: "**"
+  match:
     path: /foo/bar/api2
     methods: 
     - GET
     - POST
+    with:
+      scheme: http
+      host_glob: "**"
   execute:
   - authenticator: barfoo
 `
@@ -261,10 +264,12 @@ rules:
 				"rules": [{
 					"id": "foobar",
                     "match": {
-                      "scheme": "http",
-                      "host_glob": "**",
                       "path": "/foo/bar/api1",
-		              "methods": ["GET", "POST"]
+		              "methods": ["GET", "POST"],
+                      "with": {
+                        "scheme": "http",
+                        "host_glob": "**"
+                      }
                     },
 					"execute": [
 						{ "authenticator": "foobar" }
@@ -277,10 +282,12 @@ rules:
 				"rules": [{
 					"id": "barfoo",
                     "match": {
-                      "scheme": "http",
-                      "host_glob": "**",
                       "path": "/foo/bar/api2",
-		              "methods": ["GET", "POST"]
+		              "methods": ["GET", "POST"],
+                      "with": {
+                        "scheme": "http",
+                        "host_glob": "**"
+                      }
                     },
 					"execute": [
 						{ "authenticator": "barfoo" }
@@ -375,10 +382,12 @@ rules:
 				"rules": [{
 					"id": "foobar",
                     "match": {
-                      "scheme": "http",
-                      "host_glob": "**",
                       "path": "/foo/bar/api1",
-		              "methods": ["GET", "POST"]
+		              "methods": ["GET", "POST"],
+                      "with": {
+                        "scheme": "http",
+                        "host_glob": "**"
+                      }
                     },
 					"execute": [
 						{ "authenticator": "foobar" }

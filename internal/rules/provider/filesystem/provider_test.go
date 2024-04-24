@@ -204,6 +204,9 @@ rules:
 - id: foo
   match:
     path: /foo/bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -255,6 +258,9 @@ rules:
 - id: foo
   match:
     path: /foo/bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -296,6 +302,9 @@ rules:
 - id: foo
   match:
     path: /foo/bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -330,6 +339,9 @@ rules:
 - id: foo
   match:
     path: /foo/bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -379,6 +391,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -393,6 +408,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -407,6 +425,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 

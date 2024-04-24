@@ -186,6 +186,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+   - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -216,7 +219,7 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo", "match": { "path": "/foo"} }
+		{ "id": "foo", "match": { "path": "/foo", "methods" : ["GET"] }, "execute": [{ "authenticator": "test"}] }
 	]
 }`))
 				require.NoError(t, err)
@@ -251,12 +254,14 @@ rules:
       { 
 	    "id": "foo",
         "match": {
-          "path": {
-		    "expression": "/foo/bar/:*",
-		    "glob": "/foo/bar/**"
-		  },
-		  "host_glob": "moobar.local:9090"
-	    }
+          "path": "/foo/bar/:*",
+          "methods": [ "GET" ],
+          "with": {
+            "host_glob": "moobar.local:9090",
+            "path_glob": "/foo/bar/**"
+          }
+	    },
+        "execute": [{ "authenticator": "test"}]
 	  }
 	]
 }`))

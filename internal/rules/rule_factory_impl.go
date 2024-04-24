@@ -37,6 +37,9 @@ import (
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
+// nolint: gochecknoglobals
+var spaceReplacer = strings.NewReplacer("\t", "", "\n", "", "\v", "", "\f", "", "\r", "", " ", "")
+
 type alwaysMatcher struct{}
 
 func (alwaysMatcher) Match(_ string) bool { return true }
@@ -157,74 +160,23 @@ func (f *ruleFactory) createExecutePipeline(
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
-//nolint:cyclop, funlen
-func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (
-	rule.Rule, error,
-) {
-	if len(ruleConfig.ID) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no ID defined")
+func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (rule.Rule, error) {
+	if f.mode == config.ProxyMode && ruleConfig.Backend == nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
-	if len(ruleConfig.Matcher.Path.Expression) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"no path matching expression defined")
-	}
-
-	if len(ruleConfig.Matcher.HostGlob) != 0 && len(ruleConfig.Matcher.HostRegex) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"host glob and regex expressions are defined")
-	}
-
-	if len(ruleConfig.Matcher.Path.Glob) != 0 && len(ruleConfig.Matcher.Path.Regex) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"path glob and regex expressions are defined")
-	}
-
-	if f.mode == config.ProxyMode {
-		if err := checkProxyModeApplicability(ruleConfig); err != nil {
-			return nil, err
-		}
-	}
-
-	var (
-		hostMatcher PatternMatcher
-		pathMatcher PatternMatcher
-		err         error
-	)
-
-	spaceReplacer := strings.NewReplacer("\t", "", "\n", "", "\v", "", "\f", "", "\r", "", " ", "")
-
-	hostGlob := spaceReplacer.Replace(ruleConfig.Matcher.HostGlob)
-	hostRegex := spaceReplacer.Replace(ruleConfig.Matcher.HostRegex)
-	pathGlob := spaceReplacer.Replace(ruleConfig.Matcher.Path.Glob)
-	pathRegex := spaceReplacer.Replace(ruleConfig.Matcher.Path.Regex)
-
-	switch {
-	case len(hostGlob) != 0:
-		hostMatcher, err = newGlobMatcher(hostGlob, '.')
-	case len(hostRegex) != 0:
-		hostMatcher, err = newRegexMatcher(hostRegex)
-	default:
-		hostMatcher = alwaysMatcher{}
-	}
-
+	hostMatcher, err := f.createPatternMatcher(
+		ruleConfig.Matcher.With.HostGlob, '.', ruleConfig.Matcher.With.HostRegex)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"filed to compile host pattern defined").CausedBy(err)
+			"filed to compile host expression").CausedBy(err)
 	}
 
-	switch {
-	case len(pathGlob) != 0:
-		pathMatcher, err = newGlobMatcher(pathGlob, '/')
-	case len(pathRegex) != 0:
-		pathMatcher, err = newRegexMatcher(pathRegex)
-	default:
-		pathMatcher = alwaysMatcher{}
-	}
-
+	pathMatcher, err := f.createPatternMatcher(
+		ruleConfig.Matcher.With.PathGlob, '/', ruleConfig.Matcher.With.PathRegex)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"filed to compile path pattern defined").CausedBy(err)
+			"filed to compile path expression").CausedBy(err)
 	}
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
@@ -248,15 +200,10 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
 		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
-		methods = x.IfThenElse(len(methods) != 0, methods, f.defaultRule.allowedMethods)
 	}
 
 	if len(authenticators) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
-	}
-
-	if len(methods) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no methods defined")
 	}
 
 	hash, err := f.createHash(ruleConfig)
@@ -273,11 +220,11 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			ruleConfig.EncodedSlashesHandling,
 			config2.EncodedSlashesOff,
 		),
-		allowedScheme:  ruleConfig.Matcher.Scheme,
+		allowedScheme:  ruleConfig.Matcher.With.Scheme,
 		allowedMethods: methods,
 		hostMatcher:    hostMatcher,
 		pathMatcher:    pathMatcher,
-		pathExpression: ruleConfig.Matcher.Path.Expression,
+		pathExpression: ruleConfig.Matcher.Path,
 		backend:        ruleConfig.Backend,
 		hash:           hash,
 		sc:             authenticators,
@@ -287,28 +234,20 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}, nil
 }
 
-func checkProxyModeApplicability(ruleConfig config2.Rule) error {
-	if ruleConfig.Backend == nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
-	}
+func (f *ruleFactory) createPatternMatcher(
+	globExpression string, globSeparator rune, regexExpression string,
+) (PatternMatcher, error) {
+	glob := spaceReplacer.Replace(globExpression)
+	regex := spaceReplacer.Replace(regexExpression)
 
-	if len(ruleConfig.Backend.Host) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "missing host definition in forward_to")
+	switch {
+	case len(glob) != 0:
+		return newGlobMatcher(glob, globSeparator)
+	case len(regex) != 0:
+		return newRegexMatcher(regex)
+	default:
+		return alwaysMatcher{}, nil
 	}
-
-	urlRewriter := ruleConfig.Backend.URLRewriter
-	if urlRewriter == nil {
-		return nil
-	}
-
-	if len(urlRewriter.Scheme) == 0 &&
-		len(urlRewriter.PathPrefixToAdd) == 0 &&
-		len(urlRewriter.PathPrefixToCut) == 0 &&
-		len(urlRewriter.QueryParamsToRemove) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "rewrite is defined in forward_to, but is empty")
-	}
-
-	return nil
 }
 
 func (f *ruleFactory) createHash(ruleConfig config2.Rule) ([]byte, error) {

@@ -244,6 +244,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `
 
 				_, err := backend.PutObject(bucketName, "test-rule",
@@ -290,6 +293,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `
 
 				_, err := backend.PutObject(bucketName, "test-rule",
@@ -341,6 +347,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule1",
@@ -357,6 +366,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule2",
@@ -431,8 +443,10 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `
-
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))
@@ -445,8 +459,10 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `
-
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))
@@ -459,8 +475,10 @@ rules:
 - id: baz
   match:
     path: /baz
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `
-
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))

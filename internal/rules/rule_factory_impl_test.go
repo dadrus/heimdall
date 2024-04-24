@@ -544,67 +544,11 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		{
-			uc:     "with missing id",
-			config: config2.Rule{},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no ID defined")
-			},
-		},
-		{
-			uc:     "without match path expression",
-			config: config2.Rule{ID: "foobar"},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no path matching expression")
-			},
-		},
-		{
-			uc: "with both glob and regex host patterns configured",
-			config: config2.Rule{
-				ID: "foobar",
-				Matcher: config2.Matcher{
-					Path:      config2.Path{Expression: "/foo/bar"},
-					HostRegex: ".*",
-					HostGlob:  "**",
-				},
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "host glob and regex")
-			},
-		},
-		{
-			uc: "with both glob and regex path patterns configured",
-			config: config2.Rule{
-				ID: "foobar",
-				Matcher: config2.Matcher{
-					Path: config2.Path{Expression: "/foo/bar", Regex: ".*", Glob: "**"},
-				},
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "path glob and regex")
-			},
-		},
-		{
 			uc:     "in proxy mode without forward_to definition",
 			opMode: config.ProxyMode,
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -615,47 +559,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc:     "in proxy mode and empty forward_to definition",
-			opMode: config.ProxyMode,
-			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
-				Backend: &config2.Backend{},
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "missing host")
-			},
-		},
-		{
-			uc:     "in proxy mode, with forward_to.host, but empty rewrite definition",
-			opMode: config.ProxyMode,
-			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
-				Backend: &config2.Backend{
-					Host:        "foo.bar",
-					URLRewriter: &config2.URLRewriter{},
-				},
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "rewrite is defined")
-			},
-		},
-		{
-			uc: "with bad host pattern",
+			uc: "with bad host expression",
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
-					HostRegex: "?>?<*??",
-					Path:      config2.Path{Expression: "/foo/bar"},
+					Path: "/foo/bar",
+					With: config2.MatcherConstraints{HostRegex: "?>?<*??"},
 				},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
@@ -663,28 +572,31 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "filed to compile host pattern")
+				assert.Contains(t, err.Error(), "filed to compile host expression")
 			},
 		},
 		{
-			uc: "with bad path pattern",
+			uc: "with bad path expression",
 			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar", Glob: "!*][)(*"}},
+				ID: "foobar",
+				Matcher: config2.Matcher{
+					Path: "/foo/bar",
+					With: config2.MatcherConstraints{PathGlob: "!*][)(*"},
+				},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "filed to compile path pattern")
+				assert.Contains(t, err.Error(), "filed to compile path expression")
 			},
 		},
 		{
 			uc: "with error while creating execute pipeline",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
@@ -703,7 +615,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with error while creating on_error pipeline",
 			config: config2.Rule{
 				ID:           "foobar",
-				Matcher:      config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
+				Matcher:      config2.Matcher{Path: "/foo/bar"},
 				ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
@@ -722,7 +634,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "without default rule and without any execute configuration",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -733,80 +645,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "without default rule and with only authenticator configured",
+			uc: "without default rule and with authenticator and finalizer configured, with error while expanding methods",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
-				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods defined")
-			},
-		},
-		{
-			uc: "without default rule and with only authenticator and contextualizer configured",
-			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"contextualizer": "bar"},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateContextualizer("test", "bar", mock.Anything).Return(&mocks5.ContextualizerMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods defined")
-			},
-		},
-		{
-			uc: "without default rule and with only authenticator, contextualizer and authorizer configured",
-			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"contextualizer": "bar"},
-					{"authorizer": "baz"},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateContextualizer("test", "bar", mock.Anything).Return(&mocks5.ContextualizerMock{}, nil)
-				mhf.EXPECT().CreateAuthorizer("test", "baz", mock.Anything).Return(&mocks4.AuthorizerMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods defined")
-			},
-		},
-		{
-			uc: "without default rule and with authenticator and finalizer configured, but with error while expanding methods",
-			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}, Methods: []string{"FOO", ""}},
+				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO", ""}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"finalizer": "bar"},
@@ -827,34 +669,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "without default rule and with authenticator and finalizer configured, but without methods",
-			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"finalizer": "bar"},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods defined")
-			},
-		},
-		{
 			uc: "without default rule but with minimum required configuration in decision mode",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}, Methods: []string{"FOO", "BAR"}},
+				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO", "BAR"}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 				},
@@ -891,7 +709,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config2.Rule{
 				ID:      "foobar",
 				Backend: &config2.Backend{Host: "foo.bar"},
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}, Methods: []string{"FOO", "BAR"}},
+				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO", "BAR"}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 				},
@@ -927,7 +745,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with default rule and with id and path expression only",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 			},
 			defaultRule: &ruleImpl{
 				allowedMethods: []string{"FOO"},
@@ -949,7 +767,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "/foo/bar", rul.PathExpression())
 				assert.IsType(t, alwaysMatcher{}, rul.hostMatcher)
 				assert.IsType(t, alwaysMatcher{}, rul.pathMatcher)
-				assert.ElementsMatch(t, rul.allowedMethods, []string{"FOO"})
+				assert.Empty(t, rul.allowedMethods)
 				assert.Len(t, rul.sc, 1)
 				assert.Len(t, rul.sh, 1)
 				assert.Len(t, rul.fi, 1)
@@ -961,12 +779,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
-					Scheme:   "https",
-					HostGlob: "**.example.com",
-					Methods:  []string{"BAR", "BAZ"},
-					Path: config2.Path{
-						Expression: "/foo/:resource",
-						Regex:      "^/foo/(bar|baz)",
+					Path:    "/foo/:resource",
+					Methods: []string{"BAR", "BAZ"},
+					With: config2.MatcherConstraints{
+						Scheme:    "https",
+						HostGlob:  "**.example.com",
+						PathRegex: "^/foo/(bar|baz)",
 					},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOnNoDecode,
@@ -1038,12 +856,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
-					Scheme:   "https",
-					HostGlob: "**.example.com",
-					Methods:  []string{"BAR", "BAZ"},
-					Path: config2.Path{
-						Expression: "/foo/:resource",
-						Regex:      "^/foo/(bar|baz)",
+					Path:    "/foo/:resource",
+					Methods: []string{"BAR", "BAZ"},
+					With: config2.MatcherConstraints{
+						Scheme:    "https",
+						HostGlob:  "**.example.com",
+						PathRegex: "^/foo/(bar|baz)",
 					},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOn,
@@ -1129,7 +947,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with conditional execution configuration type error",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}, Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"finalizer": "bar", "if": 1},
@@ -1152,7 +970,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with empty conditional execution configuration",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}, Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"finalizer": "bar", "if": ""},
@@ -1175,7 +993,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with conditional execution for some mechanisms",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}, Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"authorizer": "bar", "if": "false"},
@@ -1243,7 +1061,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with conditional execution for error handler",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: config2.Path{Expression: "/foo/bar"}, Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"authorizer": "bar"},
@@ -1375,99 +1193,6 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 
 			// THEN
 			tc.assert(t, conf)
-		})
-	}
-}
-
-func TestRuleFactoryProxyModeApplicability(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc          string
-		ruleConfig  config2.Rule
-		shouldError bool
-	}{
-		{
-			uc:          "no upstream url factory",
-			ruleConfig:  config2.Rule{},
-			shouldError: true,
-		},
-		{
-			uc:          "no host defined",
-			ruleConfig:  config2.Rule{Backend: &config2.Backend{}},
-			shouldError: true,
-		},
-		{
-			uc:         "with host but no rewrite options",
-			ruleConfig: config2.Rule{Backend: &config2.Backend{Host: "foo.bar"}},
-		},
-		{
-			uc: "with host and empty rewrite option",
-			ruleConfig: config2.Rule{
-				Backend: &config2.Backend{
-					Host:        "foo.bar",
-					URLRewriter: &config2.URLRewriter{},
-				},
-			},
-			shouldError: true,
-		},
-		{
-			uc: "with host and scheme rewrite option",
-			ruleConfig: config2.Rule{
-				Backend: &config2.Backend{
-					Host:        "foo.bar",
-					URLRewriter: &config2.URLRewriter{Scheme: "https"},
-				},
-			},
-		},
-		{
-			uc: "with host and strip path prefix rewrite option",
-			ruleConfig: config2.Rule{
-				Backend: &config2.Backend{
-					Host:        "foo.bar",
-					URLRewriter: &config2.URLRewriter{PathPrefixToCut: "/foo"},
-				},
-			},
-		},
-		{
-			uc: "with host and add path prefix rewrite option",
-			ruleConfig: config2.Rule{
-				Backend: &config2.Backend{
-					Host:        "foo.bar",
-					URLRewriter: &config2.URLRewriter{PathPrefixToAdd: "/foo"},
-				},
-			},
-		},
-		{
-			uc: "with host and empty strip query parameter rewrite option",
-			ruleConfig: config2.Rule{
-				Backend: &config2.Backend{
-					Host:        "foo.bar",
-					URLRewriter: &config2.URLRewriter{QueryParamsToRemove: []string{}},
-				},
-			},
-			shouldError: true,
-		},
-		{
-			uc: "with host and strip query parameter rewrite option",
-			ruleConfig: config2.Rule{
-				Backend: &config2.Backend{
-					Host:        "foo.bar",
-					URLRewriter: &config2.URLRewriter{QueryParamsToRemove: []string{"foo"}},
-				},
-			},
-		},
-	} {
-		t.Run(tc.uc, func(t *testing.T) {
-			// WHEN
-			err := checkProxyModeApplicability(tc.ruleConfig)
-
-			// THEN
-			if tc.shouldError {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
 		})
 	}
 }

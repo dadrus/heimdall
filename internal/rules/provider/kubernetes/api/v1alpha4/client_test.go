@@ -57,13 +57,13 @@ const response = `{
             ],
             "id": "test:rule",
             "match": {
-              "scheme": "http",
-              "host_glob": "127.0.0.1:*",
-              "path": {
-                "expression": "/foobar/:*",
-                "glob": "/foobar/foos*"
-              },
-              "methods": ["GET", "POST"]
+              "path": "/foobar/:*",
+              "methods": ["GET", "POST"],
+              "with": {
+                "scheme": "http",
+                "host_glob": "127.0.0.1:*",
+                "path_glob": "/foobar/foos*"
+              }
             },
             "forward_to": {
               "host": "foo.bar",
@@ -141,10 +141,10 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 	rule := ruleSet.Spec.Rules[0]
 	assert.Equal(t, "test:rule", rule.ID)
-	assert.Equal(t, "http", rule.Matcher.Scheme)
-	assert.Equal(t, "127.0.0.1:*", rule.Matcher.HostGlob)
-	assert.Equal(t, "/foobar/:*", rule.Matcher.Path.Expression)
-	assert.Equal(t, "/foobar/foos*", rule.Matcher.Path.Glob)
+	assert.Equal(t, "/foobar/:*", rule.Matcher.Path)
+	assert.Equal(t, "http", rule.Matcher.With.Scheme)
+	assert.Equal(t, "127.0.0.1:*", rule.Matcher.With.HostGlob)
+	assert.Equal(t, "/foobar/foos*", rule.Matcher.With.PathGlob)
 	assert.ElementsMatch(t, rule.Matcher.Methods, []string{"GET", "POST"})
 	assert.Empty(t, rule.ErrorHandler)
 	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.Backend.CreateURL(&url.URL{

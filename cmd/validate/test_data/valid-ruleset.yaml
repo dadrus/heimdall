@@ -3,9 +3,12 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    scheme: http
     path: /**
-    host_glob: foo.bar
+    methods:
+      - ALL
+    with:
+      scheme: http
+      host_glob: foo.bar
   forward_to:
     host: bar.foo
     rewrite:

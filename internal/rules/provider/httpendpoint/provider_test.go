@@ -264,6 +264,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ "GET" ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -308,6 +311,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ "GET" ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -357,6 +363,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 2:
@@ -370,6 +379,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -437,6 +449,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 2:
@@ -448,6 +463,9 @@ rules:
 - id: baz
   match:
     path: /baz
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 3:
@@ -459,6 +477,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					default:
@@ -470,6 +491,9 @@ rules:
 - id: foz
   match:
     path: /foz
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -542,6 +566,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -589,6 +616,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -634,6 +664,9 @@ rules:
 - id: foo
   match:
     path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -673,6 +706,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					} else {
@@ -684,6 +720,9 @@ rules:
 - id: baz
   match:
     path: /baz
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -728,6 +767,9 @@ rules:
 - id: bar
   match:
     path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					} else {

@@ -29,7 +29,7 @@ type MetaData struct {
 type RuleSet struct {
 	MetaData
 
-	Version string `json:"version" yaml:"version"`
+	Version string `json:"version" yaml:"version" validate:"required"` //nolint:tagalign
 	Name    string `json:"name"    yaml:"name"`
-	Rules   []Rule `json:"rules"   validate:"dive" yaml:"rules"`
+	Rules   []Rule `json:"rules"   yaml:"rules"   validate:"gt=0,dive,required"` //nolint:tagalign
 }

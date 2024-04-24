@@ -23,8 +23,8 @@ import (
 )
 
 type Backend struct {
-	Host        string       `json:"host"    yaml:"host"`
-	URLRewriter *URLRewriter `json:"rewrite" yaml:"rewrite"`
+	Host        string       `json:"host"    yaml:"host"    validate:"required"` //nolint:tagalign
+	URLRewriter *URLRewriter `json:"rewrite" yaml:"rewrite" validate:"omitnil"`  //nolint:tagalign
 }
 
 func (f *Backend) CreateURL(value *url.URL) *url.URL {

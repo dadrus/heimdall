@@ -18,41 +18,20 @@ package config
 
 import (
 	"slices"
-
-	"github.com/goccy/go-json"
-
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type Path struct {
-	Expression string `json:"expression" yaml:"expression" validate:"required"` //nolint:tagalign
-	Glob       string `json:"glob"       yaml:"glob"`
-	Regex      string `json:"regex"      yaml:"regex"`
-}
-
-func (p *Path) UnmarshalJSON(data []byte) error {
-	if data[0] == '"' {
-		// data contains just the path expression
-		p.Expression = stringx.ToString(data[1 : len(data)-1])
-
-		return nil
-	}
-
-	var rawData map[string]any
-
-	if err := json.Unmarshal(data, &rawData); err != nil {
-		return err
-	}
-
-	return DecodeConfig(rawData, p)
+type MatcherConstraints struct {
+	Scheme    string `json:"scheme"     yaml:"scheme"     validate:"omitempty,oneof=http https"` //nolint:tagalign
+	HostGlob  string `json:"host_glob"  yaml:"host_glob"  validate:"excluded_with=HostRegex"`    //nolint:tagalign
+	HostRegex string `json:"host_regex" yaml:"host_regex" validate:"excluded_with=HostGlob"`     //nolint:tagalign
+	PathGlob  string `json:"path_glob"  yaml:"path_glob"  validate:"excluded_with=PathRegex"`    //nolint:tagalign
+	PathRegex string `json:"path_regex" yaml:"path_regex" validate:"excluded_with=PathGlob"`     //nolint:tagalign
 }
 
 type Matcher struct {
-	Scheme    string   `json:"scheme"     yaml:"scheme"`
-	Methods   []string `json:"methods"    yaml:"methods"`
-	HostGlob  string   `json:"host_glob"  yaml:"host_glob"`
-	HostRegex string   `json:"host_regex" yaml:"host_regex"`
-	Path      Path     `json:"path"       yaml:"path"`
+	Path    string             `json:"path"    yaml:"path"    validate:"required"`           //nolint:tagalign
+	Methods []string           `json:"methods" yaml:"methods" validate:"gt=0,dive,required"` //nolint:tagalign
+	With    MatcherConstraints `json:"with"    yaml:"with"`
 }
 
 func (m *Matcher) DeepCopyInto(out *Matcher) {

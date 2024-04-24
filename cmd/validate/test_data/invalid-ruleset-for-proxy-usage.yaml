@@ -3,9 +3,11 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    scheme: http
-    host_glob: foo.bar
     path: /**
+    methods: [ ALL ]
+    with:
+      scheme: http
+      host_glob: foo.bar
   execute:
     - authenticator: unauthorized_authenticator
     - authenticator: jwt_authenticator1
