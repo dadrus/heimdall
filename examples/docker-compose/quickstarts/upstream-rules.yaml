@@ -3,6 +3,7 @@ rules:
 - id: demo:public
   match:
     path: /public
+    methods: [ GET, POST ]
   forward_to:
     host: upstream:8081
   execute:
@@ -12,7 +13,9 @@ rules:
 - id: demo:protected
   match:
     path: /:user
-    regex: ^/(user|admin)
+    methods: [ GET, POST ]
+    with:
+      path_regex: ^/(user|admin)
   forward_to:
     host: upstream:8081
   execute:

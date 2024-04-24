@@ -9,16 +9,16 @@ spec:
   rules:
     - id: public-access
       match:
-        path:
-          expression: /pub/**
+        path: /pub/**
+        methods: [ ALL ]
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
     - id: anonymous-access
       match:
-        path:
-          expression: /anon/**
+        path: /anon/**
+        methods: [ ALL ]
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
@@ -26,8 +26,8 @@ spec:
         - finalizer: create_jwt
     - id: redirect
       match:
-        path:
-          expression: /redir/**
+        path: /redir/**
+        methods: [ ALL ]
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
