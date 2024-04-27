@@ -10,7 +10,6 @@ spec:
     - id: public-access
       match:
         path: /pub/**
-        methods: [ ALL ]
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
@@ -18,7 +17,6 @@ spec:
     - id: anonymous-access
       match:
         path: /anon/**
-        methods: [ ALL ]
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
@@ -27,7 +25,6 @@ spec:
     - id: redirect
       match:
         path: /redir/**
-        methods: [ ALL ]
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:

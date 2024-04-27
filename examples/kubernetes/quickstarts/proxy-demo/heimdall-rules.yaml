@@ -13,7 +13,6 @@ data:
       - id: public-access
         match:
           path: /pub/**
-          methods: [ ALL ]
         forward_to:
           host: localhost:8080
           rewrite:
@@ -24,7 +23,6 @@ data:
       - id: anonymous-access
         match:
           path: /anon/**
-          methods: [ ALL ]
         forward_to:
           host: localhost:8080
           rewrite:
@@ -36,7 +34,6 @@ data:
       - id: redirect
         match:
           path: /redir/**
-          methods: [ ALL ]
         forward_to:
           host: localhost:8080
           rewrite:

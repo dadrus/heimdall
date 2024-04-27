@@ -35,9 +35,6 @@ mechanisms:
       config:
         to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 default_rule:
-  methods:
-    - GET
-    - POST
   execute:
     - authenticator: anonymous_authenticator
     - authorizer: deny_all_requests
