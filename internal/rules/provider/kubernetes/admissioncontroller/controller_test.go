@@ -272,10 +272,10 @@ func TestControllerLifecycle(t *testing.T) {
 							{
 								ID: "test",
 								Matcher: config2.Matcher{
-									Path:    "/foo.bar",
-									Methods: []string{http.MethodGet},
-									With: config2.MatcherConstraints{
-										Scheme: "http",
+									Path: "/foo.bar",
+									With: &config2.MatcherConstraints{
+										Scheme:  "http",
+										Methods: []string{http.MethodGet},
 									},
 								},
 								Backend: &config2.Backend{
@@ -367,10 +367,10 @@ func TestControllerLifecycle(t *testing.T) {
 							{
 								ID: "test",
 								Matcher: config2.Matcher{
-									Path:    "/foo.bar",
-									Methods: []string{http.MethodGet},
-									With: config2.MatcherConstraints{
-										Scheme: "http",
+									Path: "/foo.bar",
+									With: &config2.MatcherConstraints{
+										Scheme:  "http",
+										Methods: []string{http.MethodGet},
 									},
 								},
 								Backend: &config2.Backend{

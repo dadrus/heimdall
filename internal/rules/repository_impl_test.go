@@ -23,19 +23,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/config"
+	mocks3 "github.com/dadrus/heimdall/internal/rules/config/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/radixtree"
 )
-
-type testMatcher bool
-
-func (m testMatcher) Match(_ string) bool { return bool(m) }
 
 func TestRepositoryAddRuleSetWithoutViolation(t *testing.T) {
 	t.Parallel()
@@ -114,31 +113,15 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
 
 	rules1 := []rule.Rule{
-		&ruleImpl{
-			id: "1", srcID: "bar", pathExpression: "/bar/1",
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
-
-		&ruleImpl{
-			id: "3", srcID: "bar", pathExpression: "/bar/3",
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
-		&ruleImpl{
-			id: "4", srcID: "bar", pathExpression: "/bar/4",
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
+		&ruleImpl{id: "1", srcID: "bar", pathExpression: "/bar/1"},
+		&ruleImpl{id: "3", srcID: "bar", pathExpression: "/bar/3"},
+		&ruleImpl{id: "4", srcID: "bar", pathExpression: "/bar/4"},
 	}
 	rules2 := []rule.Rule{
-		&ruleImpl{
-			id: "2", srcID: "baz", pathExpression: "/baz/2",
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
+		&ruleImpl{id: "2", srcID: "baz", pathExpression: "/baz/2"},
 	}
 	rules3 := []rule.Rule{
-		&ruleImpl{
-			id: "4", srcID: "foo", pathExpression: "/foo/4",
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
+		&ruleImpl{id: "4", srcID: "foo", pathExpression: "/foo/4"},
 	}
 
 	// WHEN
@@ -203,43 +186,19 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
 
 	initialRules := []rule.Rule{
-		&ruleImpl{
-			id: "1", srcID: "1", pathExpression: "/bar/1", hash: []byte{1},
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
-		&ruleImpl{
-			id: "2", srcID: "1", pathExpression: "/bar/2", hash: []byte{1},
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
-		&ruleImpl{
-			id: "3", srcID: "1", pathExpression: "/bar/3", hash: []byte{1},
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
-		&ruleImpl{
-			id: "4", srcID: "1", pathExpression: "/bar/4", hash: []byte{1},
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
+		&ruleImpl{id: "1", srcID: "1", pathExpression: "/bar/1", hash: []byte{1}},
+		&ruleImpl{id: "2", srcID: "1", pathExpression: "/bar/2", hash: []byte{1}},
+		&ruleImpl{id: "3", srcID: "1", pathExpression: "/bar/3", hash: []byte{1}},
+		&ruleImpl{id: "4", srcID: "1", pathExpression: "/bar/4", hash: []byte{1}},
 	}
 
 	require.NoError(t, repo.AddRuleSet("1", initialRules))
 
 	updatedRules := []rule.Rule{
-		&ruleImpl{
-			// changed
-			id: "1", srcID: "1", pathExpression: "/bar/1", hash: []byte{2},
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
+		&ruleImpl{id: "1", srcID: "1", pathExpression: "/bar/1", hash: []byte{2}}, // changed
 		// rule with id 2 is deleted
-		&ruleImpl{
-			// changed and path expression changed
-			id: "3", srcID: "1", pathExpression: "/foo/3", hash: []byte{2},
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
-		&ruleImpl{
-			// same as before
-			id: "4", srcID: "1", pathExpression: "/bar/4", hash: []byte{1},
-			hostMatcher: testMatcher(true), pathMatcher: testMatcher(true), allowedMethods: []string{http.MethodGet},
-		},
+		&ruleImpl{id: "3", srcID: "1", pathExpression: "/foo/3", hash: []byte{2}}, // changed and path expression changed
+		&ruleImpl{id: "4", srcID: "1", pathExpression: "/bar/4", hash: []byte{1}}, // same as before
 	}
 
 	// WHEN
@@ -309,7 +268,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			},
 		},
 		{
-			uc:         "matches upstream rule having path without escaped parts",
+			uc:         "matches upstream rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -319,55 +278,17 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				fooBarMatcher, err := newGlobMatcher("foo.bar", '.')
-				require.NoError(t, err)
-
-				err = repo.AddRuleSet("baz", []rule.Rule{
+				err := repo.AddRuleSet("baz", []rule.Rule{
 					&ruleImpl{
 						id:             "test2",
 						srcID:          "baz",
 						pathExpression: "/baz/bar",
-						hostMatcher:    fooBarMatcher,
-						pathMatcher:    testMatcher(true),
-						allowedMethods: []string{http.MethodGet},
-					},
-				})
-				require.NoError(t, err)
-			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
-				t.Helper()
+						matcher: func() config.RequestMatcher {
+							rm := mocks3.NewRequestMatcherMock(t)
+							rm.EXPECT().Matches(mock.Anything).Return(nil)
 
-				require.NoError(t, err)
-
-				impl, ok := rul.(*ruleImpl)
-				require.True(t, ok)
-
-				require.Equal(t, "test2", impl.id)
-				require.Equal(t, "baz", impl.srcID)
-			},
-		},
-		{
-			uc:         "matches upstream rule having path with escaped parts",
-			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar", RawPath: "/baz%2Fbar"},
-			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
-				t.Helper()
-
-				factory.EXPECT().HasDefaultRule().Return(false)
-			},
-			addRules: func(t *testing.T, repo *repository) {
-				t.Helper()
-
-				fooBarMatcher, err := newGlobMatcher("foo.bar", '.')
-				require.NoError(t, err)
-
-				err = repo.AddRuleSet("baz", []rule.Rule{
-					&ruleImpl{
-						id:             "test2",
-						srcID:          "baz",
-						pathExpression: "/baz%2Fbar",
-						hostMatcher:    fooBarMatcher,
-						pathMatcher:    testMatcher(true),
-						allowedMethods: []string{http.MethodGet},
+							return rm
+						}(),
 					},
 				})
 				require.NoError(t, err)

@@ -17,14 +17,9 @@
 package rules
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
-	"net/http"
-	"slices"
-	"strings"
 
-	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -34,15 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/slicex"
 )
-
-// nolint: gochecknoglobals
-var spaceReplacer = strings.NewReplacer("\t", "", "\n", "", "\v", "", "\f", "", "\r", "", " ", "")
-
-type alwaysMatcher struct{}
-
-func (alwaysMatcher) Match(_ string) bool { return true }
 
 func NewRuleFactory(
 	hf mechanisms.Factory,
@@ -165,18 +152,15 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
-	hostMatcher, err := f.createPatternMatcher(
-		ruleConfig.Matcher.With.HostGlob, '.', ruleConfig.Matcher.With.HostRegex)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"filed to compile host expression").CausedBy(err)
-	}
+	slashesHandling := x.IfThenElse(
+		len(ruleConfig.EncodedSlashesHandling) != 0,
+		ruleConfig.EncodedSlashesHandling,
+		config2.EncodedSlashesOff,
+	)
 
-	pathMatcher, err := f.createPatternMatcher(
-		ruleConfig.Matcher.With.PathGlob, '/', ruleConfig.Matcher.With.PathRegex)
+	matcher, err := ruleConfig.Matcher.With.ToRequestMatcher(slashesHandling)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"filed to compile path expression").CausedBy(err)
+		return nil, err
 	}
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
@@ -187,12 +171,6 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	errorHandlers, err := f.createOnErrorPipeline(version, ruleConfig.ErrorHandler)
 	if err != nil {
 		return nil, err
-	}
-
-	methods, err := expandHTTPMethods(ruleConfig.Matcher.Methods)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to expand allowed HTTP methods").CausedBy(err)
 	}
 
 	if f.defaultRule != nil {
@@ -206,60 +184,25 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
 	}
 
-	hash, err := f.createHash(ruleConfig)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to create hash")
-	}
-
-	return &ruleImpl{
-		id:        ruleConfig.ID,
-		srcID:     srcID,
-		isDefault: false,
-		encodedSlashesHandling: x.IfThenElse(
-			len(ruleConfig.EncodedSlashesHandling) != 0,
-			ruleConfig.EncodedSlashesHandling,
-			config2.EncodedSlashesOff,
-		),
-		allowedScheme:  ruleConfig.Matcher.With.Scheme,
-		allowedMethods: methods,
-		hostMatcher:    hostMatcher,
-		pathMatcher:    pathMatcher,
-		pathExpression: ruleConfig.Matcher.Path,
-		backend:        ruleConfig.Backend,
-		hash:           hash,
-		sc:             authenticators,
-		sh:             subHandlers,
-		fi:             finalizers,
-		eh:             errorHandlers,
-	}, nil
-}
-
-func (f *ruleFactory) createPatternMatcher(
-	globExpression string, globSeparator rune, regexExpression string,
-) (PatternMatcher, error) {
-	glob := spaceReplacer.Replace(globExpression)
-	regex := spaceReplacer.Replace(regexExpression)
-
-	switch {
-	case len(glob) != 0:
-		return newGlobMatcher(glob, globSeparator)
-	case len(regex) != 0:
-		return newRegexMatcher(regex)
-	default:
-		return alwaysMatcher{}, nil
-	}
-}
-
-func (f *ruleFactory) createHash(ruleConfig config2.Rule) ([]byte, error) {
-	rawRuleConfig, err := json.Marshal(ruleConfig)
+	hash, err := ruleConfig.Hash()
 	if err != nil {
 		return nil, err
 	}
 
-	md := crypto.SHA256.New()
-	md.Write(rawRuleConfig)
-
-	return md.Sum(nil), nil
+	return &ruleImpl{
+		id:              ruleConfig.ID,
+		srcID:           srcID,
+		isDefault:       false,
+		slashesHandling: slashesHandling,
+		matcher:         matcher,
+		pathExpression:  ruleConfig.Matcher.Path,
+		backend:         ruleConfig.Backend,
+		hash:            hash,
+		sc:              authenticators,
+		sh:              subHandlers,
+		fi:              finalizers,
+		eh:              errorHandlers,
+	}, nil
 }
 
 func (f *ruleFactory) createOnErrorPipeline(
@@ -324,55 +267,20 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
 	}
 
-	methods, err := expandHTTPMethods(ruleConfig.Methods)
-	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "failed to expand allowed HTTP methods").
-			CausedBy(err)
-	}
-
-	if len(methods) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no methods defined for default rule")
-	}
-
 	f.defaultRule = &ruleImpl{
-		id:                     "default",
-		encodedSlashesHandling: config2.EncodedSlashesOff,
-		allowedMethods:         methods,
-		srcID:                  "config",
-		isDefault:              true,
-		sc:                     authenticators,
-		sh:                     subHandlers,
-		fi:                     finalizers,
-		eh:                     errorHandlers,
+		id:              "default",
+		slashesHandling: config2.EncodedSlashesOff,
+		srcID:           "config",
+		isDefault:       true,
+		sc:              authenticators,
+		sh:              subHandlers,
+		fi:              finalizers,
+		eh:              errorHandlers,
 	}
 
 	f.hasDefaultRule = true
 
 	return nil
-}
-
-func expandHTTPMethods(methods []string) ([]string, error) {
-	if slices.Contains(methods, "ALL") {
-		methods = slices.DeleteFunc(methods, func(method string) bool { return method == "ALL" })
-
-		methods = append(methods,
-			http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch,
-			http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace)
-	}
-
-	slices.SortFunc(methods, strings.Compare)
-
-	methods = slices.Compact(methods)
-	if res := slicex.Filter(methods, func(s string) bool { return len(s) == 0 }); len(res) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"methods list contains empty values. have you forgotten to put the corresponding value into braces?")
-	}
-
-	tbr := slicex.Filter(methods, func(s string) bool { return strings.HasPrefix(s, "!") })
-	methods = slicex.Subtract(methods, tbr)
-	tbr = slicex.Map[string, string](tbr, func(s string) string { return strings.TrimPrefix(s, "!") })
-
-	return slicex.Subtract(methods, tbr), nil
 }
 
 type CheckFunc func() error

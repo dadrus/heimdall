@@ -4,11 +4,12 @@ rules:
 - id: rule:foo
   match:
     path: /**
-    methods:
-      - ALL
     with:
       scheme: http
       host_glob: foo.bar
+      methods:
+        - POST
+        - PUT
   forward_to:
     host: bar.foo
     rewrite:

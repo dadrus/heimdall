@@ -2523,19 +2523,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "methods": {
-          "description": "Allowed HTTP methods for any endpoint",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "type": "string"
-          },
-          "examples": [
-            "GET",
-            "POST"
-          ]
-        },
         "execute": {
           "description": "The mechanisms to execute (authenticators, authorizers, etc)",
           "type": "array",

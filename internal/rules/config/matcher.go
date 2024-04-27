@@ -16,25 +16,17 @@
 
 package config
 
-import (
-	"slices"
-)
-
-type MatcherConstraints struct {
-	Scheme    string `json:"scheme"     yaml:"scheme"     validate:"omitempty,oneof=http https"` //nolint:tagalign
-	HostGlob  string `json:"host_glob"  yaml:"host_glob"  validate:"excluded_with=HostRegex"`    //nolint:tagalign
-	HostRegex string `json:"host_regex" yaml:"host_regex" validate:"excluded_with=HostGlob"`     //nolint:tagalign
-	PathGlob  string `json:"path_glob"  yaml:"path_glob"  validate:"excluded_with=PathRegex"`    //nolint:tagalign
-	PathRegex string `json:"path_regex" yaml:"path_regex" validate:"excluded_with=PathGlob"`     //nolint:tagalign
-}
-
 type Matcher struct {
-	Path    string             `json:"path"    yaml:"path"    validate:"required"`           //nolint:tagalign
-	Methods []string           `json:"methods" yaml:"methods" validate:"gt=0,dive,required"` //nolint:tagalign
-	With    MatcherConstraints `json:"with"    yaml:"with"`
+	Path string              `json:"path" yaml:"path" validate:"required"`         //nolint:tagalign
+	With *MatcherConstraints `json:"with" yaml:"with" validate:"omitnil,required"` //nolint:tagalign
 }
 
 func (m *Matcher) DeepCopyInto(out *Matcher) {
 	*out = *m
-	out.Methods = slices.Clone(m.Methods)
+
+	if m.With != nil {
+		in, out := m.With, out.With
+
+		in.DeepCopyInto(out)
+	}
 }

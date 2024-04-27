@@ -118,7 +118,6 @@ func TestParseRules(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.Contains(t, err.Error(), "'rules'[0].'match'.'path' is a required field")
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'methods' must contain more than 0 items")
 				require.Nil(t, ruleSet)
 			},
 		},
@@ -131,7 +130,7 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "methods":["ALL"], "with": {"host_glob":"**", "host_regex":"**"}},
+    "match":{"path":"/foo/bar", "with": {"host_glob":"**", "host_regex":"**"}},
     "execute": [{"authenticator":"test"}]
   }]
 }`),
@@ -154,7 +153,7 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "methods":["ALL"], "with": {"path_glob":"**", "path_regex":"**"}},
+    "match":{"path":"/foo/bar", "with": {"path_glob":"**", "path_regex":"**"}},
     "execute": [{"authenticator":"test"}]
   }]
 }`),
@@ -177,7 +176,7 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "methods":["ALL"], "with": {"scheme":"foo"}},
+    "match":{"path":"/foo/bar", "with": {"scheme":"foo", "methods":["ALL"]}},
     "execute": [{"authenticator":"test"}]
   }]
 }`),
@@ -199,7 +198,7 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "methods":["ALL"]},
+    "match":{"path":"/foo/bar"},
     "execute": [{"authenticator":"test"}],
     "forward_to": { "rewrite": {"scheme": "http"}}
   }]
@@ -222,7 +221,7 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "methods":["ALL"]},
+    "match":{"path":"/foo/bar"},
     "allow_encoded_slashes": "foo",
     "execute": [{"authenticator":"test"}]
   }]
@@ -244,7 +243,7 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "methods":["ALL"]},
+    "match":{"path":"/foo/bar", "with": { "methods": ["ALL"] }},
     "execute": [{"authenticator":"test"}]
   }]
 }`),
@@ -261,7 +260,7 @@ func TestParseRules(t *testing.T) {
 				require.NotNil(t, rul)
 				assert.Equal(t, "foo", rul.ID)
 				assert.Equal(t, "/foo/bar", rul.Matcher.Path)
-				assert.ElementsMatch(t, []string{"ALL"}, rul.Matcher.Methods)
+				assert.ElementsMatch(t, []string{"ALL"}, rul.Matcher.With.Methods)
 				assert.Len(t, rul.Execute, 1)
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
 			},
@@ -276,7 +275,9 @@ rules:
 - id: bar
   match:
     path: /foo/bar
-    methods: [ "GET" ]
+    with:
+      methods:
+        - GET
   forward_to:
     host: test
   allow_encoded_slashes: no_decode
@@ -295,7 +296,7 @@ rules:
 				require.NotNil(t, rul)
 				assert.Equal(t, "bar", rul.ID)
 				assert.Equal(t, "/foo/bar", rul.Matcher.Path)
-				assert.ElementsMatch(t, []string{"GET"}, rul.Matcher.Methods)
+				assert.ElementsMatch(t, []string{"GET"}, rul.Matcher.With.Methods)
 				assert.Equal(t, EncodedSlashesOnNoDecode, rul.EncodedSlashesHandling)
 				assert.Len(t, rul.Execute, 1)
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
@@ -374,7 +375,6 @@ rules:
 - id: bar
   match:
     path: foo
-    methods: [ ALL ]
   execute:
     - authenticator: test
 `),
@@ -421,7 +421,6 @@ rules:
 - id: bar
   match:
     path: foo
-    methods: [ ALL ]
   execute:
     - authenticator: test
 `),
@@ -449,7 +448,6 @@ rules:
 - id: bar
   match:
     path: foo
-    methods: [ ALL ]
   execute:
     - authenticator: test
 `),

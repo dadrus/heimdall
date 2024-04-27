@@ -472,9 +472,6 @@ mechanisms:
         to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
 default_rule:
-  methods:
-    - GET
-    - POST
   execute:
     - authenticator: anonymous_authenticator
     - finalizer: jwt

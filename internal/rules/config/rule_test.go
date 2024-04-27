@@ -34,9 +34,9 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 	in := Rule{
 		ID: "foo",
 		Matcher: Matcher{
-			Path:    "bar",
-			Methods: []string{"GET", "PATCH"},
-			With: MatcherConstraints{
+			Path: "bar",
+			With: &MatcherConstraints{
+				Methods:   []string{"GET", "PATCH"},
 				Scheme:    "https",
 				HostGlob:  "**.example.com",
 				HostRegex: ".*\\.example.com",
@@ -63,7 +63,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 	// THEN
 	assert.Equal(t, in.ID, out.ID)
 	assert.Equal(t, in.Matcher.Path, out.Matcher.Path)
-	assert.Equal(t, in.Matcher.Methods, out.Matcher.Methods)
+	assert.Equal(t, in.Matcher.With.Methods, out.Matcher.With.Methods)
 	assert.Equal(t, in.Matcher.With.Scheme, out.Matcher.With.Scheme)
 	assert.Equal(t, in.Matcher.With.HostGlob, out.Matcher.With.HostGlob)
 	assert.Equal(t, in.Matcher.With.HostRegex, out.Matcher.With.HostRegex)
@@ -81,9 +81,9 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 	in := Rule{
 		ID: "foo",
 		Matcher: Matcher{
-			Path:    "bar",
-			Methods: []string{"GET", "PATCH"},
-			With: MatcherConstraints{
+			Path: "bar",
+			With: &MatcherConstraints{
+				Methods:   []string{"GET", "PATCH"},
 				Scheme:    "https",
 				HostGlob:  "**.example.com",
 				HostRegex: ".*\\.example.com",
@@ -114,7 +114,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 	// but same contents
 	assert.Equal(t, in.ID, out.ID)
 	assert.Equal(t, in.Matcher.Path, out.Matcher.Path)
-	assert.Equal(t, in.Matcher.Methods, out.Matcher.Methods)
+	assert.Equal(t, in.Matcher.With.Methods, out.Matcher.With.Methods)
 	assert.Equal(t, in.Matcher.With.Scheme, out.Matcher.With.Scheme)
 	assert.Equal(t, in.Matcher.With.HostGlob, out.Matcher.With.HostGlob)
 	assert.Equal(t, in.Matcher.With.HostRegex, out.Matcher.With.HostRegex)

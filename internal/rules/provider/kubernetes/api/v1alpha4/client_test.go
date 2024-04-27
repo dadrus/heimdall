@@ -58,11 +58,11 @@ const response = `{
             "id": "test:rule",
             "match": {
               "path": "/foobar/:*",
-              "methods": ["GET", "POST"],
               "with": {
                 "scheme": "http",
                 "host_glob": "127.0.0.1:*",
-                "path_glob": "/foobar/foos*"
+                "path_glob": "/foobar/foos*",
+                "methods": ["GET", "POST"]
               }
             },
             "forward_to": {
@@ -145,7 +145,7 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 	assert.Equal(t, "http", rule.Matcher.With.Scheme)
 	assert.Equal(t, "127.0.0.1:*", rule.Matcher.With.HostGlob)
 	assert.Equal(t, "/foobar/foos*", rule.Matcher.With.PathGlob)
-	assert.ElementsMatch(t, rule.Matcher.Methods, []string{"GET", "POST"})
+	assert.ElementsMatch(t, rule.Matcher.With.Methods, []string{"GET", "POST"})
 	assert.Empty(t, rule.ErrorHandler)
 	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.Backend.CreateURL(&url.URL{
 		Scheme:   "http",

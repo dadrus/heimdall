@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"net/http"
 	"net/url"
 	"testing"
 
@@ -300,134 +299,12 @@ func TestRuleFactoryNew(t *testing.T) {
 			},
 		},
 		{
-			uc: "new factory with default rule, consisting of authenticator only",
-			config: &config.Configuration{
-				Default: &config.DefaultRule{
-					Execute: []config.MechanismConfig{
-						{"authenticator": "bar"},
-					},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleFactory) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods")
-			},
-		},
-		{
-			uc: "new factory with default rule, consisting of authorizer and contextualizer",
-			config: &config.Configuration{
-				Default: &config.DefaultRule{
-					Execute: []config.MechanismConfig{
-						{"authenticator": "bar"},
-						{"contextualizer": "baz"},
-					},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
-				mhf.EXPECT().CreateContextualizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleFactory) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods")
-			},
-		},
-		{
-			uc: "new factory with default rule, consisting of authorizer, contextualizer and authorizer",
-			config: &config.Configuration{
-				Default: &config.DefaultRule{
-					Execute: []config.MechanismConfig{
-						{"authenticator": "bar"},
-						{"contextualizer": "baz"},
-						{"authorizer": "zab"},
-					},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
-				mhf.EXPECT().CreateContextualizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
-				mhf.EXPECT().CreateAuthorizer(mock.Anything, "zab", mock.Anything).Return(nil, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleFactory) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods")
-			},
-		},
-		{
-			uc: "new factory with default rule, consisting of authorizer and finalizer with error while expanding methods",
-			config: &config.Configuration{
-				Default: &config.DefaultRule{
-					Execute: []config.MechanismConfig{
-						{"authenticator": "bar"},
-						{"finalizer": "baz"},
-					},
-					Methods: []string{"FOO", ""},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
-				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleFactory) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed to expand")
-			},
-		},
-		{
-			uc: "new factory with default rule, consisting of authorizer and finalizer without methods defined",
-			config: &config.Configuration{
-				Default: &config.DefaultRule{
-					Execute: []config.MechanismConfig{
-						{"authenticator": "bar"},
-						{"finalizer": "baz"},
-					},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
-				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleFactory) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no methods defined")
-			},
-		},
-		{
 			uc: "new factory with default rule, configured with all required elements",
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 					},
-					Methods: []string{"FOO"},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
@@ -447,8 +324,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
-				assert.Equal(t, config2.EncodedSlashesOff, defRule.encodedSlashesHandling)
-				assert.ElementsMatch(t, defRule.allowedMethods, []string{"FOO"})
+				assert.Equal(t, config2.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Empty(t, defRule.sh)
 				assert.Empty(t, defRule.fi)
@@ -469,7 +345,6 @@ func TestRuleFactoryNew(t *testing.T) {
 						{"error_handler": "foobar"},
 						{"error_handler": "barfoo"},
 					},
-					Methods: []string{"FOO", "BAR"},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
@@ -494,8 +369,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
-				assert.Equal(t, config2.EncodedSlashesOff, defRule.encodedSlashesHandling)
-				assert.ElementsMatch(t, defRule.allowedMethods, []string{"FOO", "BAR"})
+				assert.Equal(t, config2.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Len(t, defRule.sh, 2)
 				assert.Len(t, defRule.fi, 1)
@@ -559,12 +433,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "with bad host expression",
+			uc: "with error while creating request matcher",
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
 					Path: "/foo/bar",
-					With: config2.MatcherConstraints{HostRegex: "?>?<*??"},
+					With: &config2.MatcherConstraints{HostRegex: "?>?<*??"},
 				},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
@@ -573,23 +447,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "filed to compile host expression")
-			},
-		},
-		{
-			uc: "with bad path expression",
-			config: config2.Rule{
-				ID: "foobar",
-				Matcher: config2.Matcher{
-					Path: "/foo/bar",
-					With: config2.MatcherConstraints{PathGlob: "!*][)(*"},
-				},
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "filed to compile path expression")
 			},
 		},
 		{
@@ -645,34 +502,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "without default rule and with authenticator and finalizer configured, with error while expanding methods",
+			uc: "without default rule and minimum required configuration in decision mode",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO", ""}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"finalizer": "bar"},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed to expand")
-			},
-		},
-		{
-			uc: "without default rule but with minimum required configuration in decision mode",
-			config: config2.Rule{
-				ID:      "foobar",
-				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO", "BAR"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 				},
@@ -691,12 +524,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOff, rul.encodedSlashesHandling)
-				assert.Empty(t, rul.allowedScheme)
+				assert.Equal(t, config2.EncodedSlashesOff, rul.slashesHandling)
+				assert.NotNil(t, rul.matcher)
 				assert.Equal(t, "/foo/bar", rul.PathExpression())
-				assert.IsType(t, alwaysMatcher{}, rul.hostMatcher)
-				assert.IsType(t, alwaysMatcher{}, rul.pathMatcher)
-				assert.ElementsMatch(t, rul.allowedMethods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
 				assert.Empty(t, rul.sh)
 				assert.Empty(t, rul.fi)
@@ -704,12 +534,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc:     "without default rule but with minimum required configuration in proxy mode",
+			uc:     "without default rule and minimum required configuration in proxy mode",
 			opMode: config.ProxyMode,
 			config: config2.Rule{
 				ID:      "foobar",
 				Backend: &config2.Backend{Host: "foo.bar"},
-				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO", "BAR"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 				},
@@ -728,12 +558,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOff, rul.encodedSlashesHandling)
-				assert.Empty(t, rul.allowedScheme)
+				assert.Equal(t, config2.EncodedSlashesOff, rul.slashesHandling)
+				assert.NotNil(t, rul.matcher)
 				assert.Equal(t, "/foo/bar", rul.PathExpression())
-				assert.IsType(t, alwaysMatcher{}, rul.hostMatcher)
-				assert.IsType(t, alwaysMatcher{}, rul.pathMatcher)
-				assert.ElementsMatch(t, rul.allowedMethods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
 				assert.Empty(t, rul.sh)
 				assert.Empty(t, rul.fi)
@@ -748,11 +575,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: config2.Matcher{Path: "/foo/bar"},
 			},
 			defaultRule: &ruleImpl{
-				allowedMethods: []string{"FOO"},
-				sc:             compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
-				sh:             compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				fi:             compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				eh:             compositeErrorHandler{&mocks.ErrorHandlerMock{}},
+				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -763,11 +589,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Empty(t, rul.allowedScheme)
+				assert.NotNil(t, rul.matcher)
 				assert.Equal(t, "/foo/bar", rul.PathExpression())
-				assert.IsType(t, alwaysMatcher{}, rul.hostMatcher)
-				assert.IsType(t, alwaysMatcher{}, rul.pathMatcher)
-				assert.Empty(t, rul.allowedMethods)
 				assert.Len(t, rul.sc, 1)
 				assert.Len(t, rul.sh, 1)
 				assert.Len(t, rul.fi, 1)
@@ -779,12 +602,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
-					Path:    "/foo/:resource",
-					Methods: []string{"BAR", "BAZ"},
-					With: config2.MatcherConstraints{
+					Path: "/foo/:resource",
+					With: &config2.MatcherConstraints{
 						Scheme:    "https",
 						HostGlob:  "**.example.com",
 						PathRegex: "^/foo/(bar|baz)",
+						Methods:   []string{"BAR", "BAZ"},
 					},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOnNoDecode,
@@ -799,11 +622,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				allowedMethods: []string{"FOO"},
-				sc:             compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
-				sh:             compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				fi:             compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				eh:             compositeErrorHandler{&mocks.ErrorHandlerMock{}},
+				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
@@ -828,14 +650,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOnNoDecode, rul.encodedSlashesHandling)
-				assert.Equal(t, "https", rul.allowedScheme)
+				assert.Equal(t, config2.EncodedSlashesOnNoDecode, rul.slashesHandling)
 				assert.Equal(t, "/foo/:resource", rul.PathExpression())
-				require.IsType(t, &globMatcher{}, rul.hostMatcher)
-				assert.True(t, rul.hostMatcher.Match("foo.example.com"))
-				require.IsType(t, &regexpMatcher{}, rul.pathMatcher)
-				assert.True(t, rul.pathMatcher.Match("/foo/bar"))
-				assert.ElementsMatch(t, rul.allowedMethods, []string{"BAR", "BAZ"})
+				assert.NotNil(t, rul.matcher)
 
 				// nil checks above mean the responses from the mockHandlerFactory are used
 				// and not the values from the default rule
@@ -856,12 +673,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
-					Path:    "/foo/:resource",
-					Methods: []string{"BAR", "BAZ"},
-					With: config2.MatcherConstraints{
+					Path: "/foo/:resource",
+					With: &config2.MatcherConstraints{
 						Scheme:    "https",
 						HostGlob:  "**.example.com",
 						PathRegex: "^/foo/(bar|baz)",
+						Methods:   []string{"BAR", "BAZ"},
 					},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOn,
@@ -885,11 +702,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				allowedMethods: []string{"FOO"},
-				sc:             compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
-				sh:             compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				fi:             compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				eh:             compositeErrorHandler{&mocks.ErrorHandlerMock{}},
+				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
@@ -914,14 +730,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOn, rul.encodedSlashesHandling)
-				assert.Equal(t, "https", rul.allowedScheme)
+				assert.Equal(t, config2.EncodedSlashesOn, rul.slashesHandling)
 				assert.Equal(t, "/foo/:resource", rul.PathExpression())
-				require.IsType(t, &globMatcher{}, rul.hostMatcher)
-				assert.True(t, rul.hostMatcher.Match("foo.example.com"))
-				require.IsType(t, &regexpMatcher{}, rul.pathMatcher)
-				assert.True(t, rul.pathMatcher.Match("/foo/bar"))
-				assert.ElementsMatch(t, rul.allowedMethods, []string{"BAR", "BAZ"})
+				assert.NotNil(t, rul.matcher)
 				assert.Equal(t, "https://bar.foo/baz/bar?foo=bar", rul.backend.CreateURL(&url.URL{
 					Scheme:   "http",
 					Host:     "foo.bar:8888",
@@ -947,7 +758,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with conditional execution configuration type error",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"finalizer": "bar", "if": 1},
@@ -970,7 +781,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with empty conditional execution configuration",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"finalizer": "bar", "if": ""},
@@ -993,7 +804,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with conditional execution for some mechanisms",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"authorizer": "bar", "if": "false"},
@@ -1023,11 +834,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Empty(t, rul.allowedScheme)
 				assert.Equal(t, "/foo/bar", rul.PathExpression())
-				assert.IsType(t, alwaysMatcher{}, rul.hostMatcher)
-				assert.IsType(t, alwaysMatcher{}, rul.pathMatcher)
-				assert.ElementsMatch(t, rul.allowedMethods, []string{"FOO"})
+				assert.NotNil(t, rul.matcher)
 
 				require.Len(t, rul.sc, 1)
 				assert.NotNil(t, rul.sc[0])
@@ -1061,7 +869,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc: "with conditional execution for error handler",
 			config: config2.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Path: "/foo/bar", Methods: []string{"FOO"}},
+				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"authorizer": "bar"},
@@ -1097,11 +905,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Empty(t, rul.allowedScheme)
 				assert.Equal(t, "/foo/bar", rul.PathExpression())
-				assert.IsType(t, alwaysMatcher{}, rul.hostMatcher)
-				assert.IsType(t, alwaysMatcher{}, rul.pathMatcher)
-				assert.ElementsMatch(t, rul.allowedMethods, []string{"FOO"})
+				assert.NotNil(t, rul.matcher)
 
 				require.Len(t, rul.sc, 1)
 				assert.NotNil(t, rul.sc[0])
@@ -1193,67 +998,6 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 
 			// THEN
 			tc.assert(t, conf)
-		})
-	}
-}
-
-func TestExpandHTTPMethods(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc          string
-		configured  []string
-		expected    []string
-		shouldError bool
-	}{
-		{
-			uc: "empty configuration",
-		},
-		{
-			uc:          "empty method in list",
-			configured:  []string{"FOO", ""},
-			shouldError: true,
-		},
-		{
-			uc:         "duplicates should be removed",
-			configured: []string{"BAR", "BAZ", "BAZ", "FOO", "FOO", "ZAB"},
-			expected:   []string{"BAR", "BAZ", "FOO", "ZAB"},
-		},
-		{
-			uc:         "only ALL configured",
-			configured: []string{"ALL"},
-			expected: []string{
-				http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions,
-				http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace,
-			},
-		},
-		{
-			uc:         "ALL without POST and TRACE",
-			configured: []string{"ALL", "!POST", "!TRACE"},
-			expected: []string{
-				http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead,
-				http.MethodOptions, http.MethodPatch, http.MethodPut,
-			},
-		},
-		{
-			uc:         "ALL with duplicates and without POST and TRACE",
-			configured: []string{"ALL", "GET", "!POST", "!TRACE", "!TRACE"},
-			expected: []string{
-				http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead,
-				http.MethodOptions, http.MethodPatch, http.MethodPut,
-			},
-		},
-	} {
-		t.Run(tc.uc, func(t *testing.T) {
-			// WHEN
-			res, err := expandHTTPMethods(tc.configured)
-
-			// THEN
-			if tc.shouldError {
-				require.Error(t, err)
-			} else {
-				require.Equal(t, tc.expected, res)
-			}
 		})
 	}
 }

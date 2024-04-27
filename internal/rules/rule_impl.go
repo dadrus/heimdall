@@ -18,7 +18,6 @@ package rules
 
 import (
 	"net/url"
-	"slices"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -26,24 +25,22 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ruleImpl struct {
-	id                     string
-	encodedSlashesHandling config.EncodedSlashesHandling
-	pathExpression         string
-	allowedScheme          string
-	hostMatcher            PatternMatcher
-	pathMatcher            PatternMatcher
-	allowedMethods         []string
-	backend                *config.Backend
-	srcID                  string
-	isDefault              bool
-	hash                   []byte
-	sc                     compositeSubjectCreator
-	sh                     compositeSubjectHandler
-	fi                     compositeSubjectHandler
-	eh                     compositeErrorHandler
+	id              string
+	srcID           string
+	isDefault       bool
+	hash            []byte
+	pathExpression  string
+	matcher         config.RequestMatcher
+	slashesHandling config.EncodedSlashesHandling
+	backend         *config.Backend
+	sc              compositeSubjectCreator
+	sh              compositeSubjectHandler
+	fi              compositeSubjectHandler
+	eh              compositeErrorHandler
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
@@ -60,12 +57,18 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	// unescape captures
 	captures := request.URL.Captures
 	for k, v := range captures {
-		captures[k] = unescape(v, r.encodedSlashesHandling)
+		captures[k] = unescape(v, r.slashesHandling)
 	}
 
-	// unescape path
-	if r.encodedSlashesHandling == config.EncodedSlashesOn {
+	switch r.slashesHandling { //nolint:exhaustive
+	case config.EncodedSlashesOn:
+		// unescape path
 		request.URL.RawPath = ""
+	case config.EncodedSlashesOff:
+		if strings.Contains(request.URL.RawPath, "%2F") {
+			return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
+				"path contains encoded slash, which is not allowed")
+		}
 	}
 
 	// authenticators
@@ -101,46 +104,8 @@ func (r *ruleImpl) Matches(ctx heimdall.Context) bool {
 
 	logger.Debug().Msg("Matching rule")
 
-	// fastest checks first
-	// match scheme
-	if len(r.allowedScheme) != 0 && r.allowedScheme != request.URL.Scheme {
-		logger.Debug().Msg("Allowed scheme mismatch")
-
-		return false
-	}
-
-	// match methods
-	if !slices.Contains(r.allowedMethods, request.Method) {
-		logger.Debug().Msg("Allowed method mismatch")
-
-		return false
-	}
-
-	// check encoded slash handling
-	if r.encodedSlashesHandling == config.EncodedSlashesOff && strings.Contains(request.URL.RawPath, "%2F") {
-		logger.Debug().Msg("Path contains encoded slashes, which is not allowed")
-
-		return false
-	}
-
-	// match host
-	if !r.hostMatcher.Match(request.URL.Host) {
-		logger.Debug().Msg("Host does not satisfy configured expression")
-
-		return false
-	}
-
-	// match path
-	var path string
-	if len(request.URL.RawPath) == 0 || r.encodedSlashesHandling == config.EncodedSlashesOn {
-		path = request.URL.Path
-	} else {
-		unescaped, _ := url.PathUnescape(strings.ReplaceAll(request.URL.RawPath, "%2F", "$$$escaped-slash$$$"))
-		path = strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
-	}
-
-	if !r.pathMatcher.Match(path) {
-		logger.Debug().Msgf("Path %s does not satisfy configured expression", request.URL.Path)
+	if err := r.matcher.Matches(request); err != nil {
+		logger.Debug().Err(err).Msg("Request does not satisfy matching conditions")
 
 		return false
 	}

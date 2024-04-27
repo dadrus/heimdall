@@ -244,7 +244,6 @@ rules:
 - id: foo
   match:
     path: /foo
-    methods: [ GET ]
   execute:
     - authenticator: test
 `
@@ -293,7 +292,6 @@ rules:
 - id: foo
   match:
     path: /foo
-    methods: [ GET ]
   execute:
     - authenticator: test
 `
@@ -347,7 +345,6 @@ rules:
 - id: foo
   match:
     path: /foo
-    methods: [ GET ]
   execute:
     - authenticator: test
 `
@@ -366,7 +363,6 @@ rules:
 - id: bar
   match:
     path: /bar
-    methods: [ GET ]
   execute:
     - authenticator: test
 `
@@ -443,7 +439,6 @@ rules:
 - id: foo
   match:
     path: /foo
-    methods: [ GET ]
   execute:
     - authenticator: test
 `
@@ -459,7 +454,6 @@ rules:
 - id: bar
   match:
     path: /bar
-    methods: [ GET ]
   execute:
     - authenticator: test
 `
@@ -475,7 +469,6 @@ rules:
 - id: baz
   match:
     path: /baz
-    methods: [ GET ]
   execute:
     - authenticator: test
 `

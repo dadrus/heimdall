@@ -18,16 +18,19 @@ package rules
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/config"
+	mocks2 "github.com/dadrus/heimdall/internal/rules/config/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -45,102 +48,29 @@ func TestRuleMatches(t *testing.T) {
 		matches bool
 	}{
 		{
-			uc: "doesn't match scheme",
+			uc: "doesn't match",
 			rule: &ruleImpl{
-				hostMatcher:            testMatcher(true),
-				pathMatcher:            testMatcher(true),
-				allowedScheme:          "https",
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOn,
+				matcher: func() config.RequestMatcher {
+					rm := mocks2.NewRequestMatcherMock(t)
+					rm.EXPECT().Matches(mock.Anything).Return(errors.New("test error"))
+
+					return rm
+				}(),
 			},
 			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
 			matches: false,
 		},
 		{
-			uc: "doesn't match method",
+			uc: "matches",
 			rule: &ruleImpl{
-				hostMatcher:            testMatcher(true),
-				pathMatcher:            testMatcher(true),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOn,
+				matcher: func() config.RequestMatcher {
+					rm := mocks2.NewRequestMatcherMock(t)
+					rm.EXPECT().Matches(mock.Anything).Return(nil)
+
+					return rm
+				}(),
 			},
 			toMatch: &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{}},
-			matches: false,
-		},
-		{
-			uc: "doesn't match due to not allowed encoded slash",
-			rule: &ruleImpl{
-				hostMatcher:            testMatcher(true),
-				pathMatcher:            testMatcher(true),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOff,
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
-			matches: false,
-		},
-		{
-			uc: "doesn't match host",
-			rule: &ruleImpl{
-				hostMatcher:            testMatcher(false),
-				pathMatcher:            testMatcher(true),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOn,
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
-			matches: false,
-		},
-		{
-			uc: "doesn't match path with allowed encoded slashes",
-			rule: &ruleImpl{
-				hostMatcher:            testMatcher(true),
-				pathMatcher:            testMatcher(false),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOn,
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
-			matches: false,
-		},
-		{
-			uc: "doesn't match path with encoded slash with allowed encoded slashes without decoding them",
-			rule: &ruleImpl{
-				hostMatcher:            testMatcher(true),
-				pathMatcher:            testMatcher(false),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOnNoDecode,
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
-			matches: false,
-		},
-		{
-			uc: "match path with encoded slash with allowed encoded slashes without decoding them",
-			rule: &ruleImpl{
-				hostMatcher: testMatcher(true),
-				pathMatcher: func() PatternMatcher {
-					matcher := &mocks.PatternMatcherMock{}
-					matcher.EXPECT().Match("/foo%2Fbar").Return(true)
-
-					return matcher
-				}(),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOnNoDecode,
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
-			matches: true,
-		},
-		{
-			uc: "match path with encoded slash with allowed encoded slashes with decoding them",
-			rule: &ruleImpl{
-				hostMatcher: testMatcher(true),
-				pathMatcher: func() PatternMatcher {
-					matcher := &mocks.PatternMatcherMock{}
-					matcher.EXPECT().Match("/foo/bar").Return(true)
-
-					return matcher
-				}(),
-				allowedMethods:         []string{http.MethodGet},
-				encodedSlashesHandling: config.EncodedSlashesOn,
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: url.URL{Path: "/foo/bar", RawPath: "/foo%2Fbar"}}},
 			matches: true,
 		},
 	} {
@@ -325,41 +255,30 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "all handler succeed with disallowed urlencoded slashes",
+			uc:            "all handler succeed with disallowed urlencoded slashes",
+			slashHandling: config.EncodedSlashesOff,
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
-				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
-				_ *mocks.ErrorHandlerMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, _ *mocks.SubjectCreatorMock,
+				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock, _ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
-
-				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
+				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{
 					URL: &heimdall.URL{
 						URL:      *targetURL,
-						Captures: map[string]string{"first": "api", "second": "v1", "third": "foo%5Bid%5D"},
+						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, _ rule.Backend, _ map[string]string) {
 				t.Helper()
 
-				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
-				assert.Equal(t, expectedURL, backend.URL())
-
-				assert.Equal(t, "api", captures["first"])
-				assert.Equal(t, "v1", captures["second"])
-				assert.Equal(t, "foo[id]", captures["third"])
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorContains(t, err, "path contains encoded slash")
 			},
 		},
 		{
@@ -519,12 +438,12 @@ func TestRuleExecute(t *testing.T) {
 			errHandler := mocks.NewErrorHandlerMock(t)
 
 			rul := &ruleImpl{
-				backend:                tc.backend,
-				encodedSlashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, config.EncodedSlashesOff),
-				sc:                     compositeSubjectCreator{authenticator},
-				sh:                     compositeSubjectHandler{authorizer},
-				fi:                     compositeSubjectHandler{finalizer},
-				eh:                     compositeErrorHandler{errHandler},
+				backend:         tc.backend,
+				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, config.EncodedSlashesOff),
+				sc:              compositeSubjectCreator{authenticator},
+				sh:              compositeSubjectHandler{authorizer},
+				fi:              compositeSubjectHandler{finalizer},
+				eh:              compositeErrorHandler{errHandler},
 			}
 
 			tc.configureMocks(t, ctx, authenticator, authorizer, finalizer, errHandler)

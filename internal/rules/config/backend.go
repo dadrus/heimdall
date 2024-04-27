@@ -27,28 +27,24 @@ type Backend struct {
 	URLRewriter *URLRewriter `json:"rewrite" yaml:"rewrite" validate:"omitnil"`  //nolint:tagalign
 }
 
-func (f *Backend) CreateURL(value *url.URL) *url.URL {
+func (b *Backend) CreateURL(value *url.URL) *url.URL {
 	upstreamURL := &url.URL{
 		Scheme:   value.Scheme,
-		Host:     f.Host,
+		Host:     b.Host,
 		Path:     value.Path,
 		RawPath:  value.RawPath,
 		RawQuery: value.RawQuery,
 	}
 
-	if f.URLRewriter != nil {
-		f.URLRewriter.Rewrite(upstreamURL)
+	if b.URLRewriter != nil {
+		b.URLRewriter.Rewrite(upstreamURL)
 	}
 
 	return upstreamURL
 }
 
-func (f *Backend) DeepCopyInto(out *Backend) {
-	if f == nil {
-		return
-	}
-
-	jsonStr, _ := json.Marshal(f)
+func (b *Backend) DeepCopyInto(out *Backend) {
+	jsonStr, _ := json.Marshal(b)
 
 	// we cannot do anything with an error here as
 	// the interface implemented here doesn't support

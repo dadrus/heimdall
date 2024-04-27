@@ -189,10 +189,10 @@ func TestFetchRuleSets(t *testing.T) {
 		"id": "foobar",
         "match": {
           "path": "/foo/bar/api1",
-		  "methods": ["GET", "POST"],
           "with": {
             "scheme": "http",
-            "host_glob": "**"
+            "host_glob": "**",
+            "methods": ["GET", "POST"]
           }
         },
 		"execute": [
@@ -208,12 +208,12 @@ rules:
 - id: barfoo
   match:
     path: /foo/bar/api2
-    methods: 
-    - GET
-    - POST
     with:
       scheme: http
       host_glob: "**"
+      methods: 
+        - GET
+        - POST
   execute:
   - authenticator: barfoo
 `
@@ -265,10 +265,10 @@ rules:
 					"id": "foobar",
                     "match": {
                       "path": "/foo/bar/api1",
-		              "methods": ["GET", "POST"],
                       "with": {
                         "scheme": "http",
-                        "host_glob": "**"
+                        "host_glob": "**",
+                        "methods": ["GET", "POST"]
                       }
                     },
 					"execute": [
@@ -283,10 +283,10 @@ rules:
 					"id": "barfoo",
                     "match": {
                       "path": "/foo/bar/api2",
-		              "methods": ["GET", "POST"],
                       "with": {
                         "scheme": "http",
-                        "host_glob": "**"
+                        "host_glob": "**",
+                        "methods": ["GET", "POST"]
                       }
                     },
 					"execute": [
@@ -383,10 +383,10 @@ rules:
 					"id": "foobar",
                     "match": {
                       "path": "/foo/bar/api1",
-		              "methods": ["GET", "POST"],
                       "with": {
                         "scheme": "http",
-                        "host_glob": "**"
+                        "host_glob": "**",
+                        "methods": ["GET", "POST"]
                       }
                     },
 					"execute": [
