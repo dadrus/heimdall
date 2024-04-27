@@ -4,10 +4,10 @@ rules:
 - id: rule:foo
   match:
     path: /**
-    methods:
+    with:
+      methods:
       - GET
       - POST
-    with:
       host_glob: foo.bar
       scheme: http
   forward_to:
