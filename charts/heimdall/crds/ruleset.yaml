@@ -76,43 +76,42 @@ spec:
                         type: object
                         required:
                           - path
-                          - methods
                         properties:
                           path:
                             description: The path to match
                             type: string
                             maxLength: 256
-                          methods:
-                            description: The HTTP methods to match
-                            type: array
-                            minItems: 1
-                            items:
-                              type: string
-                              maxLength: 16
-                              enum:
-                                - "CONNECT"
-                                - "!CONNECT"
-                                - "DELETE"
-                                - "!DELETE"
-                                - "GET"
-                                - "!GET"
-                                - "HEAD"
-                                - "!HEAD"
-                                - "OPTIONS"
-                                - "!OPTIONS"
-                                - "PATCH"
-                                - "!PATCH"
-                                - "POST"
-                                - "!POST"
-                                - "PUT"
-                                - "!PUT"
-                                - "TRACE"
-                                - "!TRACE"
-                                - "ALL"
                           with:
                             description: Additional constraints during request matching
                             type: object
                             properties:
+                              methods:
+                                description: The HTTP methods to match
+                                type: array
+                                minItems: 1
+                                items:
+                                  type: string
+                                  maxLength: 16
+                                  enum:
+                                    - "CONNECT"
+                                    - "!CONNECT"
+                                    - "DELETE"
+                                    - "!DELETE"
+                                    - "GET"
+                                    - "!GET"
+                                    - "HEAD"
+                                    - "!HEAD"
+                                    - "OPTIONS"
+                                    - "!OPTIONS"
+                                    - "PATCH"
+                                    - "!PATCH"
+                                    - "POST"
+                                    - "!POST"
+                                    - "PUT"
+                                    - "!PUT"
+                                    - "TRACE"
+                                    - "!TRACE"
+                                    - "ALL"
                               scheme:
                                 description: The HTTP scheme, which should be matched. If not set, http and https are matched
                                 type: string

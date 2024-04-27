@@ -27,8 +27,6 @@ spec:
     - id: public-access
       match:
         path: /pub/**
-        methods:
-          - ALL
       forward_to:
         host: {{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
       execute:
@@ -38,8 +36,6 @@ spec:
     - id: anonymous-access
       match:
         path: /anon/**
-        methods:
-          - ALL
       forward_to:
         host: {{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
       execute:
