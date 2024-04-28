@@ -44,15 +44,17 @@ WARNING: All environment variables, used in the rule set files must be known in 
 ====
 [source, yaml]
 ----
-version: "1alpha3"
+version: "1alpha4"
 name: my-rule-set
 rules:
 - id: rule:1
   match:
-    url: https://my-service1.local/<**>
+    path: /**
+    with:
+      host_glob: my-service1.local
+      methods: [ "GET" ]
   forward_to:
     host: ${UPSTREAM_HOST:="default-backend:8080"}
-  methods: [ "GET" ]
   execute:
     - authorizer: foobar
 ----

@@ -72,6 +72,7 @@ This object contains information about the request handled by heimdall and has t
 +
 The HTTP method used, like `GET`, `POST`, etc.
 
+[#_url_captures]
 * *`URL`*: _URL_
 +
 The URL of the matched request. This object has the following properties and methods:
@@ -79,21 +80,30 @@ The URL of the matched request. This object has the following properties and met
 ** *`Scheme`*: _string_
 +
 The HTTP scheme part of the url
+
 ** *`Host`*: _string_
 +
 The host part of the url
+
 ** *`Path`*: _string_
 +
 The path part of the url
+
 ** *`RawQuery`*: _string_
 +
 The raw query part of the url.
+
 ** *`String()`*: _method_
 +
 This method returns the URL as valid URL string of a form `scheme:host/path?query`.
+
 ** *`Query()`*: _method_
 +
 The parsed query with each key-value pair being a string to array of strings mapping.
+
+** *`Captures`*: _map_
++
+Allows accessing of the values captured by the named wildcards used in the matching path expression of the rule.
 
 * *`ClientIPAddresses`*: _string array_
 +
@@ -152,8 +162,9 @@ Request = {
   Url: {
     Scheme: "https",
     Host: "localhost",
-    Path: "/test",
-    RawQuery: "baz=zab&baz=bar&foo=bar"
+    Path: "/test/abc",
+    RawQuery: "baz=zab&baz=bar&foo=bar",
+    Captures: { "value": "abc" }
   },
   ClientIP: ["127.0.0.1", "10.10.10.10"]
 }

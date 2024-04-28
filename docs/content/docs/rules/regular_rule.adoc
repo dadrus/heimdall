@@ -24,41 +24,43 @@ The unique identifier of a rule. It must be unique across all rules loaded by th
 
 * *`match`*: _RuleMatcher_ (mandatory)
 +
-Defines how to match a rule and supports the following properties:
+Defines how to match a rule and supports the following properties (see also link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details):
 
-** *`scheme`*: _string_ (optional)
+** *`path`*: _link:{{< relref "#_path_expression" >}}[PathExpression]_ (mandatory)
 +
-Which HTTP scheme is allowed. If not specified, both http and https are accepted.
+The path expression describing the paths of incoming requests this rule is supposed to match. Supports usage of simple and free (named) wildcards.
 
-** *`host_glob`*: _string_ (optional)
+** *`backtracking_enabled`*: _boolean_ (optional)
 +
-Glob expression to match the host. Used after the rule is matched with the `path` definition (see below). Mutually exclusive with `host_regex`.
-+
-Head over to https://github.com/gobwas/glob[gobwas/glob] to get more insights about possible options.
+Whether to allow backtracking if a request is matched based on the `path` expression, but the additional matching conditions (see below) are not satisfied. Defaults to `false`.
 
-** *`host_regex`*: _string_ (optional)
+** *`with`*: _MatchConditions_ (optional)
 +
-Regular expression to match the host. Used after the rule is matched with the `path` definition (see below). Mutually exclusive with `host_glob`.
+Additional conditions, which all must hold true to have the request matched and the pipeline of this rule executed. This way, you can define different rules for the same path but with different conditions, e.g. to define separate rules for read and write requests to the same resource.
 
-** *`path`*: _PathExpression_ (mandatory)
+*** *`path_glob`*: _string_ (optional)
 +
-Definitions on how to match the path.
+A https://github.com/gobwas/glob[glob expression], which should be satisfied by the path of the incoming request. Mutually exclusive with `path_regex`.
 
-*** *`expression`*: _string_ (mandatory)
+*** *`path_regex`*: _string_ (optional)
 +
-The actual matching expression. Simple and free (named and unnamed) wildcards can be used
+A regular expression, which should be satisfied by the path of the incoming request. Mutually exclusive with `path_glob`.
 
-*** *`glob`*: _string_ (optional)
+*** *`scheme`*: _string_ (optional)
 +
-An additional glob expression, which should be satisfied after the request has been matched by the `expression` value. Mutually exclusive with `regex`.
+Expected HTTP scheme. If not specified, both http and https are accepted.
 
-*** *`regex`*: _string_ (optional)
+*** *`host_glob`*: _string_ (optional)
 +
-An additional regular expression, which should be satisfied after the request has been matched by the `expression` value. Mutually exclusive with `glob`.
+A https://github.com/gobwas/glob[glob expression] which should be satisfied by the host of the incoming request. Mutually exclusive with `host_regex`.
 
-** *`methods`*: _string array_ (optional)
+*** *`host_regex`*: _string_ (optional)
 +
-Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, no rule will feel responsible resulting in `404 Not Found` response from heimdall. If all methods should be allowed, one can use a special `ALL` placeholder. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
+Regular expression to match the host. Mutually exclusive with `host_glob`.
+
+*** *`methods`*: _string array_ (optional)
++
+Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. If not specified, all methods are allowed. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
 +
 .Methods list which effectively expands to all HTTP methods
 ====
@@ -85,8 +87,8 @@ methods:
 Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests. Can be set to the one of the following values, defaulting to `off`:
 
 ** *`off`* - Reject requests containing encoded slashes. Means, if the request URL contains an url-encoded slash (`%2F`), the rule will not match it.
-** *`on`* - Accept requests using encoded slashes, decoding them and making it transparent for the rules and the upstream url. That is, the `%2F` becomes a `/` and will be treated as such in all places.
-** *`no_decode`* - Accept requests using encoded slashes, but not touching them and showing them to the rules and the upstream. That is, the `%2F` just remains as is.
+** *`on`* - Accept requests with encoded slashes. As soon as a rule is matched, encoded slashes present in the path of the request are, decoded and made transparent for the matched rule and the upstream service. That is, the `%2F` becomes a `/` and will be treated as such in all places.
+** *`no_decode`* - Accept requests using encoded slashes without touching them. That is, the `%2F` just remains as is.
 
 +
 CAUTION: Since the proxy integrating with heimdall, heimdall by itself, and the upstream service, all may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities resulting in privilege escalations.
@@ -135,16 +137,18 @@ Which error handler mechanisms to use if any of the mechanisms, defined in the `
 ----
 id: rule:foo:bar
 match:
-  url: http://my-service.local/<**>
-  strategy: glob
+  path: /**
+  with:
+    scheme: http
+    host_glob: my-service.local
+    methods:
+      - GET
+      - POST
 forward_to:
   host: backend-a:8080
   rewrite:
     scheme: http
     strip_path_prefix: /api/v1
-methods:
-  - GET
-  - POST
 execute:
   # the following just demonstrates how to make use of specific
   # mechanisms in the simplest possible form
@@ -165,6 +169,108 @@ on_error:
   - error_handler: foobar
 ----
 ====
+
+== Path Expression
+
+Path expressions are used to match the incoming requests. When specifying these, you can make use of two types of wildcards:
+
+- free wildcard, which can be defined using `*` and
+- single wildcard, which can be defined using `:`
+
+Both can be named and unnamed, with named wildcards allowing accessing of the matched segments in the pipeline of the rule using the defined name as a key on the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[`Request.URL.Captures`] object. Unnamed free wildcard is defined as `\**` and unnamed single wildcard is defined as `:*`. A named wildcard uses some identifier instead of the `*`, so like `*name` for free wildcard and `:name` for single wildcard.
+
+The value of the path segment, respectively path segments available via the wildcard name is decoded. E.g. if you define the to be matched path in a rule as `/file/:name`, and the actual path of the request is `/file/%5Bid%5D`, you'll get `[id]` when accessing the captured path segment via the `name` key. Not every path encoded value is decoded though. Decoding of encoded slashes happens only if `allow_encoded_slashes` was set to `on`.
+
+There are some simple rules, which must be followed while using wildcards:
+
+- One can use as many single wildcards, as needed in any segment
+- A segment must start with `:` or `*` to define a wildcard
+- No segments are allowed after a free (named) wildcard
+- If a regular segment must start with `:` or `*`, but should not be considered as a wildcard, it must be escaped with `\`.
+
+Here some path examples:
+
+- `/apples/and/bananas` - Matches exactly the given path
+- `/apples/and/:something` - Matches `/apples/and/bananas`, `/apples/and/oranges` and alike, but not `/apples/and/bananas/andmore` or `/apples/or/bananas`. Since a named single wildcard is used, the actual value of the path segment matched by `:something` can be accessed in the rule pipeline using `something` as a key.
+- `/apples/:junction/:something` - Similar to above. But will also match `/apples/or/bananas` in addition to `/apples/and/bananas` and `/apples/and/oranges`.
+- `/apples/and/some:thing` - Matches exactly `/apples/and/some:thing`
+- `/apples/and/some*\*` -  Matches exactly `/apples/and/some**`
+- `/apples/**` - Matches any path starting with `/apples/`, like `/apples/and/bananas` but not `/apples/`.
+- `/apples/*remainingpath` - Same as above, but uses a named free wildcard
+- `/apples/**/bananas` - Is invalid, as there is a path segment after a free wildcard
+- `/apples/\*remainingpath` - Matches exactly `/apples/*remainingpath`
+
+Here is an example demonstrating the usage of a single named wildcard:
+
+[source, yaml]
+----
+id: rule:1
+match:
+  path: /files/:uuid/delete
+  with:
+    host_glob: hosty.mchostface
+  execute:
+    - authorizer: openfga_check
+      config:
+        payload: |
+          {
+            "user": "{{ .Subject.ID }}",
+            "relation": "can_delete",
+            "object": "file:{{ .Request.URL.Captures.uuid }}"
+          }
+----
+
+== Rule Matching Specificity & Backtracking
+
+The implementation ensures, that more specific path expressions are matched first regardless of the placement of rules in a rule set.
+Indeed, the more specific rules are matched first even the corresponding rules are defined in different rule sets.
+
+Same path expressions with different conditions may be defined by multiple rules in the same rule set.
+
+When the path expression is matched to a request, additional conditions, if present in the rule's matching definition, are evaluated. Only if these succeeded, the pipeline of the rule is executed. If there are multiple rules with the same path expressions, their additional condition statements are executed in a sequence until one rule matches. If there is no matching rule, backtracking, if enabled, will take place and the next less specific rule may be matched. Backtracking stops if either
+
+* a less specific rule is successfully matched (incl. the evaluation of additional expressions), or
+* a less specific rule is not matched and does not allow backtracking.
+
+The following examples demonstrates the aspects described above.
+
+Imagine, there are the following rules
+
+[source, yaml]
+----
+id: rule1
+match:
+  path: /files/**
+execute:
+  - <pipeline definition>
+----
+
+[source, yaml]
+----
+id: rule2
+match:
+  path: /files/:team/:name
+  backtracking_enabled: true
+  with:
+    path_regex: ^/files/(team1|team2)/.*
+execute:
+  - <pipeline definition>
+----
+
+[source, yaml]
+----
+id: rule3
+match:
+  path: /files/team3/:name
+execute:
+  - <pipeline definition>
+----
+
+The request to `/files/team1/document.pdf` will be matched by the rule with id `rule2` as it is more specific to `rule1`. So the pipeline of `rule2` will be executed.
+
+The request to `/files/team3/document.pdf` will be matched by the `rule3` as it is more specific than `rule1` and `rule2`. Again the corresponding pipeline will be executed.
+
+However, even the request to  `/files/team4/document.pdf` will be matched by `rule2`, the regular expression `^/files/(team1|team2)/.*` will fail. Here, since `backtracking_enabled` is set to `true` backtracking will start and the request will be matched by the `rule1` and its pipeline will be then executed.
 
 == Authentication & Authorization Pipeline
 
