@@ -10,7 +10,7 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha3 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
+	v1alpha4 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -29,23 +29,23 @@ func (_m *RuleSetRepositoryMock) EXPECT() *RuleSetRepositoryMock_Expecter {
 }
 
 // Get provides a mock function with given fields: ctx, key, opts
-func (_m *RuleSetRepositoryMock) Get(ctx context.Context, key types.NamespacedName, opts v1.GetOptions) (*v1alpha3.RuleSet, error) {
+func (_m *RuleSetRepositoryMock) Get(ctx context.Context, key types.NamespacedName, opts v1.GetOptions) (*v1alpha4.RuleSet, error) {
 	ret := _m.Called(ctx, key, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
-	var r0 *v1alpha3.RuleSet
+	var r0 *v1alpha4.RuleSet
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, types.NamespacedName, v1.GetOptions) (*v1alpha3.RuleSet, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, types.NamespacedName, v1.GetOptions) (*v1alpha4.RuleSet, error)); ok {
 		return rf(ctx, key, opts)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, types.NamespacedName, v1.GetOptions) *v1alpha3.RuleSet); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, types.NamespacedName, v1.GetOptions) *v1alpha4.RuleSet); ok {
 		r0 = rf(ctx, key, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha3.RuleSet)
+			r0 = ret.Get(0).(*v1alpha4.RuleSet)
 		}
 	}
 
@@ -78,34 +78,34 @@ func (_c *RuleSetRepositoryMock_Get_Call) Run(run func(ctx context.Context, key 
 	return _c
 }
 
-func (_c *RuleSetRepositoryMock_Get_Call) Return(_a0 *v1alpha3.RuleSet, _a1 error) *RuleSetRepositoryMock_Get_Call {
+func (_c *RuleSetRepositoryMock_Get_Call) Return(_a0 *v1alpha4.RuleSet, _a1 error) *RuleSetRepositoryMock_Get_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *RuleSetRepositoryMock_Get_Call) RunAndReturn(run func(context.Context, types.NamespacedName, v1.GetOptions) (*v1alpha3.RuleSet, error)) *RuleSetRepositoryMock_Get_Call {
+func (_c *RuleSetRepositoryMock_Get_Call) RunAndReturn(run func(context.Context, types.NamespacedName, v1.GetOptions) (*v1alpha4.RuleSet, error)) *RuleSetRepositoryMock_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *RuleSetRepositoryMock) List(ctx context.Context, opts v1.ListOptions) (*v1alpha3.RuleSetList, error) {
+func (_m *RuleSetRepositoryMock) List(ctx context.Context, opts v1.ListOptions) (*v1alpha4.RuleSetList, error) {
 	ret := _m.Called(ctx, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 *v1alpha3.RuleSetList
+	var r0 *v1alpha4.RuleSetList
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) (*v1alpha3.RuleSetList, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) (*v1alpha4.RuleSetList, error)); ok {
 		return rf(ctx, opts)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha3.RuleSetList); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha4.RuleSetList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha3.RuleSetList)
+			r0 = ret.Get(0).(*v1alpha4.RuleSetList)
 		}
 	}
 
@@ -137,38 +137,38 @@ func (_c *RuleSetRepositoryMock_List_Call) Run(run func(ctx context.Context, opt
 	return _c
 }
 
-func (_c *RuleSetRepositoryMock_List_Call) Return(_a0 *v1alpha3.RuleSetList, _a1 error) *RuleSetRepositoryMock_List_Call {
+func (_c *RuleSetRepositoryMock_List_Call) Return(_a0 *v1alpha4.RuleSetList, _a1 error) *RuleSetRepositoryMock_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *RuleSetRepositoryMock_List_Call) RunAndReturn(run func(context.Context, v1.ListOptions) (*v1alpha3.RuleSetList, error)) *RuleSetRepositoryMock_List_Call {
+func (_c *RuleSetRepositoryMock_List_Call) RunAndReturn(run func(context.Context, v1.ListOptions) (*v1alpha4.RuleSetList, error)) *RuleSetRepositoryMock_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // PatchStatus provides a mock function with given fields: ctx, patch, opts
-func (_m *RuleSetRepositoryMock) PatchStatus(ctx context.Context, patch v1alpha3.Patch, opts v1.PatchOptions) (*v1alpha3.RuleSet, error) {
+func (_m *RuleSetRepositoryMock) PatchStatus(ctx context.Context, patch v1alpha4.Patch, opts v1.PatchOptions) (*v1alpha4.RuleSet, error) {
 	ret := _m.Called(ctx, patch, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PatchStatus")
 	}
 
-	var r0 *v1alpha3.RuleSet
+	var r0 *v1alpha4.RuleSet
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, v1alpha3.Patch, v1.PatchOptions) (*v1alpha3.RuleSet, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, v1alpha4.Patch, v1.PatchOptions) (*v1alpha4.RuleSet, error)); ok {
 		return rf(ctx, patch, opts)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, v1alpha3.Patch, v1.PatchOptions) *v1alpha3.RuleSet); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, v1alpha4.Patch, v1.PatchOptions) *v1alpha4.RuleSet); ok {
 		r0 = rf(ctx, patch, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha3.RuleSet)
+			r0 = ret.Get(0).(*v1alpha4.RuleSet)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, v1alpha3.Patch, v1.PatchOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, v1alpha4.Patch, v1.PatchOptions) error); ok {
 		r1 = rf(ctx, patch, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -190,19 +190,19 @@ func (_e *RuleSetRepositoryMock_Expecter) PatchStatus(ctx interface{}, patch int
 	return &RuleSetRepositoryMock_PatchStatus_Call{Call: _e.mock.On("PatchStatus", ctx, patch, opts)}
 }
 
-func (_c *RuleSetRepositoryMock_PatchStatus_Call) Run(run func(ctx context.Context, patch v1alpha3.Patch, opts v1.PatchOptions)) *RuleSetRepositoryMock_PatchStatus_Call {
+func (_c *RuleSetRepositoryMock_PatchStatus_Call) Run(run func(ctx context.Context, patch v1alpha4.Patch, opts v1.PatchOptions)) *RuleSetRepositoryMock_PatchStatus_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(v1alpha3.Patch), args[2].(v1.PatchOptions))
+		run(args[0].(context.Context), args[1].(v1alpha4.Patch), args[2].(v1.PatchOptions))
 	})
 	return _c
 }
 
-func (_c *RuleSetRepositoryMock_PatchStatus_Call) Return(_a0 *v1alpha3.RuleSet, _a1 error) *RuleSetRepositoryMock_PatchStatus_Call {
+func (_c *RuleSetRepositoryMock_PatchStatus_Call) Return(_a0 *v1alpha4.RuleSet, _a1 error) *RuleSetRepositoryMock_PatchStatus_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *RuleSetRepositoryMock_PatchStatus_Call) RunAndReturn(run func(context.Context, v1alpha3.Patch, v1.PatchOptions) (*v1alpha3.RuleSet, error)) *RuleSetRepositoryMock_PatchStatus_Call {
+func (_c *RuleSetRepositoryMock_PatchStatus_Call) RunAndReturn(run func(context.Context, v1alpha4.Patch, v1.PatchOptions) (*v1alpha4.RuleSet, error)) *RuleSetRepositoryMock_PatchStatus_Call {
 	_c.Call.Return(run)
 	return _c
 }

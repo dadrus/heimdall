@@ -364,7 +364,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -464,7 +464,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -483,7 +483,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 
 				assert.Len(t, *statusList, 1)
@@ -528,7 +528,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -596,7 +596,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -728,7 +728,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -747,7 +747,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -819,7 +819,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -838,7 +838,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1alpha3", ruleSet.Version)
+				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 

@@ -340,8 +340,8 @@ func (p *provider) toRuleSetConfiguration(rs *v1alpha4.RuleSet) *config2.RuleSet
 }
 
 func (p *provider) mapVersion(_ string) string {
-	// currently the only possible version is v1alpha4, which is mapped to the version "1alpha3" used internally
-	return "1alpha3"
+	// currently the only possible version is v1alpha4, which is mapped to the version "1alpha4" used internally
+	return "1alpha4"
 }
 
 func (p *provider) updateStatus(

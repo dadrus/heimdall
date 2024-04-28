@@ -312,7 +312,7 @@ func TestControllerLifecycle(t *testing.T) {
 			setupRuleFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
-				factory.EXPECT().CreateRule("1alpha3", mock.Anything, mock.Anything).
+				factory.EXPECT().CreateRule("1alpha4", mock.Anything, mock.Anything).
 					Once().Return(nil, errors.New("Test error"))
 			},
 			assert: func(t *testing.T, err error, resp *http.Response) {
@@ -407,7 +407,7 @@ func TestControllerLifecycle(t *testing.T) {
 			setupRuleFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
-				factory.EXPECT().CreateRule("1alpha3", mock.Anything, mock.Anything).
+				factory.EXPECT().CreateRule("1alpha4", mock.Anything, mock.Anything).
 					Once().Return(nil, nil)
 			},
 			assert: func(t *testing.T, err error, resp *http.Response) {

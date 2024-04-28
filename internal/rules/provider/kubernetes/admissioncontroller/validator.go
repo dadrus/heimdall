@@ -100,6 +100,6 @@ func (rv *rulesetValidator) ruleSetFrom(req *admission.Request) (*v1alpha4.RuleS
 }
 
 func (rv *rulesetValidator) mapVersion(_ string) string {
-	// currently the only possible version is v1alpha4, which is mapped to the version "1alpha3" used internally
-	return "1alpha3"
+	// currently the only possible version is v1alpha4, which is mapped to the version "1alpha4" used internally
+	return "1alpha4"
 }
