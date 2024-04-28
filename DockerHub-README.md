@@ -107,9 +107,6 @@ mechanisms:
     type: jwt
       
 default_rule:
-  methods:
-  - GET
-  - POST
   execute:
   - authenticator: anonymous_authenticator
   - authorizer: deny_all_requests
@@ -124,11 +121,11 @@ providers:
 Create a rule file (`rule.yaml`) with the following contents:
 
 ```yaml
-version: "1alpha3"
+version: "1alpha4"
 rules:
   - id: test-rule
     match: 
-      url: http://<**>/<**>
+      path: /**
     forward_to:
       host: upstream
     execute:
