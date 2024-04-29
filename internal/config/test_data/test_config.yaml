@@ -488,8 +488,8 @@ providers:
     watch_interval: 5m
     endpoints:
       - url: http://foo.bar/rules.yaml
-        rule_path_match_prefix: /foo
-        enable_http_cache: true
+        http_cache:
+          enabled: true
       - url: http://bar.foo/rules.yaml
         headers:
           bla: bla
@@ -508,10 +508,8 @@ providers:
     buckets:
       - url: gs://my-bucket
         prefix: service1
-        rule_path_match_prefix: /service1
       - url: gs://my-bucket
         prefix: service2
-        rule_path_match_prefix: /service2
       - url: s3://my-bucket/my-rule-set
 
   kubernetes:
