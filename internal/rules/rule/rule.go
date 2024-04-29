@@ -28,5 +28,6 @@ type Rule interface {
 	Execute(ctx heimdall.Context) (Backend, error)
 	Matches(ctx heimdall.Context) bool
 	PathExpression() string
+	BacktrackingEnabled() bool
 	SameAs(other Rule) bool
 }

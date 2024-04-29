@@ -173,11 +173,14 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, err
 	}
 
+	var defaultBacktracking bool
+
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
 		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
+		defaultBacktracking = f.defaultRule.allowsBacktracking
 	}
 
 	if len(authenticators) == 0 {
@@ -189,19 +192,24 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, err
 	}
 
+	allowsBacktracking := x.IfThenElseExec(ruleConfig.Matcher.BacktrackingEnabled != nil,
+		func() bool { return *ruleConfig.Matcher.BacktrackingEnabled },
+		func() bool { return defaultBacktracking })
+
 	return &ruleImpl{
-		id:              ruleConfig.ID,
-		srcID:           srcID,
-		isDefault:       false,
-		slashesHandling: slashesHandling,
-		matcher:         matcher,
-		pathExpression:  ruleConfig.Matcher.Path,
-		backend:         ruleConfig.Backend,
-		hash:            hash,
-		sc:              authenticators,
-		sh:              subHandlers,
-		fi:              finalizers,
-		eh:              errorHandlers,
+		id:                 ruleConfig.ID,
+		srcID:              srcID,
+		isDefault:          false,
+		allowsBacktracking: allowsBacktracking,
+		slashesHandling:    slashesHandling,
+		matcher:            matcher,
+		pathExpression:     ruleConfig.Matcher.Path,
+		backend:            ruleConfig.Backend,
+		hash:               hash,
+		sc:                 authenticators,
+		sh:                 subHandlers,
+		fi:                 finalizers,
+		eh:                 errorHandlers,
 	}, nil
 }
 
@@ -268,14 +276,15 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	f.defaultRule = &ruleImpl{
-		id:              "default",
-		slashesHandling: config2.EncodedSlashesOff,
-		srcID:           "config",
-		isDefault:       true,
-		sc:              authenticators,
-		sh:              subHandlers,
-		fi:              finalizers,
-		eh:              errorHandlers,
+		id:                 "default",
+		slashesHandling:    config2.EncodedSlashesOff,
+		srcID:              "config",
+		isDefault:          true,
+		allowsBacktracking: ruleConfig.BacktrackingEnabled,
+		sc:                 authenticators,
+		sh:                 subHandlers,
+		fi:                 finalizers,
+		eh:                 errorHandlers,
 	}
 
 	f.hasDefaultRule = true

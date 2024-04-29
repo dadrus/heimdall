@@ -189,7 +189,10 @@ func (r *repository) DeleteRuleSet(srcID string) error {
 
 func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Rule], rules []rule.Rule) error {
 	for _, rul := range rules {
-		if err := tree.Add(rul.PathExpression(), rul); err != nil {
+		if err := tree.Add(
+			rul.PathExpression(),
+			rul,
+			radixtree.WithBacktracking[rule.Rule](rul.BacktrackingEnabled())); err != nil {
 			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed adding rule ID='%s'", rul.ID()).
 				CausedBy(err)
 		}

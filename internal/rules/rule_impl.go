@@ -29,18 +29,19 @@ import (
 )
 
 type ruleImpl struct {
-	id              string
-	srcID           string
-	isDefault       bool
-	hash            []byte
-	pathExpression  string
-	matcher         config.RequestMatcher
-	slashesHandling config.EncodedSlashesHandling
-	backend         *config.Backend
-	sc              compositeSubjectCreator
-	sh              compositeSubjectHandler
-	fi              compositeSubjectHandler
-	eh              compositeErrorHandler
+	id                 string
+	srcID              string
+	isDefault          bool
+	hash               []byte
+	pathExpression     string
+	matcher            config.RequestMatcher
+	allowsBacktracking bool
+	slashesHandling    config.EncodedSlashesHandling
+	backend            *config.Backend
+	sc                 compositeSubjectCreator
+	sh                 compositeSubjectHandler
+	fi                 compositeSubjectHandler
+	eh                 compositeErrorHandler
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
@@ -120,6 +121,8 @@ func (r *ruleImpl) ID() string { return r.id }
 func (r *ruleImpl) SrcID() string { return r.srcID }
 
 func (r *ruleImpl) PathExpression() string { return r.pathExpression }
+
+func (r *ruleImpl) BacktrackingEnabled() bool { return r.allowsBacktracking }
 
 func (r *ruleImpl) SameAs(other rule.Rule) bool {
 	return r.ID() == other.ID() && r.SrcID() == other.SrcID()
