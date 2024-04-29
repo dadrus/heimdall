@@ -11,7 +11,6 @@ var (
 	ErrInvalidPath          = errors.New("invalid path")
 	ErrNotFound             = errors.New("not found")
 	ErrFailedToDelete       = errors.New("failed to delete")
-	ErrFailedToUpdate       = errors.New("failed to update")
 	ErrConstraintsViolation = errors.New("constraints violation")
 )
 
@@ -48,7 +47,7 @@ type (
 		canAdd ConstraintsFunc[V]
 
 		// node local options
-		backtrackingDisabled bool
+		backtrackingEnabled bool
 	}
 )
 
@@ -120,7 +119,7 @@ func (n *Tree[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 
 	remainingPath := path[tokenEnd:]
 
-	if !inStaticToken {
+	if !inStaticToken { //nolint:nestif
 		switch token {
 		case '*':
 			thisToken = thisToken[1:]
@@ -133,6 +132,10 @@ func (n *Tree[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 				n.catchAllChild = &Tree[V]{
 					path:       thisToken,
 					isCatchAll: true,
+				}
+
+				if len(n.values) == 0 {
+					n.backtrackingEnabled = true
 				}
 			}
 
@@ -148,6 +151,10 @@ func (n *Tree[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 		case ':':
 			if n.wildcardChild == nil {
 				n.wildcardChild = &Tree[V]{path: "wildcard", isWildcard: true}
+
+				if len(n.values) == 0 {
+					n.backtrackingEnabled = true
+				}
 			}
 
 			return n.wildcardChild.addNode(remainingPath, append(wildcardKeys, thisToken[1:]), false)
@@ -189,12 +196,16 @@ func (n *Tree[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 	n.staticIndices = append(n.staticIndices, token)
 	n.staticChildren = append(n.staticChildren, child)
 
+	if len(n.values) == 0 {
+		n.backtrackingEnabled = true
+	}
+
 	// Ensure that the rest of this token is not mistaken for a wildcard
 	// if a prefix split occurs at a '*' or ':'.
 	return child.addNode(remainingPath, wildcardKeys, token != '/')
 }
 
-//nolint:cyclop
+//nolint:cyclop,funlen
 func (n *Tree[V]) delNode(path string, matcher Matcher[V]) bool {
 	pathLen := len(path)
 	if pathLen == 0 {
@@ -204,8 +215,13 @@ func (n *Tree[V]) delNode(path string, matcher Matcher[V]) bool {
 
 		oldSize := len(n.values)
 		n.values = slices.DeleteFunc(n.values, matcher.Match)
+		newSize := len(n.values)
 
-		return oldSize != len(n.values)
+		if newSize == 0 {
+			n.backtrackingEnabled = true
+		}
+
+		return oldSize != newSize
 	}
 
 	var (
@@ -336,7 +352,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 			}
 		}
 
-		return nil, 0, nil, !n.backtrackingDisabled
+		return nil, 0, nil, n.backtrackingEnabled
 	}
 
 	// First see if this matches a static token.
@@ -375,9 +391,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 				}
 
 				return found, idx, append(params, thisToken), backtrack
-			}
-
-			if !backtrack {
+			} else if !backtrack {
 				return nil, 0, nil, false
 			}
 		}
@@ -396,7 +410,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 			}
 		}
 
-		return nil, 0, nil, !n.backtrackingDisabled
+		return nil, 0, nil, n.backtrackingEnabled
 	}
 
 	return nil, 0, nil, true

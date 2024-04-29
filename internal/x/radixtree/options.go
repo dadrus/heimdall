@@ -12,8 +12,8 @@ func WithValuesConstraints[V any](constraints ConstraintsFunc[V]) Option[V] {
 
 type AddOption[V any] func(n *Tree[V])
 
-func WithoutBacktracking[V any](flag bool) AddOption[V] {
+func WithBacktracking[V any](flag bool) AddOption[V] {
 	return func(n *Tree[V]) {
-		n.backtrackingDisabled = flag
+		n.backtrackingEnabled = flag
 	}
 }

@@ -149,16 +149,14 @@ func TestTreeSearchWithBacktracking(t *testing.T) {
 	// GIVEN
 	tree := New[string]()
 
-	err := tree.Add("/date/:year/abc", "first")
+	err := tree.Add("/date/:year/abc", "first", WithBacktracking[string](true))
 	require.NoError(t, err)
 
 	err = tree.Add("/date/**", "second")
 	require.NoError(t, err)
 
 	// WHEN
-	entry, err := tree.Find("/date/2024/abc", MatcherFunc[string](func(value string) bool {
-		return value != "first"
-	}))
+	entry, err := tree.Find("/date/2024/abc", MatcherFunc[string](func(value string) bool { return value != "first" }))
 
 	// THEN
 	require.NoError(t, err)
@@ -171,7 +169,7 @@ func TestTreeSearchWithoutBacktracking(t *testing.T) {
 	// GIVEN
 	tree := New[string]()
 
-	err := tree.Add("/date/:year/abc", "first", WithoutBacktracking[string](true))
+	err := tree.Add("/date/:year/abc", "first")
 	require.NoError(t, err)
 
 	err = tree.Add("/date/**", "second")
