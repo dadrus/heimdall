@@ -32,7 +32,7 @@ The path expression describing the paths of incoming requests this rule is suppo
 
 ** *`backtracking_enabled`*: _boolean_ (optional)
 +
-Whether to allow backtracking if a request is matched based on the `path` expression, but the additional matching conditions (see below) are not satisfied. Defaults to `false`.
+Whether to allow backtracking if a request is matched based on the `path` expression, but the additional matching conditions (see below) are not satisfied. Inherited from the default rule and defaults to the settings in that rule.
 
 ** *`with`*: _MatchConditions_ (optional)
 +
@@ -221,9 +221,7 @@ match:
 The implementation ensures, that more specific path expressions are matched first regardless of the placement of rules in a rule set.
 Indeed, the more specific rules are matched first even the corresponding rules are defined in different rule sets.
 
-Same path expressions with different conditions may be defined by multiple rules in the same rule set.
-
-When the path expression is matched to a request, additional conditions, if present in the rule's matching definition, are evaluated. Only if these succeeded, the pipeline of the rule is executed. If there are multiple rules with the same path expressions, their additional condition statements are executed in a sequence until one rule matches. If there is no matching rule, backtracking, if enabled, will take place and the next less specific rule may be matched. Backtracking stops if either
+When the path expression is matched to a request, additional conditions, if present in the rule's matching definition, are evaluated. Only if these succeeded, the pipeline of the rule is executed. If there are multiple rules with the same path expressions, their additional condition statements are executed in a sequence until one rule matches. If there are multiple matching rules, the first one is taken. The matching order depends on the rule sequence in the rule set. If there is no matching rule, backtracking, if enabled, will take place and the next less specific rule may be matched. Backtracking stops if either
 
 * a less specific rule is successfully matched (incl. the evaluation of additional expressions), or
 * a less specific rule is not matched and does not allow backtracking.
