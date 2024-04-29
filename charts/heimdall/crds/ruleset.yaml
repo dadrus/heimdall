@@ -81,6 +81,9 @@ spec:
                             description: The path to match
                             type: string
                             maxLength: 256
+                          backtracking_enabled:
+                            description: Wither this rule allows backtracking. Defaults to the value inherited from the default rule
+                            type: boolean
                           with:
                             description: Additional constraints during request matching
                             type: object
