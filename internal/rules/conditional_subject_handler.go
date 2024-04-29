@@ -21,7 +21,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
@@ -30,7 +30,7 @@ type conditionalSubjectHandler struct {
 	c executionCondition
 }
 
-func (h *conditionalSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (h *conditionalSubjectHandler) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	logger.Debug().Str("_id", h.h.ID()).Msg("Checking execution condition")

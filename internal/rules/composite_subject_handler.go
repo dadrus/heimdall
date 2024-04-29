@@ -20,12 +20,12 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 type compositeSubjectHandler []subjectHandler
 
-func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	for _, handler := range cm {

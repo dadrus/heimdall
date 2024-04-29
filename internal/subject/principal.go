@@ -22,12 +22,12 @@ import (
 	"github.com/goccy/go-json"
 )
 
-type Subject struct {
+type Principal struct {
 	ID         string
 	Attributes map[string]any
 }
 
-func (s *Subject) Hash() []byte {
+func (s *Principal) Hash() []byte {
 	hash := sha256.New()
 	rawSub, _ := json.Marshal(s)
 

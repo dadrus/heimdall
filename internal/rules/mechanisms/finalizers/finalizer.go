@@ -18,14 +18,14 @@ package finalizers
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 //go:generate mockery --name Finalizer --structname FinalizerMock
 
 type Finalizer interface {
 	ID() string
-	Execute(ctx heimdall.Context, sub *subject.Subject) error
+	Execute(ctx heimdall.Context, sub subject.Subject) error
 	WithConfig(config map[string]any) (Finalizer, error)
 	ContinueOnError() bool
 }

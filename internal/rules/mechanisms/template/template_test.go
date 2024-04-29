@@ -26,8 +26,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 func TestTemplateRender(t *testing.T) {
@@ -46,7 +46,7 @@ func TestTemplateRender(t *testing.T) {
 		ClientIPAddresses: []string{"192.168.1.1"},
 	})
 
-	sub := &subject.Subject{
+	sub := &subject.Principal{
 		ID: "foo",
 		Attributes: map[string]any{
 			"name":    "bar",

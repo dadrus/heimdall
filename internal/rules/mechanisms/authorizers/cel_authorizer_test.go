@@ -27,7 +27,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -240,7 +240,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 		uc                         string
 		id                         string
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub subject.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		{
@@ -250,7 +250,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ subject.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -291,15 +291,17 @@ expressions:
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
   - expression: Request.URL.Path.split("/").last() == "test"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub subject.Subject) {
 				t.Helper()
 
-				sub.ID = "foobar"
-				sub.Attributes = map[string]any{
-					"group1": []string{"admin@acme.co", "analyst@acme.co"},
-					"labels": []string{"metadata", "prod", "pii"},
-					"groupN": []string{"forever@acme.co"},
-				}
+				sub.AddPrincipal("Subject", &subject.Principal{
+					ID: "foobar",
+					Attributes: map[string]any{
+						"group1": []string{"admin@acme.co", "analyst@acme.co"},
+						"labels": []string{"metadata", "prod", "pii"},
+						"groupN": []string{"forever@acme.co"},
+					},
+				})
 
 				reqf := mocks.NewRequestFunctionsMock(t)
 				reqf.EXPECT().Header("X-Custom-Header").Return("foobar")
@@ -332,7 +334,7 @@ expressions:
 			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().AppContext().Return(context.Background())
 
-			sub := &subject.Subject{}
+			sub := subject.Subject{}
 
 			tc.configureContextAndSubject(t, ctx, sub)
 

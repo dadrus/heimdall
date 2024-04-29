@@ -28,7 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -62,7 +62,7 @@ password: bar`),
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.ContinueOnError())
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
@@ -89,7 +89,7 @@ allow_fallback_on_error: true
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.True(t, auth.ContinueOnError())
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
@@ -187,8 +187,8 @@ allow_fallback_on_error: true
 				require.NoError(t, err)
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.NotEqual(t, prototype.ContinueOnError(), configured.ContinueOnError())
+				assert.True(t, configured.ContinueOnError())
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -209,7 +209,7 @@ password: baz`),
 
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -229,7 +229,7 @@ password: baz`),
 
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -249,7 +249,7 @@ user_id: baz`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -270,7 +270,7 @@ password: bar`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -291,7 +291,7 @@ password: baz`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, "auth2", configured.ID())
 
 				md := sha256.New()
@@ -341,7 +341,7 @@ password: bar`))
 		uc               string
 		id               string
 		configureContext func(t *testing.T, ctx *mocks.ContextMock)
-		assert           func(t *testing.T, err error, sub *subject.Subject)
+		assert           func(t *testing.T, err error, sub subject.Subject)
 	}{
 		{
 			uc: "no required header present",
@@ -354,7 +354,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -366,7 +366,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		{
@@ -380,7 +380,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -392,7 +392,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		{
@@ -407,7 +407,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -419,7 +419,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		{
@@ -434,7 +434,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -446,7 +446,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		{
@@ -461,7 +461,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -473,7 +473,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		{
@@ -488,14 +488,15 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, sub)
+				require.Len(t, sub, 1)
 
-				require.Equal(t, "foo", sub.ID)
-				assert.NotNil(t, sub.Attributes)
+				principal := sub["auth3"]
+				require.Equal(t, "foo", principal.ID)
+				assert.NotNil(t, principal.Attributes)
 			},
 		},
 	} {
@@ -504,12 +505,14 @@ password: bar`))
 			auth, err := newBasicAuthAuthenticator(tc.id, conf)
 			require.NoError(t, err)
 
+			sub := subject.Subject{}
+
 			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().AppContext().Return(context.Background())
 			tc.configureContext(t, ctx)
 
 			// WHEN
-			sub, err := auth.Execute(ctx)
+			err = auth.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, sub)

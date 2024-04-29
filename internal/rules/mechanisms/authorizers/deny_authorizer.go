@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -46,7 +46,7 @@ func newDenyAuthorizer(id string) *denyAuthorizer {
 	return &denyAuthorizer{id: id}
 }
 
-func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using deny authorizer")
 

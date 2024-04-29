@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 // by intention. Used only during application bootstrap
@@ -43,7 +43,7 @@ type noopFinalizer struct {
 	id string
 }
 
-func (u *noopFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (u *noopFinalizer) Execute(ctx heimdall.Context, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", u.id).Msg("Finalizing using noop finalizer")
 

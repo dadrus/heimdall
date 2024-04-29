@@ -20,16 +20,16 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type SubjectInfo struct {
+type PrincipalInfo struct {
 	IDFrom         string `mapstructure:"id"         validate:"required"`
 	AttributesFrom string `mapstructure:"attributes"`
 }
 
-func (s *SubjectInfo) CreateSubject(rawData []byte) (*subject.Subject, error) {
+func (s *PrincipalInfo) CreatePrincipal(rawData []byte) (*subject.Principal, error) {
 	attributesFrom := "@this"
 	if len(s.AttributesFrom) != 0 {
 		attributesFrom = s.AttributesFrom
@@ -52,7 +52,7 @@ func (s *SubjectInfo) CreateSubject(rawData []byte) (*subject.Subject, error) {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unexpected response from gjson template")
 	}
 
-	return &subject.Subject{
+	return &subject.Principal{
 		ID:         subjectID,
 		Attributes: attrs,
 	}, nil

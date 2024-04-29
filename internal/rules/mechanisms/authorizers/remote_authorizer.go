@@ -36,9 +36,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -87,9 +87,9 @@ func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimd
 	}
 }
 
-func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Subject) {
+func (ai *authorizationInformation) addAttributesTo(key string, principal *subject.Principal) {
 	if ai.Payload != nil {
-		sub.Attributes[key] = ai.Payload
+		principal.Attributes[key] = ai.Payload
 	}
 }
 
@@ -131,7 +131,7 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 	}, nil
 }
 
-func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using remote authorizer")
 
@@ -182,7 +182,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	}
 
 	authInfo.addHeadersTo(a.headersForUpstream, ctx)
-	authInfo.addAttributesTo(a.id, sub)
+	authInfo.addAttributesTo(a.id, sub["Subject"])
 
 	return nil
 }
@@ -229,7 +229,7 @@ func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 
 func (a *remoteAuthorizer) doAuthorize(
 	ctx heimdall.Context,
-	sub *subject.Subject,
+	sub subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*authorizationInformation, error) {
@@ -245,7 +245,7 @@ func (a *remoteAuthorizer) doAuthorize(
 		}
 
 		return tpl.Render(map[string]any{
-			"Subject": sub,
+			"Subject": sub["Subject"],
 			"Values":  values,
 		})
 	})
@@ -330,7 +330,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[string]string, payload string) string {
+func (a *remoteAuthorizer) calculateCacheKey(sub subject.Subject, values map[string]string, payload string) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
@@ -361,7 +361,7 @@ func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
 
 func (a *remoteAuthorizer) renderTemplates(
 	ctx heimdall.Context,
-	sub *subject.Subject,
+	sub subject.Subject,
 ) (map[string]string, string, error) {
 	var (
 		values  map[string]string
@@ -382,7 +382,7 @@ func (a *remoteAuthorizer) renderTemplates(
 	if a.payload != nil {
 		if payload, err = a.payload.Render(map[string]any{
 			"Request": ctx.Request(),
-			"Subject": sub,
+			"Subject": sub["Subject"],
 			"Values":  values,
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,

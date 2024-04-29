@@ -110,22 +110,29 @@ func (i *accessLogInterceptor) finalizeTransaction(
 func logAccessStatus(ctx context.Context, event *zerolog.Event, err error) *zerolog.Event {
 	subject := accesscontext.Subject(ctx)
 	accessErr := accesscontext.Error(ctx)
+	dict := zerolog.Dict()
+
+	if len(subject) != 0 {
+		for _, v := range subject {
+			dict = dict.Str("id", v.ID)
+		}
+	}
 
 	switch {
 	case err != nil:
 		if len(subject) != 0 {
-			event.Str("_subject", subject)
+			event.Dict("_subject", dict)
 		}
 
 		event.Err(err).Bool("_access_granted", false)
 	case accessErr != nil:
 		if len(subject) != 0 {
-			event.Str("_subject", subject)
+			event.Dict("_subject", dict)
 		}
 
 		event.Err(accessErr).Bool("_access_granted", false)
 	default:
-		event.Str("_subject", subject).Bool("_access_granted", true)
+		event.Dict("_subject", dict).Bool("_access_granted", true)
 	}
 
 	return event

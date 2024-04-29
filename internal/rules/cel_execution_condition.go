@@ -23,7 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -31,11 +31,11 @@ type celExecutionCondition struct {
 	e *cellib.CompiledExpression
 }
 
-func (c *celExecutionCondition) CanExecute(ctx heimdall.Context, sub *subject.Subject) (bool, error) {
+func (c *celExecutionCondition) CanExecute(ctx heimdall.Context, sub subject.Subject) (bool, error) {
 	obj := map[string]any{"Request": ctx.Request()}
 
-	if sub != nil {
-		obj["Subject"] = sub
+	if len(sub) != 0 {
+		obj["Subject"] = sub["Subject"]
 	}
 
 	if err := c.e.Eval(obj); err != nil {

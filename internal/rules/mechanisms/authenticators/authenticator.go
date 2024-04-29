@@ -18,14 +18,14 @@ package authenticators
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 //go:generate mockery --name Authenticator --structname AuthenticatorMock
 
 type Authenticator interface {
 	ID() string
-	Execute(ctx heimdall.Context) (*subject.Subject, error)
+	Execute(ctx heimdall.Context, sub subject.Subject) error
 	WithConfig(config map[string]any) (Authenticator, error)
-	IsFallbackOnErrorAllowed() bool
+	ContinueOnError() bool
 }

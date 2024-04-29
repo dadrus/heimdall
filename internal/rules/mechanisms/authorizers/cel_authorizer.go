@@ -22,7 +22,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -71,11 +71,11 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 	return &celAuthorizer{id: id, expressions: expressions}, nil
 }
 
-func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (a *celAuthorizer) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using CEL authorizer")
 
-	return a.expressions.eval(map[string]any{"Subject": sub, "Request": ctx.Request()}, a)
+	return a.expressions.eval(map[string]any{"Subject": sub["Subject"], "Request": ctx.Request()}, a)
 }
 
 func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {

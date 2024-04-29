@@ -37,8 +37,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -69,7 +69,7 @@ type jwtAuthenticator struct {
 	r                    oauth2.ServerMetadataResolver
 	a                    oauth2.Expectation
 	ttl                  *time.Duration
-	sf                   SubjectFactory
+	sf                   PrincipalFactory
 	ads                  extractors.AuthDataExtractStrategy
 	allowFallbackOnError bool
 	trustStore           truststore.TrustStore
@@ -81,7 +81,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
 		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
+		SubjectInfo          PrincipalInfo                       `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
@@ -164,13 +164,13 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 	}, nil
 }
 
-func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using JWT authenticator")
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "no JWT present").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -178,7 +178,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").
 			WithErrorContext(a).
 			CausedBy(heimdall.ErrArgument).
@@ -187,18 +187,20 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	rawClaims, err := a.verifyToken(ctx, token)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreateSubject(rawClaims)
+	principal, err := a.sf.CreatePrincipal(rawClaims)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub.AddPrincipal(a.id, principal)
+
+	return nil
 }
 
 func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
@@ -233,7 +235,7 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}, nil
 }
 
-func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
+func (a *jwtAuthenticator) ContinueOnError() bool {
 	return a.allowFallbackOnError
 }
 

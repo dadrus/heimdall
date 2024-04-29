@@ -25,6 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/subject"
 )
 
 func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
@@ -32,18 +33,19 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	// GIVEN
 	var identifier interface{ ID() string }
 
+	sub := subject.Subject{}
+
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().AppContext().Return(context.Background())
 
 	auth := newUnauthorizedAuthenticator("unauth")
 
 	// WHEN
-	sub, err := auth.Execute(ctx)
+	err := auth.Execute(ctx, sub)
 
 	// THEN
 	require.ErrorIs(t, err, heimdall.ErrAuthentication)
 	require.ErrorContains(t, err, "denied by authenticator")
-	assert.Nil(t, sub)
 
 	require.ErrorAs(t, err, &identifier)
 	assert.Equal(t, "unauth", identifier.ID())
@@ -75,7 +77,7 @@ func TestUnauthorizedAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 	auth := newUnauthorizedAuthenticator("unauth")
 
 	// WHEN
-	isAllowed := auth.IsFallbackOnErrorAllowed()
+	isAllowed := auth.ContinueOnError()
 
 	// THEN
 	require.False(t, isAllowed)

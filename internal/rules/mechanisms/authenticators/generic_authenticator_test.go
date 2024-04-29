@@ -37,8 +37,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -175,9 +175,9 @@ subject:
 				assert.NotNil(t, auth.payload)
 				assert.Empty(t, auth.fwdCookies)
 				assert.Empty(t, auth.fwdHeaders)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &PrincipalInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.ContinueOnError())
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "auth1", auth.ID())
 			},
@@ -209,9 +209,9 @@ cache_ttl: 5s`),
 				assert.Nil(t, auth.payload)
 				assert.Empty(t, auth.fwdCookies)
 				assert.Empty(t, auth.fwdHeaders)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &PrincipalInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.ContinueOnError())
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "auth1", auth.ID())
 			},
@@ -246,9 +246,9 @@ allow_fallback_on_error: true`),
 				assert.Len(t, auth.fwdCookies, 1)
 				assert.Contains(t, auth.fwdCookies, "foo-cookie")
 				assert.Empty(t, auth.fwdHeaders)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &PrincipalInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.True(t, auth.ContinueOnError())
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "auth1", auth.ID())
 			},
@@ -289,9 +289,9 @@ session_lifespan:
 				assert.Len(t, auth.fwdHeaders, 1)
 				assert.Contains(t, auth.fwdHeaders, "X-My-Header")
 				assert.Empty(t, auth.fwdCookies)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &PrincipalInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.ContinueOnError())
 				assert.NotNil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "foo", auth.sessionLifespanConf.ActiveField)
 				assert.Equal(t, "bar", auth.sessionLifespanConf.IssuedAtField)
@@ -411,7 +411,7 @@ subject:
 				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.Equal(t, "auth2", configured.ID())
 			},
@@ -442,8 +442,8 @@ subject:
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.NotEqual(t, prototype.ContinueOnError(), configured.ContinueOnError())
+				assert.True(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.Equal(t, "auth2", configured.ID())
 			},
@@ -482,7 +482,7 @@ cache_ttl: 15s`),
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, 5*time.Second, prototype.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.Equal(t, "auth2", configured.ID())
 			},
@@ -524,7 +524,7 @@ session_lifespan:
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.NotNil(t, configured.sessionLifespanConf)
 				assert.Equal(t, "foo", configured.sessionLifespanConf.ActiveField)
@@ -780,7 +780,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *genericAuthenticator)
-		assert func(t *testing.T, err error, sub *subject.Subject)
+		assert func(t *testing.T, err error, sub subject.Subject)
 	}{
 		{
 			uc:            "with failing auth data source",
@@ -795,7 +795,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -831,7 +831,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -861,7 +861,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -891,7 +891,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -926,7 +926,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				responseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -952,7 +952,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"X-User-Data": "{{ .AuthenticationData }}",
 					},
 				},
-				sf: &SubjectInfo{IDFrom: "barfoo"},
+				sf: &PrincipalInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -979,7 +979,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1004,7 +1004,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
-				sf: &SubjectInfo{IDFrom: "user_id"},
+				sf: &PrincipalInfo{IDFrom: "user_id"},
 				payload: func() template.Template {
 					tpl, err := template.New("foo={{ .AuthenticationData }}")
 					require.NoError(t, err)
@@ -1043,16 +1043,18 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
 
 				require.NoError(t, err)
 
-				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				require.Len(t, sub, 1)
+				principal := sub[""]
+
+				assert.Equal(t, "barbar", principal.ID)
+				assert.Len(t, principal.Attributes, 1)
 			},
 		},
 		{
@@ -1066,7 +1068,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
-				sf:  &SubjectInfo{IDFrom: "user_id"},
+				sf:  &PrincipalInfo{IDFrom: "user_id"},
 				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
@@ -1080,16 +1082,18 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return([]byte(`{ "user_id": "barbar" }`), nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
 
 				require.NoError(t, err)
 
-				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				require.Len(t, sub, 1)
+				principal := sub[""]
+
+				assert.Equal(t, "barbar", principal.ID)
+				assert.Len(t, principal.Attributes, 1)
 			},
 		},
 		{
@@ -1102,7 +1106,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:         &SubjectInfo{IDFrom: "user_id"},
+				sf:         &PrincipalInfo{IDFrom: "user_id"},
 				fwdHeaders: []string{"X-Original-Auth"},
 				ttl:        5 * time.Second,
 			},
@@ -1138,16 +1142,18 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
 
 				require.NoError(t, err)
 
-				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				require.Len(t, sub, 1)
+				principal := sub[""]
+
+				assert.Equal(t, "barbar", principal.ID)
+				assert.Len(t, principal.Attributes, 1)
 			},
 		},
 		{
@@ -1161,7 +1167,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				fwdCookies:          []string{"original-auth"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
@@ -1200,7 +1206,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "active": false }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1225,7 +1231,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
 			},
@@ -1255,7 +1261,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "iat": "2006-01-02T15:04:05.999999Z07" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1285,7 +1291,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 30 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
 			},
@@ -1323,16 +1329,18 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "exp": ` + exp + ` }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
 
 				require.NoError(t, err)
 
-				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 2)
+				require.Len(t, sub, 1)
+				principal := sub[""]
+
+				assert.Equal(t, "barbar", principal.ID)
+				assert.Len(t, principal.Attributes, 2)
 			},
 		},
 	} {
@@ -1370,8 +1378,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
+			sub := subject.Subject{}
+
 			// WHEN
-			sub, err := tc.authenticator.Execute(ctx)
+			err := tc.authenticator.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, sub)

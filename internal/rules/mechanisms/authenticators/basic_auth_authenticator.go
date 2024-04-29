@@ -26,7 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -89,7 +89,7 @@ func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthA
 	return &auth, nil
 }
 
-func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using basic_auth authenticator")
 
@@ -97,7 +97,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 
 	authData, err := strategy.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "expected header not present in request").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -105,14 +105,14 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 
 	res, err := base64.StdEncoding.DecodeString(authData)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to decode received credentials value").
 			WithErrorContext(a)
 	}
 
 	userIDAndPassword := strings.Split(string(res), ":")
 	if len(userIDAndPassword) != basicAuthSchemeCredentialsElements {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "malformed user-id - password scheme").
 			WithErrorContext(a)
 	}
@@ -129,12 +129,14 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	passwordOK := password == a.password
 
 	if !(userIDOK && passwordOK) {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "invalid user credentials").
 			WithErrorContext(a)
 	}
 
-	return &subject.Subject{ID: userIDAndPassword[0], Attributes: make(map[string]any)}, nil
+	sub.AddPrincipal(a.id, &subject.Principal{ID: userIDAndPassword[0], Attributes: make(map[string]any)})
+
+	return nil
 }
 
 func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authenticator, error) {
@@ -180,7 +182,7 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}, nil
 }
 
-func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
+func (a *basicAuthAuthenticator) ContinueOnError() bool {
 	return a.allowFallbackOnError
 }
 

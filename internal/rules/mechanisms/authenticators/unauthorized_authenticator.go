@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -46,11 +46,11 @@ func newUnauthorizedAuthenticator(id string) *unauthorizedAuthenticator {
 	return &unauthorizedAuthenticator{id: id}
 }
 
-func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using unauthorized authenticator")
 
-	return nil, errorchain.
+	return errorchain.
 		NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator").
 		WithErrorContext(a)
 }
@@ -60,7 +60,7 @@ func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator,
 	return a, nil
 }
 
-func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
+func (a *unauthorizedAuthenticator) ContinueOnError() bool {
 	// not allowed, as this authenticator fails always
 	return false
 }
