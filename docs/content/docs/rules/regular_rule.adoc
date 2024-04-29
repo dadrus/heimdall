@@ -38,49 +38,45 @@ Whether to allow backtracking if a request is matched based on the `path` expres
 +
 Additional conditions, which all must hold true to have the request matched and the pipeline of this rule executed. This way, you can define different rules for the same path but with different conditions, e.g. to define separate rules for read and write requests to the same resource.
 
-*** *`path_glob`*: _string_ (optional)
-+
-A https://github.com/gobwas/glob[glob expression], which should be satisfied by the path of the incoming request. Mutually exclusive with `path_regex`.
-
-*** *`path_regex`*: _string_ (optional)
-+
-A regular expression, which should be satisfied by the path of the incoming request. Mutually exclusive with `path_glob`.
-
-*** *`scheme`*: _string_ (optional)
-+
-Expected HTTP scheme. If not specified, both http and https are accepted.
-
 *** *`host_glob`*: _string_ (optional)
 +
-A https://github.com/gobwas/glob[glob expression] which should be satisfied by the host of the incoming request. Mutually exclusive with `host_regex`.
+A https://github.com/gobwas/glob[glob expression] which should be satisfied by the host of the incoming request. `.` is used as a delimiter. That means `*` will match anything until the next `.`. Mutually exclusive with `host_regex`.
 
 *** *`host_regex`*: _string_ (optional)
 +
 Regular expression to match the host. Mutually exclusive with `host_glob`.
 
+*** *`scheme`*: _string_ (optional)
++
+Expected HTTP scheme. If not specified, both http and https are accepted.
+
 *** *`methods`*: _string array_ (optional)
 +
 Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. If not specified, all methods are allowed. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
 +
-.Methods list which effectively expands to all HTTP methods
-====
 [source, yaml]
 ----
+# Methods list which effectively expands to all HTTP methods
 methods:
   - ALL
 ----
-====
 +
-.Methods list consisting of all HTTP methods without `TRACE` and `OPTIONS`
-====
 [source, yaml]
 ----
+# Methods list consisting of all HTTP methods without `TRACE` and `OPTIONS`
 methods:
   - ALL
   - "!TRACE"
   - "!OPTIONS"
 ----
-====
+
+*** *`path_glob`*: _string_ (optional)
++
+A https://github.com/gobwas/glob[glob expression], which should be satisfied by the path of the incoming request. `/` is used as a delimiter. That means `*` will match anything until the next `/`. Mutually exclusive with `path_regex`.
+
+*** *`path_regex`*: _string_ (optional)
++
+A regular expression, which should be satisfied by the path of the incoming request. Mutually exclusive with `path_glob`.
 
 * *`allow_encoded_slashes`*: _string_ (optional)
 +

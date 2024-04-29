@@ -77,33 +77,41 @@ The HTTP method used, like `GET`, `POST`, etc.
 +
 The URL of the matched request. This object has the following properties and methods:
 
-** *`Scheme`*: _string_
+** *`Captures`*: _map_
 +
-The HTTP scheme part of the url
+Allows accessing of the values captured by the named wildcards used in the matching path expression of the rule.
 
 ** *`Host`*: _string_
 +
-The host part of the url
+The host part of the url.
+
+** *`Hostname()`*: _method_
++
+This method returns the host name stripping any valid port number if present.
+
+** *`Port()`*: _method_
++
+Returns the port part of the `Host`, without the leading colon. If `Host` doesn't contain a valid numeric port, returns an empty string.
 
 ** *`Path`*: _string_
 +
-The path part of the url
-
-** *`RawQuery`*: _string_
-+
-The raw query part of the url.
-
-** *`String()`*: _method_
-+
-This method returns the URL as valid URL string of a form `scheme:host/path?query`.
+The path part of the url.
 
 ** *`Query()`*: _method_
 +
 The parsed query with each key-value pair being a string to array of strings mapping.
 
-** *`Captures`*: _map_
+** *`RawQuery`*: _string_
 +
-Allows accessing of the values captured by the named wildcards used in the matching path expression of the rule.
+The raw query part of the url.
+
+** *`Scheme`*: _string_
++
+The HTTP scheme part of the url.
+
+** *`String()`*: _method_
++
+This method returns the URL as valid URL string of a form `scheme:host/path?query`.
 
 * *`ClientIPAddresses`*: _string array_
 +
@@ -273,7 +281,7 @@ This will result in the following JSON object:
 ----
 ====
 
-.Access the last part of the path
+.Access to captured path segments
 ====
 Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
 
@@ -288,7 +296,7 @@ config:
     {
       "user": "user:{{ .Subject.ID }}",
       "relation": "write",
-      "object": "file:{{ splitList "/" .Request.URL.Path | last }}"
+      "object": "file:{{ .Request.URL.Captures.id }}"
     }
   expressions:
   - expression: |
