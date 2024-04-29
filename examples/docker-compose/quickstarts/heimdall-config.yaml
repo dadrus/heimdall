@@ -41,9 +41,6 @@ mechanisms:
     type: noop
 
 default_rule:
-  methods:
-  - GET
-  - POST
   execute:
   - authenticator: deny_all
   - finalizer: create_jwt
