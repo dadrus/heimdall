@@ -16,7 +16,13 @@ description: Heimdall lets you not only define upstream service specific rules, 
 
 The configuration of the default rule can be done by making use of the `default_rule` property and configuring the options shown below.
 
-NOTE: The default rule does not support all the properties, which can be configured in an link:{{< relref "regular_rule.adoc" >}}[regular rule]. E.g. it can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.
+[NOTE]
+====
+The default rule does not support all the properties, which can be configured in an link:{{< relref "regular_rule.adoc" >}}[regular rule].
+
+* It can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.
+* A default rule does also reject requests with encoded slashes in the path of the URL with `400 Bad Request`, which can be configured on the level of a regular rule.
+====
 
 * *`backtracking_enabled`*: _boolean_ (optional)
 +

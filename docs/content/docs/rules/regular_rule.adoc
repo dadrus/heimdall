@@ -266,6 +266,32 @@ The request to `/files/team3/document.pdf` will be matched by the `rule3` as it 
 
 However, even the request to  `/files/team4/document.pdf` will be matched by `rule2`, the regular expression `^/files/(team1|team2)/.*` will fail. Here, since `backtracking_enabled` is set to `true` backtracking will start and the request will be matched by the `rule1` and its pipeline will be then executed.
 
+[CAUTION]
+====
+Since multiple rules with the same path expression might be present in a rule set, multiple rules could be matched based on their additional conditions definitions. Here an example:
+
+[source, yaml]
+----
+- id: rule1
+  match:
+    path: /articles/:id
+    with:
+      methods: [ POST ]
+  execute:
+    - <pipeline definition>
+
+- id: rule2
+  match:
+    path: /articles/:id
+    with:
+      methods: [ POST ]
+  execute:
+    - <pipeline definition>
+----
+
+Such conflicting configurations cannot be avoided while loading a rule set and there might be valid reasons to have different rules with more specific additional conditions for the same path expression as well. For that reason, heimdall will use the first matching rule (the order is given by the placement of the rules in a rule set) when the incoming request is matched by multiple rules and emit a corresponding log statement.
+====
+
 == Authentication & Authorization Pipeline
 
 As described in the link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, this pipeline consists of mechanisms, previously configured in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanisms catalogue], organized in stages as described below, with authentication stage (consisting of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticators]) being mandatory.
