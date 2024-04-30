@@ -28,8 +28,6 @@ serve:
           code: 404
         authorization_error:
           code: 404
-        method_error:
-          code: 400
         communication_error:
           code: 502
         internal_error:

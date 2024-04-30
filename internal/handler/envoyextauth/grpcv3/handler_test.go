@@ -70,17 +70,17 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.InvalidArgument), response.GetStatus().GetCode())
+				assert.Equal(t, int32(codes.NotFound), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
-				assert.Equal(t, typev3.StatusCode(http.StatusMethodNotAllowed), deniedResponse.GetStatus().GetCode())
+				assert.Equal(t, typev3.StatusCode(http.StatusNotFound), deniedResponse.GetStatus().GetCode())
 				assert.Empty(t, deniedResponse.GetBody())
 				assert.Empty(t, deniedResponse.GetHeaders())
 			},

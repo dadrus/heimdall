@@ -137,25 +137,6 @@ func TestHandlerHandle(t *testing.T) {
 			expBody: "<p>argument error</p>",
 		},
 		{
-			uc:      "method error default",
-			handler: New(),
-			err:     errorchain.New(heimdall.ErrMethodNotAllowed),
-			expCode: http.StatusMethodNotAllowed,
-		},
-		{
-			uc:      "method error overridden",
-			handler: New(WithMethodErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrMethodNotAllowed),
-			expCode: http.StatusContinue,
-		},
-		{
-			uc:      "method error verbose without mime type",
-			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrMethodNotAllowed),
-			expCode: http.StatusMethodNotAllowed,
-			expBody: "<p>method not allowed</p>",
-		},
-		{
 			uc:      "no rule error default",
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrNoRuleFound),

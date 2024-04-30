@@ -551,9 +551,6 @@
             "authorization_error": {
               "$ref": "#/definitions/responseOverride"
             },
-            "method_error": {
-              "$ref": "#/definitions/responseOverride"
-            },
             "communication_error": {
               "$ref": "#/definitions/responseOverride"
             },
