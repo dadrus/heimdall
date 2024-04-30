@@ -95,7 +95,7 @@ func (r *RequestContext) Request() *heimdall.Request {
 	return &heimdall.Request{
 		RequestFunctions:  r,
 		Method:            r.reqMethod,
-		URL:               r.reqURL,
+		URL:               &heimdall.URL{URL: *r.reqURL},
 		ClientIPAddresses: r.ips,
 	}
 }

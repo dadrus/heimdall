@@ -96,7 +96,6 @@ func newService(
 		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
 		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
 		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
-		errorhandler.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
 		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 	)

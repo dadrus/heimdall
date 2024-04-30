@@ -29,7 +29,6 @@ var (
 	ErrCommunicationTimeout = errors.New("communication timeout error")
 	ErrConfiguration        = errors.New("configuration error")
 	ErrInternal             = errors.New("internal error")
-	ErrMethodNotAllowed     = errors.New("method not allowed")
 	ErrNoRuleFound          = errors.New("no rule found")
 )
 

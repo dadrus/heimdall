@@ -201,7 +201,7 @@ values:
 					"Subject": &subject.Subject{ID: "bar"},
 					"Request": &heimdall.Request{
 						RequestFunctions: rfunc,
-						URL:              &url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo/bar"},
+						URL:              &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo/bar"}},
 					},
 				})
 				require.NoError(t, err)

@@ -33,8 +33,6 @@ import (
 
 type ruleSetEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
-
-	RulesPathPrefix string `mapstructure:"rule_path_match_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
@@ -76,10 +74,6 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, er
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
-	}
-
-	if err = ruleSet.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
-		return nil, err
 	}
 
 	ruleSet.Hash = md.Sum(nil)

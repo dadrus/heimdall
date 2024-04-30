@@ -16,31 +16,18 @@
 
 package config
 
-import (
-	"github.com/goccy/go-json"
-
-	"github.com/dadrus/heimdall/internal/x/stringx"
-)
-
 type Matcher struct {
-	URL      string `json:"url"      yaml:"url"`
-	Strategy string `json:"strategy" yaml:"strategy"`
+	Path                string              `json:"path"                 yaml:"path"                 validate:"required"`              //nolint:lll,tagalign
+	BacktrackingEnabled *bool               `json:"backtracking_enabled" yaml:"backtracking_enabled" validate:"excluded_without=With"` //nolint:lll,tagalign
+	With                *MatcherConstraints `json:"with"                 yaml:"with"                 validate:"omitnil,required"`      //nolint:lll,tagalign
 }
 
-func (m *Matcher) UnmarshalJSON(data []byte) error {
-	if data[0] == '"' {
-		// data contains just the url matching value
-		m.URL = stringx.ToString(data[1 : len(data)-1])
-		m.Strategy = "glob"
+func (m *Matcher) DeepCopyInto(out *Matcher) {
+	*out = *m
 
-		return nil
+	if m.With != nil {
+		in, out := m.With, out.With
+
+		in.DeepCopyInto(out)
 	}
-
-	var rawData map[string]any
-
-	if err := json.Unmarshal(data, &rawData); err != nil {
-		return err
-	}
-
-	return DecodeConfig(rawData, m)
 }

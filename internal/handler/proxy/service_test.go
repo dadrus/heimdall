@@ -159,7 +159,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -167,7 +167,7 @@ func TestProxyService(t *testing.T) {
 				require.False(t, upstreamCalled)
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+				assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)

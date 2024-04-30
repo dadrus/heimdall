@@ -118,11 +118,11 @@ providers:
 +
 [source, yaml]
 ----
-version: "1alpha3"
+version: "1alpha4"
 rules:
 - id: demo:public  # <1>
   match:
-    url: http://<**>/public
+    path: /public
   forward_to:
     host: upstream:8081
   execute:
@@ -131,7 +131,9 @@ rules:
 
 - id: demo:protected  # <2>
   match:
-    url: http://<**>/<{user,admin}>
+    path: /:user
+    with:
+      path_glob: {/user,/admin}
   forward_to:
     host: upstream:8081
   execute:

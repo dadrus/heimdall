@@ -1,4 +1,4 @@
-apiVersion: heimdall.dadrus.github.com/v1alpha3
+apiVersion: heimdall.dadrus.github.com/v1alpha4
 kind: RuleSet
 metadata:
   name: echo-app-rules
@@ -9,14 +9,14 @@ spec:
   rules:
     - id: public-access
       match:
-        url: <**>://<**>/pub/<**>
+        path: /pub/**
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
     - id: anonymous-access
       match:
-        url: <**>://<**>/anon/<**>
+        path: /anon/**
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
@@ -24,7 +24,7 @@ spec:
         - finalizer: create_jwt
     - id: redirect
       match:
-        url: <**>://<**>/redir/<**>
+        path: /redir/**
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:

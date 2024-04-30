@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1alpha3
+package v1alpha4
 
 import (
 	"context"
@@ -38,9 +38,9 @@ const watchResponse = `{
 `
 
 const response = `{
-  "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
+  "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
   "items": [{
-      "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
+      "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
       "kind": "RuleSet",
       "metadata": {
         "name": "test-rule-set",
@@ -56,16 +56,23 @@ const response = `{
               { "authorizer": "test_authz" }
             ],
             "id": "test:rule",
-            "matching_strategy": "glob",
-            "match": "http://127.0.0.1:9090/foobar/<{foos*}>",
+            "match": {
+              "path": "/foobar/:*",
+              "with": {
+                "scheme": "http",
+                "host_glob": "127.0.0.1:*",
+                "path_glob": "/foobar/foos*",
+                "methods": ["GET", "POST"]
+              }
+            },
             "forward_to": {
-				"host": "foo.bar",
-				"rewrite": {
-					"scheme": "https",
-					"strip_path_prefix": "/foo",
-					"add_path_prefix": "/baz",
-					"strip_query_parameters": ["boo"]
-				}
+              "host": "foo.bar",
+              "rewrite": {
+			    "scheme": "https",
+				"strip_path_prefix": "/foo",
+				"add_path_prefix": "/baz",
+				"strip_query_parameters": ["boo"]
+			  }
 			}
           }
         ]
@@ -126,7 +133,7 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 	ruleSet := rls.Items[0]
 	assert.Equal(t, "RuleSet", ruleSet.Kind)
-	assert.Equal(t, "heimdall.dadrus.github.com/v1alpha3", ruleSet.APIVersion)
+	assert.Equal(t, "heimdall.dadrus.github.com/v1alpha4", ruleSet.APIVersion)
 	assert.Equal(t, "test-rule-set", ruleSet.Name)
 	assert.Equal(t, "foo", ruleSet.Namespace)
 	assert.Equal(t, "foobar", ruleSet.Spec.AuthClassName)
@@ -134,9 +141,11 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 	rule := ruleSet.Spec.Rules[0]
 	assert.Equal(t, "test:rule", rule.ID)
-	assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
-	assert.Equal(t, "http://127.0.0.1:9090/foobar/<{foos*}>", rule.RuleMatcher.URL)
-	assert.Empty(t, rule.Methods)
+	assert.Equal(t, "/foobar/:*", rule.Matcher.Path)
+	assert.Equal(t, "http", rule.Matcher.With.Scheme)
+	assert.Equal(t, "127.0.0.1:*", rule.Matcher.With.HostGlob)
+	assert.Equal(t, "/foobar/foos*", rule.Matcher.With.PathGlob)
+	assert.ElementsMatch(t, rule.Matcher.With.Methods, []string{"GET", "POST"})
 	assert.Empty(t, rule.ErrorHandler)
 	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.Backend.CreateURL(&url.URL{
 		Scheme:   "http",

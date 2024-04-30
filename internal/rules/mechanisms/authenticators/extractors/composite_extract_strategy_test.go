@@ -70,7 +70,7 @@ func TestCompositeExtractHeaderValueWithScheme(t *testing.T) {
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{
 		RequestFunctions: fnt,
-		URL:              &url.URL{},
+		URL:              &heimdall.URL{URL: url.URL{}},
 	})
 
 	strategy := CompositeExtractStrategy{

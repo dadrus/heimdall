@@ -7,3 +7,5 @@ Those examples, which are based on docker compose are located in the `docker-com
 To be able to run the docker compose examples, you'll need Docker and docker-compose installed.
 
 To be able to run the Kubernetes based examples, you'll need just, kubectl, kustomize, helm and a k8s cluster. Latter can also be created locally using kind. The examples are indeed using it.
+
+Please note: The main branch may have breaking changes (see pending release PRs for details under https://github.com/dadrus/heimdall/pulls) which would make the usage of the referenced heimdall images impossible (even though the configuration files and rules reflect the latest changes). In such situations you'll have to build a heimdall image by yourself and update the setups to use it.

@@ -1,19 +1,22 @@
-version: "1alpha3"
+version: "1alpha4"
 name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    url: http://foo.bar/<**>
-    strategy: glob
+    path: /**
+    backtracking_enabled: true
+    with:
+      scheme: http
+      host_glob: foo.bar
+      methods:
+        - POST
+        - PUT
   forward_to:
     host: bar.foo
     rewrite:
       strip_path_prefix: /foo
       add_path_prefix: /baz
       strip_query_parameters: [boo]
-#  methods: # reuses default
-#    - GET
-#    - POST
   execute:
     - authenticator: unauthorized_authenticator
     - authenticator: jwt_authenticator1

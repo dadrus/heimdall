@@ -38,8 +38,8 @@ func TestRequests(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	rawURI := "http://localhost/foo/bar?foo=bar&foo=baz&bar=foo"
-	uri, err := url.Parse("http://localhost/foo/bar?foo=bar&foo=baz&bar=foo")
+	rawURI := "http://localhost:8080/foo/bar?foo=bar&foo=baz&bar=foo"
+	uri, err := url.Parse(rawURI)
 	require.NoError(t, err)
 
 	reqf := mocks.NewRequestFunctionsMock(t)
@@ -50,9 +50,12 @@ func TestRequests(t *testing.T) {
 	reqf.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}})
 
 	req := &heimdall.Request{
-		RequestFunctions:  reqf,
-		Method:            http.MethodHead,
-		URL:               uri,
+		RequestFunctions: reqf,
+		Method:           http.MethodHead,
+		URL: &heimdall.URL{
+			URL:      *uri,
+			Captures: map[string]string{"foo": "bar"},
+		},
 		ClientIPAddresses: []string{"127.0.0.1"},
 	}
 
@@ -61,6 +64,11 @@ func TestRequests(t *testing.T) {
 	}{
 		{expr: `Request.Method == "HEAD"`},
 		{expr: `Request.URL.String() == "` + rawURI + `"`},
+		{expr: `Request.URL.Captures.foo == "bar"`},
+		{expr: `Request.URL.Query().bar == ["foo"]`},
+		{expr: `Request.URL.Host == "localhost:8080"`},
+		{expr: `Request.URL.Hostname() == "localhost"`},
+		{expr: `Request.URL.Port() == "8080"`},
 		{expr: `Request.Cookie("foo") == "bar"`},
 		{expr: `Request.Header("bar") == "baz"`},
 		{expr: `Request.Header("zab").contains("bar")`},

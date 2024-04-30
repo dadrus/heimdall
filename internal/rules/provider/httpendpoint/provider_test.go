@@ -262,6 +262,12 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+    with:
+      methods: [ "GET" ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -304,6 +310,12 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+    with:
+      methods: [ "GET" ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -351,6 +363,12 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+    with:
+      methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 2:
@@ -362,6 +380,12 @@ version: "2"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+    with:    
+      methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -427,6 +451,10 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 2:
@@ -436,6 +464,10 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    path: /baz
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 3:
@@ -445,6 +477,10 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					default:
@@ -454,6 +490,10 @@ version: "1"
 name: test
 rules:
 - id: foz
+  match:
+    path: /foz
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -524,6 +564,10 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -569,6 +613,10 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -612,6 +660,10 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -649,6 +701,10 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					} else {
@@ -658,6 +714,10 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    path: /baz
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -700,6 +760,10 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					} else {

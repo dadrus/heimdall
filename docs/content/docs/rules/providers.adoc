@@ -44,15 +44,17 @@ WARNING: All environment variables, used in the rule set files must be known in 
 ====
 [source, yaml]
 ----
-version: "1alpha3"
+version: "1alpha4"
 name: my-rule-set
 rules:
 - id: rule:1
   match:
-    url: https://my-service1.local/<**>
+    path: /**
+    with:
+      host_glob: my-service1.local
+      methods: [ "GET" ]
   forward_to:
     host: ${UPSTREAM_HOST:="default-backend:8080"}
-  methods: [ "GET" ]
   execute:
     - authorizer: foobar
 ----
@@ -99,15 +101,11 @@ Following configuration options are supported:
 +
 Whether the configured `endpoints` should be polled for updates. Defaults to `0s` (polling disabled).
 
-* *`endpoints`*: _RuleSetEndpoint array_ (mandatory)
+* *`endpoints`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint] array_ (mandatory)
 +
-Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. As with the link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be configured. Following properties are defined in addition:
-+
-** *`rule_path_match_prefix`*: _string_ (optional)
-+
-This property can be used to create kind of a namespace for the rule sets retrieved from the different endpoints. If set, the provider checks whether the urls specified in all rules retrieved from the referenced endpoint have the defined path prefix. If not, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not collide with a rule from another endpoint.
+Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. As with the link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be configured.
 
-NOTE: HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] is enabled by default. It can be disabled by setting `http_cache.enabled` to `false`.
+NOTE: HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] is enabled by default. It can be disabled on the particular endpoint by setting `http_cache.enabled` to `false`.
 
 === Examples
 
@@ -128,9 +126,7 @@ http_endpoint:
 
 Here, the provider is configured to poll the two defined rule set endpoints for changes every 5 minutes.
 
-The configuration for the first endpoint instructs heimdall to ensure all urls defined in the rules coming from that endpoint must match the defined path prefix.
-
-The configuration for the second endpoint defines the `rule_path_match_prefix` as well. It also defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
+The configuration for both endpoints instructs heimdall to disable HTTP caching. The configuration of the second endpoint uses a couple of additional properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
 
 [source, yaml]
 ----
@@ -138,9 +134,11 @@ http_endpoint:
   watch_interval: 5m
   endpoints:
     - url: http://foo.bar/ruleset1
-      rule_path_match_prefix: /foo/bar
+      http_cache:
+        enabled: false
     - url: http://foo.bar/ruleset2
-      rule_path_match_prefix: /bar/foo
+      http_cache:
+        enabled: false
       retry:
         give_up_after: 5s
         max_delay: 250ms
@@ -183,10 +181,6 @@ The actual url to the bucket or to a specific blob in the bucket.
 ** *`prefix`*: _string_ (optional)
 +
 Indicates that only blobs with a key starting with this prefix should be retrieved
-+
-** *`rule_path_match_prefix`*: _string_ (optional)
-+
-Creates kind of a namespace for the rule sets retrieved from the blobs. If set, the provider checks whether the urls patterns specified in all rules retrieved from the referenced bucket have the defined path prefix. If that rule is violated, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not override a rule from another endpoint.
 
 The differentiation which storage is used is based on the URL scheme. These are:
 
@@ -222,17 +216,14 @@ cloud_blob:
   buckets:
     - url: gs://my-bucket
       prefix: service1
-      rule_path_match_prefix: /service1
     - url: gs://my-bucket
       prefix: service2
-      rule_path_match_prefix: /service2
     - url: s3://my-bucket/my-rule-set?region=us-west-1
 ----
 
 Here, the provider is configured to poll multiple buckets with rule sets for changes every 2 minutes.
 
 The first two bucket reference configurations reference actually the same bucket on Google Cloud Storage, but different blobs based on the configured blob prefix. The first one will let heimdall loading only those blobs, which start with `service1`, the second only those, which start with `service2`.
-As `rule_path_match_prefix` are defined for both as well, heimdall will ensure, that rule sets loaded from the corresponding blobs will not overlap in their url matching definitions.
 
 The last one instructs heimdall to load rule set from a specific blob, namely a blob named `my-rule-set`, which resides on the `my-bucket` AWS S3 bucket, which is located in the `us-west-1` AWS region.
 

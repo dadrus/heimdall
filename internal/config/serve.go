@@ -80,7 +80,6 @@ type RespondConfig struct {
 		ArgumentError       ResponseOverride `koanf:"argument_error"`
 		AuthenticationError ResponseOverride `koanf:"authentication_error"`
 		AuthorizationError  ResponseOverride `koanf:"authorization_error"`
-		BadMethodError      ResponseOverride `koanf:"method_error"`
 		CommunicationError  ResponseOverride `koanf:"communication_error"`
 		InternalError       ResponseOverride `koanf:"internal_error"`
 		NoRuleError         ResponseOverride `koanf:"no_rule_error"`

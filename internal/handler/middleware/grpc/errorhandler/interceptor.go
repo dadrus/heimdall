@@ -67,8 +67,6 @@ func (h *interceptor) intercept(
 		return h.communicationError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, heimdall.ErrArgument):
 		return h.preconditionError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, heimdall.ErrMethodNotAllowed):
-		return h.badMethodError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, heimdall.ErrNoRuleFound):
 		return h.noRuleError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, &heimdall.RedirectError{}):

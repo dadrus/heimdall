@@ -24,10 +24,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
-	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 // NewValidateRulesCommand represents the "validate rules" command.
@@ -55,8 +56,6 @@ func NewValidateRulesCommand() *cobra.Command {
 }
 
 func validateRuleSet(cmd *cobra.Command, args []string) error {
-	const queueSize = 50
-
 	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
 	logger := zerolog.Nop()
 
@@ -90,14 +89,17 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	queue := make(event.RuleSetChangedEventQueue, queueSize)
-
-	defer close(queue)
-
-	provider, err := filesystem.NewProvider(conf, rules.NewRuleSetProcessor(queue, rFactory, logger), logger)
+	provider, err := filesystem.NewProvider(conf, rules.NewRuleSetProcessor(&noopRepository{}, rFactory), logger)
 	if err != nil {
 		return err
 	}
 
 	return provider.Start(context.Background())
 }
+
+type noopRepository struct{}
+
+func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) { return nil, nil }
+func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error       { return nil }
+func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error    { return nil }
+func (*noopRepository) DeleteRuleSet(_ string) error                   { return nil }

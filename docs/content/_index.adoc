@@ -15,7 +15,7 @@ Use declarative techniques you are already familiar with
 
 [source, yaml]
 ----
-apiVersion: heimdall.dadrus.github.com/v1alpha3
+apiVersion: heimdall.dadrus.github.com/v1alpha4
 kind: RuleSet
 metadata:
   name: My awesome service
@@ -23,7 +23,10 @@ spec:
   rules:
     - id: my_api_rule
       match:
-        url: http://127.0.0.1:9090/api/<**>
+        path: /api/**
+        with:
+          scheme: http
+          host_glob: 127.0.0.1:9090
       execute:
         - authenticator: keycloak
         - authorizer: opa

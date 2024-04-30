@@ -165,28 +165,6 @@ func TestErrorInterceptor(t *testing.T) {
 			expBody:     "<p>argument error</p>",
 		},
 		{
-			uc:          "method error default",
-			interceptor: New(),
-			err:         heimdall.ErrMethodNotAllowed,
-			expGRPCCode: codes.InvalidArgument,
-			expHTTPCode: http.StatusMethodNotAllowed,
-		},
-		{
-			uc:          "method error overridden",
-			interceptor: New(WithMethodErrorCode(http.StatusContinue)),
-			err:         heimdall.ErrMethodNotAllowed,
-			expGRPCCode: codes.InvalidArgument,
-			expHTTPCode: http.StatusContinue,
-		},
-		{
-			uc:          "method error verbose",
-			interceptor: New(WithVerboseErrors(true)),
-			err:         heimdall.ErrMethodNotAllowed,
-			expGRPCCode: codes.InvalidArgument,
-			expHTTPCode: http.StatusMethodNotAllowed,
-			expBody:     "<p>method not allowed</p>",
-		},
-		{
 			uc:          "no rule error default",
 			interceptor: New(),
 			err:         heimdall.ErrNoRuleFound,

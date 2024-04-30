@@ -43,8 +43,6 @@ location @error401 {
 
 * If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which is anyway recommended to have secure defaults
 
-* If a heimdall rule is matched, but is configured to not allow a particular HTTP method, `405 Method Not Allowed` response code is returned. That will result in `500` returned by NGINX due to the reasons written above. To overcome that, you can configure heimdall to respond with another HTTP response code using the `respond` property on the level of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] configuration.
-
 == Vanilla NGINX
 
 Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.

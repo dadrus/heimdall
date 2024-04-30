@@ -17,46 +17,50 @@
 package config
 
 import (
+	"crypto"
+	"fmt"
+
+	"github.com/goccy/go-json"
+
 	"github.com/dadrus/heimdall/internal/config"
-)
-
-type EncodedSlashesHandling string
-
-const (
-	EncodedSlashesOff      EncodedSlashesHandling = "off"
-	EncodedSlashesOn       EncodedSlashesHandling = "on"
-	EncodedSlashesNoDecode EncodedSlashesHandling = "no_decode"
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 type Rule struct {
-	ID                     string                   `json:"id"                    yaml:"id"`
+	ID                     string                   `json:"id"                    yaml:"id"                    validate:"required"`                         //nolint:lll,tagalign
 	EncodedSlashesHandling EncodedSlashesHandling   `json:"allow_encoded_slashes" yaml:"allow_encoded_slashes" validate:"omitempty,oneof=off on no_decode"` //nolint:lll,tagalign
-	RuleMatcher            Matcher                  `json:"match"                 yaml:"match"`
-	Backend                *Backend                 `json:"forward_to"            yaml:"forward_to"`
-	Methods                []string                 `json:"methods"               yaml:"methods"`
-	Execute                []config.MechanismConfig `json:"execute"               yaml:"execute"`
+	Matcher                Matcher                  `json:"match"                 yaml:"match"                 validate:"required"`                         //nolint:lll,tagalign
+	Backend                *Backend                 `json:"forward_to"            yaml:"forward_to"            validate:"omitnil"`                          //nolint:lll,tagalign
+	Execute                []config.MechanismConfig `json:"execute"               yaml:"execute"               validate:"gt=0,dive,required"`               //nolint:lll,tagalign
 	ErrorHandler           []config.MechanismConfig `json:"on_error"              yaml:"on_error"`
 }
 
-func (in *Rule) DeepCopyInto(out *Rule) {
-	*out = *in
-	out.RuleMatcher = in.RuleMatcher
+func (r *Rule) Hash() ([]byte, error) {
+	rawRuleConfig, err := json.Marshal(r)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to create hash", heimdall.ErrInternal)
+	}
 
-	if in.Backend != nil {
-		in, out := in.Backend, out.Backend
+	md := crypto.SHA256.New()
+	md.Write(rawRuleConfig)
+
+	return md.Sum(nil), nil
+}
+
+func (r *Rule) DeepCopyInto(out *Rule) {
+	*out = *r
+
+	inm, outm := &r.Matcher, &out.Matcher
+	inm.DeepCopyInto(outm)
+
+	if r.Backend != nil {
+		in, out := r.Backend, out.Backend
 
 		in.DeepCopyInto(out)
 	}
 
-	if in.Methods != nil {
-		in, out := &in.Methods, &out.Methods
-
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
-
-	if in.Execute != nil {
-		in, out := &in.Execute, &out.Execute
+	if r.Execute != nil {
+		in, out := &r.Execute, &out.Execute
 
 		*out = make([]config.MechanismConfig, len(*in))
 		for i := range *in {
@@ -64,8 +68,8 @@ func (in *Rule) DeepCopyInto(out *Rule) {
 		}
 	}
 
-	if in.ErrorHandler != nil {
-		in, out := &in.ErrorHandler, &out.ErrorHandler
+	if r.ErrorHandler != nil {
+		in, out := &r.ErrorHandler, &out.ErrorHandler
 
 		*out = make([]config.MechanismConfig, len(*in))
 		for i := range *in {
@@ -74,13 +78,13 @@ func (in *Rule) DeepCopyInto(out *Rule) {
 	}
 }
 
-func (in *Rule) DeepCopy() *Rule {
-	if in == nil {
+func (r *Rule) DeepCopy() *Rule {
+	if r == nil {
 		return nil
 	}
 
 	out := new(Rule)
-	in.DeepCopyInto(out)
+	r.DeepCopyInto(out)
 
 	return out
 }

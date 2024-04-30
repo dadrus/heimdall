@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1alpha3
+package v1alpha4
 
 //go:generate controller-gen object paths=$GOFILE
 

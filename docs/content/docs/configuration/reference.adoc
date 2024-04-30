@@ -368,9 +368,7 @@ mechanisms:
             - '*/*'
 
 default_rule:
-  methods:
-  - GET
-  - POST
+  backtracking_enabled: false
   execute:
   - authenticator: anonymous_authenticator
   - finalizer: jwt
@@ -386,8 +384,8 @@ providers:
     watch_interval: 5m
     endpoints:
       - url: http://foo.bar/ruleset1
-        expected_path_prefix: /foo/bar
-        enable_http_cache: false
+        http_cache:
+          enabled: false
       - url: http://foo.bar/ruleset2
         retry:
           give_up_after: 5s
@@ -406,10 +404,8 @@ providers:
     buckets:
       - url: gs://my-bucket
         prefix: service1
-        rule_path_match_prefix: /service1
       - url: azblob://my-bucket
         prefix: service2
-        rule_path_match_prefix: /service2
       - url: s3://my-bucket/my-rule-set
 
   kubernetes:

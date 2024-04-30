@@ -27,7 +27,7 @@ spec:
     singular: ruleset
     listKind: RuleSetList
   versions:
-    - name: v1alpha3
+    - name: v1alpha4
       served: true
       storage: true
       schema:
@@ -75,20 +75,66 @@ spec:
                         description: How to match the rule
                         type: object
                         required:
-                          - url
+                          - path
                         properties:
-                          url:
-                            description: The url to match
+                          path:
+                            description: The path to match
                             type: string
-                            maxLength: 512
-                          strategy:
-                            description: Strategy to match the url. Can either be regex or glob.
-                            type: string
-                            maxLength: 5
-                            default: glob
-                            enum:
-                              - regex
-                              - glob
+                            maxLength: 256
+                          backtracking_enabled:
+                            description: Wither this rule allows backtracking. Defaults to the value inherited from the default rule
+                            type: boolean
+                          with:
+                            description: Additional constraints during request matching
+                            type: object
+                            properties:
+                              methods:
+                                description: The HTTP methods to match
+                                type: array
+                                minItems: 1
+                                items:
+                                  type: string
+                                  maxLength: 16
+                                  enum:
+                                    - "CONNECT"
+                                    - "!CONNECT"
+                                    - "DELETE"
+                                    - "!DELETE"
+                                    - "GET"
+                                    - "!GET"
+                                    - "HEAD"
+                                    - "!HEAD"
+                                    - "OPTIONS"
+                                    - "!OPTIONS"
+                                    - "PATCH"
+                                    - "!PATCH"
+                                    - "POST"
+                                    - "!POST"
+                                    - "PUT"
+                                    - "!PUT"
+                                    - "TRACE"
+                                    - "!TRACE"
+                                    - "ALL"
+                              scheme:
+                                description: The HTTP scheme, which should be matched. If not set, http and https are matched
+                                type: string
+                                maxLength: 5
+                              host_glob:
+                                description: Glob expression to match the host if required. If not set, all hosts are matched. Mutually exclusive with 'host_regex'.
+                                type: string
+                                maxLength: 512
+                              host_regex:
+                                description: Regular expression to match the host if required. If not set, all hosts are matched. Mutually exclusive with 'host_glob'.
+                                type: string
+                                maxLength: 512
+                              path_glob:
+                                description: Additional glob expression the matched path should be matched against. Mutual exclusive with 'regex'.
+                                type: string
+                                maxLength: 256
+                              path_regex:
+                                description: Additional regular expression the matched path should be matched against. Mutual exclusive with 'glob'
+                                type: string
+                                maxLength: 256
                       forward_to:
                         description: Where to forward the request to. Required only if heimdall is used in proxy operation mode.
                         type: object
@@ -125,33 +171,6 @@ spec:
                                 items:
                                   type: string
                                   maxLength: 128
-                      methods:
-                        description: The allowed HTTP methods
-                        type: array
-                        minItems: 1
-                        items:
-                          type: string
-                          maxLength: 16
-                          enum:
-                            - "CONNECT"
-                            - "!CONNECT"
-                            - "DELETE"
-                            - "!DELETE"
-                            - "GET"
-                            - "!GET"
-                            - "HEAD"
-                            - "!HEAD"
-                            - "OPTIONS"
-                            - "!OPTIONS"
-                            - "PATCH"
-                            - "!PATCH"
-                            - "POST"
-                            - "!POST"
-                            - "PUT"
-                            - "!PUT"
-                            - "TRACE"
-                            - "!TRACE"
-                            - "ALL"
                       execute:
                         description: The pipeline mechanisms to execute
                         type: array

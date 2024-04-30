@@ -110,7 +110,6 @@ buckets:
   - url: s3://foobar
   - url: s3://barfoo/foo&foo=bar
     prefix: bar
-    rule_path_match_prefix: baz
 `),
 			assert: func(t *testing.T, err error, prov *provider) {
 				t.Helper()
@@ -243,6 +242,10 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+  execute:
+    - authenticator: test
 `
 
 				_, err := backend.PutObject(bucketName, "test-rule",
@@ -287,6 +290,10 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+  execute:
+    - authenticator: test
 `
 
 				_, err := backend.PutObject(bucketName, "test-rule",
@@ -336,6 +343,10 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+  execute:
+    - authenticator: test
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule1",
@@ -350,6 +361,10 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+  execute:
+    - authenticator: test
 `
 
 						_, err := backend.PutObject(bucketName, "test-rule2",
@@ -422,8 +437,11 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    path: /foo
+  execute:
+    - authenticator: test
 `
-
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))
@@ -434,8 +452,11 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    path: /bar
+  execute:
+    - authenticator: test
 `
-
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))
@@ -446,8 +467,11 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    path: /baz
+  execute:
+    - authenticator: test
 `
-
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))

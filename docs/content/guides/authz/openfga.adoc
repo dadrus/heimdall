@@ -241,17 +241,15 @@ Note or write down the value of `authorization_model_id`.
 +
 [source, yaml]
 ----
-version: "1alpha3"
+version: "1alpha4"
 rules:
 - id: access_document  # <1>
   match:
-    url: http://<**>/document/<**> # <2>
+    path: /document/:id # <2>
+    with:
+      methods: [ GET, POST, DELETE ]
   forward_to: # <3>
     host: upstream:8081
-  methods:
-  - GET
-  - POST
-  - DELETE
   execute:
   - authenticator: jwt_auth # <4>
   - authorizer: openfga_check # <5>
@@ -266,16 +264,16 @@ rules:
           {{- else -}} unknown
           {{- end -}}
         object: >
-          document:{{- splitList "/" .Request.URL.Path | last -}} # <9>
+          document:{{- .Request.URL.Captures.id -}} # <9>
   - finalizer: create_jwt # <10>
 
 - id: list_documents  # <11>
   match:
-    url: http://<**>/documents # <12>
+    path: /documents # <12>
+    with:
+      methods: [ GET ] # <14>
   forward_to: # <13>
     host: upstream:8081
-  methods:
-  - GET # <14>
   execute: # <15>
   - authenticator: jwt_auth
   - contextualizer: openfga_list
@@ -297,7 +295,7 @@ rules:
 <6> Replace the value here with the store id, you've received in step 6
 <7> Replace the value here with the authorization model id, you've received in step 7
 <8> Here, we set the relation depending on the used HTTP request method
-<9> Our object reference. We use the last URL path fragment as the id of the document
+<9> Our object reference. We use the value captured by the wildcard named `id`.
 <10> Reference to the previously configured finalizer to create a JWT to be forwarded to our upstream service
 <11> This is our second rule. It has the id `list_documents`.
 <12> And matches any request of the form `/documents`

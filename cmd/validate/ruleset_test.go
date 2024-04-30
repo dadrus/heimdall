@@ -103,7 +103,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 			proxyMode: true,
 			confFile:  "test_data/config.yaml",
 			rulesFile: "test_data/invalid-ruleset-for-proxy-usage.yaml",
-			expError:  "no forward_to",
+			expError:  "requires forward_to",
 		},
 		{
 			uc:        "everything is valid for proxy mode usage",

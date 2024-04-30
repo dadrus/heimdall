@@ -141,7 +141,9 @@ if: type(Error) == authentication_error
 
 				ctx := mocks.NewContextMock(t)
 				ctx.EXPECT().Request().
-					Return(&heimdall.Request{URL: &url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}})
+					Return(&heimdall.Request{
+						URL: &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
+					})
 
 				toURL, err := redEH.to.Render(map[string]any{
 					"Request": ctx.Request(),
@@ -382,7 +384,7 @@ if: type(Error) == authentication_error
 				requestURL, err := url.Parse("http://test.org")
 				require.NoError(t, err)
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: requestURL})
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *requestURL}})
 				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 

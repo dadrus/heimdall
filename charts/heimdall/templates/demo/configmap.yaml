@@ -74,9 +74,6 @@ data:
         type: noop
 
     default_rule:
-      methods:
-        - GET
-        - POST
       execute:
         - authenticator: anonymous_authenticator
         - authorizer: deny_all_requests

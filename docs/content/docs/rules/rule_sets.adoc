@@ -27,7 +27,7 @@ Available properties are:
 
 * *`version`*: _string_ (mandatory)
 +
-The version schema of the rule set. The current version of heimdall supports only the version `1alpha3`.
+The version schema of the rule set. The current version of heimdall supports only the version `1alpha4`.
 
 * *`name`*: _string_ (optional)
 +
@@ -44,19 +44,25 @@ An imaginary rule set file defining two rules could look like shown below.
 
 [source, yaml]
 ----
-version: "1alpha3"
+version: "1alpha4"
 name: my-rule-set
 rules:
 - id: rule:1
   match:
-    url: https://my-service1.local/<**>
-  methods: [ "GET" ]
+    path: /**
+    with:
+      methods: [ "GET" ]
+      scheme: https
+      host_glob: my-service1.local
   execute:
     - authorizer: foobar
 - id: rule:2
   match:
-    url: https://my-service2.local/<**>
-  methods: [ "GET" ]
+    path: /**
+    with:
+      scheme: https
+      host_glob: my-service2.local
+      methods: [ "GET" ]
   execute:
     - authorizer: barfoo
 ----
@@ -70,7 +76,7 @@ If you operate heimdall in kubernetes, most probably, you would like to make use
 
 * *`apiVersion`*: _string_ (mandatory)
 +
-The api version of the custom resource definition, the given rule set is based on. The current version of heimdall supports only `heimdall.dadrus.github.com/v1alpha3` version.
+The api version of the custom resource definition, the given rule set is based on. The current version of heimdall supports only `heimdall.dadrus.github.com/v1alpha4` version.
 
 * *`kind`*: _string_ (mandatory)
 +
@@ -108,7 +114,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts
 ====
 [source, yaml]
 ----
-apiVersion: heimdall.dadrus.github.com/v1alpha3
+apiVersion: heimdall.dadrus.github.com/v1alpha4
 kind: RuleSet
 metadata:
   name: "<some name>"
@@ -117,7 +123,10 @@ spec:
   rules:
     - id: "<identifier of a rule 1>"
       match:
-        url: http://127.0.0.1:9090/foo/<**>
+        path: /foo/**
+        with:
+          scheme: https
+          host_glob: 127.0.0.1:9090
       execute:
         - authenticator: foo
         - authorizer: bar

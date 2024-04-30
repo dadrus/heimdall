@@ -72,7 +72,6 @@ func newService(
 			errorhandler.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
 			errorhandler.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
 			errorhandler.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
-			errorhandler.WithMethodErrorCode(service.Respond.With.BadMethodError.Code),
 			errorhandler.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
 			errorhandler.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
 		),

@@ -22,6 +22,8 @@ import (
 
 	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestUrls(t *testing.T) {
@@ -33,8 +35,8 @@ func TestUrls(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	rawURI := "http://localhost/foo/bar?foo=bar&foo=baz&bar=foo"
-	uri, err := url.Parse("http://localhost/foo/bar?foo=bar&foo=baz&bar=foo")
+	rawURI := "http://localhost:8080/foo/bar?foo=bar&foo=baz&bar=foo"
+	uri, err := url.Parse(rawURI)
 	require.NoError(t, err)
 
 	for _, tc := range []struct {
@@ -43,6 +45,11 @@ func TestUrls(t *testing.T) {
 		{expr: `uri.String() == "` + rawURI + `"`},
 		{expr: `uri.Query() == {"foo":["bar", "baz"], "bar": ["foo"]}`},
 		{expr: `uri.Query().bar == ["foo"]`},
+		{expr: `uri.Host == "localhost:8080"`},
+		{expr: `uri.Hostname() == "localhost"`},
+		{expr: `uri.Port() == "8080"`},
+		{expr: `uri.Captures.zab == "baz"`},
+		{expr: `uri.Path == "/foo/bar"`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
 			ast, iss := env.Compile(tc.expr)
@@ -58,7 +65,7 @@ func TestUrls(t *testing.T) {
 			prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 			require.NoError(t, err)
 
-			out, _, err := prg.Eval(map[string]any{"uri": uri})
+			out, _, err := prg.Eval(map[string]any{"uri": &heimdall.URL{URL: *uri, Captures: map[string]string{"zab": "baz"}}})
 			require.NoError(t, err)
 			require.Equal(t, true, out.Value()) //nolint:testifylint
 		})

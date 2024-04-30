@@ -46,8 +46,19 @@ func init() {
 		panic(err)
 	}
 
+	getTagValue := func(tag reflect.StructTag) string {
+		for _, tagName := range []string{"mapstructure", "json", "yaml"} {
+			val := tag.Get(tagName)
+			if len(val) != 0 {
+				return val
+			}
+		}
+
+		return ""
+	}
+
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		return "'" + strings.SplitN(fld.Tag.Get("mapstructure"), ",", 2)[0] + "'" // nolint: gomnd
+		return "'" + strings.SplitN(getTagValue(fld.Tag), ",", 2)[0] + "'" // nolint: gomnd
 	})
 }
 
