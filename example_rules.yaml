@@ -4,6 +4,7 @@ rules:
 - id: rule:foo
   match:
     path: /**
+    backtracking_enabled: false
     with:
       methods:
       - GET
