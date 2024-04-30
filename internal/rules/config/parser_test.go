@@ -235,6 +235,27 @@ func TestParseRules(t *testing.T) {
 			},
 		},
 		{
+			uc:          "JSON rule set with invalid backtracking_enabled settings",
+			contentType: "application/json",
+			content: []byte(`{
+"version": "1",
+"name": "foo",
+"rules": [
+  {
+    "id": "foo",
+    "match":{"path":"/foo/bar", "backtracking_enabled": true },
+    "execute": [{"authenticator":"test"}]
+  }]
+}`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.Contains(t, err.Error(), "'backtracking_enabled' is an excluded field")
+				require.Nil(t, ruleSet)
+			},
+		},
+		{
 			uc:          "Valid JSON rule set",
 			contentType: "application/json",
 			content: []byte(`{
@@ -243,7 +264,7 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "with": { "methods": ["ALL"] }},
+    "match":{"path":"/foo/bar", "with": { "methods": ["ALL"] }, "backtracking_enabled": true },
     "execute": [{"authenticator":"test"}]
   }]
 }`),

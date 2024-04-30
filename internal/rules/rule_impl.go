@@ -55,12 +55,6 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 
 	request := ctx.Request()
 
-	// unescape captures
-	captures := request.URL.Captures
-	for k, v := range captures {
-		captures[k] = unescape(v, r.slashesHandling)
-	}
-
 	switch r.slashesHandling { //nolint:exhaustive
 	case config.EncodedSlashesOn:
 		// unescape path
@@ -70,6 +64,12 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 			return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
 				"path contains encoded slash, which is not allowed")
 		}
+	}
+
+	// unescape captures
+	captures := request.URL.Captures
+	for k, v := range captures {
+		captures[k] = unescape(v, r.slashesHandling)
 	}
 
 	// authenticators

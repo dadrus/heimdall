@@ -17,9 +17,9 @@
 package config
 
 type Matcher struct {
-	Path                string              `json:"path"                 yaml:"path" validate:"required"` //nolint:tagalign
-	BacktrackingEnabled *bool               `json:"backtracking_enabled" yaml:"backtracking_enabled"`
-	With                *MatcherConstraints `json:"with"                 yaml:"with" validate:"omitnil,required"` //nolint:lll,tagalign
+	Path                string              `json:"path"                 yaml:"path"                 validate:"required"`              //nolint:lll,tagalign
+	BacktrackingEnabled *bool               `json:"backtracking_enabled" yaml:"backtracking_enabled" validate:"excluded_without=With"` //nolint:lll,tagalign
+	With                *MatcherConstraints `json:"with"                 yaml:"with"                 validate:"omitnil,required"`      //nolint:lll,tagalign
 }
 
 func (m *Matcher) DeepCopyInto(out *Matcher) {
