@@ -32,7 +32,7 @@ The path expression describing the paths of incoming requests this rule is suppo
 
 ** *`backtracking_enabled`*: _boolean_ (optional)
 +
-Whether to allow backtracking if a request is matched based on the `path` expression, but the additional matching conditions (see below) are not satisfied. Inherited from the default rule and defaults to the settings in that rule.
+This property can only be used together with the additional matching conditions (see the `with` property below). Enables or disables backtracking if a request is matched based on the `path` expression, but the additional matching conditions are not satisfied. Inherited from the default rule and defaults to the settings in that rule. If enabled, the lookup will traverse back to a rule with a less specific path expression and potentially (depending on the evaluation of additional conditions defined on that level) match it.
 
 ** *`with`*: _MatchConditions_ (optional)
 +
@@ -221,7 +221,11 @@ match:
 The implementation ensures, that more specific path expressions are matched first regardless of the placement of rules in a rule set.
 Indeed, the more specific rules are matched first even the corresponding rules are defined in different rule sets.
 
-When the path expression is matched to a request, additional conditions, if present in the rule's matching definition, are evaluated. Only if these succeeded, the pipeline of the rule is executed. If there are multiple rules with the same path expressions, their additional condition statements are executed in a sequence until one rule matches. If there are multiple matching rules, the first one is taken. The matching order depends on the rule sequence in the rule set. If there is no matching rule, backtracking, if enabled, will take place and the next less specific rule may be matched. Backtracking stops if either
+When the path expression is matched to a request, additional conditions, if present in the rule's matching definition, are evaluated. Only if these succeeded, the pipeline of the rule is executed.
+
+CAUTION: If there are multiple rules for the same path expression with matching additional conditions, the first matching rule is taken. The matching order depends on the rule sequence in the rule set.
+
+If there is no matching rule, backtracking, if enabled, will take place and the next less specific rule may be matched. Backtracking stops if either
 
 * a less specific rule is successfully matched (incl. the evaluation of additional expressions), or
 * a less specific rule is not matched and does not allow backtracking.
@@ -265,32 +269,6 @@ The request to `/files/team1/document.pdf` will be matched by the rule with id `
 The request to `/files/team3/document.pdf` will be matched by the `rule3` as it is more specific than `rule1` and `rule2`. Again the corresponding pipeline will be executed.
 
 However, even the request to  `/files/team4/document.pdf` will be matched by `rule2`, the regular expression `^/files/(team1|team2)/.*` will fail. Here, since `backtracking_enabled` is set to `true` backtracking will start and the request will be matched by the `rule1` and its pipeline will be then executed.
-
-[CAUTION]
-====
-Since multiple rules with the same path expression might be present in a rule set, multiple rules could be matched based on their additional conditions definitions. Here an example:
-
-[source, yaml]
-----
-- id: rule1
-  match:
-    path: /articles/:id
-    with:
-      methods: [ POST ]
-  execute:
-    - <pipeline definition>
-
-- id: rule2
-  match:
-    path: /articles/:id
-    with:
-      methods: [ POST ]
-  execute:
-    - <pipeline definition>
-----
-
-Such conflicting configurations cannot be avoided while loading a rule set and there might be valid reasons to have different rules with more specific additional conditions for the same path expression as well. For that reason, heimdall will use the first matching rule (the order is given by the placement of the rules in a rule set) when the incoming request is matched by multiple rules and emit a corresponding log statement.
-====
 
 == Authentication & Authorization Pipeline
 
