@@ -357,9 +357,7 @@ On this page<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill=
             <span class=pi>-</span> <span class=s1>&#39;</span><span class=s>*/*&#39;</span>
 
 <span class=na>default_rule</span><span class=pi>:</span>
-  <span class=na>methods</span><span class=pi>:</span>
-  <span class=pi>-</span> <span class=s>GET</span>
-  <span class=pi>-</span> <span class=s>POST</span>
+  <span class=na>backtracking_enabled</span><span class=pi>:</span> <span class=kc>false</span>
   <span class=na>execute</span><span class=pi>:</span>
   <span class=pi>-</span> <span class=na>authenticator</span><span class=pi>:</span> <span class=s>anonymous_authenticator</span>
   <span class=pi>-</span> <span class=na>finalizer</span><span class=pi>:</span> <span class=s>jwt</span>
@@ -375,8 +373,8 @@ On this page<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill=
     <span class=na>watch_interval</span><span class=pi>:</span> <span class=s>5m</span>
     <span class=na>endpoints</span><span class=pi>:</span>
       <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>http://foo.bar/ruleset1</span>
-        <span class=na>expected_path_prefix</span><span class=pi>:</span> <span class=s>/foo/bar</span>
-        <span class=na>enable_http_cache</span><span class=pi>:</span> <span class=kc>false</span>
+        <span class=na>http_cache</span><span class=pi>:</span>
+          <span class=na>enabled</span><span class=pi>:</span> <span class=kc>false</span>
       <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>http://foo.bar/ruleset2</span>
         <span class=na>retry</span><span class=pi>:</span>
           <span class=na>give_up_after</span><span class=pi>:</span> <span class=s>5s</span>
@@ -395,10 +393,8 @@ On this page<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill=
     <span class=na>buckets</span><span class=pi>:</span>
       <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>gs://my-bucket</span>
         <span class=na>prefix</span><span class=pi>:</span> <span class=s>service1</span>
-        <span class=na>rule_path_match_prefix</span><span class=pi>:</span> <span class=s>/service1</span>
       <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>azblob://my-bucket</span>
         <span class=na>prefix</span><span class=pi>:</span> <span class=s>service2</span>
-        <span class=na>rule_path_match_prefix</span><span class=pi>:</span> <span class=s>/service2</span>
       <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>s3://my-bucket/my-rule-set</span>
 
   <span class=na>kubernetes</span><span class=pi>:</span>
@@ -408,4 +404,4 @@ On this page<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill=
       <span class=na>key_store</span><span class=pi>:</span>
         <span class=na>path</span><span class=pi>:</span> <span class=s>/path/to/pem.file</span>
         <span class=na>password</span><span class=pi>:</span> <span class=s>VerySecret!</span>
-      <span class=na>min_version</span><span class=pi>:</span> <span class=s>TLS1.3</span></code></pre></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Mar 11, 2024</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../docs/configuration/types/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentcolor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>Type Definitions</a></div></div></main></div><footer class="footer py-4 py-md-5 px-4 px-md-3 mt-3"><div class=container><div class=row><div class="col-lg-3 mb-3"><p class=fs-5>Heimdall</p><ul class="list-unstyled small text-muted"><li class=mb-2>2022-2024 © Heimdall Project Authors. All rights reserved.</li><li class=mb-2><a href=https://github.com/dadrus/heimdall/blob/master/LICENSE>Apache 2.0 licensed</a></li></ul></div><div class="col-6 col-lg-2 offset-lg-1 mb-3"><h5>Links</h5><ul class=list-unstyled><li class=mb-2><a href=../../../>Home</a></li><li class=mb-2><a href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=mb-2><a href=../../../guides/>Guides</a></li><li class=mb-2><a href=../../../openapi/>API</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Guides</h5><ul class=list-unstyled><li class=mb-2><a href=../../../guides/proxies/>API Gateways & Proxies</a></li><li class=mb-2><a href=../../../guides/authz/>Authorization Services</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Community</h5><ul class=list-unstyled><li class=mb-2><a href=https://github.com/dadrus/heimdall>Github</a></li><li class=mb-2><a href=https://discord.gg/qQgg8xKuyb>Discord</a></li></ul></div></div></div></footer><script src=../../../js/main.js defer></script></body></html>
+      <span class=na>min_version</span><span class=pi>:</span> <span class=s>TLS1.3</span></code></pre></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Apr 30, 2024</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../docs/configuration/types/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentcolor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>Type Definitions</a></div></div></main></div><footer class="footer py-4 py-md-5 px-4 px-md-3 mt-3"><div class=container><div class=row><div class="col-lg-3 mb-3"><p class=fs-5>Heimdall</p><ul class="list-unstyled small text-muted"><li class=mb-2>2022-2024 © Heimdall Project Authors. All rights reserved.</li><li class=mb-2><a href=https://github.com/dadrus/heimdall/blob/master/LICENSE>Apache 2.0 licensed</a></li></ul></div><div class="col-6 col-lg-2 offset-lg-1 mb-3"><h5>Links</h5><ul class=list-unstyled><li class=mb-2><a href=../../../>Home</a></li><li class=mb-2><a href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=mb-2><a href=../../../guides/>Guides</a></li><li class=mb-2><a href=../../../openapi/>API</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Guides</h5><ul class=list-unstyled><li class=mb-2><a href=../../../guides/proxies/>API Gateways & Proxies</a></li><li class=mb-2><a href=../../../guides/authz/>Authorization Services</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Community</h5><ul class=list-unstyled><li class=mb-2><a href=https://github.com/dadrus/heimdall>Github</a></li><li class=mb-2><a href=https://discord.gg/qQgg8xKuyb>Discord</a></li></ul></div></div></div></footer><script src=../../../js/main.js defer></script></body></html>
