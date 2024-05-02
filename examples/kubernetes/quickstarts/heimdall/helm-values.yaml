@@ -26,3 +26,7 @@ env:
   OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
   OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo.monitoring:4317"
+
+image:
+  repository: heimdall
+  tag: local

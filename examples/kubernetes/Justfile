@@ -7,11 +7,13 @@ nginx_version := '9.7.7'
 contour_version := '17.0.0'
 emissary_version := '8.7.2'
 haproxy_version := '0.14.4'
+envoy_gw_version := 'v1.0.1'
 metallb_version := '0.13.10'
-certmanager_version := '1.12.3'
+certmanager_version := '1.14.5'
+trustmanager_version := '0.9.2'
 
 cluster_name := 'demo-cluster'
-default_ingress_controller := "contour"
+default_router := "contour"
 
 setup-charts:
   helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -21,7 +23,7 @@ setup-charts:
   helm repo add jetstack https://charts.jetstack.io
   helm repo add dadrus https://dadrus.github.io/heimdall/charts
   helm repo add datawire https://app.getambassador.io
-  helm repo add haproxy-ingress https://haproxy-ingress.github.io/charts
+  helm repo add haproxy https://haproxy-ingress.github.io/charts
   helm repo update
 
 ## Installs Grafana
@@ -96,8 +98,8 @@ install-nginx-ingress-controller:
     --wait
 
 install-contour-ingress-controller:
-  helm upgrade --install contour-ingress-controller bitnami/contour \
-    -n contour-ingress-controller --create-namespace \
+  helm upgrade --install contour-controller bitnami/contour \
+    -n contour-controller --create-namespace \
     --version {{contour_version}} \
     -f contour/helm-values.yaml # used only to configure a global auth server
 
@@ -107,34 +109,32 @@ install-emissary-ingress-controller:
   kubectl apply -f https://app.getambassador.io/yaml/emissary/${app_version}/emissary-crds.yaml
   kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext -n emissary-system
 
-  helm upgrade --install emissary-ingress datawire/emissary-ingress \
-    -n emissary-ingress-controller --create-namespace \
+  helm upgrade --install emissary datawire/emissary \
+    -n emissary-controller --create-namespace \
     --version {{emissary_version}}
 
-  kubectl -n emissary-ingress-controller wait --for condition=available --timeout=90s deploy -lapp.kubernetes.io/instance=emissary-ingress
+  kubectl -n emissary-controller wait --for condition=available --timeout=90s deploy -lapp.kubernetes.io/instance=emissary
 
-  kubectl apply -f - <<EOF
-  apiVersion: getambassador.io/v3alpha1
-  kind: Listener
-  metadata:
-    name: emissary-tls-ingress-listener
-    namespace: emissary-ingress-controller
-  spec:
-    port: 8443
-    protocol: HTTPS
-    securityModel: XFP
-    hostBinding:
-      namespace:
-        from: ALL
-  EOF
+  kubectl apply -f emissary/listener.yaml
 
 
 install-haproxy-ingress-controller:
-  helm install haproxy-ingress-controller haproxy-ingress/haproxy-ingress \
-    -n haproxy-ingress-controller --create-namespace \
+  helm upgrade --install haproxy-controller haproxy/haproxy \
+    -n haproxy-controller --create-namespace \
     --version {{haproxy_version}} \
     -f haproxy/helm-values.yaml \
     --wait
+
+install-envoy-gateway:
+  helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version {{envoy_gw_version}} \
+    -n envoy-gateway-system --create-namespace
+
+  kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+
+  #kubectl rollout restart deployment cert-manager -n cert-manager
+
+  kubectl apply -f envoygw/gateway.yaml
+
 
 install-lb:
   #!/usr/bin/env bash
@@ -147,51 +147,59 @@ install-lb:
 
 install-cert-manager:
   #!/usr/bin/env bash
+
   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v{{certmanager_version}}/cert-manager.crds.yaml
 
   helm upgrade --install cert-manager jetstack/cert-manager \
     -n cert-manager --create-namespace \
     --version {{certmanager_version}} \
     --set installCRDs=false \
-    --set featureGates='AdditionalCertificateOutputFormats=true' \
+    --set featureGates='AdditionalCertificateOutputFormats=true,ExperimentalGatewayAPISupport=true' \
+    --set webhook.featureGates='AdditionalCertificateOutputFormats=true' \
     --wait
 
-  kubectl apply -n cert-manager -f - <<EOF
-  apiVersion: cert-manager.io/v1
-  kind: ClusterIssuer
-  metadata:
-    name: selfsigned
-  spec:
-    selfSigned: {}
-  EOF
+  kubectl apply -n cert-manager -f cert-manager/cluster_issuer.yaml
+  kubectl apply -n cert-manager -f cert-manager/ca.yaml
 
-install-echo-service ingress_controller=default_ingress_controller:
-  kustomize build quickstarts/demo-app/overlays/{{ingress_controller}}-ingress | kubectl apply -f -
+install-echo-service router=default_router:
+  kustomize build quickstarts/demo-app/overlays/{{router}} | kubectl apply -f -
 
 install-echo-service-with-proxy:
   kustomize build quickstarts/proxy-demo/ | kubectl apply -f -
 
-install-heimdall ingress_controller=default_ingress_controller:
+install-heimdall router=default_router:
   #!/usr/bin/env bash
-  kubectl create namespace heimdall
+
+  kubectl apply -f quickstarts/heimdall/namespace.yaml
+
+  helm upgrade --install trust-manager jetstack/trust-manager \
+    -n heimdall \
+    --version {{trustmanager_version}} \
+    --set app.trust.namespace=heimdall \
+    --wait
+
   kubectl apply -f quickstarts/heimdall/certificate.yaml
 
   extraArgs='extraArgs={}'
-  if [[ "{{ingress_controller}}" == "contour" || "{{ingress_controller}}" == "emissary" ]]; then
+  if [[ "{{router}}" == "contour" || "{{router}}" == "emissary" || "{{router}}" == "envoygw" ]]; then
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
-  helm upgrade --install heimdall dadrus/heimdall \
+  helm upgrade --install heimdall ../../charts/heimdall \
     -n heimdall \
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
     --set "${extraArgs}" \
     --wait
 
-  if [ "{{ingress_controller}}" == "contour" ]; then
+  if [ "{{router}}" == "contour" ]; then
       kubectl apply -f quickstarts/heimdall/contour-extension-service.yaml
-  elif [ "{{ingress_controller}}" == "emissary" ]; then
+  elif [ "{{router}}" == "emissary" ]; then
       kubectl apply -f quickstarts/heimdall/emissary-auth-service.yaml
+  elif [ "{{router}}" == "envoygw" ]; then
+      kubectl apply -f quickstarts/heimdall/backend-tls-policy.yaml
+      #kubectl apply -f quickstarts/heimdall/reference-grant.yaml
+      kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
   fi
 
 create-cluster:
@@ -206,6 +214,8 @@ install-contour-decision-demo: setup-cluster install-contour-ingress-controller 
 install-haproxy-decision-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
 
 install-emissary-decision-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
+
+install-envoygw-decision-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
