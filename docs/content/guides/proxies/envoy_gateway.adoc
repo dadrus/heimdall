@@ -1,0 +1,19 @@
+---
+title: "Envoy Gateway Integration"
+date: 2024-05-02T13:02:43+02:00
+draft: false
+weight: 13
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: This guide explains how to integrate heimdall with Envoy Gateway.
+---
+
+:toc:
+
+https://gateway.envoyproxy.io[Envoy Gateway] is an open source project for managing https://www.envoyproxy.io/[Envoy Proxy] as a Kubernetes-based application gateway by making use of the https://gateway-api.sigs.k8s.io/[Gateway API] resources.
+
+== Prerequisites
+
+* Integration with Envoy proxy requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+
