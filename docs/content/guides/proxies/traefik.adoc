@@ -15,7 +15,7 @@ https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load b
 
 == Prerequisites
 
-* Integration with Envoy proxy requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+* Integration with traefik requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
 
 [CAUTION]
 ====
