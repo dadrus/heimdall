@@ -131,9 +131,10 @@ install-envoy-gateway:
 
   kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 
-  #kubectl rollout restart deployment cert-manager -n cert-manager
-
   kubectl apply -f envoygw/gateway.yaml
+
+install-traefik-ingress-controller:
+
 
 
 install-lb:
@@ -215,6 +216,8 @@ install-haproxy-decision-demo: setup-cluster install-haproxy-ingress-controller 
 install-emissary-decision-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
 
 install-envoygw-decision-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
+
+install-traefik-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
