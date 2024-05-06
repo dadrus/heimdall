@@ -131,8 +131,6 @@ install-envoy-gateway:
 
   kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 
-  #kubectl rollout restart deployment cert-manager -n cert-manager
-
   kubectl apply -f envoygw/gateway.yaml
 
 
@@ -185,7 +183,7 @@ install-heimdall router=default_router:
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
-  helm upgrade --install heimdall ../../charts/heimdall \
+  helm upgrade --install heimdall dadrus/heimdall \
     -n heimdall \
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
