@@ -31,9 +31,9 @@ In both cases, the filter calls an external gRPC or HTTP service (here heimdall)
 
 In case of Envoy Gateway the abovesaid configuration happens via a https://gateway.envoyproxy.io/contributions/design/security-policy/[`SecurityPolicy`] custom resource, that can be linked to a https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`], https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`], or a https://gateway-api.sigs.k8s.io/api-types/grpcroute[`GRPCRoute`] resource.
 
-== Global Configuration
+NOTE: As of today, there is a limitation in the implementation of the Envoy Gateway - it does not allow cross-namespace reference of external auth services (see also https://github.com/envoyproxy/gateway/issues/3322[envoyproxy/gateway#3322]). That means, the https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`], the https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource and heimdall must be deployed in the same namespace.
 
-NOTE: As of today, there is a limitation in the implementation of the Envoy Gateway - it does not allow cross-namespace reference of external auth services (see also https://github.com/envoyproxy/gateway/issues/3322[envoyproxy/gateway#3322]). That means, both the https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource and heimdall must be deployed in the same namespace.
+== Global Configuration
 
 To integrate heimdall with the gateway globally, that is, each and every request will be forwarded to heimdall for authentication and authorization purposes first, create a https://gateway.envoyproxy.io/contributions/design/security-policy/[`SecurityPolicy`] as shown below in the namespace, the https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource is deployed into.
 
@@ -72,12 +72,12 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
   name: ext-auth-example # <1>
-  namespace: myapp # <2>
+  namespace: heimdall # <2>
 spec:
   targetRef: # <3>
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: myapp
+    name: heimdall
   extAuth:
     grpc:
       backendRef: # <4>
@@ -92,7 +92,7 @@ spec:
 
 == Security Considerations
 
-The configuration options shown above are highly insecure, as the communication from the gateway to heimdall happens over plain HTTP. Therefore, tt is highly recommended to enable TLS. This can be achieved by enabling TLS for heimdall and attaching a https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/[`BackendTLSPolicy`] resource shown below to heimdall's https://kubernetes.io/docs/concepts/services-networking/service/[`Service`].
+The configuration options shown above are highly insecure, as the communication from the gateway to heimdall happens over plain HTTP. Therefore, it is highly recommended to enable TLS. This can be achieved by enabling TLS for heimdall and attaching a https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/[`BackendTLSPolicy`] resource shown below to heimdall's https://kubernetes.io/docs/concepts/services-networking/service/[`Service`].
 
 [source, yaml]
 ----

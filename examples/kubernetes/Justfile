@@ -198,7 +198,6 @@ install-heimdall router=default_router:
       kubectl apply -f quickstarts/heimdall/emissary-auth-service.yaml
   elif [ "{{router}}" == "envoygw" ]; then
       kubectl apply -f quickstarts/heimdall/backend-tls-policy.yaml
-      #kubectl apply -f quickstarts/heimdall/reference-grant.yaml
       kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
   fi
 
