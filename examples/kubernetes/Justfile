@@ -186,7 +186,7 @@ install-heimdall router=default_router:
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
-  helm upgrade --install heimdall ../../charts/heimdall \
+  helm upgrade --install heimdall dadrus/heimdall \
     -n heimdall \
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
