@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   proxy:
-    image: traefik:2.11.2
+    image: traefik:3.0.0
     ports:
     - "9090:9090"
     command: >
