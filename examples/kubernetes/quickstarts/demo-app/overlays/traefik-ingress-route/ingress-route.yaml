@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: echo-app
 spec:
   entryPoints:
-    - web
+    - websecure
   routes:
     - kind: Rule
       match: Host(`echo-app.local`) && PathPrefix(`/`)
@@ -19,3 +19,5 @@ spec:
           name: echo-app
           namespace: quickstarts
           port: app-port
+  tls:
+    secretName: echo-app
