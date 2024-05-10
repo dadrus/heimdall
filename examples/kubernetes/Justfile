@@ -8,6 +8,7 @@ contour_version := '17.0.0'
 emissary_version := '8.7.2'
 haproxy_version := '0.14.4'
 envoy_gw_version := 'v1.0.1'
+traefik_version := '28.0.0'
 metallb_version := '0.13.10'
 certmanager_version := '1.14.5'
 trustmanager_version := '0.9.2'
@@ -24,6 +25,7 @@ setup-charts:
   helm repo add dadrus https://dadrus.github.io/heimdall/charts
   helm repo add datawire https://app.getambassador.io
   helm repo add haproxy https://haproxy-ingress.github.io/charts
+  helm repo add traefik https://traefik.github.io/charts
   helm repo update
 
 ## Installs Grafana
@@ -133,9 +135,14 @@ install-envoy-gateway:
 
   kubectl apply -f envoygw/gateway.yaml
 
-install-traefik-ingress-controller:
+install-traefik:
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 
-
+  helm upgrade --install traefik traefik/traefik \
+      -n traefik --create-namespace \
+      --version {{traefik_version}} \
+      -f traefik/helm-values.yaml \
+      --wait
 
 install-lb:
   #!/usr/bin/env bash
@@ -186,7 +193,7 @@ install-heimdall router=default_router:
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
-  helm upgrade --install heimdall dadrus/heimdall \
+  helm upgrade --install heimdall ../../charts/heimdall \
     -n heimdall \
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
@@ -200,6 +207,8 @@ install-heimdall router=default_router:
   elif [ "{{router}}" == "envoygw" ]; then
       kubectl apply -f quickstarts/heimdall/backend-tls-policy.yaml
       kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
+  elif [ "{{router}}" == "traefik-ingress" ]; then
+      kubectl apply -f quickstarts/heimdall/heimdall-middleware.yaml
   fi
 
 create-cluster:
@@ -217,7 +226,11 @@ install-emissary-decision-demo: setup-cluster install-emissary-ingress-controlle
 
 install-envoygw-decision-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
 
-install-traefik-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik")
+install-traefik-ingress-decision-demo: setup-cluster install-traefik (install-heimdall "traefik-ingress") (install-echo-service "traefik-ingress")
+
+install-traefik-ingress-route-decision-demo: setup-cluster install-traefik (install-heimdall "traefik-ingress-route") (install-echo-service "traefik-ingress-route")
+
+install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik-gw") (install-echo-service "traefik-gw")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
