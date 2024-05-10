@@ -19,3 +19,9 @@ ports:
     port: 9000
     expose:
       default: true
+  web:
+    middlewares:
+      - heimdall-heimdall@kubernetescrd
+  websecure:
+    middlewares:
+      - heimdall-heimdall@kubernetescrd

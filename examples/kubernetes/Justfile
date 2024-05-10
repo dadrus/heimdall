@@ -135,13 +135,17 @@ install-envoy-gateway:
 
   kubectl apply -f envoygw/gateway.yaml
 
-install-traefik:
+install-traefik global_mw="true":
+  #!/usr/bin/env bash
+  valuesFile=$({{global_mw}} && echo global-mw-helm-values.yaml || echo helm-values.yaml)
+  echo "using ${valuesFile}"
+
   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 
   helm upgrade --install traefik traefik/traefik \
       -n traefik --create-namespace \
       --version {{traefik_version}} \
-      -f traefik/helm-values.yaml \
+      -f traefik/${valuesFile} \
       --wait
 
 install-lb:
@@ -207,7 +211,7 @@ install-heimdall router=default_router:
   elif [ "{{router}}" == "envoygw" ]; then
       kubectl apply -f quickstarts/heimdall/backend-tls-policy.yaml
       kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
-  elif [ "{{router}}" == "traefik-ingress" ]; then
+  elif [ "{{router}}" == "traefik" ]; then
       kubectl apply -f quickstarts/heimdall/heimdall-middleware.yaml
   fi
 
@@ -226,9 +230,9 @@ install-emissary-decision-demo: setup-cluster install-emissary-ingress-controlle
 
 install-envoygw-decision-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
 
-install-traefik-ingress-decision-demo: setup-cluster install-traefik (install-heimdall "traefik-ingress") (install-echo-service "traefik-ingress")
+install-traefik-ingress-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-ingress")
 
-install-traefik-ingress-route-decision-demo: setup-cluster install-traefik (install-heimdall "traefik-ingress-route") (install-echo-service "traefik-ingress-route")
+install-traefik-ingress-route-decision-demo: setup-cluster (install-traefik "false") (install-heimdall "traefik") (install-echo-service "traefik-ingress-route")
 
 install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik-gw") (install-echo-service "traefik-gw")
 
