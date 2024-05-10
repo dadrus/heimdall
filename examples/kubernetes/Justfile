@@ -138,12 +138,13 @@ install-envoy-gateway:
 install-traefik global_mw="true":
   #!/usr/bin/env bash
   valuesFile=$({{global_mw}} && echo global-mw-helm-values.yaml || echo helm-values.yaml)
-  echo "using ${valuesFile}"
+
+  kubectl apply -f traefik/certificate.yaml
 
   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 
   helm upgrade --install traefik traefik/traefik \
-      -n traefik --create-namespace \
+      -n traefik \
       --version {{traefik_version}} \
       -f traefik/${valuesFile} \
       --wait
@@ -234,7 +235,7 @@ install-traefik-ingress-decision-demo: setup-cluster install-traefik (install-he
 
 install-traefik-ingress-route-decision-demo: setup-cluster (install-traefik "false") (install-heimdall "traefik") (install-echo-service "traefik-ingress-route")
 
-install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik-gw") (install-echo-service "traefik-gw")
+install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-gw")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
