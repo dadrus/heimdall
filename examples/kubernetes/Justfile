@@ -3,7 +3,7 @@ prometheus_version := '44.2.1'
 loki_version := '2.8.9'
 tempo_version := '0.16.8'
 phlare_version := '0.1.2'
-nginx_version := '11.1.2'
+nginx_version := '4.10.1'
 contour_version := '17.0.12'
 emissary_version := '8.9.1'
 haproxy_version := '0.14.6'
@@ -18,6 +18,7 @@ default_router := "contour"
 
 setup-charts:
   helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
   helm repo add grafana https://grafana.github.io/helm-charts
   helm repo add metallb https://metallb.github.io/metallb
@@ -93,10 +94,10 @@ install-heimdall-pod-monitor:
 install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards install-heimdall-pod-monitor
 
 install-nginx-ingress-controller:
-  helm upgrade --install nginx-ingress-controller bitnami/nginx-ingress-controller \
-    -n nginx-ingress-controller --create-namespace \
+  helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+    -n nginx-controller --create-namespace \
     --version {{nginx_version}} \
-    --set metrics.enabled=true \
+    --set controller.allowSnippetAnnotations=true \
     --wait
 
 install-contour-ingress-controller:
