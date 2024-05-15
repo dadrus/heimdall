@@ -256,7 +256,7 @@ jobs:
           egress-policy: audit
       - name: Prepare Release
         id: release_prepare
-        uses: googleapis/release-please-action@a37ac6e4f6449ce8b3f7607e4d97d0146028dc0b # v4.1.0
+        uses: googleapis/release-please-action@f3969c04a4ec81d7a9aa4010d84ae6a7602f86a7 # v4.1.1
         with:
           target-branch: ${{ github.ref_name }}
 
