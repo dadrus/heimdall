@@ -1,4 +1,4 @@
-FROM golang:1.22.3-bookworm@sha256:c2bc4ef4064059a5dbd083e573dbd5d074858130fa3f1ed14807903b71ed99f1
+FROM golang:1.22.3-bookworm@sha256:5b4854acee80f9bacd1e6f1fe5adb2341eef70542566c2c0667ed478424e7115
 ENV CGO_ENABLED 1
 
 RUN apt-get update && apt-get install -y --no-install-recommends inotify-tools=3.14-7 psmisc=23.2-1+deb10u1 \
