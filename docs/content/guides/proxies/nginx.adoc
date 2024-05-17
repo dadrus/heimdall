@@ -153,7 +153,7 @@ With that in place, you can simply use the standard https://kubernetes.io/docs/c
 
 ==== Using `X-Forwarded-*` headers
 
-To integrate heimdall with the NGINX Ingress Controller you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
+To integrate heimdall with the NGINX Ingress Controller you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] and the link:{{< relref "#_global_configuration" >}}[Global Configuration] for the NGINX Ingress Controller sections.
 
 NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies` on heimdall side. On NGINX Ingress Controller side you must allow the usage of `nginx.ingress.kubernetes.io/auth-snippet` (See also https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations[here]).
 
@@ -168,8 +168,6 @@ nginx.ingress.kubernetes.io/auth-snippet: |
   proxy_set_header    X-Forwarded-Uri      $request_uri;
 # other annotations required
 ----
-
-It is very similar to the link:{{< relref "#_global_configuration" >}}[Global Configuration].
 
 ==== Alternative Configuration
 
