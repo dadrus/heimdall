@@ -130,7 +130,7 @@ Even one can configure an external auth server globally with vanilla NGINX, ther
 
 To integrate heimdall with the NGINX Ingress Controller you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
 
-NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies`.
+NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies` on heimdall side. On NGINX Ingress Controller side you must allow the usage of `nginx.ingress.kubernetes.io/auth-snippet` (See also https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations[here]).
 
 [source, yaml]
 ----
