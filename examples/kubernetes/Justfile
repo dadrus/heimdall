@@ -113,16 +113,16 @@ install-emissary-ingress-controller:
   kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext -n emissary-system
 
   helm upgrade --install emissary datawire/emissary-ingress \
-    -n emissary-ingress-controller --create-namespace \
+    -n emissary-controller --create-namespace \
     --version {{emissary_version}}
 
-  kubectl -n emissary-ingress-controller wait --for condition=available --timeout=90s deploy -lapp.kubernetes.io/instance=emissary
+  kubectl -n emissary-controller wait --for condition=available --timeout=90s deploy -lapp.kubernetes.io/instance=emissary
 
   kubectl apply -f emissary/listener.yaml
 
 
 install-haproxy-ingress-controller:
-  helm upgrade --install haproxy-controller haproxy-ingress/haproxy-ingress \
+  helm upgrade --install haproxy-controller haproxy/haproxy-ingress \
     -n haproxy-controller --create-namespace \
     --version {{haproxy_version}} \
     -f haproxy/helm-values.yaml \
