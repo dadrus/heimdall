@@ -93,11 +93,15 @@ install-heimdall-pod-monitor:
 
 install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards install-heimdall-pod-monitor
 
-install-nginx-ingress-controller:
+install-nginx-ingress-controller global_ext_auth="true":
+  #!/usr/bin/env bash
+
+  valuesFile=$({{global_ext_auth}} && echo global-helm-values.yaml || echo helm-values.yaml)
+
   helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
     -n nginx-controller --create-namespace \
     --version {{nginx_version}} \
-    --set controller.allowSnippetAnnotations=true \
+    -f nginx/${valuesFile} \
     --wait
 
 install-contour-ingress-controller:
@@ -222,7 +226,9 @@ create-cluster:
 
 setup-cluster: create-cluster setup-charts install-lb install-cert-manager
 
-install-ngnix-decision-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx")
+install-ngnix-decision-demo: setup-cluster (install-nginx-ingress-controller "false") (install-heimdall "nginx") (install-echo-service "nginx-route-based")
+
+install-ngnix-global-decision-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx-global")
 
 install-contour-decision-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
 
