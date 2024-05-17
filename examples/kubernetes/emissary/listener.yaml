@@ -2,7 +2,7 @@ apiVersion: getambassador.io/v3alpha1
 kind: Listener
 metadata:
   name: emissary-tls-ingress-listener
-  namespace: emissary-ingress-controller
+  namespace: emissary-controller
 spec:
   port: 8443
   protocol: HTTPS

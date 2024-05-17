@@ -15,7 +15,7 @@ https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load b
 
 == Prerequisites
 
-* Integration with Envoy proxy requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+* Integration with traefik requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
 
 [CAUTION]
 ====
@@ -31,12 +31,14 @@ To let Traefik forward all incoming requests to heimdall, there is a need
 * to configure the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth] middleware, and
 * to add it to the list of https://doc.traefik.io/traefik/routing/entrypoints/#middlewares[middlewares] that are prepended by default to the list of middlewares of each router associated to a named entry point.
 
-Both is shown in the snippet below
+=== Regular Deployment
+
+If you are using Traefik outside of kubernetes, the above can be achieved by the following static configuration
 
 [source, yaml]
 ----
 entryPoints:
-  http:
+  web:
     address: ":8080"
     middlewares: # <1>
     - heimdall
@@ -55,6 +57,51 @@ http:
 <3> which is of type https://doc.traefik.io/traefik/middlewares/http/forwardauth/[`forwardAuth`]
 <4> Configures this middleware to forward requests to a service available under "heimdall" DNS name
 <5> Configures this middleware to forward the `Authorization` header from heimdall's response to the upstream service
+
+=== Kubernetes Deployment
+
+If you are using Traefik as https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/[Ingress Controller] or as https://gateway-api.sigs.k8s.io/[Gateway API] implementation in your kubernetes cluster, the required configuration is slightly different. The configuration of the entry point(s) stays the same, but the middleware needs to be deployed as a custom resource.
+
+Here an example for a https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-middleware[`Middleware`] custom resource:
+
+[source, yaml]
+----
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata: # <1>
+  name: heimdall
+  namespace: heimdall
+spec:
+  forwardAuth: # <2>
+    address: "http://heimdall.heimdall.svc.cluster.local:4456" # <3>
+    authResponseHeaders: # <4>
+      - Authorization
+----
+<1> The name and the namespace of the middleware. Both are set to `heimdall` here
+<2> The type of the middleware, which is of type https://doc.traefik.io/traefik/middlewares/http/forwardauth/[`forwardAuth`]
+<3> Configures this middleware to forward requests to the heimdall service. Here, the corresponding `Service` is named `heimdall` and is also located in the namespace named `heimdall`.
+<4> Configures this middleware to forward the `Authorization` header from heimdall's response to the upstream service
+
+How to add this middleware to the default middleware list of a particular endpoint depends on the method used to install Traefik. If helm is used, you can configure that list by making use of the following `values.yaml` file:
+
+[source, yaml]
+----
+providers:
+  kubernetesCRD:
+    enabled: true # <1>
+
+ports:
+  web: # <2>
+    middlewares:
+      - heimdall-heimdall@kubernetescrd # <3>
+  websecure: # <4>
+    middlewares:
+      - heimdall-heimdall@kubernetescrd
+----
+<1> To let traefik load `Middleware` resources, like defined above, traefik's `kubernetesCRD` provider must be enabled. Typically, it is enabled by default.
+<2> Traefik's helm chart defines two entry points `web` for HTTP traffic and `websecure` for HTTPS traffic. Here we configure the `web` endpoint to use our middleware
+<3> Reference to the `Middleware` resource, defined above. The general structure is `<middleware name>-<middleware namespace>@<provider>`. Since our middleware resource is loaded by the `kubernetescrd` provider, resides in the `heimdall` namespace, and is named `heimdall`, the reference `heimdall-heimdall@kubernetescrd` is used.
+<4> Here we configure the `websecure` endpoint, which, as written above, is configured via helm chart for HTTPS traffic. The actual configuration is identical to the configuration for the `web` endpoint.
 
 == Route-based Configuration with Docker
 
@@ -103,7 +150,40 @@ services:
 
 If you have Traefik as Ingress Controller in your Kubernetes cluster, you can simply integrate heimdall globally as descibed in link:{{< relref "#_global_configuration" >}}[Global Configuration] chapter above and make use of the standard https://kubernetes.io/docs/concepts/services-networking/ingress/[Ingress resource].
 
-There is also an option to have a route based configuration. In that case, you'll have to use Traefik proprietary https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-middleware[`Middleware`] and https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-ingressroute[`IngressRoute`] custom resources to define and use the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth] middleware.
+If you are using traefik's proprietary https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-ingressroute[`IngressRoute`] custom resource instead of kubernetes standard https://kubernetes.io/docs/concepts/services-networking/ingress/[`Ingress`] one, you can also reference the https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-middleware[`Middleware`] resource locally. This option is shown in the snippet below.
+
+[source, yaml]
+----
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata: # <1>
+  name: demo-app
+  namespace: demo
+spec:
+  entryPoints:
+    - web # <2>
+  routes:
+    - kind: Rule
+      match: Host(`demo-app.local`) && PathPrefix(`/`)
+      middlewares: # <3>
+        - name: heimdall
+          namespace: heimdall
+      services: # <4>
+        - kind: Service
+          name: demo-app
+          namespace: demo
+          port: app-port
+----
+<1> `metadata`, like name and the namespace of the `IngressRoute` resource
+<2> The traefik entry points to attach this resource to. Here only `web` entry point is referenced
+<3> List of the middlewares to be applied. Here the `Middleware` named `heimdall` in the namespace `heimdall` is referenced.
++
+NOTE: By default, `IngressRoute` resources are not allowed to reference resources in namespaces different from the own namespace. If your `Middleware` resource, like also shown here, is deployed in another namespace, you have to allow that. If traefik is installed via helm, it can be achieved by setting `providers.kubernetesCRD.allowCrossNamespace` to `true` (See also https://doc.traefik.io/traefik/providers/kubernetes-crd/#allowcrossnamespace[here]).
+<4> The reference to the `Service`, the requests should be forwarded to.
+
+== Traefik as Gateway API implementation
+
+If you have Traefik as https://gateway-api.sigs.k8s.io/[Gateway API] implementation in your Kubernetes cluster, you can simply integrate heimdall globally as descibed in link:{{< relref "#_kubernetes_deployment" >}}[Global Configuration] chapter above and make use of the standard https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`] resource.
 
 == Additional Resources
 

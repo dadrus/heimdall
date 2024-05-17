@@ -3,12 +3,13 @@ prometheus_version := '44.2.1'
 loki_version := '2.8.9'
 tempo_version := '0.16.8'
 phlare_version := '0.1.2'
-nginx_version := '9.7.7'
-contour_version := '17.0.0'
-emissary_version := '8.7.2'
-haproxy_version := '0.14.4'
+nginx_version := '4.10.1'
+contour_version := '17.0.12'
+emissary_version := '8.9.1'
+haproxy_version := '0.14.6'
 envoy_gw_version := 'v1.0.1'
-metallb_version := '0.13.10'
+traefik_version := '28.0.0'
+metallb_version := '0.14.5'
 certmanager_version := '1.14.5'
 trustmanager_version := '0.9.2'
 
@@ -17,6 +18,7 @@ default_router := "contour"
 
 setup-charts:
   helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
   helm repo add grafana https://grafana.github.io/helm-charts
   helm repo add metallb https://metallb.github.io/metallb
@@ -24,6 +26,7 @@ setup-charts:
   helm repo add dadrus https://dadrus.github.io/heimdall/charts
   helm repo add datawire https://app.getambassador.io
   helm repo add haproxy https://haproxy-ingress.github.io/charts
+  helm repo add traefik https://traefik.github.io/charts
   helm repo update
 
 ## Installs Grafana
@@ -91,10 +94,10 @@ install-heimdall-pod-monitor:
 install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards install-heimdall-pod-monitor
 
 install-nginx-ingress-controller:
-  helm upgrade --install nginx-ingress-controller bitnami/nginx-ingress-controller \
-    -n nginx-ingress-controller --create-namespace \
+  helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+    -n nginx-controller --create-namespace \
     --version {{nginx_version}} \
-    --set metrics.enabled=true \
+    --set controller.allowSnippetAnnotations=true \
     --wait
 
 install-contour-ingress-controller:
@@ -109,7 +112,7 @@ install-emissary-ingress-controller:
   kubectl apply -f https://app.getambassador.io/yaml/emissary/${app_version}/emissary-crds.yaml
   kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext -n emissary-system
 
-  helm upgrade --install emissary datawire/emissary \
+  helm upgrade --install emissary datawire/emissary-ingress \
     -n emissary-controller --create-namespace \
     --version {{emissary_version}}
 
@@ -119,7 +122,7 @@ install-emissary-ingress-controller:
 
 
 install-haproxy-ingress-controller:
-  helm upgrade --install haproxy-controller haproxy/haproxy \
+  helm upgrade --install haproxy-controller haproxy/haproxy-ingress \
     -n haproxy-controller --create-namespace \
     --version {{haproxy_version}} \
     -f haproxy/helm-values.yaml \
@@ -133,6 +136,19 @@ install-envoy-gateway:
 
   kubectl apply -f envoygw/gateway.yaml
 
+install-traefik global_mw="true":
+  #!/usr/bin/env bash
+  valuesFile=$({{global_mw}} && echo global-mw-helm-values.yaml || echo helm-values.yaml)
+
+  kubectl apply -f traefik/certificate.yaml
+
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+
+  helm upgrade --install traefik traefik/traefik \
+      -n traefik \
+      --version {{traefik_version}} \
+      -f traefik/${valuesFile} \
+      --wait
 
 install-lb:
   #!/usr/bin/env bash
@@ -183,7 +199,7 @@ install-heimdall router=default_router:
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
-  helm upgrade --install heimdall dadrus/heimdall \
+  helm upgrade --install heimdall ../../charts/heimdall \
     -n heimdall \
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
@@ -197,6 +213,8 @@ install-heimdall router=default_router:
   elif [ "{{router}}" == "envoygw" ]; then
       kubectl apply -f quickstarts/heimdall/backend-tls-policy.yaml
       kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
+  elif [ "{{router}}" == "traefik" ]; then
+      kubectl apply -f quickstarts/heimdall/heimdall-middleware.yaml
   fi
 
 create-cluster:
@@ -213,6 +231,12 @@ install-haproxy-decision-demo: setup-cluster install-haproxy-ingress-controller 
 install-emissary-decision-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
 
 install-envoygw-decision-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
+
+install-traefik-ingress-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-ingress")
+
+install-traefik-ingress-route-decision-demo: setup-cluster (install-traefik "false") (install-heimdall "traefik") (install-echo-service "traefik-ingress-route")
+
+install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-gw")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}

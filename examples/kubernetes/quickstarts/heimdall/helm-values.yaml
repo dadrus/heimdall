@@ -28,5 +28,4 @@ env:
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo.monitoring:4317"
 
 image:
-  repository: heimdall
-  tag: local
+  tag: dev

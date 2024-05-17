@@ -1,0 +1,27 @@
+logs:
+  general:
+    level: DEBUG
+  access:
+    enabled: true
+
+experimental:
+  kubernetesGateway:
+    enabled: true
+    namespacePolicy: All
+    certificate:
+      group: core
+      kind: Secret
+      name: traefik-tls
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    # without that the middleware must be deployed into the same namespace as the resource
+    # referencing it (IngressRoute)
+    allowCrossNamespace: true
+
+ports:
+  traefik:
+    port: 9000
+    expose:
+      default: true

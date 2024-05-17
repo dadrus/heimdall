@@ -1,0 +1,31 @@
+logs:
+  general:
+    level: DEBUG
+  access:
+    enabled: true
+
+experimental:
+  kubernetesGateway:
+    enabled: true
+    namespacePolicy: All
+    certificate:
+      group: ""
+      kind: Secret
+      name: traefik-tls
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+
+ports:
+  traefik:
+    port: 9000
+    expose:
+      default: true
+  web:
+    middlewares:
+      - heimdall-heimdall@kubernetescrd
+  websecure:
+    middlewares:
+      - heimdall-heimdall@kubernetescrd
