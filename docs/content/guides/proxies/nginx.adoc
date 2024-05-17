@@ -126,6 +126,8 @@ location = /_auth {
 
 === Global Configuration
 
+==== Using `X-Forwarded-*` headers
+
 NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies` on heimdall side.
 
 Global configuration can be achieved by setting the following properties in controller `ConfigMap`. If you install the NGINX controller via the helm chart, you can add these properties under the `controller.config` property of your helm `values.yaml` file.
@@ -149,13 +151,42 @@ NOTE: Without that, heimdall will not be able extracting relevant information fr
 
 With that in place, you can simply use the standard https://kubernetes.io/docs/concepts/services-networking/ingress/[`Ingress`] resource, and the NGINX Ingress Controller will ensure, each request will be analyzed by heimdall first.
 
+This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
+
+==== Alternative Configuration
+
+Alternatively, if you don't want configuring `trusted_proxies` and do not rely on the used HTTP scheme, host and port in your rules, you can also use the `location-snippet` and the `server-snippet` to the `ConfigMap` of the NGINX Ingress Controller with values shown below.
+
+This example is an exact copy of the configuration used in the very first link:{{< relref "#_first_option" >}}[integration option] described above.
+
+[source, yaml]
+----
+location-snippet: |
+  auth_request               /_auth;
+  auth_request_set           $auth_cookie $upstream_http_set_cookie;
+  add_header                 Set-Cookie $auth_cookie;
+  auth_request_set           $auth_header $upstream_http_authorization;
+  proxy_set_header           'Authorization' $auth_header;
+  proxy_set_header Proxy     "";
+server-snippet: |
+  location = /_auth {
+    internal;
+    access_log               off;
+    proxy_method             $request_method;
+    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>$request_uri;
+    proxy_pass_request_body  off;
+    proxy_set_header         Content-Length   "";
+    proxy_set_header         Host $http_host;
+  }
+----
+
+As with the previous integration option, you can add these properties under the `controller.config` property of your helm `values.yaml` file if you install the NGINX Ingress Controller via helm.
+
 === Integration on `Ingress` Resource Level
 
 ==== Using `X-Forwarded-*` headers
 
-To integrate heimdall with the NGINX Ingress Controller you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] and the link:{{< relref "#_global_configuration" >}}[Global Configuration] for the NGINX Ingress Controller sections.
-
-NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies` on heimdall side. On NGINX Ingress Controller side you must allow the usage of `nginx.ingress.kubernetes.io/auth-snippet` (See also https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations[here]).
+One option to integrate heimdall with the NGINX Ingress Controller on the `Ingress` resource level is making use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This approach requires proper configuration of `trusted_proxies` on heimdall side. On NGINX Ingress Controller side you must allow the usage of `nginx.ingress.kubernetes.io/auth-snippet` (See also https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations[here]).
 
 [source, yaml]
 ----
