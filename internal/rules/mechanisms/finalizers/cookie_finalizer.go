@@ -76,6 +76,7 @@ func (u *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 		value, err := tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
+			"Outputs": ctx.Outputs(),
 		})
 		if err != nil {
 			return errorchain.
