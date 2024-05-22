@@ -285,7 +285,7 @@ rules:
   - finalizer: create_jwt
     config:
       claims: |
-        {{ toJson .Subject.Attributes.openfga_list }} # <16>
+        {{ toJson .Outputs.openfga_list }} # <16>
 ----
 <1> Our rule set consists of two rules. The first one has the id `access_document`
 <2> This rule should match urls of the following form `/document/<id>`, with id being the identifier of a document.
