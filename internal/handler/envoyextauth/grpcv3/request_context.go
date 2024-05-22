@@ -49,6 +49,7 @@ type RequestContext struct {
 	err             error
 
 	savedBody any
+	outputs   map[string]any
 }
 
 func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *RequestContext {
@@ -145,6 +146,14 @@ func (r *RequestContext) SetPipelineError(err error)              { r.err = err 
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
+
+func (r *RequestContext) Outputs() map[string]any {
+	if r.outputs == nil {
+		r.outputs = make(map[string]any)
+	}
+
+	return r.outputs
+}
 
 func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if r.err != nil {
