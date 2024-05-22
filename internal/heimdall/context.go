@@ -19,8 +19,9 @@ package heimdall
 import (
 	"context"
 	"crypto/sha256"
-	"github.com/goccy/go-json"
 	"net/url"
+
+	"github.com/goccy/go-json"
 )
 
 type Outputs map[string]any

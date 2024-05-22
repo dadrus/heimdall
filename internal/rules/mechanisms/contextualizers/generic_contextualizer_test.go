@@ -610,7 +610,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -759,6 +759,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, sub.Attributes, 1)
+				assert.Len(t, outputs, 1)
 			},
 		},
 		{
