@@ -262,6 +262,7 @@ headers:
   bar: "{{ .Subject.ID }}"
   baz: bar
   X-Baz: '{{ .Request.Header "X-Foo" }}'
+  X-Foo: '{{ .Outputs.foo }}'
 `),
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
@@ -273,7 +274,9 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("bar", "FooBar")
 				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
 				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
+				ctx.EXPECT().AddHeaderForUpstream("X-Foo", "bar")
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
+				ctx.EXPECT().Outputs().Return(heimdall.Outputs{"foo": "bar"})
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
