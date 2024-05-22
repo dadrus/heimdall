@@ -88,7 +88,7 @@ The metadata, you would like to assign to the rule set, like the name of the rul
 
 * *`spec`*: _map_ (mandatory)
 +
-The actual specification of the rule set. Following attributes are possible, respectively required:
+The actual specification of the rule set. Following properties are possible, respectively required:
 
 ** *`authClassName`*: _string_ (optional)
 +
@@ -135,7 +135,7 @@ spec:
 
 === Resource Status
 
-In addition to configuration attributes described above, a `RuleSet` resource has a `status` stanza, which provides information about the usage status as soon as a `RuleSet` has been loaded by at least one heimdall instance.
+In addition to configuration properties described above, a `RuleSet` resource has a `status` stanza, which provides information about the usage status as soon as a `RuleSet` has been loaded by at least one heimdall instance.
 
 By making use of `kubectl get -n <your namespace> rulesets.heimdall.dadrus.github.com` you'll get an overview of deployed `RuleSet` resources in a particular namespace, like e.g. shown below
 

@@ -451,10 +451,11 @@ func TestJWTFinalizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
+				ctx.EXPECT().Outputs().Return(heimdall.Outputs{"foo": "bar"})
 
 				finalizer := jwtFinalizer{ttl: defaultJWTTTL}
 
-				cacheKey := finalizer.calculateCacheKey(sub, signer)
+				cacheKey := finalizer.calculateCacheKey(ctx, sub)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return([]byte("TestToken"), nil)
 			},
 			assert: func(t *testing.T, err error) {
@@ -478,6 +479,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
+				ctx.EXPECT().Outputs().Return(heimdall.Outputs{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte("barfoo"), configuredTTL-defaultCacheLeeway).Return(nil)
@@ -497,7 +499,8 @@ header:
 claims: '{
   {{ $val := .Subject.Attributes.baz }}
   "sub_id": {{ quote .Subject.ID }}, 
-  {{ quote $val }}: "baz"
+  {{ quote $val }}: "baz",
+  "foo": {{ .Outputs.foo | quote }}
 }'`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
@@ -509,10 +512,12 @@ claims: '{
 				signer.EXPECT().Sign(sub.ID, defaultJWTTTL, map[string]any{
 					"sub_id": "foo",
 					"bar":    "baz",
+					"foo":    "bar",
 				}).Return("barfoo", nil)
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token", "Bar barfoo")
+				ctx.EXPECT().Outputs().Return(heimdall.Outputs{"foo": "bar"})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte("barfoo"), defaultJWTTTL-defaultCacheLeeway).Return(nil)
@@ -536,6 +541,7 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().Outputs().Return(heimdall.Outputs{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
@@ -564,6 +570,7 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().Outputs().Return(heimdall.Outputs{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},

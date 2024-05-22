@@ -113,7 +113,7 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 		err      error
 	)
 
-	cacheKey := u.calculateCacheKey(sub, ctx.Signer())
+	cacheKey := u.calculateCacheKey(ctx, sub)
 	if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
 		logger.Debug().Msg("Reusing JWT from cache")
 
@@ -178,6 +178,7 @@ func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 	if u.claims != nil {
 		vals, err := u.claims.Render(map[string]any{
 			"Subject": sub,
+			"Outputs": ctx.Outputs(),
 		})
 		if err != nil {
 			return "", errorchain.
@@ -207,19 +208,20 @@ func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 	return token, nil
 }
 
-func (u *jwtFinalizer) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) string {
+func (u *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub *subject.Subject) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(u.ttl))
 
 	hash := sha256.New()
-	hash.Write(iss.Hash())
+	hash.Write(ctx.Signer().Hash())
 	hash.Write(x.IfThenElseExec(u.claims != nil,
 		func() []byte { return u.claims.Hash() },
 		func() []byte { return []byte{} }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
+	hash.Write(ctx.Outputs().Hash())
 
 	return hex.EncodeToString(hash.Sum(nil))
 }

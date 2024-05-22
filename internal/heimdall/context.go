@@ -18,8 +18,22 @@ package heimdall
 
 import (
 	"context"
+	"crypto/sha256"
 	"net/url"
+
+	"github.com/goccy/go-json"
 )
+
+type Outputs map[string]any
+
+func (o Outputs) Hash() []byte {
+	hash := sha256.New()
+	rawSub, _ := json.Marshal(o)
+
+	hash.Write(rawSub)
+
+	return hash.Sum(nil)
+}
 
 //go:generate mockery --name Context --structname ContextMock
 
@@ -34,6 +48,8 @@ type Context interface {
 	SetPipelineError(err error)
 
 	Signer() JWTSigner
+
+	Outputs() Outputs
 }
 
 //go:generate mockery --name RequestFunctions --structname RequestFunctionsMock

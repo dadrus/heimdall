@@ -255,6 +255,7 @@ expressions:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
+				ctx.EXPECT().Outputs().Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -269,7 +270,7 @@ expressions:
 			},
 		},
 		{
-			uc: "expressions can use subject and request properties",
+			uc: "expressions can use subject, request and outputs properties",
 			id: "authz2",
 			config: []byte(`
 expressions:
@@ -291,6 +292,7 @@ expressions:
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
   - expression: Request.URL.Path.split("/").last() == "test"
   - expression: Request.URL.Captures.foo == "bar"
+  - expression: Outputs.foo == "bar"
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
 				t.Helper()
@@ -320,6 +322,8 @@ expressions:
 					},
 					ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 				})
+
+				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

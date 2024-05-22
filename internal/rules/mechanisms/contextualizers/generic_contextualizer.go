@@ -164,7 +164,7 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	}
 
 	if response.Payload != nil {
-		sub.Attributes[h.id] = response.Payload
+		ctx.Outputs()[h.id] = response.Payload
 	}
 
 	return nil
@@ -268,6 +268,7 @@ func (h *genericContextualizer) createRequest(
 		return tpl.Render(map[string]any{
 			"Subject": sub,
 			"Values":  values,
+			"Outputs": ctx.Outputs(),
 		})
 	})
 
@@ -385,6 +386,7 @@ func (h *genericContextualizer) renderTemplates(
 	if values, err = h.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
+		"Outputs": ctx.Outputs(),
 	}); err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the contextualization endpoint").
@@ -397,6 +399,7 @@ func (h *genericContextualizer) renderTemplates(
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Values":  values,
+			"Outputs": ctx.Outputs(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the contextualization endpoint").

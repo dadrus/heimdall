@@ -45,6 +45,7 @@ type RequestContext struct {
 	savedBody any
 	hmdlReq   *heimdall.Request
 	headers   map[string]string
+	outputs   map[string]any
 }
 
 func New(signer heimdall.JWTSigner, req *http.Request) *RequestContext {
@@ -175,3 +176,10 @@ func (r *RequestContext) AppContext() context.Context             { return r.req
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) PipelineError() error                    { return r.err }
 func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
+func (r *RequestContext) Outputs() heimdall.Outputs {
+	if r.outputs == nil {
+		r.outputs = make(heimdall.Outputs)
+	}
+
+	return r.outputs
+}

@@ -20,15 +20,15 @@ Objects represent state in the execution of a particular rule. These are the ent
 
 === Subject
 
-This object contains the information about the authenticated subject and has the following attributes:
+This object is created by an authenticator which was able to verify the authentication claim available in the request, and contains the information about the authenticated subject. It has the following properties:
 
 * *`ID`*: _string_
 +
-The identifier of the subject. This value is set by the authenticator, which was able to authenticate the subject.
+The identifier of the subject.
 
 * *`Attributes`*: _map_
 +
-Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Mechanisms in the following stages can update it, but cannot override any entries.
+Contains all attributes, which are known about the subject.
 
 Each object of this type can be thought as a JSON object. Here some examples:
 
@@ -179,6 +179,20 @@ Request = {
 ----
 ====
 
+=== Outputs
+
+This object represents a pipeline execution specific key value map. It is used by pipeline steps to store or read results of particular step executions. Mechanism id used by a pipeline step is used as a key and the value is the corresponding result.
+
+Example:
+
+[source, javascript]
+----
+Outputs = {
+    "id_1": ["a", "b"],
+    "id_2": { "foo": "bar", "baz": false }
+}
+----
+
 === Payload
 
 This object represents the contents of a payload, like the request body or a response body. The contents depend on the MIME-Type of the payload. For `json`, `yaml` or `x-www-form-urlencoded` encoded payload, the object is transformed to a JSON object. Otherwise, it is just a string.
@@ -233,7 +247,7 @@ Values = {
 
 == Templating
 
-Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
 To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
@@ -260,7 +274,8 @@ Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab?foo=bar`, 
   "request_url": {{ quote .Request.URL }},
   "foo_value": {{ index .Request.URL.Query.foo 0 | quote }}
   "request_method": {{ quote .Request.Method }},
-  "x_foo_value": {{ .Request.Header "X-Foo" | quote }}
+  "x_foo_value": {{ .Request.Header "X-Foo" | quote }},
+  "whatever": {{ .Outputs.whatever | quote }}
 }
 ----
 
@@ -276,7 +291,8 @@ This will result in the following JSON object:
     "request_url": "http://foobar.baz/zab?foo=bar",
     "foo_value": "bar",
     "request_method": "POST",
-    "x_foo_value": "bar"
+    "x_foo_value": "bar",
+    "whatever": "some value"
 }
 ----
 ====
