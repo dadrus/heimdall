@@ -147,9 +147,9 @@ func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHe
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
 
-func (r *RequestContext) Outputs() map[string]any {
+func (r *RequestContext) Outputs() heimdall.Outputs {
 	if r.outputs == nil {
-		r.outputs = make(map[string]any)
+		r.outputs = make(heimdall.Outputs)
 	}
 
 	return r.outputs

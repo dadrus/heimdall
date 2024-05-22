@@ -186,19 +186,19 @@ func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(rule.Backend) error) 
 }
 
 // Outputs provides a mock function with given fields:
-func (_m *ContextMock) Outputs() map[string]interface{} {
+func (_m *ContextMock) Outputs() heimdall.Outputs {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Outputs")
 	}
 
-	var r0 map[string]interface{}
-	if rf, ok := ret.Get(0).(func() map[string]interface{}); ok {
+	var r0 heimdall.Outputs
+	if rf, ok := ret.Get(0).(func() heimdall.Outputs); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]interface{})
+			r0 = ret.Get(0).(heimdall.Outputs)
 		}
 	}
 
@@ -222,12 +222,12 @@ func (_c *ContextMock_Outputs_Call) Run(run func()) *ContextMock_Outputs_Call {
 	return _c
 }
 
-func (_c *ContextMock_Outputs_Call) Return(_a0 map[string]interface{}) *ContextMock_Outputs_Call {
+func (_c *ContextMock_Outputs_Call) Return(_a0 heimdall.Outputs) *ContextMock_Outputs_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *ContextMock_Outputs_Call) RunAndReturn(run func() map[string]interface{}) *ContextMock_Outputs_Call {
+func (_c *ContextMock_Outputs_Call) RunAndReturn(run func() heimdall.Outputs) *ContextMock_Outputs_Call {
 	_c.Call.Return(run)
 	return _c
 }

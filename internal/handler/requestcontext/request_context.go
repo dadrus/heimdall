@@ -176,9 +176,9 @@ func (r *RequestContext) AppContext() context.Context             { return r.req
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) PipelineError() error                    { return r.err }
 func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
-func (r *RequestContext) Outputs() map[string]any {
+func (r *RequestContext) Outputs() heimdall.Outputs {
 	if r.outputs == nil {
-		r.outputs = make(map[string]any)
+		r.outputs = make(heimdall.Outputs)
 	}
 
 	return r.outputs
