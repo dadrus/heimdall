@@ -255,6 +255,7 @@ expressions:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
+				ctx.EXPECT().Outputs().Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
