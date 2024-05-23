@@ -46,7 +46,7 @@ require (
 	github.com/redis/rueidis v1.0.37
 	github.com/redis/rueidis/rueidisotel v1.0.37
 	github.com/rs/cors v1.11.0
-	github.com/rs/zerolog v1.32.0
+	github.com/rs/zerolog v1.33.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
