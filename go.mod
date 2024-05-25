@@ -77,7 +77,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.27.0
 	go.uber.org/fx v1.21.1
 	gocloud.dev v0.37.0
-	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
+	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240521202816-d264139d666e
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
