@@ -21,7 +21,7 @@ type SignatureConfig struct {
 }
 
 type HTTPMessageSignatures struct {
-	Components []string        `mapstructure:"components" validate:"required"`
+	Components []string        `mapstructure:"components" validate:"gt=0,dive,required"`
 	Signature  SignatureConfig `mapstructure:"signature"  validate:"required"`
 }
 
