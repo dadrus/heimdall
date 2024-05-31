@@ -55,6 +55,8 @@ func (c *HTTPMessageSignatures) Apply(ctx context.Context, req *http.Request) er
 
 	if c.Signature.TTL != nil {
 		expires = now.Add(*c.Signature.TTL)
+	} else {
+		expires = now.Add(1 * time.Minute)
 	}
 
 	signer := httpsig.NewSigner(
