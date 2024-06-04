@@ -14,15 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package signer
+package finalizers
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"github.com/dadrus/heimdall/internal/x"
 	"sync"
 	"time"
 
@@ -31,9 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/knadh/koanf/maps"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/watcher"
@@ -42,31 +38,15 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger, fw watcher.Watcher) (heimdall.JWTSigner, error) {
-	signer := &jwtSigner{
-		path:     conf.Signer.KeyStore.Path,
-		password: conf.Signer.KeyStore.Password,
-		keyID:    conf.Signer.KeyID,
-		iss:      conf.Signer.Name,
-	}
+type KeyStore struct {
+	Path     string `mapstructure:"path"     validate:"required"`
+	Password string `mapstructure:"password"`
+}
 
-	if err := signer.load(logger); err != nil {
-		logger.Error().Err(err).Msg("Failed creating signer")
-
-		return nil, err
-	}
-
-	if len(signer.path) != 0 && fw != nil {
-		if err := fw.Add(signer.path, signer); err != nil {
-			logger.Error().Err(err).Msg("Failed registering signer for updates")
-
-			return nil, err
-		}
-	}
-
-	logger.Info().Msg("Signer configured")
-
-	return signer, nil
+type SignerConfig struct {
+	Name     string   `mapstructure:"name"`
+	KeyStore KeyStore `mapstructure:"key_store" validate:"required"`
+	KeyID    string   `mapstructure:"key_id"`
 }
 
 type jwtSigner struct {
@@ -75,53 +55,53 @@ type jwtSigner struct {
 	keyID    string
 	iss      string
 
-	mut     sync.Mutex
+	mut     sync.RWMutex
 	jwk     jose.JSONWebKey
 	key     crypto.Signer
 	pubKeys []jose.JSONWebKey
 }
 
+func newJWTSigner(conf *SignerConfig, fw watcher.Watcher) (*jwtSigner, error) {
+	signer := &jwtSigner{
+		path:     conf.KeyStore.Path,
+		password: conf.KeyStore.Password,
+		keyID:    conf.KeyID,
+		iss:      x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
+	}
+
+	if err := signer.load(); err != nil {
+		return nil, err
+	}
+
+	if err := fw.Add(signer.path, signer); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed registering jwt signer for updates").
+			CausedBy(err)
+	}
+
+	return signer, nil
+}
+
 func (s *jwtSigner) OnChanged(logger zerolog.Logger) {
-	err := s.load(logger)
+	err := s.load()
 	if err != nil {
-		log.Warn().Err(err).
+		logger.Warn().Err(err).
 			Str("_file", s.path).
 			Msg("Signer key store reload failed")
 	} else {
-		log.Info().
+		logger.Info().
 			Str("_file", s.path).
 			Msg("Signer key store reloaded")
 	}
 }
 
-func (s *jwtSigner) load(logger zerolog.Logger) error {
-	var (
-		ks  keystore.KeyStore
-		kse *keystore.Entry
-		err error
-	)
-
-	if len(s.path) == 0 {
-		logger.Warn().
-			Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an ECDSA P-384 key pair.")
-
-		var privateKey *ecdsa.PrivateKey
-
-		privateKey, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-		if err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrInternal,
-				"failed to generate ECDSA P-384 key pair").CausedBy(err)
-		}
-
-		ks, err = keystore.NewKeyStoreFromKey(privateKey)
-	} else {
-		ks, err = keystore.NewKeyStoreFromPEMFile(s.path, s.password)
-	}
-
+func (s *jwtSigner) load() error {
+	ks, err := keystore.NewKeyStoreFromPEMFile(s.path, s.password)
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
 			CausedBy(err)
 	}
+
+	var kse *keystore.Entry
 
 	if len(s.keyID) == 0 {
 		kse, err = ks.Entries()[0], nil
@@ -161,9 +141,9 @@ func (s *jwtSigner) load(logger zerolog.Logger) error {
 }
 
 func (s *jwtSigner) Hash() []byte {
-	s.mut.Lock()
+	s.mut.RLock()
 	jwk := s.jwk
-	s.mut.Unlock()
+	s.mut.RUnlock()
 
 	hash := sha256.New()
 	hash.Write(stringx.ToBytes(jwk.KeyID))
@@ -174,10 +154,10 @@ func (s *jwtSigner) Hash() []byte {
 }
 
 func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]any) (string, error) {
-	s.mut.Lock()
+	s.mut.RLock()
 	jwk := s.jwk
 	key := s.key
-	s.mut.Unlock()
+	s.mut.RUnlock()
 
 	signer, err := jose.NewSigner(
 		jose.SigningKey{Algorithm: jose.SignatureAlgorithm(jwk.Algorithm), Key: key},
@@ -212,8 +192,8 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]
 }
 
 func (s *jwtSigner) Keys() []jose.JSONWebKey {
-	s.mut.Lock()
-	defer s.mut.Unlock()
+	s.mut.RLock()
+	defer s.mut.RUnlock()
 
 	return s.pubKeys
 }

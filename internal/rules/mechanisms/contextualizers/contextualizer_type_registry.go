@@ -18,6 +18,8 @@ package contextualizers
 
 import (
 	"errors"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -27,13 +29,20 @@ var (
 	ErrUnsupportedContextualizerType = errors.New("contextualizer type unsupported")
 
 	// by intention. Used only during application bootstrap.
-	typeFactories   []ContextualizerTypeFactory //nolint:gochecknoglobals
-	typeFactoriesMu sync.RWMutex                //nolint:gochecknoglobals
+	typeFactories   []TypeFactory //nolint:gochecknoglobals
+	typeFactoriesMu sync.RWMutex  //nolint:gochecknoglobals
 )
 
-type ContextualizerTypeFactory func(id string, typ string, c map[string]any) (bool, Contextualizer, error)
+//go:generate mockery --name CreationContext --structname CreationContextMock  --inpackage --testonly
 
-func registerTypeFactory(factory ContextualizerTypeFactory) {
+type CreationContext interface {
+	Watcher() watcher.Watcher
+	KeyHolderRegistry() keyholder.Registry
+}
+
+type TypeFactory func(ctx CreationContext, id string, typ string, c map[string]any) (bool, Contextualizer, error)
+
+func registerTypeFactory(factory TypeFactory) {
 	typeFactoriesMu.Lock()
 	defer typeFactoriesMu.Unlock()
 
@@ -44,12 +53,12 @@ func registerTypeFactory(factory ContextualizerTypeFactory) {
 	typeFactories = append(typeFactories, factory)
 }
 
-func CreatePrototype(id string, typ string, config map[string]any) (Contextualizer, error) {
+func CreatePrototype(ctx CreationContext, id string, typ string, config map[string]any) (Contextualizer, error) {
 	typeFactoriesMu.RLock()
 	defer typeFactoriesMu.RUnlock()
 
 	for _, create := range typeFactories {
-		if ok, at, err := create(id, typ, config); ok {
+		if ok, at, err := create(ctx, id, typ, config); ok {
 			return at, err
 		}
 	}

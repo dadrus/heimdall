@@ -105,9 +105,6 @@ func defaultConfig() Configuration {
 			Port:    defaultProfilingServicePort,
 			Host:    loopbackIP,
 		},
-		Signer: SignerConfig{
-			Name: "heimdall",
-		},
 		Prototypes: &MechanismPrototypes{},
 	}
 }

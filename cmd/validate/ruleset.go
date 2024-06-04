@@ -18,6 +18,9 @@ package validate
 
 import (
 	"context"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/go-jose/go-jose/v4"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -79,7 +82,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
-	mFactory, err := mechanisms.NewFactory(conf, logger)
+	mFactory, err := mechanisms.NewMechanismFactory(conf, logger, &watcher.NoopWatcher{}, &noopRegistry{})
 	if err != nil {
 		return err
 	}
@@ -103,3 +106,8 @@ func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) { return 
 func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error       { return nil }
 func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error    { return nil }
 func (*noopRepository) DeleteRuleSet(_ string) error                   { return nil }
+
+type noopRegistry struct{}
+
+func (*noopRegistry) Add(_ keyholder.KeyHolder) {}
+func (*noopRegistry) Keys() []jose.JSONWebKey   { return nil }

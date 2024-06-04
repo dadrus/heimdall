@@ -205,7 +205,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			tc.configureMocks(t, exec)
 
-			srv := newService(conf, cch, log.Logger, exec, nil)
+			srv := newService(conf, cch, log.Logger, exec)
 
 			defer srv.Stop()
 

@@ -18,6 +18,7 @@ package management
 
 import (
 	"fmt"
+	"github.com/dadrus/heimdall/internal/keyholder"
 	"net/http"
 	"strings"
 
@@ -34,7 +35,6 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
@@ -43,7 +43,7 @@ import (
 func newService(
 	conf *config.Configuration,
 	log zerolog.Logger,
-	signer heimdall.JWTSigner,
+	khr keyholder.Registry,
 ) *http.Server {
 	cfg := conf.Serve.Management
 	eh := errorhandler2.New()
@@ -82,7 +82,7 @@ func newService(
 			},
 			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
-	).Then(newManagementHandler(signer, eh))
+	).Then(newManagementHandler(khr, eh))
 
 	return &http.Server{
 		Handler:        hc,

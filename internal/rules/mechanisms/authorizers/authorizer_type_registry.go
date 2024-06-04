@@ -18,6 +18,8 @@ package authorizers
 
 import (
 	"errors"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -27,13 +29,20 @@ var (
 	ErrUnsupportedAuthorizerType = errors.New("authorizer type unsupported")
 
 	// by intention. Used only during application bootstrap.
-	authorizerTypeFactories   []AuthorizerTypeFactory //nolint:gochecknoglobals
-	authorizerTypeFactoriesMu sync.RWMutex            //nolint:gochecknoglobals
+	authorizerTypeFactories   []TypeFactory //nolint:gochecknoglobals
+	authorizerTypeFactoriesMu sync.RWMutex  //nolint:gochecknoglobals
 )
 
-type AuthorizerTypeFactory func(id string, typ string, config map[string]any) (bool, Authorizer, error)
+//go:generate mockery --name CreationContext --structname CreationContextMock  --inpackage --testonly
 
-func registerTypeFactory(factory AuthorizerTypeFactory) {
+type CreationContext interface {
+	Watcher() watcher.Watcher
+	KeyHolderRegistry() keyholder.Registry
+}
+
+type TypeFactory func(ctx CreationContext, id string, typ string, config map[string]any) (bool, Authorizer, error)
+
+func registerTypeFactory(factory TypeFactory) {
 	authorizerTypeFactoriesMu.Lock()
 	defer authorizerTypeFactoriesMu.Unlock()
 
@@ -44,12 +53,12 @@ func registerTypeFactory(factory AuthorizerTypeFactory) {
 	authorizerTypeFactories = append(authorizerTypeFactories, factory)
 }
 
-func CreatePrototype(id string, typ string, config map[string]any) (Authorizer, error) {
+func CreatePrototype(ctx CreationContext, id string, typ string, config map[string]any) (Authorizer, error) {
 	authorizerTypeFactoriesMu.RLock()
 	defer authorizerTypeFactoriesMu.RUnlock()
 
 	for _, create := range authorizerTypeFactories {
-		if ok, at, err := create(id, typ, config); ok {
+		if ok, at, err := create(ctx, id, typ, config); ok {
 			return at, err
 		}
 	}

@@ -18,6 +18,8 @@ package authenticators
 
 import (
 	"errors"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -27,13 +29,20 @@ var (
 	ErrUnsupportedAuthenticatorType = errors.New("authenticator type unsupported")
 
 	// by intention. Used only during application bootstrap.
-	authenticatorTypeFactories   []AuthenticatorTypeFactory //nolint:gochecknoglobals
-	authenticatorTypeFactoriesMu sync.RWMutex               //nolint:gochecknoglobals
+	authenticatorTypeFactories   []TypeFactory //nolint:gochecknoglobals
+	authenticatorTypeFactoriesMu sync.RWMutex  //nolint:gochecknoglobals
 )
 
-type AuthenticatorTypeFactory func(id string, typ string, config map[string]any) (bool, Authenticator, error)
+//go:generate mockery --name CreationContext --structname CreationContextMock  --inpackage --testonly
 
-func registerTypeFactory(factory AuthenticatorTypeFactory) {
+type CreationContext interface {
+	Watcher() watcher.Watcher
+	KeyHolderRegistry() keyholder.Registry
+}
+
+type TypeFactory func(ctx CreationContext, id string, typ string, config map[string]any) (bool, Authenticator, error)
+
+func registerTypeFactory(factory TypeFactory) {
 	authenticatorTypeFactoriesMu.Lock()
 	defer authenticatorTypeFactoriesMu.Unlock()
 
@@ -44,12 +53,12 @@ func registerTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactories = append(authenticatorTypeFactories, factory)
 }
 
-func CreatePrototype(id string, typ string, config map[string]any) (Authenticator, error) {
+func CreatePrototype(ctx CreationContext, id string, typ string, config map[string]any) (Authenticator, error) {
 	authenticatorTypeFactoriesMu.RLock()
 	defer authenticatorTypeFactoriesMu.RUnlock()
 
 	for _, create := range authenticatorTypeFactories {
-		if ok, at, err := create(id, typ, config); ok {
+		if ok, at, err := create(ctx, id, typ, config); ok {
 			return at, err
 		}
 	}

@@ -39,7 +39,7 @@ type keyStore struct {
 	keyID    string
 
 	tlsCert *tls.Certificate
-	mut     sync.Mutex
+	mut     sync.RWMutex
 }
 
 func newTLSKeyStore(path, keyID, password string) (*keyStore, error) {
@@ -96,9 +96,9 @@ func (cr *keyStore) load() error {
 func (cr *keyStore) certificate(cc compatibilityChecker) (*tls.Certificate, error) {
 	var cert *tls.Certificate
 
-	cr.mut.Lock()
+	cr.mut.RLock()
 	cert = cr.tlsCert
-	cr.mut.Unlock()
+	cr.mut.RUnlock()
 
 	if err := cc.SupportsCertificate(cert); err != nil {
 		return nil, err

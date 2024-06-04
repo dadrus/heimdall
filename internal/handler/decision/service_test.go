@@ -565,7 +565,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			client := &http.Client{Transport: &http.Transport{}}
 
-			decision := newService(conf, cch, log.Logger, exec, nil)
+			decision := newService(conf, cch, log.Logger, exec)
 			defer decision.Shutdown(context.Background())
 
 			go func() {

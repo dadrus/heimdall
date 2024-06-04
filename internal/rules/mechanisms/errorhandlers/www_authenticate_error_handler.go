@@ -28,7 +28,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerWWWAuthenticate {
 				return false, nil, nil
 			}

@@ -942,7 +942,7 @@ func TestProxyService(t *testing.T) {
 
 			client := createClient(t)
 
-			proxy := newService(conf, cch, log.Logger, exec, nil)
+			proxy := newService(conf, cch, log.Logger, exec)
 
 			defer proxy.Shutdown(context.Background())
 
@@ -1046,7 +1046,7 @@ func TestWebSocketSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
 	defer proxy.Shutdown(context.Background())
 
@@ -1146,7 +1146,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
 	defer proxy.Shutdown(context.Background())
 

@@ -39,8 +39,8 @@ const (
 )
 
 type service struct {
-	name         string
-	certificates []*x509.Certificate
+	name            string
+	getCertificates func() []*x509.Certificate
 }
 
 type expirationObserver struct {
@@ -95,10 +95,11 @@ func (eo *expirationObserver) register() error {
 			defer lock.Unlock()
 
 			for _, srv := range eo.services {
+				certs := srv.getCertificates()
 				if eo.monitorEECertsOnly {
-					eo.observeCertificate(observer, expirationCounter, srv.certificates[0], srv.name)
+					eo.observeCertificate(observer, expirationCounter, certs[0], srv.name)
 				} else {
-					for _, cert := range srv.certificates {
+					for _, cert := range certs {
 						eo.observeCertificate(observer, expirationCounter, cert, srv.name)
 					}
 				}

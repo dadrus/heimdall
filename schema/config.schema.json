@@ -1648,9 +1648,29 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "claims"
+            "signer" ,"claims"
           ],
           "properties": {
+            "signer": {
+              "description": "Configures signer options for issued JWTs.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [ "key_store" ],
+              "properties": {
+                "name": {
+                  "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
+                  "type": "string",
+                  "default": "heimdall"
+                },
+                "key_store": {
+                  "$ref": "#/definitions/keyStore"
+                },
+                "key_id": {
+                  "description": "The key id referencing the entry in the key store.",
+                  "type": "string"
+                }
+              }
+            },
             "claims": {
               "description": "Custom claims, which should be included into the JWT.",
               "type": "string"
@@ -2390,25 +2410,6 @@
             "localhost",
             "127.0.0.1"
           ]
-        }
-      }
-    },
-    "signer": {
-      "description": "Configures signer options for issued JWTs.",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
-          "type": "string",
-          "default": "heimdall"
-        },
-        "key_store": {
-          "$ref": "#/definitions/keyStore"
-        },
-        "key_id": {
-          "description": "The key id referencing the entry in the key store.",
-          "type": "string"
         }
       }
     },

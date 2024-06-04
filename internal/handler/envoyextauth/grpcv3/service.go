@@ -33,7 +33,6 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
@@ -42,7 +41,6 @@ func newService(
 	cch cache.Cache,
 	logger zerolog.Logger,
 	exec rule.Executor,
-	signer heimdall.JWTSigner,
 ) *grpc.Server {
 	service := conf.Serve.Decision
 	accessLogger := accesslogmiddleware.New(logger)
@@ -98,7 +96,7 @@ func newService(
 		grpc.ChainStreamInterceptor(streamInterceptors...),
 	)
 
-	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec, s: signer})
+	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec})
 
 	return srv
 }

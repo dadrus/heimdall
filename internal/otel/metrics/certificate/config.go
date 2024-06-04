@@ -66,12 +66,23 @@ func WithFirstEntry() CertGetter {
 	}
 }
 
+func WithServiceCertificatesCallback(serviceName string, getCertificates func() []*x509.Certificate) Option {
+	return func(conf *config) {
+		if getCertificates != nil {
+			conf.services = append(conf.services, &service{
+				name:            serviceName,
+				getCertificates: getCertificates,
+			})
+		}
+	}
+}
+
 func WithServiceCertificates(serviceName string, certs []*x509.Certificate) Option {
 	return func(conf *config) {
 		if len(certs) != 0 {
 			conf.services = append(conf.services, &service{
-				name:         serviceName,
-				certificates: certs,
+				name:            serviceName,
+				getCertificates: func() []*x509.Certificate { return certs },
 			})
 		}
 	}

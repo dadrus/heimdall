@@ -25,7 +25,6 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
@@ -42,7 +41,6 @@ func newLifecycleManager(
 	conf *config.Configuration,
 	logger zerolog.Logger,
 	exec rule.Executor,
-	signer heimdall.JWTSigner,
 	cch cache.Cache,
 	cw watcher.Watcher,
 ) *fxlcm.LifecycleManager {
@@ -52,7 +50,7 @@ func newLifecycleManager(
 		ServiceName:    "Decision Envoy ExtAuth",
 		ServiceAddress: cfg.Address(),
 		Server: &adapter{
-			s: newService(conf, cch, logger, exec, signer),
+			s: newService(conf, cch, logger, exec),
 		},
 		Logger:      logger,
 		TLSConf:     cfg.TLS,

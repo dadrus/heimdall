@@ -51,7 +51,7 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerRemote {
 				return false, nil, nil
 			}

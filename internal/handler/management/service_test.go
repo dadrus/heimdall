@@ -23,6 +23,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"github.com/dadrus/heimdall/internal/keyholder/mocks"
 	"io"
 	"net/http"
 	"testing"
@@ -35,7 +36,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -48,10 +48,10 @@ type ServiceTestSuite struct {
 	ee1     *testsupport.EndEntity
 	ee2     *testsupport.EndEntity
 
-	srv    *http.Server
-	ks     keystore.KeyStore
-	signer *mocks.JWTSignerMock
-	addr   string
+	srv  *http.Server
+	ks   keystore.KeyStore
+	addr string
+	khr  *mocks.RegistryMock
 }
 
 func (suite *ServiceTestSuite) SetupSuite() {
@@ -127,8 +127,8 @@ func (suite *ServiceTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()
 
-	suite.signer = mocks.NewJWTSignerMock(suite.T())
-	suite.srv = newService(conf, log.Logger, suite.signer)
+	suite.khr = mocks.NewRegistryMock(suite.T())
+	suite.srv = newService(conf, log.Logger, suite.khr)
 
 	go func() {
 		suite.srv.Serve(listener)
@@ -152,7 +152,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 		keys[idx] = entry.JWK()
 	}
 
-	suite.signer.EXPECT().Keys().Return(keys)
+	suite.khr.EXPECT().Keys().Return(keys)
 
 	// WHEN
 	client := &http.Client{Transport: &http.Transport{}}
@@ -216,7 +216,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 		keys[idx] = entry.JWK()
 	}
 
-	suite.signer.EXPECT().Keys().Return(keys)
+	suite.khr.EXPECT().Keys().Return(keys)
 
 	client := &http.Client{Transport: &http.Transport{}}
 	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)

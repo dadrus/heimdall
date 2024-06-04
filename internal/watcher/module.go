@@ -35,7 +35,7 @@ var Module = fx.Options(
 					return newWatcher(logger)
 				}
 
-				return &noopWatcher{}, nil
+				return &NoopWatcher{}, nil
 			},
 			// nolint: forcetypeassert
 			fx.OnStart(func(ctx context.Context, w Watcher) error {
