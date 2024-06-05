@@ -1,3 +1,5 @@
+version: 2
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -31,7 +33,7 @@ builds:
 
 
 changelog:
-  skip: true
+  disable: true
 
 archives:
   - format: tar.gz
