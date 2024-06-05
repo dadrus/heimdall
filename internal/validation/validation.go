@@ -58,7 +58,7 @@ func init() {
 	}
 
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		return "'" + strings.SplitN(getTagValue(fld.Tag), ",", 2)[0] + "'" // nolint: gomnd
+		return "'" + strings.SplitN(getTagValue(fld.Tag), ",", 2)[0] + "'" // nolint: mnd
 	})
 }
 

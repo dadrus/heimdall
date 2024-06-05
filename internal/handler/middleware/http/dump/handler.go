@@ -163,7 +163,7 @@ func writeStatusLine(bw *bytes.Buffer, proto string, code int, scratch []byte) {
 	bw.WriteString(proto + " ")
 
 	if text := http.StatusText(code); text != "" {
-		bw.Write(strconv.AppendInt(scratch[:0], int64(code), 10)) //nolint:gomnd
+		bw.Write(strconv.AppendInt(scratch[:0], int64(code), 10)) //nolint:mnd
 		bw.WriteByte(' ')
 		bw.WriteString(text)
 		bw.WriteString("\r\n")

@@ -18,6 +18,7 @@ package validate
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -30,6 +31,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
+
+var errFunctionNotSupported = errors.New("function not supported")
 
 // NewValidateRulesCommand represents the "validate rules" command.
 func NewValidateRulesCommand() *cobra.Command {
@@ -99,7 +102,9 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 type noopRepository struct{}
 
-func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) { return nil, nil }
-func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error       { return nil }
-func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error    { return nil }
-func (*noopRepository) DeleteRuleSet(_ string) error                   { return nil }
+func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) {
+	return nil, errFunctionNotSupported
+}
+func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error    { return nil }
+func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error { return errFunctionNotSupported }
+func (*noopRepository) DeleteRuleSet(_ string) error                { return errFunctionNotSupported }

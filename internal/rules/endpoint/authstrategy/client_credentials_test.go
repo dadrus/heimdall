@@ -90,7 +90,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 		w.WriteHeader(code)
 		_, err = w.Write(rawResp)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	defer srv.Close()
 

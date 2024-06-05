@@ -61,8 +61,8 @@ func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) life
 		ServiceAddress: cfg.Address(),
 		Logger:         logger,
 		Server: &http.Server{
-			ReadHeaderTimeout: 5 * time.Second,  // nolint: gomnd
-			IdleTimeout:       90 * time.Second, // nolint: gomnd
+			ReadHeaderTimeout: 5 * time.Second,  // nolint: mnd
+			IdleTimeout:       90 * time.Second, // nolint: mnd
 			ErrorLog:          loggeradapter.NewStdLogger(logger),
 		},
 	}

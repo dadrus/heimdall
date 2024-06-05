@@ -46,7 +46,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 		}
 
 		_, err := w.Write([]byte("foobar"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 
 	defer srv.Close()

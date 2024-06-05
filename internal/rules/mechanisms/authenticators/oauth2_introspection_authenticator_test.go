@@ -642,7 +642,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		if introspectionResponseContent != nil {
 			w.Header().Set("Content-Type", introspectionResponseContentType)
 			_, err := w.Write(introspectionResponseContent)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}
 
 		w.WriteHeader(introspectionResponseCode)
@@ -656,7 +656,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		if metadataResponseContent != nil {
 			w.Header().Set("Content-Type", metadataResponseContentType)
 			_, err := w.Write(metadataResponseContent)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}
 
 		w.WriteHeader(metadataResponseCode)
