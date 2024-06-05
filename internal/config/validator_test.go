@@ -101,7 +101,7 @@ func TestValidateConfigFileWithValidYAMLContentButFailingSchemaValidation(t *tes
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, heimdall.ErrConfiguration)
-	assert.Contains(t, err.Error(), "validate")
+	assert.Contains(t, err.Error(), "'foo' not allowed")
 }
 
 func TestValidateValidConfigFile(t *testing.T) {
