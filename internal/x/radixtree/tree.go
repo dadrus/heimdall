@@ -387,7 +387,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 				if params == nil {
 					// we don't expect more than 3 parameters to be defined for a path
 					// even 3 is already too much
-					params = make([]string, 0, 3) //nolint:gomnd
+					params = make([]string, 0, 3) //nolint:mnd
 				}
 
 				return found, idx, append(params, thisToken), backtrack
@@ -403,7 +403,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 			if match := matcher.Match(value); match {
 				// we don't expect more than 3 parameters to be defined for a path
 				// even 3 is already too much
-				params = make([]string, 1, 3) //nolint:gomnd
+				params = make([]string, 1, 3) //nolint:mnd
 				params[0] = path
 
 				return n.catchAllChild, idx, params, false

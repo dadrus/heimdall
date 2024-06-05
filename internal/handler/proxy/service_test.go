@@ -983,7 +983,7 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		require.Equal(t, "/bar", req.URL.Path)
+		assert.Equal(t, "/bar", req.URL.Path)
 
 		upgrader := websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool {
@@ -992,22 +992,22 @@ func TestWebSocketSupport(t *testing.T) {
 		}
 
 		con, err := upgrader.Upgrade(rw, req, nil)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		defer con.Close()
 
 		err = con.WriteMessage(websocket.TextMessage, []byte("ping 1"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		_, message, err := con.ReadMessage()
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, []byte("ping 1"), message)
 
 		err = con.WriteMessage(websocket.TextMessage, []byte("ping 2"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		_, message, err = con.ReadMessage()
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, []byte("ping 2"), message)
 	}))
 	defer upstreamSrv.Close()
@@ -1092,7 +1092,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		require.Equal(t, "/bar", req.URL.Path)
+		assert.Equal(t, "/bar", req.URL.Path)
 
 		rw.Header().Set("Content-Type", "text/event-stream")
 		rw.Header().Set("Cache-Control", "no-cache")
@@ -1102,9 +1102,9 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 		for i := range 5 {
 			_, err := rw.Write(stringx.ToBytes(strconv.Itoa(i)))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
-			require.NoError(t, rc.Flush())
+			assert.NoError(t, rc.Flush())
 
 			time.Sleep(50 * time.Millisecond)
 		}

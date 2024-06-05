@@ -764,7 +764,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
 			_, err := w.Write(responseContent)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}
 
 		w.WriteHeader(responseCode)
