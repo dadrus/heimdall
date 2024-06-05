@@ -11,7 +11,7 @@ on:
       - release
 
 env:
-  GO_VERSION: "1.22.3"
+  GO_VERSION: "1.22.4"
   GOLANGCI_LINT_VERSION: "v1.57.2"
   HELM_VERSION: "3.14.1"
   KUBECONFORM_VERSION: "0.6.4"
