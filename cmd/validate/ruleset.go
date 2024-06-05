@@ -18,21 +18,24 @@ package validate
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/watcher"
-	"github.com/go-jose/go-jose/v4"
+	"errors"
 	"os"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keyholder"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
+
+var errFunctionNotSupported = errors.New("function not supported")
 
 // NewValidateRulesCommand represents the "validate rules" command.
 func NewValidateRulesCommand() *cobra.Command {
@@ -102,10 +105,12 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 type noopRepository struct{}
 
-func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) { return nil, nil }
-func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error       { return nil }
-func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error    { return nil }
-func (*noopRepository) DeleteRuleSet(_ string) error                   { return nil }
+func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) {
+	return nil, errFunctionNotSupported
+}
+func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error    { return nil }
+func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error { return errFunctionNotSupported }
+func (*noopRepository) DeleteRuleSet(_ string) error                { return errFunctionNotSupported }
 
 type noopRegistry struct{}
 
