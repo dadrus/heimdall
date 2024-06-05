@@ -18,9 +18,10 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	"github.com/knadh/koanf/maps"
-	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -48,7 +49,7 @@ func ValidateConfig(configPath string) error {
 			"failed to parse config file").CausedBy(err)
 	}
 
-	schema, err := jsonschema.CompileString("config.schema.json", stringx.ToString(schema.ConfigSchema))
+	compiledSchema, err := compileSchema("config.schema.json", stringx.ToString(schema.ConfigSchema))
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to compile JSON schema").CausedBy(err)
@@ -56,10 +57,24 @@ func ValidateConfig(configPath string) error {
 
 	maps.IntfaceKeysToStrings(conf)
 
-	err = schema.Validate(conf)
+	err = compiledSchema.Validate(conf)
 	if err != nil {
 		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
 	}
 
 	return nil
+}
+
+func compileSchema(url, schemaContent string) (*jsonschema.Schema, error) {
+	configSchema, err := jsonschema.UnmarshalJSON(strings.NewReader(schemaContent))
+	if err != nil {
+		return nil, err
+	}
+
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource(url, configSchema); err != nil {
+		return nil, err
+	}
+
+	return compiler.Compile(url)
 }
