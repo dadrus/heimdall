@@ -344,6 +344,8 @@ github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 h1:GHRpF1pTW19a
 github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46/go.mod h1:uAQ5PCi+MFsC7HjREoAz1BU+Mq60+05gifQSsHSDG/8=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.0 h1:tnigFF7+QRJfnw8PQmcq4mvcWxz6RcLY+isSK15D/GI=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.0/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
+github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 h1:PKK9DyHxif4LZo+uQSgXNqs0jj5+xZwwfKHgph2lxBw=
+github.com/santhosh-tekuri/jsonschema/v6 v6.0.1/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
 github.com/shabbyrobe/gocovmerge v0.0.0-20190829150210-3e036491d500 h1:WnNuhiq+FOY3jNj6JXFT+eLN3CQ/oPIsDPRanvwsmbI=
 github.com/shabbyrobe/gocovmerge v0.0.0-20190829150210-3e036491d500/go.mod h1:+njLrG5wSeoG4Ds61rFgEzKvenR2UHbjMoDHsczxly0=
 github.com/shirou/gopsutil/v3 v3.24.4 h1:dEHgzZXt4LMNm+oYELpzl9YCqV65Yr/6SfrvgRBtXeU=
