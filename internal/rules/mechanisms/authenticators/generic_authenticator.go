@@ -44,7 +44,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorGeneric {
 				return false, nil, nil
 			}

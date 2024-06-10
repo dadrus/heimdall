@@ -26,7 +26,7 @@ import (
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorAnonymous {
 				return false, nil, nil
 			}

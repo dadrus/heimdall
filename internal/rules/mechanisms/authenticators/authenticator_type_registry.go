@@ -18,10 +18,10 @@ package authenticators
 
 import (
 	"errors"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

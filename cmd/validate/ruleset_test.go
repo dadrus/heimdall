@@ -21,16 +21,16 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	"github.com/dadrus/heimdall/internal/x/stringx"
-	"github.com/drone/envsubst/v2"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/drone/envsubst/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -49,7 +49,7 @@ func TestValidateRuleset(t *testing.T) {
 
 	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
 
-	err = os.WriteFile(pemFile, pemBytes, 0644)
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
 	raw, err := os.ReadFile("test_data/config.yaml")
@@ -58,7 +58,7 @@ func TestValidateRuleset(t *testing.T) {
 	content, err := envsubst.EvalEnv(stringx.ToString(raw))
 	require.NoError(t, err)
 
-	err = os.WriteFile(configFile, []byte(content), 0644)
+	err = os.WriteFile(configFile, []byte(content), 0o600)
 	require.NoError(t, err)
 
 	for _, tc := range []struct {
@@ -127,7 +127,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 
 	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
 
-	err = os.WriteFile(pemFile, pemBytes, 0644)
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
 	raw, err := os.ReadFile("test_data/config.yaml")
@@ -136,7 +136,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 	content, err := envsubst.EvalEnv(stringx.ToString(raw))
 	require.NoError(t, err)
 
-	err = os.WriteFile(configFile, []byte(content), 0644)
+	err = os.WriteFile(configFile, []byte(content), 0o600)
 	require.NoError(t, err)
 
 	for _, tc := range []struct {

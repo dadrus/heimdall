@@ -18,13 +18,13 @@ package management
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/keyholder"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/keyholder"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 

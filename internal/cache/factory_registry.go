@@ -18,10 +18,10 @@ package cache
 
 import (
 	"errors"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/cache/noop"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )

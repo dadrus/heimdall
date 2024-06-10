@@ -20,7 +20,6 @@ import (
 	"crypto"
 	"crypto/sha256"
 	"crypto/x509"
-	"github.com/dadrus/heimdall/internal/x"
 	"sync"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/dadrus/heimdall/internal/x/stringx"

@@ -17,7 +17,6 @@
 package management
 
 import (
-	"github.com/dadrus/heimdall/internal/keyholder"
 	"net/http"
 
 	"github.com/go-http-utils/etag"
@@ -28,6 +27,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter"
+	"github.com/dadrus/heimdall/internal/keyholder"
 )
 
 func newManagementHandler(khr keyholder.Registry, eh errorhandler.ErrorHandler) http.Handler {

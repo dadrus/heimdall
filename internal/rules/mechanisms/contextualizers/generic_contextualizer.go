@@ -53,7 +53,7 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
 			if typ != ContextualizerGeneric {
 				return false, nil, nil
 			}

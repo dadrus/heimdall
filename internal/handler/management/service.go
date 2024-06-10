@@ -18,7 +18,6 @@ package management
 
 import (
 	"fmt"
-	"github.com/dadrus/heimdall/internal/keyholder"
 	"net/http"
 	"strings"
 
@@ -35,6 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/keyholder"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"

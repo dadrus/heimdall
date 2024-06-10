@@ -17,10 +17,10 @@
 package redis
 
 import (
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"time"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 

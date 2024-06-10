@@ -17,7 +17,6 @@
 package metrics
 
 import (
-	"context"
 	"go.opentelemetry.io/contrib/instrumentation/host"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.uber.org/fx"
@@ -31,7 +30,7 @@ var Module = fx.Options( // nolint: gochecknoglobals
 	fx.Provide(
 		fx.Annotate(
 			certificate.NewObserver,
-			fx.OnStart(func(ctx context.Context, co certificate.Observer) error { return co.Start() }),
+			fx.OnStart(func(co certificate.Observer) error { return co.Start() }),
 		),
 	),
 )

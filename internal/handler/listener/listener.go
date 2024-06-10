@@ -18,12 +18,12 @@ package listener
 
 import (
 	"crypto/tls"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"net"
 	"sync/atomic"
 	"time"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
@@ -90,7 +90,12 @@ func (l *listener) Accept() (net.Conn, error) {
 	return &conn{Conn: con}, nil
 }
 
-func New(network, name, address string, tlsConf *config.TLS, cw watcher.Watcher, co certificate.Observer) (net.Listener, error) {
+func New(
+	network, name, address string,
+	tlsConf *config.TLS,
+	cw watcher.Watcher,
+	co certificate.Observer,
+) (net.Listener, error) {
 	listnr, err := net.Listen(network, address)
 	if err != nil {
 		return nil, err
@@ -105,7 +110,13 @@ func New(network, name, address string, tlsConf *config.TLS, cw watcher.Watcher,
 	return listnr, nil
 }
 
-func newTLSListener(name string, tlsConf *config.TLS, listener net.Listener, cw watcher.Watcher, co certificate.Observer) (net.Listener, error) {
+func newTLSListener(
+	name string,
+	tlsConf *config.TLS,
+	listener net.Listener,
+	cw watcher.Watcher,
+	co certificate.Observer,
+) (net.Listener, error) {
 	cfg, err := tlsx.ToTLSConfig(tlsConf,
 		tlsx.WithServerAuthentication(true),
 		tlsx.WithSecretsWatcher(cw),

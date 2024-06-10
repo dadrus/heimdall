@@ -18,17 +18,18 @@ package mechanisms
 
 import (
 	"errors"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
-	"github.com/dadrus/heimdall/internal/watcher"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

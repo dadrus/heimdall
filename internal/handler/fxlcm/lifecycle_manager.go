@@ -19,7 +19,6 @@ package fxlcm
 import (
 	"context"
 	"errors"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"net"
 	"net/http"
 
@@ -27,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 

@@ -59,7 +59,7 @@ func TestCreateJWTFinalizer(t *testing.T) {
 	testDir := t.TempDir()
 	pemFile := filepath.Join(testDir, "keystore.pem")
 
-	err = os.WriteFile(pemFile, pemBytes, 0644)
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
 	const expectedTTL = 5 * time.Second
@@ -446,7 +446,7 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 	testDir := t.TempDir()
 	pemFile := filepath.Join(testDir, "keystore.pem")
 
-	err = os.WriteFile(pemFile, pemBytes, 0640)
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
 	const expectedTTL = 5 * time.Second
@@ -681,7 +681,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 	testDir := t.TempDir()
 	pemFile := filepath.Join(testDir, "keystore.pem")
 
-	err = os.WriteFile(pemFile, pemBytes, 0644)
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
 	for _, tc := range []struct {

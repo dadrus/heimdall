@@ -19,7 +19,6 @@ package redis
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"net"
 	"os"
 	"sync"
@@ -32,6 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
@@ -139,7 +139,11 @@ type baseConfig struct {
 	TLS           tlsConfig          `mapstructure:"tls"`
 }
 
-func (c baseConfig) clientOptions(name string, cw watcher.Watcher, co certificate.Observer) (rueidis.ClientOption, error) {
+func (c baseConfig) clientOptions(
+	name string,
+	cw watcher.Watcher,
+	co certificate.Observer,
+) (rueidis.ClientOption, error) {
 	var (
 		tlsCfg *tls.Config
 		err    error

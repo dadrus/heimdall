@@ -19,12 +19,12 @@ package memory
 import (
 	"context"
 	"errors"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 
