@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
@@ -85,7 +86,13 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
-	mFactory, err := mechanisms.NewMechanismFactory(conf, logger, &watcher.NoopWatcher{}, &noopRegistry{})
+	mFactory, err := mechanisms.NewMechanismFactory(
+		conf,
+		logger,
+		&watcher.NoopWatcher{},
+		&noopRegistry{},
+		&noopCertificateObserver{},
+	)
 	if err != nil {
 		return err
 	}
@@ -116,3 +123,8 @@ type noopRegistry struct{}
 
 func (*noopRegistry) Add(_ keyholder.KeyHolder) {}
 func (*noopRegistry) Keys() []jose.JSONWebKey   { return nil }
+
+type noopCertificateObserver struct{}
+
+func (*noopCertificateObserver) Add(_ certificate.Supplier) {}
+func (*noopCertificateObserver) Start() error               { return errFunctionNotSupported }

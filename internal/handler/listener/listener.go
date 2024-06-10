@@ -18,6 +18,7 @@ package listener
 
 import (
 	"crypto/tls"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"net"
 	"sync/atomic"
 	"time"
@@ -89,7 +90,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	return &conn{Conn: con}, nil
 }
 
-func New(network, address string, tlsConf *config.TLS, cw watcher.Watcher) (net.Listener, error) {
+func New(network, name, address string, tlsConf *config.TLS, cw watcher.Watcher, co certificate.Observer) (net.Listener, error) {
 	listnr, err := net.Listen(network, address)
 	if err != nil {
 		return nil, err
@@ -98,16 +99,17 @@ func New(network, address string, tlsConf *config.TLS, cw watcher.Watcher) (net.
 	listnr = &listener{Listener: listnr}
 
 	if tlsConf != nil {
-		return newTLSListener(tlsConf, listnr, cw)
+		return newTLSListener(name, tlsConf, listnr, cw, co)
 	}
 
 	return listnr, nil
 }
 
-func newTLSListener(tlsConf *config.TLS, listener net.Listener, cw watcher.Watcher) (net.Listener, error) {
+func newTLSListener(name string, tlsConf *config.TLS, listener net.Listener, cw watcher.Watcher, co certificate.Observer) (net.Listener, error) {
 	cfg, err := tlsx.ToTLSConfig(tlsConf,
 		tlsx.WithServerAuthentication(true),
 		tlsx.WithSecretsWatcher(cw),
+		tlsx.WithCertificateObserver(name, co),
 	)
 	if err != nil {
 		return nil, err

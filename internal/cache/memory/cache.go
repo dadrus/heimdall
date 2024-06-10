@@ -19,6 +19,7 @@ package memory
 import (
 	"context"
 	"errors"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
@@ -34,7 +35,7 @@ func init() { // nolint: gochecknoinits
 	cache.Register("in-memory", cache.FactoryFunc(NewCache))
 }
 
-func NewCache(_ map[string]any, _ watcher.Watcher) (cache.Cache, error) {
+func NewCache(_ map[string]any, _ watcher.Watcher, _ certificate.Observer) (cache.Cache, error) {
 	return &Cache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}, nil
 }
 

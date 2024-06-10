@@ -37,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/keyholder/mocks"
+	mocks4 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	mocks2 "github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -111,8 +112,12 @@ signer:
 				khr := mocks3.NewRegistryMock(t)
 				khr.EXPECT().Add(mock.Anything)
 
+				co := mocks4.NewObserverMock(t)
+				co.EXPECT().Add(mock.Anything)
+
 				ctx.EXPECT().Watcher().Return(wm)
 				ctx.EXPECT().KeyHolderRegistry().Return(khr)
+				ctx.EXPECT().CertificateObserver().Return(co)
 			},
 			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
@@ -151,8 +156,12 @@ signer:
 				khr := mocks3.NewRegistryMock(t)
 				khr.EXPECT().Add(mock.Anything)
 
+				co := mocks4.NewObserverMock(t)
+				co.EXPECT().Add(mock.Anything)
+
 				ctx.EXPECT().Watcher().Return(wm)
 				ctx.EXPECT().KeyHolderRegistry().Return(khr)
+				ctx.EXPECT().CertificateObserver().Return(co)
 			},
 			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
@@ -208,8 +217,12 @@ claims:
 				khr := mocks3.NewRegistryMock(t)
 				khr.EXPECT().Add(mock.Anything)
 
+				co := mocks4.NewObserverMock(t)
+				co.EXPECT().Add(mock.Anything)
+
 				ctx.EXPECT().Watcher().Return(wm)
 				ctx.EXPECT().KeyHolderRegistry().Return(khr)
+				ctx.EXPECT().CertificateObserver().Return(co)
 			},
 			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
@@ -254,8 +267,12 @@ claims:
 				khr := mocks3.NewRegistryMock(t)
 				khr.EXPECT().Add(mock.Anything)
 
+				co := mocks4.NewObserverMock(t)
+				co.EXPECT().Add(mock.Anything)
+
 				ctx.EXPECT().Watcher().Return(wm)
 				ctx.EXPECT().KeyHolderRegistry().Return(khr)
+				ctx.EXPECT().CertificateObserver().Return(co)
 			},
 			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
@@ -332,8 +349,12 @@ header:
 				khr := mocks3.NewRegistryMock(t)
 				khr.EXPECT().Add(mock.Anything)
 
+				co := mocks4.NewObserverMock(t)
+				co.EXPECT().Add(mock.Anything)
+
 				ctx.EXPECT().Watcher().Return(wm)
 				ctx.EXPECT().KeyHolderRegistry().Return(khr)
+				ctx.EXPECT().CertificateObserver().Return(co)
 			},
 			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
@@ -371,8 +392,12 @@ header:
 				khr := mocks3.NewRegistryMock(t)
 				khr.EXPECT().Add(mock.Anything)
 
+				co := mocks4.NewObserverMock(t)
+				co.EXPECT().Add(mock.Anything)
+
 				ctx.EXPECT().Watcher().Return(wm)
 				ctx.EXPECT().KeyHolderRegistry().Return(khr)
+				ctx.EXPECT().CertificateObserver().Return(co)
 			},
 			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
@@ -421,7 +446,7 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 	testDir := t.TempDir()
 	pemFile := filepath.Join(testDir, "keystore.pem")
 
-	err = os.WriteFile(pemFile, pemBytes, 0644)
+	err = os.WriteFile(pemFile, pemBytes, 0640)
 	require.NoError(t, err)
 
 	const expectedTTL = 5 * time.Second
@@ -610,9 +635,13 @@ foo: bar
 			khr := mocks3.NewRegistryMock(t)
 			khr.EXPECT().Add(mock.Anything)
 
+			co := mocks4.NewObserverMock(t)
+			co.EXPECT().Add(mock.Anything)
+
 			ctx := NewCreationContextMock(t)
 			ctx.EXPECT().Watcher().Return(wm)
 			ctx.EXPECT().KeyHolderRegistry().Return(khr)
+			ctx.EXPECT().CertificateObserver().Return(co)
 
 			prototype, err := newJWTFinalizer(ctx, tc.id, protoConf)
 			require.NoError(t, err)
@@ -856,9 +885,13 @@ claims: "{{ len .foobar }}"
 			khr := mocks3.NewRegistryMock(t)
 			khr.EXPECT().Add(mock.Anything)
 
+			co := mocks4.NewObserverMock(t)
+			co.EXPECT().Add(mock.Anything)
+
 			cctx := NewCreationContextMock(t)
 			cctx.EXPECT().Watcher().Return(wm)
 			cctx.EXPECT().KeyHolderRegistry().Return(khr)
+			cctx.EXPECT().CertificateObserver().Return(co)
 
 			mctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 

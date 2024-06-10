@@ -18,10 +18,11 @@ package errorhandlers
 
 import (
 	"errors"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -37,6 +38,7 @@ var (
 type CreationContext interface {
 	Watcher() watcher.Watcher
 	KeyHolderRegistry() keyholder.Registry
+	CertificateObserver() certificate.Observer
 }
 
 type TypeFactory func(ctx CreationContext, id string, typ string, c map[string]any) (bool, ErrorHandler, error)

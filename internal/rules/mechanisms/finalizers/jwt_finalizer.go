@@ -18,6 +18,7 @@ package finalizers
 
 import (
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -90,7 +91,7 @@ func newJWTFinalizer(ctx CreationContext, id string, rawConfig map[string]any) (
 
 	ctx.KeyHolderRegistry().Add(signer)
 
-	return &jwtFinalizer{
+	fin := &jwtFinalizer{
 		id:     id,
 		claims: conf.Claims,
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -103,7 +104,11 @@ func newJWTFinalizer(ctx CreationContext, id string, rawConfig map[string]any) (
 			func() string { return conf.Header.Scheme },
 			func() string { return "Bearer" }),
 		signer: signer,
-	}, nil
+	}
+
+	ctx.CertificateObserver().Add(fin)
+
+	return fin, nil
 }
 
 func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
@@ -235,3 +240,6 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub *subject.Subj
 
 	return hex.EncodeToString(hash.Sum(nil))
 }
+
+func (f *jwtFinalizer) Name() string                      { return f.id }
+func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.Keys()[0].Certificates }

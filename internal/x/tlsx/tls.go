@@ -44,6 +44,10 @@ func ToTLSConfig(tlsCfg *config.TLS, opts ...Option) (*tls.Config, error) {
 				return nil, err
 			}
 		}
+
+		if args.certificateObserver != nil {
+			args.certificateObserver.Add(&certificateSupplier{name: args.name, ks: ks})
+		}
 	}
 
 	// nolint:gosec

@@ -19,6 +19,7 @@ package mechanisms
 import (
 	"errors"
 	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/rs/zerolog"
 
@@ -54,10 +55,11 @@ func NewMechanismFactory(
 	logger zerolog.Logger,
 	fw watcher.Watcher,
 	khr keyholder.Registry,
+	co certificate.Observer,
 ) (MechanismFactory, error) {
 	logger.Info().Msg("Loading pipeline definitions")
 
-	repository, err := newMechanismRepository(conf, logger, fw, khr)
+	repository, err := newMechanismRepository(conf, logger, fw, khr, co)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading pipeline definitions")
 

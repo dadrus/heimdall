@@ -19,6 +19,7 @@ package fxlcm
 import (
 	"context"
 	"errors"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"net"
 	"net/http"
 
@@ -37,16 +38,17 @@ type Server interface {
 }
 
 type LifecycleManager struct {
-	ServiceName    string
-	ServiceAddress string
-	Server         Server
-	Logger         zerolog.Logger
-	TLSConf        *config.TLS
-	FileWatcher    watcher.Watcher
+	ServiceName         string
+	ServiceAddress      string
+	Server              Server
+	Logger              zerolog.Logger
+	TLSConf             *config.TLS
+	FileWatcher         watcher.Watcher
+	CertificateObserver certificate.Observer
 }
 
 func (m *LifecycleManager) Start(_ context.Context) error {
-	ln, err := listener.New("tcp", m.ServiceAddress, m.TLSConf, m.FileWatcher)
+	ln, err := listener.New("tcp", m.ServiceName, m.ServiceAddress, m.TLSConf, m.FileWatcher, m.CertificateObserver)
 	if err != nil {
 		m.Logger.Fatal().Err(err).Str("_service", m.ServiceName).Msg("Could not create listener")
 

@@ -16,12 +16,17 @@
 
 package tlsx
 
-import "github.com/dadrus/heimdall/internal/watcher"
+import (
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/watcher"
+)
 
 type options struct {
-	serverAuthRequired bool
-	clientAuthRequired bool
-	secretsWatcher     watcher.Watcher
+	name                string
+	serverAuthRequired  bool
+	clientAuthRequired  bool
+	secretsWatcher      watcher.Watcher
+	certificateObserver certificate.Observer
 }
 
 type Option func(*options)
@@ -41,5 +46,12 @@ func WithClientAuthentication(flag bool) Option {
 func WithSecretsWatcher(cw watcher.Watcher) Option {
 	return func(o *options) {
 		o.secretsWatcher = cw
+	}
+}
+
+func WithCertificateObserver(name string, co certificate.Observer) Option {
+	return func(o *options) {
+		o.name = name
+		o.certificateObserver = co
 	}
 }

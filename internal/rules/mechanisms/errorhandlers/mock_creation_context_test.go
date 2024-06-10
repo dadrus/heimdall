@@ -4,6 +4,8 @@ package errorhandlers
 
 import (
 	keyholder "github.com/dadrus/heimdall/internal/keyholder"
+	certificate "github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+
 	mock "github.com/stretchr/testify/mock"
 
 	watcher "github.com/dadrus/heimdall/internal/watcher"
@@ -20,6 +22,53 @@ type CreationContextMock_Expecter struct {
 
 func (_m *CreationContextMock) EXPECT() *CreationContextMock_Expecter {
 	return &CreationContextMock_Expecter{mock: &_m.Mock}
+}
+
+// CertificateObserver provides a mock function with given fields:
+func (_m *CreationContextMock) CertificateObserver() certificate.Observer {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for CertificateObserver")
+	}
+
+	var r0 certificate.Observer
+	if rf, ok := ret.Get(0).(func() certificate.Observer); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(certificate.Observer)
+		}
+	}
+
+	return r0
+}
+
+// CreationContextMock_CertificateObserver_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CertificateObserver'
+type CreationContextMock_CertificateObserver_Call struct {
+	*mock.Call
+}
+
+// CertificateObserver is a helper method to define mock.On call
+func (_e *CreationContextMock_Expecter) CertificateObserver() *CreationContextMock_CertificateObserver_Call {
+	return &CreationContextMock_CertificateObserver_Call{Call: _e.mock.On("CertificateObserver")}
+}
+
+func (_c *CreationContextMock_CertificateObserver_Call) Run(run func()) *CreationContextMock_CertificateObserver_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CreationContextMock_CertificateObserver_Call) Return(_a0 certificate.Observer) *CreationContextMock_CertificateObserver_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CreationContextMock_CertificateObserver_Call) RunAndReturn(run func() certificate.Observer) *CreationContextMock_CertificateObserver_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // KeyHolderRegistry provides a mock function with given fields:

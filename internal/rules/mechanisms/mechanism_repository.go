@@ -23,6 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
@@ -37,22 +38,26 @@ var ErrNoSuchPipelineObject = errors.New("pipeline object not found")
 type creationContext struct {
 	fw  watcher.Watcher
 	khr keyholder.Registry
+	co  certificate.Observer
 }
 
-func (cc *creationContext) Watcher() watcher.Watcher              { return cc.fw }
-func (cc *creationContext) KeyHolderRegistry() keyholder.Registry { return cc.khr }
+func (cc *creationContext) Watcher() watcher.Watcher                  { return cc.fw }
+func (cc *creationContext) KeyHolderRegistry() keyholder.Registry     { return cc.khr }
+func (cc *creationContext) CertificateObserver() certificate.Observer { return cc.co }
 
 func newMechanismRepository(
 	conf *config.Configuration,
 	logger zerolog.Logger,
 	fw watcher.Watcher,
 	khr keyholder.Registry,
+	co certificate.Observer,
 ) (*mechanismRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")
 
 	cc := &creationContext{
 		fw:  fw,
 		khr: khr,
+		co:  co,
 	}
 
 	authenticatorMap, err := createPipelineObjects[authenticators.Authenticator, authenticators.CreationContext](

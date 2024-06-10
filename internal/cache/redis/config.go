@@ -19,6 +19,7 @@ package redis
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"net"
 	"os"
 	"sync"
@@ -138,7 +139,7 @@ type baseConfig struct {
 	TLS           tlsConfig          `mapstructure:"tls"`
 }
 
-func (c baseConfig) clientOptions(cw watcher.Watcher) (rueidis.ClientOption, error) {
+func (c baseConfig) clientOptions(name string, cw watcher.Watcher, co certificate.Observer) (rueidis.ClientOption, error) {
 	var (
 		tlsCfg *tls.Config
 		err    error
@@ -148,6 +149,7 @@ func (c baseConfig) clientOptions(cw watcher.Watcher) (rueidis.ClientOption, err
 		tlsCfg, err = tlsx.ToTLSConfig(&c.TLS.TLS,
 			tlsx.WithClientAuthentication(len(c.TLS.KeyStore.Path) != 0),
 			tlsx.WithSecretsWatcher(cw),
+			tlsx.WithCertificateObserver(name, co),
 		)
 		if err != nil {
 			return rueidis.ClientOption{}, err
