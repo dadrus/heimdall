@@ -58,13 +58,17 @@ func WithClientAuthentication(flag bool) Option {
 
 func WithSecretsWatcher(cw watcher.Watcher) Option {
 	return func(o *options) {
-		o.secretsWatcher = cw
+		if cw != nil {
+			o.secretsWatcher = cw
+		}
 	}
 }
 
 func WithCertificateObserver(name string, co certificate.Observer) Option {
 	return func(o *options) {
-		o.name = name
-		o.certificateObserver = co
+		if co != nil {
+			o.name = name
+			o.certificateObserver = co
+		}
 	}
 }
