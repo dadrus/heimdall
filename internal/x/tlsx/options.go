@@ -21,12 +21,25 @@ import (
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 
+type noopObserver struct{}
+
+func (*noopObserver) Add(_ certificate.Supplier) {}
+func (*noopObserver) Start() error               { return nil }
+
 type options struct {
 	name                string
 	serverAuthRequired  bool
 	clientAuthRequired  bool
 	secretsWatcher      watcher.Watcher
 	certificateObserver certificate.Observer
+}
+
+func newOptions() *options {
+	return &options{
+		name:                "unknown",
+		secretsWatcher:      &watcher.NoopWatcher{},
+		certificateObserver: &noopObserver{},
+	}
 }
 
 type Option func(*options)

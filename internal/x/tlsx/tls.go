@@ -25,13 +25,13 @@ import (
 
 func ToTLSConfig(tlsCfg *config.TLS, opts ...Option) (*tls.Config, error) {
 	var (
-		args options
-		ks   *keyStore
-		err  error
+		ks  *keyStore
+		err error
 	)
 
+	args := newOptions()
 	for _, opt := range opts {
-		opt(&args)
+		opt(args)
 	}
 
 	if args.serverAuthRequired || args.clientAuthRequired {
@@ -39,15 +39,11 @@ func ToTLSConfig(tlsCfg *config.TLS, opts ...Option) (*tls.Config, error) {
 			return nil, err
 		}
 
-		if args.secretsWatcher != nil {
-			if err = args.secretsWatcher.Add(ks.path, ks); err != nil {
-				return nil, err
-			}
+		if err = args.secretsWatcher.Add(ks.path, ks); err != nil {
+			return nil, err
 		}
 
-		if args.certificateObserver != nil {
-			args.certificateObserver.Add(&certificateSupplier{name: args.name, ks: ks})
-		}
+		args.certificateObserver.Add(&certificateSupplier{name: args.name, ks: ks})
 	}
 
 	// nolint:gosec
