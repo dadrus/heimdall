@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{- if not .Values.demo.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -63,4 +62,3 @@ data:
     providers:
       {{- toYaml . | nindent 6 }}
     {{- end }}
-{{- end }}

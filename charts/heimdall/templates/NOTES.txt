@@ -12,23 +12,5 @@ services. Consult the Ingress Controller documentation of your choice on how to 
 {{- else }}
 Heimdall is installed and configured to operate in proxy mode.
 
-  {{- if not .Values.demo.enabled }}
-
 The actual integration depends pretty much on your requirements and setup.
-  {{- end }}
-{{- end }}
-
-{{- if .Values.demo.enabled }}
-
-The setup includes a demo app (which just echoes the request) and a rule set. If you're using NGINX as Ingress Controller, the abovesaid annotations are already added to the demo app ingress rule. So, to see heimdall in actions, just do.
-
-> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/pub/test
-This endpoint is not protected. so heimdall will just allow the request
-
-> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anon/test
-This endpoint is configured to accept anonymous requests. So heimdall will allow the request,
-but create a JWT with "sub" claim set to anonymous.
-
-Requests to any other endpoints will be answered with HTTP 403. E.g.
-curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/foo
 {{- end }}
