@@ -96,7 +96,7 @@ func (cr *keyStore) load() error {
 	return nil
 }
 
-func (cr *keyStore) certificates() []*x509.Certificate {
+func (cr *keyStore) activeCertificateChain() []*x509.Certificate {
 	cr.mut.RLock()
 	defer cr.mut.RUnlock()
 

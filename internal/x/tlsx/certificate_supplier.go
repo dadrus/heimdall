@@ -7,5 +7,7 @@ type certificateSupplier struct {
 	ks   *keyStore
 }
 
-func (c *certificateSupplier) Name() string                      { return c.name }
-func (c *certificateSupplier) Certificates() []*x509.Certificate { return c.ks.certificates() }
+func (c *certificateSupplier) Name() string { return c.name }
+func (c *certificateSupplier) Certificates() []*x509.Certificate {
+	return c.ks.activeCertificateChain()
+}
