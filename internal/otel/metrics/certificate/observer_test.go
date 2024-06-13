@@ -82,13 +82,28 @@ func checkMetric(t *testing.T, dp []metricdata.DataPoint[float64], service strin
 	assert.Contains(t, names, service)
 }
 
-type testCertificateSupplier struct {
+type staticCertificateSupplier struct {
 	name  string
 	certs []*x509.Certificate
 }
 
-func (s *testCertificateSupplier) Name() string                      { return s.name }
-func (s *testCertificateSupplier) Certificates() []*x509.Certificate { return s.certs }
+func (s *staticCertificateSupplier) Name() string                      { return s.name }
+func (s *staticCertificateSupplier) Certificates() []*x509.Certificate { return s.certs }
+
+type dynamicCertificateSupplier struct {
+	name  string
+	certs []*x509.Certificate
+	idx   int
+}
+
+func (s *dynamicCertificateSupplier) Name() string { return s.name }
+func (s *dynamicCertificateSupplier) Certificates() []*x509.Certificate {
+	nextIdx := (s.idx + 1) % len(s.certs)
+	cert := s.certs[s.idx]
+	s.idx = nextIdx
+
+	return []*x509.Certificate{cert}
+}
 
 func TestCertificateExpirationCollector(t *testing.T) {
 	t.Parallel()
@@ -142,22 +157,22 @@ func TestCertificateExpirationCollector(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
 		suppliers []Supplier
-		assert    func(t *testing.T, rm *metricdata.ResourceMetrics)
+		assert    func(t *testing.T, rm *metricdata.ResourceMetrics, call int)
 	}{
 		{
 			uc: "without suppliers",
-			assert: func(t *testing.T, rm *metricdata.ResourceMetrics) {
+			assert: func(t *testing.T, rm *metricdata.ResourceMetrics, _ int) {
 				t.Helper()
 
 				assert.Empty(t, rm.ScopeMetrics)
 			},
 		},
 		{
-			uc: "with single supplier providing only ee certificate",
+			uc: "with single supplier providing only static ee certificate",
 			suppliers: []Supplier{
-				&testCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert}},
+				&staticCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert}},
 			},
-			assert: func(t *testing.T, rm *metricdata.ResourceMetrics) {
+			assert: func(t *testing.T, rm *metricdata.ResourceMetrics, _ int) {
 				t.Helper()
 
 				require.Len(t, rm.ScopeMetrics, 1)
@@ -178,11 +193,11 @@ func TestCertificateExpirationCollector(t *testing.T) {
 			},
 		},
 		{
-			uc: "with single supplier providing the entire chain",
+			uc: "with single supplier providing the entire chain statically",
 			suppliers: []Supplier{
-				&testCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate}},
+				&staticCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate}},
 			},
-			assert: func(t *testing.T, rm *metricdata.ResourceMetrics) {
+			assert: func(t *testing.T, rm *metricdata.ResourceMetrics, _ int) {
 				t.Helper()
 
 				require.Len(t, rm.ScopeMetrics, 1)
@@ -205,12 +220,12 @@ func TestCertificateExpirationCollector(t *testing.T) {
 			},
 		},
 		{
-			uc: "with multiple suppliers providing the entire chain",
+			uc: "with multiple suppliers providing the entire chain statically",
 			suppliers: []Supplier{
-				&testCertificateSupplier{name: "test-1", certs: []*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate}},
-				&testCertificateSupplier{name: "test-2", certs: []*x509.Certificate{ee2cert, intCA1Cert, rootCA1.Certificate}},
+				&staticCertificateSupplier{name: "test-1", certs: []*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate}},
+				&staticCertificateSupplier{name: "test-2", certs: []*x509.Certificate{ee2cert, intCA1Cert, rootCA1.Certificate}},
 			},
-			assert: func(t *testing.T, rm *metricdata.ResourceMetrics) {
+			assert: func(t *testing.T, rm *metricdata.ResourceMetrics, _ int) {
 				t.Helper()
 
 				require.Len(t, rm.ScopeMetrics, 1)
@@ -236,6 +251,35 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				checkMetric(t, data.DataPoints, "test-2", ee2cert)
 			},
 		},
+		{
+			uc: "with supplier providing a certificate dynamically",
+			suppliers: []Supplier{
+				&dynamicCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert, ee2cert}},
+			},
+			assert: func(t *testing.T, rm *metricdata.ResourceMetrics, call int) {
+				t.Helper()
+
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 1)
+
+				metrics := sm.Metrics[0]
+				assert.Equal(t, "certificate.expiry", metrics.Name)
+				assert.Equal(t, "s", metrics.Unit)
+				assert.Equal(t, "Number of seconds until certificate expires", metrics.Description)
+
+				data := metrics.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
+				assert.False(t, data.IsMonotonic)
+				assert.Len(t, data.DataPoints, 1)
+
+				if call == 1 {
+					checkMetric(t, data.DataPoints, "test", ee1cert)
+				} else {
+					checkMetric(t, data.DataPoints, "test", ee2cert)
+				}
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -251,18 +295,24 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				obs.Add(supplier)
 			}
 
-			// WHEN
 			err = obs.Start()
+			require.NoError(t, err)
+
+			var rm1, rm2 metricdata.ResourceMetrics
+
+			// WHEN
+			err = exp.Collect(context.TODO(), &rm1)
+			require.NoError(t, err)
 
 			// THEN
+			tc.assert(t, &rm1, 1)
+
+			// WHEN
+			err = exp.Collect(context.TODO(), &rm2)
 			require.NoError(t, err)
 
-			var rm metricdata.ResourceMetrics
-			err = exp.Collect(context.TODO(), &rm)
-
-			require.NoError(t, err)
-
-			tc.assert(t, &rm)
+			// THEN
+			tc.assert(t, &rm2, 2)
 		})
 	}
 }
