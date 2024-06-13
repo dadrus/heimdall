@@ -95,6 +95,27 @@ func TestCreateJWTFinalizer(t *testing.T) {
 			},
 		},
 		{
+			uc: "with not existing key store for signer",
+			id: "fin",
+			config: []byte(`
+signer:
+  key_store:
+    path: /does/not/exist.pem
+  key_id: key
+`),
+			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Watcher().Return(mocks2.NewWatcherMock(t))
+			},
+			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed loading keystore")
+			},
+		},
+		{
 			uc: "with signer only",
 			id: "fin",
 			config: []byte(`
