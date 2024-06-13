@@ -86,6 +86,10 @@ mechanisms: # <3>
   finalizers:
     - id: create_jwt # <8>
       type: jwt
+      config:
+        signer:
+          key_store:
+            path: /etc/heimdall/signer.pem
     - id: noop # <9>
       type: noop
 
@@ -109,10 +113,24 @@ providers:
 <5> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous]` authenticator named `anon`. It allows any request passing through and creates a subject with ID set to `anonymous`. You can find more information about the subject and other objects link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].
 <6> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With the given configuration it will check whether a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint. It will reject all requests without a valid JWT or create a subject with ID set to the value of the `sub` claim from the token and add also add all claims as key-value map to subject's Attribute property.
 <7> Here we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `opa`. Please note, how we allow overriding of particular settings, which application you'll find below, when we define the rules.
-<8> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. Without any configuration, as used here, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID. The key material used for signature creation purpose will be generated on start up. This is fine for our demo purpose. For real scenarios you should definitely link:{{< relref "/docs/operations/security.adoc#_signatures" >}}[define it].
+<8> The following lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. With the given configuration, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID. The key material used for signature creation purpose is taken from the referenced key store.
 <9> These two lines conclude the definition of our mechanisms catalogue and define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_noop" >}}[noop]` finalizer, which as the type implies, does nothing.
 <10> With the above catalogue in place, we can now define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which will kick in if no other rule matches the request. In addition, it acts as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for the definition of regular (upstream service specific) rules. In this case it allows only HTTP GET and POST requests and defines a secure default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline], which refuses any request by making use of the `deny_all` authenticator, and if the regular rule overrides that authenticator, will create a JWT thanks to the used `jwt` finalizer.
 <11> The last few lines of the configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which allows loading of regular rules from the file system. Btw. the provider is configured to watch for changes. So you can modify the rules, we're going to create, while playing around.
+
+. Create a file, named `signer.pem` with the following content. This is our key store with a private key, you've seen in the configuration above.
++
+[source, yaml]
+----
+-----BEGIN EC PRIVATE KEY-----
+MIGkAgEBBDALv/dRp6zvm6nmozmB/21viwFCUGBoisHz0v8LSRXGiM5aDywLFmMy
+1jPnw29tz36gBwYFK4EEACKhZANiAAQgZkUS7PCh5tEXXvZk0LDQ4Xn4LSK+vKkI
+zlCZl+oMgud8gacf4uG5ERgju1xdUyfewsXlwepTnWuwhXM7GdnwY5GOxZTwGn3X
+XVwR/5tokqFVrFxt/5c1x7VdccF4nNM=
+-----END EC PRIVATE KEY-----
+----
++
+WARNING: Do not use it for purposes beyond this demo!
 
 . Now, create a rule file named `upstream-rules.yaml`, which will implement the authentication and authorization requirements of our service, and copy the following contents to it:
 +
@@ -232,6 +250,7 @@ services:
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./upstream-rules.yaml:/etc/heimdall/rules.yaml:ro
+    - ./signer.pem:/etc/heimdall/signer.pem:ro
     command: -c /etc/heimdall/config.yaml serve proxy
 
   upstream: # <2>
@@ -251,7 +270,7 @@ services:
     volumes:
     - ./policy.rego:/etc/opa/policies/policy.rego:ro
 ----
-<1> These lines configure heimdall to use our config and rule file and to run in proxy operation mode.
+<1> These lines configure heimdall to use our config, our key store, and the rule file and to run in proxy operation mode.
 <2> Here, we configure the "upstream" service. As already written above, it is a very simple service, which just echoes back everything it receives.
 <3> This is our NGINX, which mimics an IDP system and exposes an JWKS endpoint with our key material.
 <4> And these lines configure our OPA instance to use our authorization policy
@@ -286,6 +305,7 @@ services:
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./upstream-rules.yaml:/etc/heimdall/rules.yaml:ro
+    - ./signer.pem:/etc/heimdall/signer.pem:ro
     command: -c /etc/heimdall/config.yaml serve decision
 
   upstream:  # <4>
@@ -313,7 +333,7 @@ services:
 +
 <1> These lines configure Traefik, which is used to dispatch the incoming requests and also forward all of them to heimdall before routing to the target service. We're using the ForwardAuth middleware here, which requires an additional configuration on the route level.
 <2> Here we configure Trafik to forward the requests to heimdall
-<3> These lines configure heimdall to use our config and rule file and to run in decision operation mode.
+<3> These lines configure heimdall to use our config, our key store, and the rule file and to run in decision operation mode.
 <4> Here, we configure the "upstream" service. As already written above, it is a very simple service, which just echoes back everything it receives. As also written above, we need to provide some route level configuration here to have the requests forwarded to heimdall. We could however also have a global configuration (which we decided not to do to avoid yet another configuration file).
 <5> This is our NGINX, which mimics an IDP system and exposes an JWKS endpoint with our key material.
 <6> And these lines configure our OPA instance to use our authorization policy
