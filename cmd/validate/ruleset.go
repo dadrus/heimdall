@@ -121,8 +121,8 @@ func (*noopRepository) DeleteRuleSet(_ string) error                { return err
 
 type noopRegistry struct{}
 
-func (*noopRegistry) Add(_ keyholder.KeyHolder) {}
-func (*noopRegistry) Keys() []jose.JSONWebKey   { return nil }
+func (*noopRegistry) AddKeyHolder(_ keyholder.KeyHolder) {}
+func (*noopRegistry) Keys() []jose.JSONWebKey            { return nil }
 
 type noopCertificateObserver struct{}
 
