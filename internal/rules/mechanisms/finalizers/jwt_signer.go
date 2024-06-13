@@ -197,3 +197,10 @@ func (s *jwtSigner) Keys() []jose.JSONWebKey {
 
 	return s.pubKeys
 }
+
+func (s *jwtSigner) activeCertificateChain() []*x509.Certificate {
+	s.mut.RLock()
+	defer s.mut.RUnlock()
+
+	return s.jwk.Certificates
+}

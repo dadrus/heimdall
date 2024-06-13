@@ -242,4 +242,4 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub *subject.Subj
 }
 
 func (f *jwtFinalizer) Name() string                      { return f.id }
-func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.Keys()[0].Certificates }
+func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.activeCertificateChain() }
