@@ -3,9 +3,8 @@ package keyholder
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-jose/go-jose/v4"
+	"github.com/stretchr/testify/assert"
 )
 
 type testKeyHolder []jose.JSONWebKey
