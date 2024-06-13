@@ -157,6 +157,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, rsaPrivKey1, signer.key)
 				assert.Equal(t, "key1", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS256), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -177,6 +178,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, rsaPrivKey2, signer.key)
 				assert.Equal(t, "key2", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS384), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -211,6 +213,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, rsaPrivKey1, signer.key)
 				assert.Equal(t, "key1", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS256), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -231,6 +234,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, rsaPrivKey2, signer.key)
 				assert.Equal(t, "key2", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS384), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -251,6 +255,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, rsaPrivKey3, signer.key)
 				assert.Equal(t, "key3", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS512), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -271,6 +276,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, ecdsaPrivKey1, signer.key)
 				assert.Equal(t, "key4", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES256), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -291,6 +297,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, ecdsaPrivKey2, signer.key)
 				assert.Equal(t, "key5", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES384), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -311,6 +318,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, ecdsaPrivKey3, signer.key)
 				assert.Equal(t, "key6", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES512), signer.jwk.Algorithm)
+				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
 		{
@@ -369,6 +377,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, ecdsaPrivKey5, signer.key)
 				assert.Equal(t, "self_signed", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES512), signer.jwk.Algorithm)
+				assert.Equal(t, []*x509.Certificate{cert5}, signer.activeCertificateChain())
 			},
 		},
 		{
