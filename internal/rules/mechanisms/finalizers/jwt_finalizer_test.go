@@ -110,7 +110,7 @@ signer:
 				wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 				khr := mocks3.NewRegistryMock(t)
-				khr.EXPECT().Add(mock.Anything)
+				khr.EXPECT().AddKeyHolder(mock.Anything)
 
 				co := mocks4.NewObserverMock(t)
 				co.EXPECT().Add(mock.Anything)
@@ -154,7 +154,7 @@ signer:
 				wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 				khr := mocks3.NewRegistryMock(t)
-				khr.EXPECT().Add(mock.Anything)
+				khr.EXPECT().AddKeyHolder(mock.Anything)
 
 				co := mocks4.NewObserverMock(t)
 				co.EXPECT().Add(mock.Anything)
@@ -215,7 +215,7 @@ claims:
 				wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 				khr := mocks3.NewRegistryMock(t)
-				khr.EXPECT().Add(mock.Anything)
+				khr.EXPECT().AddKeyHolder(mock.Anything)
 
 				co := mocks4.NewObserverMock(t)
 				co.EXPECT().Add(mock.Anything)
@@ -265,7 +265,7 @@ claims:
 				wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 				khr := mocks3.NewRegistryMock(t)
-				khr.EXPECT().Add(mock.Anything)
+				khr.EXPECT().AddKeyHolder(mock.Anything)
 
 				co := mocks4.NewObserverMock(t)
 				co.EXPECT().Add(mock.Anything)
@@ -347,7 +347,7 @@ header:
 				wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 				khr := mocks3.NewRegistryMock(t)
-				khr.EXPECT().Add(mock.Anything)
+				khr.EXPECT().AddKeyHolder(mock.Anything)
 
 				co := mocks4.NewObserverMock(t)
 				co.EXPECT().Add(mock.Anything)
@@ -390,7 +390,7 @@ header:
 				wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 				khr := mocks3.NewRegistryMock(t)
-				khr.EXPECT().Add(mock.Anything)
+				khr.EXPECT().AddKeyHolder(mock.Anything)
 
 				co := mocks4.NewObserverMock(t)
 				co.EXPECT().Add(mock.Anything)
@@ -633,7 +633,7 @@ foo: bar
 			wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 			khr := mocks3.NewRegistryMock(t)
-			khr.EXPECT().Add(mock.Anything)
+			khr.EXPECT().AddKeyHolder(mock.Anything)
 
 			co := mocks4.NewObserverMock(t)
 			co.EXPECT().Add(mock.Anything)
@@ -883,7 +883,7 @@ claims: "{{ len .foobar }}"
 			wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
 
 			khr := mocks3.NewRegistryMock(t)
-			khr.EXPECT().Add(mock.Anything)
+			khr.EXPECT().AddKeyHolder(mock.Anything)
 
 			co := mocks4.NewObserverMock(t)
 			co.EXPECT().Add(mock.Anything)

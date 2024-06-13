@@ -89,7 +89,7 @@ func newJWTFinalizer(ctx CreationContext, id string, rawConfig map[string]any) (
 		return nil, err
 	}
 
-	ctx.KeyHolderRegistry().Add(signer)
+	ctx.KeyHolderRegistry().AddKeyHolder(signer)
 
 	fin := &jwtFinalizer{
 		id:     id,

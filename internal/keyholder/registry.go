@@ -2,10 +2,14 @@ package keyholder
 
 import "github.com/go-jose/go-jose/v4"
 
+type KeyHolder interface {
+	Keys() []jose.JSONWebKey
+}
+
 //go:generate mockery --name Registry --structname RegistryMock
 
 type Registry interface {
-	Add(keyHolder KeyHolder)
+	AddKeyHolder(kh KeyHolder)
 	Keys() []jose.JSONWebKey
 }
 
@@ -14,17 +18,17 @@ func newRegistry() Registry {
 }
 
 type registry struct {
-	kh []KeyHolder
+	keyHolders []KeyHolder
 }
 
-func (r *registry) Add(keyHolder KeyHolder) {
-	r.kh = append(r.kh, keyHolder)
+func (r *registry) AddKeyHolder(kh KeyHolder) {
+	r.keyHolders = append(r.keyHolders, kh)
 }
 
 func (r *registry) Keys() []jose.JSONWebKey {
 	var keys []jose.JSONWebKey
 
-	for _, holder := range r.kh {
+	for _, holder := range r.keyHolders {
 		keys = append(keys, holder.Keys()...)
 	}
 

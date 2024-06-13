@@ -21,35 +21,35 @@ func (_m *RegistryMock) EXPECT() *RegistryMock_Expecter {
 	return &RegistryMock_Expecter{mock: &_m.Mock}
 }
 
-// Add provides a mock function with given fields: keyHolder
-func (_m *RegistryMock) Add(keyHolder keyholder.KeyHolder) {
-	_m.Called(keyHolder)
+// AddKeyHolder provides a mock function with given fields: kh
+func (_m *RegistryMock) AddKeyHolder(kh keyholder.KeyHolder) {
+	_m.Called(kh)
 }
 
-// RegistryMock_Add_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Add'
-type RegistryMock_Add_Call struct {
+// RegistryMock_AddKeyHolder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddKeyHolder'
+type RegistryMock_AddKeyHolder_Call struct {
 	*mock.Call
 }
 
-// Add is a helper method to define mock.On call
-//   - keyHolder keyholder.KeyHolder
-func (_e *RegistryMock_Expecter) Add(keyHolder interface{}) *RegistryMock_Add_Call {
-	return &RegistryMock_Add_Call{Call: _e.mock.On("Add", keyHolder)}
+// AddKeyHolder is a helper method to define mock.On call
+//   - kh keyholder.KeyHolder
+func (_e *RegistryMock_Expecter) AddKeyHolder(kh interface{}) *RegistryMock_AddKeyHolder_Call {
+	return &RegistryMock_AddKeyHolder_Call{Call: _e.mock.On("AddKeyHolder", kh)}
 }
 
-func (_c *RegistryMock_Add_Call) Run(run func(keyHolder keyholder.KeyHolder)) *RegistryMock_Add_Call {
+func (_c *RegistryMock_AddKeyHolder_Call) Run(run func(kh keyholder.KeyHolder)) *RegistryMock_AddKeyHolder_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(keyholder.KeyHolder))
 	})
 	return _c
 }
 
-func (_c *RegistryMock_Add_Call) Return() *RegistryMock_Add_Call {
+func (_c *RegistryMock_AddKeyHolder_Call) Return() *RegistryMock_AddKeyHolder_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *RegistryMock_Add_Call) RunAndReturn(run func(keyholder.KeyHolder)) *RegistryMock_Add_Call {
+func (_c *RegistryMock_AddKeyHolder_Call) RunAndReturn(run func(keyholder.KeyHolder)) *RegistryMock_AddKeyHolder_Call {
 	_c.Call.Return(run)
 	return _c
 }
