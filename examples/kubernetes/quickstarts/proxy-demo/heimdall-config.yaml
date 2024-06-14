@@ -30,6 +30,10 @@ data:
       finalizers:
         - id: create_jwt
           type: jwt
+          config:
+            signer:
+              key_store:
+                path: /etc/heimdall/certs/jwt/tls-combined.pem
       error_handlers:
         - id: redirect
           type: redirect
