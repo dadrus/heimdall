@@ -130,7 +130,7 @@ XVwR/5tokqFVrFxt/5c1x7VdccF4nNM=
 -----END EC PRIVATE KEY-----
 ----
 +
-WARNING: Do not use it for purposes beyond this demo!
+WARNING: Do not use it for purposes beyond this tutorial!
 
 . Now, create a rule file named `upstream-rules.yaml`, which will implement the authentication and authorization requirements of our service, and copy the following contents to it:
 +
