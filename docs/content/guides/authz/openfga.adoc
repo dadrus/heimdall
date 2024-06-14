@@ -51,6 +51,7 @@ services:
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./rules:/etc/heimdall/rules:ro
+    - ./signer.pem:/etc/heimdall/signer.pem:ro
     command: -c /etc/heimdall/config.yaml serve proxy
 
   upstream: # <2>
@@ -122,6 +123,10 @@ mechanisms:
   finalizers:
     - id: create_jwt # <9>
       type: jwt
+      config:
+        signer:
+          key_store:
+            path: /etc/heimdall/signer.pem
 
 providers:
   file_system: # <10>
@@ -139,8 +144,22 @@ NOTE: We use a very simple `link:{{< relref "/docs/configuration/types.adoc#_end
 <6> Here we define and configure a `link:{{< relref "/docs/mechanisms/contextualizers.adoc#_generic" >}}[generic]` contextualizer named `openfga_list`.
 <7> As with the authorization mechanism, defined above, here we configure the endpoint to list the allowed objects.
 <8> The payload configuration used while communicating to the configured endpoint.
-<9> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. Without any configuration, as used here, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID.
+<9> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. With the given configuration, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID.
 <10> The last few lines of the configure the `link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[file_system]` provider, which allows loading of regular rules from the file system.
+
+. Create a file, named `signer.pem` with the following content. This is our key store with a private key, you've seen in the configuration above.
++
+[source, yaml]
+----
+-----BEGIN EC PRIVATE KEY-----
+MIGkAgEBBDALv/dRp6zvm6nmozmB/21viwFCUGBoisHz0v8LSRXGiM5aDywLFmMy
+1jPnw29tz36gBwYFK4EEACKhZANiAAQgZkUS7PCh5tEXXvZk0LDQ4Xn4LSK+vKkI
+zlCZl+oMgud8gacf4uG5ERgju1xdUyfewsXlwepTnWuwhXM7GdnwY5GOxZTwGn3X
+XVwR/5tokqFVrFxt/5c1x7VdccF4nNM=
+-----END EC PRIVATE KEY-----
+----
++
+WARNING: Do not use it for purposes beyond this tutorial!
 
 . Configure NGINX to expose a static endpoint serving a JWKS document under the `.well-known` path, so heimdall is able to verify the JWT, we're going to use. Create a file named `idp.nginx` with the following content:
 +
