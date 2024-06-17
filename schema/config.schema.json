@@ -1648,7 +1648,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "signer" ,"claims"
+            "signer"
           ],
           "properties": {
             "signer": {
