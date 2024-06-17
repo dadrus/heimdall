@@ -53,7 +53,7 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.2
 	github.com/undefinedlabs/go-mpatch v1.0.7
-	github.com/wI2L/jsondiff v0.5.2
+	github.com/wI2L/jsondiff v0.6.0
 	github.com/ybbus/httpretry v1.0.2
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20240424034433-3c2c7870ae76
