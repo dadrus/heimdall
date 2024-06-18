@@ -412,6 +412,8 @@ github.com/undefinedlabs/go-mpatch v1.0.7 h1:943FMskd9oqfbZV0qRVKOUsXQhTLXL0bQTV
 github.com/undefinedlabs/go-mpatch v1.0.7/go.mod h1:TyJZDQ/5AgyN7FSLiBJ8RO9u2c6wbtRvK827b6AVqY4=
 github.com/wI2L/jsondiff v0.5.2 h1:f68drsfk/Xgvt3BpLVDlGkQzOC4o+qUCl9jtGr0sbfE=
 github.com/wI2L/jsondiff v0.5.2/go.mod h1:96+qu+Fhb323v//55RjkiTWYaGkiNWUqRV/w670bTAE=
+github.com/wI2L/jsondiff v0.6.0 h1:zrsH3FbfVa3JO9llxrcDy/XLkYPLgoMX6Mz3T2PP2AI=
+github.com/wI2L/jsondiff v0.6.0/go.mod h1:D6aQ5gKgPF9g17j+E9N7aasmU1O+XvfmWm1y8UMmNpw=
 github.com/ybbus/httpretry v1.0.2 h1:QIU8dfSF+kZx5xO1bUcLKyxYNEUsLX/hsN6gN6Up1So=
 github.com/ybbus/httpretry v1.0.2/go.mod h1:fwOEa1URVFYikEqgQLCBtLyExFt5danZrxF5xF2qZh8=
 github.com/yl2chen/cidranger v1.0.2 h1:lbOWZVCG1tCRX4u24kuM1Tb4nHqWkDxwLdoS+SevawU=
