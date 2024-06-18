@@ -47,8 +47,6 @@ type Context interface {
 
 	SetPipelineError(err error)
 
-	Signer() JWTSigner
-
 	Outputs() Outputs
 }
 

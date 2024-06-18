@@ -53,7 +53,7 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorJwt {
 				return false, nil, nil
 			}

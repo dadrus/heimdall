@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 
@@ -28,7 +29,7 @@ func init() { // nolint: gochecknoinits
 	cache.Register("redis-cluster", cache.FactoryFunc(NewClusterCache))
 }
 
-func NewClusterCache(conf map[string]any, cw watcher.Watcher) (cache.Cache, error) {
+func NewClusterCache(conf map[string]any, cw watcher.Watcher, co certificate.Observer) (cache.Cache, error) {
 	type Config struct {
 		baseConfig `mapstructure:",squash"`
 
@@ -44,7 +45,7 @@ func NewClusterCache(conf map[string]any, cw watcher.Watcher) (cache.Cache, erro
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions(cw)
+	opts, err := cfg.clientOptions("redis-cluster", cw, co)
 	if err != nil {
 		return nil, err
 	}

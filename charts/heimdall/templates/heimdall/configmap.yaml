@@ -48,11 +48,6 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
-    {{- with .Values.signer }}
-    signer:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-
     {{- with .Values.mechanisms }}
     mechanisms:
       {{- toYaml . | nindent 6 }}

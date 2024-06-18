@@ -28,7 +28,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, _ map[string]any) (bool, Finalizer, error) {
+		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerNoop {
 				return false, nil, nil
 			}
@@ -43,15 +43,15 @@ type noopFinalizer struct {
 	id string
 }
 
-func (u *noopFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (f *noopFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Finalizing using noop finalizer")
+	logger.Debug().Str("_id", f.id).Msg("Finalizing using noop finalizer")
 
 	return nil
 }
 
-func (u *noopFinalizer) WithConfig(map[string]any) (Finalizer, error) { return u, nil }
+func (f *noopFinalizer) WithConfig(map[string]any) (Finalizer, error) { return f, nil }
 
-func (u *noopFinalizer) ID() string { return u.id }
+func (f *noopFinalizer) ID() string { return f.id }
 
-func (u *noopFinalizer) ContinueOnError() bool { return false }
+func (f *noopFinalizer) ContinueOnError() bool { return false }

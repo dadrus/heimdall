@@ -32,7 +32,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
 			}

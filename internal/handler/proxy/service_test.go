@@ -928,7 +928,7 @@ func TestProxyService(t *testing.T) {
 			proxyConf.Host = "127.0.0.1"
 			proxyConf.Port = port
 
-			listener, err := listener.New("tcp", proxyConf.Address(), proxyConf.TLS, nil)
+			listener, err := listener.New("tcp", "test", proxyConf.Address(), proxyConf.TLS, nil, nil)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
@@ -942,7 +942,7 @@ func TestProxyService(t *testing.T) {
 
 			client := createClient(t)
 
-			proxy := newService(conf, cch, log.Logger, exec, nil)
+			proxy := newService(conf, cch, log.Logger, exec)
 
 			defer proxy.Shutdown(context.Background())
 
@@ -1046,11 +1046,11 @@ func TestWebSocketSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil)
+	listener, err := listener.New("tcp", "test", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -1146,11 +1146,11 @@ func TestServerSentEventsSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil)
+	listener, err := listener.New("tcp", "test", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {

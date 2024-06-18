@@ -46,7 +46,6 @@ type requestContext struct {
 }
 
 func newContextFactory(
-	signer heimdall.JWTSigner,
 	cfg config.ServiceConfig,
 	tlsCfg *tls.Config,
 ) requestcontext.ContextFactory {
@@ -72,7 +71,7 @@ func newContextFactory(
 
 	return requestcontext.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
 		return &requestContext{
-			RequestContext: requestcontext.New(signer, req),
+			RequestContext: requestcontext.New(req),
 			transport:      transport,
 			rw:             rw,
 			req:            req,

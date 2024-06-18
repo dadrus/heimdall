@@ -57,7 +57,7 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			errorHandler, err := CreatePrototype("foo", tc.typ, nil)
+			errorHandler, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, errorHandler)

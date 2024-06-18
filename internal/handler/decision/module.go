@@ -25,7 +25,6 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
@@ -43,7 +42,6 @@ func newLifecycleManager(
 	logger zerolog.Logger,
 	cch cache.Cache,
 	exec rule.Executor,
-	signer heimdall.JWTSigner,
 	cw watcher.Watcher,
 ) *fxlcm.LifecycleManager {
 	cfg := conf.Serve.Decision
@@ -51,7 +49,7 @@ func newLifecycleManager(
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Decision",
 		ServiceAddress: cfg.Address(),
-		Server:         newService(conf, cch, logger, exec, signer),
+		Server:         newService(conf, cch, logger, exec),
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
 		FileWatcher:    cw,

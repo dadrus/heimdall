@@ -17,23 +17,52 @@
 package mechanisms
 
 import (
+	"errors"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func NewFactory(conf *config.Configuration, logger zerolog.Logger) (Factory, error) {
-	logger.Info().Msg("Loading pipeline definitions")
+var (
+	ErrAuthenticatorCreation  = errors.New("failed to create authenticator")
+	ErrAuthorizerCreation     = errors.New("failed to create authorizer")
+	ErrFinalizerCreation      = errors.New("failed to create finalizer")
+	ErrContextualizerCreation = errors.New("failed to create contextualizer")
+	ErrErrorHandlerCreation   = errors.New("failed to create error handler")
+)
 
-	repository, err := newPrototypeRepository(conf, logger)
+//go:generate mockery --name MechanismFactory --structname MechanismFactoryMock
+
+type MechanismFactory interface {
+	CreateAuthenticator(version, id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
+	CreateAuthorizer(version, id string, conf config.MechanismConfig) (authorizers.Authorizer, error)
+	CreateContextualizer(version, id string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)
+	CreateFinalizer(version, id string, conf config.MechanismConfig) (finalizers.Finalizer, error)
+	CreateErrorHandler(version, id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
+}
+
+func NewMechanismFactory(
+	conf *config.Configuration,
+	logger zerolog.Logger,
+	fw watcher.Watcher,
+	khr keyholder.Registry,
+	co certificate.Observer,
+) (MechanismFactory, error) {
+	logger.Info().Msg("Loading mechanism catalogue")
+
+	repository, err := newMechanismRepository(conf, logger, fw, khr, co)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed loading pipeline definitions")
+		logger.Error().Err(err).Msg("Failed loading mechanism catalogue")
 
 		return nil, err
 	}
@@ -42,7 +71,7 @@ func NewFactory(conf *config.Configuration, logger zerolog.Logger) (Factory, err
 }
 
 type mechanismsFactory struct {
-	r *prototypeRepository
+	r *mechanismRepository
 }
 
 func (hf *mechanismsFactory) CreateAuthenticator(_, id string, conf config.MechanismConfig) (

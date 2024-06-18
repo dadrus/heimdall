@@ -31,7 +31,6 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestNewRequestContext(t *testing.T) {
@@ -69,7 +68,6 @@ func TestNewRequestContext(t *testing.T) {
 			md,
 		),
 		checkReq,
-		mocks.NewJWTSignerMock(t),
 	)
 
 	// THEN
@@ -87,7 +85,6 @@ func TestNewRequestContext(t *testing.T) {
 	require.Equal(t, "baz", ctx.Request().Cookie("foo"))
 	require.Empty(t, ctx.Request().Cookie("baz"))
 	require.NotNil(t, ctx.AppContext())
-	require.NotNil(t, ctx.Signer())
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
 }
 
@@ -237,7 +234,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 					},
 				},
 			}
-			ctx := NewRequestContext(context.Background(), checkReq, nil)
+			ctx := NewRequestContext(context.Background(), checkReq)
 
 			tc.updateContext(t, ctx)
 
@@ -315,7 +312,6 @@ func TestRequestContextBody(t *testing.T) {
 						},
 					},
 				},
-				nil,
 			)
 
 			// WHEN

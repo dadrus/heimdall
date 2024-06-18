@@ -21,15 +21,19 @@ import (
 	"errors"
 	"os"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 var errFunctionNotSupported = errors.New("function not supported")
@@ -82,7 +86,13 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
-	mFactory, err := mechanisms.NewFactory(conf, logger)
+	mFactory, err := mechanisms.NewMechanismFactory(
+		conf,
+		logger,
+		&watcher.NoopWatcher{},
+		&noopRegistry{},
+		&noopCertificateObserver{},
+	)
 	if err != nil {
 		return err
 	}
@@ -108,3 +118,13 @@ func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) {
 func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error    { return nil }
 func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error { return errFunctionNotSupported }
 func (*noopRepository) DeleteRuleSet(_ string) error                { return errFunctionNotSupported }
+
+type noopRegistry struct{}
+
+func (*noopRegistry) AddKeyHolder(_ keyholder.KeyHolder) {}
+func (*noopRegistry) Keys() []jose.JSONWebKey            { return nil }
+
+type noopCertificateObserver struct{}
+
+func (*noopCertificateObserver) Add(_ certificate.Supplier) {}
+func (*noopCertificateObserver) Start() error               { return errFunctionNotSupported }

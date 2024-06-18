@@ -107,6 +107,9 @@ mechanisms:
   - id: jwt_finalizer
     type: jwt
     config:
+      signer:
+        key_store:
+          path: /etc/heimdall/signer.pem
       ttl: 5m
       claims: |
           {

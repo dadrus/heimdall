@@ -1,9 +1,0 @@
-apiVersion: getambassador.io/v3alpha1
-kind: AuthService
-metadata:
-  name: heimdall
-  namespace: heimdall
-spec:
-  auth_service: "https://heimdall.heimdall.svc.cluster.local:4456"
-  proto: grpc
-  protocol_version: v3

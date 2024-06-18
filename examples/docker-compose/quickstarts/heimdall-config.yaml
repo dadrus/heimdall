@@ -37,6 +37,10 @@ mechanisms:
   finalizers:
   - id: create_jwt
     type: jwt
+    config:
+      signer:
+        key_store:
+          path: /etc/heimdall/keys/signer.pem
   - id: noop
     type: noop
 

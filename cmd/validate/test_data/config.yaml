@@ -145,6 +145,11 @@ mechanisms:
     - id: jwt
       type: jwt
       config:
+        signer:
+          name: heimdall
+          key_id: "key"
+          key_store:
+            path: "${TEST_KEYSTORE_FILE}"
         ttl: 5m
         claims: |
           {"user": {{ quote .Subject.ID }} }

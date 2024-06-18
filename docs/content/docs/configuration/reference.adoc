@@ -156,13 +156,6 @@ profiling:
   host: 0.0.0.0
   port: 9000
 
-signer:
-  name: foobar
-  key_store:
-    path: /opt/heimdall/keystore.pem
-    password: VeryInsecure!
-  key_id: foo
-
 mechanisms:
   authenticators:
   - id: anonymous_authenticator
@@ -322,6 +315,12 @@ mechanisms:
   - id: jwt
     type: jwt
     config:
+      signer:
+        name: foobar
+        key_store:
+          path: /opt/heimdall/keystore.pem
+          password: VeryInsecure!
+        key_id: foo
       ttl: 5m
       header:
         name: Foo

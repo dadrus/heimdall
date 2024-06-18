@@ -45,7 +45,7 @@ func TestRuleFactoryNew(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		config         *config.Configuration
-		configureMocks func(t *testing.T, mhf *mocks3.FactoryMock)
+		configureMocks func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
 		assert         func(t *testing.T, err error, ruleFactory *ruleFactory)
 	}{
 		{
@@ -104,7 +104,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "bar", mock.Anything).
@@ -128,7 +128,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "bar", mock.Anything).Return(nil, nil)
@@ -148,7 +148,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
@@ -170,7 +170,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "bar", mock.Anything).Return(nil, nil)
@@ -190,7 +190,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthorizer(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
@@ -212,7 +212,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "bar", mock.Anything).Return(nil, nil)
@@ -232,7 +232,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "foo", mock.Anything).
@@ -252,7 +252,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"finalizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
@@ -271,7 +271,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateErrorHandler(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
@@ -307,7 +307,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
@@ -347,7 +347,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
@@ -381,9 +381,9 @@ func TestRuleFactoryNew(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks3.FactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks3.MechanismFactoryMock) { t.Helper() })
 
-			handlerFactory := mocks3.NewFactoryMock(t)
+			handlerFactory := mocks3.NewMechanismFactoryMock(t)
 			configureMocks(t, handlerFactory)
 
 			// WHEN
@@ -414,7 +414,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		opMode         config.OperationMode
 		config         config2.Rule
 		defaultRule    *ruleImpl
-		configureMocks func(t *testing.T, mhf *mocks3.FactoryMock)
+		configureMocks func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		{
@@ -456,7 +456,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: config2.Matcher{Path: "/foo/bar"},
 				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
@@ -475,7 +475,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher:      config2.Matcher{Path: "/foo/bar"},
 				ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateErrorHandler("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
@@ -510,7 +510,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"authenticator": "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
@@ -544,7 +544,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"authenticator": "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
@@ -627,7 +627,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
@@ -707,7 +707,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
@@ -764,7 +764,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"finalizer": "bar", "if": 1},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
@@ -787,7 +787,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"finalizer": "bar", "if": ""},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
@@ -813,7 +813,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"finalizer": "bar", "if": "true"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
@@ -880,7 +880,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"error_handler": "bar", "if": "false", "config": map[string]any{}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
@@ -931,9 +931,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks3.FactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks3.MechanismFactoryMock) { t.Helper() })
 
-			handlerFactory := mocks3.NewFactoryMock(t)
+			handlerFactory := mocks3.NewMechanismFactoryMock(t)
 			configureMocks(t, handlerFactory)
 
 			factory := &ruleFactory{

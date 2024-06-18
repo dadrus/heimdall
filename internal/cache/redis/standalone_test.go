@@ -345,7 +345,7 @@ func TestNewStandaloneCache(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			cch, err := NewStandaloneCache(conf, wm)
+			cch, err := NewStandaloneCache(conf, wm, nil)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}

@@ -18,6 +18,7 @@ package tlsx
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -38,8 +39,9 @@ type keyStore struct {
 	password string
 	keyID    string
 
-	tlsCert *tls.Certificate
-	mut     sync.Mutex
+	tlsCert   *tls.Certificate
+	certChain []*x509.Certificate
+	mut       sync.RWMutex
 }
 
 func newTLSKeyStore(path, keyID, password string) (*keyStore, error) {
@@ -88,17 +90,25 @@ func (cr *keyStore) load() error {
 
 	cr.mut.Lock()
 	cr.tlsCert = &cert
+	cr.certChain = entry.CertChain
 	cr.mut.Unlock()
 
 	return nil
 }
 
+func (cr *keyStore) activeCertificateChain() []*x509.Certificate {
+	cr.mut.RLock()
+	defer cr.mut.RUnlock()
+
+	return cr.certChain
+}
+
 func (cr *keyStore) certificate(cc compatibilityChecker) (*tls.Certificate, error) {
 	var cert *tls.Certificate
 
-	cr.mut.Lock()
+	cr.mut.RLock()
 	cert = cr.tlsCert
-	cr.mut.Unlock()
+	cr.mut.RUnlock()
 
 	if err := cc.SupportsCertificate(cert); err != nil {
 		return nil, err
