@@ -46,7 +46,6 @@ type requestContext struct {
 }
 
 func newContextFactory(
-	signer heimdall.JWTSigner,
 	cfg config.ServiceConfig,
 	tlsCfg *tls.Config,
 ) requestcontext.ContextFactory {
@@ -56,15 +55,15 @@ func newContextFactory(
 		// is possible per upstream
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second, //nolint:gomnd
-			KeepAlive: 30 * time.Second, //nolint:gomnd
+			Timeout:   30 * time.Second, //nolint:mnd
+			KeepAlive: 30 * time.Second, //nolint:mnd
 		}).DialContext,
 		ResponseHeaderTimeout: cfg.Timeout.Read,
 		MaxIdleConns:          cfg.ConnectionsLimit.MaxIdle,
 		MaxIdleConnsPerHost:   cfg.ConnectionsLimit.MaxIdlePerHost,
 		MaxConnsPerHost:       cfg.ConnectionsLimit.MaxPerHost,
 		IdleConnTimeout:       cfg.Timeout.Idle,
-		TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
+		TLSHandshakeTimeout:   10 * time.Second, //nolint:mnd
 		ExpectContinueTimeout: 1 * time.Second,
 		ForceAttemptHTTP2:     true,
 		TLSClientConfig:       tlsCfg,
@@ -72,7 +71,7 @@ func newContextFactory(
 
 	return requestcontext.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
 		return &requestContext{
-			RequestContext: requestcontext.New(signer, req),
+			RequestContext: requestcontext.New(req),
 			transport:      transport,
 			rw:             rw,
 			req:            req,

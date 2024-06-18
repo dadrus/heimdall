@@ -32,7 +32,7 @@ import (
 )
 
 func NewRuleFactory(
-	hf mechanisms.Factory,
+	hf mechanisms.MechanismFactory,
 	conf *config.Configuration,
 	mode config.OperationMode,
 	logger zerolog.Logger,
@@ -51,7 +51,7 @@ func NewRuleFactory(
 }
 
 type ruleFactory struct {
-	hf             mechanisms.Factory
+	hf             mechanisms.MechanismFactory
 	logger         zerolog.Logger
 	defaultRule    *ruleImpl
 	hasDefaultRule bool

@@ -46,7 +46,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 		}
 
 		_, err := w.Write([]byte("foobar"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 
 	defer srv.Close()
@@ -73,7 +73,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 				},
 			}
 
-			cch, err := memory.NewCache(nil, nil)
+			cch, err := memory.NewCache(nil, nil, nil)
 			require.NoError(t, err)
 
 			ctx := cache.WithContext(context.Background(), cch)

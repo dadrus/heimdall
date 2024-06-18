@@ -113,7 +113,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			configureMock(t, mAuth)
 
 			factory := &mechanismsFactory{
-				r: &prototypeRepository{
+				r: &mechanismRepository{
 					authenticators: map[string]authenticators.Authenticator{
 						ID: mAuth,
 					},
@@ -205,7 +205,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			configureMock(t, mAuth)
 
 			factory := &mechanismsFactory{
-				r: &prototypeRepository{
+				r: &mechanismRepository{
 					authorizers: map[string]authorizers.Authorizer{
 						ID: mAuth,
 					},
@@ -298,7 +298,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			configureMock(t, mContextualizer)
 
 			factory := &mechanismsFactory{
-				r: &prototypeRepository{
+				r: &mechanismRepository{
 					contextualizers: map[string]contextualizers.Contextualizer{
 						ID: mContextualizer,
 					},
@@ -390,7 +390,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 			configureMock(t, mFin)
 
 			factory := &mechanismsFactory{
-				r: &prototypeRepository{
+				r: &mechanismRepository{
 					finalizers: map[string]finalizers.Finalizer{
 						ID: mFin,
 					},
@@ -482,7 +482,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			configureMock(t, mEH)
 
 			factory := &mechanismsFactory{
-				r: &prototypeRepository{
+				r: &mechanismRepository{
 					errorHandlers: map[string]errorhandlers.ErrorHandler{
 						ID: mEH,
 					},
@@ -551,7 +551,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 			)
 
 			// WHEN
-			factory, err := NewFactory(tc.conf, log.Logger)
+			factory, err := NewMechanismFactory(tc.conf, log.Logger, nil, nil, nil)
 
 			// THEN
 			if err == nil {

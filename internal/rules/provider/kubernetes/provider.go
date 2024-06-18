@@ -406,7 +406,7 @@ func (p *provider) updateStatus(
 		p.l.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
 
 		// to avoid cascading reads and writes
-		time.Sleep(time.Duration(2*rand.Intn(50)) * time.Millisecond) //nolint:gomnd,gosec
+		time.Sleep(time.Duration(2*rand.Intn(50)) * time.Millisecond) //nolint:mnd,gosec
 
 		rsKey := types.NamespacedName{Namespace: rs.Namespace, Name: rs.Name}
 		if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {

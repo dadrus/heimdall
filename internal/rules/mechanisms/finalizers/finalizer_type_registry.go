@@ -20,6 +20,9 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -31,7 +34,15 @@ var (
 	typeFactoriesMu sync.RWMutex  //nolint:gochecknoglobals
 )
 
-type TypeFactory func(id string, typ string, c map[string]any) (bool, Finalizer, error)
+//go:generate mockery --name CreationContext --structname CreationContextMock  --inpackage --testonly
+
+type CreationContext interface {
+	Watcher() watcher.Watcher
+	KeyHolderRegistry() keyholder.Registry
+	CertificateObserver() certificate.Observer
+}
+
+type TypeFactory func(ctx CreationContext, id string, typ string, c map[string]any) (bool, Finalizer, error)
 
 func registerTypeFactory(factory TypeFactory) {
 	typeFactoriesMu.Lock()
@@ -44,12 +55,12 @@ func registerTypeFactory(factory TypeFactory) {
 	typeFactories = append(typeFactories, factory)
 }
 
-func CreatePrototype(id string, typ string, mConfig map[string]any) (Finalizer, error) {
+func CreatePrototype(ctx CreationContext, id string, typ string, mConfig map[string]any) (Finalizer, error) {
 	typeFactoriesMu.RLock()
 	defer typeFactoriesMu.RUnlock()
 
 	for _, create := range typeFactories {
-		if ok, at, err := create(id, typ, mConfig); ok {
+		if ok, at, err := create(ctx, id, typ, mConfig); ok {
 			return at, err
 		}
 	}

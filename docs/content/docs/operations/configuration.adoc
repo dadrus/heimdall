@@ -70,11 +70,12 @@ mechanisms:
   finalizers:
   - id: create_jwt
     type: jwt
+    config:
+      signer:
+        key_store:
+          path: /etc/heimdall/signer.pem
 
 default_rule:
-  methods:
-    - GET
-    - POST
   execute:
     - authenticator: anonymous_authenticator
     - finalizer: create_jwt
@@ -100,6 +101,10 @@ mechanisms:
   finalizers:
   - id: create_jwt
     type: jwt
+    config:
+      signer:
+        key_store:
+          path: ${SIGNER_KEY_STORE_FILE}
 ----
 ====
 
@@ -133,22 +138,23 @@ HEIMDALLCFG_LOG_LEVEL=info
 
 * Array entries must be defined using `\_<IDX>[_]`, with `IDX` being the index of the array starting with `0` and `_` in brackets being only required, if the value of the configured element has a structure/hierarchy.
 +
-E.g. the `methods` of the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] can be configured in a config file as
+E.g. the `trusted_proxies` property of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] can be configured in a config file as
 +
 [source,yaml]
 ----
-default_rule:
-  methods:
-    - GET
-    - POST
+serve:
+  decision:
+    trusted_proxies:
+      - 192.168.1.0/24
+      - 192.168.2.0/24
 ----
 +
 and using environment variables with
 +
 [source,bash]
 ----
-HEIMDALLCFG_DEFAULT__RULE_METHODS_0=GET
-HEIMDALLCFG_DEFAULT__RULE_METHODS_1=POST
+HEIMDALLCFG_SERVE_DECISION_TRUSTED__PROXIES_0=192.168.1.0/24
+HEIMDALLCFG_SERVE_DECISION_TRUSTED__PROXIES_0=192.168.2.0/24
 ----
 +
 For structured configuration, like the definition of the authenticators in the example above

@@ -10,23 +10,15 @@ linters:
     - wrapcheck
     - ireturn
     - exhaustruct
-    - exhaustivestruct
     - testpackage
     - paralleltest
     - nolintlint
     - tparallel
     - depguard
     - zerologlint
-    # deprecated
-    - interfacer
-    - varcheck
-    - deadcode
-    - nosnakecase
-    - structcheck
-    - maligned
-    - scopelint
-    - ifshort
-    - golint
+    # depricated
+    - gomnd
+    - execinquery
 
 issues:
   exclude-rules:
@@ -36,9 +28,11 @@ issues:
         - maintidx
         - cyclop
         - gocognit
-        - goerr113
+        - err113
         - lll
         - errcheck
+        - canonicalheader
+        - mnd
 
 linters-settings:
   exhaustive:
@@ -83,3 +77,8 @@ linters-settings:
       # to avoid having a CVE in the used version
       - golang.org/x/net
       - golang.org/x/text
+  mnd:
+    ignored-functions:
+      - '^make'
+      - '^math\.'
+      - '^time\.*'

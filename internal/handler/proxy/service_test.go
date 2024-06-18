@@ -928,7 +928,7 @@ func TestProxyService(t *testing.T) {
 			proxyConf.Host = "127.0.0.1"
 			proxyConf.Port = port
 
-			listener, err := listener.New("tcp", proxyConf.Address(), proxyConf.TLS, nil)
+			listener, err := listener.New("tcp", "test", proxyConf.Address(), proxyConf.TLS, nil, nil)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
@@ -942,7 +942,7 @@ func TestProxyService(t *testing.T) {
 
 			client := createClient(t)
 
-			proxy := newService(conf, cch, log.Logger, exec, nil)
+			proxy := newService(conf, cch, log.Logger, exec)
 
 			defer proxy.Shutdown(context.Background())
 
@@ -983,7 +983,7 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		require.Equal(t, "/bar", req.URL.Path)
+		assert.Equal(t, "/bar", req.URL.Path)
 
 		upgrader := websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool {
@@ -992,22 +992,22 @@ func TestWebSocketSupport(t *testing.T) {
 		}
 
 		con, err := upgrader.Upgrade(rw, req, nil)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		defer con.Close()
 
 		err = con.WriteMessage(websocket.TextMessage, []byte("ping 1"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		_, message, err := con.ReadMessage()
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, []byte("ping 1"), message)
 
 		err = con.WriteMessage(websocket.TextMessage, []byte("ping 2"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		_, message, err = con.ReadMessage()
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, []byte("ping 2"), message)
 	}))
 	defer upstreamSrv.Close()
@@ -1046,11 +1046,11 @@ func TestWebSocketSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil)
+	listener, err := listener.New("tcp", "test", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -1092,7 +1092,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		require.Equal(t, "/bar", req.URL.Path)
+		assert.Equal(t, "/bar", req.URL.Path)
 
 		rw.Header().Set("Content-Type", "text/event-stream")
 		rw.Header().Set("Cache-Control", "no-cache")
@@ -1102,9 +1102,9 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 		for i := range 5 {
 			_, err := rw.Write(stringx.ToBytes(strconv.Itoa(i)))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
-			require.NoError(t, rc.Flush())
+			assert.NoError(t, rc.Flush())
 
 			time.Sleep(50 * time.Millisecond)
 		}
@@ -1146,11 +1146,11 @@ func TestServerSentEventsSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil)
+	listener, err := listener.New("tcp", "test", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {

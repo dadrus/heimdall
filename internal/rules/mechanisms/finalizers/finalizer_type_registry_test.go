@@ -57,7 +57,7 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			finalizer, err := CreatePrototype("foo", tc.typ, nil)
+			finalizer, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, finalizer)

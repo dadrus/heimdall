@@ -312,53 +312,6 @@ func (_c *ContextMock_SetPipelineError_Call) RunAndReturn(run func(error)) *Cont
 	return _c
 }
 
-// Signer provides a mock function with given fields:
-func (_m *ContextMock) Signer() heimdall.JWTSigner {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Signer")
-	}
-
-	var r0 heimdall.JWTSigner
-	if rf, ok := ret.Get(0).(func() heimdall.JWTSigner); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(heimdall.JWTSigner)
-		}
-	}
-
-	return r0
-}
-
-// ContextMock_Signer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Signer'
-type ContextMock_Signer_Call struct {
-	*mock.Call
-}
-
-// Signer is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) Signer() *ContextMock_Signer_Call {
-	return &ContextMock_Signer_Call{Call: _e.mock.On("Signer")}
-}
-
-func (_c *ContextMock_Signer_Call) Run(run func()) *ContextMock_Signer_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *ContextMock_Signer_Call) Return(_a0 heimdall.JWTSigner) *ContextMock_Signer_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *ContextMock_Signer_Call) RunAndReturn(run func() heimdall.JWTSigner) *ContextMock_Signer_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // NewContextMock creates a new instance of ContextMock. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewContextMock(t interface {

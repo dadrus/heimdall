@@ -86,7 +86,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			cache, _ := NewCache(nil, nil)
+			cache, _ := NewCache(nil, nil, nil)
 
 			// WHEN
 			tc.configureCache(t, cache)
@@ -102,7 +102,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 func TestMemoryCacheExpiration(t *testing.T) {
 	t.Parallel()
 
-	cache, _ := NewCache(nil, nil)
+	cache, _ := NewCache(nil, nil, nil)
 	cache.Set(context.TODO(), "baz", []byte("bar"), 1*time.Second)
 
 	hits := 0

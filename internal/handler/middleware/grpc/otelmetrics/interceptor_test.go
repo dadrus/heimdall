@@ -213,7 +213,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 			lis := bufconn.Listen(1024 * 1024)
 			handler := &mocks2.MockHandler{}
-			conn, err := grpc.DialContext(context.Background(), "bufnet",
+			conn, err := grpc.NewClient("passthrough://bufnet",
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)
@@ -275,7 +275,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 
 	lis := bufconn.Listen(1024 * 1024)
 	handler := &mocks2.MockHandler{}
-	conn, err := grpc.DialContext(context.Background(), "bufnet",
+	conn, err := grpc.NewClient("passthrough://bufnet",
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)

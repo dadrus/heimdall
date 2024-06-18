@@ -49,7 +49,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorOAuth2Introspection {
 				return false, nil, nil
 			}

@@ -228,7 +228,7 @@ func TestErrorInterceptor(t *testing.T) {
 			lis := bufconn.Listen(1024 * 1024)
 			handler := &mocks.MockHandler{}
 			bufDialer := func(context.Context, string) (net.Conn, error) { return lis.Dial() }
-			conn, err := grpc.DialContext(context.Background(), "bufnet",
+			conn, err := grpc.NewClient("passthrough://bufnet",
 				grpc.WithContextDialer(bufDialer),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)

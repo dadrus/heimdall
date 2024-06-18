@@ -20,19 +20,30 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var (
 	ErrUnsupportedErrorHandlerType = errors.New("error handler type unsupported")
 
-	errorHandlerTypeFactories   []ErrorHandlerTypeFactory // nolint: gochecknoglobals
-	errorHandlerTypeFactoriesMu sync.RWMutex              // nolint: gochecknoglobals
+	errorHandlerTypeFactories   []TypeFactory // nolint: gochecknoglobals
+	errorHandlerTypeFactoriesMu sync.RWMutex  // nolint: gochecknoglobals
 )
 
-type ErrorHandlerTypeFactory func(id string, typ string, c map[string]any) (bool, ErrorHandler, error)
+//go:generate mockery --name CreationContext --structname CreationContextMock  --inpackage --testonly
 
-func registerTypeFactory(factory ErrorHandlerTypeFactory) {
+type CreationContext interface {
+	Watcher() watcher.Watcher
+	KeyHolderRegistry() keyholder.Registry
+	CertificateObserver() certificate.Observer
+}
+
+type TypeFactory func(ctx CreationContext, id string, typ string, c map[string]any) (bool, ErrorHandler, error)
+
+func registerTypeFactory(factory TypeFactory) {
 	errorHandlerTypeFactoriesMu.Lock()
 	defer errorHandlerTypeFactoriesMu.Unlock()
 
@@ -43,12 +54,12 @@ func registerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactories = append(errorHandlerTypeFactories, factory)
 }
 
-func CreatePrototype(id string, typ string, config map[string]any) (ErrorHandler, error) {
+func CreatePrototype(ctx CreationContext, id string, typ string, config map[string]any) (ErrorHandler, error) {
 	errorHandlerTypeFactoriesMu.RLock()
 	defer errorHandlerTypeFactoriesMu.RUnlock()
 
 	for _, create := range errorHandlerTypeFactories {
-		if ok, at, err := create(id, typ, config); ok {
+		if ok, at, err := create(ctx, id, typ, config); ok {
 			return at, err
 		}
 	}

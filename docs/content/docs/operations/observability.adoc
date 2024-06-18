@@ -345,7 +345,7 @@ You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` envir
 All, but custom metrics adhere to the https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/[OpenTelementry semantic conventions]. For that reason, only the custom metrics are listed in the table below.
 
 ==== Metric: `certificate.expiry`
-Number of seconds until a certificate used by a particular service (decision, proxy, management), as well as signer expires. The metric type is UpDownCounter und the unit is s.
+Number of seconds until a certificate used by a particular service (decision, proxy, management), or mechanism (e.g. jwt finalizer) expires. The metric type is UpDownCounter und the unit is s.
 
 [cols="2,1,5"]
 |===

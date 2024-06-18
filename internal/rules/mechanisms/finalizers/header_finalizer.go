@@ -30,7 +30,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerHeader {
 				return false, nil, nil
 			}
@@ -62,17 +62,17 @@ func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, 
 	}, nil
 }
 
-func (u *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (f *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Finalizing using header finalizer")
+	logger.Debug().Str("_id", f.id).Msg("Finalizing using header finalizer")
 
 	if sub == nil {
 		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to execute header finalizer due to 'nil' subject").
-			WithErrorContext(u)
+			WithErrorContext(f)
 	}
 
-	for name, tmpl := range u.headers {
+	for name, tmpl := range f.headers {
 		value, err := tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
@@ -81,7 +81,7 @@ func (u *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 		if err != nil {
 			return errorchain.
 				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' header", name).
-				WithErrorContext(u).
+				WithErrorContext(f).
 				CausedBy(err)
 		}
 
@@ -93,14 +93,14 @@ func (u *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	return nil
 }
 
-func (u *headerFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
+func (f *headerFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
 	if len(config) == 0 {
-		return u, nil
+		return f, nil
 	}
 
-	return newHeaderFinalizer(u.id, config)
+	return newHeaderFinalizer(f.id, config)
 }
 
-func (u *headerFinalizer) ID() string { return u.id }
+func (f *headerFinalizer) ID() string { return f.id }
 
-func (u *headerFinalizer) ContinueOnError() bool { return false }
+func (f *headerFinalizer) ContinueOnError() bool { return false }
