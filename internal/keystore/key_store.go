@@ -224,11 +224,11 @@ func readPEMContents(data []byte) []*pem.Block {
 
 	for {
 		block, next = pem.Decode(next)
-		blocks = append(blocks, block)
-
-		if len(next) == 0 {
+		if block == nil {
 			break
 		}
+
+		blocks = append(blocks, block)
 	}
 
 	return blocks
