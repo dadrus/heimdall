@@ -126,7 +126,7 @@ func createPipelineObjects[T any, CC any](
 	objects := make(map[string]T)
 
 	for _, pe := range pObjects {
-		logger.Debug().Str("_id", pe.ID).Str("_type", pe.Type).Msg("Loading pipeline definition")
+		logger.Debug().Str("_id", pe.ID).Str("_type", pe.Type).Msg("Loading mechanism definition")
 
 		if len(pe.Condition) != 0 {
 			pe.Config["if"] = pe.Condition
