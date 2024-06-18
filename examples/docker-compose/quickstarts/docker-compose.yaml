@@ -1,11 +1,22 @@
 version: '3.7'
 
 services:
+  heimdall-init:
+    image: finalgene/openssh
+    command: /tmp/generate_keys.sh
+    volumes:
+      - ./generate_keys.sh:/tmp/generate_keys.sh:ro
+      - heimdall-keys:/etc/heimdall/keys
+
   heimdall:
     image: dadrus/heimdall:latest
+    depends_on:
+      heimdall-init:
+        condition: service_started
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./upstream-rules.yaml:/etc/heimdall/rules.yaml:ro
+    - heimdall-keys:/etc/heimdall/keys:ro
 
   upstream:
     image: containous/whoami:latest
@@ -22,4 +33,7 @@ services:
     command: run --server /etc/opa/policies
     volumes:
     - ./policy.rego:/etc/opa/policies/policy.rego:ro
+
+volumes:
+  heimdall-keys:
 
