@@ -44,11 +44,13 @@ import (
 // nolint: gochecknoglobals
 // generated with openssl ecparam -name prime256v1 -genkey -noout -out key.pem.
 var pemPKCS1ECPrivateKey = []byte(`
+
 -----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIAcCM9VY6RRiUlz3UoywbT9yN9UlWEEWKIPqiA2D86pCoAoGCCqGSM49
 AwEHoUQDQgAEPEmirqVF2KoNguFuh4GGyShM3OIZt/yD6WESlOvAJhJX6HZyOgFu
 xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 -----END EC PRIVATE KEY-----
+
 `)
 
 // nolint: gochecknoglobals
@@ -66,6 +68,7 @@ MtusvyePIsJKGGKsTyHwla4eWpjorL+V116zP35J5x32AFIT8hCbZlLGdL5dpVU=
 // nolint: gochecknoglobals
 // converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem -nocrypt.
 var pemPKCS8ECPrivateKey = []byte(`
+
 -----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgBwIz1VjpFGJSXPdS
 jLBtP3I31SVYQRYog+qIDYPzqkKhRANCAAQ8SaKupUXYqg2C4W6HgYbJKEzc4hm3
@@ -103,11 +106,15 @@ GbF249/4VrRL8MHubOp2IakJZH0fd01/oSCG8xuFD/0/6X5hvGVM6bwNhgqAGn7c
 Yxty35glWR1l8sPN0rD9+QdEYuLY3Ov23SVxHnNKy1pGSJjTinBkfjNEBOdfDUrV
 ga1bMw04tVw/6O9EEKNGaQsS6B0fzq99acgVHADvRji+eqw18x0J
 -----END RSA PRIVATE KEY-----
+
+
 `)
 
 // nolint: gochecknoglobals
 // converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem.
 var pemPKCS8RSAEncryptedPrivateKey = []byte(`
+
+
 -----BEGIN ENCRYPTED PRIVATE KEY-----
 MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQI2GK20IxuPzwCAggA
 MAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBCR3q6ur2Vas0CfsnCyEDqoBIIE
@@ -143,6 +150,8 @@ OK9MsGDvuCMUZH6RSGZrEOrepKg3c04DxoVaBamdz7mj
 // nolint: gochecknoglobals
 // converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem.
 var pemPKCS8RSAPrivateKey = []byte(`
+
+
 -----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC/Fzdkc01Vp8gm
 9hF0hn4MNXSoOibXmT3ukvNyCc2NG0D8Iqtt3gzqoxRwqnpP32sS9ENZGUEQTWxM
@@ -171,6 +180,8 @@ GXADAyyrW/DYo+XBgxyMAoOPqsjPyYBmZP5jG3LfmCVZHWXyw83SsP35B0Ri4tjc
 6/bdJXEec0rLWkZImNOKcGR+M0QE518NStWBrVszDTi1XD/o70QQo0ZpCxLoHR/O
 r31pyBUcAO9GOL56rDXzHQk=
 -----END PRIVATE KEY-----
+
+
 `)
 
 func findKeyType(entries []*keystore.Entry, alg string) *keystore.Entry {
