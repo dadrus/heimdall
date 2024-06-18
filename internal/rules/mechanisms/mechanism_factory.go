@@ -58,11 +58,11 @@ func NewMechanismFactory(
 	khr keyholder.Registry,
 	co certificate.Observer,
 ) (MechanismFactory, error) {
-	logger.Info().Msg("Loading pipeline definitions")
+	logger.Info().Msg("Loading mechanism catalogue")
 
 	repository, err := newMechanismRepository(conf, logger, fw, khr, co)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed loading pipeline definitions")
+		logger.Error().Err(err).Msg("Failed loading mechanism catalogue")
 
 		return nil, err
 	}
