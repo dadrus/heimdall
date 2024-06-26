@@ -51,7 +51,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.1
-	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.2
+	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/undefinedlabs/go-mpatch v1.0.7
 	github.com/wI2L/jsondiff v0.6.0
 	github.com/ybbus/httpretry v1.0.2
