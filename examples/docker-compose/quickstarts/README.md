@@ -2,7 +2,7 @@
 
 This directory contains examples described in the getting started section of the documentation. The demonstration of the decision operation mode is done via integration with some reverse proxies.
 
-**Note:** The main branch may have breaking changes (see pending release PRs for details under https://github.com/dadrus/heimdall/pulls) which would make the usage of the referenced heimdall images impossible (even though the configuration files and rules reflect the latest changes). In such situations you'll have to build a heimdall image by yourself and update the setups to use it.
+**Note:** The main branch may have breaking changes (see pending release PRs for details under https://github.com/dadrus/heimdall/pulls) which would make the usage of the referenced heimdall images impossible (even though the configuration files and rules reflect the latest changes). In such situations you'll have to use the `dev` image, build a heimdall image by yourself and update the setups to use it, ot switch to a tagged (released) version.
 
 
 # Proxy Mode Quickstart
