@@ -173,9 +173,9 @@ func (r *RequestContext) UpstreamCookies() map[string]string      { return r.ups
 func (r *RequestContext) AppContext() context.Context             { return r.req.Context() }
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) PipelineError() error                    { return r.err }
-func (r *RequestContext) Outputs() heimdall.Outputs {
+func (r *RequestContext) Outputs() map[string]any {
 	if r.outputs == nil {
-		r.outputs = make(heimdall.Outputs)
+		r.outputs = make(map[string]any)
 	}
 
 	return r.outputs

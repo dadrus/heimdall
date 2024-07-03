@@ -751,7 +751,7 @@ signer:
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
-				ctx.EXPECT().Outputs().Return(heimdall.Outputs{"foo": "bar"})
+				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
 				cacheKey := fin.calculateCacheKey(ctx, sub)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return([]byte("TestToken"), nil)
@@ -778,7 +778,7 @@ ttl: 1m
 
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
-				ctx.EXPECT().Outputs().Return(heimdall.Outputs{})
+				ctx.EXPECT().Outputs().Return(map[string]any{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, configuredTTL-defaultCacheLeeway).Return(nil)
@@ -812,7 +812,7 @@ claims: '{
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bar ") }))
-				ctx.EXPECT().Outputs().Return(heimdall.Outputs{"foo": "bar"})
+				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
@@ -838,7 +838,7 @@ claims: "foo: bar"
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(heimdall.Outputs{})
+				ctx.EXPECT().Outputs().Return(map[string]any{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
@@ -869,7 +869,7 @@ claims: "{{ len .foobar }}"
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(heimdall.Outputs{})
+				ctx.EXPECT().Outputs().Return(map[string]any{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
