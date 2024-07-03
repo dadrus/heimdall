@@ -60,7 +60,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.52.0
 	go.opentelemetry.io/contrib/instrumentation/host v0.53.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0
-	go.opentelemetry.io/contrib/instrumentation/runtime v0.52.0
+	go.opentelemetry.io/contrib/instrumentation/runtime v0.53.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.52.0
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/bridge/opentracing v1.28.0
