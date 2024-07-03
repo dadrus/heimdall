@@ -43,13 +43,15 @@ func (e *Expectation) Merge(other *Expectation) Expectation {
 		return *other
 	}
 
-	e.TrustedIssuers = x.IfThenElse(len(e.TrustedIssuers) != 0, e.TrustedIssuers, other.TrustedIssuers)
-	e.ScopesMatcher = x.IfThenElse(e.ScopesMatcher != nil, e.ScopesMatcher, other.ScopesMatcher)
-	e.Audiences = x.IfThenElse(len(e.Audiences) != 0, e.Audiences, other.Audiences)
-	e.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
-	e.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
+	exp := *e
 
-	return *e
+	exp.TrustedIssuers = x.IfThenElse(len(e.TrustedIssuers) != 0, e.TrustedIssuers, other.TrustedIssuers)
+	exp.ScopesMatcher = x.IfThenElse(e.ScopesMatcher != nil, e.ScopesMatcher, other.ScopesMatcher)
+	exp.Audiences = x.IfThenElse(len(e.Audiences) != 0, e.Audiences, other.Audiences)
+	exp.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
+	exp.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
+
+	return exp
 }
 
 func (e *Expectation) AssertAlgorithm(alg string) error {
