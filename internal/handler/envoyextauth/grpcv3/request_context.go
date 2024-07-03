@@ -144,9 +144,9 @@ func (r *RequestContext) SetPipelineError(err error)              { r.err = err 
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 
-func (r *RequestContext) Outputs() heimdall.Outputs {
+func (r *RequestContext) Outputs() map[string]any {
 	if r.outputs == nil {
-		r.outputs = make(heimdall.Outputs)
+		r.outputs = make(map[string]any)
 	}
 
 	return r.outputs

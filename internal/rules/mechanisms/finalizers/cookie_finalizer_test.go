@@ -277,7 +277,7 @@ cookies:
 				ctx.EXPECT().AddCookieForUpstream("x_foo", "Bar")
 				ctx.EXPECT().AddCookieForUpstream("x_bar", "bar")
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
-				ctx.EXPECT().Outputs().Return(heimdall.Outputs{"foo": "bar"})
+				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
