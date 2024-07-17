@@ -524,7 +524,7 @@ func TestExpectationAssertScopes(t *testing.T) {
 	}
 }
 
-func TestMergeExpectations(t *testing.T) {
+func TestExpectationMerge(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -533,15 +533,6 @@ func TestMergeExpectations(t *testing.T) {
 		source Expectation
 		assert func(t *testing.T, merged Expectation, source Expectation, target Expectation)
 	}{
-		{
-			uc:     "with nil target",
-			source: Expectation{},
-			assert: func(t *testing.T, merged Expectation, source Expectation, _ Expectation) {
-				t.Helper()
-
-				require.Equal(t, source, merged)
-			},
-		},
 		{
 			uc: "with empty target",
 			source: Expectation{
@@ -705,4 +696,24 @@ func TestMergeExpectations(t *testing.T) {
 			tc.assert(t, exp, tc.source, tc.target)
 		})
 	}
+}
+
+func TestExpectationMergeIdempotency(t *testing.T) {
+	t.Parallel()
+
+	exp := Expectation{}
+
+	exp.Merge(Expectation{
+		ScopesMatcher:     ExactScopeStrategyMatcher{},
+		Audiences:         []string{"foo"},
+		TrustedIssuers:    []string{"bar"},
+		AllowedAlgorithms: []string{"RS512"},
+		ValidityLeeway:    10 * time.Second,
+	})
+
+	assert.Nil(t, exp.ScopesMatcher)
+	assert.Empty(t, exp.Audiences)
+	assert.Empty(t, exp.TrustedIssuers)
+	assert.Empty(t, exp.AllowedAlgorithms)
+	assert.Equal(t, 0*time.Second, exp.ValidityLeeway)
 }
