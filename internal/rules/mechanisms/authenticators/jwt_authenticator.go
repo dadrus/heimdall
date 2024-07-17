@@ -208,9 +208,9 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	type Config struct {
-		Assertions           *oauth2.Expectation `mapstructure:"assertions"              validate:"-"`
-		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
+		Assertions           oauth2.Expectation `mapstructure:"assertions"              validate:"-"`
+		CacheTTL             *time.Duration     `mapstructure:"cache_ttl"`
+		AllowFallbackOnError *bool              `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -221,7 +221,7 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	return &jwtAuthenticator{
 		id:  a.id,
 		r:   a.r,
-		a:   conf.Assertions.Merge(&a.a),
+		a:   conf.Assertions.Merge(a.a),
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 		sf:  a.sf,
 		ads: a.ads,
@@ -314,7 +314,7 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebT
 	}
 
 	// configured assertions take precedence over those available in the metadata
-	assertions := a.a.Merge(&oauth2.Expectation{
+	assertions := a.a.Merge(oauth2.Expectation{
 		TrustedIssuers: []string{metadata.Issuer},
 	})
 
