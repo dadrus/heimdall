@@ -17,7 +17,7 @@
 apiVersion: v2
 name: heimdall
 description: A cloud native Identity Aware Proxy and Access Control Decision Service
-version: 0.13.3
+version: 0.13.4
 appVersion: latest
 kubeVersion: ^1.19.0
 type: application
