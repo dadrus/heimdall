@@ -3,6 +3,7 @@
   "extends": [
     "config:recommended",
     ":semanticCommitScopeDisabled",
+    ":semanticCommitTypeAll(chore)",
     "docker:pinDigests",
     "helpers:pinGitHubActionDigests",
     ":pinDevDependencies"
