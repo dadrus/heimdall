@@ -38,21 +38,17 @@ type Expectation struct {
 	ValidityLeeway    time.Duration `mapstructure:"validity_leeway"`
 }
 
-func (e *Expectation) Merge(other *Expectation) Expectation {
-	if e == nil {
-		return *other
-	}
-
+func (e Expectation) Merge(other Expectation) Expectation {
 	e.TrustedIssuers = x.IfThenElse(len(e.TrustedIssuers) != 0, e.TrustedIssuers, other.TrustedIssuers)
 	e.ScopesMatcher = x.IfThenElse(e.ScopesMatcher != nil, e.ScopesMatcher, other.ScopesMatcher)
 	e.Audiences = x.IfThenElse(len(e.Audiences) != 0, e.Audiences, other.Audiences)
 	e.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
 	e.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
 
-	return *e
+	return e
 }
 
-func (e *Expectation) AssertAlgorithm(alg string) error {
+func (e Expectation) AssertAlgorithm(alg string) error {
 	if !slices.Contains(e.AllowedAlgorithms, alg) {
 		return errorchain.NewWithMessagef(ErrAssertion, "algorithm %s is not allowed", alg)
 	}
@@ -60,7 +56,7 @@ func (e *Expectation) AssertAlgorithm(alg string) error {
 	return nil
 }
 
-func (e *Expectation) AssertIssuer(issuer string) error {
+func (e Expectation) AssertIssuer(issuer string) error {
 	if !slices.Contains(e.TrustedIssuers, issuer) {
 		return errorchain.NewWithMessagef(ErrAssertion, "issuer %s is not trusted", issuer)
 	}
@@ -68,7 +64,7 @@ func (e *Expectation) AssertIssuer(issuer string) error {
 	return nil
 }
 
-func (e *Expectation) AssertAudience(audience []string) error {
+func (e Expectation) AssertAudience(audience []string) error {
 	if len(e.Audiences) == 0 {
 		return nil
 	}
@@ -80,7 +76,7 @@ func (e *Expectation) AssertAudience(audience []string) error {
 	return nil
 }
 
-func (e *Expectation) AssertValidity(notBefore, notAfter time.Time) error {
+func (e Expectation) AssertValidity(notBefore, notAfter time.Time) error {
 	leeway := int64(x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway).Seconds())
 	now := time.Now().Unix()
 	nbf := notBefore.Unix()
@@ -97,7 +93,7 @@ func (e *Expectation) AssertValidity(notBefore, notAfter time.Time) error {
 	return nil
 }
 
-func (e *Expectation) AssertIssuanceTime(issuedAt time.Time) error {
+func (e Expectation) AssertIssuanceTime(issuedAt time.Time) error {
 	leeway := x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway)
 
 	// IssuedAt is optional but cannot be in the future. This is not required by the RFC, but
@@ -109,4 +105,4 @@ func (e *Expectation) AssertIssuanceTime(issuedAt time.Time) error {
 	return nil
 }
 
-func (e *Expectation) AssertScopes(scopes []string) error { return e.ScopesMatcher.Match(scopes) }
+func (e Expectation) AssertScopes(scopes []string) error { return e.ScopesMatcher.Match(scopes) }
