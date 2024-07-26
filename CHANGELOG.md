@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.15.0-alpha](https://github.com/dadrus/heimdall/compare/v0.14.0-alpha...v0.15.0-alpha) (2024-07-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* Deprecated OTEL attributes replaced ([#1669](https://github.com/dadrus/heimdall/issues/1669))
+* Configuration of `signer` moved into `jwt` finalizer ([#1534](https://github.com/dadrus/heimdall/issues/1534))
+* Demo installation removed from the helm chart ([#1544](https://github.com/dadrus/heimdall/issues/1544))
+* Subject has been made immutable ([#1487](https://github.com/dadrus/heimdall/issues/1487))
+* Rule matching configuration API redesigned ([#1358](https://github.com/dadrus/heimdall/issues/1358))
+* Default rule rejects requests with encoded slashes in the path of the URL with `400 Bad Request` ([#1358](https://github.com/dadrus/heimdall/issues/1358))
+* Support for `rule_path_match_prefix` on endpoint configurations for `http_endpoint` and `cloud_blob` providers has been dropped ([#1358](https://github.com/dadrus/heimdall/issues/1358))
+
+### Features
+
+* Glob expressions are context aware and use `.` for host related expressions and `/` for path related ones as separators ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Multiple rules can be defined for the same path, e.g. to have separate rules for read and write requests ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Support for backtracking while matching rules ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Support for free and single (named) wildcards for request path matching and access of the captured values from the pipeline ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+
+
+### Code Refactorings
+
+* Configuration of `signer` moved into `jwt` finalizer ([#1534](https://github.com/dadrus/heimdall/issues/1534)) ([4475745](https://github.com/dadrus/heimdall/commit/447574557d109be7f17844bc743eb9cc625427d9))
+* Default rule rejects requests with encoded slashes in the path of the URL with `400 Bad Request` ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Demo installation removed from the helm chart ([#1544](https://github.com/dadrus/heimdall/issues/1544)) ([f8770b3](https://github.com/dadrus/heimdall/commit/f8770b3bfa3599c37290677454baa4f52c12a7a7))
+* Deprecated OTEL attributes replaced ([#1669](https://github.com/dadrus/heimdall/issues/1669)) ([e5ed3a5](https://github.com/dadrus/heimdall/commit/e5ed3a57f5de3164200c285a811908c7a32fbfc8))
+* Rule matching configuration API redesigned ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Subject has been made immutable ([#1487](https://github.com/dadrus/heimdall/issues/1487)) ([6c4957f](https://github.com/dadrus/heimdall/commit/6c4957fd897de55de4b23563be4406423ba26b00))
+* Support for `rule_path_match_prefix` on endpoint configurations for `http_endpoint` and `cloud_blob` providers has been dropped ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+
+
+### Performance Improvements
+
+* O(log(n)) time complexity for lookup of rules ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+
+
+### Bug Fixes
+
+* Taking updates of certificates into account while collecting metrics ([#1534](https://github.com/dadrus/heimdall/issues/1534)) ([4475745](https://github.com/dadrus/heimdall/commit/447574557d109be7f17844bc743eb9cc625427d9))
+
+
+### Documentation
+
+* New integration guide for Envoy Gateway ([#1412](https://github.com/dadrus/heimdall/issues/1412)) ([526f381](https://github.com/dadrus/heimdall/commit/526f381c931cd58e9513716a1bc7fa9149c36e3d))
+* NGING Ingress Controller guide updated to cover global integration options ([#1469](https://github.com/dadrus/heimdall/issues/1469)) ([a710a64](https://github.com/dadrus/heimdall/commit/a710a640fc1ce2cadfa37eb59a4fc0fa52c5120b))
+* Traefik guide updated to cover `Ingress`, `IngressRoute` and `HTTPRoute` based integration options ([#1420](https://github.com/dadrus/heimdall/issues/1420)) ([303095e](https://github.com/dadrus/heimdall/commit/303095e204c3ea753b06a2b90171462de19b1eb4))
+
 ## [0.14.4-alpha](https://github.com/dadrus/heimdall/compare/v0.14.3-alpha...v0.14.4-alpha) (2024-07-25)
 
 
