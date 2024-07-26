@@ -134,7 +134,7 @@ func peerAttr(addr string) []attribute.KeyValue {
 		return []attribute.KeyValue{semconv.NetworkPeerAddress(host), semconv.NetworkPeerPort(port)}
 	}
 
-	return []attribute.KeyValue{semconv.ServerAddress(host), semconv.ServerPort(port)}
+	return []attribute.KeyValue{semconv.ClientAddress(host), semconv.ClientPort(port)}
 }
 
 func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
@@ -187,7 +187,7 @@ func serverAttr(addr string) []attribute.KeyValue {
 	}
 
 	return []attribute.KeyValue{
-		attribute.Key("server.address").String(host),
-		attribute.Key("server.port").Int(port),
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 	}
 }
