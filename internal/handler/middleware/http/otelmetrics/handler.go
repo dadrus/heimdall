@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -139,15 +139,15 @@ func methodMetric(method string) attribute.KeyValue {
 func flavor(proto string) attribute.KeyValue {
 	switch proto {
 	case "HTTP/1.0":
-		return semconv.HTTPFlavorHTTP10 // nolint: staticcheck
+		return semconv.HTTPFlavorHTTP10
 	case "HTTP/1.1":
-		return semconv.HTTPFlavorHTTP11 // nolint: staticcheck
+		return semconv.HTTPFlavorHTTP11
 	case "HTTP/2":
-		return semconv.HTTPFlavorHTTP20 // nolint: staticcheck
+		return semconv.HTTPFlavorHTTP20
 	case "HTTP/3":
-		return semconv.HTTPFlavorHTTP30 // nolint: staticcheck
+		return semconv.HTTPFlavorHTTP30
 	default:
-		return semconv.HTTPFlavorKey.String(proto) // nolint: staticcheck
+		return semconv.HTTPFlavorKey.String(proto)
 	}
 }
 
