@@ -18,6 +18,7 @@ package otelmetrics
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -104,14 +105,13 @@ func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue
 
 	attrs := make([]attribute.KeyValue, 0, attrsCount)
 	attrs = append(attrs, methodMetric(req.Method))
-	attrs = append(attrs, x.IfThenElse(req.TLS != nil,
-		semconv.HTTPSchemeKey.String("https"), // nolint: staticcheck
-		semconv.HTTPSchemeKey.String("http"))) // nolint: staticcheck
-	attrs = append(attrs, flavor(req.Proto))
-	attrs = append(attrs, semconv.NetHostNameKey.String(host)) // nolint: staticcheck
+	attrs = append(attrs, x.IfThenElse(req.TLS != nil, semconv.URLScheme("https"), semconv.URLScheme("http")))
+	attrs = append(attrs, semconv.NetworkProtocolName("http"))
+	attrs = append(attrs, semconv.NetworkProtocolVersion(strconv.Itoa(req.ProtoMajor)+"."+strconv.Itoa(req.ProtoMinor)))
+	attrs = append(attrs, semconv.ServerAddress(host))
 
 	if hostPort > 0 {
-		attrs = append(attrs, semconv.NetHostPortKey.Int(hostPort)) // nolint: staticcheck
+		attrs = append(attrs, semconv.ServerPort(hostPort))
 	}
 
 	return attrs
@@ -133,22 +133,7 @@ func methodMetric(method string) attribute.KeyValue {
 		method = "_OTHER"
 	}
 
-	return semconv.HTTPMethodKey.String(method)
-}
-
-func flavor(proto string) attribute.KeyValue {
-	switch proto {
-	case "HTTP/1.0":
-		return semconv.HTTPFlavorHTTP10
-	case "HTTP/1.1":
-		return semconv.HTTPFlavorHTTP11
-	case "HTTP/2":
-		return semconv.HTTPFlavorHTTP20
-	case "HTTP/3":
-		return semconv.HTTPFlavorHTTP30
-	default:
-		return semconv.HTTPFlavorKey.String(proto)
-	}
+	return semconv.HTTPRequestMethodKey.String(method)
 }
 
 func requiredHTTPPort(https bool, port int) int { // nolint:revive
