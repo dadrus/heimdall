@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -136,7 +136,7 @@ func methodMetric(method string) attribute.KeyValue {
 	return semconv.HTTPRequestMethodKey.String(method)
 }
 
-func requiredHTTPPort(https bool, port int) int { // nolint:revive
+func requiredHTTPPort(https bool, port int) int {
 	if https {
 		if port > 0 && port != 443 {
 			return port
