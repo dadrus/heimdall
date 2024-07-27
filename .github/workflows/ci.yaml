@@ -619,7 +619,7 @@ jobs:
         with:
           node-version: 17.7
       - name: Setup ruby
-        uses: ruby/setup-ruby@50ba3386b050ad5b97a41fcb81240cbee1d1821f # v1.188.0
+        uses: ruby/setup-ruby@bc2ba926aade0711935b50bcb1b9ccdb5fde2dda # v1.189.0
         with:
           ruby-version: 3.1.3
       - name: Install asciidoctor
@@ -676,7 +676,7 @@ jobs:
       - name: Install mermaid
         run: npm install -g @mermaid-js/mermaid-cli@10.8.0
       - name: Setup ruby
-        uses: ruby/setup-ruby@50ba3386b050ad5b97a41fcb81240cbee1d1821f # v1.188.0
+        uses: ruby/setup-ruby@bc2ba926aade0711935b50bcb1b9ccdb5fde2dda # v1.189.0
         with:
           ruby-version: 2.7
       - name: Install asciidoctor
