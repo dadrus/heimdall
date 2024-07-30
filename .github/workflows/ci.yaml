@@ -628,7 +628,7 @@ jobs:
         working-directory: ./docs
         run: npm install
       - name: Update version string to dev version
-        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
         with:
           find: "x-current-version"
           replace: "dev"
@@ -685,7 +685,7 @@ jobs:
         working-directory: ./docs
         run: npm install
       - name: Update version string to new released version
-        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
         with:
           find: "x-current-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
@@ -695,7 +695,7 @@ jobs:
         working-directory: ./docs
         run: hugo --minify -d ./public
       - name: Update uri for redirecting to new version
-        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
         with:
           find: "x-released-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
