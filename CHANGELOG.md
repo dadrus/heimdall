@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.14.5-alpha](https://github.com/dadrus/heimdall/compare/v0.14.4-alpha...v0.14.5-alpha) (2024-08-08)
+
+
+### Dependencies
+
+* update github.com/youmark/pkcs8 digest to a2c0da2 ([#1671](https://github.com/dadrus/heimdall/issues/1671)) ([ad37b99](https://github.com/dadrus/heimdall/commit/ad37b99aa94a99299a4a37e32a774a8e51099844))
+* update golang to v1.22.6 ([#1692](https://github.com/dadrus/heimdall/issues/1692)) ([ff4e58c](https://github.com/dadrus/heimdall/commit/ff4e58caab5dd9cc4f3c471fdd8be524f0bde796))
+* update golang.org/x/exp digest to 0cdaa3a ([#1697](https://github.com/dadrus/heimdall/issues/1697)) ([bf612d5](https://github.com/dadrus/heimdall/commit/bf612d5a08c05a224f43114a1b2b6373b9a84a51))
+* update google.golang.org/genproto/googleapis/rpc digest to 2c9e96a ([#1688](https://github.com/dadrus/heimdall/issues/1688)) ([1f36cf6](https://github.com/dadrus/heimdall/commit/1f36cf613c9a509059eb87bf2e3ef3dd8445156d))
+* update google.golang.org/genproto/googleapis/rpc digest to 573a115 ([#1698](https://github.com/dadrus/heimdall/issues/1698)) ([f6ac921](https://github.com/dadrus/heimdall/commit/f6ac921db91188e7c4373f93e9425e9585483a4d))
+* update module github.com/dlclark/regexp2 to v1.11.4 ([#1686](https://github.com/dadrus/heimdall/issues/1686)) ([e4827de](https://github.com/dadrus/heimdall/commit/e4827de8716941ef94a7f7f982fd58aa8f8826db))
+* update module github.com/go-jose/go-jose/v4 to v4.0.4 ([#1673](https://github.com/dadrus/heimdall/issues/1673)) ([2dfb142](https://github.com/dadrus/heimdall/commit/2dfb1422ecfe8c706a8512efc4655ec45789b092))
+* update module github.com/google/cel-go to v0.21.0 ([#1684](https://github.com/dadrus/heimdall/issues/1684)) ([0601589](https://github.com/dadrus/heimdall/commit/06015891e3e88a4c023740fef0f6fd345ee2f02e))
+* update module github.com/redis/rueidis to v1.0.43 ([#1676](https://github.com/dadrus/heimdall/issues/1676)) ([b993ee7](https://github.com/dadrus/heimdall/commit/b993ee7a82707efbf3a3272160a0991761c81c21))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.43 ([#1677](https://github.com/dadrus/heimdall/issues/1677)) ([1f72eaf](https://github.com/dadrus/heimdall/commit/1f72eaf7ecd18ce57f343fcfeb7cd882a0fe251a))
+* update module github.com/tidwall/gjson to v1.17.3 ([#1681](https://github.com/dadrus/heimdall/issues/1681)) ([f5e1707](https://github.com/dadrus/heimdall/commit/f5e170701b7ac4ae682f8b4ef2b58f412d56e10e))
+* update module go.uber.org/fx to v1.22.2 ([#1694](https://github.com/dadrus/heimdall/issues/1694)) ([810d995](https://github.com/dadrus/heimdall/commit/810d995e4a5611ce4aaabc9f8e71e1a8d03a7208))
+
 ## [0.14.4-alpha](https://github.com/dadrus/heimdall/compare/v0.14.3-alpha...v0.14.4-alpha) (2024-07-25)
 
 
