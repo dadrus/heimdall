@@ -40,7 +40,7 @@ func NewSentinelCache(conf map[string]any, cw watcher.Watcher) (cache.Cache, err
 	}
 
 	cfg := Config{
-		baseConfig: baseConfig{ClientCache: clientCache{TTL: 5 * time.Minute}}, //nolint:gomnd
+		baseConfig: baseConfig{ClientCache: clientCache{TTL: 5 * time.Minute}}, //nolint:mnd
 	}
 
 	err := decodeConfig(conf, &cfg)

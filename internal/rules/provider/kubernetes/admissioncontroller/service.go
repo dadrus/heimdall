@@ -72,10 +72,10 @@ func newService(
 
 	return &http.Server{
 		Handler:        hc,
-		ReadTimeout:    5 * time.Second,      //nolint:gomnd
-		WriteTimeout:   10 * time.Second,     //nolint:gomnd
-		IdleTimeout:    90 * time.Second,     //nolint:gomnd
-		MaxHeaderBytes: int(4 * bytesize.KB), //nolint:gomnd
+		ReadTimeout:    5 * time.Second,      //nolint:mnd
+		WriteTimeout:   10 * time.Second,     //nolint:mnd
+		IdleTimeout:    90 * time.Second,     //nolint:mnd
+		MaxHeaderBytes: int(4 * bytesize.KB), //nolint:mnd
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
 }

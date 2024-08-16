@@ -293,13 +293,13 @@ func (suite *CertChainTestSuite) TestFindChain() {
 			},
 		},
 	} {
-		suite.T().Run("case="+tc.uc, func(t *testing.T) {
+		suite.Run("case="+tc.uc, func() {
 			// GIVEN
 			// WHEN
 			chain := keystore.FindChain(tc.eeCert.PublicKey, tc.certPool)
 
 			// THEN
-			tc.assert(t, chain)
+			tc.assert(suite.T(), chain)
 		})
 	}
 }
@@ -368,7 +368,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 			},
 		},
 	} {
-		suite.T().Run("case="+tc.uc, func(t *testing.T) {
+		suite.Run("case="+tc.uc, func() {
 			// GIVEN
 			chain := keystore.FindChain(tc.eeCert.PublicKey, tc.certPool)
 
@@ -376,7 +376,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 			err := keystore.ValidateChain(chain)
 
 			// THEN
-			tc.assert(t, err)
+			tc.assert(suite.T(), err)
 		})
 	}
 }

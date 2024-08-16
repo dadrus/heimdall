@@ -376,7 +376,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 		if serverResponse != nil {
 			_, err := w.Write(serverResponse)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}
 
 		w.WriteHeader(statusCode)

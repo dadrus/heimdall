@@ -238,7 +238,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 			handler := &mocks2.MockHandler{}
-			conn, err := grpc.DialContext(context.Background(), "bufnet",
+			conn, err := grpc.NewClient("passthrough://bufnet",
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)
@@ -303,7 +303,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	bufDialer := func(context.Context, string) (net.Conn, error) {
 		return lis.Dial()
 	}
-	conn, err := grpc.DialContext(context.Background(), "bufnet",
+	conn, err := grpc.NewClient("passthrough://bufnet",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)

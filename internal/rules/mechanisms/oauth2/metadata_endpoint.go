@@ -36,7 +36,7 @@ func (e *MetadataEndpoint) init() {
 	}
 
 	if e.HTTPCache == nil {
-		e.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute} //nolint:gomnd
+		e.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute} //nolint:mnd
 	}
 }
 

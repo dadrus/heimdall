@@ -124,14 +124,13 @@ func newProvider(
 func (p *provider) newController(ctx context.Context, namespace string) (cache.Store, cache.Controller) {
 	repository := p.cl.RuleSetRepository(namespace)
 
-	return cache.NewInformer(
-		&cache.ListWatch{
+	return cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: &cache.ListWatch{
 			ListFunc:  func(opts metav1.ListOptions) (runtime.Object, error) { return repository.List(ctx, opts) },
 			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) { return repository.Watch(ctx, opts) },
 		},
-		&v1alpha3.RuleSet{},
-		0,
-		cache.FilteringResourceEventHandler{
+		ObjectType: &v1alpha3.RuleSet{},
+		Handler: cache.FilteringResourceEventHandler{
 			FilterFunc: p.filter,
 			Handler: cache.ResourceEventHandlerFuncs{
 				AddFunc:    p.addRuleSet,
@@ -139,7 +138,7 @@ func (p *provider) newController(ctx context.Context, namespace string) (cache.S
 				UpdateFunc: p.updateRuleSet,
 			},
 		},
-	)
+	})
 }
 
 func (p *provider) Start(ctx context.Context) error { //nolint:contextcheck
@@ -406,7 +405,7 @@ func (p *provider) updateStatus(
 		p.l.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
 
 		// to avoid cascading reads and writes
-		time.Sleep(time.Duration(2*rand.Intn(50)) * time.Millisecond) //nolint:gomnd,gosec
+		time.Sleep(time.Duration(2*rand.Intn(50)) * time.Millisecond) //nolint:mnd,gosec
 
 		rsKey := types.NamespacedName{Namespace: rs.Namespace, Name: rs.Name}
 		if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
