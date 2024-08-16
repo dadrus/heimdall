@@ -99,7 +99,7 @@ func (s *ClientTestSuite) SetupSuite() {
 			_, err = w.Write([]byte(response))
 		}
 
-		s.Require().NoError(err)
+		s.NoError(err)
 
 		w.WriteHeader(http.StatusOK)
 	}))

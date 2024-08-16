@@ -881,7 +881,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		if jwksResponseContent != nil {
 			w.Header().Set("Content-Type", jwksResponseContentType)
 			_, err := w.Write(jwksResponseContent)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		} else {
 			w.WriteHeader(jwksResponseCode)
 		}
@@ -895,7 +895,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		if metadataResponseContent != nil {
 			w.Header().Set("Content-Type", metadataResponseContentType)
 			_, err = w.Write(metadataResponseContent)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		} else {
 			w.WriteHeader(metadataResponseCode)
 		}
