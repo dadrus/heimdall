@@ -1,10 +1,13 @@
 module github.com/dadrus/heimdall
 
-go 1.22.4
+go 1.22.5
+
+toolchain go1.23.0
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/alicebob/miniredis/v2 v2.33.0
+	github.com/dadrus/httpsig v0.0.0-20240814203911-f6539fdef42a
 	github.com/dlclark/regexp2 v1.11.0
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
@@ -39,7 +42,6 @@ require (
 	github.com/knadh/koanf/providers/rawbytes v0.1.0
 	github.com/knadh/koanf/providers/structs v0.1.0
 	github.com/knadh/koanf/v2 v2.1.1
-	github.com/offblocks/httpsig v0.8.1
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.19.1
