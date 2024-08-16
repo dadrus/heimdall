@@ -8,7 +8,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
-	github.com/envoyproxy/go-control-plane v0.12.0
+	github.com/envoyproxy/go-control-plane v0.13.0
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/fsnotify/fsnotify v1.7.0
@@ -168,6 +168,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
+	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
