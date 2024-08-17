@@ -236,7 +236,9 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub *subject.Subj
 		func() []byte { return []byte{} }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
-	hash.Write(ctx.Outputs().Hash())
+
+	rawSub, _ := json.Marshal(ctx.Outputs())
+	hash.Write(rawSub)
 
 	return hex.EncodeToString(hash.Sum(nil))
 }

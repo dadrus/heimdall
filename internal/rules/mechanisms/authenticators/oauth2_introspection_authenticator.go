@@ -195,9 +195,9 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	type Config struct {
-		Assertions           *oauth2.Expectation `mapstructure:"assertions"`
-		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
+		Assertions           oauth2.Expectation `mapstructure:"assertions"`
+		CacheTTL             *time.Duration     `mapstructure:"cache_ttl"`
+		AllowFallbackOnError *bool              `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -208,7 +208,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	return &oauth2IntrospectionAuthenticator{
 		id:  a.id,
 		r:   a.r,
-		a:   conf.Assertions.Merge(&a.a),
+		a:   conf.Assertions.Merge(a.a),
 		sf:  a.sf,
 		ads: a.ads,
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
@@ -302,7 +302,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	}
 
 	// configured assertions take precedence over those available in the metadata
-	assertions := a.a.Merge(&oauth2.Expectation{
+	assertions := a.a.Merge(oauth2.Expectation{
 		TrustedIssuers: []string{metadata.Issuer},
 	})
 
