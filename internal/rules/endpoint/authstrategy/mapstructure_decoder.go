@@ -98,7 +98,6 @@ func decodeHTTPMessageSignaturesStrategy(ctx CreationContext, config any) (any, 
 	}
 
 	ctx.CertificateObserver().Add(httpSig)
-	ctx.KeyHolderRegistry().AddKeyHolder(httpSig)
 
 	return httpSig, nil
 }

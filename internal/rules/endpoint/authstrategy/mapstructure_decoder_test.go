@@ -35,7 +35,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks2 "github.com/dadrus/heimdall/internal/keyholder/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
@@ -716,14 +715,10 @@ auth:
 				watcher := mocks.NewWatcherMock(t)
 				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
 
-				registry := mocks2.NewRegistryMock(t)
-				registry.EXPECT().AddKeyHolder(mock.Anything)
-
 				observer := mocks3.NewObserverMock(t)
 				observer.EXPECT().Add(mock.Anything)
 
 				ccm.EXPECT().Watcher().Return(watcher)
-				ccm.EXPECT().KeyHolderRegistry().Return(registry)
 				ccm.EXPECT().CertificateObserver().Return(observer)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
@@ -762,14 +757,10 @@ auth:
 				watcher := mocks.NewWatcherMock(t)
 				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
 
-				registry := mocks2.NewRegistryMock(t)
-				registry.EXPECT().AddKeyHolder(mock.Anything)
-
 				observer := mocks3.NewObserverMock(t)
 				observer.EXPECT().Add(mock.Anything)
 
 				ccm.EXPECT().Watcher().Return(watcher)
-				ccm.EXPECT().KeyHolderRegistry().Return(registry)
 				ccm.EXPECT().CertificateObserver().Return(observer)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
