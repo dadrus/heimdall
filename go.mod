@@ -1,12 +1,6 @@
 module github.com/dadrus/heimdall
 
-go 1.22.5
-
-toolchain go1.23.0
-
-replace (
-	github.com/offblocks/httpsig => ../httpsig
-)
+go 1.23.0
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
