@@ -31,12 +31,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerCEL {
 				return false, nil, nil
 			}
 
-			auth, err := newCELAuthorizer(id, conf)
+			auth, err := newCELAuthorizer(ctx, id, conf)
 
 			return true, auth, err
 		})
@@ -47,13 +47,13 @@ type celAuthorizer struct {
 	expressions compiledExpressions
 }
 
-func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, error) {
+func newCELAuthorizer(ctx CreationContext, id string, rawConfig map[string]any) (*celAuthorizer, error) {
 	type Config struct {
 		Expressions []Expression `mapstructure:"expressions" validate:"required,gt=0,dive"`
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthorizerCEL, rawConfig, &conf); err != nil {
+	if err := decodeConfig(ctx, AuthorizerCEL, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -83,7 +83,7 @@ func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error)
 		return a, nil
 	}
 
-	return newCELAuthorizer(a.id, rawConfig)
+	return newCELAuthorizer(nil, a.id, rawConfig)
 }
 
 func (a *celAuthorizer) ID() string { return a.id }

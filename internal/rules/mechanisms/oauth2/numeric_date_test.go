@@ -89,6 +89,6 @@ func TestNumericDateTime(t *testing.T) {
 	time2 := date2.Time()
 
 	// THEN
-	assert.Less(t, time1.Unix(), int64(0))
+	assert.Negative(t, time1.Unix())
 	assert.Equal(t, int64(100), time2.Unix())
 }

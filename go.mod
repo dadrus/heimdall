@@ -4,6 +4,10 @@ go 1.22.5
 
 toolchain go1.23.0
 
+replace (
+	github.com/offblocks/httpsig => ../httpsig
+)
+
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/alicebob/miniredis/v2 v2.33.0

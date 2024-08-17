@@ -166,7 +166,7 @@ continue_pipeline_on_error: true
 			require.NoError(t, err)
 
 			// WHEN
-			contextualizer, err := newGenericContextualizer(tc.id, conf)
+			contextualizer, err := newGenericContextualizer(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, contextualizer)
@@ -473,7 +473,7 @@ continue_pipeline_on_error: false
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newGenericContextualizer(tc.id, pc)
+			prototype, err := newGenericContextualizer(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN

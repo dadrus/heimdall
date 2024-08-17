@@ -142,7 +142,7 @@ expressions:
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newCELAuthorizer(tc.id, conf)
+			a, err := newCELAuthorizer(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -218,7 +218,7 @@ expressions:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newCELAuthorizer(tc.id, pc)
+			prototype, err := newCELAuthorizer(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -344,7 +344,7 @@ expressions:
 
 			tc.configureContextAndSubject(t, ctx, sub)
 
-			auth, err := newCELAuthorizer(tc.id, conf)
+			auth, err := newCELAuthorizer(nil, tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN

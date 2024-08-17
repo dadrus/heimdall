@@ -140,7 +140,7 @@ foo: bar`),
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newBasicAuthAuthenticator(tc.id, conf)
+			auth, err := newBasicAuthAuthenticator(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -310,7 +310,7 @@ password: baz`),
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newBasicAuthAuthenticator(tc.id, pc)
+			prototype, err := newBasicAuthAuthenticator(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -501,7 +501,7 @@ password: bar`))
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			auth, err := newBasicAuthAuthenticator(tc.id, conf)
+			auth, err := newBasicAuthAuthenticator(nil, tc.id, conf)
 			require.NoError(t, err)
 
 			ctx := mocks.NewContextMock(t)

@@ -17,13 +17,30 @@
 package authstrategy
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"errors"
+	"math/big"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	mocks2 "github.com/dadrus/heimdall/internal/keyholder/mocks"
+	mocks3 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/watcher/mocks"
+	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -41,7 +58,7 @@ func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) 
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		{
-			uc: "basic auth with all required properties",
+			uc: "all required properties configured",
 			config: []byte(`
 auth:
   type: basic_auth
@@ -59,7 +76,25 @@ auth:
 			},
 		},
 		{
-			uc: "basic auth without user property",
+			uc: "with unsupported properties",
+			config: []byte(`
+auth:
+  type: basic_auth
+  config:
+    user: foo
+    password: bar
+    foo: bar
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "invalid keys: foo")
+			},
+		},
+		{
+			uc: "without user property",
 			config: []byte(`
 auth:
   type: basic_auth
@@ -74,7 +109,7 @@ auth:
 			},
 		},
 		{
-			uc: "basic auth without password property",
+			uc: "without password property",
 			config: []byte(`
 auth:
   type: basic_auth
@@ -89,7 +124,7 @@ auth:
 			},
 		},
 		{
-			uc: "basic auth without config property",
+			uc: "without config property",
 			config: []byte(`
 auth:
   type: basic_auth
@@ -102,13 +137,13 @@ auth:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(),
+					DecodeAuthenticationStrategyHookFunc(nil),
 				),
 				Result: &typ,
 			})
@@ -140,7 +175,7 @@ func TestDecodeAuthenticationStrategyHookFuncForAPIKeyStrategy(t *testing.T) {
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		{
-			uc: "api key with all required properties, with in=header",
+			uc: "all required properties, with in=header",
 			config: []byte(`
 auth:
   type: api_key
@@ -161,7 +196,26 @@ auth:
 			},
 		},
 		{
-			uc: "api key with all required properties, with in=cookie",
+			uc: "with unsupported properties",
+			config: []byte(`
+auth:
+  type: api_key
+  config:
+    name: foo
+    value: bar
+    in: header
+    foo: bar
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "invalid keys: foo")
+			},
+		},
+		{
+			uc: "all required properties, with in=cookie",
 			config: []byte(`
 auth:
   type: api_key
@@ -182,7 +236,7 @@ auth:
 			},
 		},
 		{
-			uc: "api key with all required properties, with in=query",
+			uc: "all required properties, with in=query",
 			config: []byte(`
 auth:
   type: api_key
@@ -203,7 +257,7 @@ auth:
 			},
 		},
 		{
-			uc: "api key with all required properties, with in=foobar",
+			uc: "all required properties, with in=foobar",
 			config: []byte(`
 auth:
   type: api_key
@@ -220,7 +274,7 @@ auth:
 			},
 		},
 		{
-			uc: "api key without in property",
+			uc: "without in property",
 			config: []byte(`
 auth:
   type: api_key
@@ -236,7 +290,7 @@ auth:
 			},
 		},
 		{
-			uc: "api key without name property",
+			uc: "without name property",
 			config: []byte(`
 auth:
   type: api_key
@@ -252,7 +306,7 @@ auth:
 			},
 		},
 		{
-			uc: "api key without value property",
+			uc: "without value property",
 			config: []byte(`
 auth:
   type: api_key
@@ -268,7 +322,7 @@ auth:
 			},
 		},
 		{
-			uc: "api key without config property",
+			uc: "without config property",
 			config: []byte(`
 auth:
   type: api_key
@@ -281,13 +335,13 @@ auth:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(),
+					DecodeAuthenticationStrategyHookFunc(nil),
 				),
 				Result: &typ,
 			})
@@ -312,14 +366,13 @@ func TestDecodeAuthenticationStrategyHookFuncForClientCredentialsStrategy(t *tes
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	// du to a bug in the linter
 	for _, tc := range []struct {
 		uc     string
 		config []byte
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		{
-			uc: "client credentials with all required properties",
+			uc: "all required properties",
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -340,7 +393,26 @@ auth:
 			},
 		},
 		{
-			uc: "client credentials with all possible properties",
+			uc: "with unsupported properties",
+			config: []byte(`
+auth:
+  type: oauth2_client_credentials
+  config:
+    client_id: foo
+    client_secret: bar
+    token_url: http://foobar.foo
+    foo: bar
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "invalid keys: foo")
+			},
+		},
+		{
+			uc: "all possible properties",
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -365,7 +437,7 @@ auth:
 			},
 		},
 		{
-			uc: "client credentials without client_id property",
+			uc: "without client_id property",
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -381,7 +453,7 @@ auth:
 			},
 		},
 		{
-			uc: "client credentials without client_secret property",
+			uc: "without client_secret property",
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -397,7 +469,7 @@ auth:
 			},
 		},
 		{
-			uc: "client credentials without token_url property",
+			uc: "without token_url property",
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -413,7 +485,7 @@ auth:
 			},
 		},
 		{
-			uc: "client credentials without config property",
+			uc: "without config property",
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -426,13 +498,309 @@ auth:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(),
+					DecodeAuthenticationStrategyHookFunc(nil),
+				),
+				Result: &typ,
+			})
+			require.NoError(t, err)
+
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
+			// WHEN
+			err = dec.Decode(conf)
+
+			// THEN
+			tc.assert(t, err, typ.AuthStrategy)
+		})
+	}
+}
+
+func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+
+	privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	cert1, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "test cert 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSelfSigned(),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
+		testsupport.WithSignaturePrivKey(privKey1)).
+		Build()
+	require.NoError(t, err)
+
+	pemBytes1, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key1")),
+		pemx.WithX509Certificate(cert1),
+	)
+	require.NoError(t, err)
+
+	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
+	require.NoError(t, err)
+
+	_, err = pemFile.Write(pemBytes1)
+	require.NoError(t, err)
+
+	type Type struct {
+		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
+	}
+
+	for _, tc := range []struct {
+		uc               string
+		config           []byte
+		configureContext func(t *testing.T, ccm *CreationContextMock)
+		assert           func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
+	}{
+		{
+			uc: "without signer",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    components: ["@method"]
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'signer' is a required field")
+			},
+		},
+		{
+			uc: "without key store",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    signer:
+      name: foo
+    components: ["@method"]
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'signer'.'key_store' is a required field")
+			},
+		},
+		{
+			uc: "without key store path",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    signer:
+      key_store:
+        password: foo
+    components: ["@method"]
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'signer'.'key_store'.'path' is a required field")
+			},
+		},
+		{
+			uc: "without component identifiers",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    signer:
+      key_store:
+        path: /some/file.pem
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'components' must contain more than 0 items")
+			},
+		},
+		{
+			uc: "error while initializing strategy",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    components: ["@method"]
+    signer:
+      key_store:
+        path: /some/path.pem
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "/some/path.pem")
+			},
+		},
+		{
+			uc: "with unsupported properties",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    components: ["@method"]
+    foo: bar
+    signer:
+      key_store:
+        path: /some/path.pem
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "invalid keys: foo")
+			},
+		},
+		{
+			uc: "error while registering signer for updates watching",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    components: ["@method"]
+    signer:
+      key_store:
+        path: ` + pemFile.Name() + `
+`),
+			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+				t.Helper()
+
+				watcher := mocks.NewWatcherMock(t)
+				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(errors.New("test error"))
+
+				ccm.EXPECT().Watcher().Return(watcher)
+			},
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorContains(t, err, "failed registering")
+			},
+		},
+		{
+			uc: "minimal possible configuration",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    components: ["@method"]
+    signer:
+      key_store:
+        path: ` + pemFile.Name() + `
+`),
+			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+				t.Helper()
+
+				watcher := mocks.NewWatcherMock(t)
+				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
+
+				registry := mocks2.NewRegistryMock(t)
+				registry.EXPECT().AddKeyHolder(mock.Anything)
+
+				observer := mocks3.NewObserverMock(t)
+				observer.EXPECT().Add(mock.Anything)
+
+				ccm.EXPECT().Watcher().Return(watcher)
+				ccm.EXPECT().KeyHolderRegistry().Return(registry)
+				ccm.EXPECT().CertificateObserver().Return(observer)
+			},
+			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				httpSig, ok := as.(*HTTPMessageSignatures)
+				require.True(t, ok)
+
+				assert.NotNil(t, httpSig.signer)
+				assert.NotEmpty(t, httpSig.Certificates())
+				assert.NotEmpty(t, httpSig.Keys())
+				assert.Equal(t, "http message signer", httpSig.Name())
+			},
+		},
+		{
+			uc: "full possible configuration",
+			config: []byte(`
+auth:
+  type: http_message_signatures
+  config:
+    ttl: 1m
+    label: bar
+    components: ["@method"]
+    signer:
+      name: foobar
+      key_id: key1
+      key_store:
+        password: secret
+        path: ` + pemFile.Name() + `
+`),
+			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+				t.Helper()
+
+				watcher := mocks.NewWatcherMock(t)
+				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
+
+				registry := mocks2.NewRegistryMock(t)
+				registry.EXPECT().AddKeyHolder(mock.Anything)
+
+				observer := mocks3.NewObserverMock(t)
+				observer.EXPECT().Add(mock.Anything)
+
+				ccm.EXPECT().Watcher().Return(watcher)
+				ccm.EXPECT().KeyHolderRegistry().Return(registry)
+				ccm.EXPECT().CertificateObserver().Return(observer)
+			},
+			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				httpSig, ok := as.(*HTTPMessageSignatures)
+				require.True(t, ok)
+
+				assert.NotNil(t, httpSig.signer)
+				assert.NotEmpty(t, httpSig.Certificates())
+				assert.NotEmpty(t, httpSig.Keys())
+				assert.Equal(t, "http message signer", httpSig.Name())
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			ccm := NewCreationContextMock(t)
+			configureContext := x.IfThenElse(tc.configureContext != nil,
+				tc.configureContext,
+				func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			)
+			configureContext(t, ccm)
+
+			var typ Type
+
+			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+				DecodeHook: mapstructure.ComposeDecodeHookFunc(
+					DecodeAuthenticationStrategyHookFunc(ccm),
 				),
 				Result: &typ,
 			})
@@ -462,7 +830,7 @@ func TestDecodeAuthenticationStrategyHookFuncForUnknownStrategy(t *testing.T) {
 
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			DecodeAuthenticationStrategyHookFunc(),
+			DecodeAuthenticationStrategyHookFunc(nil),
 		),
 		Result: &typ,
 	})

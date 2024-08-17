@@ -22,12 +22,23 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
+//go:generate mockery --name CreationContext --structname CreationContextMock  --inpackage --testonly
+
+type CreationContext interface {
+	Watcher() watcher.Watcher
+	KeyHolderRegistry() keyholder.Registry
+	CertificateObserver() certificate.Observer
+}
+
+func DecodeAuthenticationStrategyHookFunc(ctx CreationContext) mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
 		var as endpoint.AuthenticationStrategy
 
@@ -62,12 +73,34 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 		case "oauth2_client_credentials":
 			return decodeStrategy("oauth2_client_credentials", &OAuth2ClientCredentials{}, typed["config"])
 		case "http_message_signatures":
-			return decodeStrategy("http_message_signatures", &HTTPMessageSignatures{}, typed["config"])
+			return decodeHTTPMessageSignaturesStrategy(ctx, typed["config"])
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported authentication type: '%s'", typed["type"])
 		}
 	}
+}
+
+func decodeHTTPMessageSignaturesStrategy(ctx CreationContext, config any) (any, error) {
+	httpSig := &HTTPMessageSignatures{}
+
+	if _, err := decodeStrategy("http_message_signatures", httpSig, config); err != nil {
+		return nil, err
+	}
+
+	if err := httpSig.init(); err != nil {
+		return nil, err
+	}
+
+	if err := ctx.Watcher().Add(httpSig.Signer.KeyStore.Path, httpSig); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed registering http_message_signatures for updates").CausedBy(err)
+	}
+
+	ctx.CertificateObserver().Add(httpSig)
+	ctx.KeyHolderRegistry().AddKeyHolder(httpSig)
+
+	return httpSig, nil
 }
 
 func decodeStrategy[S endpoint.AuthenticationStrategy](
@@ -80,7 +113,19 @@ func decodeStrategy[S endpoint.AuthenticationStrategy](
 			"'%s' strategy requires 'config' property to be set", name)
 	}
 
-	if err := mapstructure.Decode(config, strategy); err != nil {
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+		Result:      strategy,
+		ErrorUnused: true,
+	})
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
+	}
+
+	if err := dec.Decode(config); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
 	}

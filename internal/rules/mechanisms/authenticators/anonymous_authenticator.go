@@ -26,21 +26,25 @@ import (
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorAnonymous {
 				return false, nil, nil
 			}
 
-			auth, err := newAnonymousAuthenticator(id, conf)
+			auth, err := newAnonymousAuthenticator(ctx, id, conf)
 
 			return true, auth, err
 		})
 }
 
-func newAnonymousAuthenticator(id string, rawConfig map[string]any) (*anonymousAuthenticator, error) {
+func newAnonymousAuthenticator(
+	ctx CreationContext,
+	id string,
+	rawConfig map[string]any,
+) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
-	if err := decodeConfig(AuthenticatorAnonymous, rawConfig, &auth); err != nil {
+	if err := decodeConfig(ctx, AuthenticatorAnonymous, rawConfig, &auth); err != nil {
 		return nil, err
 	}
 
@@ -71,7 +75,7 @@ func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticato
 		return a, nil
 	}
 
-	return newAnonymousAuthenticator(a.id, config)
+	return newAnonymousAuthenticator(nil, a.id, config)
 }
 
 func (a *anonymousAuthenticator) IsFallbackOnErrorAllowed() bool {
