@@ -26,9 +26,9 @@ import (
 	"crypto/x509/pkix"
 	"math/big"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -339,7 +339,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			uc: "successful",
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}},
-				Components: []string{"@method"},
+				Components: []string{"@method", "content-digest"},
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -347,13 +347,16 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotEmpty(t, req.Header.Get("Signature"))
 				sigInput := req.Header.Get("Signature-Input")
-				assert.Contains(t, sigInput, `("@method")`)
+				assert.Contains(t, sigInput, `("@method" "content-digest")`)
 				assert.Contains(t, sigInput, `created=`)
 				assert.Contains(t, sigInput, `expires=`)
 				assert.Contains(t, sigInput, `keyid="test"`)
 				assert.Contains(t, sigInput, `alg="ecdsa-p384-sha384"`)
 				assert.Contains(t, sigInput, `nonce=`)
 				assert.Contains(t, sigInput, `tag="heimdall"`)
+				contentDigest := req.Header.Get("Content-Digest")
+				assert.Contains(t, contentDigest, "sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=:")
+				assert.Contains(t, contentDigest, "sha-512=:WZDPaVn/7XgHaAy8pmojAkGWoRx2UFChF41A2svX+TaPm+AbwAgBWnrIiYllu7BNNyealdVLvRwEmTHWXvJwew==:")
 			},
 		},
 	} {
@@ -361,7 +364,13 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			err := tc.conf.init()
 			require.NoError(t, err)
 
-			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
+			req, err := http.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"http//example.com/test",
+				strings.NewReader(`{"hello": "world"}`),
+			)
+			require.NoError(t, err)
 
 			err = tc.conf.Apply(context.Background(), req)
 
