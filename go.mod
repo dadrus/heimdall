@@ -42,7 +42,7 @@ require (
 	github.com/ory/ladon v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.2.0
-	github.com/prometheus/client_golang v1.20.1
+	github.com/prometheus/client_golang v1.20.2
 	github.com/redis/rueidis v1.0.44
 	github.com/redis/rueidis/rueidisotel v1.0.44
 	github.com/rs/cors v1.11.0
