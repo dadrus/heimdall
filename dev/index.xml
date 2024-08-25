@@ -2,7 +2,7 @@
 You can use it
 integrated into available proxies and API gateways, allowing implementation of Edge-level Authorization Architectures, or</description></item><item><title>Install heimdall</title><link>https://dadrus.github.io/docs/getting_started/installation/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/installation/</guid><description>Source Code You can always build a copy of heimdall by following the following instructions for your OS/environment.
 Prerequisites git
-The Go programming language &amp;gt;= 1.22
+The Go programming language &amp;gt;= 1.23
 Download Retrieve the latest copy of heimdall source code by cloning the git repository
 $ git clone git@github.com:dadrus/heimdall.git Build with go Build using a single line with go build
 $ CGO_ENABLED=0 go build -trimpath -ldflags=&amp;#34;-buildid= -w -s -X github.com/dadrus/heimdall/version.Version==my-custom-build&amp;#34; The flags are set by intention.</description></item><item><title>Protect an Application</title><link>https://dadrus.github.io/docs/getting_started/protect_an_app/</link><pubDate>Mon, 04 Mar 2024 08:54:47 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/protect_an_app/</guid><description>Overview In this guide we’re going to configure two setups, both protecting a service which exposes a couple of endpoints:
