@@ -1,4 +1,0 @@
-[[PackageOverrides]]
-name = "docs"
-ignore = true
-reason = "The results of this directory is generated static html content. Even some of the dependencies may have vulnerabilities they have no effect as neither inbound nor outbound connections are made during the generation of the content."
