@@ -33,6 +33,7 @@ issues:
         - errcheck
         - canonicalheader
         - mnd
+        - err113
 
 linters-settings:
   exhaustive:
