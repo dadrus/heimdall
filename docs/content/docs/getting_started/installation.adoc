@@ -19,7 +19,7 @@ You can always build a copy of heimdall by following the following instructions 
 === Prerequisites
 
 * https://git-scm.com/[git]
-* The https://go.dev/dl/[Go] programming language >= 1.22
+* The https://go.dev/dl/[Go] programming language >= 1.23
 
 === Download
 Retrieve the latest copy of heimdall source code by cloning the git repository
