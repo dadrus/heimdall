@@ -339,6 +339,8 @@ github.com/prometheus/procfs v0.15.1 h1:YagwOFzUgYfKKHX6Dr+sHT7km/hxC76UB0leargg
 github.com/prometheus/procfs v0.15.1/go.mod h1:fB45yRUv8NstnjriLhBQLuOUt+WW4BsoGhij/e3PBqk=
 github.com/redis/rueidis v1.0.44 h1:QfhfuovwEabcywfEXofRjPZuT29pjtpIWDJlCGHZfg8=
 github.com/redis/rueidis v1.0.44/go.mod h1:bnbkk4+CkXZgDPEbUtSos/o55i4RhFYYesJ4DS2zmq0=
+github.com/redis/rueidis v1.0.45 h1:j7hfcqfLLIqgTK3IkxBhXdeJcP34t3XLXvorDLqXfgM=
+github.com/redis/rueidis v1.0.45/go.mod h1:by+34b0cFXndxtYmPAHpoTHO5NkosDlBvhexoTURIxM=
 github.com/redis/rueidis/rueidisotel v1.0.44 h1:mapx4f1HokB1Yyrm6JaRBgDNu9IqAFuMeeLRLx7ocHc=
 github.com/redis/rueidis/rueidisotel v1.0.44/go.mod h1:Xp0cQ7DoWiXOo/nuKRLchY5hmkVcvbqo3VAi9v1sgeY=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
