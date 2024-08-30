@@ -11,6 +11,14 @@ tests:
       - isAPIVersion:
           of: apps/v1
 
+  - it: should fail if operation mode is set to an unexpected value
+    template: deployment.yaml
+    set:
+      operationMode: foo
+    asserts:
+      - failedTemplate:
+          errorMessage: A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>
+
   - it: name should be set with default name
     template: deployment.yaml
     asserts:
