@@ -1,0 +1,209 @@
+suite: test suite for horizontal pod autoscaler
+templates:
+  - hpa.yaml
+tests:
+  - it: should be configured by default
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - isAPIVersion:
+          of: autoscaling/v2
+
+  - it: can be disabled
+    set:
+      deployment.autoscaling.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: name should be set with default name
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-heimdall
+
+  - it: name should be set with overwritten name
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-foo
+
+  - it: namespace should be set
+    release:
+      namespace: test-namespace
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: test-namespace
+
+  - it: should set default labels with default values
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set custom labels in addition to default ones if provided
+    set:
+      deployment.labels:
+        foo: bar
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+            foo: bar
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set default labels with overwrites
+    chart:
+      appVersion: 1.0.0
+      version: 2.0.0
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: foo
+            app.kubernetes.io/version: 1.0.0
+            helm.sh/chart: heimdall-2.0.0
+
+  - it: should have no annotations
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: should reference expected deployment
+    release:
+      name: test-release
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef
+          value:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: test-release-heimdall
+
+  - it: should set min and max replicas by default
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 10
+
+  - it: min and max replicas can be configured
+    set:
+      deployment.autoscaling.minReplicas: 1
+      deployment.autoscaling.maxReplicas: 4
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 1
+      - equal:
+          path: spec.maxReplicas
+          value: 4
+
+  - it: should configure cpu and memory metrics by default with default average utilization
+    asserts:
+      - equal:
+          path: spec.metrics
+          value:
+            - resource:
+                name: cpu
+                target:
+                  averageUtilization: 80
+                  type: Utilization
+              type: Resource
+            - resource:
+                name: memory
+                target:
+                  averageUtilization: 80
+                  type: Utilization
+              type: Resource
+
+  - it: should configure cpu and memory metrics with specified average utilization
+    set:
+      deployment:
+        autoscaling:
+          targetCPUUtilizationPercentage: 40
+          targetMemoryUtilizationPercentage: 50
+    asserts:
+      - equal:
+          path: spec.metrics
+          value:
+            - resource:
+                name: cpu
+                target:
+                  averageUtilization: 40
+                  type: Utilization
+              type: Resource
+            - resource:
+                name: memory
+                target:
+                  averageUtilization: 50
+                  type: Utilization
+              type: Resource
+
+  - it: cpu metrics can be disabled
+    set:
+      deployment:
+        autoscaling:
+          targetCPUUtilizationPercentage: 0
+    asserts:
+      - equal:
+          path: spec.metrics
+          value:
+            - resource:
+                name: memory
+                target:
+                  averageUtilization: 80
+                  type: Utilization
+              type: Resource
+
+  - it: memory metrics can be disabled
+    set:
+      deployment:
+        autoscaling:
+          targetMemoryUtilizationPercentage: 0
+    asserts:
+      - equal:
+          path: spec.metrics
+          value:
+            - resource:
+                name: cpu
+                target:
+                  averageUtilization: 80
+                  type: Utilization
+              type: Resource
+
+  - it: should error when both, cpu and memory metrics are disabled
+    set:
+      deployment:
+        autoscaling:
+          targetCPUUtilizationPercentage: 0
+          targetMemoryUtilizationPercentage: 0
+    asserts:
+      - failedTemplate:
+          errorMessage: autoscaling is enabled, but usage of both, the cpu and the memory metrics is disabled
