@@ -206,3 +206,68 @@ tests:
               port: 4458
               protocol: TCP
               targetPort: https-webhook
+
+  - it: should use provided port and name values for each exposed service port in decision mode
+    set:
+      rules.providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+      service.management:
+        port: 1111
+        name: man
+      service.decision:
+        port: 2222
+        name: dec
+      service.admissionController:
+        port: 3333
+        name: adm
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: man
+              port: 1111
+              protocol: TCP
+              targetPort: http-management
+            - name: dec
+              port: 2222
+              protocol: TCP
+              targetPort: http-decision
+            - name: adm
+              port: 3333
+              protocol: TCP
+              targetPort: https-webhook
+
+  - it: should use provided port and name values for each exposed service port in proxy mode
+    set:
+      operationMode: proxy
+      rules.providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+      service.management:
+        port: 1111
+        name: man
+      service.proxy:
+        port: 2222
+        name: prox
+      service.admissionController:
+        port: 3333
+        name: adm
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: man
+              port: 1111
+              protocol: TCP
+              targetPort: http-management
+            - name: prox
+              port: 2222
+              protocol: TCP
+              targetPort: http-proxy
+            - name: adm
+              port: 3333
+              protocol: TCP
+              targetPort: https-webhook
