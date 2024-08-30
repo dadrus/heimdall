@@ -1,0 +1,17 @@
+suite: test suite for service
+templates:
+  - service.yaml
+tests:
+  - it: should be configured by default
+    asserts:
+      - isKind:
+          of: Service
+      - isAPIVersion:
+          of: v1
+
+  - it: should fail if operation mode is set to an unexpected value
+    set:
+      operationMode: foo
+    asserts:
+      - failedTemplate:
+          errorMessage: A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>
