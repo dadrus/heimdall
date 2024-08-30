@@ -339,12 +339,37 @@ tests:
               name: http-profiling
               protocol: TCP
 
+  - it: should expose admission controller web hook port if configured
+    template: deployment.yaml
+    set:
+      rules.providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+            - containerPort: 4458
+              name: https-webhook
+              protocol: TCP
+
   - it: should configure all possible ports if requested
     template: deployment.yaml
     set:
       profiling.enabled: true
       env:
         OTEL_METRICS_EXPORTER: "prometheus"
+      rules.providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
     asserts:
       - equal:
           path: spec.template.spec.containers[0].ports
@@ -360,4 +385,7 @@ tests:
               protocol: TCP
             - containerPort: 10251
               name: http-profiling
+              protocol: TCP
+            - containerPort: 4458
+              name: https-webhook
               protocol: TCP
