@@ -53,23 +53,6 @@ tests:
           path: metadata.labels["helm.sh/chart"]
           pattern: heimdall-*
 
-  - it: should set custom labels in addition to default ones if provided
-    set:
-      deployment.labels:
-        foo: bar
-    asserts:
-      - isSubset:
-          path: metadata.labels
-          content:
-            app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/managed-by: Helm
-            app.kubernetes.io/name: heimdall
-            app.kubernetes.io/version: latest
-            foo: bar
-      - matchRegex:
-          path: metadata.labels["helm.sh/chart"]
-          pattern: heimdall-*
-
   - it: should set default labels with overwrites
     chart:
       appVersion: 1.0.0

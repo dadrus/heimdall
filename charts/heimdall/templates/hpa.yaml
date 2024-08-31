@@ -18,7 +18,7 @@
 {{- if and (not .Values.deployment.autoscaling.targetCPUUtilizationPercentage) (not .Values.deployment.autoscaling.targetMemoryUtilizationPercentage) }}
   {{- fail "autoscaling is enabled, but usage of both, the cpu and the memory metrics is disabled" }}
 {{- end }}
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" }}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
