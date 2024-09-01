@@ -1,0 +1,22 @@
+suite: test suite for validating webhook configuration
+templates:
+  - validating_webhook.yaml
+tests:
+  - it: should not be configured by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should be configured if tls settings are provided for the kubernetes provider
+    set:
+      providers:
+        kubernetes:
+          auth_class: foo
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - isKind:
+          of: ValidatingWebhookConfiguration
+      - isAPIVersion:
+          of: admissionregistration.k8s.io/v1
