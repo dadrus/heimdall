@@ -237,7 +237,7 @@ jobs:
           helm: '${{ env.HELM_VERSION }}'
           kubeconform: '${{ env.KUBECONFORM_VERSION }}'
       - name: Install Helm Unittest
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git@v0.6.0
+        run: helm plugin install --version v0.6.0 https://github.com/helm-unittest/helm-unittest.git
       - name: Run tests
         run: |
           helm unittest ./charts/heimdall
