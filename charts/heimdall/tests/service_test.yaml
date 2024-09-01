@@ -9,13 +9,6 @@ tests:
       - isAPIVersion:
           of: v1
 
-  - it: should fail if operation mode is set to an unexpected value
-    set:
-      operationMode: foo
-    asserts:
-      - failedTemplate:
-          errorMessage: A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>
-
   - it: name should be set with default name
     asserts:
       - equal:

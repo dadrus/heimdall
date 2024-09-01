@@ -14,10 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{ $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode }}
-{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) }}
-  {{- fail "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" }}
-{{- end }}
 {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
@@ -77,12 +73,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - serve
-            - {{- if eq $opMode "decision" }} decision{{- else }} proxy{{- end }}
+            - {{- if eq .Values.operationMode "decision" }} decision{{- else }} proxy{{- end }}
             {{- with .Values.extraArgs }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
-            {{- if eq $opMode "decision" }}
+            {{- if eq .Values.operationMode "decision" }}
             - name: http-decision
               containerPort: {{ .Values.serve.decision.port }}
               protocol: TCP
