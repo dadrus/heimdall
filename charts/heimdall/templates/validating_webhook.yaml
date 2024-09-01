@@ -36,8 +36,8 @@ webhooks:
       caBundle: {{ . }}
       {{- end }}
       service:
-        namespace: {{ include "heimdall.namespace" $data }}
-        name: {{ include "heimdall.fullname" $data }}
+        namespace: {{ include "heimdall.namespace" . }}
+        name: {{ include "heimdall.fullname" . }}
         path: "/validate-ruleset"
         port: {{ .Values.service.admissionController.port }}
 {{- end }}
