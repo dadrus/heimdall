@@ -42,8 +42,7 @@ spec:
       protocol: TCP
       name: {{ .Values.service.proxy.name }}
       {{- end }}
-      {{- $rules := default dict .Values.rules }}
-      {{- $providers := default dict $rules.providers }}
+      {{- $providers := default dict .Values.providers }}
       {{- $kubernetes := default dict $providers.kubernetes }}
       {{- if $kubernetes.tls }}
     - port: {{ .Values.service.admissionController.port }}

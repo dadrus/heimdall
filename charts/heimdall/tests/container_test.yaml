@@ -342,7 +342,7 @@ tests:
   - it: should expose admission controller web hook port if configured
     template: deployment.yaml
     set:
-      rules.providers.kubernetes:
+      providers.kubernetes:
         tls:
           key_store:
             path: /path/to/file.pem
@@ -366,7 +366,7 @@ tests:
       profiling.enabled: true
       env:
         OTEL_METRICS_EXPORTER: "prometheus"
-      rules.providers.kubernetes:
+      providers.kubernetes:
         tls:
           key_store:
             path: /path/to/file.pem

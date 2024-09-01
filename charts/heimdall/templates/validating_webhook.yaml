@@ -1,5 +1,4 @@
-{{- $rules := default dict .Values.rules }}
-{{- $providers := default dict $rules.providers }}
+{{- $providers := default dict .Values.providers }}
 {{- $kubernetes := default dict $providers.kubernetes }}
 {{- if $kubernetes.tls }}
 # Only active if .Values.rules.providers.kubernetes.tls is configured
@@ -28,9 +27,6 @@ webhooks:
         resources:   ["rulesets"]
         scope:       "Namespaced"
     matchConditions:
-      {{- $rules := .Values.rules | default dict }}
-      {{- $providers := $rules.providers | default dict }}
-      {{- $kubernetes := $providers.kubernetes | default dict}}
       # Match only those rule sets, which relate to the configured auth class
       - name: 'auth-class-filter'
         expression: 'object.spec.authClassName == {{ default (quote "default") (quote $kubernetes.auth_class) }}'

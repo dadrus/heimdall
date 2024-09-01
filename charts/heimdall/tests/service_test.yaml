@@ -179,7 +179,7 @@ tests:
 
   - it: should expose admission controller web hook port if configured
     set:
-      rules.providers.kubernetes:
+      providers.kubernetes:
         tls:
           key_store:
             path: /path/to/file.pem
@@ -202,7 +202,7 @@ tests:
 
   - it: should use provided port and name values for each exposed service port in decision mode
     set:
-      rules.providers.kubernetes:
+      providers.kubernetes:
         tls:
           key_store:
             path: /path/to/file.pem
@@ -235,7 +235,7 @@ tests:
   - it: should use provided port and name values for each exposed service port in proxy mode
     set:
       operationMode: proxy
-      rules.providers.kubernetes:
+      providers.kubernetes:
         tls:
           key_store:
             path: /path/to/file.pem

@@ -100,8 +100,7 @@ spec:
               protocol: TCP
               containerPort: {{ .Values.profiling.port }}
             {{- end }}
-            {{- $rules := .Values.rules | default dict }}
-            {{- $providers := $rules.providers | default dict }}
+            {{- $providers := .Values.providers | default dict }}
             {{- $kubernetes := $providers.kubernetes | default dict}}
             {{- if $kubernetes.tls }}
             - name: https-webhook
