@@ -430,7 +430,7 @@ By making use of this property, you can specify the TCP port the heimdall should
 ====
 [source, yaml]
 ----
-metrics:
+profiling:
   port: 9999
 ----
 ====
