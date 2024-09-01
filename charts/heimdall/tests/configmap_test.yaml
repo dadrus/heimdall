@@ -1,0 +1,280 @@
+suite: test suite for configmap configuration
+templates:
+  - configmap.yaml
+tests:
+  - it: should be configured by default
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
+
+  - it: name should be set with default name
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-heimdall-config
+
+  - it: name should be set with overwritten name
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-foo-config
+
+  - it: namespace should be set
+    release:
+      namespace: test-namespace
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: test-namespace
+
+  - it: should set default labels with default values
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should not have any annotations
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: should include default entries if nothing is specified
+    asserts:
+      - equal:
+          path: data["heimdall.yaml"]
+          value:
+            |-
+            serve:
+              decision:
+                port: 4456
+              management:
+                port: 4457
+              proxy:
+                port: 4455
+            profiling:
+              enabled: false
+              host: 0.0.0.0
+              port: 10251
+
+  - it: should allow configuration of any heimdall setting
+    set:
+      serve:
+        decision:
+          host: 127.0.0.1
+          tls:
+            key_store:
+              path: /path/to/keystore.pem
+              password: VerySecure!
+          timeout:
+            read: 1s
+            write: 2s
+            idle: 30s
+          buffer_limit:
+            read: 4KB
+            write: 10KB
+          trusted_proxies:
+            - 192.168.1.0/24
+          respond:
+            verbose: true
+            with:
+              authentication_error:
+                code: 404
+              authorization_error:
+                code: 404
+        management:
+          host: 127.0.0.1
+          tls:
+            key_store:
+              path: /path/to/keystore.pem
+              password: VerySecure!
+          timeout:
+            read: 1s
+            write: 2s
+            idle: 30s
+          buffer_limit:
+            read: 4KB
+            write: 10KB
+        metrics:
+          enabled: true
+        profiling:
+          host: 192.168.2.10
+          port: 9999
+        tracing:
+          enabled: true
+          span_processor: batch
+        log:
+          level: debug
+          format: gelf
+        mechanisms:
+          authenticators:
+            - id: deny_all
+              type: unauthorized
+            - id: anon
+              type: anonymous
+            - id: jwt_auth
+              type: jwt
+              config:
+                jwks_endpoint: http://idp:8080/.well-known/jwks
+                assertions:
+                  issuers:
+                    - demo_issuer
+          authorizers:
+            - id: opa
+              type: remote
+              config:
+                endpoint: http://opa:8181/v1/data/{{ .Values.policy }}
+                payload: "{}"
+                expressions:
+                  - expression: |
+                      Payload.result == true
+          finalizers:
+            - id: create_jwt
+              type: jwt
+              config:
+                signer:
+                  key_store:
+                    path: /etc/heimdall/signer.pem
+            - id: noop
+              type: noop
+        default_rule:
+          execute:
+            - authenticator: deny_all
+            - finalizer: create_jwt
+        providers:
+            file_system:
+              src: /etc/heimdall/rules.yaml
+              watch: true
+            http_endpoint:
+              endpoints:
+                - url: http://foo.bar/ruleset1
+            cloud_blob:
+              buckets:
+                - url: gs://my-bucket
+            kubernetes:
+              auth_class: foo
+              tls:
+                key_store:
+                  path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: data["heimdall.yaml"]
+          value:
+            |-
+            serve:
+              decision:
+                buffer_limit:
+                  read: 4KB
+                  write: 10KB
+                host: 127.0.0.1
+                port: 4456
+                respond:
+                  verbose: true
+                  with:
+                    authentication_error:
+                      code: 404
+                    authorization_error:
+                      code: 404
+                timeout:
+                  idle: 30s
+                  read: 1s
+                  write: 2s
+                tls:
+                  key_store:
+                    password: VerySecure!
+                    path: /path/to/keystore.pem
+                trusted_proxies:
+                - 192.168.1.0/24
+              default_rule:
+                execute:
+                - authenticator: deny_all
+                - finalizer: create_jwt
+              log:
+                format: gelf
+                level: debug
+              management:
+                buffer_limit:
+                  read: 4KB
+                  write: 10KB
+                host: 127.0.0.1
+                port: 4457
+                timeout:
+                  idle: 30s
+                  read: 1s
+                  write: 2s
+                tls:
+                  key_store:
+                    password: VerySecure!
+                    path: /path/to/keystore.pem
+              mechanisms:
+                authenticators:
+                - id: deny_all
+                  type: unauthorized
+                - id: anon
+                  type: anonymous
+                - config:
+                    assertions:
+                      issuers:
+                      - demo_issuer
+                    jwks_endpoint: http://idp:8080/.well-known/jwks
+                  id: jwt_auth
+                  type: jwt
+                authorizers:
+                - config:
+                    endpoint: http://opa:8181/v1/data/{{ .Values.policy }}
+                    expressions:
+                    - expression: |
+                        Payload.result == true
+                    payload: '{}'
+                  id: opa
+                  type: remote
+                finalizers:
+                - config:
+                    signer:
+                      key_store:
+                        path: /etc/heimdall/signer.pem
+                  id: create_jwt
+                  type: jwt
+                - id: noop
+                  type: noop
+              metrics:
+                enabled: true
+              profiling:
+                host: 192.168.2.10
+                port: 9999
+              providers:
+                cloud_blob:
+                  buckets:
+                  - url: gs://my-bucket
+                file_system:
+                  src: /etc/heimdall/rules.yaml
+                  watch: true
+                http_endpoint:
+                  endpoints:
+                  - url: http://foo.bar/ruleset1
+                kubernetes:
+                  auth_class: foo
+                  tls:
+                    key_store:
+                      path: /path/to/file.pem
+              proxy:
+                port: 4455
+              tracing:
+                enabled: true
+                span_processor: batch
+            profiling:
+              enabled: false
+              host: 0.0.0.0
+              port: 10251
