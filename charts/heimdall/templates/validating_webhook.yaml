@@ -13,11 +13,12 @@ metadata:
   annotations:
     {{- toYaml .Values.admissionController.annotations | nindent 4 }}
 webhooks:
-  - name: "admission-controller.heimdall.dadrus.github.com"
+  - name: admission-controller.heimdall.dadrus.github.com
     admissionReviewVersions: [ "v1" ]
     sideEffects: None
     timeoutSeconds: {{ .Values.admissionController.timeoutSeconds }}
     {{- with .Values.admissionController.namespaceSelector }}
+    namespaceSelector:
       {{- toYaml . | nindent 8 }}
     {{- end }}
     rules:
