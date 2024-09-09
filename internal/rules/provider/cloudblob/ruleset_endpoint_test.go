@@ -188,12 +188,12 @@ func TestFetchRuleSets(t *testing.T) {
 	"rules": [{
 		"id": "foobar",
         "match": {
-          "path": "/foo/bar/api1",
-          "with": {
-            "scheme": "http",
-            "host_glob": "**",
-            "methods": ["GET", "POST"]
-          }
+          "routes": [
+            { "path": "/foo/bar/api1" }
+          ],
+          "scheme": "http",
+          "hosts": [{ "type": "glob", "value": "**"}],
+          "methods": ["GET", "POST"]
         },
 		"execute": [
 			{ "authenticator": "foobar" }
@@ -207,13 +207,15 @@ name: test2
 rules:
 - id: barfoo
   match:
-    path: /foo/bar/api2
-    with:
-      scheme: http
-      host_glob: "**"
-      methods: 
-        - GET
-        - POST
+    routes:
+      - path: /foo/bar/api2
+    scheme: http
+    hosts:
+      - type: glob
+        value: "**"
+    methods: 
+      - GET
+      - POST
   execute:
   - authenticator: barfoo
 `
@@ -264,12 +266,12 @@ rules:
 				"rules": [{
 					"id": "foobar",
                     "match": {
-                      "path": "/foo/bar/api1",
-                      "with": {
-                        "scheme": "http",
-                        "host_glob": "**",
-                        "methods": ["GET", "POST"]
-                      }
+                      "routes": [
+                         { "path": "/foo/bar/api1" }
+                      ],
+                      "scheme": "http",
+                      "hosts": [{ "type": "glob", "value": "**" }],
+                      "methods": ["GET", "POST"]
                     },
 					"execute": [
 						{ "authenticator": "foobar" }
@@ -282,12 +284,12 @@ rules:
 				"rules": [{
 					"id": "barfoo",
                     "match": {
-                      "path": "/foo/bar/api2",
-                      "with": {
-                        "scheme": "http",
-                        "host_glob": "**",
-                        "methods": ["GET", "POST"]
-                      }
+                      "routes": [
+                        { "path": "/foo/bar/api2" }
+                      ],
+                      "scheme": "http",
+                      "hosts": [{ "type": "glob", "value": "**"}],
+                      "methods": ["GET", "POST"]
                     },
 					"execute": [
 						{ "authenticator": "barfoo" }
@@ -382,12 +384,12 @@ rules:
 				"rules": [{
 					"id": "foobar",
                     "match": {
-                      "path": "/foo/bar/api1",
-                      "with": {
-                        "scheme": "http",
-                        "host_glob": "**",
-                        "methods": ["GET", "POST"]
-                      }
+                      "routes": [
+                        { "path": "/foo/bar/api1" }
+                      ],
+                      "scheme": "http",
+                      "hosts": [{ "type": "glob", "value": "**" }],
+                      "methods": ["GET", "POST"]
                     },
 					"execute": [
 						{ "authenticator": "foobar" }
