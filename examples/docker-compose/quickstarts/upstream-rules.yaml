@@ -2,9 +2,9 @@ version: "1alpha4"
 rules:
 - id: demo:public
   match:
-    path: /public
-    with:
-      methods: [ GET, POST ]
+    routes:
+      - path: /public
+    methods: [ GET, POST ]
   forward_to:
     host: upstream:8081
   execute:
@@ -13,10 +13,13 @@ rules:
 
 - id: demo:protected
   match:
-    path: /:user
-    with:
-      path_regex: ^/(user|admin)
-      methods: [ GET, POST ]
+    routes:
+      - path: /:user
+        path_params:
+          - type: regex
+            name: user
+            value: (user|admin)
+    methods: [ GET, POST ]
   forward_to:
     host: upstream:8081
   execute:
