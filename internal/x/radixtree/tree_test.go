@@ -149,6 +149,7 @@ func TestTreeSearch(t *testing.T) {
 			if expParams == nil {
 				expParams = map[string]string{}
 			}
+
 			assert.Equal(t, expParams, entry.Parameters, "Path %s expected parameters are %v, saw %v", tc.path, tc.expParams, entry.Parameters)
 		})
 	}

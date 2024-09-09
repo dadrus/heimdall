@@ -148,13 +148,13 @@ func (f *ruleFactory) createExecutePipeline(
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
+// nolint:cyclop,funlen
 func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (rule.Rule, error) {
 	if f.mode == config.ProxyMode && ruleConfig.Backend == nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
-	slashesHandling := x.IfThenElse(
-		len(ruleConfig.EncodedSlashesHandling) != 0,
+	slashesHandling := x.IfThenElse(len(ruleConfig.EncodedSlashesHandling) != 0,
 		ruleConfig.EncodedSlashesHandling,
 		config2.EncodedSlashesOff,
 	)
@@ -223,11 +223,12 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 				CausedBy(err)
 		}
 
-		rul.routes = append(rul.routes, &routeImpl{
-			rule:    rul,
-			path:    rc.Path,
-			matcher: compositeMatcher{sm, mm, hm, ppm},
-		})
+		rul.routes = append(rul.routes,
+			&routeImpl{
+				rule:    rul,
+				path:    rc.Path,
+				matcher: compositeMatcher{sm, mm, hm, ppm},
+			})
 	}
 
 	return rul, nil

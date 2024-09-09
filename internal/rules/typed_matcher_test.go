@@ -164,8 +164,7 @@ func TestExactMatcher(t *testing.T) {
 		{uc: "doesn't match", expression: "foo", toMatch: "bar"},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
-			matcher, err := newExactMatcher(tc.expression)
-			require.NoError(t, err)
+			matcher := newExactMatcher(tc.expression)
 
 			matches := matcher.match(tc.toMatch)
 			assert.Equal(t, tc.matches, matches)

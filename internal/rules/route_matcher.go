@@ -28,9 +28,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
-// nolint: gochecknoglobals
-var spaceReplacer = strings.NewReplacer("\t", "", "\n", "", "\v", "", "\f", "", "\r", "", " ", "")
-
 var (
 	ErrRequestSchemeMismatch = errors.New("request scheme mismatch")
 	ErrRequestMethodMismatch = errors.New("request method mismatch")
@@ -164,7 +161,7 @@ func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
 		case "regex":
 			tm, err = newRegexMatcher(host.Value)
 		case "exact":
-			tm, err = newExactMatcher(host.Value)
+			tm = newExactMatcher(host.Value)
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported host matching expression type '%s' at index %d", host.Type, idx)
@@ -181,7 +178,10 @@ func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
 	return matchers, nil
 }
 
-func createPathParamsMatcher(params []config.ParameterMatcher, esh config.EncodedSlashesHandling) (RouteMatcher, error) {
+func createPathParamsMatcher(
+	params []config.ParameterMatcher,
+	esh config.EncodedSlashesHandling,
+) (RouteMatcher, error) {
 	matchers := make(compositeMatcher, len(params))
 
 	for idx, param := range params {
@@ -196,7 +196,7 @@ func createPathParamsMatcher(params []config.ParameterMatcher, esh config.Encode
 		case "regex":
 			tm, err = newRegexMatcher(param.Value)
 		case "exact":
-			tm, err = newExactMatcher(param.Value)
+			tm = newExactMatcher(param.Value)
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported path parameter expression type '%s' for parameter '%s' at index %d",

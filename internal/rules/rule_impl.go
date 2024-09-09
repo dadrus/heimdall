@@ -112,7 +112,7 @@ func (r *ruleImpl) Routes() []rule.Route { return r.routes }
 func (r *ruleImpl) EqualTo(other rule.Rule) bool {
 	return r.ID() == other.ID() &&
 		r.SrcID() == other.SrcID() &&
-		bytes.Equal(r.hash, other.(*ruleImpl).hash)
+		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
 func (r *ruleImpl) AllowsBacktracking() bool { return r.allowsBacktracking }

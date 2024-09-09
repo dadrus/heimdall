@@ -82,4 +82,4 @@ func newRegexMatcher(pattern string) (typedMatcher, error) {
 	return &regexpMatcher{compiled: compiled}, nil
 }
 
-func newExactMatcher(value string) (typedMatcher, error) { return &exactMatcher{value: value}, nil }
+func newExactMatcher(value string) typedMatcher { return &exactMatcher{value: value} }

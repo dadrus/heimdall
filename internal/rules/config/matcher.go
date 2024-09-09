@@ -19,16 +19,16 @@ package config
 import "slices"
 
 type Matcher struct {
-	Routes              []Route       `json:"routes"               yaml:"routes"               validate:"required,dive"`              //nolint:lll
-	BacktrackingEnabled *bool         `json:"backtracking_enabled" yaml:"backtracking_enabled"`                                       //nolint:lll
-	Scheme              string        `json:"scheme"               yaml:"scheme"               validate:"omitempty,oneof=http https"` //nolint:lll
-	Methods             []string      `json:"methods"              yaml:"methods"              validate:"omitempty,dive,required"`    //nolint:lll
-	Hosts               []HostMatcher `json:"hosts"                yaml:"hosts"                validate:"omitempty,dive,required"`    //nolint:lll
+	Routes              []Route       `json:"routes"               yaml:"routes"               validate:"required,dive"`              //nolint:lll,tagalign
+	BacktrackingEnabled *bool         `json:"backtracking_enabled" yaml:"backtracking_enabled"`                                       //nolint:lll,tagalign
+	Scheme              string        `json:"scheme"               yaml:"scheme"               validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
+	Methods             []string      `json:"methods"              yaml:"methods"              validate:"omitempty,dive,required"`    //nolint:lll,tagalign
+	Hosts               []HostMatcher `json:"hosts"                yaml:"hosts"                validate:"omitempty,dive,required"`    //nolint:lll,tagalign
 }
 
 type Route struct {
-	Path       string             `json:"path"        yaml:"path"        validate:"required"`
-	PathParams []ParameterMatcher `json:"path_params" yaml:"path_params" validate:"omitempty,dive,required"`
+	Path       string             `json:"path"        yaml:"path"        validate:"required"`                //nolint:lll,tagalign
+	PathParams []ParameterMatcher `json:"path_params" yaml:"path_params" validate:"omitempty,dive,required"` //nolint:lll,tagalign
 }
 
 func (r *Route) DeepCopyInto(out *Route) {
@@ -38,18 +38,19 @@ func (r *Route) DeepCopyInto(out *Route) {
 }
 
 type ParameterMatcher struct {
-	Name  string `json:"name"  yaml:"name"  validate:"required"`
-	Value string `json:"value" yaml:"value" validate:"required"`
-	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"`
+	Name  string `json:"name"  yaml:"name"  validate:"required"`                        //nolint:tagalign
+	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
+	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
 }
 
 type HostMatcher struct {
-	Value string `json:"value" yaml:"value" validate:"required"`
-	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"`
+	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
+	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
 }
 
 func (m *Matcher) DeepCopyInto(out *Matcher) {
 	var withBacktracking *bool
+
 	if m.BacktrackingEnabled != nil {
 		value := *m.BacktrackingEnabled
 		withBacktracking = &value

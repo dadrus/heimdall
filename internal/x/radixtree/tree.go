@@ -381,8 +381,9 @@ func (n *Tree[V]) findNode(path string, captures []string, matcher LookupMatcher
 		nextToken := path[nextSeparator:]
 
 		if len(thisToken) > 0 { // Don't match on empty tokens.
-			tmp := append(captures, thisToken)
-			found, idx, tmp, backtrack = n.wildcardChild.findNode(nextToken, tmp, matcher)
+			var tmp []string
+
+			found, idx, tmp, backtrack = n.wildcardChild.findNode(nextToken, append(captures, thisToken), matcher)
 			if found != nil {
 				return found, idx, tmp, backtrack
 			} else if !backtrack {
