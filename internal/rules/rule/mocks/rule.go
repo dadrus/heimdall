@@ -22,12 +22,12 @@ func (_m *RuleMock) EXPECT() *RuleMock_Expecter {
 	return &RuleMock_Expecter{mock: &_m.Mock}
 }
 
-// BacktrackingEnabled provides a mock function with given fields:
-func (_m *RuleMock) BacktrackingEnabled() bool {
+// AllowsBacktracking provides a mock function with given fields:
+func (_m *RuleMock) AllowsBacktracking() bool {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for BacktrackingEnabled")
+		panic("no return value specified for AllowsBacktracking")
 	}
 
 	var r0 bool
@@ -40,29 +40,75 @@ func (_m *RuleMock) BacktrackingEnabled() bool {
 	return r0
 }
 
-// RuleMock_BacktrackingEnabled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BacktrackingEnabled'
-type RuleMock_BacktrackingEnabled_Call struct {
+// RuleMock_AllowsBacktracking_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AllowsBacktracking'
+type RuleMock_AllowsBacktracking_Call struct {
 	*mock.Call
 }
 
-// BacktrackingEnabled is a helper method to define mock.On call
-func (_e *RuleMock_Expecter) BacktrackingEnabled() *RuleMock_BacktrackingEnabled_Call {
-	return &RuleMock_BacktrackingEnabled_Call{Call: _e.mock.On("BacktrackingEnabled")}
+// AllowsBacktracking is a helper method to define mock.On call
+func (_e *RuleMock_Expecter) AllowsBacktracking() *RuleMock_AllowsBacktracking_Call {
+	return &RuleMock_AllowsBacktracking_Call{Call: _e.mock.On("AllowsBacktracking")}
 }
 
-func (_c *RuleMock_BacktrackingEnabled_Call) Run(run func()) *RuleMock_BacktrackingEnabled_Call {
+func (_c *RuleMock_AllowsBacktracking_Call) Run(run func()) *RuleMock_AllowsBacktracking_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *RuleMock_BacktrackingEnabled_Call) Return(_a0 bool) *RuleMock_BacktrackingEnabled_Call {
+func (_c *RuleMock_AllowsBacktracking_Call) Return(_a0 bool) *RuleMock_AllowsBacktracking_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *RuleMock_BacktrackingEnabled_Call) RunAndReturn(run func() bool) *RuleMock_BacktrackingEnabled_Call {
+func (_c *RuleMock_AllowsBacktracking_Call) RunAndReturn(run func() bool) *RuleMock_AllowsBacktracking_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// EqualTo provides a mock function with given fields: other
+func (_m *RuleMock) EqualTo(other rule.Rule) bool {
+	ret := _m.Called(other)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EqualTo")
+	}
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(rule.Rule) bool); ok {
+		r0 = rf(other)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// RuleMock_EqualTo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EqualTo'
+type RuleMock_EqualTo_Call struct {
+	*mock.Call
+}
+
+// EqualTo is a helper method to define mock.On call
+//   - other rule.Rule
+func (_e *RuleMock_Expecter) EqualTo(other interface{}) *RuleMock_EqualTo_Call {
+	return &RuleMock_EqualTo_Call{Call: _e.mock.On("EqualTo", other)}
+}
+
+func (_c *RuleMock_EqualTo_Call) Run(run func(other rule.Rule)) *RuleMock_EqualTo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(rule.Rule))
+	})
+	return _c
+}
+
+func (_c *RuleMock_EqualTo_Call) Return(_a0 bool) *RuleMock_EqualTo_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *RuleMock_EqualTo_Call) RunAndReturn(run func(rule.Rule) bool) *RuleMock_EqualTo_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -170,93 +216,49 @@ func (_c *RuleMock_ID_Call) RunAndReturn(run func() string) *RuleMock_ID_Call {
 	return _c
 }
 
-// Matches provides a mock function with given fields: ctx
-func (_m *RuleMock) Matches(ctx heimdall.Context) bool {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Matches")
-	}
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(heimdall.Context) bool); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
-// RuleMock_Matches_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Matches'
-type RuleMock_Matches_Call struct {
-	*mock.Call
-}
-
-// Matches is a helper method to define mock.On call
-//   - ctx heimdall.Context
-func (_e *RuleMock_Expecter) Matches(ctx interface{}) *RuleMock_Matches_Call {
-	return &RuleMock_Matches_Call{Call: _e.mock.On("Matches", ctx)}
-}
-
-func (_c *RuleMock_Matches_Call) Run(run func(ctx heimdall.Context)) *RuleMock_Matches_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context))
-	})
-	return _c
-}
-
-func (_c *RuleMock_Matches_Call) Return(_a0 bool) *RuleMock_Matches_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *RuleMock_Matches_Call) RunAndReturn(run func(heimdall.Context) bool) *RuleMock_Matches_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// PathExpression provides a mock function with given fields:
-func (_m *RuleMock) PathExpression() string {
+// Routes provides a mock function with given fields:
+func (_m *RuleMock) Routes() []rule.Route {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for PathExpression")
+		panic("no return value specified for Routes")
 	}
 
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
+	var r0 []rule.Route
+	if rf, ok := ret.Get(0).(func() []rule.Route); ok {
 		r0 = rf()
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]rule.Route)
+		}
 	}
 
 	return r0
 }
 
-// RuleMock_PathExpression_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PathExpression'
-type RuleMock_PathExpression_Call struct {
+// RuleMock_Routes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Routes'
+type RuleMock_Routes_Call struct {
 	*mock.Call
 }
 
-// PathExpression is a helper method to define mock.On call
-func (_e *RuleMock_Expecter) PathExpression() *RuleMock_PathExpression_Call {
-	return &RuleMock_PathExpression_Call{Call: _e.mock.On("PathExpression")}
+// Routes is a helper method to define mock.On call
+func (_e *RuleMock_Expecter) Routes() *RuleMock_Routes_Call {
+	return &RuleMock_Routes_Call{Call: _e.mock.On("Routes")}
 }
 
-func (_c *RuleMock_PathExpression_Call) Run(run func()) *RuleMock_PathExpression_Call {
+func (_c *RuleMock_Routes_Call) Run(run func()) *RuleMock_Routes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *RuleMock_PathExpression_Call) Return(_a0 string) *RuleMock_PathExpression_Call {
+func (_c *RuleMock_Routes_Call) Return(_a0 []rule.Route) *RuleMock_Routes_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *RuleMock_PathExpression_Call) RunAndReturn(run func() string) *RuleMock_PathExpression_Call {
+func (_c *RuleMock_Routes_Call) RunAndReturn(run func() []rule.Route) *RuleMock_Routes_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -26,8 +26,8 @@ type Rule interface {
 	ID() string
 	SrcID() string
 	Execute(ctx heimdall.Context) (Backend, error)
-	Matches(ctx heimdall.Context) bool
-	PathExpression() string
-	BacktrackingEnabled() bool
+	Routes() []Route
 	SameAs(other Rule) bool
+	EqualTo(other Rule) bool
+	AllowsBacktracking() bool
 }
