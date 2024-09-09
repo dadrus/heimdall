@@ -110,60 +110,20 @@ func TestParseRules(t *testing.T) {
 			content: []byte(`{
 "version": "1",
 "name": "foo",
-"rules": [{"id": "foo", "match":{"with": {"host_glob":"**"}}, "execute": [{"authenticator":"test"}]}]
-}`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'path' is a required field")
-				require.Nil(t, ruleSet)
-			},
-		},
-		{
-			uc:          "JSON rule set with a rule which match definition contains conflicting fields for host matching",
-			contentType: "application/json",
-			content: []byte(`{
-"version": "1",
-"name": "foo",
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "with": {"host_glob":"**", "host_regex":"**"}},
-    "execute": [{"authenticator":"test"}]
-  }]
+    "match": {
+      "hosts":[{ "value": "*", "type": "glob" }]
+    },
+    "execute": [{"authenticator":"test"}]}]
 }`),
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'with'.'host_glob' is an excluded field")
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'with'.'host_regex' is an excluded field")
-				require.Nil(t, ruleSet)
-			},
-		},
-		{
-			uc:          "JSON rule set with a rule which match definition contains conflicting fields for path matching",
-			contentType: "application/json",
-			content: []byte(`{
-"version": "1",
-"name": "foo",
-"rules": [
-  {
-    "id": "foo",
-    "match":{"path":"/foo/bar", "with": {"path_glob":"**", "path_regex":"**"}},
-    "execute": [{"authenticator":"test"}]
-  }]
-}`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'with'.'path_glob' is an excluded field")
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'with'.'path_regex' is an excluded field")
+				require.Contains(t, err.Error(), "'rules'[0].'match'.'routes' is a required field")
 				require.Nil(t, ruleSet)
 			},
 		},
@@ -176,7 +136,11 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "with": {"scheme":"foo", "methods":["ALL"]}},
+    "match":{
+      "routes": [{ "path":"/foo/bar" }],
+      "scheme":"foo",
+      "methods":["ALL"]
+    },
     "execute": [{"authenticator":"test"}]
   }]
 }`),
@@ -185,7 +149,7 @@ func TestParseRules(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'with'.'scheme' must be one of [http https]")
+				require.Contains(t, err.Error(), "'rules'[0].'match'.'scheme' must be one of [http https]")
 				require.Nil(t, ruleSet)
 			},
 		},
@@ -198,7 +162,9 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar"},
+    "match":{
+      "routes": [{ "path":"/foo/bar" }]
+    },
     "execute": [{"authenticator":"test"}],
     "forward_to": { "rewrite": {"scheme": "http"}}
   }]
@@ -221,7 +187,9 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar"},
+    "match":{
+      "routes": [{ "path":"/foo/bar" }]
+    },
     "allow_encoded_slashes": "foo",
     "execute": [{"authenticator":"test"}]
   }]
@@ -235,27 +203,6 @@ func TestParseRules(t *testing.T) {
 			},
 		},
 		{
-			uc:          "JSON rule set with invalid backtracking_enabled settings",
-			contentType: "application/json",
-			content: []byte(`{
-"version": "1",
-"name": "foo",
-"rules": [
-  {
-    "id": "foo",
-    "match":{"path":"/foo/bar", "backtracking_enabled": true },
-    "execute": [{"authenticator":"test"}]
-  }]
-}`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
-				t.Helper()
-
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.Contains(t, err.Error(), "'backtracking_enabled' is an excluded field")
-				require.Nil(t, ruleSet)
-			},
-		},
-		{
 			uc:          "Valid JSON rule set",
 			contentType: "application/json",
 			content: []byte(`{
@@ -264,7 +211,11 @@ func TestParseRules(t *testing.T) {
 "rules": [
   {
     "id": "foo",
-    "match":{"path":"/foo/bar", "with": { "methods": ["ALL"] }, "backtracking_enabled": true },
+    "match":{
+      "routes": [{ "path":"/foo/bar" }],
+      "methods": ["ALL"],
+      "backtracking_enabled": true 
+    },
     "execute": [{"authenticator":"test"}]
   }]
 }`),
@@ -280,8 +231,10 @@ func TestParseRules(t *testing.T) {
 				rul := ruleSet.Rules[0]
 				require.NotNil(t, rul)
 				assert.Equal(t, "foo", rul.ID)
-				assert.Equal(t, "/foo/bar", rul.Matcher.Path)
-				assert.ElementsMatch(t, []string{"ALL"}, rul.Matcher.With.Methods)
+				assert.Len(t, rul.Matcher.Routes, 1)
+				assert.Equal(t, "/foo/bar", rul.Matcher.Routes[0].Path)
+				assert.ElementsMatch(t, []string{"ALL"}, rul.Matcher.Methods)
+				assert.True(t, *rul.Matcher.BacktrackingEnabled)
 				assert.Len(t, rul.Execute, 1)
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
 			},
@@ -295,10 +248,10 @@ name: foo
 rules:
 - id: bar
   match:
-    path: /foo/bar
-    with:
-      methods:
-        - GET
+    routes:
+      - path: /foo/bar
+    methods:
+      - GET
   forward_to:
     host: test
   allow_encoded_slashes: no_decode
@@ -316,8 +269,10 @@ rules:
 				rul := ruleSet.Rules[0]
 				require.NotNil(t, rul)
 				assert.Equal(t, "bar", rul.ID)
-				assert.Equal(t, "/foo/bar", rul.Matcher.Path)
-				assert.ElementsMatch(t, []string{"GET"}, rul.Matcher.With.Methods)
+				assert.Len(t, rul.Matcher.Routes, 1)
+				assert.Equal(t, "/foo/bar", rul.Matcher.Routes[0].Path)
+				assert.ElementsMatch(t, []string{"GET"}, rul.Matcher.Methods)
+				assert.Equal(t, "test", rul.Backend.Host)
 				assert.Equal(t, EncodedSlashesOnNoDecode, rul.EncodedSlashesHandling)
 				assert.Len(t, rul.Execute, 1)
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
@@ -395,7 +350,8 @@ name: foo
 rules:
 - id: bar
   match:
-    path: foo
+    routes:
+      - path: foo
   execute:
     - authenticator: test
 `),
@@ -411,7 +367,8 @@ rules:
 				rul := ruleSet.Rules[0]
 				require.NotNil(t, rul)
 				assert.Equal(t, "bar", rul.ID)
-				assert.Equal(t, "foo", rul.Matcher.Path)
+				assert.Len(t, rul.Matcher.Routes, 1)
+				assert.Equal(t, "foo", rul.Matcher.Routes[0].Path)
 			},
 		},
 		{
@@ -441,7 +398,14 @@ name: ${FOO}
 rules:
 - id: bar
   match:
-    path: foo
+    routes:
+      - path: /foo/:bar
+        path_params:
+          - name: bar
+            type: glob
+            value: "[a-z]"
+    methods:
+      - GET
   execute:
     - authenticator: test
 `),
@@ -457,7 +421,13 @@ rules:
 				rul := ruleSet.Rules[0]
 				require.NotNil(t, rul)
 				assert.Equal(t, "bar", rul.ID)
-				assert.Equal(t, "foo", rul.Matcher.Path)
+				assert.Len(t, rul.Matcher.Routes, 1)
+				assert.Equal(t, "/foo/:bar", rul.Matcher.Routes[0].Path)
+				assert.Len(t, rul.Matcher.Routes[0].PathParams, 1)
+				assert.Equal(t, "bar", rul.Matcher.Routes[0].PathParams[0].Name)
+				assert.Equal(t, "glob", rul.Matcher.Routes[0].PathParams[0].Type)
+				assert.Equal(t, "[a-z]", rul.Matcher.Routes[0].PathParams[0].Value)
+				assert.Equal(t, "GET", rul.Matcher.Methods[0])
 			},
 		},
 		{
@@ -468,7 +438,8 @@ name: ${FOO}
 rules:
 - id: bar
   match:
-    path: foo
+    routes:
+      - path: foo
   execute:
     - authenticator: test
 `),
@@ -484,7 +455,8 @@ rules:
 				rul := ruleSet.Rules[0]
 				require.NotNil(t, rul)
 				assert.Equal(t, "bar", rul.ID)
-				assert.Equal(t, "foo", rul.Matcher.Path)
+				assert.Len(t, rul.Matcher.Routes, 1)
+				assert.Equal(t, "foo", rul.Matcher.Routes[0].Path)
 			},
 		},
 	} {
