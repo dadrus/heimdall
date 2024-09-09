@@ -51,11 +51,12 @@ func NewRuleFactory(
 }
 
 type ruleFactory struct {
-	hf             mechanisms.MechanismFactory
-	logger         zerolog.Logger
-	defaultRule    *ruleImpl
-	hasDefaultRule bool
-	mode           config.OperationMode
+	hf                  mechanisms.MechanismFactory
+	logger              zerolog.Logger
+	defaultRule         *ruleImpl
+	hasDefaultRule      bool
+	mode                config.OperationMode
+	defaultBacktracking bool
 }
 
 //nolint:funlen,gocognit,cyclop
@@ -158,11 +159,6 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		config2.EncodedSlashesOff,
 	)
 
-	matcher, err := ruleConfig.Matcher.With.ToRequestMatcher(slashesHandling)
-	if err != nil {
-		return nil, err
-	}
-
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
 	if err != nil {
 		return nil, err
@@ -173,14 +169,16 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, err
 	}
 
-	var defaultBacktracking bool
+	var allowsBacktracking bool
 
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
 		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
-		defaultBacktracking = f.defaultRule.allowsBacktracking
+		allowsBacktracking = x.IfThenElseExec(ruleConfig.Matcher.BacktrackingEnabled != nil,
+			func() bool { return *ruleConfig.Matcher.BacktrackingEnabled },
+			func() bool { return f.defaultBacktracking })
 	}
 
 	if len(authenticators) == 0 {
@@ -192,25 +190,47 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, err
 	}
 
-	allowsBacktracking := x.IfThenElseExec(ruleConfig.Matcher.BacktrackingEnabled != nil,
-		func() bool { return *ruleConfig.Matcher.BacktrackingEnabled },
-		func() bool { return defaultBacktracking })
-
-	return &ruleImpl{
+	rul := &ruleImpl{
 		id:                 ruleConfig.ID,
 		srcID:              srcID,
-		isDefault:          false,
-		allowsBacktracking: allowsBacktracking,
 		slashesHandling:    slashesHandling,
-		matcher:            matcher,
-		pathExpression:     ruleConfig.Matcher.Path,
+		allowsBacktracking: allowsBacktracking,
 		backend:            ruleConfig.Backend,
 		hash:               hash,
 		sc:                 authenticators,
 		sh:                 subHandlers,
 		fi:                 finalizers,
 		eh:                 errorHandlers,
-	}, nil
+	}
+
+	mm, err := createMethodMatcher(ruleConfig.Matcher.Methods)
+	if err != nil {
+		return nil, err
+	}
+
+	hm, err := createHostMatcher(ruleConfig.Matcher.Hosts)
+	if err != nil {
+		return nil, err
+	}
+
+	sm := schemeMatcher(ruleConfig.Matcher.Scheme)
+
+	for _, rc := range ruleConfig.Matcher.Routes {
+		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"failed creating route '%s'", rc.Path).
+				CausedBy(err)
+		}
+
+		rul.routes = append(rul.routes, &routeImpl{
+			rule:    rul,
+			path:    rc.Path,
+			matcher: compositeMatcher{sm, mm, hm, ppm},
+		})
+	}
+
+	return rul, nil
 }
 
 func (f *ruleFactory) createOnErrorPipeline(
@@ -276,18 +296,18 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	f.defaultRule = &ruleImpl{
-		id:                 "default",
-		slashesHandling:    config2.EncodedSlashesOff,
-		srcID:              "config",
-		isDefault:          true,
-		allowsBacktracking: ruleConfig.BacktrackingEnabled,
-		sc:                 authenticators,
-		sh:                 subHandlers,
-		fi:                 finalizers,
-		eh:                 errorHandlers,
+		id:              "default",
+		slashesHandling: config2.EncodedSlashesOff,
+		srcID:           "config",
+		isDefault:       true,
+		sc:              authenticators,
+		sh:              subHandlers,
+		fi:              finalizers,
+		eh:              errorHandlers,
 	}
 
 	f.hasDefaultRule = true
+	f.defaultBacktracking = ruleConfig.BacktrackingEnabled
 
 	return nil
 }
@@ -330,11 +350,12 @@ func getConfig(conf any) config.MechanismConfig {
 		return nil
 	}
 
-	if m, ok := conf.(map[string]any); ok {
-		return m
+	m, ok := conf.(map[string]any)
+	if !ok {
+		panic(fmt.Sprintf("unexpected type for config %T", conf))
 	}
 
-	panic(fmt.Sprintf("unexpected type for config %T", conf))
+	return m
 }
 
 func getExecutionCondition(conf any) (executionCondition, error) {
