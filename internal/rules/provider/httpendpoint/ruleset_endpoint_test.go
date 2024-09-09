@@ -135,7 +135,8 @@ name: test
 rules:
 - id: bar
   match:
-    path: /bar
+    routes: 
+      - path: /bar
 `))
 				require.NoError(t, err)
 			},
@@ -185,9 +186,13 @@ name: test
 rules:
 - id: foo
   match:
-    path: /foo
-    with:
-      methods: [ GET ]
+    routes:
+      - path: /foo/:bar
+        path_params:
+          - name: bar
+            type: glob
+            value: "*baz"
+    methods: [ GET ]
   execute:
    - authenticator: test
 `))
@@ -199,9 +204,18 @@ rules:
 				require.NoError(t, err)
 
 				require.NotNil(t, ruleSet)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
-				require.NotEmpty(t, ruleSet.Hash)
+				require.Len(t, ruleSet.Rules[0].Matcher.Routes, 1)
+				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.Routes[0].Path)
+				require.Len(t, ruleSet.Rules[0].Matcher.Routes[0].PathParams, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Name)
+				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Type)
+				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Value)
+				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.Methods)
+				assert.NotEmpty(t, ruleSet.Hash)
 			},
 		},
 		{
@@ -220,7 +234,13 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo", "match": { "path": "/foo", "with": { "methods" : ["GET"] }}, "execute": [{ "authenticator": "test"}] }
+		{ 
+          "id": "foo",
+          "match": { 
+            "routes": [{"path": "/foo"}],
+            "methods" : ["GET"]
+          },
+          "execute": [{ "authenticator": "test"}] }
 	]
 }`))
 				require.NoError(t, err)
@@ -255,12 +275,11 @@ rules:
       { 
 	    "id": "foo",
         "match": {
-          "path": "/foo/bar/:*",
-          "with": {
-            "host_glob": "moobar.local:9090",
-            "path_glob": "/foo/bar/**",
-            "methods": [ "GET" ]
-          }
+          "routes": [
+            { "path": "/foo/bar/:*", "path_params": [{ "name": "*", "type":"glob", "value":"{*.ico,*.js}" }] }
+          ],
+          "methods": [ "GET" ],
+          "hosts": [{ "value":"moobar.local:9090", "type": "exact"}],
 	    },
         "execute": [{ "authenticator": "test"}]
 	  }
