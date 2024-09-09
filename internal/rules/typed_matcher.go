@@ -13,7 +13,7 @@ var (
 )
 
 type (
-	patternMatcher interface {
+	typedMatcher interface {
 		match(pattern string) bool
 	}
 
@@ -23,6 +23,10 @@ type (
 
 	regexpMatcher struct {
 		compiled *regexp.Regexp
+	}
+
+	valueMatcher struct {
+		value string
 	}
 )
 
@@ -34,7 +38,9 @@ func (m *regexpMatcher) match(matchAgainst string) bool {
 	return m.compiled.MatchString(matchAgainst)
 }
 
-func newGlobMatcher(pattern string, separator rune) (patternMatcher, error) {
+func (m *valueMatcher) match(value string) bool { return m.value == value }
+
+func newGlobMatcher(pattern string, separator rune) (typedMatcher, error) {
 	if len(pattern) == 0 {
 		return nil, ErrNoGlobPatternDefined
 	}
@@ -47,7 +53,7 @@ func newGlobMatcher(pattern string, separator rune) (patternMatcher, error) {
 	return &globMatcher{compiled: compiled}, nil
 }
 
-func newRegexMatcher(pattern string) (patternMatcher, error) {
+func newRegexMatcher(pattern string) (typedMatcher, error) {
 	if len(pattern) == 0 {
 		return nil, ErrNoRegexPatternDefined
 	}
@@ -59,3 +65,5 @@ func newRegexMatcher(pattern string) (patternMatcher, error) {
 
 	return &regexpMatcher{compiled: compiled}, nil
 }
+
+func newValueMatcher(value string) (typedMatcher, error) { return &valueMatcher{value: value}, nil }

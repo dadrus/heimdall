@@ -1,4 +1,4 @@
-package config
+package rules
 
 import (
 	"net/http"

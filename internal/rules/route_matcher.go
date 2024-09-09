@@ -1,7 +1,8 @@
-package config
+package rules
 
 import (
 	"errors"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"net/http"
 	"net/url"
 	"slices"
@@ -22,17 +23,17 @@ var (
 	ErrRequestPathMismatch   = errors.New("request path mismatch")
 )
 
-//go:generate mockery --name RequestMatcher --structname RequestMatcherMock
+//go:generate mockery --name RouteMatcher --structname RouteMatcherMock
 
-type RequestMatcher interface {
-	Matches(request *heimdall.Request) error
+type RouteMatcher interface {
+	Matches(request *heimdall.Request, keys, values []string) error
 }
 
-type compositeMatcher []RequestMatcher
+type compositeMatcher []RouteMatcher
 
-func (c compositeMatcher) Matches(request *heimdall.Request) error {
+func (c compositeMatcher) Matches(request *heimdall.Request, keys, values []string) error {
 	for _, matcher := range c {
-		if err := matcher.Matches(request); err != nil {
+		if err := matcher.Matches(request, keys, values); err != nil {
 			return err
 		}
 	}
@@ -46,7 +47,7 @@ func (alwaysMatcher) match(_ string) bool { return true }
 
 type schemeMatcher string
 
-func (s schemeMatcher) Matches(request *heimdall.Request) error {
+func (s schemeMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	if len(s) != 0 && string(s) != request.URL.Scheme {
 		return errorchain.NewWithMessagef(ErrRequestSchemeMismatch, "expected %s, got %s", s, request.URL.Scheme)
 	}
@@ -56,7 +57,7 @@ func (s schemeMatcher) Matches(request *heimdall.Request) error {
 
 type methodMatcher []string
 
-func (m methodMatcher) Matches(request *heimdall.Request) error {
+func (m methodMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	if len(m) == 0 {
 		return nil
 	}
@@ -69,10 +70,10 @@ func (m methodMatcher) Matches(request *heimdall.Request) error {
 }
 
 type hostMatcher struct {
-	patternMatcher
+	typedMatcher
 }
 
-func (m *hostMatcher) Matches(request *heimdall.Request) error {
+func (m *hostMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	if !m.match(request.URL.Host) {
 		return errorchain.NewWithMessagef(ErrRequestHostMismatch, "%s is not expected", request.URL.Host)
 	}
@@ -80,15 +81,35 @@ func (m *hostMatcher) Matches(request *heimdall.Request) error {
 	return nil
 }
 
-type pathMatcher struct {
-	patternMatcher
+type paramMatcher struct {
+	typedMatcher
 
-	slashHandling EncodedSlashesHandling
+	name string
+}
+
+func (m *paramMatcher) Matches(_ *heimdall.Request, keys, values []string) error {
+	idx := slices.Index(keys, m.name)
+	if idx == -1 {
+		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "%s is not expected", m.name)
+	}
+
+	value := values[idx]
+	if !m.match(value) {
+		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "%s is not expected", value)
+	}
+
+	return nil
+}
+
+type pathMatcher struct {
+	typedMatcher
+
+	slashHandling config.EncodedSlashesHandling
 }
 
 func (m *pathMatcher) Matches(request *heimdall.Request) error {
 	var path string
-	if len(request.URL.RawPath) == 0 || m.slashHandling == EncodedSlashesOn {
+	if len(request.URL.RawPath) == 0 || m.slashHandling == config.EncodedSlashesOn {
 		path = request.URL.Path
 	} else {
 		unescaped, _ := url.PathUnescape(strings.ReplaceAll(request.URL.RawPath, "%2F", "$$$escaped-slash$$$"))
@@ -130,38 +151,64 @@ func createMethodMatcher(methods []string) (methodMatcher, error) {
 	return slicex.Subtract(methods, tbr), nil
 }
 
-func createPathMatcher(
-	globExpression string, regexExpression string, slashHandling EncodedSlashesHandling,
-) (*pathMatcher, error) {
-	matcher, err := createPatternMatcher(globExpression, '/', regexExpression)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"filed to compile path expression").CausedBy(err)
+func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
+	matchers := make(compositeMatcher, len(hosts))
+
+	for idx, host := range hosts {
+		var (
+			tm  typedMatcher
+			err error
+		)
+
+		switch host.Type {
+		case "glob":
+			tm, err = newGlobMatcher(host.Value, '.')
+		case "regex":
+			tm, err = newRegexMatcher(host.Value)
+		case "exact":
+			matchers[idx] = &hostMatcher{&valueMatcher{host.Value}}
+		default:
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"unsupported expression type for host")
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		matchers[idx] = &hostMatcher{tm}
 	}
 
-	return &pathMatcher{matcher, slashHandling}, nil
+	return matchers, nil
 }
 
-func createHostMatcher(globExpression string, regexExpression string) (*hostMatcher, error) {
-	matcher, err := createPatternMatcher(globExpression, '.', regexExpression)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"filed to compile host expression").CausedBy(err)
+func createParamsMatcher(params []config.ParameterMatcher) (RouteMatcher, error) {
+	matchers := make(compositeMatcher, len(params))
+
+	for idx, param := range params {
+		var (
+			tm  typedMatcher
+			err error
+		)
+
+		switch param.Type {
+		case "glob":
+			tm, err = newGlobMatcher(param.Value, '/')
+		case "regex":
+			tm, err = newRegexMatcher(param.Value)
+		case "exact":
+			matchers[idx] = &paramMatcher{&valueMatcher{param.Value}, param.Name}
+		default:
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"unsupported expression type for parameter")
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		matchers[idx] = &paramMatcher{tm, param.Name}
 	}
 
-	return &hostMatcher{matcher}, nil
-}
-
-func createPatternMatcher(globExpression string, globSeparator rune, regexExpression string) (patternMatcher, error) {
-	glob := spaceReplacer.Replace(globExpression)
-	regex := spaceReplacer.Replace(regexExpression)
-
-	switch {
-	case len(glob) != 0:
-		return newGlobMatcher(glob, globSeparator)
-	case len(regex) != 0:
-		return newRegexMatcher(regex)
-	default:
-		return alwaysMatcher{}, nil
-	}
+	return matchers, nil
 }
