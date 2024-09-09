@@ -1,14 +1,29 @@
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package rules
 
 import (
 	"errors"
-	"github.com/dadrus/heimdall/internal/rules/config"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -22,8 +37,6 @@ var (
 	ErrRequestHostMismatch   = errors.New("request host mismatch")
 	ErrRequestPathMismatch   = errors.New("request path mismatch")
 )
-
-//go:generate mockery --name RouteMatcher --structname RouteMatcherMock
 
 type RouteMatcher interface {
 	Matches(request *heimdall.Request, keys, values []string) error
@@ -40,10 +53,6 @@ func (c compositeMatcher) Matches(request *heimdall.Request, keys, values []stri
 
 	return nil
 }
-
-type alwaysMatcher struct{}
-
-func (alwaysMatcher) match(_ string) bool { return true }
 
 type schemeMatcher string
 
@@ -81,43 +90,31 @@ func (m *hostMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	return nil
 }
 
-type paramMatcher struct {
+type pathParamMatcher struct {
 	typedMatcher
 
-	name string
-}
-
-func (m *paramMatcher) Matches(_ *heimdall.Request, keys, values []string) error {
-	idx := slices.Index(keys, m.name)
-	if idx == -1 {
-		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "%s is not expected", m.name)
-	}
-
-	value := values[idx]
-	if !m.match(value) {
-		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "%s is not expected", value)
-	}
-
-	return nil
-}
-
-type pathMatcher struct {
-	typedMatcher
-
+	name          string
 	slashHandling config.EncodedSlashesHandling
 }
 
-func (m *pathMatcher) Matches(request *heimdall.Request) error {
-	var path string
-	if len(request.URL.RawPath) == 0 || m.slashHandling == config.EncodedSlashesOn {
-		path = request.URL.Path
-	} else {
-		unescaped, _ := url.PathUnescape(strings.ReplaceAll(request.URL.RawPath, "%2F", "$$$escaped-slash$$$"))
-		path = strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
+func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []string) error {
+	idx := slices.Index(keys, m.name)
+	if idx == -1 {
+		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "path parameter %s is not expected", m.name)
 	}
 
-	if !m.match(path) {
-		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "%s is not expected", path)
+	value := values[idx]
+	// URL.RawPath is set only if the original url contains url encoded parts
+	if len(request.URL.RawPath) != 0 &&
+		m.slashHandling == config.EncodedSlashesOff &&
+		strings.Contains(request.URL.RawPath, "%2F") {
+		return errorchain.NewWithMessagef(ErrRequestPathMismatch,
+			"value for path parameter %s contains encoded slashes which are not allowed", keys[idx])
+	}
+
+	if !m.match(value) {
+		return errorchain.NewWithMessagef(ErrRequestPathMismatch,
+			"captured values for path parameter %s is not expected", value)
 	}
 
 	return nil
@@ -141,7 +138,8 @@ func createMethodMatcher(methods []string) (methodMatcher, error) {
 	methods = slices.Compact(methods)
 	if res := slicex.Filter(methods, func(s string) bool { return len(s) == 0 }); len(res) != 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"methods list contains empty values. have you forgotten to put the corresponding value into braces?")
+			"methods list contains empty values. "+
+				"have you forgotten to put the corresponding value into braces?")
 	}
 
 	tbr := slicex.Filter(methods, func(s string) bool { return strings.HasPrefix(s, "!") })
@@ -166,14 +164,15 @@ func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
 		case "regex":
 			tm, err = newRegexMatcher(host.Value)
 		case "exact":
-			matchers[idx] = &hostMatcher{&valueMatcher{host.Value}}
+			tm, err = newExactMatcher(host.Value)
 		default:
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"unsupported expression type for host")
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"unsupported host matching expression type '%s' at index %d", host.Type, idx)
 		}
 
 		if err != nil {
-			return nil, err
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"failed to compile host matching expression at index %d", idx).CausedBy(err)
 		}
 
 		matchers[idx] = &hostMatcher{tm}
@@ -182,7 +181,7 @@ func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
 	return matchers, nil
 }
 
-func createParamsMatcher(params []config.ParameterMatcher) (RouteMatcher, error) {
+func createPathParamsMatcher(params []config.ParameterMatcher, esh config.EncodedSlashesHandling) (RouteMatcher, error) {
 	matchers := make(compositeMatcher, len(params))
 
 	for idx, param := range params {
@@ -197,17 +196,21 @@ func createParamsMatcher(params []config.ParameterMatcher) (RouteMatcher, error)
 		case "regex":
 			tm, err = newRegexMatcher(param.Value)
 		case "exact":
-			matchers[idx] = &paramMatcher{&valueMatcher{param.Value}, param.Name}
+			tm, err = newExactMatcher(param.Value)
 		default:
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"unsupported expression type for parameter")
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"unsupported path parameter expression type '%s' for parameter '%s' at index %d",
+				param.Type, param.Name, idx)
 		}
 
 		if err != nil {
-			return nil, err
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"failed to compile path params matching expression for parameter '%s' at index %d",
+				param.Name, idx).
+				CausedBy(err)
 		}
 
-		matchers[idx] = &paramMatcher{tm, param.Name}
+		matchers[idx] = &pathParamMatcher{tm, param.Name, esh}
 	}
 
 	return matchers, nil

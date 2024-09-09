@@ -1,4 +1,20 @@
-package config
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package rules
 
 import (
 	"testing"
@@ -131,6 +147,28 @@ func TestGlobPatternMatcher(t *testing.T) {
 			}
 
 			tc.assert(t, err, matched)
+		})
+	}
+}
+
+func TestExactMatcher(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc         string
+		expression string
+		toMatch    string
+		matches    bool
+	}{
+		{uc: "matches", expression: "foo", toMatch: "foo", matches: true},
+		{uc: "doesn't match", expression: "foo", toMatch: "bar"},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			matcher, err := newExactMatcher(tc.expression)
+			require.NoError(t, err)
+
+			matches := matcher.match(tc.toMatch)
+			assert.Equal(t, tc.matches, matches)
 		})
 	}
 }
