@@ -9,7 +9,7 @@ enableGitInfo: true
 security:
   enableInlineShortcodes: false
   exec:
-    allow: ['asciidoctor']
+    allow: ['asciidoctor', 'git']
     osEnv: ['(?i)^(PATH|PATHEXT|APPDATA|TMP|TEMP|TERM|GEM_PATH)$']
 
   funcs:
