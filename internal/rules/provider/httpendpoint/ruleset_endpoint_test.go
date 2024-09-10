@@ -276,7 +276,7 @@ rules:
 	    "id": "foo",
         "match": {
           "routes": [
-            { "path": "/foo/bar/:*", "path_params": [{ "name": "*", "type":"glob", "value":"{*.ico,*.js}" }] }
+            { "path": "/foo/bar/:baz", "path_params": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
           ],
           "methods": [ "GET" ],
           "hosts": [{ "value":"moobar.local:9090", "type": "exact"}],
