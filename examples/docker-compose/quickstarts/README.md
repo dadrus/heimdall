@@ -21,8 +21,8 @@ In that setup heimdall is not integrated with any other reverse proxy.
    curl -v http://127.0.0.1:9090/public
    curl -v http://127.0.0.1:9090/private
    curl -v http://127.0.0.1:9090/user
-   curl -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiIzZmFmNDkxOS0wZjUwLTQ3NGItOGExMy0yOTYzMjEzNThlOTMiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJ1c2VyIiwic3ViIjoiMiJ9.W5xCpwsFShS0RpOtrm9vrV2dN6K8pRr5gQnt0kluzLE6oNWFzf7Oot-0YLCPa64Z3XPd7cfGcBiSjrzKZSAj4g" 127.0.0.1:9090/user
-   curl -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiI0NjExZDM5Yy00MzI1LTRhMWYtYjdkOC1iMmYxMTE3NDEyYzAiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJhZG1pbiIsInN1YiI6IjEifQ.mZZ_UqC8RVzEKBPZbPs4eP-MkXLK22Q27ZJ34UwJiioFdaYXqYJ4ZsatP0TbpKeNyF83mkrrCGL_pWLFTho7Gg" 127.0.0.1:9090/admin
+   curl -v -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiIzZmFmNDkxOS0wZjUwLTQ3NGItOGExMy0yOTYzMjEzNThlOTMiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJ1c2VyIiwic3ViIjoiMiJ9.W5xCpwsFShS0RpOtrm9vrV2dN6K8pRr5gQnt0kluzLE6oNWFzf7Oot-0YLCPa64Z3XPd7cfGcBiSjrzKZSAj4g" 127.0.0.1:9090/user
+   curl -v -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiI0NjExZDM5Yy00MzI1LTRhMWYtYjdkOC1iMmYxMTE3NDEyYzAiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJhZG1pbiIsInN1YiI6IjEifQ.mZZ_UqC8RVzEKBPZbPs4eP-MkXLK22Q27ZJ34UwJiioFdaYXqYJ4ZsatP0TbpKeNyF83mkrrCGL_pWLFTho7Gg" 127.0.0.1:9090/admin
    ```
    
    Check the responses
@@ -43,8 +43,8 @@ In that setup heimdall is integrated with Traefik. All requests are sent to trae
    curl -v http://127.0.0.1:9090/public
    curl -v http://127.0.0.1:9090/private
    curl -v http://127.0.0.1:9090/user
-   curl -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiIzZmFmNDkxOS0wZjUwLTQ3NGItOGExMy0yOTYzMjEzNThlOTMiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJ1c2VyIiwic3ViIjoiMiJ9.W5xCpwsFShS0RpOtrm9vrV2dN6K8pRr5gQnt0kluzLE6oNWFzf7Oot-0YLCPa64Z3XPd7cfGcBiSjrzKZSAj4g" 127.0.0.1:9090/user
-   curl -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiI0NjExZDM5Yy00MzI1LTRhMWYtYjdkOC1iMmYxMTE3NDEyYzAiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJhZG1pbiIsInN1YiI6IjEifQ.mZZ_UqC8RVzEKBPZbPs4eP-MkXLK22Q27ZJ34UwJiioFdaYXqYJ4ZsatP0TbpKeNyF83mkrrCGL_pWLFTho7Gg" 127.0.0.1:9090/admin
+   curl -v -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiIzZmFmNDkxOS0wZjUwLTQ3NGItOGExMy0yOTYzMjEzNThlOTMiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJ1c2VyIiwic3ViIjoiMiJ9.W5xCpwsFShS0RpOtrm9vrV2dN6K8pRr5gQnt0kluzLE6oNWFzf7Oot-0YLCPa64Z3XPd7cfGcBiSjrzKZSAj4g" 127.0.0.1:9090/user
+   curl -v -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiI0NjExZDM5Yy00MzI1LTRhMWYtYjdkOC1iMmYxMTE3NDEyYzAiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJhZG1pbiIsInN1YiI6IjEifQ.mZZ_UqC8RVzEKBPZbPs4eP-MkXLK22Q27ZJ34UwJiioFdaYXqYJ4ZsatP0TbpKeNyF83mkrrCGL_pWLFTho7Gg" 127.0.0.1:9090/admin
    ```
 
    Check the responses
