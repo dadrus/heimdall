@@ -58,7 +58,8 @@ Obviously, the authentication & authorization pipeline (defined in the `execute`
 ----
 id: rule:my-service:protected-api
 match:
-  path: /foo
+  routes:
+    - path: /foo
 execute:
   - authorizer: allow_all_requests_authz
 ----

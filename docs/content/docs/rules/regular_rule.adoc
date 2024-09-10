@@ -12,7 +12,7 @@ description: Regular rules allow definition and as such execution of arbitrary l
 
 :toc:
 
-In simplest case a regular rule will just reuse mechanisms from a previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex cases a rule can reconfigure parts of used mechanisms. Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
+In the simplest case, a regular rule reuses mechanisms from the previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex scenarios, a rule can reconfigure parts of the mechanisms being used. The specific parts that can be reconfigured or overridden depend on the mechanism itself and are described in the mechanism-specific documentation. Reconfiguration is always limited to the particular rule's pipeline and does not affect other rules.
 
 == Configuration
 
@@ -20,39 +20,66 @@ A single regular rule consists of the following properties:
 
 * *`id`*: _string_ (mandatory)
 +
-The unique identifier of a rule. It must be unique across all rules loaded by the same link:{{< relref "providers.adoc" >}}[Rule Provider]. To ensure this, it is recommended to let the `id` include the name of your upstream service, as well as its purpose. E.g. `rule:my-service:public-api`.
+The unique identifier of the rule. It must be unique across all rules loaded by the same link:{{< relref "providers.adoc" >}}[Rule Provider]. To ensure uniqueness, it's recommended to include the upstream service's name and the rule’s purpose in the id. For example, `rule:my-service:public-api`.
 
 * *`match`*: _RuleMatcher_ (mandatory)
 +
-Defines how to match a rule and supports the following properties (see also link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details):
+Defines the matching criteria for a rule, with the following properties:
 
-** *`path`*: _link:{{< relref "#_path_expression" >}}[PathExpression]_ (mandatory)
+** *`routes`*: _RouteMatcher array_ (mandatory)
 +
-The path expression describing the paths of incoming requests this rule is supposed to match. Supports usage of simple and free (named) wildcards.
+Specifies route conditions for matching the rule to incoming HTTP requests with each entry having the following properties:
+
+*** *`path`*: _string_ (mandatory)
++
+The link:{{< relref "#_path_expression" >}}[Path Expression] describing the request path this rule should match. It supports both simple and free (named) wildcards.
+
+*** *`path_params`*: _PathParameterConditions_ (optional)
++
+Additional conditions for the values captured by named wildcards in the path expression. Each entry supports the following properties:
+
+**** *`name`*: _string_ (mandatory)
++
+The name of the wildcard.
+
+**** *`type`*: _string_ (mandatory)
++
+The type of expression used to match the captured wildcard's value. The supported types are:
+
+***** `glob`: to use a https://github.com/gobwas/glob[glob expression] to match the captured value (`/` is used as a delimiter, so `*` matches anything until the next `/`).
+***** `regex` to use a regular expression to match the captured value.
+
+**** *`value`*: _string_ (mandatory)
++
+The actual expression based on the given `type`.
 
 ** *`backtracking_enabled`*: _boolean_ (optional)
 +
-This property can only be used together with the additional matching conditions (see the `with` property below). Enables or disables backtracking if a request is matched based on the `path` expression, but the additional matching conditions are not satisfied. Inherited from the default rule and defaults to the settings in that rule. If enabled, the lookup will traverse back to a rule with a less specific path expression and potentially (depending on the evaluation of additional conditions defined on that level) match it.
+Enables or disables backtracking when a request matches the path expressions but fails to meet additional matching criteria, like `path_params`, `hosts`, etc. This setting is inherited from the default rule and defaults to that rule's setting. When enabled, the system will backtrack to attempt a match with a less specific rule (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details).
 
-** *`with`*: _MatchConditions_ (optional)
+** *`hosts`*: _HostMatcher array_ (optional)
 +
-Additional conditions, which all must hold true to have the request matched and the pipeline of this rule executed. This way, you can define different rules for the same path but with different conditions, e.g. to define separate rules for read and write requests to the same resource.
+Defines a set of hosts to match against the HTTP Host header. Each entry has the following properties:
 
-*** *`host_glob`*: _string_ (optional)
+*** *`type`*: _string_ (mandatory)
 +
-A https://github.com/gobwas/glob[glob expression] which should be satisfied by the host of the incoming request. `.` is used as a delimiter. That means `*` will match anything until the next `.`. Mutually exclusive with `host_regex`.
+Specifies the type of expression for matching the host, which can be one of:
 
-*** *`host_regex`*: _string_ (optional)
-+
-Regular expression to match the host. Mutually exclusive with `host_glob`.
+**** `exact` to match the host exactly
+**** `glob` to use a https://github.com/gobwas/glob[glob expression] which should be satisfied by the host of the incoming request (`.` is used as a delimiter, which means `*` will match anything until the next `.`).
+**** `regex` to use a regular expression which should be satisfied by the host of the incoming request.
 
-*** *`scheme`*: _string_ (optional)
+*** *`value`*: _string_ (mandatory)
 +
-Expected HTTP scheme. If not specified, both http and https are accepted.
+The actual host expression based on the `type`.
 
-*** *`methods`*: _string array_ (optional)
+** *`scheme`*: _string_ (optional)
 +
-Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. If not specified, all methods are allowed. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
+The expected HTTP scheme. If not specified, both http and https are accepted.
+
+** *`methods`*: _string array_ (optional)
++
+Specifies the allowed HTTP methods (`GET`, `POST`, `PATCH`, etc). If not specified, all methods are allowed. To allow all methods except specific ones, use `ALL` and prefix the methods to exclude with `!`. For example:
 +
 [source, yaml]
 ----
@@ -70,62 +97,54 @@ methods:
   - "!OPTIONS"
 ----
 
-*** *`path_glob`*: _string_ (optional)
-+
-A https://github.com/gobwas/glob[glob expression], which should be satisfied by the path of the incoming request. `/` is used as a delimiter. That means `*` will match anything until the next `/`. Mutually exclusive with `path_regex`.
-
-*** *`path_regex`*: _string_ (optional)
-+
-A regular expression, which should be satisfied by the path of the incoming request. Mutually exclusive with `path_glob`.
-
 * *`allow_encoded_slashes`*: _string_ (optional)
 +
-Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests. Can be set to the one of the following values, defaulting to `off`:
+Controls how to handle URL-encoded slashes in request paths during matching and forwarding. Options include:
 
-** *`off`* - Reject requests containing encoded slashes. Means, if the request URL contains an url-encoded slash (`%2F`), the rule will not match it.
-** *`on`* - Accept requests with encoded slashes. As soon as a rule is matched, encoded slashes present in the path of the request are, decoded and made transparent for the matched rule and the upstream service. That is, the `%2F` becomes a `/` and will be treated as such in all places.
-** *`no_decode`* - Accept requests using encoded slashes without touching them. That is, the `%2F` just remains as is.
+** *`off`* - Reject requests with encoded slashes (`%2F`). This is the default behavior.
+** *`on`* - Accept requests with encoded slashes recoding them to `/`.
+** *`no_decode`* - Accept requests with encoded slashes without touching them.
 
 +
-CAUTION: Since the proxy integrating with heimdall, heimdall by itself, and the upstream service, all may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities resulting in privilege escalations.
+CAUTION: Handling URL-encoded slashes may differ across the proxies in front of heimdall, heimdall, and the upstream service. Accepting requests with encoded slashes could, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities resulting in privilege escalations.
 
 * *`forward_to`*: _RequestForwarder_ (mandatory in Proxy operation mode)
 +
-Defines where to forward the proxied request to. Used only when heimdall is operated in the Proxy operation mode and supports the following properties:
+Specifies where to forward proxied requests when heimdall is operating in proxy mode. The following properties are supported:
 
 ** *`host`*: _string_ (mandatory)
 +
-Host (and port) to be used for request forwarding. If no `rewrite` property (see below) is specified, all other parts, like scheme, path, etc. of the original url are preserved. E.g. if the original request is `\https://mydomain.com/api/v1/something?foo=bar&bar=baz` and the value of this property is set to `my-backend:8080`, the url used to forward the request to the upstream will be `\https://my-backend:8080/api/v1/something?foo=bar&bar=baz`
+Host (and port) for forwarding the request. If no `rewrite` property (see below) is defined, the original URL's scheme, path, and other components are preserved. E.g. if the original request is `\https://mydomain.com/api/v1/something?foo=bar&bar=baz` and the value of this property is set to `my-backend:8080`, the url used to forward the request to the upstream will be `\https://my-backend:8080/api/v1/something?foo=bar&bar=baz`
 +
-NOTE: The `Host` header is not preserved while forwarding the request. If you need it to be set to the value from the original request, make use of the link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] in your `execute` pipeline and set it accordingly. The example below demonstrates that.
+NOTE: The `Host` header is not preserved when forwarding the request. To preserve it, use of the link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] in your `execute` pipeline and set it accordingly. The example below demonstrates that.
 
 ** *`rewrite`*: _OriginalURLRewriter_ (optional)
 +
-Can be used to rewrite further parts of the original url before forwarding the request. If specified at least one of the following supported (middleware) properties must be specified:
+Can be used to rewrite further parts of the original URL before forwarding the request. If specified, at least one of the following supported (middleware) properties must be specified:
 
 *** *`scheme`*: _string_ (optional)
 +
-If defined, heimdall will use the specified value for the url scheme part while forwarding the request to the upstream.
+Specifies the URL scheme to use for forwarding the request.
 
 *** *`strip_path_prefix`*: _string_ (optional)
 +
-If defined, heimdall will strip the specified prefix from the original url path. E.g. if the path of the original url is `/api/v1/something` and the value of this property is set to `/api/v1`, the request to the upstream will have the url path set to `/something`.
+This middleware strips the specified prefix from the original URL path before forwarding. E.g. if the path of the original url is `/api/v1/something` and the value of this property is set to `/api/v1`, the request to the upstream will have the url path set to `/something`.
 
 *** *`add_path_prefix`*: _string_ (optional)
 +
-This middleware is applied after the execution of the `strip_path_prefix` middleware described above. If defined, heimdall will add the specified path prefix to the path used to forward the request to the upstream service. E.g. if the path of the original url or the pass resulting after the application of the `strip_path_prefix` middleware is `/something` and the value of this property is set to `/my-backend`, the request to the upstream will have the url path set to `/my-backend/something`.
+This middleware is applied after the execution of the `strip_path_prefix` middleware described above. If specified, heimdall will add the specified path prefix to the path used to forward the request to the upstream service. E.g. if the path of the original URL or the path resulting after the application of the `strip_path_prefix` middleware is `/something` and the value of this property is set to `/my-backend`, the request to the upstream will have the URL path set to `/my-backend/something`.
 
 *** *`strip_query_parameters`*: _string array_ (optional)
 +
-If defined, heimdall will remove the specified query parameters from the original url before forwarding the request to the upstream service. E.g. if the query parameters part of the original url is `foo=bar&bar=baz` and the value of this property is set to `["foo"]`, the query part of the request to the upstream will be set to `bar=baz`
+Removes specified query parameters from the original URL before forwarding. E.g. if the query parameters part of the original URL is `foo=bar&bar=baz` and the value of this property is set to `["foo"]`, the query part of the request to the upstream will be set to `bar=baz`
 
 * *`execute`*: _link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline]_ (mandatory)
 +
-Which mechanisms to use to authenticate, authorize, contextualize (enrich) and finalize the pipeline.
+Specifies the mechanisms used for authentication, authorization, contextualization, and finalization.
 
 * *`on_error`*: _link:{{< relref "#_error_pipeline" >}}[Error Pipeline]_ (optional)
 +
-Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property, fails. This property is optional only, if a link:{{< relref "default_rule.adoc" >}}[default rule] has been configured and contains an `on_error` definition.
+Specifies error handling mechanisms if the pipeline defined by the `execute` property fails. Optional, if a link:{{< relref "default_rule.adoc" >}}[default rule] is configured with `on_error` definition.
 
 .An example rule
 ====
@@ -133,11 +152,17 @@ Which error handler mechanisms to use if any of the mechanisms, defined in the `
 ----
 id: rule:foo:bar
 match:
-  path: /**
-  with:
-    scheme: http
-    host_glob: my-service.local
-    methods:
+  routes:
+    - path: /some/:identifier/followed/by/**
+      path_params:
+        - name: identifier
+          type: glob
+          value: "[a-z]"
+  scheme: http
+  hosts:
+    - type: exact
+      value: my-service.local
+  methods:
       - GET
       - POST
 forward_to:
@@ -170,8 +195,8 @@ on_error:
 
 Path expressions are used to match the incoming requests. When specifying these, you can make use of two types of wildcards:
 
-- free wildcard, which can be defined using `*` and
-- single wildcard, which can be defined using `:`
+* free wildcard, which can be defined using `*` and
+* single wildcard, which can be defined using `:`
 
 Both can be named and unnamed, with named wildcards allowing accessing of the matched segments in the pipeline of the rule using the defined name as a key on the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[`Request.URL.Captures`] object. Unnamed free wildcard is defined as `\**` and unnamed single wildcard is defined as `:*`. A named wildcard uses some identifier instead of the `*`, so like `*name` for free wildcard and `:name` for single wildcard.
 
@@ -202,9 +227,11 @@ Here is an example demonstrating the usage of a single named wildcard:
 ----
 id: rule:1
 match:
-  path: /files/:uuid/delete
-  with:
-    host_glob: hosty.mchostface
+  routes:
+    - path: /files/:uuid/delete
+  hosts:
+    - type: exact
+      value: hosty.mchostface
   execute:
     - authorizer: openfga_check
       config:
@@ -218,27 +245,27 @@ match:
 
 == Rule Matching Specificity & Backtracking
 
-The implementation ensures, that more specific path expressions are matched first regardless of the placement of rules in a rule set.
-Indeed, the more specific rules are matched first even the corresponding rules are defined in different rule sets.
+The implementation ensures that rules with more specific path expressions are matched first, regardless of their placement within a rule set. In fact, more specific rules are prioritized even when they are defined across different rule sets.
 
-When the path expression is matched to a request, additional conditions, if present in the rule's matching definition, are evaluated. Only if these succeeded, the pipeline of the rule is executed.
+When a path expression matches a request, any additional conditions specified in the rule's matching criteria are evaluated. Only if these conditions are met will the rule's pipeline be executed.
 
-CAUTION: If there are multiple rules for the same path expression with matching additional conditions, the first matching rule is taken. The matching order depends on the rule sequence in the rule set.
+CAUTION: If multiple rules share the same path expression and all their additional conditions match, the first matching rule will be applied. The matching order is determined by the sequence of rules in the rule set.
 
-If there is no matching rule, backtracking, if enabled, will take place and the next less specific rule may be matched. Backtracking stops if either
+If no rule is matched, and backtracking is enabled, the process will backtrack to attempt a match with the next less specific rule. Backtracking will stop when:
 
-* a less specific rule is successfully matched (incl. the evaluation of additional expressions), or
-* a less specific rule is not matched and does not allow backtracking.
+* a less specific rule successfully matches (including evaluation of any additional conditions), or
+* a less specific rule fails to match and does not permit backtracking.
 
-The following examples demonstrates the aspects described above.
+The following examples illustrate these principles:
 
-Imagine, there are the following rules
+Imagine the following set of rules
 
 [source, yaml]
 ----
 id: rule1
 match:
-  path: /files/**
+  routes:
+    - path: /files/**
 execute:
   - <pipeline definition>
 ----
@@ -247,10 +274,13 @@ execute:
 ----
 id: rule2
 match:
-  path: /files/:team/:name
+  routes:
+    - path: /files/:team/:name
+      path_params:
+        - name: team
+          type: regex
+          value: "(team1|team2)"
   backtracking_enabled: true
-  with:
-    path_regex: ^/files/(team1|team2)/.*
 execute:
   - <pipeline definition>
 ----
@@ -259,16 +289,17 @@ execute:
 ----
 id: rule3
 match:
-  path: /files/team3/:name
+  routes:
+    - path: /files/team3/:name
 execute:
   - <pipeline definition>
 ----
 
-The request to `/files/team1/document.pdf` will be matched by the rule with id `rule2` as it is more specific to `rule1`. So the pipeline of `rule2` will be executed.
+The request to `/files/team1/document.pdf` will be matched by `rule2`, as it is more specific than `rule1`. Consequently, the pipeline for `rule2` will be executed.
 
-The request to `/files/team3/document.pdf` will be matched by the `rule3` as it is more specific than `rule1` and `rule2`. Again the corresponding pipeline will be executed.
+The request to `/files/team3/document.pdf` will be matched by `rule3`, which is more specific than both `rule1` and `rule2`. As a result, the corresponding pipeline will be executed.
 
-However, even the request to  `/files/team4/document.pdf` will be matched by `rule2`, the regular expression `^/files/(team1|team2)/.*` will fail. Here, since `backtracking_enabled` is set to `true` backtracking will start and the request will be matched by the `rule1` and its pipeline will be then executed.
+However, even though the request to `/files/team4/document.pdf` matches the path defined in `rule2`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Since `backtracking_enabled` is set to `true`, backtracking will occur, and the request will be matched by `rule1`, with its pipeline then being executed.
 
 == Authentication & Authorization Pipeline
 
