@@ -114,7 +114,7 @@ func TestParseRules(t *testing.T) {
   {
     "id": "foo",
     "match": {
-      "hosts":[{ "value": "*", "type": "glob" }]
+      "hosts":[{ "value": "*.foo.bar", "type": "glob" }]
     },
     "execute": [{"authenticator":"test"}]}]
 }`),
@@ -123,7 +123,7 @@ func TestParseRules(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.Contains(t, err.Error(), "'rules'[0].'match'.'routes' is a required field")
+				require.ErrorContains(t, err, "'rules'[0].'match'.'routes' is a required field")
 				require.Nil(t, ruleSet)
 			},
 		},
@@ -214,7 +214,9 @@ func TestParseRules(t *testing.T) {
     "match":{
       "routes": [{ "path":"/foo/bar" }],
       "methods": ["ALL"],
-      "backtracking_enabled": true 
+      "backtracking_enabled": true,
+      "hosts":[{ "value": "*.foo.bar", "type": "glob" }],
+      "scheme": "https"
     },
     "execute": [{"authenticator":"test"}]
   }]
@@ -249,7 +251,11 @@ rules:
 - id: bar
   match:
     routes:
-      - path: /foo/bar
+      - path: /foo/:bar
+        path_params:
+          - name: bar
+            type: glob
+            value: "*foo"
     methods:
       - GET
   forward_to:
@@ -270,7 +276,8 @@ rules:
 				require.NotNil(t, rul)
 				assert.Equal(t, "bar", rul.ID)
 				assert.Len(t, rul.Matcher.Routes, 1)
-				assert.Equal(t, "/foo/bar", rul.Matcher.Routes[0].Path)
+				assert.Equal(t, "/foo/:bar", rul.Matcher.Routes[0].Path)
+				assert.Len(t, rul.Matcher.Routes[0].PathParams, 1)
 				assert.ElementsMatch(t, []string{"GET"}, rul.Matcher.Methods)
 				assert.Equal(t, "test", rul.Backend.Host)
 				assert.Equal(t, EncodedSlashesOnNoDecode, rul.EncodedSlashesHandling)
@@ -279,7 +286,34 @@ rules:
 			},
 		},
 		{
-			uc:          "YAML content type and validation error",
+			uc:          "YAML content type and validation error due to missing properties",
+			contentType: "application/yaml",
+			content: []byte(`
+version: "1"
+name: foo
+rules:
+- id: bar
+  match:
+    routes:
+      - path: /foo/:*
+        path_params:
+          - name: "*"
+            type: glob
+            value: "*foo"
+  execute:
+    - authenticator: test
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'rules'[0].'match'.'routes'[0].'path_params'[0].'name' should not be equal to *")
+				require.Nil(t, ruleSet)
+			},
+		},
+		{
+			uc:          "YAML content type and validation error due bad path params name",
 			contentType: "application/yaml",
 			content: []byte(`
 version: "1"
@@ -291,7 +325,11 @@ rules:
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
 
+				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'rules'[0].'allow_encoded_slashes' must be one of [off on no_decode]")
+				require.ErrorContains(t, err, "'rules'[0].'match' is a required field")
+				require.ErrorContains(t, err, "'rules'[0].'execute' must contain more than 0 items")
 				require.Nil(t, ruleSet)
 			},
 		},

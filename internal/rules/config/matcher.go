@@ -38,7 +38,7 @@ func (r *Route) DeepCopyInto(out *Route) {
 }
 
 type ParameterMatcher struct {
-	Name  string `json:"name"  yaml:"name"  validate:"required"`                        //nolint:tagalign
+	Name  string `json:"name"  yaml:"name"  validate:"required,ne=*"`                   //nolint:tagalign
 	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
 	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
 }
