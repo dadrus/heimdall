@@ -55,7 +55,7 @@ type schemeMatcher string
 
 func (s schemeMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	if len(s) != 0 && string(s) != request.URL.Scheme {
-		return errorchain.NewWithMessagef(ErrRequestSchemeMismatch, "expected %s, got %s", s, request.URL.Scheme)
+		return errorchain.NewWithMessagef(ErrRequestSchemeMismatch, "expected '%s', got '%s'", s, request.URL.Scheme)
 	}
 
 	return nil
@@ -69,7 +69,7 @@ func (m methodMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	}
 
 	if !slices.Contains(m, request.Method) {
-		return errorchain.NewWithMessagef(ErrRequestMethodMismatch, "%s is not expected", request.Method)
+		return errorchain.NewWithMessagef(ErrRequestMethodMismatch, "'%s' is not expected", request.Method)
 	}
 
 	return nil
@@ -81,7 +81,7 @@ type hostMatcher struct {
 
 func (m *hostMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	if !m.match(request.URL.Host) {
-		return errorchain.NewWithMessagef(ErrRequestHostMismatch, "%s is not expected", request.URL.Host)
+		return errorchain.NewWithMessagef(ErrRequestHostMismatch, "'%s' is not expected", request.URL.Host)
 	}
 
 	return nil
@@ -97,7 +97,7 @@ type pathParamMatcher struct {
 func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []string) error {
 	idx := slices.Index(keys, m.name)
 	if idx == -1 {
-		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "path parameter %s is not expected", m.name)
+		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "path parameter '%s' is not expected", m.name)
 	}
 
 	value := values[idx]
@@ -105,13 +105,13 @@ func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []str
 	if len(request.URL.RawPath) != 0 &&
 		m.slashHandling == config.EncodedSlashesOff &&
 		strings.Contains(request.URL.RawPath, "%2F") {
-		return errorchain.NewWithMessagef(ErrRequestPathMismatch,
-			"value for path parameter %s contains encoded slashes which are not allowed", keys[idx])
+		return errorchain.NewWithMessage(ErrRequestPathMismatch,
+			"request path contains encoded slashes which are not allowed")
 	}
 
 	if !m.match(value) {
 		return errorchain.NewWithMessagef(ErrRequestPathMismatch,
-			"captured values for path parameter %s is not expected", value)
+			"captured value '%s' for path parameter '%s' is not expected", value, m.name)
 	}
 
 	return nil
