@@ -565,7 +565,8 @@ auth:
 headers:
   X-My-First-Header: foobar
   X-My-Second-Header: barfoo
-enable_http_cache: true
+http_cache:
+  enabled: true
 ----
 
 ====
