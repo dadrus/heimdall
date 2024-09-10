@@ -1,6 +1,6 @@
 module github.com/dadrus/heimdall
 
-go 1.23.0
+go 1.23.1
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -152,7 +152,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
-	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jonboulle/clockwork v0.4.0 // indirect
