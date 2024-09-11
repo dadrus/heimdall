@@ -211,12 +211,10 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 				{
 					ID: "test",
 					Matcher: config2.Matcher{
-						Path: "/",
-						With: &config2.MatcherConstraints{
-							Scheme:   "http",
-							HostGlob: "foo.bar",
-							Methods:  []string{http.MethodGet},
-						},
+						Routes:  []config2.Route{{Path: "/"}},
+						Scheme:  "http",
+						Methods: []string{http.MethodGet},
+						Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "glob"}},
 					},
 					Backend: &config2.Backend{
 						Host: "baz",
@@ -370,11 +368,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				rule := ruleSet.Rules[0]
 				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http", rule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", rule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", rule.Matcher.Path)
-				assert.Len(t, rule.Matcher.With.Methods, 1)
-				assert.Contains(t, rule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", rule.Matcher.Scheme)
+				assert.Len(t, rule.Matcher.Hosts, 1)
+				assert.Equal(t, "foo.bar", rule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "glob", rule.Matcher.Hosts[0].Type)
+				assert.Len(t, rule.Matcher.Routes, 1)
+				assert.Equal(t, "/", rule.Matcher.Routes[0].Path)
+				assert.Len(t, rule.Matcher.Methods, 1)
+				assert.Contains(t, rule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", rule.Backend.Host)
 				assert.Empty(t, rule.ErrorHandler)
 				assert.Len(t, rule.Execute, 2)
@@ -470,11 +471,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http", createdRule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", createdRule.Matcher.Path)
-				assert.Len(t, createdRule.Matcher.With.Methods, 1)
-				assert.Contains(t, createdRule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Len(t, createdRule.Matcher.Hosts, 1)
+				assert.Equal(t, "glob", createdRule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Len(t, createdRule.Matcher.Routes, 1)
+				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
@@ -534,11 +538,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http", createdRule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", createdRule.Matcher.Path)
-				assert.Len(t, createdRule.Matcher.With.Methods, 1)
-				assert.Contains(t, createdRule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Len(t, createdRule.Matcher.Hosts, 1)
+				assert.Equal(t, "glob", createdRule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Len(t, createdRule.Matcher.Routes, 1)
+				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
@@ -602,11 +609,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http", createdRule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", createdRule.Matcher.Path)
-				assert.Len(t, createdRule.Matcher.With.Methods, 1)
-				assert.Contains(t, createdRule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Len(t, createdRule.Matcher.Hosts, 1)
+				assert.Equal(t, "glob", createdRule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Len(t, createdRule.Matcher.Routes, 1)
+				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
@@ -680,12 +690,10 @@ func TestProviderLifecycle(t *testing.T) {
 							{
 								ID: "test",
 								Matcher: config2.Matcher{
-									Path: "/",
-									With: &config2.MatcherConstraints{
-										Scheme:   "http",
-										HostGlob: "foo.bar",
-										Methods:  []string{http.MethodGet},
-									},
+									Routes:  []config2.Route{{Path: "/"}},
+									Scheme:  "http",
+									Methods: []string{http.MethodGet},
+									Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "glob"}},
 								},
 								Backend: &config2.Backend{
 									Host: "bar",
@@ -734,11 +742,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http", createdRule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", createdRule.Matcher.Path)
-				assert.Len(t, createdRule.Matcher.With.Methods, 1)
-				assert.Contains(t, createdRule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Len(t, createdRule.Matcher.Hosts, 1)
+				assert.Equal(t, "glob", createdRule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Len(t, createdRule.Matcher.Routes, 1)
+				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
@@ -753,11 +764,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				updatedRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", updatedRule.ID)
-				assert.Equal(t, "http", createdRule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", createdRule.Matcher.Path)
-				assert.Len(t, createdRule.Matcher.With.Methods, 1)
-				assert.Contains(t, createdRule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Len(t, createdRule.Matcher.Hosts, 1)
+				assert.Equal(t, "glob", createdRule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Len(t, createdRule.Matcher.Routes, 1)
+				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "bar", updatedRule.Backend.Host)
 				assert.Empty(t, updatedRule.ErrorHandler)
 				assert.Len(t, updatedRule.Execute, 2)
@@ -825,11 +839,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
-				assert.Equal(t, "http", createdRule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", createdRule.Matcher.Path)
-				assert.Len(t, createdRule.Matcher.With.Methods, 1)
-				assert.Contains(t, createdRule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Len(t, createdRule.Matcher.Hosts, 1)
+				assert.Equal(t, "glob", createdRule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Len(t, createdRule.Matcher.Routes, 1)
+				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
 				assert.Empty(t, createdRule.ErrorHandler)
 				assert.Len(t, createdRule.Execute, 2)
@@ -844,11 +861,14 @@ func TestProviderLifecycle(t *testing.T) {
 
 				deleteRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", deleteRule.ID)
-				assert.Equal(t, "http", createdRule.Matcher.With.Scheme)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.With.HostGlob)
-				assert.Equal(t, "/", createdRule.Matcher.Path)
-				assert.Len(t, createdRule.Matcher.With.Methods, 1)
-				assert.Contains(t, createdRule.Matcher.With.Methods, http.MethodGet)
+				assert.Equal(t, "http", createdRule.Matcher.Scheme)
+				assert.Len(t, createdRule.Matcher.Hosts, 1)
+				assert.Equal(t, "glob", createdRule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Len(t, createdRule.Matcher.Routes, 1)
+				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.Methods, 1)
+				assert.Contains(t, createdRule.Matcher.Methods, http.MethodGet)
 				assert.Equal(t, "baz", deleteRule.Backend.Host)
 				assert.Empty(t, deleteRule.ErrorHandler)
 				assert.Len(t, deleteRule.Execute, 2)
@@ -882,12 +902,10 @@ func TestProviderLifecycle(t *testing.T) {
 							{
 								ID: "test",
 								Matcher: config2.Matcher{
-									Path: "/",
-									With: &config2.MatcherConstraints{
-										Scheme:   "http",
-										HostGlob: "foo.bar",
-										Methods:  []string{http.MethodGet},
-									},
+									Routes:  []config2.Route{{Path: "/"}},
+									Scheme:  "http",
+									Methods: []string{http.MethodGet},
+									Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "glob"}},
 								},
 								Backend: &config2.Backend{
 									Host: "bar",

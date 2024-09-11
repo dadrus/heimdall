@@ -3,14 +3,20 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    path: /**
+    routes:
+      - path: /foo/:bar/**
+        path_params:
+          - name: bar
+            type: glob
+            value: "*baz"
     backtracking_enabled: false
-    with:
-      methods:
+    methods:
       - GET
       - POST
-      host_glob: foo.bar
-      scheme: http
+    hosts:
+      - type: exact
+        value: foo.bar
+    scheme: http
   forward_to:
     host: bar.foo
   execute:

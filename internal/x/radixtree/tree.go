@@ -206,7 +206,7 @@ func (n *Tree[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 }
 
 //nolint:cyclop,funlen
-func (n *Tree[V]) delNode(path string, matcher Matcher[V]) bool {
+func (n *Tree[V]) delNode(path string, matcher ValueMatcher[V]) bool {
 	pathLen := len(path)
 	if pathLen == 0 {
 		if len(n.values) == 0 {
@@ -330,12 +330,11 @@ func (n *Tree[V]) delEdge(token byte) {
 }
 
 //nolint:funlen,gocognit,cyclop
-func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []string, bool) {
+func (n *Tree[V]) findNode(path string, captures []string, matcher LookupMatcher[V]) (*Tree[V], int, []string, bool) {
 	var (
-		found  *Tree[V]
-		params []string
-		idx    int
-		value  V
+		found *Tree[V]
+		idx   int
+		value V
 	)
 
 	backtrack := true
@@ -347,8 +346,8 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 		}
 
 		for idx, value = range n.values {
-			if match := matcher.Match(value); match {
-				return n, idx, nil, false
+			if match := matcher.Match(value, n.wildcardKeys, captures); match {
+				return n, idx, captures, false
 			}
 		}
 
@@ -364,7 +363,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 
 			if pathLen >= childPathLen && child.path == path[:childPathLen] {
 				nextPath := path[childPathLen:]
-				found, idx, params, backtrack = child.findNode(nextPath, matcher)
+				found, idx, captures, backtrack = child.findNode(nextPath, captures, matcher)
 			}
 
 			break
@@ -372,7 +371,7 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 	}
 
 	if found != nil || !backtrack {
-		return found, idx, params, backtrack
+		return found, idx, captures, backtrack
 	}
 
 	if n.wildcardChild != nil { //nolint:nestif
@@ -382,15 +381,11 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 		nextToken := path[nextSeparator:]
 
 		if len(thisToken) > 0 { // Don't match on empty tokens.
-			found, idx, params, backtrack = n.wildcardChild.findNode(nextToken, matcher)
-			if found != nil {
-				if params == nil {
-					// we don't expect more than 3 parameters to be defined for a path
-					// even 3 is already too much
-					params = make([]string, 0, 3) //nolint:mnd
-				}
+			var tmp []string
 
-				return found, idx, append(params, thisToken), backtrack
+			found, idx, tmp, backtrack = n.wildcardChild.findNode(nextToken, append(captures, thisToken), matcher)
+			if found != nil {
+				return found, idx, tmp, backtrack
 			} else if !backtrack {
 				return nil, 0, nil, false
 			}
@@ -400,20 +395,15 @@ func (n *Tree[V]) findNode(path string, matcher Matcher[V]) (*Tree[V], int, []st
 	if n.catchAllChild != nil {
 		// Hit the catchall, so just assign the whole remaining path.
 		for idx, value = range n.catchAllChild.values {
-			if match := matcher.Match(value); match {
-				// we don't expect more than 3 parameters to be defined for a path
-				// even 3 is already too much
-				params = make([]string, 1, 3) //nolint:mnd
-				params[0] = path
-
-				return n.catchAllChild, idx, params, false
+			if match := matcher.Match(value, n.wildcardKeys, captures); match {
+				return n.catchAllChild, idx, append(captures, path), false
 			}
 		}
 
-		return nil, 0, nil, n.backtrackingEnabled
+		return nil, 0, captures, n.backtrackingEnabled
 	}
 
-	return nil, 0, nil, true
+	return nil, 0, captures, true
 }
 
 func (n *Tree[V]) splitCommonPrefix(existingNodeIndex int, path string) (*Tree[V], int) {
@@ -448,8 +438,8 @@ func (n *Tree[V]) splitCommonPrefix(existingNodeIndex int, path string) (*Tree[V
 	return newNode, i
 }
 
-func (n *Tree[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
-	found, idx, params, _ := n.findNode(path, matcher)
+func (n *Tree[V]) Find(path string, matcher LookupMatcher[V]) (*Entry[V], error) {
+	found, idx, params, _ := n.findNode(path, make([]string, 0, 3), matcher)
 	if found == nil {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
 	}
@@ -458,14 +448,10 @@ func (n *Tree[V]) Find(path string, matcher Matcher[V]) (*Entry[V], error) {
 		Value: found.values[idx],
 	}
 
-	if len(params) == 0 {
-		return entry, nil
-	}
-
 	entry.Parameters = make(map[string]string, len(params))
 
 	for i, param := range params {
-		key := found.wildcardKeys[len(params)-1-i]
+		key := found.wildcardKeys[i]
 		if key != "*" {
 			entry.Parameters[key] = param
 		}
@@ -493,7 +479,7 @@ func (n *Tree[V]) Add(path string, value V, opts ...AddOption[V]) error {
 	return nil
 }
 
-func (n *Tree[V]) Delete(path string, matcher Matcher[V]) error {
+func (n *Tree[V]) Delete(path string, matcher ValueMatcher[V]) error {
 	if !n.delNode(path, matcher) {
 		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
 	}

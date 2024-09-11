@@ -16,18 +16,53 @@
 
 package config
 
+import "slices"
+
 type Matcher struct {
-	Path                string              `json:"path"                 yaml:"path"                 validate:"required"`              //nolint:lll,tagalign
-	BacktrackingEnabled *bool               `json:"backtracking_enabled" yaml:"backtracking_enabled" validate:"excluded_without=With"` //nolint:lll,tagalign
-	With                *MatcherConstraints `json:"with"                 yaml:"with"                 validate:"omitnil,required"`      //nolint:lll,tagalign
+	Routes              []Route       `json:"routes"               yaml:"routes"               validate:"required,dive"`              //nolint:lll,tagalign
+	BacktrackingEnabled *bool         `json:"backtracking_enabled" yaml:"backtracking_enabled"`                                       //nolint:lll,tagalign
+	Scheme              string        `json:"scheme"               yaml:"scheme"               validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
+	Methods             []string      `json:"methods"              yaml:"methods"              validate:"omitempty,dive,required"`    //nolint:lll,tagalign
+	Hosts               []HostMatcher `json:"hosts"                yaml:"hosts"                validate:"omitempty,dive,required"`    //nolint:lll,tagalign
+}
+
+type Route struct {
+	Path       string             `json:"path"        yaml:"path"        validate:"required"`                //nolint:lll,tagalign
+	PathParams []ParameterMatcher `json:"path_params" yaml:"path_params" validate:"omitempty,dive,required"` //nolint:lll,tagalign
+}
+
+func (r *Route) DeepCopyInto(out *Route) {
+	*out = *r
+
+	out.PathParams = slices.Clone(r.PathParams)
+}
+
+type ParameterMatcher struct {
+	Name  string `json:"name"  yaml:"name"  validate:"required,ne=*"`                   //nolint:tagalign
+	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
+	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
+}
+
+type HostMatcher struct {
+	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
+	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
 }
 
 func (m *Matcher) DeepCopyInto(out *Matcher) {
-	*out = *m
+	var withBacktracking *bool
 
-	if m.With != nil {
-		in, out := m.With, out.With
+	if m.BacktrackingEnabled != nil {
+		value := *m.BacktrackingEnabled
+		withBacktracking = &value
+	}
 
-		in.DeepCopyInto(out)
+	out.Scheme = m.Scheme
+	out.BacktrackingEnabled = withBacktracking
+	out.Methods = slices.Clone(m.Methods)
+	out.Hosts = slices.Clone(m.Hosts)
+
+	out.Routes = make([]Route, len(m.Routes))
+	for i, route := range m.Routes {
+		route.DeepCopyInto(&out.Routes[i])
 	}
 }

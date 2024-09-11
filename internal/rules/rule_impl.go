@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"bytes"
 	"net/url"
 	"strings"
 
@@ -32,10 +33,9 @@ type ruleImpl struct {
 	id                 string
 	srcID              string
 	isDefault          bool
-	hash               []byte
-	pathExpression     string
-	matcher            config.RequestMatcher
 	allowsBacktracking bool
+	hash               []byte
+	routes             []rule.Route
 	slashesHandling    config.EncodedSlashesHandling
 	backend            *config.Backend
 	sc                 compositeSubjectCreator
@@ -99,13 +99,40 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	return upstream, nil
 }
 
-func (r *ruleImpl) Matches(ctx heimdall.Context) bool {
-	request := ctx.Request()
-	logger := zerolog.Ctx(ctx.AppContext()).With().Str("_source", r.srcID).Str("_id", r.id).Logger()
+func (r *ruleImpl) ID() string { return r.id }
+
+func (r *ruleImpl) SrcID() string { return r.srcID }
+
+func (r *ruleImpl) SameAs(other rule.Rule) bool {
+	return r.ID() == other.ID() && r.SrcID() == other.SrcID()
+}
+
+func (r *ruleImpl) Routes() []rule.Route { return r.routes }
+
+func (r *ruleImpl) EqualTo(other rule.Rule) bool {
+	return r.ID() == other.ID() &&
+		r.SrcID() == other.SrcID() &&
+		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
+}
+
+func (r *ruleImpl) AllowsBacktracking() bool { return r.allowsBacktracking }
+
+type routeImpl struct {
+	rule    *ruleImpl
+	path    string
+	matcher RouteMatcher
+}
+
+func (r *routeImpl) Matches(ctx heimdall.Context, keys, values []string) bool {
+	logger := zerolog.Ctx(ctx.AppContext()).With().
+		Str("_source", r.rule.srcID).
+		Str("_id", r.rule.id).
+		Str("route", r.path).
+		Logger()
 
 	logger.Debug().Msg("Matching rule")
 
-	if err := r.matcher.Matches(request); err != nil {
+	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {
 		logger.Debug().Err(err).Msg("Request does not satisfy matching conditions")
 
 		return false
@@ -116,17 +143,9 @@ func (r *ruleImpl) Matches(ctx heimdall.Context) bool {
 	return true
 }
 
-func (r *ruleImpl) ID() string { return r.id }
+func (r *routeImpl) Path() string { return r.path }
 
-func (r *ruleImpl) SrcID() string { return r.srcID }
-
-func (r *ruleImpl) PathExpression() string { return r.pathExpression }
-
-func (r *ruleImpl) BacktrackingEnabled() bool { return r.allowsBacktracking }
-
-func (r *ruleImpl) SameAs(other rule.Rule) bool {
-	return r.ID() == other.ID() && r.SrcID() == other.SrcID()
-}
+func (r *routeImpl) Rule() rule.Rule { return r.rule }
 
 type backend struct {
 	targetURL *url.URL

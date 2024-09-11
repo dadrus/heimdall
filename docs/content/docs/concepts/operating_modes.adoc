@@ -76,12 +76,14 @@ And there is a rule, which allows anonymous requests and sets a header with subj
 ----
 id: rule:my-service:anonymous-api-access
 match:
-  path: /my-service/api
-  with:
-    scheme: http
-    host_glob: my-backend-service
-    methods:
-      - GET
+  routes:
+    - path: /my-service/api
+  scheme: http
+  hosts:
+    - type: exact
+      value: my-backend-service
+  methods:
+    - GET
 execute:
   - authenticator: anonymous-authn
   - finalizer: id-header
@@ -147,10 +149,10 @@ And there is a rule, which allows anonymous requests and sets a header with subj
 ----
 id: rule:my-service:anonymous-api-access
 match:
-  path: /my-service/api
-  with:
-    methods:
-      - GET
+  routes:
+    - path: /my-service/api
+  methods:
+    - GET
 forward_to:
   host: my-backend-service:8888
 execute:

@@ -18,75 +18,21 @@ package rules
 
 import (
 	"context"
-	"errors"
-	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/config/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
-
-func TestRuleMatches(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc      string
-		rule    *ruleImpl
-		toMatch *heimdall.Request
-		matches bool
-	}{
-		{
-			uc: "doesn't match",
-			rule: &ruleImpl{
-				matcher: func() config.RequestMatcher {
-					rm := mocks2.NewRequestMatcherMock(t)
-					rm.EXPECT().Matches(mock.Anything).Return(errors.New("test error"))
-
-					return rm
-				}(),
-			},
-			toMatch: &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{}},
-			matches: false,
-		},
-		{
-			uc: "matches",
-			rule: &ruleImpl{
-				matcher: func() config.RequestMatcher {
-					rm := mocks2.NewRequestMatcherMock(t)
-					rm.EXPECT().Matches(mock.Anything).Return(nil)
-
-					return rm
-				}(),
-			},
-			toMatch: &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{}},
-			matches: true,
-		},
-	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
-			ctx := heimdallmocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.TODO())
-			ctx.EXPECT().Request().Return(tc.toMatch)
-
-			// WHEN
-			matched := tc.rule.Matches(ctx)
-
-			// THEN
-			assert.Equal(t, tc.matches, matched)
-		})
-	}
-}
 
 func TestRuleExecute(t *testing.T) {
 	t.Parallel()
