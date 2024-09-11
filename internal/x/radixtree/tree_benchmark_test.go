@@ -7,7 +7,7 @@ import (
 )
 
 func BenchmarkNodeSearchNoPaths(b *testing.B) {
-	tm := testMatcher[string](true)
+	tm := lookupMatcher[string](true)
 	tree := &Tree[string]{
 		path:   "/",
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -17,12 +17,12 @@ func BenchmarkNodeSearchNoPaths(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("", tm)
+		tree.findNode("", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchRoot(b *testing.B) {
-	tm := testMatcher[string](true)
+	tm := lookupMatcher[string](true)
 	tree := &Tree[string]{
 		path:   "/",
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -32,12 +32,12 @@ func BenchmarkNodeSearchRoot(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("/", tm)
+		tree.findNode("/", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneStaticPath(b *testing.B) {
-	tm := testMatcher[string](true)
+	tm := lookupMatcher[string](true)
 	tree := &Tree[string]{
 		path:   "/",
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -49,12 +49,12 @@ func BenchmarkNodeSearchOneStaticPath(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("abc", tm)
+		tree.findNode("abc", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneLongStaticPath(b *testing.B) {
-	tm := testMatcher[string](true)
+	tm := lookupMatcher[string](true)
 	tree := &Tree[string]{
 		path:   "/",
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -66,12 +66,12 @@ func BenchmarkNodeSearchOneLongStaticPath(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("foo/bar/baz", tm)
+		tree.findNode("foo/bar/baz", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneWildcardPath(b *testing.B) {
-	tm := testMatcher[string](true)
+	tm := lookupMatcher[string](true)
 	tree := &Tree[string]{
 		path:   "/",
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -83,12 +83,12 @@ func BenchmarkNodeSearchOneWildcardPath(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("abc", tm)
+		tree.findNode("abc", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneLongWildcards(b *testing.B) {
-	tm := testMatcher[string](true)
+	tm := lookupMatcher[string](true)
 	tree := &Tree[string]{
 		path:   "/",
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -100,12 +100,12 @@ func BenchmarkNodeSearchOneLongWildcards(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("abcdefghijklmnop/aaaabbbbccccddddeeeeffffgggg/hijkl", tm)
+		tree.findNode("abcdefghijklmnop/aaaabbbbccccddddeeeeffffgggg/hijkl", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneFreeWildcard(b *testing.B) {
-	tm := testMatcher[string](true)
+	tm := lookupMatcher[string](true)
 	tree := &Tree[string]{
 		path:   "/",
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -117,6 +117,6 @@ func BenchmarkNodeSearchOneFreeWildcard(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("foo", tm)
+		tree.findNode("foo", nil, tm)
 	}
 }

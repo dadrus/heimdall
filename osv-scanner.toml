@@ -1,4 +1,3 @@
-[[PackageOverrides]]
-name = "docs"
-ignore = true
-reason = "The results of this directory is generated static html content. Even some of the dependencies may have vulnerabilities they have no effect as neither inbound nor outbound connections are made during the generation of the content."
+[[IgnoredVulns]]
+id = "GO-2022-0646"
+reason = "The access to the S3 bucket happens in read-only mode without making use of the EncryptionClient."

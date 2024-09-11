@@ -125,7 +125,8 @@ version: "1alpha4"
 rules:
   - id: test-rule
     match: 
-      path: /**
+      routes:
+        - path: /**
     forward_to:
       host: upstream
     execute:

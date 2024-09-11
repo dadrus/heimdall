@@ -15,18 +15,22 @@
 # SPDX-License-Identifier: Apache-2.0
 
 {{- if .Values.deployment.autoscaling.enabled }}
+{{- if and (not .Values.deployment.autoscaling.targetCPUUtilizationPercentage) (not .Values.deployment.autoscaling.targetMemoryUtilizationPercentage) }}
+  {{- fail "autoscaling is enabled, but usage of both, the cpu and the memory metrics is disabled" }}
+{{- end }}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "heimdall.fullname" . }}
-  namespace: {{ include "heimdall.namespace" . }}
+  name: {{ include "heimdall.fullname" $data }}
+  namespace: {{ include "heimdall.namespace" $data }}
   labels:
-    {{- include "heimdall.labels" . | nindent 4 }}
+    {{- include "heimdall.labels" $data | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "heimdall.fullname" . }}
+    name: {{ include "heimdall.fullname" $data }}
   minReplicas: {{ .Values.deployment.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.deployment.autoscaling.maxReplicas }}
   metrics:

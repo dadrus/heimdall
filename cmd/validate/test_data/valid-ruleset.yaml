@@ -3,14 +3,16 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    path: /**
+    routes:
+      - path: /**
     backtracking_enabled: true
-    with:
-      scheme: http
-      host_glob: foo.bar
-      methods:
-        - POST
-        - PUT
+    scheme: http
+    hosts:
+      - type: glob
+        value: foo.bar
+    methods:
+      - POST
+      - PUT
   forward_to:
     host: bar.foo
     rewrite:

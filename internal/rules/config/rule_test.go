@@ -28,21 +28,35 @@ import (
 func TestRuleConfigDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
+	trueValue := true
+
 	// GIVEN
 	var out Rule
 
 	in := Rule{
 		ID: "foo",
 		Matcher: Matcher{
-			Path: "bar",
-			With: &MatcherConstraints{
-				Methods:   []string{"GET", "PATCH"},
-				Scheme:    "https",
-				HostGlob:  "**.example.com",
-				HostRegex: ".*\\.example.com",
-				PathGlob:  "**.css",
-				PathRegex: ".*\\.css",
+			Routes: []Route{
+				{
+					Path: "/:foo/*something",
+					PathParams: []ParameterMatcher{
+						{Name: "foo", Value: "bar", Type: "glob"},
+						{Name: "something", Value: ".*\\.css", Type: "regex"},
+					},
+				},
+				{
+					Path: "/some/static/path",
+				},
 			},
+			BacktrackingEnabled: &trueValue,
+			Scheme:              "https",
+			Hosts: []HostMatcher{
+				{
+					Value: "**.example.com",
+					Type:  "glob",
+				},
+			},
+			Methods: []string{"GET", "PATCH"},
 		},
 		Backend: &Backend{
 			Host: "baz",
@@ -61,35 +75,36 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 	in.DeepCopyInto(&out)
 
 	// THEN
-	assert.Equal(t, in.ID, out.ID)
-	assert.Equal(t, in.Matcher.Path, out.Matcher.Path)
-	assert.Equal(t, in.Matcher.With.Methods, out.Matcher.With.Methods)
-	assert.Equal(t, in.Matcher.With.Scheme, out.Matcher.With.Scheme)
-	assert.Equal(t, in.Matcher.With.HostGlob, out.Matcher.With.HostGlob)
-	assert.Equal(t, in.Matcher.With.HostRegex, out.Matcher.With.HostRegex)
-	assert.Equal(t, in.Matcher.With.PathGlob, out.Matcher.With.PathGlob)
-	assert.Equal(t, in.Matcher.With.PathRegex, out.Matcher.With.PathRegex)
-	assert.Equal(t, in.Backend, out.Backend)
-	assert.Equal(t, in.Execute, out.Execute)
-	assert.Equal(t, in.ErrorHandler, out.ErrorHandler)
+	assert.Equal(t, in, out)
 }
 
 func TestRuleConfigDeepCopy(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	in := Rule{
+	in := &Rule{
 		ID: "foo",
 		Matcher: Matcher{
-			Path: "bar",
-			With: &MatcherConstraints{
-				Methods:   []string{"GET", "PATCH"},
-				Scheme:    "https",
-				HostGlob:  "**.example.com",
-				HostRegex: ".*\\.example.com",
-				PathGlob:  "**.css",
-				PathRegex: ".*\\.css",
+			Routes: []Route{
+				{
+					Path: "/:foo/*something",
+					PathParams: []ParameterMatcher{
+						{Name: "foo", Value: "bar", Type: "glob"},
+						{Name: "something", Value: ".*\\.css", Type: "regex"},
+					},
+				},
+				{
+					Path: "/some/static/path",
+				},
 			},
+			Scheme: "https",
+			Hosts: []HostMatcher{
+				{
+					Value: "**.example.com",
+					Type:  "glob",
+				},
+			},
+			Methods: []string{"GET", "PATCH"},
 		},
 		Backend: &Backend{
 			Host: "baz",
@@ -112,15 +127,5 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 	require.NotSame(t, &in, out)
 
 	// but same contents
-	assert.Equal(t, in.ID, out.ID)
-	assert.Equal(t, in.Matcher.Path, out.Matcher.Path)
-	assert.Equal(t, in.Matcher.With.Methods, out.Matcher.With.Methods)
-	assert.Equal(t, in.Matcher.With.Scheme, out.Matcher.With.Scheme)
-	assert.Equal(t, in.Matcher.With.HostGlob, out.Matcher.With.HostGlob)
-	assert.Equal(t, in.Matcher.With.HostRegex, out.Matcher.With.HostRegex)
-	assert.Equal(t, in.Matcher.With.PathGlob, out.Matcher.With.PathGlob)
-	assert.Equal(t, in.Matcher.With.PathRegex, out.Matcher.With.PathRegex)
-	assert.Equal(t, in.Backend, out.Backend)
-	assert.Equal(t, in.Execute, out.Execute)
-	assert.Equal(t, in.ErrorHandler, out.ErrorHandler)
+	assert.Equal(t, in, out)
 }

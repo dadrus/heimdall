@@ -1,51 +1,80 @@
+// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package config
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMatcherDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
+	trueValue := true
+
 	for _, tc := range []struct {
-		uc     string
-		in     *Matcher
-		assert func(t *testing.T, out *Matcher)
+		uc string
+		in *Matcher
 	}{
 		{
-			uc: "with path only",
-			in: &Matcher{Path: "/foo/bar"},
-			assert: func(t *testing.T, out *Matcher) {
-				t.Helper()
-
-				assert.Equal(t, "/foo/bar", out.Path)
-				assert.Nil(t, out.With)
+			uc: "single route defining only a path",
+			in: &Matcher{
+				Routes: []Route{{Path: "/foo/bar"}},
 			},
 		},
 		{
-			uc: "with path and simple constraints",
-			in: &Matcher{Path: "/foo/bar", With: &MatcherConstraints{Scheme: "http"}},
-			assert: func(t *testing.T, out *Matcher) {
-				t.Helper()
-
-				assert.Equal(t, "/foo/bar", out.Path)
-				require.NotNil(t, out.With)
-				assert.Equal(t, "http", out.With.Scheme)
+			uc: "single route defining path and some path parameters",
+			in: &Matcher{
+				Routes: []Route{
+					{
+						Path: "/:foo/:bar",
+						PathParams: []ParameterMatcher{
+							{Name: "foo", Value: "bar", Type: "glob"},
+							{Name: "bar", Value: "baz", Type: "regex"},
+						},
+					},
+				},
 			},
 		},
 		{
-			uc: "with path and complex constraints",
-			in: &Matcher{Path: "/foo/bar", With: &MatcherConstraints{Methods: []string{"GET"}, Scheme: "http"}},
-			assert: func(t *testing.T, out *Matcher) {
-				t.Helper()
-
-				assert.Equal(t, "/foo/bar", out.Path)
-				require.NotNil(t, out.With)
-				assert.Equal(t, "http", out.With.Scheme)
-				assert.ElementsMatch(t, out.With.Methods, []string{"GET"})
+			uc: "multiple routes and additional constraints",
+			in: &Matcher{
+				Routes: []Route{
+					{
+						Path: "/:foo/:bar",
+						PathParams: []ParameterMatcher{
+							{Name: "foo", Value: "bar", Type: "glob"},
+							{Name: "bar", Value: "baz", Type: "regex"},
+						},
+					},
+					{
+						Path: "/some/static/path",
+					},
+				},
+				BacktrackingEnabled: &trueValue,
+				Scheme:              "https",
+				Hosts: []HostMatcher{
+					{
+						Value: "*example.com",
+						Type:  "glob",
+					},
+				},
+				Methods: []string{"GET", "POST"},
 			},
 		},
 	} {
@@ -54,7 +83,7 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 
 			tc.in.DeepCopyInto(out)
 
-			tc.assert(t, out)
+			assert.Equal(t, tc.in, out)
 		})
 	}
 }

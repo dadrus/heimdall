@@ -9,7 +9,13 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func testMatcher[V any](matches bool) MatcherFunc[V] { return func(_ V) bool { return matches } }
+func lookupMatcher[V any](matches bool) LookupMatcherFunc[V] {
+	return func(_ V, _, _ []string) bool { return matches }
+}
+
+func deleteMatcher[V any](matches bool) ValueMatcherFunc[V] {
+	return func(_ V) bool { return matches }
+}
 
 func TestTreeSearch(t *testing.T) {
 	t.Parallel()
@@ -62,15 +68,15 @@ func TestTreeSearch(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	trueMatcher := testMatcher[string](true)
-	falseMatcher := testMatcher[string](false)
+	trueMatcher := lookupMatcher[string](true)
+	falseMatcher := lookupMatcher[string](false)
 
 	for _, tc := range []struct {
 		path      string
 		expPath   string
 		expErr    error
 		expParams map[string]string
-		matcher   Matcher[string]
+		matcher   LookupMatcher[string]
 	}{
 		{path: "/users/abc/updatePassword", expPath: "/users/:id/updatePassword", expParams: map[string]string{"id": "abc"}},
 		{path: "/users/all/something", expPath: "/users/:pk/:related", expParams: map[string]string{"pk": "all", "related": "something"}},
@@ -121,7 +127,7 @@ func TestTreeSearch(t *testing.T) {
 		{path: "/カ", expPath: "/カ"},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
-			var matcher Matcher[string]
+			var matcher LookupMatcher[string]
 			if tc.matcher == nil {
 				matcher = trueMatcher
 			} else {
@@ -138,7 +144,13 @@ func TestTreeSearch(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equalf(t, tc.expPath, entry.Value, "Path %s matched %s, expected %s", tc.path, entry.Value, tc.expPath)
-			assert.Equal(t, tc.expParams, entry.Parameters, "Path %s expected parameters are %v, saw %v", tc.path, tc.expParams, entry.Parameters)
+
+			expParams := tc.expParams
+			if expParams == nil {
+				expParams = map[string]string{}
+			}
+
+			assert.Equal(t, expParams, entry.Parameters, "Path %s expected parameters are %v, saw %v", tc.path, tc.expParams, entry.Parameters)
 		})
 	}
 }
@@ -156,7 +168,8 @@ func TestTreeSearchWithBacktracking(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN
-	entry, err := tree.Find("/date/2024/abc", MatcherFunc[string](func(value string) bool { return value != "first" }))
+	entry, err := tree.Find("/date/2024/abc",
+		LookupMatcherFunc[string](func(value string, _, _ []string) bool { return value != "first" }))
 
 	// THEN
 	require.NoError(t, err)
@@ -176,9 +189,10 @@ func TestTreeSearchWithoutBacktracking(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN
-	entry, err := tree.Find("/date/2024/abc", MatcherFunc[string](func(value string) bool {
-		return value != "first"
-	}))
+	entry, err := tree.Find("/date/2024/abc",
+		LookupMatcherFunc[string](func(value string, _, _ []string) bool {
+			return value != "first"
+		}))
 
 	// THEN
 	require.Error(t, err)
@@ -198,16 +212,18 @@ func TestTreeAddPathDuplicates(t *testing.T) {
 	err = tree.Add(path, "second")
 	require.NoError(t, err)
 
-	entry, err := tree.Find("/date/2024/04/abc", MatcherFunc[string](func(value string) bool {
-		return value == "first"
-	}))
+	entry, err := tree.Find("/date/2024/04/abc",
+		LookupMatcherFunc[string](func(value string, _, _ []string) bool {
+			return value == "first"
+		}))
 	require.NoError(t, err)
 	assert.Equal(t, "first", entry.Value)
 	assert.Equal(t, map[string]string{"year": "2024", "month": "04"}, entry.Parameters)
 
-	entry, err = tree.Find("/date/2024/04/abc", MatcherFunc[string](func(value string) bool {
-		return value == "second"
-	}))
+	entry, err = tree.Find("/date/2024/04/abc",
+		LookupMatcherFunc[string](func(value string, _, _ []string) bool {
+			return value == "second"
+		}))
 	require.NoError(t, err)
 	assert.Equal(t, "second", entry.Value)
 	assert.Equal(t, map[string]string{"year": "2024", "month": "04"}, entry.Parameters)
@@ -281,10 +297,10 @@ func TestTreeDeleteStaticPaths(t *testing.T) {
 	}
 
 	for i := len(paths) - 1; i >= 0; i-- {
-		err := tree.Delete(paths[i], testMatcher[int](true))
+		err := tree.Delete(paths[i], deleteMatcher[int](true))
 		require.NoError(t, err)
 
-		err = tree.Delete(paths[i], testMatcher[int](true))
+		err = tree.Delete(paths[i], deleteMatcher[int](true))
 		require.Error(t, err)
 	}
 }
@@ -316,16 +332,16 @@ func TestTreeDeleteStaticAndWildcardPaths(t *testing.T) {
 	for i := len(paths) - 1; i >= 0; i-- {
 		tbdPath := paths[i]
 
-		err := tree.Delete(tbdPath, testMatcher[int](true))
+		err := tree.Delete(tbdPath, deleteMatcher[int](true))
 		require.NoErrorf(t, err, "Should be able to delete %s", paths[i])
 
-		err = tree.Delete(tbdPath, testMatcher[int](true))
+		err = tree.Delete(tbdPath, deleteMatcher[int](true))
 		require.Errorf(t, err, "Should not be able to delete %s", paths[i])
 
 		deletedPaths = append(deletedPaths, tbdPath)
 
 		for idx, path := range paths {
-			entry, err := tree.Find(path, testMatcher[int](true))
+			entry, err := tree.Find(path, lookupMatcher[int](true))
 
 			if slices.Contains(deletedPaths, path) {
 				require.Errorf(t, err, "Should not be able to find %s after deleting %s", path, tbdPath)
@@ -370,10 +386,10 @@ func TestTreeDeleteMixedPaths(t *testing.T) {
 	for i := len(paths) - 1; i >= 0; i-- {
 		tbdPath := paths[i]
 
-		err := tree.Delete(tbdPath, testMatcher[int](true))
+		err := tree.Delete(tbdPath, deleteMatcher[int](true))
 		require.NoErrorf(t, err, "Should be able to delete %s", paths[i])
 
-		err = tree.Delete(tbdPath, testMatcher[int](true))
+		err = tree.Delete(tbdPath, deleteMatcher[int](true))
 		require.Errorf(t, err, "Should not be able to delete %s", paths[i])
 	}
 
@@ -401,7 +417,8 @@ func TestTreeClone(t *testing.T) {
 	clone := tree.Clone()
 
 	for _, path := range maps.Values(paths) {
-		entry, err := clone.Find(path, MatcherFunc[string](func(_ string) bool { return true }))
+		entry, err := clone.Find(path,
+			LookupMatcherFunc[string](func(_ string, _, _ []string) bool { return true }))
 
 		require.NoError(t, err)
 		assert.Equal(t, path, entry.Value)

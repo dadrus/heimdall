@@ -23,13 +23,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/config"
-	mocks3 "github.com/dadrus/heimdall/internal/rules/config/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -41,9 +38,13 @@ func TestRepositoryAddRuleSetWithoutViolation(t *testing.T) {
 
 	// GIVEN
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
-	rules := []rule.Rule{
-		&ruleImpl{id: "1", srcID: "1", pathExpression: "/foo/1"},
-	}
+
+	rule1 := &ruleImpl{id: "1", srcID: "1"}
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/2"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/3"})
+
+	rules := []rule.Rule{rule1}
 
 	// WHEN
 	err := repo.AddRuleSet("1", rules)
@@ -53,7 +54,12 @@ func TestRepositoryAddRuleSetWithoutViolation(t *testing.T) {
 	assert.Len(t, repo.knownRules, 1)
 	assert.False(t, repo.index.Empty())
 	assert.ElementsMatch(t, repo.knownRules, rules)
-	_, err = repo.index.Find("/foo/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+
+	_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+	_, err = repo.index.Find("/foo/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+	_, err = repo.index.Find("/foo/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 }
 
@@ -62,8 +68,16 @@ func TestRepositoryAddRuleSetWithViolation(t *testing.T) {
 
 	// GIVEN
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
-	rules1 := []rule.Rule{&ruleImpl{id: "1", srcID: "1", pathExpression: "/foo/1"}}
-	rules2 := []rule.Rule{&ruleImpl{id: "2", srcID: "2", pathExpression: "/foo/1"}}
+
+	rule1 := &ruleImpl{id: "1", srcID: "1"}
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/2"})
+
+	rule2 := &ruleImpl{id: "2", srcID: "2"}
+	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/foo/1"})
+
+	rules1 := []rule.Rule{rule1}
+	rules2 := []rule.Rule{rule2}
 
 	require.NoError(t, repo.AddRuleSet("1", rules1))
 
@@ -77,7 +91,9 @@ func TestRepositoryAddRuleSetWithViolation(t *testing.T) {
 	assert.Len(t, repo.knownRules, 1)
 	assert.False(t, repo.index.Empty())
 	assert.ElementsMatch(t, repo.knownRules, rules1)
-	_, err = repo.index.Find("/foo/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+	_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 }
 
@@ -86,14 +102,22 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 
 	// GIVEN
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
-	rules1 := []rule.Rule{
-		&ruleImpl{id: "1", srcID: "1", pathExpression: "/foo/1"},
-		&ruleImpl{id: "2", srcID: "1", pathExpression: "/foo/2"},
-		&ruleImpl{id: "3", srcID: "1", pathExpression: "/foo/3"},
-		&ruleImpl{id: "4", srcID: "1", pathExpression: "/foo/4"},
-	}
 
-	require.NoError(t, repo.AddRuleSet("1", rules1))
+	rule1 := &ruleImpl{id: "1", srcID: "1"}
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/1"})
+
+	rule2 := &ruleImpl{id: "2", srcID: "1"}
+	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/foo/2"})
+
+	rule3 := &ruleImpl{id: "3", srcID: "1"}
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/foo/4"})
+
+	rule4 := &ruleImpl{id: "4", srcID: "1"}
+	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, path: "/foo/4"})
+
+	rules := []rule.Rule{rule1, rule2, rule3, rule4}
+
+	require.NoError(t, repo.AddRuleSet("1", rules))
 	assert.Len(t, repo.knownRules, 4)
 	assert.False(t, repo.index.Empty())
 
@@ -112,17 +136,24 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	// GIVEN
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
 
-	rules1 := []rule.Rule{
-		&ruleImpl{id: "1", srcID: "bar", pathExpression: "/bar/1"},
-		&ruleImpl{id: "3", srcID: "bar", pathExpression: "/bar/3"},
-		&ruleImpl{id: "4", srcID: "bar", pathExpression: "/bar/4"},
-	}
-	rules2 := []rule.Rule{
-		&ruleImpl{id: "2", srcID: "baz", pathExpression: "/baz/2"},
-	}
-	rules3 := []rule.Rule{
-		&ruleImpl{id: "4", srcID: "foo", pathExpression: "/foo/4"},
-	}
+	rule1 := &ruleImpl{id: "1", srcID: "bar"}
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1"})
+
+	rule2 := &ruleImpl{id: "3", srcID: "bar"}
+	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/bar/3"})
+
+	rule3 := &ruleImpl{id: "4", srcID: "bar"}
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/bar/4"})
+
+	rule4 := &ruleImpl{id: "2", srcID: "baz"}
+	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, path: "/baz/2"})
+
+	rule5 := &ruleImpl{id: "4", srcID: "foo"}
+	rule5.routes = append(rule5.routes, &routeImpl{rule: rule5, path: "/foo/4"})
+
+	rules1 := []rule.Rule{rule1, rule2, rule3}
+	rules2 := []rule.Rule{rule4}
+	rules3 := []rule.Rule{rule5}
 
 	// WHEN
 	require.NoError(t, repo.AddRuleSet("bar", rules1))
@@ -141,19 +172,19 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 2)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0], rules3[0]})
 
-	_, err = repo.index.Find("/bar/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/bar/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/bar/3", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/bar/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/bar/4", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/bar/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/baz/2", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/baz/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/foo/4", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/foo/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -164,10 +195,10 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 1)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0]})
 
-	_, err = repo.index.Find("/foo/4", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/foo/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/baz/2", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
+	_, err = repo.index.Find("/baz/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -185,21 +216,35 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 	// GIVEN
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
 
-	initialRules := []rule.Rule{
-		&ruleImpl{id: "1", srcID: "1", pathExpression: "/bar/1", hash: []byte{1}},
-		&ruleImpl{id: "2", srcID: "1", pathExpression: "/bar/2", hash: []byte{1}},
-		&ruleImpl{id: "3", srcID: "1", pathExpression: "/bar/3", hash: []byte{1}},
-		&ruleImpl{id: "4", srcID: "1", pathExpression: "/bar/4", hash: []byte{1}},
-	}
+	rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1a"})
+
+	rule2 := &ruleImpl{id: "2", srcID: "1", hash: []byte{1}}
+	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/bar/2"})
+
+	rule3 := &ruleImpl{id: "3", srcID: "1", hash: []byte{1}}
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/bar/3"})
+
+	rule4 := &ruleImpl{id: "4", srcID: "1", hash: []byte{1}}
+	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, path: "/bar/4"})
+
+	initialRules := []rule.Rule{rule1, rule2, rule3, rule4}
 
 	require.NoError(t, repo.AddRuleSet("1", initialRules))
 
-	updatedRules := []rule.Rule{
-		&ruleImpl{id: "1", srcID: "1", pathExpression: "/bar/1", hash: []byte{2}}, // changed
-		// rule with id 2 is deleted
-		&ruleImpl{id: "3", srcID: "1", pathExpression: "/foo/3", hash: []byte{2}}, // changed and path expression changed
-		&ruleImpl{id: "4", srcID: "1", pathExpression: "/bar/4", hash: []byte{1}}, // same as before
-	}
+	// rule 1 changed: /bar/1a gone, /bar/1b added
+	rule1 = &ruleImpl{id: "1", srcID: "1", hash: []byte{2}}
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1b"})
+	// rule with id 2 is deleted
+	// rule 3 changed: /bar/2 gone, /foo/3 and /foo/4 added
+	rule3 = &ruleImpl{id: "3", srcID: "1", hash: []byte{2}}
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/foo/3"})
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/foo/4"})
+	// rule 4 same as before
+
+	updatedRules := []rule.Rule{rule1, rule3, rule4}
 
 	// WHEN
 	err := repo.UpdateRuleSet("1", updatedRules)
@@ -210,20 +255,25 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 	assert.Len(t, repo.knownRules, 3)
 	assert.False(t, repo.index.Empty())
 
-	_, err = repo.index.Find("/bar/1", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
-	assert.NoError(t, err) //nolint:testifylint
+	_, err = repo.index.Find("/bar/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+	_, err = repo.index.Find("/bar/1a", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.Error(t, err)
+	_, err = repo.index.Find("/bar/1b", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
 
-	_, err = repo.index.Find("/bar/2", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
-	assert.Error(t, err) //nolint:testifylint
+	_, err = repo.index.Find("/bar/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.Error(t, err)
 
-	_, err = repo.index.Find("/bar/3", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
-	assert.Error(t, err) //nolint:testifylint
+	_, err = repo.index.Find("/bar/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.Error(t, err)
+	_, err = repo.index.Find("/foo/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+	_, err = repo.index.Find("/foo/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
 
-	_, err = repo.index.Find("/foo/3", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
-	assert.NoError(t, err) //nolint:testifylint
-
-	_, err = repo.index.Find("/bar/4", radixtree.MatcherFunc[rule.Rule](func(_ rule.Rule) bool { return true }))
-	assert.NoError(t, err) //nolint:testifylint
+	_, err = repo.index.Find("/bar/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
 }
 
 func TestRepositoryFindRule(t *testing.T) {
@@ -278,19 +328,10 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				err := repo.AddRuleSet("baz", []rule.Rule{
-					&ruleImpl{
-						id:             "test2",
-						srcID:          "baz",
-						pathExpression: "/baz/bar",
-						matcher: func() config.RequestMatcher {
-							rm := mocks3.NewRequestMatcherMock(t)
-							rm.EXPECT().Matches(mock.Anything).Return(nil)
+				rule1 := &ruleImpl{id: "test2", srcID: "baz", hash: []byte{1}}
+				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/baz/bar", matcher: compositeMatcher{}})
 
-							return rm
-						}(),
-					},
-				})
+				err := repo.AddRuleSet("baz", []rule.Rule{rule1})
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {

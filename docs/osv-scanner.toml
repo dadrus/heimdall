@@ -1,0 +1,5 @@
+[[PackageOverrides]]
+name = "ws"
+ecosystem = "npm"
+ignore = true
+reason = "The entire docs directory is there to generat static html content. Although some of the dependencies may have vulnerabilities, like the ws package, they have no effect as neither inbound nor outbound connections are made during the generation of the content, respectively there is no server, which would use that functionalit, when the generated html documentation is hosted somewhere"

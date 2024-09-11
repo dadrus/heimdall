@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"bytes"
 	"slices"
 	"sync"
 
@@ -35,7 +34,7 @@ type repository struct {
 	knownRules      []rule.Rule
 	knownRulesMutex sync.Mutex
 
-	index          *radixtree.Tree[rule.Rule]
+	index          *radixtree.Tree[rule.Route]
 	rulesTreeMutex sync.RWMutex
 }
 
@@ -44,10 +43,10 @@ func newRepository(ruleFactory rule.Factory) rule.Repository {
 		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
 			func() rule.Rule { return ruleFactory.DefaultRule() },
 			func() rule.Rule { return nil }),
-		index: radixtree.New[rule.Rule](
-			radixtree.WithValuesConstraints(func(oldValues []rule.Rule, newValue rule.Rule) bool {
+		index: radixtree.New[rule.Route](
+			radixtree.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
 				// only rules from the same rule set can be placed in one node
-				return len(oldValues) == 0 || oldValues[0].SrcID() == newValue.SrcID()
+				return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
 			}),
 		),
 	}
@@ -61,7 +60,9 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 
 	entry, err := r.index.Find(
 		x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path),
-		radixtree.MatcherFunc[rule.Rule](func(candidate rule.Rule) bool { return candidate.Matches(ctx) }),
+		radixtree.LookupMatcherFunc[rule.Route](func(route rule.Route, keys, values []string) bool {
+			return route.Matches(ctx, keys, values)
+		}),
 	)
 	if err != nil {
 		if r.dr != nil {
@@ -74,7 +75,7 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 
 	request.URL.Captures = entry.Parameters
 
-	return entry.Value, nil
+	return entry.Value.Rule(), nil
 }
 
 func (r *repository) AddRuleSet(_ string, rules []rule.Rule) error {
@@ -106,16 +107,12 @@ func (r *repository) UpdateRuleSet(srcID string, rules []rule.Rule) error {
 
 	// find new rules, as well as those, which have been changed.
 	toBeAdded := slicex.Filter(rules, func(newRule rule.Rule) bool {
-		candidate := newRule.(*ruleImpl) //nolint: forcetypeassert
-
 		ruleIsNew := !slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
-			return existingRule.ID() == newRule.ID()
+			return existingRule.SameAs(newRule)
 		})
 
 		ruleChanged := slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
-			existing := existingRule.(*ruleImpl) //nolint: forcetypeassert
-
-			return existing.ID() == candidate.ID() && !bytes.Equal(existing.hash, candidate.hash)
+			return existingRule.SameAs(newRule) && !existingRule.EqualTo(newRule)
 		})
 
 		return ruleIsNew || ruleChanged
@@ -123,16 +120,12 @@ func (r *repository) UpdateRuleSet(srcID string, rules []rule.Rule) error {
 
 	// find deleted rules, as well as those, which have been changed.
 	toBeDeleted := slicex.Filter(applicable, func(existingRule rule.Rule) bool {
-		existing := existingRule.(*ruleImpl) //nolint: forcetypeassert
-
 		ruleGone := !slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
-			return newRule.ID() == existingRule.ID()
+			return newRule.SameAs(existingRule)
 		})
 
 		ruleChanged := slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
-			candidate := newRule.(*ruleImpl) //nolint: forcetypeassert
-
-			return existing.ID() == candidate.ID() && !bytes.Equal(existing.hash, candidate.hash)
+			return newRule.SameAs(existingRule) && !newRule.EqualTo(existingRule)
 		})
 
 		return ruleGone || ruleChanged
@@ -187,28 +180,35 @@ func (r *repository) DeleteRuleSet(srcID string) error {
 	return nil
 }
 
-func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Rule], rules []rule.Rule) error {
+func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Route], rules []rule.Rule) error {
 	for _, rul := range rules {
-		if err := tree.Add(
-			rul.PathExpression(),
-			rul,
-			radixtree.WithBacktracking[rule.Rule](rul.BacktrackingEnabled())); err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed adding rule ID='%s'", rul.ID()).
-				CausedBy(err)
+		for _, route := range rul.Routes() {
+			if err := tree.Add(
+				route.Path(),
+				route,
+				radixtree.WithBacktracking[rule.Route](rul.AllowsBacktracking()),
+			); err != nil {
+				return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed adding rule ID='%s'", rul.ID()).
+					CausedBy(err)
+			}
 		}
 	}
 
 	return nil
 }
 
-func (r *repository) removeRulesFrom(tree *radixtree.Tree[rule.Rule], tbdRules []rule.Rule) error {
+func (r *repository) removeRulesFrom(tree *radixtree.Tree[rule.Route], tbdRules []rule.Rule) error {
 	for _, rul := range tbdRules {
-		if err := tree.Delete(
-			rul.PathExpression(),
-			radixtree.MatcherFunc[rule.Rule](func(existing rule.Rule) bool { return existing.SameAs(rul) }),
-		); err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed deleting rule ID='%s'", rul.ID()).
-				CausedBy(err)
+		for _, route := range rul.Routes() {
+			if err := tree.Delete(
+				route.Path(),
+				radixtree.ValueMatcherFunc[rule.Route](func(route rule.Route) bool {
+					return route.Rule().SameAs(rul)
+				}),
+			); err != nil {
+				return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed deleting rule ID='%s'", rul.ID()).
+					CausedBy(err)
+			}
 		}
 	}
 

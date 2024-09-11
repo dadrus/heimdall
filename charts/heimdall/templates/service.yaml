@@ -14,11 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{ $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
-{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) -}}
-  {{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
-{{- end -}}
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service" -}}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -35,7 +31,7 @@ spec:
       targetPort: http-management
       protocol: TCP
       name: {{ .Values.service.management.name }}
-      {{- if eq $opMode "decision" }}
+      {{- if eq .Values.operationMode "decision" }}
     - port: {{ .Values.service.decision.port }}
       targetPort: http-decision
       protocol: TCP
@@ -46,8 +42,7 @@ spec:
       protocol: TCP
       name: {{ .Values.service.proxy.name }}
       {{- end }}
-      {{- $rules := default dict .Values.rules }}
-      {{- $providers := default dict $rules.providers }}
+      {{- $providers := default dict .Values.providers }}
       {{- $kubernetes := default dict $providers.kubernetes }}
       {{- if $kubernetes.tls }}
     - port: {{ .Values.service.admissionController.port }}

@@ -137,7 +137,8 @@ version: "1alpha4"
 rules:
 - id: demo:public  # <1>
   match:
-    path: /public
+    routes:
+      - path: /public
   forward_to:
     host: upstream:8081
   execute:
@@ -146,9 +147,12 @@ rules:
 
 - id: demo:protected  # <2>
   match:
-    path: /:user
-    with:
-      path_glob: "{/user,/admin}"
+    routes:
+      - path: /:user
+        path_params:
+          - name: user
+            type: glob
+            value: "{user,admin}"
   forward_to:
     host: upstream:8081
   execute:

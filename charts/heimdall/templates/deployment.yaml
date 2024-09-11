@@ -14,11 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{ $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
-{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) -}}
-{{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
-{{- end -}}
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" -}}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,9 +23,9 @@ metadata:
   labels:
     {{- include "heimdall.labels" $data | nindent 4 }}
   annotations:
-    checksum/config: {{ include (print $.Template.BasePath "/heimdall/configmap.yaml") . | sha256sum }}
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     {{- with .Values.deployment.annotations }}
-    {{- toYaml .Values.deployment.annotations | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
   {{- if not .Values.deployment.autoscaling.enabled }}
@@ -41,7 +37,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "heimdall.selectorLabels" $data | nindent 8 }}
+        {{- include "heimdall.labels" $data | nindent 8 }}
       annotations:
         {{- if contains "prometheus" (.Values.env.OTEL_METRICS_EXPORTER | default "") }}
         prometheus.io/scrape: "true"
@@ -77,12 +73,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - serve
-            - {{- if eq $opMode "decision" }} decision{{- else }} proxy{{- end }}
+            - {{- if eq .Values.operationMode "decision" }} decision{{- else }} proxy{{- end }}
             {{- with .Values.extraArgs }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
-            {{- if eq $opMode "decision" }}
+            {{- if eq .Values.operationMode "decision" }}
             - name: http-decision
               containerPort: {{ .Values.serve.decision.port }}
               protocol: TCP
@@ -104,8 +100,7 @@ spec:
               protocol: TCP
               containerPort: {{ .Values.profiling.port }}
             {{- end }}
-            {{- $rules := .Values.rules | default dict }}
-            {{- $providers := $rules.providers | default dict }}
+            {{- $providers := .Values.providers | default dict }}
             {{- $kubernetes := $providers.kubernetes | default dict}}
             {{- if $kubernetes.tls }}
             - name: https-webhook
