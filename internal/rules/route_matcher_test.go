@@ -423,13 +423,13 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 		{
 			uc: "matches with path having allowed but not decoded encoded slashes",
 			conf: []config.ParameterMatcher{
-				{Name: "foo", Type: "exact", Value: "bar%2Fbaz"},
+				{Name: "foo", Type: "exact", Value: "bar%2Fbaz[id]"},
 			},
 			slashHandling: config.EncodedSlashesOnNoDecode,
 			keys:          []string{"foo"},
-			values:        []string{"bar%2Fbaz"},
+			values:        []string{"bar%2Fbaz%5Bid%5D"},
 			toMatch: func() url.URL {
-				uri, err := url.Parse("http://example.com/bar%2Fbaz")
+				uri, err := url.Parse("http://example.com/bar%2Fbaz%5Bid%5D")
 				require.NoError(t, err)
 
 				return *uri
@@ -439,13 +439,13 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 		{
 			uc: "matches with path having allowed decoded slashes",
 			conf: []config.ParameterMatcher{
-				{Name: "foo", Type: "exact", Value: "bar/baz"},
+				{Name: "foo", Type: "exact", Value: "bar/baz[id]"},
 			},
 			slashHandling: config.EncodedSlashesOn,
 			keys:          []string{"foo"},
-			values:        []string{"bar%2Fbaz"},
+			values:        []string{"bar%2Fbaz%5Bid%5D"},
 			toMatch: func() url.URL {
-				uri, err := url.Parse("http://example.com/bar%2Fbaz")
+				uri, err := url.Parse("http://example.com/foo%2Fbaz%5Bid%5D")
 				require.NoError(t, err)
 
 				return *uri
