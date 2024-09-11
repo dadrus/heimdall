@@ -19,6 +19,7 @@ package rules
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -102,11 +103,19 @@ func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []str
 
 	value := values[idx]
 	// URL.RawPath is set only if the original url contains url encoded parts
-	if len(request.URL.RawPath) != 0 &&
-		m.slashHandling == config.EncodedSlashesOff &&
-		strings.Contains(request.URL.RawPath, "%2F") {
-		return errorchain.NewWithMessage(ErrRequestPathMismatch,
-			"request path contains encoded slashes which are not allowed")
+	if len(request.URL.RawPath) != 0 {
+		switch m.slashHandling {
+		case config.EncodedSlashesOff:
+			if strings.Contains(request.URL.RawPath, "%2F") {
+				return errorchain.NewWithMessage(ErrRequestPathMismatch,
+					"request path contains encoded slashes which are not allowed")
+			}
+		case config.EncodedSlashesOn:
+			value, _ = url.PathUnescape(value)
+		default:
+			unescaped, _ := url.PathUnescape(strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$"))
+			value = strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
+		}
 	}
 
 	if !m.match(value) {

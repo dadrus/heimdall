@@ -437,9 +437,9 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			matches: true,
 		},
 		{
-			uc: "matches with path having allowed encoded slashes",
+			uc: "matches with path having allowed decoded slashes",
 			conf: []config.ParameterMatcher{
-				{Name: "foo", Type: "exact", Value: "bar%2Fbaz"},
+				{Name: "foo", Type: "exact", Value: "bar/baz"},
 			},
 			slashHandling: config.EncodedSlashesOn,
 			keys:          []string{"foo"},
