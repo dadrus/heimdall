@@ -736,3 +736,4 @@ jobs:
             referencing the released ${{ needs.prepare-release.outputs.tag_name }} documentation version
           add-paths: |
             docs/versions/*.json
+          sign-commits: true
