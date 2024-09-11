@@ -102,7 +102,7 @@ methods:
 Controls how to handle URL-encoded slashes in request paths during matching and forwarding. Options include:
 
 ** *`off`* - Reject requests with encoded slashes (`%2F`). This is the default behavior.
-** *`on`* - Accept requests with encoded slashes recoding them to `/`.
+** *`on`* - Accept requests with encoded slashes decoding them to `/`.
 ** *`no_decode`* - Accept requests with encoded slashes without touching them.
 
 +
