@@ -193,7 +193,7 @@ func TestProviderLifecycle(t *testing.T) {
 			uc: "with no blobs in the bucket",
 			conf: []byte(`
 buckets:
-- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&region=eu-central-1
 `),
 			assert: func(t *testing.T, _ testCase, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -209,7 +209,7 @@ buckets:
 			uc: "with an empty blob in the bucket",
 			conf: []byte(`
 buckets:
-- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&region=eu-central-1
 `),
 			setupBucket: func(t *testing.T) {
 				t.Helper()
@@ -233,7 +233,7 @@ buckets:
 			uc: "with not empty blob and without watch interval",
 			conf: []byte(`
 buckets:
-- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&region=eu-central-1
 `),
 			setupBucket: func(t *testing.T) {
 				t.Helper()
@@ -277,7 +277,7 @@ rules:
 			conf: []byte(`
 watch_interval: 250ms
 buckets:
-- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&region=eu-central-1
 `),
 			setupBucket: func(t *testing.T) {
 				t.Helper()
@@ -321,7 +321,7 @@ rules:
 			conf: []byte(`
 watch_interval: 250ms
 buckets:
-- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&region=eu-central-1
 `),
 			setupBucket: func() func(t *testing.T) {
 				callIdx := 1
@@ -407,7 +407,7 @@ rules:
 			conf: []byte(`
 watch_interval: 250ms
 buckets:
-- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&region=eu-central-1
 `),
 			setupBucket: func() func(t *testing.T) {
 				callIdx := 1
