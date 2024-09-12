@@ -287,6 +287,8 @@ github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
 github.com/leodido/go-urn v1.4.0/go.mod h1:bvxc+MVxLKB4z00jd1z+Dvzr47oO32F/QSNjSBOlFxI=
 github.com/lufia/plan9stats v0.0.0-20240819163618-b1d8f4d146e7 h1:5RK988zAqB3/AN3opGfRpoQgAVqr6/A5+qRTi67VUZY=
 github.com/lufia/plan9stats v0.0.0-20240819163618-b1d8f4d146e7/go.mod h1:ilwx/Dta8jXAgpFYFvSWEMwxmbWXyiUHkd5FwyKhb5k=
+github.com/lufia/plan9stats v0.0.0-20240909124753-873cd0166683 h1:7UMa6KCCMjZEMDtTVdcGu0B1GmmC7QJKiCCjyTAWQy0=
+github.com/lufia/plan9stats v0.0.0-20240909124753-873cd0166683/go.mod h1:ilwx/Dta8jXAgpFYFvSWEMwxmbWXyiUHkd5FwyKhb5k=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
@@ -357,6 +359,8 @@ github.com/shabbyrobe/gocovmerge v0.0.0-20190829150210-3e036491d500 h1:WnNuhiq+F
 github.com/shabbyrobe/gocovmerge v0.0.0-20190829150210-3e036491d500/go.mod h1:+njLrG5wSeoG4Ds61rFgEzKvenR2UHbjMoDHsczxly0=
 github.com/shirou/gopsutil/v4 v4.24.7 h1:V9UGTK4gQ8HvcnPKf6Zt3XHyQq/peaekfxpJ2HSocJk=
 github.com/shirou/gopsutil/v4 v4.24.7/go.mod h1:0uW/073rP7FYLOkvxolUQM5rMOLTNmRXnFKafpb71rw=
+github.com/shirou/gopsutil/v4 v4.24.8 h1:pVQjIenQkIhqO81mwTaXjTzOMT7d3TZkf43PlVFHENI=
+github.com/shirou/gopsutil/v4 v4.24.8/go.mod h1:wE0OrJtj4dG+hYkxqDH3QiBICdKSf04/npcvLLc/oRg=
 github.com/shoenig/go-m1cpu v0.1.6 h1:nxdKQNcEB6vzgA2E2bvzKIYRuNj7XNJ4S/aRSwKzFtM=
 github.com/shoenig/go-m1cpu v0.1.6/go.mod h1:1JJMcUBvfNwpq05QDQVAnx3gUHr9IYF7GNg9SUEw2VQ=
 github.com/shoenig/test v0.6.4 h1:kVTaSd7WLz5WZ2IaoM0RSzRsUD+m8wRR+5qvntpn4LU=
@@ -430,6 +434,8 @@ go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.5
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.55.0/go.mod h1:LqaApwGx/oUmzsbqxkzuBvyoPpkxk3JQWnqfVrJ3wCA=
 go.opentelemetry.io/contrib/instrumentation/host v0.54.0 h1:ForLwWOQDIhZZdaf09H0Cy82jBWIQhWLn/tqzclD36E=
 go.opentelemetry.io/contrib/instrumentation/host v0.54.0/go.mod h1:LV9KQI6PdSf+TTg4npgD7FzPo/80CuyLekiHiCd1nt8=
+go.opentelemetry.io/contrib/instrumentation/host v0.55.0 h1:V/Cy5A2ydwvyED4ewwXJ441R3QllG+U8tXXVOjPeX4Y=
+go.opentelemetry.io/contrib/instrumentation/host v0.55.0/go.mod h1:fsY+EfHPwa1bQcxOUPv1FWaQXAwY+RliLRs6B6qgJes=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 h1:TT4fX+nBOA/+LUkobKGW1ydGcn+G3vRw9+g5HwCphpk=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0/go.mod h1:L7UH0GbB0p47T4Rri3uHjbpCFYrVrwc1I25QhNPiGK8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0 h1:ZIg3ZT/aQ7AfKqdwp7ECpOK6vHqquXXuyTjIO8ZdmPs=

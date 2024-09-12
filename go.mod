@@ -58,7 +58,7 @@ require (
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.55.0
-	go.opentelemetry.io/contrib/instrumentation/host v0.54.0
+	go.opentelemetry.io/contrib/instrumentation/host v0.55.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.55.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.55.0
@@ -159,7 +159,7 @@ require (
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/lufia/plan9stats v0.0.0-20240819163618-b1d8f4d146e7 // indirect
+	github.com/lufia/plan9stats v0.0.0-20240909124753-873cd0166683 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -178,7 +178,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
 	github.com/shabbyrobe/gocovmerge v0.0.0-20190829150210-3e036491d500 // indirect
-	github.com/shirou/gopsutil/v4 v4.24.7 // indirect
+	github.com/shirou/gopsutil/v4 v4.24.8 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
