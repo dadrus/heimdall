@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"net/http"
 	"net/url"
 	"testing"
@@ -58,7 +59,7 @@ func TestNewCelExecutionCondition(t *testing.T) {
 	}
 }
 
-func TestCelExecutionConditionCanExecute(t *testing.T) {
+func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 	t.Parallel()
 
 	sub := &subject.Subject{
@@ -117,7 +118,67 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			can, err := condition.CanExecute(ctx, sub)
+			can, err := condition.CanExecuteOnSubject(ctx, sub)
+
+			// THEN
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, can)
+		})
+	}
+}
+
+type testIdentifier string
+
+func (tid testIdentifier) ID() string { return string(tid) }
+
+func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc         string
+		expression string
+		expected   bool
+	}{
+		{
+			uc: "complex expression evaluating to true",
+			expression: `type(Error) in [communication_error, authorization_error] && 
+                           Error.Source == "foobar" &&
+                           "bar" in Request.URL.Query().foo`,
+			expected: true,
+		},
+		{
+			uc:         "simple expression evaluating to false",
+			expression: `type(Error) == internal_error && Request.Method == "GET"`,
+			expected:   false,
+		},
+		{
+			uc:         "simple expression evaluating to true",
+			expression: `type(Error) == authorization_error && Request.Method == "GET"`,
+			expected:   true,
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			ctx := mocks.NewContextMock(t)
+
+			ctx.EXPECT().Request().Return(&heimdall.Request{
+				Method: http.MethodGet,
+				URL: &heimdall.URL{URL: url.URL{
+					Scheme:   "http",
+					Host:     "localhost",
+					Path:     "/test",
+					RawQuery: "foo=bar&baz=zab",
+				}},
+				ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
+			})
+
+			condition, err := newCelExecutionCondition(tc.expression)
+			require.NoError(t, err)
+
+			// WHEN
+			can, err := condition.CanExecuteOnError(ctx, errorchain.
+				NewWithMessage(heimdall.ErrCommunication, "test").
+				CausedBy(heimdall.ErrAuthorization).WithErrorContext(testIdentifier("foobar")))
 
 			// THEN
 			require.NoError(t, err)
