@@ -976,12 +976,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Return(&mocks4.AuthorizerMock{}, nil)
 				mhf.EXPECT().CreateFinalizer("test", "baz", mock.Anything).
 					Return(&mocks7.FinalizerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("test", "foo",
-					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "true" }),
-				).Return(&mocks6.ErrorHandlerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("test", "bar",
-					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "false" }),
-				).Return(&mocks6.ErrorHandlerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "foo", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "bar", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
