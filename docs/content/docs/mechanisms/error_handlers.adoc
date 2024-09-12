@@ -16,7 +16,7 @@ Some of the error handlers may support or require additional configuration. The 
 
 == Default
 
-This mechanism is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
+This error handler is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
 
 To enable the usage of this mechanism, you have to set the `type` property to `default`.
 
@@ -37,7 +37,7 @@ This error handler mechanism allows redirecting the client to another endpoint, 
 
 To enable the usage of this mechanism, you have to set the `type` property to `redirect`.
 
-Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
+Configuration is mandatory by making use of the `config` property supporting the following settings:
 
 * *`to`*: _URL_ (mandatory, not overridable)
 +
@@ -62,9 +62,6 @@ So, e.g. if heimdall was handling the request for `\http://my-service.local/foo`
 ----
 id: authenticate_with_kratos
 type: redirect
-if: |
-  type(Error) in [authentication_error, authorization_error] &&
-  Request.Header("Accept").contains("text/html")
 config:
   to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 ----
