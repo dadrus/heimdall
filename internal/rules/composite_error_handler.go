@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"errors"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -28,16 +29,21 @@ func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) error
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Handling pipeline error")
 
-	for _, eh := range eh {
-		if eh.CanExecute(ctx, exErr) {
-			err := eh.Execute(ctx, exErr)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to execute error handler")
+	for _, handler := range eh {
+		if err := handler.Execute(ctx, exErr); err != nil {
+			if errors.Is(err, errErrorHandlerNotApplicable) {
+				continue
 			}
+
+			logger.Error().Err(err).Msg("Failed to execute error handler")
 
 			return err
 		}
+
+		return nil
 	}
+
+	logger.Warn().Msg("No applicable error handler found")
 
 	return exErr
 }
