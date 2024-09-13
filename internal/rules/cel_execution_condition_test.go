@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"net/http"
 	"net/url"
 	"testing"
@@ -28,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func TestNewCelExecutionCondition(t *testing.T) {

@@ -194,7 +194,6 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error)
 	}{
-
 		{
 			uc:    "with default realm",
 			error: heimdall.ErrAuthentication,

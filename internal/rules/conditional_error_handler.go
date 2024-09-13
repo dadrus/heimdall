@@ -18,6 +18,7 @@ package rules
 
 import (
 	"errors"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
