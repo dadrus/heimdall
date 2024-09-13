@@ -118,3 +118,16 @@ func TestConditionalSubjectHandlerContinueOnError(t *testing.T) {
 	// THEN
 	assert.True(t, ok)
 }
+
+func TestConditionalSubjectHandlerID(t *testing.T) {
+	t.Parallel()
+
+	condition := rulemocks.NewExecutionConditionMock(t)
+	handler := rulemocks.NewSubjectHandlerMock(t)
+	handler.EXPECT().ID().Return("test")
+
+	eh := conditionalSubjectHandler{c: condition, h: handler}
+
+	id := eh.ID()
+	assert.Equal(t, "test", id)
+}

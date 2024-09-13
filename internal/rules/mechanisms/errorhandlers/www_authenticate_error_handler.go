@@ -78,7 +78,7 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	type Config struct {
-		Realm *string `mapstructure:"realm"`
+		Realm string `mapstructure:"realm"`
 	}
 
 	var (
@@ -91,9 +91,7 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	return &wwwAuthenticateErrorHandler{
-		id: eh.id,
-		realm: x.IfThenElseExec(conf.Realm != nil,
-			func() string { return *conf.Realm },
-			func() string { return eh.realm }),
+		id:    eh.id,
+		realm: conf.Realm,
 	}, nil
 }

@@ -46,6 +46,7 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 
 	// GIVEN
 	prototype := newDefaultErrorHandler("foo")
+	assert.Equal(t, "foo", prototype.ID())
 
 	// WHEN
 	eh1, err1 := prototype.WithConfig(nil)
