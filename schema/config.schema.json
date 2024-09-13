@@ -1849,7 +1849,6 @@
       "required": [
         "id",
         "type",
-        "if",
         "config"
       ],
       "properties": {
@@ -1859,13 +1858,6 @@
         "id": {
           "description": "The unique id of the error handler to be used in the rule definition",
           "type": "string"
-        },
-        "if": {
-          "description": "Condition, when this error handler should be executed",
-          "type": "string",
-          "examples": [
-            "type(Error) == authentication_error"
-          ]
         },
         "config": {
           "type": "object",
@@ -1887,7 +1879,6 @@
       "required": [
         "id",
         "type",
-        "if",
         "config"
       ],
       "properties": {
@@ -1897,13 +1888,6 @@
         "id": {
           "description": "The unique id of the error handler to be used in the rule definition",
           "type": "string"
-        },
-        "if": {
-          "description": "Condition, when this error handler should be executed",
-          "type": "string",
-          "examples": [
-            "type(Error) == authentication_error"
-          ]
         },
         "config": {
           "type": "object",

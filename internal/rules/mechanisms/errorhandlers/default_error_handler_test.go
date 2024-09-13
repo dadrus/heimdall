@@ -38,7 +38,6 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 	errorHandler := newDefaultErrorHandler("foo")
 
 	// WHEN & THEN
-	require.True(t, errorHandler.CanExecute(nil, nil))
 	require.NoError(t, errorHandler.Execute(ctx, heimdall.ErrConfiguration))
 }
 
@@ -47,16 +46,22 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 
 	// GIVEN
 	prototype := newDefaultErrorHandler("foo")
+	assert.Equal(t, "foo", prototype.ID())
 
 	// WHEN
 	eh1, err1 := prototype.WithConfig(nil)
 	eh2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
+	eh3, err3 := prototype.WithConfig(map[string]any{})
 
 	// THEN
 	require.NoError(t, err1)
 	assert.Equal(t, prototype, eh1)
 
-	require.NoError(t, err2)
-	assert.Equal(t, prototype, eh2)
-	assert.Equal(t, "foo", prototype.ID())
+	require.Error(t, err2)
+	require.ErrorIs(t, err2, heimdall.ErrConfiguration)
+	require.ErrorContains(t, err2, "reconfiguration of the default error handler is not supported")
+	assert.Nil(t, eh2)
+
+	require.NoError(t, err3)
+	assert.Equal(t, prototype, eh3)
 }

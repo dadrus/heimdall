@@ -126,9 +126,6 @@ mechanisms:
   - id: default
     type: default
   - id: authenticate_with_kratos
-    if: |
-      type(Error) in [authentication_error, authorization_error] &&
-      Request.Header("Accept").contains("text/html")
     type: redirect
     config:
       to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}

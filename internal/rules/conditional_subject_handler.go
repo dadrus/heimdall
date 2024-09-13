@@ -44,7 +44,7 @@ func (h *conditionalSubjectHandler) Execute(ctx heimdall.Context, sub *subject.S
 		}
 	}
 
-	if canExecute, err := h.c.CanExecute(ctx, sub); err != nil {
+	if canExecute, err := h.c.CanExecuteOnSubject(ctx, sub); err != nil {
 		return err
 	} else if canExecute {
 		return h.h.Execute(ctx, sub)

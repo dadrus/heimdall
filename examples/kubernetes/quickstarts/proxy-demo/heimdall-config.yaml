@@ -37,7 +37,6 @@ data:
       error_handlers:
         - id: redirect
           type: redirect
-          if: type(Error) == authentication_error
           config:
             to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 
@@ -47,6 +46,7 @@ data:
         - authorizer: deny_all_requests
       on_error:
         - error_handler: redirect
+          if: type(Error) == authentication_error
 
     providers:
       file_system:

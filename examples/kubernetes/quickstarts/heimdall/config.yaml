@@ -31,7 +31,6 @@ mechanisms:
   error_handlers:
     - id: redirect
       type: redirect
-      if: type(Error) == authentication_error
       config:
         to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 
@@ -40,7 +39,8 @@ default_rule:
     - authenticator: anonymous_authenticator
     - authorizer: deny_all_requests
   on_error:
-    - error_handler: redirect
+    - if: type(Error) == authentication_error
+      error_handler: redirect
 
 providers:
   kubernetes:

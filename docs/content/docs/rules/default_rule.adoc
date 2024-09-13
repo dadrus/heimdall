@@ -32,9 +32,9 @@ Enables or disables backtracking while matching the rules globally. Defaults to 
 +
 Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "regular_rule.adoc" >}}[Regular Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
 
-* *`on_error`*: _link:{{< relref "regular_rule.adoc#_error_pipeline" >}}[Error Pipeline]_ (mandatory)
+* *`on_error`*: _link:{{< relref "regular_rule.adoc#_error_pipeline" >}}[Error Pipeline]_ (optional)
 +
-Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property fail. Allows omitting the definition of error handlers in specific rules. As soon as a specific rule defines at least one error handler mechanism, all error handler mechanisms, defined in the default rule are ignored.
+Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property fail. Allows omitting the definition of error handlers in specific rules. As soon as a specific rule defines at least one error handler mechanism, all error handler mechanisms, defined in the default rule are ignored. If not specified, the default error handler is used.
 
 .Default rule configuration
 ====
@@ -48,6 +48,8 @@ default_rule:
     - finalizer: create_jwt
   on_error:
     - error_handler: authenticate_with_kratos_eh
+      if: |
+        type(Error) == authentication_error && Error.Source == "session_cookie_from_kratos_authn"
 ----
 
 This example defines a default rule, with the authentication 6 authorization pipeline consisting of two authenticators, with `session_cookie_from_kratos_authn` being the first and `oauth2_introspect_token_from_keycloak_authn` being the fallback one (if the first one fails), a `deny_all_requests_authz` authorizer and the `create_jwt` finalizer. The error pipeline is configured to execute only the `authenticate_with_kratos_eh` error handler.

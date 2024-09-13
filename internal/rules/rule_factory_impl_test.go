@@ -841,7 +841,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "with conditional execution configuration type error",
+			uc: "with conditional execution configuration type error in the regular pipeline",
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -953,6 +953,42 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
+			uc: "with bad conditional expression in the error pipeline",
+			config: config2.Rule{
+				ID:      "foobar",
+				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"authorizer": "bar"},
+					{"finalizer": "baz"},
+				},
+				ErrorHandler: []config.MechanismConfig{
+					{"error_handler": "foo", "if": "true", "config": map[string]any{}},
+					{"error_handler": "bar", "if": 1, "config": map[string]any{}},
+				},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
+					Return(&mocks2.AuthenticatorMock{}, nil)
+				mhf.EXPECT().CreateAuthorizer("test", "bar", mock.Anything).
+					Return(&mocks4.AuthorizerMock{}, nil)
+				mhf.EXPECT().CreateFinalizer("test", "baz", mock.Anything).
+					Return(&mocks7.FinalizerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "foo", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
+				t.Helper()
+
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "unexpected type")
+			},
+		},
+		{
 			uc: "with conditional execution for error handler",
 			config: config2.Rule{
 				ID:      "foobar",
@@ -976,12 +1012,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Return(&mocks4.AuthorizerMock{}, nil)
 				mhf.EXPECT().CreateFinalizer("test", "baz", mock.Anything).
 					Return(&mocks7.FinalizerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("test", "foo",
-					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "true" }),
-				).Return(&mocks6.ErrorHandlerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("test", "bar",
-					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "false" }),
-				).Return(&mocks6.ErrorHandlerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "foo", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "bar", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
