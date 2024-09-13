@@ -978,7 +978,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Return(&mocks7.FinalizerMock{}, nil)
 				mhf.EXPECT().CreateErrorHandler("test", "foo", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				t.Helper()
