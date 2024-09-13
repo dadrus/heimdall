@@ -59,92 +59,6 @@ type ruleFactory struct {
 	defaultBacktracking bool
 }
 
-//nolint:funlen,gocognit,cyclop
-func (f *ruleFactory) createExecutePipeline(
-	version string,
-	pipeline []config.MechanismConfig,
-) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
-	var (
-		authenticators  compositeSubjectCreator
-		subjectHandlers compositeSubjectHandler
-		finalizers      compositeSubjectHandler
-	)
-
-	contextualizersCheck := func() error {
-		if len(finalizers) != 0 {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"at least one finalizer is defined before a contextualizer")
-		}
-
-		return nil
-	}
-
-	authorizersCheck := func() error {
-		if len(finalizers) != 0 {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"at least one finalizer is defined before an authorizer")
-		}
-
-		return nil
-	}
-
-	finalizersCheck := func() error { return nil }
-
-	for _, pipelineStep := range pipeline {
-		id, found := pipelineStep["authenticator"]
-		if found {
-			if len(subjectHandlers) != 0 || len(finalizers) != 0 {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"an authenticator is defined after some other non authenticator type")
-			}
-
-			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), getConfig(pipelineStep["config"]))
-			if err != nil {
-				return nil, nil, nil, err
-			}
-
-			authenticators = append(authenticators, authenticator)
-
-			continue
-		}
-
-		handler, err := createHandler(version, "authorizer", pipelineStep, authorizersCheck,
-			f.hf.CreateAuthorizer)
-		if err != nil && !errors.Is(err, errHandlerNotFound) {
-			return nil, nil, nil, err
-		} else if handler != nil {
-			subjectHandlers = append(subjectHandlers, handler)
-
-			continue
-		}
-
-		handler, err = createHandler(version, "contextualizer", pipelineStep, contextualizersCheck,
-			f.hf.CreateContextualizer)
-		if err != nil && !errors.Is(err, errHandlerNotFound) {
-			return nil, nil, nil, err
-		} else if handler != nil {
-			subjectHandlers = append(subjectHandlers, handler)
-
-			continue
-		}
-
-		handler, err = createHandler(version, "finalizer", pipelineStep, finalizersCheck,
-			f.hf.CreateFinalizer)
-		if err != nil && !errors.Is(err, errHandlerNotFound) {
-			return nil, nil, nil, err
-		} else if handler != nil {
-			finalizers = append(finalizers, handler)
-
-			continue
-		}
-
-		return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"unsupported configuration in execute")
-	}
-
-	return authenticators, subjectHandlers, finalizers, nil
-}
-
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
@@ -234,6 +148,92 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	return rul, nil
 }
 
+//nolint:funlen,gocognit,cyclop
+func (f *ruleFactory) createExecutePipeline(
+	version string,
+	pipeline []config.MechanismConfig,
+) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
+	var (
+		authenticators  compositeSubjectCreator
+		subjectHandlers compositeSubjectHandler
+		finalizers      compositeSubjectHandler
+	)
+
+	contextualizersCheck := func() error {
+		if len(finalizers) != 0 {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"at least one finalizer is defined before a contextualizer")
+		}
+
+		return nil
+	}
+
+	authorizersCheck := func() error {
+		if len(finalizers) != 0 {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"at least one finalizer is defined before an authorizer")
+		}
+
+		return nil
+	}
+
+	finalizersCheck := func() error { return nil }
+
+	for _, pipelineStep := range pipeline {
+		id, found := pipelineStep["authenticator"]
+		if found {
+			if len(subjectHandlers) != 0 || len(finalizers) != 0 {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+					"an authenticator is defined after some other non authenticator type")
+			}
+
+			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), getConfig(pipelineStep["config"]))
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			authenticators = append(authenticators, authenticator)
+
+			continue
+		}
+
+		handler, err := createHandler(version, "authorizer", pipelineStep, authorizersCheck,
+			f.hf.CreateAuthorizer)
+		if err != nil && !errors.Is(err, errHandlerNotFound) {
+			return nil, nil, nil, err
+		} else if handler != nil {
+			subjectHandlers = append(subjectHandlers, handler)
+
+			continue
+		}
+
+		handler, err = createHandler(version, "contextualizer", pipelineStep, contextualizersCheck,
+			f.hf.CreateContextualizer)
+		if err != nil && !errors.Is(err, errHandlerNotFound) {
+			return nil, nil, nil, err
+		} else if handler != nil {
+			subjectHandlers = append(subjectHandlers, handler)
+
+			continue
+		}
+
+		handler, err = createHandler(version, "finalizer", pipelineStep, finalizersCheck,
+			f.hf.CreateFinalizer)
+		if err != nil && !errors.Is(err, errHandlerNotFound) {
+			return nil, nil, nil, err
+		} else if handler != nil {
+			finalizers = append(finalizers, handler)
+
+			continue
+		}
+
+		return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"unsupported configuration in execute")
+	}
+
+	return authenticators, subjectHandlers, finalizers, nil
+}
+
 func (f *ruleFactory) createOnErrorPipeline(
 	version string,
 	ehConfigs []config.MechanismConfig,
@@ -244,18 +244,18 @@ func (f *ruleFactory) createOnErrorPipeline(
 		id, found := ehStep["error_handler"]
 		if found {
 			conf := getConfig(ehStep["config"])
-			condition := ehStep["if"]
 
-			if condition != nil {
-				conf["if"] = condition
-			}
-
-			eh, err := f.hf.CreateErrorHandler(version, id.(string), conf)
+			condition, err := getExecutionCondition(ehStep["if"])
 			if err != nil {
 				return nil, err
 			}
 
-			errorHandlers = append(errorHandlers, eh)
+			handler, err := f.hf.CreateErrorHandler(version, id.(string), conf)
+			if err != nil {
+				return nil, err
+			}
+
+			errorHandlers = append(errorHandlers, &conditionalErrorHandler{h: handler, c: condition})
 		} else {
 			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"unsupported configuration in error handler")

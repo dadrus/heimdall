@@ -31,14 +31,20 @@ type celExecutionCondition struct {
 	e *cellib.CompiledExpression
 }
 
-func (c *celExecutionCondition) CanExecute(ctx heimdall.Context, sub *subject.Subject) (bool, error) {
-	obj := map[string]any{"Request": ctx.Request()}
+func (c *celExecutionCondition) CanExecuteOnSubject(ctx heimdall.Context, sub *subject.Subject) (bool, error) {
+	if err := c.e.Eval(map[string]any{"Request": ctx.Request(), "Subject": sub}); err != nil {
+		if errors.Is(err, &cellib.EvalError{}) {
+			return false, nil
+		}
 
-	if sub != nil {
-		obj["Subject"] = sub
+		return false, err
 	}
 
-	if err := c.e.Eval(obj); err != nil {
+	return true, nil
+}
+
+func (c *celExecutionCondition) CanExecuteOnError(ctx heimdall.Context, cause error) (bool, error) {
+	if err := c.e.Eval(map[string]any{"Request": ctx.Request(), "Error": cellib.WrapError(cause)}); err != nil {
 		if errors.Is(err, &cellib.EvalError{}) {
 			return false, nil
 		}

@@ -467,10 +467,6 @@ mechanisms:
       type: default
     - id: authenticate_with_kratos
       type: redirect
-      if: |
-        ((type(Error) == authentication_error && Error.Source == "kratos_session_authenticator") ||
-        type(Error) == authorization_error) &&
-        Request.Header("Accept").contains("*/*")
       config:
         to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
@@ -481,6 +477,7 @@ default_rule:
     - finalizer: jwt
   on_error:
     - error_handler: authenticate_with_kratos
+      if: type(Error) == authentication_error
 
 providers:
   file_system:

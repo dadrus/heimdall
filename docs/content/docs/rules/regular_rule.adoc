@@ -144,7 +144,7 @@ Specifies the mechanisms used for authentication, authorization, contextualizati
 
 * *`on_error`*: _link:{{< relref "#_error_pipeline" >}}[Error Pipeline]_ (optional)
 +
-Specifies error handling mechanisms if the pipeline defined by the `execute` property fails. Optional, if a link:{{< relref "default_rule.adoc" >}}[default rule] is configured with `on_error` definition.
+Specifies error handling mechanisms if the pipeline defined by the `execute` property fails. Defaults to the error pipeline defined in the link:{{< relref "default_rule.adoc" >}}[default rule] if not specified.
 
 .An example rule
 ====
@@ -365,21 +365,23 @@ This example uses
 
 == Error Pipeline
 
-Compared to the link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline], the error pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler, previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue]. Error handlers are always executed as fallbacks. So, if the condition of the first error handler does not match, second is selected, if its condition matches, it is executed, otherwise the next one is selected, etc. If none of the conditions of the defined error handlers match, the link:{{< relref "/docs/mechanisms/error_handlers.adoc#_default" >}}[default error handler] is executed.
+Compared to the link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline], the error pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue].
 
-As with the authentication & authorization pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. Same is true for overrides of the `if` conditions. The overrides are always local to the given rule as well.
+Execution of the error handlers should happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects. Otherwise, the first error handler will be executed and the error pipeline will exit.
+
+As with the authentication & authorization pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. The overrides are always local to the given rule as well.
 
 .Two error handlers
 ====
 [source, yaml]
 ----
 - error_handler: foo
-- error_handler: bar
   if: # rule specific condition
+- error_handler: bar
   config:
       # rule specific config
 ----
 ====
 
-This example uses two error handlers, named `foo` and `bar`. `bar` will only be selected by heimdall if `foo` 's error condition (defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue]) does not match. `bar` does also override the error condition as required by the given rule.
+This example uses two error handlers, named `foo` and `bar`. `bar` will only be executed if `foo` 's error condition does not match. `bar` does also override the error handler configuration as required by the given rule.
 
