@@ -43,7 +43,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.20.3
-	github.com/redis/rueidis v1.0.45
+	github.com/redis/rueidis v1.0.46
 	github.com/redis/rueidis/rueidisotel v1.0.45
 	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.33.0
@@ -85,6 +85,7 @@ require (
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
+	k8s.io/klog/v2 v2.130.1
 )
 
 require (
@@ -217,7 +218,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
