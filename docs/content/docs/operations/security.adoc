@@ -56,7 +56,7 @@ E.g.
 docker run -t -p 4456:4456 \
   -v $PWD:/heimdall/conf \
   -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro \
-   dadrus/heimdall:latest serve decision \
+   dadrus/heimdall:dev serve decision \
   -c /heimdall/conf/heimdall.yaml
 ----
 ====
