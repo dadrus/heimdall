@@ -2,7 +2,7 @@
 title: "First-Party Authentication with OpenID Connect"
 date: 2022-11-04T09:00:41+02:00
 draft: false
-weight: 23
+weight: 31
 menu:
   guides:
     parent: "Authentication Protocols & Services"
