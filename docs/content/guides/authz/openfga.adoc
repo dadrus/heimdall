@@ -44,7 +44,7 @@ version: '3.7'
 
 services:
   heimdall: # <1>
-    image: dadrus/heimdall:latest
+    image: dadrus/heimdall:dev
     container_name: heimdall
     ports:
     - "9090:4455"

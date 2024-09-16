@@ -131,7 +131,7 @@ services:
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization # <4>
 
   heimdall:
-    image: dadrus/heimdall:latest
+    image: dadrus/heimdall:dev
     # further config
 
   upstream:
