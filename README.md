@@ -55,7 +55,8 @@ Head over to the [documentation](https://dadrus.github.io/heimdall/) for details
 
 ## Current state
 
-The current implementation is a late alpha version. That means it does not solve all the problems heimdall aims to solve. With other words a lot of functionality is missing. In addition, alpha version means, there will be breaking changes. Nevertheless, the code base is very stable and pretty good tested. Functionality already supported can be found in [Release descriptions](https://github.com/dadrus/heimdall/releases). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
+The project is considered production-ready and is already in use by multiple organizations worldwide. The code base is stable and well-tested. However, some features are still missing, and the development of these features might lead to breaking changes in future updates. For information on the currently supported functionality, please refer to the [Release descriptions](https://github.com/dadrus/heimdall/releases). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
+
 
 ## If you ...
 
