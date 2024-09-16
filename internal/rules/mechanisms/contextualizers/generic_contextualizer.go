@@ -53,12 +53,12 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
 			if typ != ContextualizerGeneric {
 				return false, nil, nil
 			}
 
-			eh, err := newGenericContextualizer(id, conf)
+			eh, err := newGenericContextualizer(ctx, id, conf)
 
 			return true, eh, err
 		})
@@ -79,7 +79,11 @@ type genericContextualizer struct {
 	v               values.Values
 }
 
-func newGenericContextualizer(id string, rawConfig map[string]any) (*genericContextualizer, error) {
+func newGenericContextualizer(
+	ctx CreationContext,
+	id string,
+	rawConfig map[string]any,
+) (*genericContextualizer, error) {
 	type Config struct {
 		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
@@ -91,7 +95,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 	}
 
 	var conf Config
-	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+	if err := decodeConfig(ctx, ContextualizerGeneric, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -185,7 +189,7 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}
 
 	var conf Config
-	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+	if err := decodeConfig(nil, ContextualizerGeneric, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 

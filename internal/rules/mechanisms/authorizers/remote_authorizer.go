@@ -51,12 +51,12 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerRemote {
 				return false, nil, nil
 			}
 
-			auth, err := newRemoteAuthorizer(id, conf)
+			auth, err := newRemoteAuthorizer(ctx, id, conf)
 
 			return true, auth, err
 		})
@@ -93,7 +93,7 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Contex
 	}
 }
 
-func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
+func newRemoteAuthorizer(ctx CreationContext, id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"                             validate:"required"` //nolint:lll
 		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
@@ -104,7 +104,7 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthorizerRemote, rawConfig, &conf); err != nil {
+	if err := decodeConfig(ctx, AuthorizerRemote, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -201,7 +201,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthorizerRemote, rawConfig, &conf); err != nil {
+	if err := decodeConfig(nil, AuthorizerRemote, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 

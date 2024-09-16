@@ -233,7 +233,7 @@ values:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newRemoteAuthorizer(tc.id, conf)
+			auth, err := newRemoteAuthorizer(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -475,7 +475,7 @@ cache_ttl: 15s
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newRemoteAuthorizer(tc.id, pc)
+			prototype, err := newRemoteAuthorizer(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN

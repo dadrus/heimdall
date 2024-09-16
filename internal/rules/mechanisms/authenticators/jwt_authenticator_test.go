@@ -448,7 +448,7 @@ cache_ttl: 5s`),
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newJwtAuthenticator(tc.id, conf)
+			a, err := newJwtAuthenticator(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -790,7 +790,7 @@ metadata_endpoint:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newJwtAuthenticator(tc.id, pc)
+			prototype, err := newJwtAuthenticator(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN

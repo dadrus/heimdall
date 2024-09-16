@@ -41,12 +41,12 @@ const (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorBasicAuth {
 				return false, nil, nil
 			}
 
-			auth, err := newBasicAuthAuthenticator(id, conf)
+			auth, err := newBasicAuthAuthenticator(ctx, id, conf)
 
 			return true, auth, err
 		})
@@ -59,7 +59,11 @@ type basicAuthAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthAuthenticator, error) {
+func newBasicAuthAuthenticator(
+	ctx CreationContext,
+	id string,
+	rawConfig map[string]any,
+) (*basicAuthAuthenticator, error) {
 	type Config struct {
 		UserID               string `mapstructure:"user_id"                 validate:"required"`
 		Password             string `mapstructure:"password"                validate:"required"`
@@ -67,7 +71,7 @@ func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthA
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+	if err := decodeConfig(ctx, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +154,7 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+	if err := decodeConfig(nil, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
