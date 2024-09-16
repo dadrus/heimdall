@@ -723,6 +723,13 @@ jobs:
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
+      - name: Update used image tags to the released version
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
+        with:
+          find: "heimdall:dev"
+          replace: "heimdall:${{ needs.prepare-release.outputs.tag_name }}"
+          regex: false
+          include: docs/**
       - name: Build documentation
         working-directory: ./docs
         run: hugo --minify -d ./public
