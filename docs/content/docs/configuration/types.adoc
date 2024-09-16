@@ -341,6 +341,45 @@ config:
 ----
 ====
 
+=== HTTP Message Signatures
+
+This strategy implements HTTP message signatures according to https://datatracker.ietf.org/doc/html/rfc9421[RFC 9421] to sign outbound requests.
+
+`type` must be set to `http_message_signatures`. `config` supports the following properties:
+
+* *`ttl`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+The TTL of the resulting signature. Defaults to 1m. Responsible for setting `created` and `expires` parameters in the resulting signature.
+
+* *`label`*: _string_ (optional)
++
+The label to use. Defaults to `sig`.
+
+* *`components`*: _string array_ (mandatory)
++
+The components to be covered by the signature. While the RFC allows for signatures that do not cover any components, this is considered a security risk. When using the `"content-digest"` component, Heimdall will compute hash values of the request body using `sha-256` and `sha-512` algorithms. It will then add a `Content-Digest` header with these hash values to the request, and this header will be included in the signature calculation.
+
+* *`signer`*: _link:{{< relref "/docs/configuration/types.adoc#_signer" >}}[Signer]_ (mandatory)
++
+The configuration of the key material used for signature creation purposes, as well as the name used for the `tag` parameter in the resulting signature.
+
+.Strategy configuration
+====
+
+[source, yaml]
+----
+type: http_message_signatures
+config:
+  ttl: 2m
+  label: foo
+  components: ["@method", "content-digest", "@authority", "x-my-fancy-header"]
+  signer:
+    name: bar
+    key-store:
+      path: /path/to/key.pem
+----
+====
+
 === OAuth2 Client Credentials Grant Flow Strategy
 
 This strategy implements the https://datatracker.ietf.org/doc/html/rfc6749#section-4.4[OAuth2 Client Credentials Grant Flow] to obtain an access token expected by the endpoint. Heimdall caches the received access token.
