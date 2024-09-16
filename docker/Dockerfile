@@ -18,7 +18,6 @@ RUN useradd -l -M -U -s "/usr/sbin/nologin" -d "/nonexistent" -u 10001 ${USER}
 WORKDIR /build
 
 COPY . .
-RUN go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.10.0
 RUN go mod download && go mod verify &&\
     CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${VERSION}"
 
