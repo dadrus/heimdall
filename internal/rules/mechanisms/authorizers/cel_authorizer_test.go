@@ -142,7 +142,7 @@ expressions:
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newCELAuthorizer(tc.id, conf)
+			a, err := newCELAuthorizer(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -218,7 +218,7 @@ expressions:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newCELAuthorizer(tc.id, pc)
+			prototype, err := newCELAuthorizer(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -255,6 +255,7 @@ expressions:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
+				ctx.EXPECT().Outputs().Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -269,7 +270,7 @@ expressions:
 			},
 		},
 		{
-			uc: "expressions can use subject and request properties",
+			uc: "expressions can use subject, request and outputs properties",
 			id: "authz2",
 			config: []byte(`
 expressions:
@@ -290,6 +291,8 @@ expressions:
   - expression: Request.Cookie("FooCookie") == "barfoo"
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
   - expression: Request.URL.Path.split("/").last() == "test"
+  - expression: Request.URL.Captures.foo == "bar"
+  - expression: Outputs.foo == "bar"
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
 				t.Helper()
@@ -308,14 +311,19 @@ expressions:
 				ctx.EXPECT().Request().Return(&heimdall.Request{
 					RequestFunctions: reqf,
 					Method:           http.MethodGet,
-					URL: &url.URL{
-						Scheme:   "http",
-						Host:     "localhost",
-						Path:     "/test",
-						RawQuery: "foo=bar&baz=zab",
+					URL: &heimdall.URL{
+						URL: url.URL{
+							Scheme:   "http",
+							Host:     "localhost",
+							Path:     "/test",
+							RawQuery: "foo=bar&baz=zab",
+						},
+						Captures: map[string]string{"foo": "bar"},
 					},
 					ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 				})
+
+				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -336,7 +344,7 @@ expressions:
 
 			tc.configureContextAndSubject(t, ctx, sub)
 
-			auth, err := newCELAuthorizer(tc.id, conf)
+			auth, err := newCELAuthorizer(nil, tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN

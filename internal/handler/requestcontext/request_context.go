@@ -36,7 +36,6 @@ type RequestContext struct {
 	reqURL          *url.URL
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
-	jwtSigner       heimdall.JWTSigner
 	req             *http.Request
 	err             error
 
@@ -45,11 +44,11 @@ type RequestContext struct {
 	savedBody any
 	hmdlReq   *heimdall.Request
 	headers   map[string]string
+	outputs   map[string]any
 }
 
-func New(signer heimdall.JWTSigner, req *http.Request) *RequestContext {
+func New(req *http.Request) *RequestContext {
 	return &RequestContext{
-		jwtSigner:       signer,
 		reqMethod:       extractMethod(req),
 		reqURL:          extractURL(req),
 		upstreamHeaders: make(http.Header),
@@ -132,7 +131,7 @@ func (r *RequestContext) Request() *heimdall.Request {
 		r.hmdlReq = &heimdall.Request{
 			RequestFunctions:  r,
 			Method:            r.reqMethod,
-			URL:               r.reqURL,
+			URL:               &heimdall.URL{URL: *r.reqURL},
 			ClientIPAddresses: r.requestClientIPs(),
 		}
 	}
@@ -174,4 +173,10 @@ func (r *RequestContext) UpstreamCookies() map[string]string      { return r.ups
 func (r *RequestContext) AppContext() context.Context             { return r.req.Context() }
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) PipelineError() error                    { return r.err }
-func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
+func (r *RequestContext) Outputs() map[string]any {
+	if r.outputs == nil {
+		r.outputs = make(map[string]any)
+	}
+
+	return r.outputs
+}

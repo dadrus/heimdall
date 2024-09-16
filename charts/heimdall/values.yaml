@@ -20,18 +20,6 @@
 # or in each pod before the actual business service.
 operationMode: decision # decision or proxy
 
-# If set to true, a demo deployment with exemplary rules, as these can be found in the documentation,
-# will be done
-demo:
-  enabled: false
-
-  # the demo setup assumes nginx ingress controller and will use the
-  # following values to configure the ingress rule
-  # change the values to what is required for your ingress controller
-  forwardAuthMiddlewareAnnotation: nginx.ingress.kubernetes.io/auth-url
-  forwardAuthMiddlewareResponseAnnotation: nginx.ingress.kubernetes.io/auth-response-headers
-  forwardAuthMiddlewareRequestUri: $request_uri
-
 # Default values for heimdall.
 image:
   repository: ghcr.io/dadrus/heimdall

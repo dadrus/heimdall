@@ -35,9 +35,8 @@ import (
 )
 
 type ruleSetEndpoint struct {
-	URL             *url.URL `mapstructure:"url"`
-	Prefix          string   `mapstructure:"prefix"`
-	RulesPathPrefix string   `mapstructure:"rule_path_match_prefix"`
+	URL    *url.URL `mapstructure:"url"`
+	Prefix string   `mapstructure:"prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string {
@@ -123,10 +122,6 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
-	}
-
-	if err = contents.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
-		return nil, err
 	}
 
 	contents.Hash = attrs.MD5

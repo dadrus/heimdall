@@ -134,6 +134,9 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    routes: 
+      - path: /bar
 `))
 				require.NoError(t, err)
 			},
@@ -182,6 +185,16 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo/:bar
+        path_params:
+          - name: bar
+            type: glob
+            value: "*baz"
+    methods: [ GET ]
+  execute:
+   - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -191,9 +204,18 @@ rules:
 				require.NoError(t, err)
 
 				require.NotNil(t, ruleSet)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
-				require.NotEmpty(t, ruleSet.Hash)
+				require.Len(t, ruleSet.Rules[0].Matcher.Routes, 1)
+				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.Routes[0].Path)
+				require.Len(t, ruleSet.Rules[0].Matcher.Routes[0].PathParams, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Name)
+				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Type)
+				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Value)
+				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.Methods)
+				assert.NotEmpty(t, ruleSet.Hash)
 			},
 		},
 		{
@@ -212,7 +234,13 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo" }
+		{ 
+          "id": "foo",
+          "match": { 
+            "routes": [{"path": "/foo"}],
+            "methods" : ["GET"]
+          },
+          "execute": [{ "authenticator": "test"}] }
 	]
 }`))
 				require.NoError(t, err)
@@ -229,13 +257,12 @@ rules:
 			},
 		},
 		{
-			uc: "valid rule set with path only url glob with path prefix violation",
+			uc: "valid rule set with full url glob",
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
 					Method: http.MethodGet,
 				},
-				RulesPathPrefix: "/foo/bar",
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -245,67 +272,17 @@ rules:
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ "id": "foo", "match":"/bar/foo/<**>" }
-	]
-}`))
-				require.NoError(t, err)
-			},
-			assert: func(t *testing.T, err error, _ *config.RuleSet) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "path prefix validation")
-			},
-		},
-		{
-			uc: "valid rule set with full url glob with path prefix violation",
-			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
-				RulesPathPrefix: "/foo/bar",
-			},
-			writeResponse: func(t *testing.T, w http.ResponseWriter) {
-				t.Helper()
-
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`{ 
-	"version": "1",
-	"name": "test",
-	"rules": [
-		{ "id": "foo", "match":"<**>://moobar.local:9090/bar/foo/<**>" }
-	]
-}`))
-				require.NoError(t, err)
-			},
-			assert: func(t *testing.T, err error, _ *config.RuleSet) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "path prefix validation")
-			},
-		},
-		{
-			uc: "valid rule set with full url glob without path prefix violation",
-			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
-				RulesPathPrefix: "/foo/bar",
-			},
-			writeResponse: func(t *testing.T, w http.ResponseWriter) {
-				t.Helper()
-
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`{ 
-	"version": "1",
-	"name": "test",
-	"rules": [
-		{ "id": "foo", "match":"<**>://moobar.local:9090/foo/bar/<**>" }
+      { 
+	    "id": "foo",
+        "match": {
+          "routes": [
+            { "path": "/foo/bar/:baz", "path_params": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
+          ],
+          "methods": [ "GET" ],
+          "hosts": [{ "value":"moobar.local:9090", "type": "exact"}],
+	    },
+        "execute": [{ "authenticator": "test"}]
+	  }
 	]
 }`))
 				require.NoError(t, err)

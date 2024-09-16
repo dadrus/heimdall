@@ -1,0 +1,417 @@
+suite: test suite for deployment configuration
+templates:
+  - deployment.yaml
+  - configmap.yaml
+tests:
+  - it: should be configured by default
+    template: deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - isAPIVersion:
+          of: apps/v1
+
+  - it: name should be set with default name
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-heimdall
+
+  - it: name should be set with overwritten name
+    template: deployment.yaml
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-foo
+
+  - it: namespace should be set
+    template: deployment.yaml
+    release:
+      namespace: test-namespace
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: test-namespace
+
+  - it: should set default labels with default values
+    template: deployment.yaml
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set custom labels in addition to default ones if provided
+    template: deployment.yaml
+    set:
+      deployment.labels:
+        foo: bar
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+            foo: bar
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set default labels with overwrites
+    template: deployment.yaml
+    chart:
+      appVersion: 1.0.0
+      version: 2.0.0
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: foo
+            app.kubernetes.io/version: 1.0.0
+            helm.sh/chart: heimdall-2.0.0
+
+  - it: should set checksum/config annotation by default
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            checksum/config: fd1d54e159488247d1aa0acf510afc7c24e8fa37e76663533a1fce9bc53b81a9
+
+  - it: should set custom annotations if provided
+    template: deployment.yaml
+    set:
+      deployment.annotations:
+        foo: bar
+        bar: foo
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            foo: bar
+            checksum/config: fd1d54e159488247d1aa0acf510afc7c24e8fa37e76663533a1fce9bc53b81a9
+            bar: foo
+
+  - it: pod label selector is configured with the required labels and values
+    template: deployment.yaml
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/name: foo
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/name: foo
+
+  - it: pod template labels should match deployment labels
+    template: deployment.yaml
+    release:
+      name: test-release
+    chart:
+      appVersion: 1.0.0
+      version: 2.0.0
+    set:
+      deployment.labels:
+        foo: bar
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: 1.0.0
+            foo: bar
+            helm.sh/chart: heimdall-2.0.0
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: 1.0.0
+            foo: bar
+            helm.sh/chart: heimdall-2.0.0
+
+  - it: should configure 2 replicas if autoscaling is disabled
+    template: deployment.yaml
+    set:
+      deployment.autoscaling.enabled: false
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: should not configure replicas if autoscaling is enabled (default)
+    template: deployment.yaml
+    set:
+      deployment.autoscaling.enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: template metadata annotations should not be set by default
+    template: deployment.yaml
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.metadata.annotations
+
+  - it: should set prometheus scraping annotations on template metadata if metrics exporter is set to prometheus
+    template: deployment.yaml
+    set:
+      env:
+        OTEL_METRICS_EXPORTER: prometheus
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            prometheus.io/scrape: "true"
+            prometheus.io/path: "/metrics"
+            prometheus.io/port: "9464"
+
+  - it: prometheus exporter port can be customized
+    template: deployment.yaml
+    set:
+      env:
+        OTEL_METRICS_EXPORTER: prometheus
+        OTEL_EXPORTER_PROMETHEUS_PORT: 8888
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            prometheus.io/scrape: "true"
+            prometheus.io/path: "/metrics"
+            prometheus.io/port: "8888"
+
+  - it: phlare annotations should be set if profiling is enabled
+    template: deployment.yaml
+    set:
+      profiling.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            phlare.grafana.com/scrape: "true"
+            phlare.grafana.com/port: "10251"
+
+  - it: port for phlare scraping can be customized
+    template: deployment.yaml
+    set:
+      profiling.enabled: true
+      profiling.port: 8888
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            phlare.grafana.com/scrape: "true"
+            phlare.grafana.com/port: "8888"
+
+  - it: should set custom pod annotations if provided
+    template: deployment.yaml
+    set:
+      deployment.pod.annotations:
+        foo: bar
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            foo: bar
+
+  - it: profiling, prometheus and custom pod annotations can be used together
+    template: deployment.yaml
+    set:
+      deployment.pod.annotations:
+        foo: bar
+      profiling.enabled: true
+      profiling.port: 8888
+      env:
+        OTEL_METRICS_EXPORTER: prometheus
+        OTEL_EXPORTER_PROMETHEUS_PORT: 9999
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            foo: bar
+            phlare.grafana.com/port: "8888"
+            phlare.grafana.com/scrape: "true"
+            prometheus.io/path: /metrics
+            prometheus.io/port: "9999"
+            prometheus.io/scrape: "true"
+
+  - it: imagePullSecrets should be empty by default
+    template: deployment.yaml
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.spec.imagePullSecrets
+
+  - it: should allow imagePullSecrets configuration
+    template: deployment.yaml
+    set:
+      image.pullSecrets:
+        - name: foobar
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value:
+            - name: foobar
+
+  - it: should automount service account token
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: should set service account name
+    template: deployment.yaml
+    release:
+      name: test-release
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: test-release-heimdall
+
+  - it: should configure pod security context by default
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            fsGroup: 10001
+            runAsGroup: 10001
+            runAsNonRoot: true
+            runAsUser: 10001
+
+  - it: should allow pod security context configuration and merge the provided configuration with the default one
+    template: deployment.yaml
+    set:
+      deployment.pod.securityContext:
+        runAsNonRoot: false
+        runAsUser: 1
+        foo: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            foo: bar
+            fsGroup: 10001
+            runAsGroup: 10001
+            runAsNonRoot: false
+            runAsUser: 1
+
+  - it: should configure one volume for heimdall configuration by default
+    template: deployment.yaml
+    release:
+      name: test-release
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes
+          value:
+            - configMap:
+                name: test-release-heimdall-config
+              name: heimdall-config-volume
+
+  - it: should reference further volumes if configured
+    template: deployment.yaml
+    set:
+      deployment.volumes:
+        - name: some-volume-name
+          configMap:
+            name: some-config-map
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes
+          value:
+            - configMap:
+                name: RELEASE-NAME-heimdall-config
+              name: heimdall-config-volume
+            - configMap:
+                name: some-config-map
+              name: some-volume-name
+
+  - it: should have no node selectors configured by default
+    template: deployment.yaml
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.spec.nodeSelector
+
+  - it: should set node selectors if specified
+    template: deployment.yaml
+    set:
+      deployment.nodeSelector:
+        foo: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            foo: bar
+
+  - it: should have no affinity configured by default
+    template: deployment.yaml
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.spec.affinity
+
+  - it: should set affinity if specified
+    template: deployment.yaml
+    set:
+      deployment.affinity:
+        foo: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity
+          value:
+            foo: bar
+
+  - it: should have no tolerations configured by default
+    template: deployment.yaml
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.spec.tolerations
+
+  - it: should set tolerations if specified
+    template: deployment.yaml
+    set:
+      deployment.tolerations:
+        - foo: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.tolerations
+          value:
+            - foo: bar
+
+  - it: should have one container with name set the name of the chart (heimdall)
+    template: deployment.yaml
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: heimdall

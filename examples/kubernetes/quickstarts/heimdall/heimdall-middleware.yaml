@@ -1,0 +1,12 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: heimdall
+  namespace: heimdall
+spec:
+  forwardAuth:
+    address: "https://heimdall.heimdall.svc.cluster.local:4456"
+    tls:
+      caSecret: heimdall-tls
+    authResponseHeaders:
+      - Authorization

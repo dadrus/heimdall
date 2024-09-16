@@ -42,7 +42,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock) {
 				t.Helper()
 
-				c.EXPECT().CanExecute(mock.Anything, mock.Anything).Return(true, nil)
+				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(true, nil)
 				h.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
 				h.EXPECT().ID().Return("test")
 			},
@@ -57,7 +57,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock) {
 				t.Helper()
 
-				c.EXPECT().CanExecute(mock.Anything, mock.Anything).Return(false, nil)
+				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(false, nil)
 				h.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
@@ -71,7 +71,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock) {
 				t.Helper()
 
-				c.EXPECT().CanExecute(mock.Anything, mock.Anything).
+				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).
 					Return(true, testsupport.ErrTestPurpose)
 				h.EXPECT().ID().Return("test")
 			},
@@ -117,4 +117,17 @@ func TestConditionalSubjectHandlerContinueOnError(t *testing.T) {
 
 	// THEN
 	assert.True(t, ok)
+}
+
+func TestConditionalSubjectHandlerID(t *testing.T) {
+	t.Parallel()
+
+	condition := rulemocks.NewExecutionConditionMock(t)
+	handler := rulemocks.NewSubjectHandlerMock(t)
+	handler.EXPECT().ID().Return("test")
+
+	eh := conditionalSubjectHandler{c: condition, h: handler}
+
+	id := eh.ID()
+	assert.Equal(t, "test", id)
 }

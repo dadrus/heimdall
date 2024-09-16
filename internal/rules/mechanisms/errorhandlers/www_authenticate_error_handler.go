@@ -28,7 +28,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerWWWAuthenticate {
 				return false, nil, nil
 			}
@@ -40,15 +40,13 @@ func init() {
 }
 
 type wwwAuthenticateErrorHandler struct {
-	*baseErrorHandler
-
+	id    string
 	realm string
 }
 
 func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
 	type Config struct {
-		Condition string `mapstructure:"if"    validate:"required"`
-		Realm     string `mapstructure:"realm"`
+		Realm string `mapstructure:"realm"`
 	}
 
 	var conf Config
@@ -56,16 +54,13 @@ func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAu
 		return nil, err
 	}
 
-	base, err := newBaseErrorHandler(id, conf.Condition)
-	if err != nil {
-		return nil, err
-	}
-
 	return &wwwAuthenticateErrorHandler{
-		baseErrorHandler: base,
-		realm:            x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
+		id:    id,
+		realm: x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
 	}, nil
 }
+
+func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ error) error {
 	logger := zerolog.Ctx(ctx.AppContext())
@@ -83,13 +78,11 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	type Config struct {
-		Condition string  `mapstructure:"if"`
-		Realm     *string `mapstructure:"realm"`
+		Realm string `mapstructure:"realm"`
 	}
 
 	var (
 		conf Config
-		base *baseErrorHandler
 		err  error
 	)
 
@@ -97,19 +90,8 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 		return nil, err
 	}
 
-	if len(conf.Condition) != 0 {
-		base, err = newBaseErrorHandler(eh.id, conf.Condition)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		base = eh.baseErrorHandler
-	}
-
 	return &wwwAuthenticateErrorHandler{
-		baseErrorHandler: base,
-		realm: x.IfThenElseExec(conf.Realm != nil,
-			func() string { return *conf.Realm },
-			func() string { return eh.realm }),
+		id:    eh.id,
+		realm: conf.Realm,
 	}, nil
 }

@@ -53,12 +53,12 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorJwt {
 				return false, nil, nil
 			}
 
-			auth, err := newJwtAuthenticator(id, conf)
+			auth, err := newJwtAuthenticator(ctx, id, conf)
 
 			return true, auth, err
 		})
@@ -76,7 +76,12 @@ type jwtAuthenticator struct {
 	validateJWKCert      bool
 }
 
-func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
+// nolint: funlen
+func newJwtAuthenticator(
+	ctx CreationContext,
+	id string,
+	rawConfig map[string]any,
+) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
 		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
 		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
@@ -90,7 +95,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthenticatorJwt, rawConfig, &conf); err != nil {
+	if err := decodeConfig(ctx, AuthenticatorJwt, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -214,7 +219,7 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthenticatorJwt, config, &conf); err != nil {
+	if err := decodeConfig(nil, AuthenticatorJwt, config, &conf); err != nil {
 		return nil, err
 	}
 

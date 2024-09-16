@@ -21,17 +21,15 @@ import (
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 type Handler struct {
 	e rule.Executor
-	s heimdall.JWTSigner
 }
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
-	reqCtx := NewRequestContext(ctx, req, h.s)
+	reqCtx := NewRequestContext(ctx, req)
 
 	_, err := h.e.Execute(reqCtx)
 	if err != nil {

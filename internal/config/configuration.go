@@ -30,7 +30,6 @@ type Configuration struct { //nolint:musttag
 	Tracing              TracingConfig        `koanf:"tracing"`
 	Metrics              MetricsConfig        `koanf:"metrics"`
 	Profiling            ProfilingConfig      `koanf:"profiling"`
-	Signer               SignerConfig         `koanf:"signer"`
 	Cache                CacheConfig          `koanf:"cache"`
 	Prototypes           *MechanismPrototypes `koanf:"mechanisms,omitempty"`
 	Default              *DefaultRule         `koanf:"default_rule,omitempty"`

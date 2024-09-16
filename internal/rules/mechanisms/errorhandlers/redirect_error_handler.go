@@ -32,7 +32,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
 			}
@@ -44,17 +44,15 @@ func init() {
 }
 
 type redirectErrorHandler struct {
-	*baseErrorHandler
-
+	id   string
 	to   template.Template
 	code int
 }
 
 func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type Config struct {
-		Condition string            `mapstructure:"if"   validate:"required"`
-		To        template.Template `mapstructure:"to"   validate:"required"`
-		Code      int               `mapstructure:"code"`
+		To   template.Template `mapstructure:"to"   validate:"required"`
+		Code int               `mapstructure:"code"`
 	}
 
 	var conf Config
@@ -62,17 +60,14 @@ func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErro
 		return nil, err
 	}
 
-	base, err := newBaseErrorHandler(id, conf.Condition)
-	if err != nil {
-		return nil, err
-	}
-
 	return &redirectErrorHandler{
-		baseErrorHandler: base,
-		to:               conf.To,
-		code:             x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
+		id:   id,
+		to:   conf.To,
+		code: x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
 	}, nil
 }
+
+func (eh *redirectErrorHandler) ID() string { return eh.id }
 
 func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ error) error {
 	logger := zerolog.Ctx(ctx.AppContext())
@@ -95,28 +90,11 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ error) error {
 	return nil
 }
 
-func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
-	if len(rawConfig) == 0 {
-		return eh, nil
+func (eh *redirectErrorHandler) WithConfig(conf map[string]any) (ErrorHandler, error) {
+	if len(conf) != 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"reconfiguration of a redirect error handler is not supported")
 	}
 
-	type Config struct {
-		Condition string `mapstructure:"if" validate:"required"`
-	}
-
-	var conf Config
-	if err := decodeConfig(ErrorHandlerRedirect, rawConfig, &conf); err != nil {
-		return nil, err
-	}
-
-	base, err := newBaseErrorHandler(eh.id, conf.Condition)
-	if err != nil {
-		return nil, err
-	}
-
-	return &redirectErrorHandler{
-		baseErrorHandler: base,
-		to:               eh.to,
-		code:             eh.code,
-	}, nil
+	return eh, nil
 }

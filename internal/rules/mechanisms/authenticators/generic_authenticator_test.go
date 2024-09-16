@@ -308,7 +308,7 @@ session_lifespan:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newGenericAuthenticator(tc.id, conf)
+			auth, err := newGenericAuthenticator(nil, tc.id, conf)
 
 			// THEN
 			tc.assertError(t, err, auth)
@@ -712,7 +712,7 @@ forward_cookies:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newGenericAuthenticator(tc.id, pc)
+			prototype, err := newGenericAuthenticator(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN

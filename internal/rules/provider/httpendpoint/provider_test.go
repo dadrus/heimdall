@@ -166,7 +166,7 @@ endpoints:
 				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
-			cch, err := memory.NewCache(nil, nil)
+			cch, err := memory.NewCache(nil, nil, nil)
 			require.NoError(t, err)
 
 			// WHEN
@@ -262,6 +262,12 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo
+    methods: [ "GET" ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -304,6 +310,12 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+    methods: [ "GET" ]
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -351,6 +363,12 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 2:
@@ -362,6 +380,12 @@ version: "2"
 name: test
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+    methods: [ GET ]
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -427,6 +451,11 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 2:
@@ -436,6 +465,11 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    routes: 
+      - path: /baz
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					case 3:
@@ -445,6 +479,11 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					default:
@@ -454,6 +493,11 @@ version: "1"
 name: test
 rules:
 - id: foz
+  match:
+    routes:
+      - path: /foz
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -524,6 +568,11 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -569,6 +618,11 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -612,6 +666,11 @@ version: "1"
 name: test
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo
+  execute:
+    - authenticator: test
 `))
 				require.NoError(t, err)
 			},
@@ -649,6 +708,11 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					} else {
@@ -658,6 +722,11 @@ version: "1"
 name: test
 rules:
 - id: baz
+  match:
+    routes:
+      - path: /baz
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					}
@@ -700,6 +769,11 @@ version: "1"
 name: test
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+  execute:
+    - authenticator: test
 `))
 						require.NoError(t, err)
 					} else {
@@ -745,7 +819,7 @@ rules:
 
 			logs := &strings.Builder{}
 
-			cch, err := memory.NewCache(nil, nil)
+			cch, err := memory.NewCache(nil, nil, nil)
 			require.NoError(t, err)
 
 			prov, err := newProvider(conf, cch, processor, zerolog.New(logs))

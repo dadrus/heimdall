@@ -240,7 +240,7 @@ func TestNewClusterCache(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			cch, err := NewClusterCache(conf, nil)
+			cch, err := NewClusterCache(conf, nil, nil)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}

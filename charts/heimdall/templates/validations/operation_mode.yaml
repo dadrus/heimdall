@@ -1,0 +1,4 @@
+{{ $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode }}
+{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) }}
+  {{- fail "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" }}
+{{- end }}

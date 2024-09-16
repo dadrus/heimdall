@@ -36,7 +36,6 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
 	"github.com/dadrus/heimdall/internal/handler/service"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -48,7 +47,6 @@ func newService(
 	cch cache.Cache,
 	log zerolog.Logger,
 	exec rule.Executor,
-	signer heimdall.JWTSigner,
 ) *http.Server {
 	cfg := conf.Serve.Decision
 	eh := errorhandler.New(
@@ -57,7 +55,6 @@ func newService(
 		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
 		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
 		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
-		errorhandler.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
 		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 	)
@@ -87,7 +84,7 @@ func newService(
 			otelmetrics.WithServerName(cfg.Address()),
 		),
 		cachemiddleware.New(cch),
-	).Then(service.NewHandler(newContextFactory(signer, acceptedCode), exec, eh))
+	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))
 
 	return &http.Server{
 		Handler:        hc,

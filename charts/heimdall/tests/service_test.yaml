@@ -1,0 +1,266 @@
+suite: test suite for service configuration
+templates:
+  - service.yaml
+tests:
+  - it: should be configured by default
+    asserts:
+      - isKind:
+          of: Service
+      - isAPIVersion:
+          of: v1
+
+  - it: name should be set with default name
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-heimdall
+
+  - it: name should be set with overwritten name
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-foo
+
+  - it: namespace should be set
+    release:
+      namespace: test-namespace
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: test-namespace
+
+  - it: should set default labels with default values
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set custom labels in addition to default ones if provided
+    set:
+      service.labels:
+        foo: bar
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+            foo: bar
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set default labels with overwrites
+    chart:
+      appVersion: 1.0.0
+      version: 2.0.0
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: foo
+            app.kubernetes.io/version: 1.0.0
+            helm.sh/chart: heimdall-2.0.0
+
+  - it: should not set any annotations by default
+    asserts:
+      - isNullOrEmpty:
+          path: metadata.annotations
+
+  - it: should not set custom annotations if provided
+    set:
+      service.annotations:
+        foo: bar
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            foo: bar
+
+  - it: should set service type to ClusterIP
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should configure selector with the required labels and values
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/name: foo
+
+  - it: should expose management and decision ports by default
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+            - name: decision
+              port: 4456
+              protocol: TCP
+              targetPort: http-decision
+
+  - it: should expose management and proxy ports if operated in proxy mode
+    set:
+      operationMode: proxy
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+            - name: proxy
+              port: 4455
+              protocol: TCP
+              targetPort: http-proxy
+
+  - it: should not expose metrics port in addition to the standard ports although it is configured
+    set:
+      env:
+        OTEL_METRICS_EXPORTER: "prometheus"
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+            - name: decision
+              port: 4456
+              protocol: TCP
+              targetPort: http-decision
+
+  - it: should not expose profiling port in addition to the standard ports although it is configured
+    set:
+      profiling.enabled: true
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+            - name: decision
+              port: 4456
+              protocol: TCP
+              targetPort: http-decision
+
+  - it: should expose admission controller web hook port if configured
+    set:
+      providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+            - name: decision
+              port: 4456
+              protocol: TCP
+              targetPort: http-decision
+            - name: admission-controller
+              port: 4458
+              protocol: TCP
+              targetPort: https-webhook
+
+  - it: should use provided port and name values for each exposed service port in decision mode
+    set:
+      providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+      service.management:
+        port: 1111
+        name: man
+      service.decision:
+        port: 2222
+        name: dec
+      service.admissionController:
+        port: 3333
+        name: adm
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: man
+              port: 1111
+              protocol: TCP
+              targetPort: http-management
+            - name: dec
+              port: 2222
+              protocol: TCP
+              targetPort: http-decision
+            - name: adm
+              port: 3333
+              protocol: TCP
+              targetPort: https-webhook
+
+  - it: should use provided port and name values for each exposed service port in proxy mode
+    set:
+      operationMode: proxy
+      providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+      service.management:
+        port: 1111
+        name: man
+      service.proxy:
+        port: 2222
+        name: prox
+      service.admissionController:
+        port: 3333
+        name: adm
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: man
+              port: 1111
+              protocol: TCP
+              targetPort: http-management
+            - name: prox
+              port: 2222
+              protocol: TCP
+              targetPort: http-proxy
+            - name: adm
+              port: 3333
+              protocol: TCP
+              targetPort: https-webhook

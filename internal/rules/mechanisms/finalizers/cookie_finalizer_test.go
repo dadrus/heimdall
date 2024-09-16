@@ -263,6 +263,7 @@ cookies:
   bar: "{{ .Subject.ID }}"
   baz: bar
   x_foo: '{{ .Request.Header "X-Foo" }}'
+  x_bar: '{{ .Outputs.foo }}'
 `),
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
@@ -274,7 +275,9 @@ cookies:
 				ctx.EXPECT().AddCookieForUpstream("bar", "FooBar")
 				ctx.EXPECT().AddCookieForUpstream("baz", "bar")
 				ctx.EXPECT().AddCookieForUpstream("x_foo", "Bar")
+				ctx.EXPECT().AddCookieForUpstream("x_bar", "bar")
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
+				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()

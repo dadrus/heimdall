@@ -49,12 +49,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorOAuth2Introspection {
 				return false, nil, nil
 			}
 
-			auth, err := newOAuth2IntrospectionAuthenticator(id, conf)
+			auth, err := newOAuth2IntrospectionAuthenticator(ctx, id, conf)
 
 			return true, auth, err
 		})
@@ -70,8 +70,11 @@ type oauth2IntrospectionAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-func newOAuth2IntrospectionAuthenticator( // nolint: funlen
-	id string, rawConfig map[string]any,
+// nolint: funlen
+func newOAuth2IntrospectionAuthenticator(
+	ctx CreationContext,
+	id string,
+	rawConfig map[string]any,
 ) (*oauth2IntrospectionAuthenticator, error) {
 	type Config struct {
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
@@ -84,7 +87,7 @@ func newOAuth2IntrospectionAuthenticator( // nolint: funlen
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+	if err := decodeConfig(ctx, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -198,7 +201,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+	if err := decodeConfig(nil, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 

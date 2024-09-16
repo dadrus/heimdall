@@ -33,7 +33,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerOAuth2ClientCredentials {
 				return false, nil, nil
 			}

@@ -1,0 +1,386 @@
+suite: test suite for validating webhook configuration
+templates:
+  - validating_webhook.yaml
+tests:
+  - it: should not be configured by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not be configured by if there is no tls configuration for kubernetes provider
+    set:
+      providers:
+        kubernetes:
+          auth_class: foo
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should be configured if tls settings are provided for the kubernetes provider
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - isKind:
+          of: ValidatingWebhookConfiguration
+      - isAPIVersion:
+          of: admissionregistration.k8s.io/v1
+
+  - it: name should be set with default name
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-heimdall-webhook
+
+  - it: name should be set with overwritten name
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-foo-webhook
+
+  - it: namespace should be set
+    release:
+      namespace: test-namespace
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: test-namespace
+
+  - it: should set default labels with default values
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set custom labels in addition to default ones if provided
+    set:
+      admissionController.labels:
+        foo: bar
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+            foo: bar
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set default labels with overwrites
+    chart:
+      appVersion: 1.0.0
+      version: 2.0.0
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: foo
+            app.kubernetes.io/version: 1.0.0
+            helm.sh/chart: heimdall-2.0.0
+
+  - it: should not set annotations by default
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - isNullOrEmpty:
+          path: metadata.annotations
+
+  - it: should set custom annotations if provided
+    set:
+      admissionController.annotations:
+        foo: bar
+        bar: foo
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            foo: bar
+            bar: foo
+
+  - it: should configure one webhook
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - lengthEqual:
+          path: webhooks
+          count: 1
+
+  - it: should set expected webhook name
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].name
+          value: admission-controller.heimdall.dadrus.github.com
+
+  - it: should set admissionReviewVersions
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].admissionReviewVersions
+          value: [ "v1" ]
+
+  - it: should set side effects to none
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].sideEffects
+          value: None
+
+  - it: should configure webhook timeout to 5 seconds by default
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].timeoutSeconds
+          value: 5
+
+  - it: webhook timeout should be configurable
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+      admissionController.timeoutSeconds: 10
+    asserts:
+      - equal:
+          path: webhooks[0].timeoutSeconds
+          value: 10
+
+  - it: should not configure namespace selector by default
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - notExists:
+          path: webhooks[0].namespaceSelector
+
+  - it: namespace selector should be configurable
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+      admissionController.namespaceSelector:
+          matchExpressions:
+            - key: runlevel,
+              operator: NotIn,
+              values: [ 0, 1 ]
+    asserts:
+      - equal:
+          path: webhooks[0].namespaceSelector
+          value:
+            matchExpressions:
+              - key: runlevel,
+                operator: NotIn,
+                values:
+                  - 0
+                  - 1
+
+  - it: should configure expected rules
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].rules
+          value:
+            - apiGroups:
+                - heimdall.dadrus.github.com
+              apiVersions:
+                - v1alpha4
+              operations:
+                - CREATE
+                - UPDATE
+              resources:
+                - rulesets
+              scope: Namespaced
+
+  - it: should configure default match conditions if no auth_class is specified
+    set:
+      providers:
+        kubernetes:
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].matchConditions
+          value:
+            - expression: object.spec.authClassName == "default"
+              name: auth-class-filter
+
+  - it: should configure match conditions based on specified auth_class
+    set:
+      providers:
+        kubernetes:
+          auth_class: foo
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].matchConditions
+          value:
+            - expression: object.spec.authClassName == "foo"
+              name: auth-class-filter
+
+  - it: should have client config configured
+    release:
+      name: foo
+      namespace: bar
+    set:
+      providers:
+        kubernetes:
+          auth_class: foo
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].clientConfig
+          value:
+            service:
+              name: foo-heimdall
+              namespace: bar
+              path: /validate-ruleset
+              port: 4458
+
+  - it: should allow configuration of the ca bundle for the client config
+    release:
+      name: foo
+      namespace: bar
+    set:
+      admissionController.caBundle: foobar
+      providers:
+        kubernetes:
+          auth_class: foo
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].clientConfig
+          value:
+            caBundle: foobar
+            service:
+              name: foo-heimdall
+              namespace: bar
+              path: /validate-ruleset
+              port: 4458
+
+  - it: should use the port configured for the admission controller service
+    set:
+      admissionController.caBundle: foobar
+      service.admissionController.port: 9999
+      providers:
+        kubernetes:
+          auth_class: foo
+          tls:
+            key_store:
+              path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: webhooks[0].clientConfig
+          value:
+            caBundle: foobar
+            service:
+              name: RELEASE-NAME-heimdall
+              namespace: NAMESPACE
+              path: /validate-ruleset
+              port: 9999

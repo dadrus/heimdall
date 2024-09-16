@@ -26,7 +26,6 @@ func defaultOptions() *opts {
 	defaults.onAuthorizationError = errorWriter(defaults, http.StatusForbidden)
 	defaults.onCommunicationError = errorWriter(defaults, http.StatusBadGateway)
 	defaults.onPreconditionError = errorWriter(defaults, http.StatusBadRequest)
-	defaults.onBadMethodError = errorWriter(defaults, http.StatusMethodNotAllowed)
 	defaults.onNoRuleError = errorWriter(defaults, http.StatusNotFound)
 	defaults.onInternalError = errorWriter(defaults, http.StatusInternalServerError)
 

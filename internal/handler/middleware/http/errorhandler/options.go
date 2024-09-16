@@ -26,7 +26,6 @@ type opts struct {
 	onAuthorizationError  func(rw http.ResponseWriter, req *http.Request, err error)
 	onCommunicationError  func(rw http.ResponseWriter, req *http.Request, err error)
 	onPreconditionError   func(rw http.ResponseWriter, req *http.Request, err error)
-	onBadMethodError      func(rw http.ResponseWriter, req *http.Request, err error)
 	onNoRuleError         func(rw http.ResponseWriter, req *http.Request, err error)
 	onInternalError       func(rw http.ResponseWriter, req *http.Request, err error)
 }
@@ -69,14 +68,6 @@ func WithInternalServerErrorCode(code int) Option {
 	return func(o *opts) {
 		if code != 0 {
 			o.onInternalError = errorWriter(o, code)
-		}
-	}
-}
-
-func WithMethodErrorCode(code int) Option {
-	return func(o *opts) {
-		if code != 0 {
-			o.onBadMethodError = errorWriter(o, code)
 		}
 	}
 }

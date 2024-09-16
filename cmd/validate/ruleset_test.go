@@ -18,17 +18,48 @@ package validate
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/drone/envsubst/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestValidateRuleset(t *testing.T) {
-	t.Parallel()
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey, pemx.WithHeader("X-Key-ID", "key")),
+	)
+	require.NoError(t, err)
+
+	testDir := t.TempDir()
+	pemFile := filepath.Join(testDir, "keystore.pem")
+	configFile := filepath.Join(testDir, "test-config.yaml")
+
+	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
+
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
+	require.NoError(t, err)
+
+	raw, err := os.ReadFile("test_data/config.yaml")
+	require.NoError(t, err)
+
+	content, err := envsubst.EvalEnv(stringx.ToString(raw))
+	require.NoError(t, err)
+
+	err = os.WriteFile(configFile, []byte(content), 0o600)
+	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		uc        string
@@ -47,13 +78,13 @@ func TestValidateRuleset(t *testing.T) {
 		},
 		{
 			uc:        "invalid rule set file",
-			confFile:  "test_data/config.yaml",
+			confFile:  configFile,
 			rulesFile: "doesnotexist.yaml",
 			expError:  os.ErrNotExist,
 		},
 		{
 			uc:        "everything is valid",
-			confFile:  "test_data/config.yaml",
+			confFile:  configFile,
 			rulesFile: "test_data/valid-ruleset.yaml",
 		},
 	} {
@@ -82,6 +113,32 @@ func TestValidateRuleset(t *testing.T) {
 }
 
 func TestRunValidateRulesCommand(t *testing.T) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey, pemx.WithHeader("X-Key-ID", "key")),
+	)
+	require.NoError(t, err)
+
+	testDir := t.TempDir()
+	pemFile := filepath.Join(testDir, "keystore.pem")
+	configFile := filepath.Join(testDir, "test-config.yaml")
+
+	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
+
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
+	require.NoError(t, err)
+
+	raw, err := os.ReadFile("test_data/config.yaml")
+	require.NoError(t, err)
+
+	content, err := envsubst.EvalEnv(stringx.ToString(raw))
+	require.NoError(t, err)
+
+	err = os.WriteFile(configFile, []byte(content), 0o600)
+	require.NoError(t, err)
+
 	for _, tc := range []struct {
 		uc        string
 		confFile  string
@@ -95,20 +152,20 @@ func TestRunValidateRulesCommand(t *testing.T) {
 		},
 		{
 			uc:        "everything is valid for decision mode usage",
-			confFile:  "test_data/config.yaml",
+			confFile:  configFile,
 			rulesFile: "test_data/valid-ruleset.yaml",
 		},
 		{
 			uc:        "invalid for proxy usage",
 			proxyMode: true,
-			confFile:  "test_data/config.yaml",
+			confFile:  configFile,
 			rulesFile: "test_data/invalid-ruleset-for-proxy-usage.yaml",
-			expError:  "no forward_to",
+			expError:  "requires forward_to",
 		},
 		{
 			uc:        "everything is valid for proxy mode usage",
 			proxyMode: true,
-			confFile:  "test_data/config.yaml",
+			confFile:  configFile,
 			rulesFile: "test_data/valid-ruleset.yaml",
 		},
 	} {

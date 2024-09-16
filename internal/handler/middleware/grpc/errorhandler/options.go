@@ -24,7 +24,6 @@ type opts struct {
 	authorizationError  func(err error, verbose bool, mimeType string) (any, error)
 	communicationError  func(err error, verbose bool, mimeType string) (any, error)
 	preconditionError   func(err error, verbose bool, mimeType string) (any, error)
-	badMethodError      func(err error, verbose bool, mimeType string) (any, error)
 	noRuleError         func(err error, verbose bool, mimeType string) (any, error)
 	internalError       func(err error, verbose bool, mimeType string) (any, error)
 }
@@ -67,14 +66,6 @@ func WithInternalServerErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
 			o.internalError = responseWith(codes.Internal, code)
-		}
-	}
-}
-
-func WithMethodErrorCode(code int) Option {
-	return func(o *opts) {
-		if code > 0 {
-			o.badMethodError = responseWith(codes.InvalidArgument, code)
 		}
 	}
 }

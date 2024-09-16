@@ -27,13 +27,13 @@ import (
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keyholder"
 )
 
-func newManagementHandler(signer heimdall.JWTSigner, eh errorhandler.ErrorHandler) http.Handler {
+func newManagementHandler(khr keyholder.Registry, eh errorhandler.ErrorHandler) http.Handler {
 	mh := &handler{
-		s:  signer,
-		eh: eh,
+		khr: khr,
+		eh:  eh,
 	}
 
 	mux := http.NewServeMux()
@@ -49,14 +49,14 @@ func newManagementHandler(signer heimdall.JWTSigner, eh errorhandler.ErrorHandle
 }
 
 type handler struct {
-	s  heimdall.JWTSigner
-	eh errorhandler.ErrorHandler
+	khr keyholder.Registry
+	eh  errorhandler.ErrorHandler
 }
 
 // jwks implements an endpoint returning JWKS objects according to
 // https://datatracker.ietf.org/doc/html/rfc7517
 func (h *handler) jwks(rw http.ResponseWriter, req *http.Request) {
-	res, err := json.Marshal(jose.JSONWebKeySet{Keys: h.s.Keys()})
+	res, err := json.Marshal(jose.JSONWebKeySet{Keys: h.khr.Keys()})
 	if err != nil {
 		zerolog.Ctx(req.Context()).Error().Err(err).Msg("Failed to marshal json web key set object")
 		h.eh.HandleError(rw, req, err)

@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "GO-2022-0646"
+reason = "The access to the S3 bucket happens in read-only mode without making use of the EncryptionClient."

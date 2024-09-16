@@ -30,7 +30,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerCookie {
 				return false, nil, nil
 			}
@@ -62,25 +62,26 @@ func newCookieFinalizer(id string, rawConfig map[string]any) (*cookieFinalizer, 
 	}, nil
 }
 
-func (u *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (f *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Finalizing using cookie finalizer")
+	logger.Debug().Str("_id", f.id).Msg("Finalizing using cookie finalizer")
 
 	if sub == nil {
 		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to execute cookie finalizer due to 'nil' subject").
-			WithErrorContext(u)
+			WithErrorContext(f)
 	}
 
-	for name, tmpl := range u.cookies {
+	for name, tmpl := range f.cookies {
 		value, err := tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
+			"Outputs": ctx.Outputs(),
 		})
 		if err != nil {
 			return errorchain.
 				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' cookie", name).
-				WithErrorContext(u).
+				WithErrorContext(f).
 				CausedBy(err)
 		}
 
@@ -92,14 +93,14 @@ func (u *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	return nil
 }
 
-func (u *cookieFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
+func (f *cookieFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
 	if len(config) == 0 {
-		return u, nil
+		return f, nil
 	}
 
-	return newCookieFinalizer(u.id, config)
+	return newCookieFinalizer(f.id, config)
 }
 
-func (u *cookieFinalizer) ID() string { return u.id }
+func (f *cookieFinalizer) ID() string { return f.id }
 
-func (u *cookieFinalizer) ContinueOnError() bool { return false }
+func (f *cookieFinalizer) ContinueOnError() bool { return false }

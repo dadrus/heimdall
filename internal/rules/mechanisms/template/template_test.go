@@ -40,9 +40,11 @@ func TestTemplateRender(t *testing.T) {
 
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{
-		RequestFunctions:  reqf,
-		Method:            http.MethodPatch,
-		URL:               &url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
+		RequestFunctions: reqf,
+		Method:           http.MethodPatch,
+		URL: &heimdall.URL{
+			URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
+		},
 		ClientIPAddresses: []string{"192.168.1.1"},
 	})
 

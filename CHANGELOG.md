@@ -1,5 +1,84 @@
 # Changelog
 
+## [0.15.0](https://github.com/dadrus/heimdall/compare/v0.14.0-alpha...v0.15.0) (2024-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* Made the usage of `if` clauses in authentication & authorization, and error pipelines consistent ([#1784](https://github.com/dadrus/heimdall/issues/1784))
+* Deprecated OTEL attributes replaced ([#1669](https://github.com/dadrus/heimdall/issues/1669))
+* Configuration of `signer` moved into `jwt` finalizer ([#1534](https://github.com/dadrus/heimdall/issues/1534))
+* Demo installation removed from the helm chart ([#1544](https://github.com/dadrus/heimdall/issues/1544))
+* Subject has been made immutable ([#1487](https://github.com/dadrus/heimdall/issues/1487))
+* Rule matching configuration API redesigned ([#1358](https://github.com/dadrus/heimdall/issues/1358))
+* Default rule rejects requests with encoded slashes in the path of the URL with `400 Bad Request` ([#1358](https://github.com/dadrus/heimdall/issues/1358))
+* Support for `rule_path_match_prefix` on endpoint configurations for `http_endpoint` and `cloud_blob` providers has been dropped ([#1358](https://github.com/dadrus/heimdall/issues/1358))
+
+### Features
+
+* Glob expressions are context aware and use `.` for host related expressions and `/` for path related ones as separators ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Multiple rules can be defined for the same path, e.g. to have separate rules for read and write requests ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* New endpoint auth type to create http message signatures for outbound requests according to RFC 9421 ([#1507](https://github.com/dadrus/heimdall/issues/1507)) ([672988d](https://github.com/dadrus/heimdall/commit/672988d2463ddf8abbade7cb9f0656d848682ae3))
+* Route based matching of rules ([#1766](https://github.com/dadrus/heimdall/issues/1766)) ([8ef379d](https://github.com/dadrus/heimdall/commit/8ef379db1d504440b6fa19794b7b38c173a730b0))
+* Support for backtracking while matching rules ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Support for free and single (named) wildcards for request path matching and access of the captured values from the pipeline ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+
+
+### Code Refactorings
+
+* Configuration of `signer` moved into `jwt` finalizer ([#1534](https://github.com/dadrus/heimdall/issues/1534)) ([4475745](https://github.com/dadrus/heimdall/commit/447574557d109be7f17844bc743eb9cc625427d9))
+* Default rule rejects requests with encoded slashes in the path of the URL with `400 Bad Request` ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Demo installation removed from the helm chart ([#1544](https://github.com/dadrus/heimdall/issues/1544)) ([f8770b3](https://github.com/dadrus/heimdall/commit/f8770b3bfa3599c37290677454baa4f52c12a7a7))
+* Deprecated OTEL attributes replaced ([#1669](https://github.com/dadrus/heimdall/issues/1669)) ([e5ed3a5](https://github.com/dadrus/heimdall/commit/e5ed3a57f5de3164200c285a811908c7a32fbfc8))
+* Made the usage of `if` clauses in authentication & authorization, and error pipelines consistent ([#1784](https://github.com/dadrus/heimdall/issues/1784)) ([2577f56](https://github.com/dadrus/heimdall/commit/2577f560b80c49e3e5a4b3da547245af98844843))
+* Rule matching configuration API redesigned ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+* Subject has been made immutable ([#1487](https://github.com/dadrus/heimdall/issues/1487)) ([6c4957f](https://github.com/dadrus/heimdall/commit/6c4957fd897de55de4b23563be4406423ba26b00))
+* Support for `rule_path_match_prefix` on endpoint configurations for `http_endpoint` and `cloud_blob` providers has been dropped ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+
+
+### Performance Improvements
+
+* O(log(n)) time complexity for lookup of rules ([#1358](https://github.com/dadrus/heimdall/issues/1358)) ([f2f6867](https://github.com/dadrus/heimdall/commit/f2f6867576b758312b1a85dc06fe52be3ae9d2ff))
+
+
+### Bug Fixes
+
+* Corrected the placement of namespace selector properties in the Helm chart's admission controller configuration ([#1752](https://github.com/dadrus/heimdall/issues/1752)). ([4c059b3](https://github.com/dadrus/heimdall/commit/4c059b38510a1aa2d37d9103a3cb8935f4c2043b))
+* Fixed a nil pointer error in the Helm chart that occurred when a deployment was configured with custom annotations due to an incorrect reference in the deployment template ([#1752](https://github.com/dadrus/heimdall/issues/1752)). ([4c059b3](https://github.com/dadrus/heimdall/commit/4c059b38510a1aa2d37d9103a3cb8935f4c2043b))
+* Taking updates of certificates into account while collecting metrics ([#1534](https://github.com/dadrus/heimdall/issues/1534)) ([4475745](https://github.com/dadrus/heimdall/commit/447574557d109be7f17844bc743eb9cc625427d9))
+* Updated the admission controller configuration in the Helm chart to align with the redesigned structure done in v0.12.0-alpha release of heimdall ([#1752](https://github.com/dadrus/heimdall/issues/1752)). ([4c059b3](https://github.com/dadrus/heimdall/commit/4c059b38510a1aa2d37d9103a3cb8935f4c2043b))
+
+
+### Documentation
+
+* Guide for First-Party Authentication with OpenID Connect ([#1789](https://github.com/dadrus/heimdall/issues/1789)) ([8c6b9c3](https://github.com/dadrus/heimdall/commit/8c6b9c3c4fec7cc605fc8a1058e0847e7abb3947))
+* New integration guide for Envoy Gateway ([#1412](https://github.com/dadrus/heimdall/issues/1412)) ([526f381](https://github.com/dadrus/heimdall/commit/526f381c931cd58e9513716a1bc7fa9149c36e3d))
+* NGING Ingress Controller guide updated to cover global integration options ([#1469](https://github.com/dadrus/heimdall/issues/1469)) ([a710a64](https://github.com/dadrus/heimdall/commit/a710a640fc1ce2cadfa37eb59a4fc0fa52c5120b))
+* Traefik guide updated to cover `Ingress`, `IngressRoute` and `HTTPRoute` based integration options ([#1420](https://github.com/dadrus/heimdall/issues/1420)) ([303095e](https://github.com/dadrus/heimdall/commit/303095e204c3ea753b06a2b90171462de19b1eb4))
+
+
+### Dependencies
+
+* update golang to v1.23.1 ([#1793](https://github.com/dadrus/heimdall/issues/1793))  ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update golang.org/x/exp digest to 701f63a ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update google.golang.org/genproto/googleapis/rpc digest to 8af14fe ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module github.com/go-playground/validator/v10 to v10.22.1 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module github.com/jellydator/ttlcache/v3 to v3.3.0 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module github.com/masterminds/sprig/v3 to v3.3.0 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module github.com/prometheus/client_golang to v1.20.3 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module github.com/redis/rueidis to v1.0.45  ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.45  ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module github.com/rs/cors to v1.11.1 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc to v0.55.0 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module go.opentelemetry.io/contrib/instrumentation/host to v0.55.0  ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.55.0  ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module go.opentelemetry.io/contrib/instrumentation/runtime to v0.55.0  ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module go.opentelemetry.io/contrib/propagators/autoprop to v0.55.0 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module gocloud.dev to v0.39.0 ([#1774](https://github.com/dadrus/heimdall/issues/1774)) ([4ffa9e4](https://github.com/dadrus/heimdall/commit/4ffa9e45227c177ba5f729b6111d6551de5a67a8))
+* update module google.golang.org/grpc to v1.66.2 ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update module k8s.io/client-go to v0.31.1  ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+* update opentelemetry-go monorepo to v1.30.0  ([#1793](https://github.com/dadrus/heimdall/issues/1793)) ([54e6cad](https://github.com/dadrus/heimdall/commit/54e6cad5e4e8b909f646e2f0318f94388f793039))
+
 ## [0.14.5-alpha](https://github.com/dadrus/heimdall/compare/v0.14.4-alpha...v0.14.5-alpha) (2024-08-25)
 
 
@@ -34,7 +113,7 @@
 
 ### Bug Fixes
 
-* OAuth2 `iss` claim verification in JWT/OIDC authenticators when used with `metadata_endpoint` ([#1660](https://github.com/dadrus/heimdall/issues/1660)) ([a9947f2](https://github.com/dadrus/heimdall/commit/a9947f20f412ca4133202ee7bc1e7b58f2903766))
+* OAuth2 `iss` claim verification in JWT/OIDC authenticators when used with `metadata_endpoint` ([#1660](https://github.com/dadrus/heimdall/issues/1660)) by [@martin31821](https://github.com/martin31821) ([a9947f2](https://github.com/dadrus/heimdall/commit/a9947f20f412ca4133202ee7bc1e7b58f2903766))
 * Trailing useless bytes ignored while parsing PEM content ([#1564](https://github.com/dadrus/heimdall/issues/1564)) ([0c52bd3](https://github.com/dadrus/heimdall/commit/0c52bd30d308dbd8985f3223ba36180dbb808a24))
 
 

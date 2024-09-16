@@ -44,13 +44,14 @@ version: '3.7'
 
 services:
   heimdall: # <1>
-    image: dadrus/heimdall:latest
+    image: dadrus/heimdall:dev
     container_name: heimdall
     ports:
     - "9090:4455"
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./rules:/etc/heimdall/rules:ro
+    - ./signer.pem:/etc/heimdall/signer.pem:ro
     command: -c /etc/heimdall/config.yaml serve proxy
 
   upstream: # <2>
@@ -122,6 +123,10 @@ mechanisms:
   finalizers:
     - id: create_jwt # <9>
       type: jwt
+      config:
+        signer:
+          key_store:
+            path: /etc/heimdall/signer.pem
 
 providers:
   file_system: # <10>
@@ -139,8 +144,22 @@ NOTE: We use a very simple `link:{{< relref "/docs/configuration/types.adoc#_end
 <6> Here we define and configure a `link:{{< relref "/docs/mechanisms/contextualizers.adoc#_generic" >}}[generic]` contextualizer named `openfga_list`.
 <7> As with the authorization mechanism, defined above, here we configure the endpoint to list the allowed objects.
 <8> The payload configuration used while communicating to the configured endpoint.
-<9> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. Without any configuration, as used here, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID.
+<9> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. With the given configuration, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID.
 <10> The last few lines of the configure the `link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[file_system]` provider, which allows loading of regular rules from the file system.
+
+. Create a file, named `signer.pem` with the following content. This is our key store with a private key, you've seen in the configuration above.
++
+[source, yaml]
+----
+-----BEGIN EC PRIVATE KEY-----
+MIGkAgEBBDALv/dRp6zvm6nmozmB/21viwFCUGBoisHz0v8LSRXGiM5aDywLFmMy
+1jPnw29tz36gBwYFK4EEACKhZANiAAQgZkUS7PCh5tEXXvZk0LDQ4Xn4LSK+vKkI
+zlCZl+oMgud8gacf4uG5ERgju1xdUyfewsXlwepTnWuwhXM7GdnwY5GOxZTwGn3X
+XVwR/5tokqFVrFxt/5c1x7VdccF4nNM=
+-----END EC PRIVATE KEY-----
+----
++
+WARNING: Do not use it for purposes beyond this tutorial!
 
 . Configure NGINX to expose a static endpoint serving a JWKS document under the `.well-known` path, so heimdall is able to verify the JWT, we're going to use. Create a file named `idp.nginx` with the following content:
 +
@@ -241,17 +260,15 @@ Note or write down the value of `authorization_model_id`.
 +
 [source, yaml]
 ----
-version: "1alpha3"
+version: "1alpha4"
 rules:
 - id: access_document  # <1>
   match:
-    url: http://<**>/document/<**> # <2>
+    routes:
+      - path: /document/:id # <2>
+    methods: [ GET, POST, DELETE ]
   forward_to: # <3>
     host: upstream:8081
-  methods:
-  - GET
-  - POST
-  - DELETE
   execute:
   - authenticator: jwt_auth # <4>
   - authorizer: openfga_check # <5>
@@ -266,16 +283,16 @@ rules:
           {{- else -}} unknown
           {{- end -}}
         object: >
-          document:{{- splitList "/" .Request.URL.Path | last -}} # <9>
+          document:{{- .Request.URL.Captures.id -}} # <9>
   - finalizer: create_jwt # <10>
 
 - id: list_documents  # <11>
   match:
-    url: http://<**>/documents # <12>
+    routes:
+      - path: /documents # <12>
+    methods: [ GET ] # <14>
   forward_to: # <13>
     host: upstream:8081
-  methods:
-  - GET # <14>
   execute: # <15>
   - authenticator: jwt_auth
   - contextualizer: openfga_list
@@ -287,7 +304,7 @@ rules:
   - finalizer: create_jwt
     config:
       claims: |
-        {{ toJson .Subject.Attributes.openfga_list }} # <16>
+        {{ toJson .Outputs.openfga_list }} # <16>
 ----
 <1> Our rule set consists of two rules. The first one has the id `access_document`
 <2> This rule should match urls of the following form `/document/<id>`, with id being the identifier of a document.
@@ -297,7 +314,7 @@ rules:
 <6> Replace the value here with the store id, you've received in step 6
 <7> Replace the value here with the authorization model id, you've received in step 7
 <8> Here, we set the relation depending on the used HTTP request method
-<9> Our object reference. We use the last URL path fragment as the id of the document
+<9> Our object reference. We use the value captured by the wildcard named `id`.
 <10> Reference to the previously configured finalizer to create a JWT to be forwarded to our upstream service
 <11> This is our second rule. It has the id `list_documents`.
 <12> And matches any request of the form `/documents`
@@ -380,7 +397,7 @@ Host: upstream:8081
 User-Agent: curl/8.2.1
 Accept: */*
 Accept-Encoding: gzip
-Authorization: Bearer eyJhbGciOiJFUzM4NCIsImtpZCI6ImRiMzliZGI3ZmIyNWMyNTgxMTI4ZDdlMzc0M2Y2MjkxY2E5YzBkZDIiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE3MTE5Nzc1NDEsImlhdCI6MTcxMTk3NzI0MSwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiJjNGMyZWMxZC02MTMxLTQ2NWYtYjYwZC01ZTYwZDJhMGNiMTgiLCJuYmYiOjE3MTE5NzcyNDEsInN1YiI6ImFubmUifQ.x03GYY2yPvItoYDY-YWlnrVlI1NUZs81Zr1yGHnR0sDPiCamzzWX2YcQFZkXCXO8EkwPLesvjZeISCs0RjuCT85UnQF8mavh2Q2j1By9zGfYobOVsaoSrIA8anR4I1hL
+Authorization: Bearer eyJhbGciOiJFUzM4NCIsImtpZCI6ImIzNDA3N2ZlNWI5NDczYzBjMmY3NDNmYWQ0MmY3ZDU0YWM3ZTFkN2EiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE3MTg2OTQ5MzAsImlhdCI6MTcxODY5NDYzMCwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiJiNzgyZGE4YS1mMDFlLTRmYmUtYTlkZC04MzdiYzYzYzlhODUiLCJuYmYiOjE3MTg2OTQ2MzAsInN1YiI6ImFubmUifQ.xANlIPmRWdMraL_j0i-0cK4NVhqopzgSc5_u0m4Hyg4VAFQ3ZHuuap1ZD9hs8ZkBQGin9-vPsBeVrQr40OfAev7WKyNVPpIpmFBAU8fX15kXgVXox29kgBAcAM2b2W-w
 Forwarded: for=172.19.0.1;host=127.0.0.1:9090;proto=http
 ----
 
@@ -405,7 +422,7 @@ Host: upstream:8081
 User-Agent: curl/8.2.1
 Accept: */*
 Accept-Encoding: gzip
-Authorization: Bearer eyJhbGciOiJFUzM4NCIsImtpZCI6ImRiMzliZGI3ZmIyNWMyNTgxMTI4ZDdlMzc0M2Y2MjkxY2E5YzBkZDIiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE3MTE5Nzc1OTksImlhdCI6MTcxMTk3NzI5OSwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiI5OTBkOTM5Ny1mMjAwLTQ4ODgtOGE0Ny0zZjZmM2Q2YmNmMmIiLCJuYmYiOjE3MTE5NzcyOTksIm9iamVjdHMiOlsiZG9jdW1lbnQ6MTIzNCJdLCJzdWIiOiJhbm5lIn0.NA2PBmdLNICDjbauIeZwKrFglNKPaddKkNOww4vUCcmWwhQX0cyKMtUILN4cypgR7Bfu_Hr9VOIgbau2IbVIYe51hEwH5jvWCUbInXDnLkdfwAdDWGpAVGtNHcMj3CRG
+Authorization: Bearer eyJhbGciOiJFUzM4NCIsImtpZCI6ImIzNDA3N2ZlNWI5NDczYzBjMmY3NDNmYWQ0MmY3ZDU0YWM3ZTFkN2EiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE3MTg2OTUwODEsImlhdCI6MTcxODY5NDc4MSwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiJiNWRhMDg2OC0yNTFhLTRhZmEtODk4ZS1hZThlYzdkZjMyZDEiLCJuYmYiOjE3MTg2OTQ3ODEsIm9iamVjdHMiOlsiZG9jdW1lbnQ6MTIzNCJdLCJzdWIiOiJhbm5lIn0.GY-4oi75KV8jQz5SgMzVMG_-CcCSi9XpmRE934Uq-A326MBwTcFuHysSYmWNz85wwG5zti2Jijn1T8Vm2fpTVEgEE6qltB9caVQlVNGDyF3uAVdpq9NRgHDcru3-15oB
 Forwarded: for=172.19.0.1;host=127.0.0.1:9090;proto=http
 ----
 

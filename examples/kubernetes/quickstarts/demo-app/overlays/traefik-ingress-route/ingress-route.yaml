@@ -1,0 +1,23 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: echo-app
+  namespace: quickstarts
+  labels:
+    app.kubernetes.io/name: echo-app
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`echo-app.local`) && PathPrefix(`/`)
+      middlewares:
+        - name: heimdall
+          namespace: heimdall
+      services:
+        - kind: Service
+          name: echo-app
+          namespace: quickstarts
+          port: app-port
+  tls:
+    secretName: echo-app

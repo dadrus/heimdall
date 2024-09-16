@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: traefik-tls
+  namespace: traefik
+spec:
+  dnsNames:
+    - echo-app
+    - echo-app.default
+    - echo-app.default.svc
+    - echo-app.default.svc.cluster.local
+    - echo-app.local
+  ipAddresses:
+    - 172.18.255.200
+  secretName: traefik-tls
+  issuerRef:
+    name: demo-ca-issuer
+    kind: ClusterIssuer

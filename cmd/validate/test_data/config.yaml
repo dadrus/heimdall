@@ -145,6 +145,11 @@ mechanisms:
     - id: jwt
       type: jwt
       config:
+        signer:
+          name: heimdall
+          key_id: "key"
+          key_store:
+            path: "${TEST_KEYSTORE_FILE}"
         ttl: 5m
         claims: |
           {"user": {{ quote .Subject.ID }} }
@@ -163,22 +168,20 @@ mechanisms:
       type: default
     - id: authenticate_with_kratos
       type: redirect
-      if: |
-        ((type(Error) == authentication_error && Error.Source == "kratos_session_authenticator") ||
-        type(Error) == authorization_error) &&
-        Request.Header("Accept").contains("*/*")
       config:
         to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
 default_rule:
-  methods:
-    - GET
-    - POST
+  backtracking_enabled: false
   execute:
     - authenticator: anonymous_authenticator
     - finalizer: jwt
   on_error:
     - error_handler: authenticate_with_kratos
+      if: |
+        ((type(Error) == authentication_error && Error.Source == "kratos_session_authenticator") ||
+        type(Error) == authorization_error) &&
+        Request.Header("Accept").contains("*/*")
 
 providers:
   file_system:
@@ -189,8 +192,8 @@ providers:
     watch_interval: 5m
     endpoints:
       - url: http://foo.bar/rules.yaml
-        rule_path_match_prefix: /foo
-        enable_http_cache: true
+        http_cache:
+          enabled: true
       - url: http://bar.foo/rules.yaml
         headers:
           bla: bla
@@ -209,10 +212,8 @@ providers:
     buckets:
       - url: gs://my-bucket
         prefix: service1
-        rule_path_match_prefix: /service1
       - url: gs://my-bucket
         prefix: service2
-        rule_path_match_prefix: /service2
       - url: s3://my-bucket/my-rule-set
 
   kubernetes:

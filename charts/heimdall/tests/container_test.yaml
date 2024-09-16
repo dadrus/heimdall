@@ -1,0 +1,391 @@
+suite: test suite for container configuration
+templates:
+  - deployment.yaml
+  - configmap.yaml
+chart:
+  appVersion: v0.14.0
+tests:
+  - it: should have the default image when no value is specified
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/dadrus/heimdall:v0.14.0
+
+  - it: should change image when image.tag value is specified
+    template: deployment.yaml
+    set:
+      image:
+        tag: v2.0.0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/dadrus/heimdall:v2.0.0
+
+  - it: should change image when image.repository value is specified
+    template: deployment.yaml
+    set:
+      image:
+        repository: docker.io/dadrus/heimdall
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/dadrus/heimdall:v0.14.0
+
+  - it: imagePullPolicy should be IfNotPresent by default
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: IfNotPresent
+
+  - it: should use custom imagePullPolicy if specified
+    template: deployment.yaml
+    set:
+      image.pullPolicy: Always
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+
+  - it: should have security context configured by default
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+
+  - it: should allow security context configuration and merge the provided configuration with the default one
+    template: deployment.yaml
+    set:
+      deployment.securityContext:
+        allowPrivilegeEscalation: true
+        foo: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: true
+            capabilities:
+              drop:
+                - ALL
+            foo: bar
+            readOnlyRootFilesystem: true
+
+  - it: should have liveness and readiness probes configured
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+
+  - it: should have no resource limits by default
+    template: deployment.yaml
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.spec.containers[0].resources
+
+  - it: should have custom resource limits when specified
+    template: deployment.yaml
+    set:
+      deployment.resources:
+        requests:
+          cpu: "100m"
+          memory: "50Mi"
+        limits:
+          cpu: "300m"
+          memory: "150Mi"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              cpu: "100m"
+              memory: "50Mi"
+            limits:
+              cpu: "300m"
+              memory: "150Mi"
+
+  - it: can configure environment variables
+    template: deployment.yaml
+    set:
+      env:
+        ENV_VAR_CONFIGMAP:
+          configMapKeyRef:
+            name: "my-configmap"
+            key: "EXAMPLE_KEY"
+        ENV_VAR_SIMPLE: "value"
+      envFrom:
+        - mountPath: /some/file.yaml
+          name: some-file-volume
+          readOnly: true
+          subPath: file.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - name: ENV_VAR_CONFIGMAP
+              valueFrom:
+                configMapKeyRef:
+                  key: EXAMPLE_KEY
+                  name: my-configmap
+            - name: ENV_VAR_SIMPLE
+              value: value
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - mountPath: /some/file.yaml
+              name: some-file-volume
+              readOnly: true
+              subPath: file.yaml
+
+  - it: should configure one volume mount for heimdall configuration by default
+    template: deployment.yaml
+    release:
+      name: test-release
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes
+          value:
+            - configMap:
+                name: test-release-heimdall-config
+              name: heimdall-config-volume
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value:
+            - name: heimdall-config-volume
+              mountPath: /etc/heimdall
+              readOnly: true
+
+  - it: should configure further volume mounts if specified
+    template: deployment.yaml
+    set:
+      deployment.volumes:
+        - name: some-volume-name
+          configMap:
+            name: some-config-map
+      deployment.volumeMounts:
+        - name: some-volume-name
+          mountPath: /some/path
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes
+          value:
+            - configMap:
+                name: RELEASE-NAME-heimdall-config
+              name: heimdall-config-volume
+            - configMap:
+                name: some-config-map
+              name: some-volume-name
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value:
+            - name: heimdall-config-volume
+              mountPath: /etc/heimdall
+              readOnly: true
+            - name: some-volume-name
+              mountPath: /some/path
+
+  - it: should start heimdall in decision mode by default
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - serve
+            - decision
+
+  - it: should allow starting heimdall in proxy mode
+    template: deployment.yaml
+    set:
+      operationMode: proxy
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - serve
+            - proxy
+
+  - it: should allow specifying additional arguments while starting heimdall
+    template: deployment.yaml
+    set:
+      extraArgs:
+        - foo
+        - bar
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - serve
+            - decision
+            - foo
+            - bar
+
+  - it: should expose management and decision service ports by default
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+
+  - it: should expose management and proxy service ports if operated in proxy mode
+    template: deployment.yaml
+    set:
+      operationMode: proxy
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4455
+              name: http-proxy
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+
+  - it: should expose metrics port in addition to the standard ports if configured
+    template: deployment.yaml
+    set:
+      env:
+        OTEL_METRICS_EXPORTER: "prometheus"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+            - containerPort: 9464
+              name: http-metrics
+              protocol: TCP
+
+  - it: metrics port value can be configured
+    template: deployment.yaml
+    set:
+      env:
+        OTEL_METRICS_EXPORTER: "prometheus"
+        OTEL_EXPORTER_PROMETHEUS_PORT: 9999
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+            - containerPort: 9999
+              name: http-metrics
+              protocol: TCP
+
+  - it: should expose profiling port in addition to the standard ports if configured
+    template: deployment.yaml
+    set:
+      profiling.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+            - containerPort: 10251
+              name: http-profiling
+              protocol: TCP
+
+  - it: profiling port value can be configured
+    template: deployment.yaml
+    set:
+      profiling.enabled: true
+      profiling.port: 8888
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+            - containerPort: 8888
+              name: http-profiling
+              protocol: TCP
+
+  - it: should expose admission controller web hook port if configured
+    template: deployment.yaml
+    set:
+      providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+            - containerPort: 4458
+              name: https-webhook
+              protocol: TCP
+
+  - it: should configure all possible ports if requested
+    template: deployment.yaml
+    set:
+      profiling.enabled: true
+      env:
+        OTEL_METRICS_EXPORTER: "prometheus"
+      providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 4456
+              name: http-decision
+              protocol: TCP
+            - containerPort: 4457
+              name: http-management
+              protocol: TCP
+            - containerPort: 9464
+              name: http-metrics
+              protocol: TCP
+            - containerPort: 10251
+              name: http-profiling
+              protocol: TCP
+            - containerPort: 4458
+              name: https-webhook
+              protocol: TCP

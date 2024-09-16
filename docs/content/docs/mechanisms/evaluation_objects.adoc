@@ -20,15 +20,15 @@ Objects represent state in the execution of a particular rule. These are the ent
 
 === Subject
 
-This object contains the information about the authenticated subject and has the following attributes:
+This object is created by an authenticator which was able to verify the authentication claim available in the request, and contains the information about the authenticated subject. It has the following properties:
 
 * *`ID`*: _string_
 +
-The identifier of the subject. This value is set by the authenticator, which was able to authenticate the subject.
+The identifier of the subject.
 
 * *`Attributes`*: _map_
 +
-Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Mechanisms in the following stages can update it, but cannot override any entries.
+Contains all attributes, which are known about the subject.
 
 Each object of this type can be thought as a JSON object. Here some examples:
 
@@ -72,28 +72,46 @@ This object contains information about the request handled by heimdall and has t
 +
 The HTTP method used, like `GET`, `POST`, etc.
 
+[#_url_captures]
 * *`URL`*: _URL_
 +
 The URL of the matched request. This object has the following properties and methods:
 
-** *`Scheme`*: _string_
+** *`Captures`*: _map_
 +
-The HTTP scheme part of the url
+Allows accessing of the values captured by the named wildcards used in the matching path expression of the rule.
+
 ** *`Host`*: _string_
 +
-The host part of the url
+The host part of the url.
+
+** *`Hostname()`*: _method_
++
+This method returns the host name stripping any valid port number if present.
+
+** *`Port()`*: _method_
++
+Returns the port part of the `Host`, without the leading colon. If `Host` doesn't contain a valid numeric port, returns an empty string.
+
 ** *`Path`*: _string_
 +
-The path part of the url
-** *`RawQuery`*: _string_
-+
-The raw query part of the url.
-** *`String()`*: _method_
-+
-This method returns the URL as valid URL string of a form `scheme:host/path?query`.
+The path part of the url.
+
 ** *`Query()`*: _method_
 +
 The parsed query with each key-value pair being a string to array of strings mapping.
+
+** *`RawQuery`*: _string_
++
+The raw query part of the url.
+
+** *`Scheme`*: _string_
++
+The HTTP scheme part of the url.
+
+** *`String()`*: _method_
++
+This method returns the URL as valid URL string of a form `scheme:host/path?query`.
 
 * *`ClientIPAddresses`*: _string array_
 +
@@ -152,13 +170,28 @@ Request = {
   Url: {
     Scheme: "https",
     Host: "localhost",
-    Path: "/test",
-    RawQuery: "baz=zab&baz=bar&foo=bar"
+    Path: "/test/abc",
+    RawQuery: "baz=zab&baz=bar&foo=bar",
+    Captures: { "value": "abc" }
   },
   ClientIP: ["127.0.0.1", "10.10.10.10"]
 }
 ----
 ====
+
+=== Outputs
+
+This object represents a pipeline execution specific key value map. It is used by pipeline steps to store or read results of particular step executions. Mechanism id used by a pipeline step is used as a key and the value is the corresponding result.
+
+Example:
+
+[source, javascript]
+----
+Outputs = {
+    "id_1": ["a", "b"],
+    "id_2": { "foo": "bar", "baz": false }
+}
+----
 
 === Payload
 
@@ -214,7 +247,7 @@ Values = {
 
 == Templating
 
-Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
 To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
@@ -241,7 +274,8 @@ Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab?foo=bar`, 
   "request_url": {{ quote .Request.URL }},
   "foo_value": {{ index .Request.URL.Query.foo 0 | quote }}
   "request_method": {{ quote .Request.Method }},
-  "x_foo_value": {{ .Request.Header "X-Foo" | quote }}
+  "x_foo_value": {{ .Request.Header "X-Foo" | quote }},
+  "whatever": {{ .Outputs.whatever | quote }}
 }
 ----
 
@@ -257,12 +291,13 @@ This will result in the following JSON object:
     "request_url": "http://foobar.baz/zab?foo=bar",
     "foo_value": "bar",
     "request_method": "POST",
-    "x_foo_value": "bar"
+    "x_foo_value": "bar",
+    "whatever": "some value"
 }
 ----
 ====
 
-.Access the last part of the path
+.Access to captured path segments
 ====
 Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
 
@@ -277,7 +312,7 @@ config:
     {
       "user": "user:{{ .Subject.ID }}",
       "relation": "write",
-      "object": "file:{{ splitList "/" .Request.URL.Path | last }}"
+      "object": "file:{{ .Request.URL.Captures.id }}"
     }
   expressions:
   - expression: |

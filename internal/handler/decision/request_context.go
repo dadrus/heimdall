@@ -22,17 +22,15 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func newContextFactory(
-	signer heimdall.JWTSigner,
 	responseCode int,
 ) requestcontext.ContextFactory {
 	return requestcontext.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
 		return &requestContext{
-			RequestContext: requestcontext.New(signer, req),
+			RequestContext: requestcontext.New(req),
 			responseCode:   responseCode,
 			rw:             rw,
 		}

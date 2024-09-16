@@ -82,20 +82,22 @@ func TestHandlerExecution(t *testing.T) {
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
 				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
-				require.Equal(t, 7, activeRequests.DataPoints[0].Attributes.Len())
+				require.Equal(t, 8, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
 				assert.Equal(t, "zab",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "baz").AsString())
-				assert.Equal(t, "1.1",
-					attributeValue(activeRequests.DataPoints[0].Attributes, "http.flavor").AsString())
-				assert.Equal(t, http.MethodGet,
-					attributeValue(activeRequests.DataPoints[0].Attributes, "http.method").AsString())
 				assert.Equal(t, "http",
-					attributeValue(activeRequests.DataPoints[0].Attributes, "http.scheme").AsString())
+					attributeValue(activeRequests.DataPoints[0].Attributes, "network.protocol.name").AsString())
+				assert.Equal(t, "1.1",
+					attributeValue(activeRequests.DataPoints[0].Attributes, "network.protocol.version").AsString())
+				assert.Equal(t, http.MethodGet,
+					attributeValue(activeRequests.DataPoints[0].Attributes, "http.request.method").AsString())
+				assert.Equal(t, "http",
+					attributeValue(activeRequests.DataPoints[0].Attributes, "url.scheme").AsString())
 				assert.Equal(t, "127.0.0.1",
-					attributeValue(activeRequests.DataPoints[0].Attributes, "net.host.name").AsString())
-				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("net.host.port"))
+					attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
 			},
 		},
 	} {

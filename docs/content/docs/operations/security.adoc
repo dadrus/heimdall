@@ -56,86 +56,12 @@ E.g.
 docker run -t -p 4456:4456 \
   -v $PWD:/heimdall/conf \
   -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro \
-   dadrus/heimdall:latest serve decision \
+   dadrus/heimdall:dev serve decision \
   -c /heimdall/conf/heimdall.yaml
 ----
 ====
 
 The verification of TLS server certificates is not the single configuration option. You should also ensure heimdall's services, you're using, are configured to be available via TLS as well. See link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS Configuration] for all available options.
-
-== Signatures
-
-When heimdall is used to issue signed objects, like JWTs, to enable upstream services to rely on authentic subject information, it acts as an issuer of such objects and requires corresponding configuration.
-
-=== Configuration
-
-The configuration related to the issuance of signed objects can be done using the `signer` property, which resides on the top level of heimdall's configuration and supports the following properties.
-
-* *`name`*: _string_ (optional)
-+
-The name used to specify the issuer. E.g. if a JWT is generated, this value is used to set the `iss` claim. If not set, the value `heimdall` is used.
-
-* *`key_store`*: _link:{{< relref "/docs/configuration/types.adoc#_key_store" >}}[Key Store]_ (optional)
-+
-The key store containing the cryptographic material. If configured, at least one private key and the corresponding certificate must be present. If not configured, heimdall generates an ECDSA P-384 key pair on start up and uses it then.
-+
-WARNING: You should always configure a valid key store for production use!
-
-* *`key_id`*: _string_ (optional)
-+
-If the `key_store` contains multiple keys, this property can be used to specify the key to use (see also link:{{< relref "/docs/configuration/types.adoc#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
-
-.Possible configuration
-====
-Imagine you have a PEM file located in `/opt/heimdall/keystore.pem` with the following contents:
-
-[source, txt]
-----
------BEGIN EC PRIVATE KEY-----
-X-Key-ID: foo
-
-MIGkAgEBBDBRLr783dIM5NHJnDDMRVBiFSF56xqHle5lZk1ZCyyow9wKZGuF4EWK
-jRBISBkE3NSgBwYFK4EEACKhZANiAAQ+oGUOJpVjntIWuanYxpXe6oN5tKhzLhBX
-GP1SOXiLhnPNnN2uZu9KwOoBzoZhr/Fxw+sziXmzHJwjluz78VOlFKyopxTfmxRZ
-0qq3f/KHWdDtVvmTfT0O/ux9mg6mCJw=
------END EC PRIVATE KEY-----
------BEGIN CERTIFICATE-----
-MIIByjCCAVGgAwIBAgIBATAKBggqhkjOPQQDAzAuMQswCQYDVQQGEwJFVTENMAsG
-A1UEChMEVGVzdDEQMA4GA1UEAxMHVGVzdCBDQTAeFw0yMjA4MTUwOTE3MTFaFw0y
-MjA4MTUxMDE3MTFaMDAxCzAJBgNVBAYTAkVVMQ0wCwYDVQQKEwRUZXN0MRIwEAYD
-VQQDEwlUZXN0IEVFIDEwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAQ+oGUOJpVjntIW
-uanYxpXe6oN5tKhzLhBXGP1SOXiLhnPNnN2uZu9KwOoBzoZhr/Fxw+sziXmzHJwj
-luz78VOlFKyopxTfmxRZ0qq3f/KHWdDtVvmTfT0O/ux9mg6mCJyjQTA/MA4GA1Ud
-DwEB/wQEAwIHgDAMBgNVHQ4EBQQDYmFyMB8GA1UdIwQYMBaAFLO77bgPgZMKz11D
-BVDUXvtNGeBnMAoGCCqGSM49BAMDA2cAMGQCMFRlx9Bq0MuSh5pDhDTqRq/MnxxD
-W7qZg15AXoNnLrR60vV9gHjzkp1UkcU9viRIuAIwU0BjwDncp9z1seqKh+/eJV3f
-xstQe2rzUEptWLIiPFoOBWZuw9wJ/Hunjik3a9T/
------END CERTIFICATE-----
------BEGIN CERTIFICATE-----
-MIIByjCCAVCgAwIBAgIBATAKBggqhkjOPQQDAzAuMQswCQYDVQQGEwJFVTENMAsG
-A1UEChMEVGVzdDEQMA4GA1UEAxMHVGVzdCBDQTAeFw0yMjA4MTUwOTE3MTFaFw0y
-MjA4MTYwOTE3MTFaMC4xCzAJBgNVBAYTAkVVMQ0wCwYDVQQKEwRUZXN0MRAwDgYD
-VQQDEwdUZXN0IENBMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEf96tstMNdNoNfYjl
-bGY6BvBFTsl9E3hpPnta7SJn6BqIYz6KEohDJ+8DXwUMVb5Ytr/QkEikg966HCY3
-A9TFBUdAs01TV8f2KoAPRQVrh+ccSLLJyACENfZ5VbGSQ0wso0IwQDAOBgNVHQ8B
-Af8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUs7vtuA+BkwrPXUMF
-UNRe+00Z4GcwCgYIKoZIzj0EAwMDaAAwZQIxAMPgE/Z+1Dcj+lH7jioE16Hig0HQ
-FC4qBx1UU05H05Gs23ECB1hzD2qXikVpaNyuDgIwbogEu42wIwpDa5xdJIZcIhmz
-DIuPvEscUDjU3C+1GPxmACcRMPv9QVUEcBAvZkfn
------END CERTIFICATE-----
-----
-
-Then you can configure heimdall to use it like follows:
-
-[source, yaml]
-----
-signer:
-  name: foobar
-  key_store:
-    path: /opt/heimdall/keystore.pem
-  key_id: foo
-----
-====
 
 === Security Considerations
 

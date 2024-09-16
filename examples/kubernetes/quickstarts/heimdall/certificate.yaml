@@ -8,7 +8,7 @@ spec:
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: selfsigned
+    name: demo-ca-issuer
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
@@ -27,7 +27,19 @@ spec:
     - heimdall.heimdall
     - heimdall.heimdall.svc
     - heimdall.heimdall.svc.cluster.local
-
+---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: demo-ca
+spec:
+  sources:
+    - secret:
+        name: heimdall-tls
+        key: ca.crt
+  target:
+    configMap:
+      key: ca.crt
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -39,7 +51,7 @@ spec:
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: selfsigned
+    name: demo-ca-issuer
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
