@@ -156,13 +156,6 @@ profiling:
   host: 0.0.0.0
   port: 9000
 
-signer:
-  name: foobar
-  key_store:
-    path: /opt/heimdall/keystore.pem
-    password: VeryInsecure!
-  key_id: foo
-
 mechanisms:
   authenticators:
   - id: anonymous_authenticator
@@ -322,6 +315,12 @@ mechanisms:
   - id: jwt
     type: jwt
     config:
+      signer:
+        name: foobar
+        key_store:
+          path: /opt/heimdall/keystore.pem
+          password: VeryInsecure!
+        key_id: foo
       ttl: 5m
       header:
         name: Foo
@@ -358,24 +357,18 @@ mechanisms:
     type: redirect
     config:
       to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
-      when:
-        - error:
-          - type: authentication_error
-            raised_by: kratos_session_authenticator
-          - type: authorization_error
-          request_headers:
-            Accept:
-            - '*/*'
 
 default_rule:
-  methods:
-  - GET
-  - POST
+  backtracking_enabled: false
   execute:
   - authenticator: anonymous_authenticator
   - finalizer: jwt
   on_error:
   - error_handler: authenticate_with_kratos
+    if: |
+      ((type(Error) == authentication_error && Error.Source == "kratos_session_authenticator") ||
+        type(Error) == authorization_error) &&
+        Request.Header("Accept").contains("*/*")
 
 providers:
   file_system:
@@ -386,8 +379,8 @@ providers:
     watch_interval: 5m
     endpoints:
       - url: http://foo.bar/ruleset1
-        expected_path_prefix: /foo/bar
-        enable_http_cache: false
+        http_cache:
+          enabled: false
       - url: http://foo.bar/ruleset2
         retry:
           give_up_after: 5s
@@ -406,10 +399,8 @@ providers:
     buckets:
       - url: gs://my-bucket
         prefix: service1
-        rule_path_match_prefix: /service1
       - url: azblob://my-bucket
         prefix: service2
-        rule_path_match_prefix: /service2
       - url: s3://my-bucket/my-rule-set
 
   kubernetes:

@@ -49,6 +49,7 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		ext.NativeTypes(reflect.TypeOf(&subject.Subject{})),
 		cel.Variable("Payload", cel.DynType),
 		cel.Variable("Subject", cel.DynType),
+		cel.Variable("Outputs", cel.MapType(cel.StringType, cel.DynType)),
 	}
 }
 

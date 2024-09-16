@@ -18,8 +18,8 @@ package watcher
 
 import "context"
 
-type noopWatcher struct{}
+type NoopWatcher struct{}
 
-func (*noopWatcher) start(_ context.Context)              {}
-func (*noopWatcher) stop(_ context.Context) error         { return nil }
-func (*noopWatcher) Add(_ string, _ ChangeListener) error { return nil }
+func (*NoopWatcher) start(_ context.Context)              {}
+func (*NoopWatcher) stop(_ context.Context) error         { return nil }
+func (*NoopWatcher) Add(_ string, _ ChangeListener) error { return nil }

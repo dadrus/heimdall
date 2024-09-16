@@ -53,12 +53,12 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
+		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
 			if typ != ContextualizerGeneric {
 				return false, nil, nil
 			}
 
-			eh, err := newGenericContextualizer(id, conf)
+			eh, err := newGenericContextualizer(ctx, id, conf)
 
 			return true, eh, err
 		})
@@ -79,7 +79,11 @@ type genericContextualizer struct {
 	v               values.Values
 }
 
-func newGenericContextualizer(id string, rawConfig map[string]any) (*genericContextualizer, error) {
+func newGenericContextualizer(
+	ctx CreationContext,
+	id string,
+	rawConfig map[string]any,
+) (*genericContextualizer, error) {
 	type Config struct {
 		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
@@ -91,7 +95,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 	}
 
 	var conf Config
-	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+	if err := decodeConfig(ctx, ContextualizerGeneric, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -164,7 +168,7 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	}
 
 	if response.Payload != nil {
-		sub.Attributes[h.id] = response.Payload
+		ctx.Outputs()[h.id] = response.Payload
 	}
 
 	return nil
@@ -185,7 +189,7 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}
 
 	var conf Config
-	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+	if err := decodeConfig(nil, ContextualizerGeneric, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -268,6 +272,7 @@ func (h *genericContextualizer) createRequest(
 		return tpl.Render(map[string]any{
 			"Subject": sub,
 			"Values":  values,
+			"Outputs": ctx.Outputs(),
 		})
 	})
 
@@ -385,6 +390,7 @@ func (h *genericContextualizer) renderTemplates(
 	if values, err = h.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
+		"Outputs": ctx.Outputs(),
 	}); err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the contextualization endpoint").
@@ -397,6 +403,7 @@ func (h *genericContextualizer) renderTemplates(
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Values":  values,
+			"Outputs": ctx.Outputs(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the contextualization endpoint").

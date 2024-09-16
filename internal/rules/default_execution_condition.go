@@ -23,6 +23,10 @@ import (
 
 type defaultExecutionCondition struct{}
 
-func (c defaultExecutionCondition) CanExecute(_ heimdall.Context, _ *subject.Subject) (bool, error) {
+func (c defaultExecutionCondition) CanExecuteOnSubject(_ heimdall.Context, _ *subject.Subject) (bool, error) {
+	return true, nil
+}
+
+func (c defaultExecutionCondition) CanExecuteOnError(_ heimdall.Context, _ error) (bool, error) {
 	return true, nil
 }

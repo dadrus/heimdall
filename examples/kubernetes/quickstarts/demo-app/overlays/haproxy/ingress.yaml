@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-app
+  namespace: quickstarts
+  labels:
+    app.kubernetes.io/name: echo-app
+  # Comment the following annotations if you configure external auth globally
+  annotations:
+    haproxy-ingress.github.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
+    haproxy-ingress.github.io/auth-headers-succeed: "authorization"
+    haproxy-ingress.github.io/headers: |
+      X-Forwarded-Uri: %[pathq]
+      X-Forwarded-Method: %[method]
+      X-Forwarded-Host: %[req.hdr(host)]
+spec:
+  ingressClassName: "haproxy"
+  tls:
+    - hosts:
+        - echo-app.local
+      secretName: echo-app
+  rules:
+    - host: echo-app.local
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: echo-app
+                port:
+                  number: 8080

@@ -27,11 +27,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(authorizerType string, input, output any) error {
+func decodeConfig(ctx CreationContext, authorizerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				authstrategy.DecodeAuthenticationStrategyHookFunc(),
+				authstrategy.DecodeAuthenticationStrategyHookFunc(ctx),
 				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 				template.DecodeTemplateHookFunc(),

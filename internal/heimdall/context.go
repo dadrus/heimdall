@@ -33,7 +33,7 @@ type Context interface {
 
 	SetPipelineError(err error)
 
-	Signer() JWTSigner
+	Outputs() map[string]any
 }
 
 //go:generate mockery --name RequestFunctions --structname RequestFunctionsMock
@@ -45,10 +45,16 @@ type RequestFunctions interface {
 	Body() any
 }
 
+type URL struct {
+	url.URL
+
+	Captures map[string]string
+}
+
 type Request struct {
 	RequestFunctions
 
 	Method            string
-	URL               *url.URL
+	URL               *URL
 	ClientIPAddresses []string
 }

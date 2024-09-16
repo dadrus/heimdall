@@ -39,7 +39,7 @@ data:
   auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" # <1>
   auth-headers-succeed: "authorization" # <2>
   headers: | # <3>
-    X-Forwarded-Uri: %[baseq]
+    X-Forwarded-Uri: %[pathq]
     X-Forwarded-Method: %[method]
     X-Forwarded-Host: %[req.hdr(host)]
 ----
@@ -63,7 +63,7 @@ annotations:
   haproxy-ingress.github.io/auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>"
   haproxy-ingress.github.io/auth-headers-succeed: "authorization"
   haproxy-ingress.github.io/headers: |
-    X-Forwarded-Uri: %[baseq]
+    X-Forwarded-Uri: %[pathq]
     X-Forwarded-Method: %[method]
     X-Forwarded-Host: %[req.hdr(host)]
 ----

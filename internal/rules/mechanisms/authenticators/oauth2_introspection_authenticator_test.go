@@ -335,7 +335,7 @@ metadata_endpoint:
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newOAuth2IntrospectionAuthenticator(tc.id, conf)
+			a, err := newOAuth2IntrospectionAuthenticator(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -588,7 +588,7 @@ subject:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newOAuth2IntrospectionAuthenticator(tc.id, pc)
+			prototype, err := newOAuth2IntrospectionAuthenticator(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN

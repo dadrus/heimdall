@@ -28,12 +28,13 @@ issues:
         - maintidx
         - cyclop
         - gocognit
-        - goerr113
+        - err113
         - lll
         - errcheck
         - canonicalheader
         - mnd
         - err113
+        - forcetypeassert
 
 linters-settings:
   exhaustive:

@@ -4,9 +4,11 @@
 
 This chart helps you to deploy heimdall in your Kubernetes cluster using Helm.
 
+**Note:** Heimdall follows the https://kubernetes.io/releases/version-skew-policy/#supported-versions[Kubernetes support policy], and supports at least the latest three minor versions of Kubernetes. General functionality cannot be guaranteed for versions older than that.
+
 == Prerequisites
 
-* A Kubernetes version >= 1.19 or >= 1.23 if you would like to use HPA
+* A Kubernetes version >= 1.27
 * https://helm.sh/docs/intro/install/[Helm] 3.0+
 * https://git-scm.com/downloads[Git] (optional)
 
@@ -47,29 +49,6 @@ This chart supports setting of any environment variables for the deployment, e.g
 If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
 
 If you want to have detailed CPU & memory profiling information, you can enable the profiling service and let your APM scrape the corresponding pprof data. For https://grafana.com/docs/phlare[Phlare], the corresponding annotations are set if the profiling service is enabled.
-
-This chart does also support a demo installation, which can be enabled by using the `--set demo.enabled=true` flag during the installation. For the demo installation there is no need to provide a configuration file (actually, you shall not provide it, as it will break the demo setup), as some simple mechanisms are already part of that installation. In addition, a demo rule set, as well as a simple echo service will be installed. If you're using an NGINX Ingress Controller, the chart will do the required integration, so you can directly see heimdall in action, by e.g. using curl:
-
-* Send requests to a "public" (unprotected) endpoint
-+
-[source,bash]
-----
-$ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/pub/foo
-----
-
-* Send requests to an endpoint which expects a JWT with a `sub` claim set to `anonymous`
-+
-[source,bash]
-----
-$ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anon/foo
-----
-
-* All other endpoints are not allowed to be called and will result in HTTP 403
-+
-[source,bash]
-----
-$ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/foo
-----
 
 === Installing the CRD
 
@@ -219,26 +198,6 @@ a| `operationMode`
 
 The mode of operation for the heimdall installation. Can be `proxy` or `decision`
 a| `decision`
-
-a| `demo.enabled`
-
-Wether a demo installation should be done. If demo installation is chosen, you don't have to provide a `heimdall.yaml` config file, as the required configuration is included in the demo setup.
-a| `false`
-
-a| `demo.forwardAuthMiddlewareAnnotation`
-
-Which annotation to use on the demo app Ingress rule for decision operation mode to let the Ingress Controller use heimdall as authentication middleware
-a| `nginx.ingress.kubernetes.io/auth-url`
-
-a| `demo.forwardAuthMiddlewareResponseAnnotation`
-
-Which annotation to use on the demo app Ingress rule for decision operation mode to let the Ingress Controller forwarding the response headers coming from heimdall to the demo app.
-a| `nginx.ingress.kubernetes.io/auth-response-headers`
-
-a| `demo.forwardAuthMiddlewareRequestUri`
-
-Which macro/variable to use to forward the request uri to heimdall. Depending on your Ingress Controller, it can be omitted. E.g. Traefik sends such information in a header.
-a| `/$request_uri`
 
 a| `image.repository`
 

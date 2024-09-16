@@ -138,7 +138,7 @@ func TestNewCache(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			cch, err := newCache(tc.conf, log.Logger, nil)
+			cch, err := newCache(tc.conf, log.Logger, nil, nil)
 
 			// THEN
 			tc.assert(t, err, cch)

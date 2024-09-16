@@ -551,9 +551,6 @@
             "authorization_error": {
               "$ref": "#/definitions/responseOverride"
             },
-            "method_error": {
-              "$ref": "#/definitions/responseOverride"
-            },
             "communication_error": {
               "$ref": "#/definitions/responseOverride"
             },
@@ -713,80 +710,6 @@
               "default": "Bearer"
             }
           }
-        }
-      }
-    },
-    "ruleSetEndpointConfiguration": {
-      "description": "Endpoint to load rule sets from",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "url"
-      ],
-      "properties": {
-        "url": {
-          "description": "The URL to communicate to.",
-          "type": "string",
-          "format": "uri",
-          "examples": [
-            "https://session-store-host"
-          ]
-        },
-        "headers": {
-          "description": "The HTTP headers to be send to the endpoint",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "minLength": 0,
-          "uniqueItems": true,
-          "default": []
-        },
-        "retry": {
-          "description": "How the implementation should behave when trying to access the configured endpoint",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "give_up_after": {
-              "description": "When the implementation should finally give up, if the endpoint is not answering.",
-              "type": "string",
-              "default": "1s",
-              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
-            },
-            "max_delay": {
-              "description": "How long the implementation should wait between the attempts",
-              "type": "string",
-              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-              "default": "100ms"
-            }
-          }
-        },
-        "auth": {
-          "description": "How to authenticate against the endpoint",
-          "type": "object",
-          "oneOf": [
-            {
-              "$ref": "#/definitions/endpointAuthApiKeyProperties"
-            },
-            {
-              "$ref": "#/definitions/endpointAuthBasicAuthProperties"
-            },
-            {
-              "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
-            }
-          ]
-        },
-        "rule_path_match_prefix": {
-          "description": "The path prefix to be checked in each rule retrieved from the endpoint",
-          "type": "string",
-          "examples": [
-            "/foo/bar"
-          ]
-        },
-        "enable_http_cache": {
-          "description": "Enables or disables http cache usage according to RFC 7234",
-          "type": "boolean",
-          "default": true
         }
       }
     },
@@ -1725,9 +1648,29 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "claims"
+            "signer"
           ],
           "properties": {
+            "signer": {
+              "description": "Configures signer options for issued JWTs.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [ "key_store" ],
+              "properties": {
+                "name": {
+                  "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
+                  "type": "string",
+                  "default": "heimdall"
+                },
+                "key_store": {
+                  "$ref": "#/definitions/keyStore"
+                },
+                "key_id": {
+                  "description": "The key id referencing the entry in the key store.",
+                  "type": "string"
+                }
+              }
+            },
             "claims": {
               "description": "Custom claims, which should be included into the JWT.",
               "type": "string"
@@ -1906,7 +1849,6 @@
       "required": [
         "id",
         "type",
-        "if",
         "config"
       ],
       "properties": {
@@ -1916,13 +1858,6 @@
         "id": {
           "description": "The unique id of the error handler to be used in the rule definition",
           "type": "string"
-        },
-        "if": {
-          "description": "Condition, when this error handler should be executed",
-          "type": "string",
-          "examples": [
-            "type(Error) == authentication_error"
-          ]
         },
         "config": {
           "type": "object",
@@ -1944,7 +1879,6 @@
       "required": [
         "id",
         "type",
-        "if",
         "config"
       ],
       "properties": {
@@ -1954,13 +1888,6 @@
         "id": {
           "description": "The unique id of the error handler to be used in the rule definition",
           "type": "string"
-        },
-        "if": {
-          "description": "Condition, when this error handler should be executed",
-          "type": "string",
-          "examples": [
-            "type(Error) == authentication_error"
-          ]
         },
         "config": {
           "type": "object",
@@ -2027,7 +1954,7 @@
           "type": "array",
           "additionalItems": false,
           "items": {
-            "$ref": "#/definitions/ruleSetEndpointConfiguration"
+            "$ref": "#/definitions/endpointConfiguration"
           }
         },
         "watch_interval": {
@@ -2078,13 +2005,6 @@
               "prefix": {
                 "description": "Indicates that only blobs with a key starting with this prefix should be retrieved",
                 "type": "string"
-              },
-              "rule_path_match_prefix": {
-                "description": "The path prefix to be checked in each url pattern of each rule retrieved from the bucket",
-                "type": "string",
-                "examples": [
-                  "/foo/bar"
-                ]
               }
             }
           }
@@ -2477,25 +2397,6 @@
         }
       }
     },
-    "signer": {
-      "description": "Configures signer options for issued JWTs.",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
-          "type": "string",
-          "default": "heimdall"
-        },
-        "key_store": {
-          "$ref": "#/definitions/keyStore"
-        },
-        "key_id": {
-          "description": "The key id referencing the entry in the key store.",
-          "type": "string"
-        }
-      }
-    },
     "mechanisms": {
       "$ref": "#/definitions/mechanismDefinitions"
     },
@@ -2523,18 +2424,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "methods": {
-          "description": "Allowed HTTP methods for any endpoint",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "type": "string"
-          },
-          "examples": [
-            "GET",
-            "POST"
-          ]
+        "backtracking_enabled": {
+          "description": "Enables or disables backtracking while matching the rules globally. Defaults to false.",
+          "type": "boolean",
+          "default": false
         },
         "execute": {
           "description": "The mechanisms to execute (authenticators, authorizers, etc)",

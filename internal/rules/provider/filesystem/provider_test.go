@@ -200,8 +200,19 @@ func TestProviderLifecycle(t *testing.T) {
 
 				_, err := file.WriteString(`
 version: "1"
+name: test
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo/:bar
+        path_params:
+          - name: bar
+            type: glob
+            value: "*baz"
+    methods: [ GET ]
+  execute:
+   - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -221,9 +232,19 @@ rules:
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "test", ruleSet.Name)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
+				require.Len(t, ruleSet.Rules[0].Matcher.Routes, 1)
+				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.Routes[0].Path)
+				require.Len(t, ruleSet.Rules[0].Matcher.Routes[0].PathParams, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Name)
+				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Type)
+				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Value)
+				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.Methods)
+				assert.NotEmpty(t, ruleSet.Hash)
 			},
 		},
 		{
@@ -251,6 +272,11 @@ rules:
 version: "2"
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo/bar
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -290,6 +316,11 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo/bar
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -322,6 +353,11 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo/bar
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -369,6 +405,11 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -381,6 +422,11 @@ rules:
 version: "1"
 rules:
 - id: foo
+  match:
+    routes:
+      - path: /foo
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 
@@ -393,6 +439,11 @@ rules:
 version: "2"
 rules:
 - id: bar
+  match:
+    routes:
+      - path: /bar
+  execute:
+    - authenticator: test
 `)
 				require.NoError(t, err)
 

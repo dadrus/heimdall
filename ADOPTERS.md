@@ -6,3 +6,4 @@ Please remember to [sign your commits](https://docs.github.com/en/authentication
 
 | Name | Since | Website | Use-Case |
 |:-|:-|:-|:-|
+| Éphémère Creative | 2023 | https://ephemerecreative.ca | Heimdall helps us manage access to a portal where users can monitor running services. |

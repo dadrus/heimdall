@@ -43,28 +43,16 @@ func TestRuleExecutorExecute(t *testing.T) {
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		{
-			uc:     "no rules configured",
+			uc:     "no matching rules",
 			expErr: heimdall.ErrNoRuleFound,
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
-				ctx.EXPECT().AppContext().Return(context.Background())
-				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodPost, URL: matchingURL})
-				repo.EXPECT().FindRule(matchingURL).Return(nil, heimdall.ErrNoRuleFound)
-			},
-		},
-		{
-			uc:     "rule doesn't match method",
-			expErr: heimdall.ErrMethodNotAllowed,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
-				t.Helper()
+				req := &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().AppContext().Return(context.Background())
-				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodPost, URL: matchingURL})
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(false)
-				rule.EXPECT().ID().Return("test_id")
-				rule.EXPECT().SrcID().Return("test_src")
-				repo.EXPECT().FindRule(matchingURL).Return(rule, nil)
+				ctx.EXPECT().Request().Return(req)
+				repo.EXPECT().FindRule(ctx).Return(nil, heimdall.ErrNoRuleFound)
 			},
 		},
 		{
@@ -73,11 +61,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
+
 				ctx.EXPECT().AppContext().Return(context.Background())
-				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
-				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
+				ctx.EXPECT().Request().Return(req)
+				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
-				repo.EXPECT().FindRule(matchingURL).Return(rule, nil)
 			},
 		},
 		{
@@ -86,12 +75,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 				t.Helper()
 
 				upstream := mocks4.NewBackendMock(t)
+				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().AppContext().Return(context.Background())
-				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
-				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
+				ctx.EXPECT().Request().Return(req)
+				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(upstream, nil)
-				repo.EXPECT().FindRule(matchingURL).Return(rule, nil)
 			},
 		},
 	} {

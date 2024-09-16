@@ -1,0 +1,148 @@
+# Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "heimdall.fullname" $data }}
+  namespace: {{ include "heimdall.namespace" $data }}
+  labels:
+    {{- include "heimdall.labels" $data | nindent 4 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    {{- with .Values.deployment.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if not .Values.deployment.autoscaling.enabled }}
+  replicas: {{ .Values.deployment.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "heimdall.selectorLabels" $data | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "heimdall.labels" $data | nindent 8 }}
+      annotations:
+        {{- if contains "prometheus" (.Values.env.OTEL_METRICS_EXPORTER | default "") }}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "{{ .Values.env.OTEL_EXPORTER_PROMETHEUS_PORT | default 9464 }}"
+        {{- end }}
+        {{- if .Values.profiling.enabled }}
+        phlare.grafana.com/scrape: "true"
+        phlare.grafana.com/port: "{{ .Values.profiling.port }}"
+        {{- end }}
+        {{- with .Values.deployment.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
+      automountServiceAccountToken: true
+      serviceAccountName: {{ include "heimdall.fullname" . }}
+      securityContext:
+        {{- toYaml .Values.deployment.pod.securityContext | nindent 8 }}
+      volumes:
+        - name: {{ include "heimdall.name" $data }}-config-volume
+          configMap:
+            name: {{ include "heimdall.fullname" $data }}-config
+        {{- with .Values.deployment.volumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.deployment.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+            - {{- if eq .Values.operationMode "decision" }} decision{{- else }} proxy{{- end }}
+            {{- with .Values.extraArgs }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            {{- if eq .Values.operationMode "decision" }}
+            - name: http-decision
+              containerPort: {{ .Values.serve.decision.port }}
+              protocol: TCP
+            {{- else }}
+            - name: http-proxy
+              containerPort: {{ .Values.serve.proxy.port }}
+              protocol: TCP
+            {{- end }}
+            - name: http-management
+              protocol: TCP
+              containerPort: {{ .Values.serve.management.port }}
+            {{- if contains "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default "") }}
+            - name: http-metrics
+              protocol: TCP
+              containerPort: {{ .Values.env.OTEL_EXPORTER_PROMETHEUS_PORT | default 9464 }}
+            {{- end }}
+            {{- if .Values.profiling.enabled }}
+            - name: http-profiling
+              protocol: TCP
+              containerPort: {{ .Values.profiling.port }}
+            {{- end }}
+            {{- $providers := .Values.providers | default dict }}
+            {{- $kubernetes := $providers.kubernetes | default dict}}
+            {{- if $kubernetes.tls }}
+            - name: https-webhook
+              protocol: TCP
+              containerPort: 4458
+            {{- end }}
+          volumeMounts:
+            - name: {{ include "heimdall.name" . }}-config-volume
+              mountPath: /etc/heimdall
+              readOnly: true
+          {{- with .Values.deployment.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.env }}
+          env:
+          {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              {{- if kindIs "string" $val }}
+              value: "{{ $val }}"
+              {{- else }}
+              valueFrom:
+                {{- toYaml $val | nindent 16 }}
+              {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+          readinessProbe:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+          resources:
+            {{- toYaml .Values.deployment.resources | nindent 12 }}
+      nodeSelector:
+        {{- toYaml .Values.deployment.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.deployment.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.deployment.tolerations | nindent 8 }}

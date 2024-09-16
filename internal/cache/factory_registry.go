@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/cache/noop"
+	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -44,7 +45,7 @@ func Register(typ string, factory Factory) {
 	factories[typ] = factory
 }
 
-func Create(typ string, config map[string]any, cw watcher.Watcher) (Cache, error) {
+func Create(typ string, config map[string]any, cw watcher.Watcher, co certificate.Observer) (Cache, error) {
 	if typ == "noop" {
 		return &noop.Cache{}, nil
 	}
@@ -57,5 +58,5 @@ func Create(typ string, config map[string]any, cw watcher.Watcher) (Cache, error
 		return nil, errorchain.NewWithMessagef(ErrUnsupportedCacheType, "'%s'", typ)
 	}
 
-	return factory.Create(config, cw)
+	return factory.Create(config, cw, co)
 }

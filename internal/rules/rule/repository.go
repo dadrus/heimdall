@@ -17,11 +17,15 @@
 package rule
 
 import (
-	"net/url"
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 //go:generate mockery --name Repository --structname RepositoryMock
 
 type Repository interface {
-	FindRule(toMatch *url.URL) (Rule, error)
+	FindRule(ctx heimdall.Context) (Rule, error)
+
+	AddRuleSet(srcID string, rules []Rule) error
+	UpdateRuleSet(srcID string, rules []Rule) error
+	DeleteRuleSet(srcID string) error
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -27,7 +28,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, _ map[string]any) (bool, ErrorHandler, error) {
+		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerDefault {
 				return false, nil, nil
 			}
@@ -44,8 +45,6 @@ func newDefaultErrorHandler(id string) *defaultErrorHandler {
 	return &defaultErrorHandler{id: id}
 }
 
-func (eh *defaultErrorHandler) CanExecute(_ heimdall.Context, _ error) bool { return true }
-
 func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, causeErr error) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using default error handler")
@@ -55,6 +54,13 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, causeErr error) err
 	return nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) { return eh, nil }
+func (eh *defaultErrorHandler) WithConfig(conf map[string]any) (ErrorHandler, error) {
+	if len(conf) != 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"reconfiguration of the default error handler is not supported")
+	}
+
+	return eh, nil
+}
 
 func (eh *defaultErrorHandler) ID() string { return eh.id }

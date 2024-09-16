@@ -109,6 +109,8 @@ jobs:
 
   lint-code:
     runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
     needs:
       - check-changes
     if: >
@@ -204,12 +206,42 @@ jobs:
         run: helm lint ./charts/heimdall
       - name: Kubeconform decision mode deployment
         run: |
-          helm template --set demo.enabled=true ./charts/heimdall > decision-demo.yaml
-          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
+          helm template ./charts/heimdall > decision-config.yaml
+          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-config.yaml
       - name: Kubeconform proxy mode deployment
         run: |
-          helm template --set operationMode=proxy --set demo.enabled=true ./charts/heimdall > proxy-demo.yaml
-          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
+          helm template --set operationMode=proxy ./charts/heimdall > proxy-config.yaml
+          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} proxy-config.yaml
+
+  unittest-helm-chart:
+    runs-on: ubuntu-22.04
+    needs:
+      - check-changes
+    if: >
+      needs.check-changes.outputs.helm_chart_changed == 'true' || 
+      needs.check-changes.outputs.ci_config_changed == 'true'
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Setup k8s tools
+        uses: yokawasa/action-setup-kube-tools@5fe385031665158529decddddb51d6224422836e # v0.11.1
+        with:
+          setup-tools: |
+            helm
+            kubeconform
+          helm: '${{ env.HELM_VERSION }}'
+          kubeconform: '${{ env.KUBECONFORM_VERSION }}'
+      - name: Install Helm Unittest
+        run: helm plugin install --version v0.6.0 https://github.com/helm-unittest/helm-unittest.git
+      - name: Run tests
+        run: |
+          helm unittest ./charts/heimdall
+  
 
   test:
     runs-on: ubuntu-22.04
@@ -691,9 +723,6 @@ jobs:
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
-      - name: Build documentation
-        working-directory: ./docs
-        run: hugo --minify -d ./public
       - name: Update uri for redirecting to new version
         uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
         with:
@@ -701,6 +730,16 @@ jobs:
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
+      - name: Update used image tags to the released version
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
+        with:
+          find: "heimdall:dev"
+          replace: "heimdall:${{ needs.prepare-release.outputs.tag_name }}"
+          regex: false
+          include: docs/**
+      - name: Build documentation
+        working-directory: ./docs
+        run: hugo --minify -d ./public
       - name: Update versions JSON document
         id: update-version-json
         run: |

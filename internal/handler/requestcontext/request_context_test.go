@@ -122,7 +122,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
-	ctx := New(nil, req)
+	ctx := New(req)
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -142,7 +142,7 @@ func TestRequestContextHeader(t *testing.T) {
 	req.Header.Add("X-Foo-Bar", "bar")
 	req.Host = "bar.foo"
 
-	ctx := New(nil, req)
+	ctx := New(req)
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -162,7 +162,7 @@ func TestRequestContextCookie(t *testing.T) {
 	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
-	ctx := New(nil, req)
+	ctx := New(req)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -230,7 +230,7 @@ func TestRequestContextBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", tc.body)
 			req.Header.Set("Content-Type", tc.ct)
 
-			ctx := New(nil, req)
+			ctx := New(req)
 
 			// WHEN
 			data := ctx.Request().Body()

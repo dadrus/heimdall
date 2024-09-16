@@ -14,5 +14,5 @@ spec:
     - 172.18.255.200
   secretName: echo-app
   issuerRef:
-    name: selfsigned
+    name: demo-ca-issuer
     kind: ClusterIssuer

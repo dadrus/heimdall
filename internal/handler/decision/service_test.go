@@ -96,13 +96,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusMethodNotAllowed, response.StatusCode)
+				assert.Equal(t, http.StatusNotFound, response.StatusCode)
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
@@ -554,7 +554,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			srvConf.Host = "127.0.0.1"
 			srvConf.Port = port
 
-			listener, err := listener.New("tcp", srvConf.Address(), srvConf.TLS, nil)
+			listener, err := listener.New("tcp", "test", srvConf.Address(), srvConf.TLS, nil, nil)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{Serve: config.ServeConfig{Decision: srvConf}}
@@ -565,7 +565,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			client := &http.Client{Transport: &http.Transport{}}
 
-			decision := newService(conf, cch, log.Logger, exec, nil)
+			decision := newService(conf, cch, log.Logger, exec)
 			defer decision.Shutdown(context.Background())
 
 			go func() {

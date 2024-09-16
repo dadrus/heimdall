@@ -183,7 +183,7 @@ func TestNewSentinelCache(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			cch, err := NewSentinelCache(conf, nil)
+			cch, err := NewSentinelCache(conf, nil, nil)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}

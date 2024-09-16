@@ -267,7 +267,7 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 
 	ruleSet, err := config2.ParseRules("application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "failed to parse rule set %s", fileName).
 			CausedBy(err)
 	}
 

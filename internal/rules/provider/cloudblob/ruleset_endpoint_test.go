@@ -170,46 +170,6 @@ func TestFetchRuleSets(t *testing.T) {
 			},
 		},
 		{
-			uc: "rule set with path prefix validation error",
-			endpoint: ruleSetEndpoint{
-				URL: &url.URL{
-					Scheme:   "s3",
-					Host:     bucketName,
-					RawQuery: fmt.Sprintf("endpoint=%s&region=eu-central-1", srv.URL),
-				},
-				RulesPathPrefix: "foo/bar",
-			},
-			setup: func(t *testing.T) {
-				t.Helper()
-
-				data := `
-{
-	"version": "1",
-	"name": "test",
-	"rules": [{
-		"id": "foobar",
-		"match": "http://<**>/bar/foo/api",
-		"methods": ["GET", "POST"],
-		"execute": [
-			{ "authenticator": "foobar" }
-		]
-	}]
-}`
-
-				_, err := backend.PutObject(bucketName, "test-rule",
-					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(data), int64(len(data)))
-				require.NoError(t, err)
-			},
-			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "path prefix validation")
-			},
-		},
-		{
 			uc: "multiple valid rule sets in yaml and json formats",
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
@@ -217,7 +177,6 @@ func TestFetchRuleSets(t *testing.T) {
 					Host:     bucketName,
 					RawQuery: fmt.Sprintf("endpoint=%s&region=eu-central-1", srv.URL),
 				},
-				RulesPathPrefix: "foo/bar",
 			},
 			setup: func(t *testing.T) {
 				t.Helper()
@@ -228,8 +187,14 @@ func TestFetchRuleSets(t *testing.T) {
 	"name": "test",
 	"rules": [{
 		"id": "foobar",
-		"match": "http://<**>/foo/bar/api1",
-		"methods": ["GET", "POST"],
+        "match": {
+          "routes": [
+            { "path": "/foo/bar/api1" }
+          ],
+          "scheme": "http",
+          "hosts": [{ "type": "glob", "value": "**"}],
+          "methods": ["GET", "POST"]
+        },
 		"execute": [
 			{ "authenticator": "foobar" }
 		]
@@ -241,13 +206,19 @@ version: "1"
 name: test2
 rules:
 - id: barfoo
-  match: http://<**>/foo/bar/api2
-  methods: 
-  - GET
-  - POST
+  match:
+    routes:
+      - path: /foo/bar/api2
+    scheme: http
+    hosts:
+      - type: glob
+        value: "**"
+    methods: 
+      - GET
+      - POST
   execute:
-  - authenticator: barfoo`
-
+  - authenticator: barfoo
+`
 				_, err := backend.PutObject(bucketName, "test-rule1",
 					map[string]string{"Content-Type": "application/json"},
 					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
@@ -294,8 +265,14 @@ rules:
 				"name": "test1",
 				"rules": [{
 					"id": "foobar",
-					"match": "http://<**>/foo/bar/api1",
-					"methods": ["GET", "POST"],
+                    "match": {
+                      "routes": [
+                         { "path": "/foo/bar/api1" }
+                      ],
+                      "scheme": "http",
+                      "hosts": [{ "type": "glob", "value": "**" }],
+                      "methods": ["GET", "POST"]
+                    },
 					"execute": [
 						{ "authenticator": "foobar" }
 					]
@@ -306,8 +283,14 @@ rules:
 				"name": "test2",
 				"rules": [{
 					"id": "barfoo",
-					"url": "http://<**>/foo/bar/api2",
-					"methods": ["GET", "POST"],
+                    "match": {
+                      "routes": [
+                        { "path": "/foo/bar/api2" }
+                      ],
+                      "scheme": "http",
+                      "hosts": [{ "type": "glob", "value": "**"}],
+                      "methods": ["GET", "POST"]
+                    },
 					"execute": [
 						{ "authenticator": "barfoo" }
 					]
@@ -400,8 +383,14 @@ rules:
 				"name": "test",
 				"rules": [{
 					"id": "foobar",
-					"match": "http://<**>/foo/bar/api1",
-					"methods": ["GET", "POST"],
+                    "match": {
+                      "routes": [
+                        { "path": "/foo/bar/api1" }
+                      ],
+                      "scheme": "http",
+                      "hosts": [{ "type": "glob", "value": "**" }],
+                      "methods": ["GET", "POST"]
+                    },
 					"execute": [
 						{ "authenticator": "foobar" }
 					]

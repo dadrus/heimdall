@@ -44,7 +44,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha3"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -56,7 +56,7 @@ type ConfigFactory func() (*rest.Config, error)
 type provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
-	cl         v1alpha3.Client
+	cl         v1alpha4.Client
 	adc        admissioncontroller.AdmissionController
 	cancel     context.CancelFunc
 	configured bool
@@ -91,7 +91,7 @@ func newProvider(
 		TLS       *config.TLS `mapstructure:"tls"`
 	}
 
-	client, err := v1alpha3.NewClient(k8sConf)
+	client, err := v1alpha4.NewClient(k8sConf)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed creating client for connecting to kubernetes cluster").CausedBy(err)
@@ -129,7 +129,7 @@ func (p *provider) newController(ctx context.Context, namespace string) (cache.S
 			ListFunc:  func(opts metav1.ListOptions) (runtime.Object, error) { return repository.List(ctx, opts) },
 			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) { return repository.Watch(ctx, opts) },
 		},
-		ObjectType: &v1alpha3.RuleSet{},
+		ObjectType: &v1alpha4.RuleSet{},
 		Handler: cache.FilteringResourceEventHandler{
 			FilterFunc: p.filter,
 			Handler: cache.ResourceEventHandlerFuncs{
@@ -206,7 +206,7 @@ func (p *provider) Stop(ctx context.Context) error {
 
 func (p *provider) filter(obj any) bool {
 	// should never be of a different type. ok if panics
-	rs := obj.(*v1alpha3.RuleSet) // nolint: forcetypeassert
+	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 
 	return rs.Spec.AuthClassName == p.ac
 }
@@ -219,7 +219,7 @@ func (p *provider) addRuleSet(obj any) {
 	p.l.Info().Msg("New rule set received")
 
 	// should never be of a different type. ok if panics
-	rs := obj.(*v1alpha3.RuleSet) // nolint: forcetypeassert
+	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 	conf := p.toRuleSetConfiguration(rs)
 
 	if err := p.p.OnCreated(conf); err != nil {
@@ -229,7 +229,7 @@ func (p *provider) addRuleSet(obj any) {
 			context.Background(),
 			rs,
 			metav1.ConditionFalse,
-			v1alpha3.ConditionRuleSetActivationFailed,
+			v1alpha4.ConditionRuleSetActivationFailed,
 			1,
 			0,
 			fmt.Sprintf("%s instance failed loading RuleSet, reason: %s", p.id, err.Error()),
@@ -239,7 +239,7 @@ func (p *provider) addRuleSet(obj any) {
 			context.Background(),
 			rs,
 			metav1.ConditionTrue,
-			v1alpha3.ConditionRuleSetActive,
+			v1alpha4.ConditionRuleSetActive,
 			1,
 			1,
 			p.id+" instance successfully loaded RuleSet",
@@ -253,8 +253,8 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 	}
 
 	// should never be of a different type. ok if panics
-	newRS := newObj.(*v1alpha3.RuleSet) // nolint: forcetypeassert
-	oldRS := oldObj.(*v1alpha3.RuleSet) // nolint: forcetypeassert
+	newRS := newObj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
+	oldRS := oldObj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 
 	if oldRS.Generation == newRS.Generation {
 		// we're only interested in Spec updates. Changes in metadata or status are not of relevance
@@ -272,7 +272,7 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 			context.Background(),
 			newRS,
 			metav1.ConditionFalse,
-			v1alpha3.ConditionRuleSetActivationFailed,
+			v1alpha4.ConditionRuleSetActivationFailed,
 			0,
 			-1,
 			fmt.Sprintf("%s instance failed updating RuleSet, reason: %s", p.id, err.Error()),
@@ -282,7 +282,7 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 			context.Background(),
 			newRS,
 			metav1.ConditionTrue,
-			v1alpha3.ConditionRuleSetActive,
+			v1alpha4.ConditionRuleSetActive,
 			0,
 			0,
 			p.id+" instance successfully reloaded RuleSet",
@@ -298,7 +298,7 @@ func (p *provider) deleteRuleSet(obj any) {
 	p.l.Info().Msg("Rule set deletion received")
 
 	// should never be of a different type. ok if panics
-	rs := obj.(*v1alpha3.RuleSet) // nolint: forcetypeassert
+	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 	conf := p.toRuleSetConfiguration(rs)
 
 	if err := p.p.OnDeleted(conf); err != nil {
@@ -308,7 +308,7 @@ func (p *provider) deleteRuleSet(obj any) {
 			context.Background(),
 			rs,
 			metav1.ConditionTrue,
-			v1alpha3.ConditionRuleSetUnloadingFailed,
+			v1alpha4.ConditionRuleSetUnloadingFailed,
 			0,
 			0,
 			p.id+" instance failed unloading RuleSet, reason: "+err.Error(),
@@ -318,7 +318,7 @@ func (p *provider) deleteRuleSet(obj any) {
 			context.Background(),
 			rs,
 			metav1.ConditionFalse,
-			v1alpha3.ConditionRuleSetUnloaded,
+			v1alpha4.ConditionRuleSetUnloaded,
 			-1,
 			-1,
 			p.id+" instance dropped RuleSet",
@@ -326,7 +326,7 @@ func (p *provider) deleteRuleSet(obj any) {
 	}
 }
 
-func (p *provider) toRuleSetConfiguration(rs *v1alpha3.RuleSet) *config2.RuleSet {
+func (p *provider) toRuleSetConfiguration(rs *v1alpha4.RuleSet) *config2.RuleSet {
 	return &config2.RuleSet{
 		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
@@ -339,15 +339,15 @@ func (p *provider) toRuleSetConfiguration(rs *v1alpha3.RuleSet) *config2.RuleSet
 }
 
 func (p *provider) mapVersion(_ string) string {
-	// currently the only possible version is v1alpha3, which is mapped to the version "1alpha3" used internally
-	return "1alpha3"
+	// currently the only possible version is v1alpha4, which is mapped to the version "1alpha4" used internally
+	return "1alpha4"
 }
 
 func (p *provider) updateStatus(
 	ctx context.Context,
-	rs *v1alpha3.RuleSet,
+	rs *v1alpha4.RuleSet,
 	status metav1.ConditionStatus,
-	reason v1alpha3.ConditionReason,
+	reason v1alpha4.ConditionReason,
 	matchIncrement int,
 	usageIncrement int,
 	msg string,
@@ -359,7 +359,7 @@ func (p *provider) updateStatus(
 
 	conditionType := p.id + "/Reconciliation"
 
-	if reason == v1alpha3.ConditionControllerStopped || reason == v1alpha3.ConditionRuleSetUnloaded {
+	if reason == v1alpha4.ConditionControllerStopped || reason == v1alpha4.ConditionRuleSetUnloaded {
 		meta.RemoveStatusCondition(&modRS.Status.Conditions, conditionType)
 	} else {
 		meta.SetStatusCondition(&modRS.Status.Conditions, metav1.Condition{
@@ -381,7 +381,7 @@ func (p *provider) updateStatus(
 
 	_, err := repository.PatchStatus(
 		p.l.WithContext(ctx),
-		v1alpha3.NewJSONPatch(rs, modRS, true),
+		v1alpha4.NewJSONPatch(rs, modRS, true),
 		metav1.PatchOptions{},
 	)
 	if err == nil {
@@ -421,10 +421,10 @@ func (p *provider) updateStatus(
 func (p *provider) finalize(ctx context.Context) {
 	for _, rs := range slicex.Filter(
 		// nolint: forcetypeassert
-		slicex.Map(p.store.List(), func(s any) *v1alpha3.RuleSet { return s.(*v1alpha3.RuleSet) }),
-		func(set *v1alpha3.RuleSet) bool { return set.Spec.AuthClassName == p.ac },
+		slicex.Map(p.store.List(), func(s any) *v1alpha4.RuleSet { return s.(*v1alpha4.RuleSet) }),
+		func(set *v1alpha4.RuleSet) bool { return set.Spec.AuthClassName == p.ac },
 	) {
-		p.updateStatus(ctx, rs, metav1.ConditionFalse, v1alpha3.ConditionControllerStopped, -1, -1,
+		p.updateStatus(ctx, rs, metav1.ConditionFalse, v1alpha4.ConditionControllerStopped, -1, -1,
 			p.id+" instance stopped")
 	}
 }

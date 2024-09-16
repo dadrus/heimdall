@@ -17,8 +17,6 @@
 package rule
 
 import (
-	"net/url"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
@@ -28,6 +26,8 @@ type Rule interface {
 	ID() string
 	SrcID() string
 	Execute(ctx heimdall.Context) (Backend, error)
-	MatchesURL(match *url.URL) bool
-	MatchesMethod(method string) bool
+	Routes() []Route
+	SameAs(other Rule) bool
+	EqualTo(other Rule) bool
+	AllowsBacktracking() bool
 }

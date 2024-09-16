@@ -17,29 +17,22 @@
 package rules
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
-	"net/http"
-	"slices"
-	"strings"
 
-	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
-	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 func NewRuleFactory(
-	hf mechanisms.Factory,
+	hf mechanisms.MechanismFactory,
 	conf *config.Configuration,
 	mode config.OperationMode,
 	logger zerolog.Logger,
@@ -58,11 +51,101 @@ func NewRuleFactory(
 }
 
 type ruleFactory struct {
-	hf             mechanisms.Factory
-	logger         zerolog.Logger
-	defaultRule    *ruleImpl
-	hasDefaultRule bool
-	mode           config.OperationMode
+	hf                  mechanisms.MechanismFactory
+	logger              zerolog.Logger
+	defaultRule         *ruleImpl
+	hasDefaultRule      bool
+	mode                config.OperationMode
+	defaultBacktracking bool
+}
+
+func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
+func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
+
+// nolint:cyclop,funlen
+func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (rule.Rule, error) {
+	if f.mode == config.ProxyMode && ruleConfig.Backend == nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
+	}
+
+	slashesHandling := x.IfThenElse(len(ruleConfig.EncodedSlashesHandling) != 0,
+		ruleConfig.EncodedSlashesHandling,
+		config2.EncodedSlashesOff,
+	)
+
+	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
+	if err != nil {
+		return nil, err
+	}
+
+	errorHandlers, err := f.createOnErrorPipeline(version, ruleConfig.ErrorHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	var allowsBacktracking bool
+
+	if f.defaultRule != nil {
+		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
+		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
+		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
+		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
+		allowsBacktracking = x.IfThenElseExec(ruleConfig.Matcher.BacktrackingEnabled != nil,
+			func() bool { return *ruleConfig.Matcher.BacktrackingEnabled },
+			func() bool { return f.defaultBacktracking })
+	}
+
+	if len(authenticators) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
+	}
+
+	hash, err := ruleConfig.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	rul := &ruleImpl{
+		id:                 ruleConfig.ID,
+		srcID:              srcID,
+		slashesHandling:    slashesHandling,
+		allowsBacktracking: allowsBacktracking,
+		backend:            ruleConfig.Backend,
+		hash:               hash,
+		sc:                 authenticators,
+		sh:                 subHandlers,
+		fi:                 finalizers,
+		eh:                 errorHandlers,
+	}
+
+	mm, err := createMethodMatcher(ruleConfig.Matcher.Methods)
+	if err != nil {
+		return nil, err
+	}
+
+	hm, err := createHostMatcher(ruleConfig.Matcher.Hosts)
+	if err != nil {
+		return nil, err
+	}
+
+	sm := schemeMatcher(ruleConfig.Matcher.Scheme)
+
+	for _, rc := range ruleConfig.Matcher.Routes {
+		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"failed creating route '%s'", rc.Path).
+				CausedBy(err)
+		}
+
+		rul.routes = append(rul.routes,
+			&routeImpl{
+				rule:    rul,
+				path:    rc.Path,
+				matcher: compositeMatcher{sm, mm, hm, ppm},
+			})
+	}
+
+	return rul, nil
 }
 
 //nolint:funlen,gocognit,cyclop
@@ -151,133 +234,6 @@ func (f *ruleFactory) createExecutePipeline(
 	return authenticators, subjectHandlers, finalizers, nil
 }
 
-func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
-func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
-
-//nolint:cyclop, funlen
-func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (
-	rule.Rule, error,
-) {
-	if len(ruleConfig.ID) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
-	if f.mode == config.ProxyMode {
-		if err := checkProxyModeApplicability(srcID, ruleConfig); err != nil {
-			return nil, err
-		}
-	}
-
-	matcher, err := patternmatcher.NewPatternMatcher(
-		ruleConfig.RuleMatcher.Strategy, ruleConfig.RuleMatcher.URL)
-	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"bad URL pattern for %s strategy defined for rule ID=%s from %s",
-			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).CausedBy(err)
-	}
-
-	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
-	if err != nil {
-		return nil, err
-	}
-
-	errorHandlers, err := f.createOnErrorPipeline(version, ruleConfig.ErrorHandler)
-	if err != nil {
-		return nil, err
-	}
-
-	methods, err := expandHTTPMethods(ruleConfig.Methods)
-	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed to expand allowed HTTP methods for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
-	}
-
-	if f.defaultRule != nil {
-		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
-		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
-		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
-		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
-		methods = x.IfThenElse(len(methods) != 0, methods, f.defaultRule.methods)
-	}
-
-	if len(authenticators) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
-	if len(methods) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
-	hash, err := f.createHash(ruleConfig)
-	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed to create hash for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
-	return &ruleImpl{
-		id: ruleConfig.ID,
-		encodedSlashesHandling: x.IfThenElse(
-			len(ruleConfig.EncodedSlashesHandling) != 0,
-			ruleConfig.EncodedSlashesHandling,
-			config2.EncodedSlashesOff,
-		),
-		urlMatcher: matcher,
-		backend:    ruleConfig.Backend,
-		methods:    methods,
-		srcID:      srcID,
-		isDefault:  false,
-		hash:       hash,
-		sc:         authenticators,
-		sh:         subHandlers,
-		fi:         finalizers,
-		eh:         errorHandlers,
-	}, nil
-}
-
-func checkProxyModeApplicability(srcID string, ruleConfig config2.Rule) error {
-	if ruleConfig.Backend == nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"heimdall is operated in proxy mode, but no forward_to is defined in rule ID=%s from %s",
-			ruleConfig.ID, srcID)
-	}
-
-	if len(ruleConfig.Backend.Host) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"missing host definition in forward_to in rule ID=%s from %s",
-			ruleConfig.ID, srcID)
-	}
-
-	urlRewriter := ruleConfig.Backend.URLRewriter
-	if urlRewriter == nil {
-		return nil
-	}
-
-	if len(urlRewriter.Scheme) == 0 &&
-		len(urlRewriter.PathPrefixToAdd) == 0 &&
-		len(urlRewriter.PathPrefixToCut) == 0 &&
-		len(urlRewriter.QueryParamsToRemove) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"rewrite is defined in forward_to in rule ID=%s from %s, but is empty", ruleConfig.ID, srcID)
-	}
-
-	return nil
-}
-
-func (f *ruleFactory) createHash(ruleConfig config2.Rule) ([]byte, error) {
-	rawRuleConfig, err := json.Marshal(ruleConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	md := crypto.SHA256.New()
-	md.Write(rawRuleConfig)
-
-	return md.Sum(nil), nil
-}
-
 func (f *ruleFactory) createOnErrorPipeline(
 	version string,
 	ehConfigs []config.MechanismConfig,
@@ -288,18 +244,18 @@ func (f *ruleFactory) createOnErrorPipeline(
 		id, found := ehStep["error_handler"]
 		if found {
 			conf := getConfig(ehStep["config"])
-			condition := ehStep["if"]
 
-			if condition != nil {
-				conf["if"] = condition
-			}
-
-			eh, err := f.hf.CreateErrorHandler(version, id.(string), conf)
+			condition, err := getExecutionCondition(ehStep["if"])
 			if err != nil {
 				return nil, err
 			}
 
-			errorHandlers = append(errorHandlers, eh)
+			handler, err := f.hf.CreateErrorHandler(version, id.(string), conf)
+			if err != nil {
+				return nil, err
+			}
+
+			errorHandlers = append(errorHandlers, &conditionalErrorHandler{h: handler, c: condition})
 		} else {
 			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"unsupported configuration in error handler")
@@ -340,55 +296,21 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
 	}
 
-	methods, err := expandHTTPMethods(ruleConfig.Methods)
-	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "failed to expand allowed HTTP methods").
-			CausedBy(err)
-	}
-
-	if len(methods) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no methods defined for default rule")
-	}
-
 	f.defaultRule = &ruleImpl{
-		id:                     "default",
-		encodedSlashesHandling: config2.EncodedSlashesOff,
-		methods:                methods,
-		srcID:                  "config",
-		isDefault:              true,
-		sc:                     authenticators,
-		sh:                     subHandlers,
-		fi:                     finalizers,
-		eh:                     errorHandlers,
+		id:              "default",
+		slashesHandling: config2.EncodedSlashesOff,
+		srcID:           "config",
+		isDefault:       true,
+		sc:              authenticators,
+		sh:              subHandlers,
+		fi:              finalizers,
+		eh:              errorHandlers,
 	}
 
 	f.hasDefaultRule = true
+	f.defaultBacktracking = ruleConfig.BacktrackingEnabled
 
 	return nil
-}
-
-func expandHTTPMethods(methods []string) ([]string, error) {
-	if slices.Contains(methods, "ALL") {
-		methods = slices.DeleteFunc(methods, func(method string) bool { return method == "ALL" })
-
-		methods = append(methods,
-			http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch,
-			http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace)
-	}
-
-	slices.SortFunc(methods, strings.Compare)
-
-	methods = slices.Compact(methods)
-	if res := slicex.Filter(methods, func(s string) bool { return len(s) == 0 }); len(res) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"methods list contains empty values. have you forgotten to put the corresponding value into braces?")
-	}
-
-	tbr := slicex.Filter(methods, func(s string) bool { return strings.HasPrefix(s, "!") })
-	methods = slicex.Subtract(methods, tbr)
-	tbr = slicex.Map[string, string](tbr, func(s string) string { return strings.TrimPrefix(s, "!") })
-
-	return slicex.Subtract(methods, tbr), nil
 }
 
 type CheckFunc func() error
@@ -429,11 +351,12 @@ func getConfig(conf any) config.MechanismConfig {
 		return nil
 	}
 
-	if m, ok := conf.(map[string]any); ok {
-		return m
+	m, ok := conf.(map[string]any)
+	if !ok {
+		panic(fmt.Sprintf("unexpected type for config %T", conf))
 	}
 
-	panic(fmt.Sprintf("unexpected type for config %T", conf))
+	return m
 }
 
 func getExecutionCondition(conf any) (executionCondition, error) {

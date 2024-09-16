@@ -28,7 +28,6 @@ func DecodeConfig(input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				matcherDecodeHookFunc,
 				mapstructure.StringToTimeDurationHookFunc(),
 			),
 			Result:      output,

@@ -21,5 +21,5 @@ import (
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
-	fx.Provide(NewFactory),
+	fx.Provide(NewMechanismFactory),
 )

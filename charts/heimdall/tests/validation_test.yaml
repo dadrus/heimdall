@@ -1,0 +1,33 @@
+suite: test suite for validations
+templates:
+  - validations/operation_mode.yaml
+tests:
+  - it: should fail if operation mode is set to an unexpected value
+    set:
+      operationMode: foo
+    asserts:
+      - failedTemplate:
+          errorMessage: A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>
+
+  - it: should fail if operation mode is empty
+    set:
+      operationMode: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: operationMode is not set! Call helm with --set operationMode=<decision or proxy>
+
+  - it: should not fail by default
+    asserts:
+      - notFailedTemplate: { }
+
+  - it: should not fail is operation mode is set to decision
+    set:
+      operationMode: decision
+    asserts:
+      - notFailedTemplate: { }
+
+  - it: should not fail is operation mode is set to proxy
+    set:
+      operationMode: decision
+    asserts:
+      - notFailedTemplate: { }

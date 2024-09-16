@@ -82,7 +82,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newAnonymousAuthenticator(tc.id, conf)
+			auth, err := newAnonymousAuthenticator(nil, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -151,7 +151,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newAnonymousAuthenticator(tc.id, pc)
+			prototype, err := newAnonymousAuthenticator(nil, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN

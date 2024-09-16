@@ -16,31 +16,53 @@
 
 package config
 
-import (
-	"github.com/goccy/go-json"
-
-	"github.com/dadrus/heimdall/internal/x/stringx"
-)
+import "slices"
 
 type Matcher struct {
-	URL      string `json:"url"      yaml:"url"`
-	Strategy string `json:"strategy" yaml:"strategy"`
+	Routes              []Route       `json:"routes"               yaml:"routes"               validate:"required,dive"`              //nolint:lll,tagalign
+	BacktrackingEnabled *bool         `json:"backtracking_enabled" yaml:"backtracking_enabled"`                                       //nolint:lll,tagalign
+	Scheme              string        `json:"scheme"               yaml:"scheme"               validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
+	Methods             []string      `json:"methods"              yaml:"methods"              validate:"omitempty,dive,required"`    //nolint:lll,tagalign
+	Hosts               []HostMatcher `json:"hosts"                yaml:"hosts"                validate:"omitempty,dive,required"`    //nolint:lll,tagalign
 }
 
-func (m *Matcher) UnmarshalJSON(data []byte) error {
-	if data[0] == '"' {
-		// data contains just the url matching value
-		m.URL = stringx.ToString(data[1 : len(data)-1])
-		m.Strategy = "glob"
+type Route struct {
+	Path       string             `json:"path"        yaml:"path"        validate:"required"`                //nolint:lll,tagalign
+	PathParams []ParameterMatcher `json:"path_params" yaml:"path_params" validate:"omitempty,dive,required"` //nolint:lll,tagalign
+}
 
-		return nil
+func (r *Route) DeepCopyInto(out *Route) {
+	*out = *r
+
+	out.PathParams = slices.Clone(r.PathParams)
+}
+
+type ParameterMatcher struct {
+	Name  string `json:"name"  yaml:"name"  validate:"required,ne=*"`                   //nolint:tagalign
+	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
+	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
+}
+
+type HostMatcher struct {
+	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
+	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
+}
+
+func (m *Matcher) DeepCopyInto(out *Matcher) {
+	var withBacktracking *bool
+
+	if m.BacktrackingEnabled != nil {
+		value := *m.BacktrackingEnabled
+		withBacktracking = &value
 	}
 
-	var rawData map[string]any
+	out.Scheme = m.Scheme
+	out.BacktrackingEnabled = withBacktracking
+	out.Methods = slices.Clone(m.Methods)
+	out.Hosts = slices.Clone(m.Hosts)
 
-	if err := json.Unmarshal(data, &rawData); err != nil {
-		return err
+	out.Routes = make([]Route, len(m.Routes))
+	for i, route := range m.Routes {
+		route.DeepCopyInto(&out.Routes[i])
 	}
-
-	return DecodeConfig(rawData, m)
 }

@@ -43,8 +43,6 @@ location @error401 {
 
 * If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which is anyway recommended to have secure defaults
 
-* If a heimdall rule is matched, but is configured to not allow a particular HTTP method, `405 Method Not Allowed` response code is returned. That will result in `500` returned by NGINX due to the reasons written above. To overcome that, you can configure heimdall to respond with another HTTP response code using the `respond` property on the level of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] configuration.
-
 == Vanilla NGINX
 
 Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.
@@ -126,24 +124,23 @@ location = /_auth {
 
 == NGINX Ingress Controller
 
-Even one can configure an external auth server globally with vanilla NGINX, there is no way to achieve that with the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller]. Only route based configuration/integration is possible.
+=== Global Configuration
 
-=== Using `X-Forwarded-*` headers
+==== Using `X-Forwarded-*` headers
 
-To integrate heimdall with the NGINX Ingress Controller you can make use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
+NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies` on heimdall side.
 
-NOTE: The configuration used in the example below requires proper configuration of `trusted_proxies`.
+Global configuration can be achieved by setting the following properties in controller `ConfigMap`. If you install the NGINX controller via the helm chart, you can add these properties under the `controller.config` property of your helm `values.yaml` file.
 
 [source, yaml]
 ----
-nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" # <1>
-nginx.ingress.kubernetes.io/auth-response-headers: Authorization # <2>
-nginx.ingress.kubernetes.io/auth-snippet: | # <3>
+global-auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" # <1>
+global-auth-response-headers: Authorization # <2>
+global-auth-snippet: | # <3>
   proxy_set_header    X-Forwarded-Method   $request_method;
   proxy_set_header    X-Forwarded-Proto    $scheme;
   proxy_set_header    X-Forwarded-Host     $http_host;
   proxy_set_header    X-Forwarded-Uri      $request_uri;
-# other annotations required
 ----
 <1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
 <2> Let NGINX forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
@@ -152,7 +149,58 @@ your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers
 +
 NOTE: Without that, heimdall will not be able extracting relevant information from the NGINX request as it does not support NGINX proprietary `X-Original-Method` and `X-Original-Uri` used by it for the same purposes.
 
-=== Alternative Configuration
+With that in place, you can simply use the standard https://kubernetes.io/docs/concepts/services-networking/ingress/[`Ingress`] resource, and the NGINX Ingress Controller will ensure, each request will be analyzed by heimdall first.
+
+This will result in an NGINX configuration corresponding to the integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section.
+
+==== Alternative Configuration
+
+Alternatively, if you don't want configuring `trusted_proxies` and do not rely on the used HTTP scheme, host and port in your rules, you can also use the `location-snippet` and the `server-snippet` to the `ConfigMap` of the NGINX Ingress Controller with values shown below.
+
+This example is an exact copy of the configuration used in the very first link:{{< relref "#_first_option" >}}[integration option] described above.
+
+[source, yaml]
+----
+location-snippet: |
+  auth_request               /_auth;
+  auth_request_set           $auth_cookie $upstream_http_set_cookie;
+  add_header                 Set-Cookie $auth_cookie;
+  auth_request_set           $auth_header $upstream_http_authorization;
+  proxy_set_header           'Authorization' $auth_header;
+  proxy_set_header Proxy     "";
+server-snippet: |
+  location = /_auth {
+    internal;
+    access_log               off;
+    proxy_method             $request_method;
+    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>$request_uri;
+    proxy_pass_request_body  off;
+    proxy_set_header         Content-Length   "";
+    proxy_set_header         Host $http_host;
+  }
+----
+
+As with the previous integration option, you can add these properties under the `controller.config` property of your helm `values.yaml` file if you install the NGINX Ingress Controller via helm.
+
+=== Integration on `Ingress` Resource Level
+
+==== Using `X-Forwarded-*` headers
+
+One option to integrate heimdall with the NGINX Ingress Controller on the `Ingress` resource level is making use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This approach requires proper configuration of `trusted_proxies` on heimdall side. On NGINX Ingress Controller side you must allow the usage of `nginx.ingress.kubernetes.io/auth-snippet` (See also https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations[here]).
+
+[source, yaml]
+----
+nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>"
+nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+nginx.ingress.kubernetes.io/auth-snippet: |
+  proxy_set_header    X-Forwarded-Method   $request_method;
+  proxy_set_header    X-Forwarded-Proto    $scheme;
+  proxy_set_header    X-Forwarded-Host     $http_host;
+  proxy_set_header    X-Forwarded-Uri      $request_uri;
+# other annotations required
+----
+
+==== Alternative Configuration
 
 Alternatively, if you don't want configuring `trusted_proxies` and do not rely on the used HTTP scheme, host and port in your rules, you can also use the `nginx.ingress.kubernetes.io/configuration-snippet` and `nginx.ingress.kubernetes.io/server-snippet` annotations and use the configuration shown below.
 

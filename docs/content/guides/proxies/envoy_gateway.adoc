@@ -1,0 +1,128 @@
+---
+title: "Envoy Gateway Integration"
+date: 2024-05-02T13:02:43+02:00
+draft: false
+weight: 13
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: This guide explains how to integrate heimdall with Envoy Gateway.
+---
+
+:toc:
+
+https://gateway.envoyproxy.io[Envoy Gateway] is an open source project for managing https://www.envoyproxy.io/[Envoy Proxy] as a Kubernetes-based application gateway by making use of the https://gateway-api.sigs.k8s.io/[Gateway API] resources.
+
+== Prerequisites
+
+* A kubernetes cluster
+* Deployed Envoy Gateway (See https://gateway.envoyproxy.io/v1.0.1/install/[here] for installation options)
+* Deployed https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass[`GatewayClass`] resource that matches Envoy Gateway's configured `controllerName` (typically `gateway.envoyproxy.io/gatewayclass-controller`), as well as a deployed https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource.
+* heimdall installed and operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+
+== Integration Options
+
+Technically, the integration happens the same way as with link:{{< relref "/guides/proxies/envoy.adoc" >}}[Envoy] itself by making use of the https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] filter, and can be done in two ways:
+
+* either via HTTP
+* or via gRPC (recommended)
+
+In both cases, the filter calls an external gRPC or HTTP service (here heimdall) to check whether an incoming HTTP request is authorized or not. If heimdall responses with `2xx` the request is forwarded to the upstream service, otherwise the response from heimdall is returned to the caller.
+
+In case of Envoy Gateway the abovesaid configuration happens via a https://gateway.envoyproxy.io/contributions/design/security-policy/[`SecurityPolicy`] custom resource, that can be linked to a https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`], https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`], or a https://gateway-api.sigs.k8s.io/api-types/grpcroute[`GRPCRoute`] resource.
+
+NOTE: As of today, there is a limitation in the implementation of the Envoy Gateway - it does not allow cross-namespace reference of external auth services (see also https://github.com/envoyproxy/gateway/issues/3322[envoyproxy/gateway#3322]). That means, the https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`], the https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource and heimdall must be deployed in the same namespace.
+
+== Global Configuration
+
+To integrate heimdall with the gateway globally, that is, each and every request will be forwarded to heimdall for authentication and authorization purposes first, create a https://gateway.envoyproxy.io/contributions/design/security-policy/[`SecurityPolicy`] as shown below in the namespace, the https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource is deployed into.
+
+[source, yaml]
+----
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-heimdall # <1>
+  namespace: heimdall # <2>
+spec:
+  targetRef: # <3>
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: heimdall
+  extAuth:
+    grpc:
+      backendRef: # <4>
+        name: heimdall
+        port: 4456
+        namespace: heimdall
+----
+<1> The name of the `SecurityPolicy`. You can change it to any other value if you like.
+<2> The namespace for the policy. It must be the same namespace the `Gateway` resource and heimdall are deployed into. So change it to your namespace.
+<3> Defines the `Gateway` resource, this policy should be applied to. Change the `name` property to the name of your `Gateway` resource and the `namespace` property to the proper namespace (same as in 2)
+<4> Defines the reference to the heimdall `Service` using the gRPC protocol. Change the `name` and the `namespace` to the proper values of your setup.
+
+== Route-level Configuration
+
+The integration on the route level happens similar to the link:{{< relref "#_global_configuration" >}}[global integration]. The difference is that the https://gateway.envoyproxy.io/contributions/design/security-policy/[`SecurityPolicy`] is applied to an https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`] as shown below and not the https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource.
+
+[source, yaml]
+----
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-example # <1>
+  namespace: heimdall # <2>
+spec:
+  targetRef: # <3>
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: heimdall
+  extAuth:
+    grpc:
+      backendRef: # <4>
+        name: heimdall
+        port: 4456
+        namespace: heimdall
+----
+<1> The name of the `SecurityPolicy`. You can change it to any other value if you like.
+<2> The namespace for the policy. It must be the same namespace the `HTTPRoute` resource is deployed into, so the namespace, your application is deployed to. So change it to your namespace.
+<3> Defines the `HTTPRoute` resource, this policy should be applied to. Change the `name` property to the name of your `HTTPRoute` resource and the `namespace` property to the proper namespace (same as in 2)
+<4> Defines the reference to the heimdall `Service` using the gRPC protocol. Change the `name` and the `namespace` to the proper values of your setup.
+
+== Security Considerations
+
+The configuration options shown above are highly insecure, as the communication from the gateway to heimdall happens over plain HTTP. Therefore, it is highly recommended to enable TLS. This can be achieved by enabling TLS for heimdall and attaching a https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/[`BackendTLSPolicy`] resource shown below to heimdall's https://kubernetes.io/docs/concepts/services-networking/service/[`Service`].
+
+[source, yaml]
+----
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: heimdall-btls
+  namespace: heimdall # <1>
+spec:
+  targetRef: # <2>
+    group: ''
+    kind: Service
+    namespace: heimdall
+    name: heimdall
+    sectionName: "4456"
+  tls: # <3>
+    caCertRefs:
+      - name: demo-ca # <4>
+        group: ''
+        kind: ConfigMap
+    hostname: heimdall # <5>
+----
+<1> Change it to the namespace in which heimdall is deployed
+<2> The reference to heimdall's `Service`. Change the `name` and the `namespace` to the proper values.
+<3> Here we configure the reference to the `ConfigMap` with the certificate of the CA, used to issue a TLS server authentication certificate for heimdall, as well as the hostname used by heimdall (and present in the SAN extension of heimdall's TLS certificate). The `ConfigMap` must be in the same namespace as the `BackendTLSPolicy`.
+<4> The name of the `ConfigMap`. Change it to the proper value.
+<5> The expected hostname used by heimdall. Change it to the proper value.
+
+== Additional Resources
+
+* A fully working example with Envoy Gateway is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
+* You can find the official external authentication guide for Envoy Gateway https://gateway.envoyproxy.io/v1.0.1/tasks/security/ext-auth/[here]. It contains a fully working setup with a demo application.
+* https://gateway.envoyproxy.io/v1.0.1/tasks/security/secure-gateways/[Secure Gateways] is a highly recommended read as well.

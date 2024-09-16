@@ -27,7 +27,7 @@ spec:
     singular: ruleset
     listKind: RuleSetList
   versions:
-    - name: v1alpha3
+    - name: v1alpha4
       served: true
       storage: true
       schema:
@@ -51,7 +51,7 @@ spec:
                   type: array
                   minItems: 1
                   items:
-                    description: A himedall rule defining the pipeline mechanisms
+                    description: A heimdall rule defining the pipeline mechanisms
                     type: object
                     required:
                       - id
@@ -75,20 +75,105 @@ spec:
                         description: How to match the rule
                         type: object
                         required:
-                          - url
+                          - routes
                         properties:
-                          url:
-                            description: The url to match
-                            type: string
-                            maxLength: 512
-                          strategy:
-                            description: Strategy to match the url. Can either be regex or glob.
+                          routes:
+                            description: Routes to match
+                            type: array
+                            minItems: 1
+                            items:
+                              description: Definition of a single route
+                              type: object
+                              required:
+                                - path
+                              properties:
+                                path:
+                                  description: The path to match
+                                  type: string
+                                  maxLength: 512
+                                path_params:
+                                  description: Optional matching definitions for the captured wildcard
+                                  type: array
+                                  items:
+                                    description: Matching definition for a single wildcard
+                                    type: object
+                                    required:
+                                      - name
+                                      - type
+                                      - value
+                                    properties:
+                                      name:
+                                        description: The name of a wildcard
+                                        type: string
+                                        maxLength: 64
+                                      type:
+                                        description: The type of the matching expression
+                                        type: string
+                                        maxLength: 5
+                                        enum:
+                                          - "exact"
+                                          - "glob"
+                                          - "regex"
+                                      value:
+                                        description: The actual matching expression
+                                        type: string
+                                        maxLength: 256
+                          backtracking_enabled:
+                            description: Wither this rule allows backtracking. Defaults to the value inherited from the default rule
+                            type: boolean
+                          methods:
+                            description: The HTTP methods to match
+                            type: array
+                            minItems: 1
+                            items:
+                              type: string
+                              maxLength: 16
+                              enum:
+                                - "CONNECT"
+                                - "!CONNECT"
+                                - "DELETE"
+                                - "!DELETE"
+                                - "GET"
+                                - "!GET"
+                                - "HEAD"
+                                - "!HEAD"
+                                - "OPTIONS"
+                                - "!OPTIONS"
+                                - "PATCH"
+                                - "!PATCH"
+                                - "POST"
+                                - "!POST"
+                                - "PUT"
+                                - "!PUT"
+                                - "TRACE"
+                                - "!TRACE"
+                                - "ALL"
+                          scheme:
+                            description: The HTTP scheme, which should be matched. If not set, http and https are matched
                             type: string
                             maxLength: 5
-                            default: glob
-                            enum:
-                              - regex
-                              - glob
+                          hosts:
+                            description: Optional expressions to match the host if required. If not set, all hosts are matched.
+                            type: array
+                            items:
+                              description: Expression to match a host
+                              type: object
+                              required:
+                                - type
+                                - value
+                              properties:
+                                type:
+                                  description: The type of the host matching expression
+                                  type: string
+                                  maxLength: 5
+                                  enum:
+                                    - "exact"
+                                    - "glob"
+                                    - "regex"
+                                value:
+                                  description: The actual host matching expression
+                                  type: string
+                                  maxLength: 256
                       forward_to:
                         description: Where to forward the request to. Required only if heimdall is used in proxy operation mode.
                         type: object
@@ -125,33 +210,6 @@ spec:
                                 items:
                                   type: string
                                   maxLength: 128
-                      methods:
-                        description: The allowed HTTP methods
-                        type: array
-                        minItems: 1
-                        items:
-                          type: string
-                          maxLength: 16
-                          enum:
-                            - "CONNECT"
-                            - "!CONNECT"
-                            - "DELETE"
-                            - "!DELETE"
-                            - "GET"
-                            - "!GET"
-                            - "HEAD"
-                            - "!HEAD"
-                            - "OPTIONS"
-                            - "!OPTIONS"
-                            - "PATCH"
-                            - "!PATCH"
-                            - "POST"
-                            - "!POST"
-                            - "PUT"
-                            - "!PUT"
-                            - "TRACE"
-                            - "!TRACE"
-                            - "ALL"
                       execute:
                         description: The pipeline mechanisms to execute
                         type: array

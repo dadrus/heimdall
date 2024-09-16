@@ -28,7 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/admission"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha3"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
@@ -88,18 +88,18 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *admission.Request) 
 	return admission.NewResponse(http.StatusOK, "RuleSet valid")
 }
 
-func (rv *rulesetValidator) ruleSetFrom(req *admission.Request) (*v1alpha3.RuleSet, error) {
+func (rv *rulesetValidator) ruleSetFrom(req *admission.Request) (*v1alpha4.RuleSet, error) {
 	if req.Kind.Kind != "RuleSet" {
 		return nil, ErrInvalidObject
 	}
 
-	p := &v1alpha3.RuleSet{}
+	p := &v1alpha4.RuleSet{}
 	err := json.Unmarshal(req.Object.Raw, p)
 
 	return p, err
 }
 
 func (rv *rulesetValidator) mapVersion(_ string) string {
-	// currently the only possible version is v1alpha3, which is mapped to the version "1alpha3" used internally
-	return "1alpha3"
+	// currently the only possible version is v1alpha4, which is mapped to the version "1alpha4" used internally
+	return "1alpha4"
 }
