@@ -1,0 +1,407 @@
+---
+title: "First-Party Authentication with OpenID Connect"
+date: 2022-11-04T09:00:41+02:00
+draft: false
+weight: 23
+menu:
+  guides:
+    parent: "Authentication Protocols & Services"
+description: This guide will walk you through the process of integrating heimdall with an OpenID Connect provider to implement first-party authentication.
+---
+
+:toc:
+
+By the end of this guide, you'll have a functional setup where heimdall uses https://www.keycloak.org/[Keycloak] to authenticate users and route requests based on their authentication status and roles for role-based access control.
+
+Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with https://zitadel.com[Zitadel], https://github.com/malach-it/boruta-server[Boruta], or any other OpenID Connect-compatible IDP.
+
+== Overview
+
+In this guide, we'll set up a Docker Compose environment where heimdall secures  services and controls access to specific endpoints:
+
+* `/` - This endpoint is open to everyone.
+* `/user` - Accessible only to authenticated users.
+* `/admin` - Accessible only to users with the `admin` role.
+
+There are also some further endpoints, which you'll learn about during the setup.
+
+Technically, the setup includes:
+
+* https://hub.docker.com/r/containous/whoami/[containous/whoami] - A service that echoes back everything it receives, simulating our main service with endpoints mentioned above.
+* https://www.keycloak.org/[Keycloak] - Our identity provider.
+* https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] - Handles the Authorization Code Grant flow for the actual user login.
+* heimdall - Manages everything to enforce the requirements outlined above.
+
+== Prerequisites
+
+To be able to follow this guide you need the following tools installed locally:
+
+* https://docs.docker.com/install/[Docker],
+* https://docs.docker.com/compose/install/[docker-compose], and
+* a text editor of your choice.
+
+== Configure the Base Setup
+
+. Create a directory for the configuration files we’ll be using (referred to as the root directory in this guide). Inside this root directory, create two additional directories named `rules` and `initdb`. The former will be used for heimdall rules and the latter for DB initialization scripts.
+
+. Create a config file for heimdall named `heimdall-config.yaml` with the following contents in the root directory:
++
+[source, yaml]
+----
+log: # <1>
+  level: debug
+
+tracing:
+  enabled: false
+
+metrics:
+  enabled: false
+
+mechanisms: # <2>
+  authenticators:
+  - id: deny_all # <3>
+    type: unauthorized
+  - id: anon # <4>
+    type: anonymous
+  - id: auth # <5>
+    type: generic
+    config:
+      identity_info_endpoint: http://oauth2-proxy:4180/oauth2/userinfo
+      authentication_data_source:
+        - cookie: SESSION
+      forward_cookies:
+        - SESSION
+      subject:
+        id: "user"
+
+  authorizers:
+    - id: cel # <6>
+      type: cel
+      config:
+        expressions:
+          - expression: "true == false"
+
+  finalizers:
+  - id: create_jwt # <7>
+    type: jwt
+    config:
+      signer:
+        key_store:
+          path: /etc/heimdall/signer.pem
+      claims: |
+        {{- dict "attrs" .Subject.Attributes | toJson -}}
+  - id: noop # <8>
+    type: noop
+
+  error_handlers: # <9>
+    - id: redirect_to_idp
+      type: redirect
+      config:
+        to: http://127.0.0.1:9090/oauth2/start?rd={{ .Request.URL | urlenc }}
+    - id: redirect_to_error_page
+      type: redirect
+      config:
+        to: https://www.google.com/search?q=access+denied&udm=2
+
+default_rule: # <10>
+  execute:
+    - authenticator: deny_all
+    - finalizer: create_jwt
+  on_error:
+    - error_handler: redirect_to_error_page
+      if: |
+        type(Error) in [authorization_error, authentication_error] &&
+        Request.Header("Accept").contains("text/html")
+
+providers: # <11>
+  file_system:
+    src: /etc/heimdall/rules
+    watch: true
+----
+<1> By default, heimdall emits logs on `error` level, but to better understand its operations, we’re setting the log level to `debug`. This way, you'll see not only the results of rule executions (which is what you would see if we set the log level to `info`), but also detailed information about what’s happening within each rule. We’re also disabling tracing and metrics collection to avoid errors related to the missing OTEL agent, which is used by default. For more details on logging and other observability options, see the link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[Observability] chapter.
+<2> We define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] for use in our link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] and link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules].
+<3> These lines define the `unauthorized` authenticator, named `deny_all`, which rejects all requests.
+<4> These lines define the `anonymous` authenticator, named `anon`, which allows all requests and creates a subject with the ID set to `anonymous`. More information about subjects and other objects can be found link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].
+<5> These and the following lines set up the `generic` authenticator, named `auth`. This configuration checks if a request includes a `Cookie` named `SESSION`, and then sends it to the `\http://oauth2-proxy:4180/oauth2/userinfo` endpoint to get user information. If successful, heimdall extracts the user identifier from the `user` property in the response. If there’s an error (e.g. the `SESSION` cookie is not present or the response from the OAuth2-Proxy contains an error), an authentication error is triggered.
+<6> These lines define a `cel` authorizer that is configured to always fail. We’ll improve this in our upstream-specific rule.
+<7> These lines define the `jwt` finalizer. It creates a JWT from the subject object with standard claims, setting the `sub` claim to the subject’s ID. The key for signing the JWT comes from a key store we’ll configure later.
+<8> These two lines define the `noop` finalizer, which we’ll use for public endpoints.
+<9> Here, we set up two `redirect` error handlers: one redirects to the `/oauth2/start` endpoint with a deep link to the current URL, and the other redirects to Google with the search query "access denied".
+<10> With all mechanisms defined, we configure our first rule - the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule]. This rule applies if no other rules match the request and serves as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for defining regular (upstream service-specific) rules as well. It sets up a default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline] that rejects all requests using the `deny_all` authenticator. This rejection triggers the `redirect_to_error_page` error handler. If a regular rule overrides this authenticator, a JWT is created using the `jwt` finalizer.
+<11> The last few lines configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which loads regular rules from the file system and watches for changes. This allows you to modify the rules while testing.
+
+. Create a file named `signer.pem` and add the following content to it. This file should also be placed in the root directory and will act as our key store, containing the private key referenced in the configuration above.
++
+[source, yaml]
+----
+-----BEGIN EC PRIVATE KEY-----
+MIGkAgEBBDALv/dRp6zvm6nmozmB/21viwFCUGBoisHz0v8LSRXGiM5aDywLFmMy
+1jPnw29tz36gBwYFK4EEACKhZANiAAQgZkUS7PCh5tEXXvZk0LDQ4Xn4LSK+vKkI
+zlCZl+oMgud8gacf4uG5ERgju1xdUyfewsXlwepTnWuwhXM7GdnwY5GOxZTwGn3X
+XVwR/5tokqFVrFxt/5c1x7VdccF4nNM=
+-----END EC PRIVATE KEY-----
+----
++
+WARNING: Do not use it for purposes beyond this tutorial!
+
+. Next, we’ll create rules for our main service - the one exposing `/`, `/user` and the `/admin` endpoints. To do this, create a file named `upstream-rules.yaml` in the `rules` directory with the following content:
++
+[source, yaml]
+----
+version: "1alpha4"
+rules:
+- id: upstream:public  # <1>
+  match:
+    routes:
+      - path: /
+      - path: /favicon.ico
+  forward_to:
+    host: upstream:8081
+  execute:
+  - authenticator: anon
+  - finalizer: noop
+
+- id: upstream:protected  # <2>
+  match:
+    routes:
+      - path: /user
+      - path: /admin
+  forward_to:
+    host: upstream:8081
+  execute:
+    - authenticator: auth
+    - authorizer: cel
+      if: Request.URL.Path == '/admin'
+      config:
+        expressions:
+          - expression: |
+              has(Subject.Attributes.groups) &&
+              "role:admin" in Subject.Attributes.groups
+            message: User is not admin
+  on_error:
+    - error_handler: redirect_to_idp
+      if: |
+        type(Error) == authentication_error &&
+        Request.Header("Accept").contains("text/html")
+    - error_handler: redirect_to_error_page
+      if: |
+        type(Error) == authorization_error &&
+        Request.Header("Accept").contains("text/html")
+----
+<1> This first rule is for the `/` endpoint. It instructs heimdall to pass requests to this endpoint directly through to our upstream service.
+<2> The second rule ensures that the `/user` endpoint is only accessible to authenticated users, while the `/admin` endpoint is only accessible to users with the `admin` role configured in our IDP.
+
+. Next, we’ll create a rule for the OAuth2-Proxy, placed behind heimdall and publicly exposing only certain endpoints. Create a new file named `oauth2-proxy-rules.yaml` in the `rules` directory with the following content:
++
+[source, yaml]
+----
+version: "1alpha4"
+rules:
+- id: oauth2-proxy:public
+  match:
+    routes:
+      - path: /oauth2/start
+      - path: /oauth2/callback
+  forward_to:
+    host: oauth2-proxy:4180
+  execute:
+  - authenticator: anon
+  - finalizer: noop
+----
+
+. Next, we’ll create a database initialization script to set up a database for Keycloak. In the `initdb` directory, create a file named `initdb.sh` with the following content, and make it executable by running `chmod +x initdb.sh`:
++
+[source, bash]
+----
+#!/bin/bash
+set -e
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+  CREATE USER keycloak WITH PASSWORD 'keycloak';
+  CREATE DATABASE keycloak OWNER keycloak;
+EOSQL
+
+----
+
+. Now, let’s bring everything together using a Docker Compose file. Create a file named `docker-compose.yaml` in the root directory with the following content:
++
+[source, yaml]
+----
+version: '3.7'
+
+services:
+  heimdall: # <1>
+    image: dadrus/heimdall:dev
+    ports:
+      - "9090:4455"
+    command: -c /etc/heimdall/config.yaml serve proxy
+    volumes:
+      - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
+      - ./rules:/etc/heimdall/rules:ro
+      - ./signer.pem:/etc/heimdall/signer.pem:ro
+
+  upstream: # <2>
+    image: containous/whoami:latest
+    command: --port=8081
+
+  oauth2-proxy: # <3>
+    depends_on:
+      - keycloak
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-amd64
+    command:
+      - --http-address
+      - 0.0.0.0:4180
+    environment:
+        OAUTH2_PROXY_CLIENT_ID: placeholder # <4>
+        OAUTH2_PROXY_CLIENT_SECRET: placeholder
+        OAUTH2_PROXY_REDIRECT_URL: http://127.0.0.1:9090/oauth2/callback # <5>
+        OAUTH2_PROXY_PROVIDER: keycloak-oidc
+        OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: true
+        OAUTH2_PROXY_COOKIE_SECRET: VerySecure!!!!!!
+        OAUTH2_PROXY_COOKIE_NAME: SESSION
+        OAUTH2_PROXY_WHITELIST_DOMAINS: 127.0.0.1:9090
+        OAUTH2_PROXY_OIDC_ISSUER_URL: http://keycloak:8080/realms/test # <6>
+        OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL: true # <7>
+        OAUTH2_PROXY_EMAIL_DOMAINS: '*'
+        OAUTH2_PROXY_OIDC_EXTRA_AUDIENCES: account # <8>
+        OAUTH2_PROXY_LOGIN_URL: http://127.0.0.1:8080/realms/test/protocol/openid-connect/auth # <9>
+        OAUTH2_PROXY_OIDC_JWKS_URL: http://keycloak:8080/realms/test/protocol/openid-connect/certs
+        OAUTH2_PROXY_REDEEM_URL: http://keycloak:8080/realms/test/protocol/openid-connect/token
+        OAUTH2_PROXY_INSECURE_OIDC_SKIP_ISSUER_VERIFICATION: true
+        OAUTH2_PROXY_SKIP_OIDC_DISCOVERY: true
+
+  keycloak: # <10>
+    image: quay.io/keycloak/keycloak:25.0.4
+    command: [ "start-dev", "--http-port", "8080" ]
+    ports:
+      - "8080:8080"
+    environment:
+      KC_HOSTNAME: 127.0.0.1
+      KC_HOSTNAME_PORT: 8080
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_LOG_LEVEL: info
+      KC_DB_URL_HOST: postgresql
+      KC_DB: postgres
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+    depends_on:
+      - postgresql
+
+  postgresql: # <11>
+    image: postgres:13.11
+    volumes:
+      - type: volume
+        source: postgres-db
+        target: /var/lib/postgresql/data
+        read_only: false
+      - ./initdb:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+volumes:
+  postgres-db:
+----
+<1> Here, we configure heimdall to use the previously defined configuration.
+<2> This section sets up the main service that we’ll be protecting.
+<3> This section defines the OAuth2-Proxy configuration, which heimdall will use to handle the Authorization Code Grant flow and manage the authentication session with a `SESSION` cookie.
+<4> The client ID and client secret values are placeholders. We will configure these in Keycloak.
+<5> Since the redirect URI, exposed as `/oauth2/callback`, is behind heimdall, we use the publicly accessible endpoint here.
+<6> The URL of the issuer that OAuth2-Proxy will use. We’ll create a corresponding realm in Keycloak to match this configuration.
+<7> The following two lines are required as we don't want keycloak to verify the email addresses of the users we'll be creating, and we want to allow any email domain.
+<8> To avoid creating a mapper to let Keycloak set a proper `aud` claim value, we allow the usage of `account` audience set by Keycloak by default.
+<9> These lines are only required as Keycloak is part of our docker compose setup, and we have to use different domain names while communicating with it.
+<10> This section sets up Keycloak.
+<11> Finally, this section configures our database.
+
+== Create a Realm and a Client in Keycloak
+
+With the above configuration in place, follow these steps to start Keycloak and the database, initialize both, and create the OAuth2-Proxy client:
+
+. In the root directory, run `docker-compose up postgresql keycloak`. Wait until the database is initialized and Keycloak has started.
+. Open your browser and go to `\http://127.0.0.1:8080`. Log in using the admin credentials (both the username and password are set to `admin` in our setup).
+. Create a Realm named `test`. For detailed instructions, refer to the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-a-realm_server_administration_guide[ creating a realm].
+. Within the `test` realm, create an OpenID Client. Follow the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide[creating an OIDC client]. Enable "Client authentication" and "Standard Flow", set `\http://127.0.0.1:9090/oauth2/callback` as the "Valid Redirect URI" and `\http://127.0.0.1:9090/` as the "Home URL" and "Valid post logout redirect URIs" and note the "Client ID" and "Client Secret" (later can be found under the "Credentials" tab after completing the client creation wizard); we will use these to complete the OAuth2-Proxy configuration in our Docker Compose file.
+. Stop the docker compose setup with `CTRL-C`.
+
+== Update OAuth2-Proxy Configuration
+
+We can now finalize the configuration and use the proper client id and secret for OAuth2-Proxy
+
+. Update the `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` in the configuration of the OAuth2-Proxy in the docker compose file with the "Client ID" and "Client Secret" values from Keycloak
+
+== Use the Setup
+
+We now have almost everything set up. The final step is to create a few users, including at least one with the `admin` role assigned.
+
+. In the root directory, run `docker-compose up`. Wait until all services are up and running.
+. Open your browser and navigate to `\http://127.0.0.1:8080`. Log in using the admin credentials (both username and password are set to `admin`).
+. Select the `test` realm and create an `admin` group with a role named `admin` assigned to it. For guidance, refer to the Keycloak documentation on creating https://www.keycloak.org/docs/latest/server_admin/index.html#proc-managing-groups_server_administration_guide[Groups] and https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-realm-roles_server_administration_guide[Roles].
+. Create several users following the Keycloak documentation on  https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-user_server_administration_guide[managing users], and assign some of them to the `admin` group. Disable email verification during user creation to avoid sending verification emails to potentially non-existent addresses.
+
+Now, let's test the setup:
+
+. Navigate to `\http://127.0.0.1:9090/`. You should see some text similar to the one shown below. This text is the response from our upstream service, which echoes back everything the browser sends in its request.
++
+[source, text]
+----
+Hostname: 39f1815dd8ac
+IP: 127.0.0.1
+IP: ::1
+IP: 172.31.0.3
+RemoteAddr: 172.31.0.2:37908
+GET / HTTP/1.1
+Host: upstream:8081
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Dnt: 1
+Forwarded: for=172.31.0.1;host=127.0.0.1:9090;proto=http
+Priority: u=0, i
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Sec-Fetch-User: ?1
+Upgrade-Insecure-Requests: 1
+X-Trp-Catalog: de
+----
+. Attempt to access the `\http://127.0.0.1:9090/user` endpoint. You should be redirected to the Keycloak login page. Log in with any of the users you configured. After logging in, you should be redirected back to `\http://127.0.0.1:9090/user`, where you’ll see some text similar to the one shown below. This indicates that the request hit the `/user` endpoint of our upstream service. You should also see a JWT token in the `Authorization` header, which is the result of the JWT finalizer we configured.
++
+[source, text]
+----
+Hostname: 39f1815dd8ac
+IP: 127.0.0.1
+IP: ::1
+IP: 172.31.0.3
+RemoteAddr: 172.31.0.2:37908
+GET /user HTTP/1.1
+Host: upstream:8081
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Authorization: Bearer eyJhbGciOiJFUzM4NCIsImtpZCI6ImIzNDA3N2ZlNWI5NDczYzBjMmY3NDNmYWQ0MmY3ZDU0YWM3ZTFkN2EiLCJ0eXAiOiJKV1QifQ.eyJhdHRycyI6eyJlbWFpbCI6InRlc3QxQGV4YW1wbGUuY29tIiwiZ3JvdXBzIjpbInJvbGU6ZGVmYXVsdC1yb2xlcy10ZXN0Iiwicm9sZTpvZmZsaW5lX2FjY2VzcyIsInJvbGU6YWRtaW4iLCJyb2xlOnVtYV9hdXRob3JpemF0aW9uIiwicm9sZTphY2NvdW50Om1hbmFnZS1hY2NvdW50Iiwicm9sZTphY2NvdW50Om1hbmFnZS1hY2NvdW50LWxpbmtzIiwicm9sZTphY2NvdW50OnZpZXctcHJvZmlsZSJdLCJwcmVmZXJyZWRVc2VybmFtZSI6InRlc3QxIiwidXNlciI6IjQ5ZWE3Mjk3LWI0NzgtNDcxNC05NjM2LWQ5ZTk3ZmVkZmNhOSJ9LCJleHAiOjE3MjY0NjkyMTAsImlhdCI6MTcyNjQ2ODkxMCwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiJkODg3Y2Q3MC1iYzhlLTQ2MTItODYzNS1lYTYwYjU1ZmU3MzciLCJuYmYiOjE3MjY0Njg5MTAsInN1YiI6IjQ5ZWE3Mjk3LWI0NzgtNDcxNC05NjM2LWQ5ZTk3ZmVkZmNhOSJ9.JLS__gH0wEHwB07DV9Rcrm9mo1xfXpqHoC8pbZ523KHV7QO3n2jrauiB4fVggB5DPe4tTUrp8X1e4nePXPniJyACyC7gmoBX5PJTbUPlalsw0WKOfYOcYXjwJDakId5r
+Cookie: SESSION=S77dk6NGQyyreWQ1enWRSCSP...wBsNTlidPgTBahs=
+Dnt: 1
+Forwarded: for=172.31.0.1;host=127.0.0.1:9090;proto=http
+Priority: u=0, i
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Sec-Fetch-User: ?1
+Upgrade-Insecure-Requests: 1
+X-Trp-Catalog: de
+----
+. Try accessing the `\http://127.0.0.1:9090/admin` endpoint with both a user not in the `admin` group and a user from the `admin` group. The user not in the `admin` group should see the "access denied" page, while the user from the `admin` group should be able to access the endpoint and see the echoed response from our upstream service.
++
+NOTE: To "logout" the user, just delete the cookies for `\http://127.0.0.1:9090` using the Web-Developer Tools of your browser.
+. Attempts to access any not exposed endpoints, like `\http://127.0.0.1:9090/foo` will always result in the "access denied" page.
+
+== Cleanup
+
+Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with `docker-compose down`.
+
