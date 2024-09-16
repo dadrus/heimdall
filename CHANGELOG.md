@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.14.6-alpha](https://github.com/dadrus/heimdall/compare/v0.14.5-alpha...v0.14.6-alpha) (2024-09-16)
+
+
+### Dependencies
+
+* update golang to v1.23.1 ([#1761](https://github.com/dadrus/heimdall/issues/1761)) ([557f134](https://github.com/dadrus/heimdall/commit/557f134275536ca88efc6bc0ba075f40450f0c88))
+* update golang.org/x/exp digest to 701f63a ([#1764](https://github.com/dadrus/heimdall/issues/1764)) ([c6a4306](https://github.com/dadrus/heimdall/commit/c6a43066a1ef057cd8fa509979edceb4b9e94721))
+* update google.golang.org/genproto/googleapis/rpc digest to 8af14fe ([#1754](https://github.com/dadrus/heimdall/issues/1754)) ([1a99299](https://github.com/dadrus/heimdall/commit/1a992990f7347989b3484592c3f8fdbfc0a59e18))
+* update module github.com/go-playground/validator/v10 to v10.22.1 ([#1762](https://github.com/dadrus/heimdall/issues/1762)) ([1c5ef95](https://github.com/dadrus/heimdall/commit/1c5ef95d80d0d2676e6d7dd6e6ae99106fc40c6c))
+* update module github.com/jellydator/ttlcache/v3 to v3.3.0 ([#1742](https://github.com/dadrus/heimdall/issues/1742)) ([a0bfb3c](https://github.com/dadrus/heimdall/commit/a0bfb3cbabf1fcb6c8b939baf971011f6c227edc))
+* update module github.com/masterminds/sprig/v3 to v3.3.0 ([#1749](https://github.com/dadrus/heimdall/issues/1749)) ([b5e93ef](https://github.com/dadrus/heimdall/commit/b5e93efca7659c454a836524974ad08013745615))
+* update module github.com/prometheus/client_golang to v1.20.3 ([#1758](https://github.com/dadrus/heimdall/issues/1758)) ([89bb8af](https://github.com/dadrus/heimdall/commit/89bb8aff07c37d1bc8459b773d43d557e46098f4))
+* update module github.com/redis/rueidis to v1.0.45 ([#1747](https://github.com/dadrus/heimdall/issues/1747)) ([ac3a018](https://github.com/dadrus/heimdall/commit/ac3a0189fb95ea7cb9098b7719210e78adc25cef))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.45 ([#1748](https://github.com/dadrus/heimdall/issues/1748)) ([3e982d0](https://github.com/dadrus/heimdall/commit/3e982d029813625e899d15764b14997c82ef7234))
+* update module github.com/rs/cors to v1.11.1 ([#1746](https://github.com/dadrus/heimdall/issues/1746)) ([933e307](https://github.com/dadrus/heimdall/commit/933e30768d4b9db19d1498816ef954bde2f600f3))
+* update module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc to v0.55.0 ([#1776](https://github.com/dadrus/heimdall/issues/1776)) ([ea82d8b](https://github.com/dadrus/heimdall/commit/ea82d8b07800ce0756cac9afdd1e8d537b1e32d0))
+* update module go.opentelemetry.io/contrib/instrumentation/host to v0.55.0 ([#1777](https://github.com/dadrus/heimdall/issues/1777)) ([c12f5ea](https://github.com/dadrus/heimdall/commit/c12f5ea10529f4c7e9f49c3f81bb65b431f041a7))
+* update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.55.0 ([#1778](https://github.com/dadrus/heimdall/issues/1778)) ([d561034](https://github.com/dadrus/heimdall/commit/d561034e1564c5061ed4ec21cdace8d475af35f3))
+* update module go.opentelemetry.io/contrib/instrumentation/runtime to v0.55.0 ([#1779](https://github.com/dadrus/heimdall/issues/1779)) ([5afb5da](https://github.com/dadrus/heimdall/commit/5afb5da42a7303bf802a5d3757443204376eabb0))
+* update module go.opentelemetry.io/contrib/propagators/autoprop to v0.55.0 ([#1780](https://github.com/dadrus/heimdall/issues/1780)) ([bd2d205](https://github.com/dadrus/heimdall/commit/bd2d205651a6cea1d2c99a03792538d3ceb4c890))
+* update module gocloud.dev to v0.39.0 ([#1772](https://github.com/dadrus/heimdall/issues/1772)) ([739a96b](https://github.com/dadrus/heimdall/commit/739a96b570c641d50d7e054acee44951131b3d42))
+* update module google.golang.org/grpc to v1.66.2 ([#1773](https://github.com/dadrus/heimdall/issues/1773)) ([ace919d](https://github.com/dadrus/heimdall/commit/ace919d2f2bfeed667663fad08212a9c6aa960f3))
+* update module k8s.io/client-go to v0.31.1 ([#1781](https://github.com/dadrus/heimdall/issues/1781)) ([3903733](https://github.com/dadrus/heimdall/commit/3903733ae745a87549b45a0333adc631b5c5e085))
+* update opentelemetry-go monorepo to v1.30.0 ([#1770](https://github.com/dadrus/heimdall/issues/1770)) ([dc4e40f](https://github.com/dadrus/heimdall/commit/dc4e40f1bef1e1355fff0e3d34ac28e7f6f3d236))
+
 ## [0.14.5-alpha](https://github.com/dadrus/heimdall/compare/v0.14.4-alpha...v0.14.5-alpha) (2024-08-25)
 
 
