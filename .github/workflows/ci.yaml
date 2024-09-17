@@ -730,11 +730,16 @@ jobs:
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
+      - name: Prepare image version
+        id: image-version
+        run: |
+          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
+          echo "result=$version" >> $GITHUB_OUTPUT
       - name: Update used image tags to the released version
         uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
         with:
           find: "heimdall:dev"
-          replace: "heimdall:${{ needs.prepare-release.outputs.tag_name }}"
+          replace: "heimdall:${{ steps.image-version.outputs.result }}"
           regex: false
           include: docs/**
       - name: Build documentation
