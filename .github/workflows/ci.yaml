@@ -660,7 +660,7 @@ jobs:
         working-directory: ./docs
         run: npm install
       - name: Update version string to dev version
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "x-current-version"
           replace: "dev"
@@ -717,21 +717,21 @@ jobs:
         working-directory: ./docs
         run: npm install
       - name: Update version string to new released version
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "x-current-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
       - name: Update uri for redirecting to new version
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "x-released-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
       - name: Update used image tags to the released version
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "heimdall:dev"
           replace: "heimdall:${{ needs.prepare-release.outputs.tag_name }}"
