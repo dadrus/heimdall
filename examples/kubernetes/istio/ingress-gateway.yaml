@@ -1,0 +1,37 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-gw
+  namespace: istio-ingress
+spec:
+  dnsNames:
+    - echo-app
+    - echo-app.default
+    - echo-app.default.svc
+    - echo-app.default.svc.cluster.local
+    - echo-app.local
+  ipAddresses:
+    - 172.18.255.200
+  secretName: istio-gw-tls
+  issuerRef:
+    name: demo-ca-issuer
+    kind: ClusterIssuer
+---
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: ingress-gw
+  namespace: istio-ingress
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "*"
+      tls:
+        mode: SIMPLE
+        credentialName: istio-gw-tls
