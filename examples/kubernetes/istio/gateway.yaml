@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: heimdall
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-gw
+  namespace: heimdall
+spec:
+  dnsNames:
+    - echo-app
+    - echo-app.default
+    - echo-app.default.svc
+    - echo-app.default.svc.cluster.local
+    - echo-app.local
+  ipAddresses:
+    - 172.18.255.200
+  secretName: istio-gw-tls
+  issuerRef:
+    name: demo-ca-issuer
+    kind: ClusterIssuer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: istio-gw
+  namespace: heimdall
+  labels:
+    app: istio-gw
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http
+      hostname: echo-app.local
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: istio-gw-tls
+            kind: Secret
