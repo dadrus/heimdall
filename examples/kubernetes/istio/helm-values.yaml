@@ -1,0 +1,10 @@
+#  extensionProviders:
+#    - name: heimdall
+#      envoyExtAuthzGrpc:
+#        service: "heimdall.heimdall.svc.cluster.local"
+#        port: "4456"
+global:
+  logging:
+    level: debug
+  proxy:
+    logLevel: debug

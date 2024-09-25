@@ -6,7 +6,7 @@ metadata:
 spec:
   isCA: true
   commonName: demo-ca
-  secretName: demo-ca-secret
+  secretName: demo-ca
   privateKey:
     algorithm: ECDSA
     size: 256
@@ -21,4 +21,4 @@ metadata:
   name: demo-ca-issuer
 spec:
   ca:
-    secretName: demo-ca-secret
+    secretName: demo-ca

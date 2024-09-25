@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: echo-app
+  namespace: quickstarts
+spec:
+  hosts:
+    - echo-app.local
+  gateways:
+    - istio-ingress/ingress-gw
+  http:
+    - match:
+        - uri:
+            prefix: "/"
+      route:
+        - destination:
+            host: echo-app
+            port:
+              number: 8080
