@@ -28,6 +28,7 @@ setup-charts:
   helm repo add datawire https://app.getambassador.io
   helm repo add haproxy https://haproxy-ingress.github.io/charts
   helm repo add traefik https://traefik.github.io/charts
+  helm repo add istio https://istio-release.storage.googleapis.com/charts
   helm repo update
 
 ## Installs Grafana
@@ -155,6 +156,29 @@ install-traefik global_mw="true":
       -f traefik/${valuesFile} \
       --wait
 
+install-istio:
+  #!/usr/bin/env bash
+  kubectl apply -f istio/namespace.yaml
+
+  helm upgrade --install istio-base istio/base \
+    -n istio-system --version {{istio_version}} \
+    --set defaultRevision=default
+  helm upgrade --install istiod istio/istiod \
+    -n istio-system --version {{istio_version}} \
+    -f istio/helm-values.yaml \
+    --wait
+
+  #kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
+  #  { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f -; }
+
+  #kubectl apply -f istio/gateway.yaml
+
+  helm install istio-ingressgateway istio/gateway \
+    -n istio-ingress --version {{istio_version}} \
+    --wait
+
+  kubectl apply -f istio/ingress-gateway.yaml
+
 install-lb:
   #!/usr/bin/env bash
   helm upgrade --install metallb metallb/metallb \
@@ -203,7 +227,7 @@ install-heimdall router=default_router:
   kubectl apply -f quickstarts/heimdall/certificate.yaml
 
   extraArgs='extraArgs={}'
-  if [[ "{{router}}" == "contour" || "{{router}}" == "emissary" || "{{router}}" == "envoygw" ]]; then
+  if [[ "{{router}}" == "contour" || "{{router}}" == "emissary" || "{{router}}" == "envoygw" || "{{router}}" == "istiogw" ]]; then
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
@@ -223,6 +247,8 @@ install-heimdall router=default_router:
       kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
   elif [ "{{router}}" == "traefik" ]; then
       kubectl apply -f quickstarts/heimdall/heimdall-middleware.yaml
+  elif [ "{{router}}" == "istiogw" ]; then
+      kubectl apply -f quickstarts/heimdall/istio-envoy-filter.yaml
   fi
 
 create-cluster:
@@ -247,6 +273,8 @@ install-traefik-ingress-decision-demo: setup-cluster install-traefik (install-he
 install-traefik-ingress-route-decision-demo: setup-cluster (install-traefik "false") (install-heimdall "traefik") (install-echo-service "traefik-ingress-route")
 
 install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-gw")
+
+install-istio-gw-decision-demo: setup-cluster install-istio (install-heimdall "istiogw") (install-echo-service "istiogw")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
