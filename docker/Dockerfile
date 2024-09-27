@@ -2,7 +2,7 @@
 # Builder image to build the app
 ARG USER=heimdall
 
-FROM --platform=$BUILDPLATFORM golang:1.23.1-bookworm@sha256:ffd95dd933460a35f276d923c1c426dfe3d5e956ad07d3dd0963b148af875ad3 as builder
+FROM --platform=$BUILDPLATFORM golang:1.23.1-bookworm@sha256:9370fc800189ae56e3bda1af6835e49e760e27d3830bd6b2ab7ca2d9e32f86da as builder
 ARG USER
 ARG TARGETARCH
 ARG VERSION="unknown"
