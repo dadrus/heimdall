@@ -25,7 +25,7 @@ permissions: read-all
 
 jobs:
   check-changes:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       code_changed: ${{steps.code-changes.outputs.count > 0}}
       test_data_changed: ${{steps.test-data-changes.outputs.count > 0}}
@@ -84,7 +84,7 @@ jobs:
             .github/workflows/*.yaml
 
   check-licenses:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: >
@@ -108,7 +108,7 @@ jobs:
         run: go-licenses check --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown .
 
   lint-code:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     needs:
@@ -135,7 +135,7 @@ jobs:
           fail_on_error: true
 
   lint-api:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: > 
@@ -159,7 +159,7 @@ jobs:
         run: redocly lint
 
   lint-dockerfiles:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: > 
@@ -180,7 +180,7 @@ jobs:
           fail_on_error: true
 
   lint-helm-chart:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: > 
@@ -214,7 +214,7 @@ jobs:
           kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} proxy-config.yaml
 
   unittest-helm-chart:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: >
@@ -244,7 +244,7 @@ jobs:
   
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: >
@@ -273,7 +273,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   prepare-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release'
     permissions:
       pull-requests: write
@@ -293,7 +293,7 @@ jobs:
           target-branch: ${{ github.ref_name }}
 
   build-binaries:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - test
       - prepare-release
@@ -331,7 +331,7 @@ jobs:
           retention-days: 30
 
   release-binaries:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - prepare-release
     if: needs.prepare-release.outputs.release_created
@@ -371,7 +371,7 @@ jobs:
 
   # this job builds container images for PRs, as well as publishes these on merges to main
   build-dev-container-images:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
       id-token: write
@@ -488,7 +488,7 @@ jobs:
   # this job releases container images
   release-container-images:
     if: needs.prepare-release.outputs.release_created
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
       id-token: write
@@ -593,7 +593,7 @@ jobs:
         run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
 
   release-helm-chart:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     needs:
@@ -621,7 +621,7 @@ jobs:
           app_version: ${{ steps.image-version.outputs.result }}
 
   build-dev-documentation:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     needs:
@@ -678,7 +678,7 @@ jobs:
           destination_dir: dev
 
   release-documentation:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       id-token: write
