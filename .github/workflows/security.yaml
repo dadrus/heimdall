@@ -1,7 +1,7 @@
 name: "Security Scan"
 
 env:
-  GO_VERSION: "1.23.1"
+  GO_VERSION: "1.23.2"
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions: read-all
 
 jobs:
   trivy-scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     permissions:
       security-events: write
@@ -29,9 +29,9 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@d9cd5b1c23aaf8cb31bb09141028215828364bbb # master
+        uses: aquasecurity/trivy-action@fc1500abdcdc9fc681e98d8912a52fa70dbc67de # master
         with:
           scan-type: 'fs'
           ignore-unfixed: true
@@ -40,12 +40,12 @@ jobs:
           severity: 'CRITICAL,HIGH'
           skip-dirs: 'docs/content/docs,docs/build'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@8214744c546c1e5c8f03dde8fab3a7353211988d # v3.26.7
+        uses: github/codeql-action/upload-sarif@f779452ac5af1c261dce0346a8f964149f49322b # v3.26.13
         with:
           sarif_file: 'trivy-results.sarif'
 
   codeql-scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     permissions:
       security-events: write
@@ -57,18 +57,18 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Set up Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@8214744c546c1e5c8f03dde8fab3a7353211988d # v3.26.7
+        uses: github/codeql-action/init@f779452ac5af1c261dce0346a8f964149f49322b # v3.26.13
         with:
           languages: go
           queries: security-and-quality
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@8214744c546c1e5c8f03dde8fab3a7353211988d # v3.26.7
+        uses: github/codeql-action/analyze@f779452ac5af1c261dce0346a8f964149f49322b # v3.26.13
         with:
           category: "/language:go"
 

@@ -11,7 +11,7 @@ on:
       - release
 
 env:
-  GO_VERSION: "1.23.1"
+  GO_VERSION: "1.23.2"
   GOLANGCI_LINT_VERSION: "v1.60.1"
   HELM_VERSION: "3.15.4"
   KUBECONFORM_VERSION: "0.6.7"
@@ -25,7 +25,7 @@ permissions: read-all
 
 jobs:
   check-changes:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       code_changed: ${{steps.code-changes.outputs.count > 0}}
       test_data_changed: ${{steps.test-data-changes.outputs.count > 0}}
@@ -39,7 +39,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Check code changes
         id: code-changes
         uses: technote-space/get-diff-action@f27caffdd0fb9b13f4fc191c016bb4e0632844af # v6.1.2
@@ -84,7 +84,7 @@ jobs:
             .github/workflows/*.yaml
 
   check-licenses:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: >
@@ -97,7 +97,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Set up Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
@@ -108,7 +108,7 @@ jobs:
         run: go-licenses check --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown .
 
   lint-code:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     needs:
@@ -123,7 +123,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
         with:
           fetch-depth: 0
       - name: Review code
@@ -135,7 +135,7 @@ jobs:
           fail_on_error: true
 
   lint-api:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: > 
@@ -148,9 +148,9 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Setup Node
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
@@ -159,7 +159,7 @@ jobs:
         run: redocly lint
 
   lint-dockerfiles:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: > 
@@ -172,7 +172,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Run hadolint
         uses: reviewdog/action-hadolint@73fec8b28091e5082c19df69815dd749d97b882a # v1.46.0
         with:
@@ -180,7 +180,7 @@ jobs:
           fail_on_error: true
 
   lint-helm-chart:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: > 
@@ -193,7 +193,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Setup k8s tools
         uses: yokawasa/action-setup-kube-tools@5fe385031665158529decddddb51d6224422836e # v0.11.1
         with:
@@ -214,7 +214,7 @@ jobs:
           kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} proxy-config.yaml
 
   unittest-helm-chart:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: >
@@ -222,12 +222,12 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
         with:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Setup k8s tools
         uses: yokawasa/action-setup-kube-tools@5fe385031665158529decddddb51d6224422836e # v0.11.1
         with:
@@ -244,7 +244,7 @@ jobs:
   
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-changes
     if: >
@@ -258,7 +258,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Set up Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
@@ -266,14 +266,14 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
       - name: Code Coverage
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
         with:
           files: coverage.cov
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   prepare-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release'
     permissions:
       pull-requests: write
@@ -293,7 +293,7 @@ jobs:
           target-branch: ${{ github.ref_name }}
 
   build-binaries:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - test
       - prepare-release
@@ -316,14 +316,14 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Set up Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Build
         run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ github.sha }}" -o ./build/
-      - uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: github.ref == 'refs/heads/main'
         with:
           name: build-result-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -331,7 +331,7 @@ jobs:
           retention-days: 30
 
   release-binaries:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - prepare-release
     if: needs.prepare-release.outputs.release_created
@@ -344,7 +344,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -352,7 +352,7 @@ jobs:
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Install Cosign
-        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Install CycloneDX gomod
@@ -371,7 +371,7 @@ jobs:
 
   # this job builds container images for PRs, as well as publishes these on merges to main
   build-dev-container-images:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
       id-token: write
@@ -390,10 +390,10 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Install Cosign
         if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
@@ -409,7 +409,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
       - name: Collect container meta-info
         id: meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
@@ -420,7 +420,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build images
         if: github.ref != 'refs/heads/main'
-        uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6.7.0
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -444,7 +444,7 @@ jobs:
       - name: Build and push dev images to container registry
         if: github.ref == 'refs/heads/main'
         id: publish-image
-        uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6.7.0
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -488,7 +488,7 @@ jobs:
   # this job releases container images
   release-container-images:
     if: needs.prepare-release.outputs.release_created
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
       id-token: write
@@ -500,14 +500,14 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Prepare image version
         id: image-version
         run: |
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
       - name: Install Cosign
-        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
@@ -522,7 +522,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
       - name: Login to DockerHub
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
@@ -544,7 +544,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build and push images to container registry
         id: publish-image
-        uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6.7.0
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -593,7 +593,7 @@ jobs:
         run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
 
   release-helm-chart:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     needs:
@@ -606,7 +606,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Prepare image version
         id: image-version
         run: |
@@ -621,7 +621,7 @@ jobs:
           app_version: ${{ steps.image-version.outputs.result }}
 
   build-dev-documentation:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     needs:
@@ -637,7 +637,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
@@ -647,11 +647,11 @@ jobs:
           hugo-version: 0.100.1
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
         with:
           node-version: 17.7
       - name: Setup ruby
-        uses: ruby/setup-ruby@52753b7da854d5c07df37391a986c76ab4615999 # v1.191.0
+        uses: ruby/setup-ruby@f26937343756480a8cb3ae1f623b9c8d89ed6984 # v1.196.0
         with:
           ruby-version: 3.1.3
       - name: Install asciidoctor
@@ -660,7 +660,7 @@ jobs:
         working-directory: ./docs
         run: npm install
       - name: Update version string to dev version
-        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "x-current-version"
           replace: "dev"
@@ -678,7 +678,7 @@ jobs:
           destination_dir: dev
 
   release-documentation:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       id-token: write
@@ -692,7 +692,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
@@ -702,13 +702,13 @@ jobs:
           hugo-version: 0.100.1
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
         with:
           node-version: 17.7
       - name: Install mermaid
         run: npm install -g @mermaid-js/mermaid-cli@10.8.0
       - name: Setup ruby
-        uses: ruby/setup-ruby@52753b7da854d5c07df37391a986c76ab4615999 # v1.191.0
+        uses: ruby/setup-ruby@f26937343756480a8cb3ae1f623b9c8d89ed6984 # v1.196.0
         with:
           ruby-version: 2.7
       - name: Install asciidoctor
@@ -717,14 +717,14 @@ jobs:
         working-directory: ./docs
         run: npm install
       - name: Update version string to new released version
-        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "x-current-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
       - name: Update uri for redirecting to new version
-        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "x-released-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
@@ -736,7 +736,7 @@ jobs:
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
       - name: Update used image tags to the released version
-        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3
+        uses: jacobtomlinson/gha-find-replace@863001a682308a0a2405e69e645cb0899b5ee64b # v3
         with:
           find: "heimdall:dev"
           replace: "heimdall:${{ steps.image-version.outputs.result }}"
@@ -768,10 +768,10 @@ jobs:
           publish_dir: ./docs/versions
           keep_files: true
       - name: Setup GitSign
-        uses: chainguard-dev/actions/setup-gitsign@29fb6e979a0b3efc79748a17e8cec08d0594cbfd # main
+        uses: chainguard-dev/actions/setup-gitsign@04b3d27d680c065e8aaaa71edabf37da0ad4ac3d # main
       - name: Create a PR for the updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
-        uses: peter-evans/create-pull-request@6cd32fd93684475c31847837f87bb135d40a2b79 # v7.0.3
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
         with:
           title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
           commit-message: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'

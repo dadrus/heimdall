@@ -1,11 +1,14 @@
-FROM uwebarthel/asciidoctor:1.75.1@sha256:c74bb133aa8f1d0ef0ec33b1e612b404e17ec00df637d96228e0de5cc182eeeb
+FROM uwebarthel/asciidoctor:1.78.0@sha256:2b1a9b1dfc852540f66badc3081aeb1a4b302aeb7a7011497efed74c5cd2356d
 LABEL maintainer=dadrus@gmx.de
 
 # hadolint ignore=DL3028
-RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community hugo && fc-cache -f && \
+RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community hugo npm && fc-cache -f && \
     gem install asciidoctor-html5s
 
 COPY scripts/run-docs.sh /run-docs.sh
+
+RUN adduser -u 1000 -D docs
+USER docs
 
 WORKDIR /opt/heimdall/docs
 
