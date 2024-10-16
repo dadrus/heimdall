@@ -115,11 +115,17 @@ func (s *jwtSigner) load() error {
 	}
 
 	if len(kse.CertChain) != 0 {
-		if err = pkix.ValidateCertificate(kse.CertChain[0],
+		opts := []pkix.ValidationOption{
 			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
 			pkix.WithRootCACertificates([]*x509.Certificate{kse.CertChain[len(kse.CertChain)-1]}),
 			pkix.WithCurrentTime(time.Now()),
-		); err != nil {
+		}
+
+		if len(kse.CertChain) > 2 { //nolint: mnd
+			opts = append(opts, pkix.WithIntermediateCACertificates(kse.CertChain[1:len(kse.CertChain)-1]))
+		}
+
+		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"configured certificate cannot be used for JWT signing purposes").CausedBy(err)
 		}
