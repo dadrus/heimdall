@@ -160,6 +160,8 @@ jobs:
 
   lint-dockerfiles:
     runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
     needs:
       - check-changes
     if: > 
@@ -177,7 +179,7 @@ jobs:
         uses: reviewdog/action-hadolint@73fec8b28091e5082c19df69815dd749d97b882a # v1.46.0
         with:
           reporter: github-pr-review
-          fail_on_error: true
+          reviewdog_flags: -fail-level=error
 
   lint-helm-chart:
     runs-on: ubuntu-24.04
