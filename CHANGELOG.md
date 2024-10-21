@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.2](https://github.com/dadrus/heimdall/compare/v0.15.1...v0.15.2) (2024-10-21)
+
+
+### Dependencies
+
+* update module github.com/envoyproxy/go-control-plane to v0.13.1 ([#1904](https://github.com/dadrus/heimdall/issues/1904)) ([dcb88fb](https://github.com/dadrus/heimdall/commit/dcb88fbf9ce6db1eef2ff8eeae3dfdbfd3588aaf))
+
 ## [0.15.1](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.15.1) (2024-10-16)
 
 
