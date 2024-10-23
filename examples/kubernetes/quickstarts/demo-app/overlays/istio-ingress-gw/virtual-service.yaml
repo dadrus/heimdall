@@ -7,7 +7,7 @@ spec:
   hosts:
     - echo-app.local
   gateways:
-    - istio-ingress/ingress-gw
+    - istio-gw/ingress-gw
   http:
     - match:
         - uri:

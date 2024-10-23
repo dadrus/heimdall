@@ -5,8 +5,8 @@ metadata:
   namespace: quickstarts
 spec:
   parentRefs:
-    - name: eg
-      namespace: heimdall
+    - name: istio-gw
+      namespace: istio-gw
   hostnames:
     - "echo-app.local"
   rules:
