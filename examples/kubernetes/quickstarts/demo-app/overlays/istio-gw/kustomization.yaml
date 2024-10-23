@@ -3,3 +3,12 @@ kind: Kustomization
 resources:
   - ../../base
   - http_route.yaml
+patches:
+    # enable injection of side-cars
+  - patch:  |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: quickstarts
+        labels:
+          istio-injection: enabled
