@@ -1,0 +1,31 @@
+global:
+  logging:
+    level: debug
+  proxy:
+    logLevel: trace
+
+  caAddress: cert-manager-istio-csr.istio-system.svc:443
+
+meshConfig:
+  defaultConfig:
+    discoveryAddress: istiod.istio-system.svc:15012
+  defaultProviders:
+    metrics:
+      - prometheus
+  enablePrometheusMerge: true
+  rootNamespace: istio-system
+  trustDomain: cluster.local
+  extensionProviders:
+    - name: heimdall-ext-auth
+      # GRPC doesn't work with istio somehow. It looks like istio configures envoyExtAuthzHttp:
+      # to use HTTP 1.1 instead of HTTP 2 for GRPC based communication. At least the configuration
+      # performed by istio Pilot does not set http2_protocol_options, which is done by any other
+      # envoy based implementation (See also docker examples)
+      #envoyExtAuthzGrpc:
+      #  service: heimdall.heimdall.svc.cluster.local
+      #  port: "4456"
+      envoyExtAuthzHttp:
+        service: heimdall.heimdall.svc.cluster.local
+        port: "4456"
+        includeRequestHeadersInCheck: [ "authorization", "cookie", "accept", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host" ]
+        headersToUpstreamOnAllow: [ "authorization" ]

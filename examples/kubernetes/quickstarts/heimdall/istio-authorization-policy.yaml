@@ -6,9 +6,9 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: istio-gw
+      istio: ingressgateway
   action: CUSTOM
   provider:
-    name: heimdall
+    name: heimdall-ext-auth
   rules:
     - {}

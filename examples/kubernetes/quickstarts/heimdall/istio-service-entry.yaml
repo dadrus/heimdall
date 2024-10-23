@@ -1,0 +1,18 @@
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: heimdall
+  namespace: heimdall
+spec:
+  host: heimdall.heimdall.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+      # if sni is not set, it will be set based on downstream HTTP host/authority
+      # header, which will result in an error on heimdall side as this name
+      # will not match the DNS entries in heimdall's certificate.
+      sni: heimdall.heimdall.svc.cluster.local
+      # the below secret is used as it contains the certificate of the CA, the
+      # certificate for heimdall is issued by as well. Without it envoy won't trust
+      # heimdall's certificate
+      credentialName: istio-gw-tls

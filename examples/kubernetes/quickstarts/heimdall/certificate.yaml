@@ -8,20 +8,18 @@ spec:
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: demo-ca-issuer
+    name: root-ca
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
-  subject:
-    organizations:
-      - heimdall
+  commonName: heimdall-tls
   isCA: false
   privateKey:
-    algorithm: RSA
-    encoding: PKCS1
-    size: 2048
+    algorithm: ECDSA
+    size: 256
   usages:
     - "server auth"
+    - "digital signature"
   dnsNames:
     - heimdall
     - heimdall.heimdall
@@ -38,18 +36,15 @@ spec:
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: demo-ca-issuer
+    name: root-ca
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
-  subject:
-    organizations:
-      - heimdall
+  commonName: heimdall-sig
   isCA: false
   privateKey:
-    algorithm: RSA
-    encoding: PKCS1
-    size: 2048
+    algorithm: ECDSA
+    size: 256
   usages:
     - "digital signature"
   dnsNames:

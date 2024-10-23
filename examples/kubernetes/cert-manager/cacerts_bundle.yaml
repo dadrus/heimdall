@@ -5,10 +5,8 @@ metadata:
 spec:
   sources:
     - secret:
-        name: demo-ca
+        name: root-ca
         key: ca.crt
   target:
     configMap:
-      key: ca.crt
-    secret:
       key: ca.crt

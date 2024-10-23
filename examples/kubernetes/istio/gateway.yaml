@@ -19,7 +19,7 @@ spec:
     - 172.18.255.200
   secretName: istio-gw-tls
   issuerRef:
-    name: demo-ca-issuer
+    name: root-ca
     kind: ClusterIssuer
 ---
 apiVersion: gateway.networking.k8s.io/v1
