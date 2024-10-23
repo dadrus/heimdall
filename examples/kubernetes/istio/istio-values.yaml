@@ -21,6 +21,7 @@ meshConfig:
       envoyExtAuthzGrpc:
         service: heimdall.heimdall.svc.cluster.local
         port: "4456"
+      # alternatively, one can use the config from below. In that case EnvoyFilter is not needed
       #envoyExtAuthzHttp:
       #  service: heimdall.heimdall.svc.cluster.local
       #  port: "4456"
