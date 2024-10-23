@@ -284,5 +284,7 @@ install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdal
 
 install-istio-ingress-gw-decision-demo: setup-cluster install-istio (install-heimdall "istio-ingress-gw") (install-echo-service "istio-ingress-gw")
 
+install-istio-gw-decision-demo: setup-cluster install-istio (install-heimdall "istio-gw") (install-echo-service "istio-gw")
+
 delete-cluster:
   kind delete clusters {{cluster_name}}
