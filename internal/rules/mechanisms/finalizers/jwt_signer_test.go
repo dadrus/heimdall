@@ -99,6 +99,40 @@ func TestNewJWTSigner(t *testing.T) {
 		Build()
 	require.NoError(t, err)
 
+	rootCA, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
+	require.NoError(t, err)
+
+	// INT CA
+	intCAPrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	intCACert, err := rootCA.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test Int CA 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithIsCA(),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&intCAPrivKey.PublicKey, x509.ECDSAWithSHA384))
+	require.NoError(t, err)
+
+	intCA := testsupport.NewCA(intCAPrivKey, intCACert)
+
+	// EE CERTS
+	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	cert6, err := intCA.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test EE 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+	require.NoError(t, err)
+
 	pemBytes, err := pemx.BuildPEM(
 		pemx.WithRSAPrivateKey(rsaPrivKey1, pemx.WithHeader("X-Key-ID", "key1")),
 		pemx.WithRSAPrivateKey(rsaPrivKey2, pemx.WithHeader("X-Key-ID", "key2")),
@@ -110,6 +144,10 @@ func TestNewJWTSigner(t *testing.T) {
 		pemx.WithX509Certificate(cert4),
 		pemx.WithECDSAPrivateKey(ecdsaPrivKey5, pemx.WithHeader("X-Key-ID", "self_signed")),
 		pemx.WithX509Certificate(cert5),
+		pemx.WithECDSAPrivateKey(ee1PrivKey, pemx.WithHeader("X-Key-ID", "key7")),
+		pemx.WithX509Certificate(cert6),
+		pemx.WithX509Certificate(intCACert),
+		pemx.WithX509Certificate(rootCA.Certificate),
 	)
 	require.NoError(t, err)
 
@@ -378,6 +416,31 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, "self_signed", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES512), signer.jwk.Algorithm)
 				assert.Equal(t, []*x509.Certificate{cert5}, signer.activeCertificateChain())
+			},
+		},
+		{
+			uc: "with usable certificate including a full cert chain",
+			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
+				t.Helper()
+
+				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+
+				return &SignerConfig{
+					Name:     "foo",
+					KeyStore: KeyStore{Path: keyFile.Name()},
+					KeyID:    "key7",
+				}
+			},
+			assert: func(t *testing.T, err error, signer *jwtSigner) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, "foo", signer.iss)
+				assert.Equal(t, ee1PrivKey, signer.key)
+				assert.Equal(t, "key7", signer.jwk.KeyID)
+				assert.Equal(t, string(jose.ES384), signer.jwk.Algorithm)
+				assert.Equal(t, []*x509.Certificate{cert6, intCACert, rootCA.Certificate}, signer.activeCertificateChain())
 			},
 		},
 		{

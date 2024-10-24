@@ -109,7 +109,7 @@ Heimdall can be installed via a Helm chart with a few simple steps, depending on
 
 === Prerequisites
 
-* A Kubernetes version >= 1.19 or >= 1.23 if you would like to use HPA
+* A Kubernetes version >= 1.27
 * https://helm.sh/docs/intro/install/[Helm] 3.0+
 
 === Adding the Helm Repository
