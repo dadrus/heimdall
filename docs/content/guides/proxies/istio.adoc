@@ -182,3 +182,7 @@ subjects:
 <1> Change the name of the service account accordingly. The name has the following pattern `<namespace>-istio`.
 
 You're now able to create the required `Gateway` and the `HTTPRoute` resources for your service.
+
+== Additional Resources
+
+A fully working example with Istio is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
