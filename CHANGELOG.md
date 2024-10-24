@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.15.2](https://github.com/dadrus/heimdall/compare/v0.15.1...v0.15.2) (2024-10-24)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 324edc3 ([#1916](https://github.com/dadrus/heimdall/issues/1916)) ([b8659ee](https://github.com/dadrus/heimdall/commit/b8659eecfdabdf0b38f44d1827bfb37501a022eb))
+* update kubernetes packages to v0.31.2 ([#1921](https://github.com/dadrus/heimdall/issues/1921)) ([21919a9](https://github.com/dadrus/heimdall/commit/21919a921e42bb065bfd64b46c9ae4ea51754c3d))
+* update module github.com/envoyproxy/go-control-plane to v0.13.1 ([#1904](https://github.com/dadrus/heimdall/issues/1904)) ([dcb88fb](https://github.com/dadrus/heimdall/commit/dcb88fbf9ce6db1eef2ff8eeae3dfdbfd3588aaf))
+* update module github.com/redis/rueidis to v1.0.48 ([#1914](https://github.com/dadrus/heimdall/issues/1914)) ([72ba8b1](https://github.com/dadrus/heimdall/commit/72ba8b125fa02421d72d3bd49d59b93cdaecd844))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.48 ([#1915](https://github.com/dadrus/heimdall/issues/1915)) ([63e2f0e](https://github.com/dadrus/heimdall/commit/63e2f0e39c16864a94518475d6218be941b705db))
+
 ## [0.15.1](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.15.1) (2024-10-16)
 
 
