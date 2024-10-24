@@ -11,4 +11,174 @@ description: Explains how to integrate heimdall with Istio Service Mesh.
 
 :toc:
 
-https://istio.io/[Istio] is an open-source service mesh that provides a uniform way to secure, connect, and observe microservices. It can also act as a Kubernetes-based application gateway by leveraging https://gateway-api.sigs.k8s.io/[Gateway API] resources.
+https://istio.io/[Istio] is an open-source service mesh that extends Kubernetes’ capabilities, providing a uniform way to observe, secure, and connect microservices. It also functions as a Kubernetes-based application gateway, using either its built-in https://istio.io/latest/docs/concepts/traffic-management/#gateways[Ingress Gateway], the Kubernetes https://istio.io/latest/docs/tasks/traffic-management/ingress/kubernetes-ingress/[Ingress], or the https://gateway-api.sigs.k8s.io/[Gateway API] resources for configuration.
+
+== Prerequisites
+
+* A kubernetes cluster
+* Deployed Istio (See https://istio.io/latest/docs/setup/install/[here] for installation options)
+* heimdall installed and operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+
+== Integration Options
+
+Technically, the integration works similarly to the link:{{< relref "/guides/proxies/envoy.adoc" >}}[Envoy]  setup by utilizing the https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] filter. This can be implemented in two ways:
+
+* via HTTP
+* via gRPC (recommended)
+
+In both approaches, the filter sends a request to an external gRPC or HTTP service (in this case, heimdall) to determine if the incoming HTTP request is authorized. If heimdall responds with a `2xx` status code, the request is forwarded to the upstream service. Otherwise, heimdall’s response is returned to the caller.
+
+For Istio, this integration involves configuring an `envoyExtAuthzHttp` or `envoyExtAuthzGrpc` https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig-ExtensionProvider[ExtensionProvider] for heimdall in the mesh configuration. The configured extension can then be enabled via an https://istio.io/latest/docs/reference/config/security/authorization-policy/[AuthorizationPolicy] resource. Depending on its definition, heimdall can be used globally for all requests served through a particular gateway, or selectively for specific requests only.
+
+The sections below explain how to achieve that for Istio's Ingress Gateway, as well by making use of the Kubernetes Gateway API
+
+== Common Configuration
+
+As written above, there is a need to register an extension provider in Istio's mesh config:
+
+1. Run `kubectl edit configmap istio -n istio-system` to edit the mesh config
+
+2. Add the `extensionProvider` to the mesh config:
++
+[source, yaml]
+----
+apiVersion: v1
+data:
+  mesh: |-
+    # Add the following contents:
+    extensionProviders:
+    - name: heimdall-ext-auth # <1>
+      envoyExtAuthzGrpc: # <2>
+        service: heimdall.heimdall.svc.cluster.local # <3>
+        port: "4456"
+----
+<1> `heimdall-ext-auth` is the name for our provider, which we'll refer to in an `AuthorizationPolicy` later
+<2> We're using a GRPC based implementation here. It requires however an additional `EnvoyFilter` resource as Istio does not configure Envoy to use HTTP2 for GRPC calls (this seems to be a bug in Istio's implementation)
+<3> The address of heimdall in the cluster.
+
+3. If you configured `envoyExtAuthzGrpc` as shown above, you'll also need to deploy the following `EnvoyFilter` resource to fix the cluster configuration, Istio creates for the heimdall service.
++
+[source, yaml]
+----
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: http2-protocol-for-heimdall
+  namespace: istio-system # <1>
+spec:
+  configPatches:
+    - applyTo: CLUSTER # <2>
+      match: # <3>
+        context: GATEWAY
+        cluster:
+          name: outbound|4456||heimdall.heimdall.svc.cluster.local
+      patch:
+        operation: MERGE
+        value:
+          typed_extension_protocol_options: # <4>
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config:
+                http2_protocol_options: {}
+----
+<1> The namespace where the Istio control plane is deployed (the config root namespace). That way this filter is used each time envoy instance is created by Istio.
+<2> Specifies that we want to apply the patch for a cluster
+<3> Since we want this patch to be applied for gateways only, we limit the context accordingly
+<4> This is the actual config we would like to merge into the cluster definition to enable HTTP 2 support.
+
+4. If you configured heimdall to use TLS for inbound traffic, we have to instruct Istio accordingly. Apply the following `DestinationRule` resource in the Istio root config namespace:
++
+[source, yaml]
+----
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: heimdall
+  namespace: istio-system
+spec:
+  host: heimdall.heimdall.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+      sni: heimdall.heimdall.svc.cluster.local # <1>
+      credentialName: cacerts # <2>
+----
+<1> If sni is not set, it will be set based on downstream HTTP host/authority header, which will result in an error on heimdall side as this name will not match the DNS entries in heimdall's certificate.
+<2> The secret containing the certificate of the CA, the certificate for heimdall is issued by. Without it Envoy won't trust heimdall's certificate. This secret must be present in each namespace Istio creates a gateway in.
+
+5. To configure each created gateway to route the igress traffic through heimdall first, create the following `AuthorizationPolicy` in Istios root configuration namespace:
++
+[source, yaml]
+----
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: heimdall
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels: # <1>
+      istio: ingressgateway
+  action: CUSTOM
+  provider:
+    name: heimdall-ext-auth # <2>
+  rules:
+    - {} # <3>
+----
+<1> We want this policy to be applied on gateways only (an not on injected sidecars)
+<2> Here, we reference the extension provider, we've created in the beginning
+<3> The policy should be always applied, hence the empty rules.
+
+With that configuration in place, you can now deploy the required gateway resources.
+
+== Ingress Gateway Configuration
+
+Just create the Ingress `Gateway` resource and create the `VirtualService` resources for your services based on your needs. No additional configuration is required
+
+== Kubenetes Gateway API
+
+At the time of this writing, Istios implementation of the new Gateway API seems to be incomplete. It does not include the `Role` and `RoleBinding` required to access the `Secret` with additional CA certificates. Without these, the Envoy instances won't be able accessing the secret and as a result won't be able to trust the certificate heimdall is using. To resolve that, apply the following resources in the namespace, you're going to install the `Gateway` into:
+
+[source, yaml]
+----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    gateway.istio.io/managed: istio.io-gateway-controller
+    gateway.networking.k8s.io/gateway-name: istio-gw
+    istio: ingressgateway
+    istio.io/gateway-name: istio-gw
+  name: istio-gw-istio
+  namespace: istio-gw
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    gateway.istio.io/managed: istio.io-gateway-controller
+    gateway.networking.k8s.io/gateway-name: istio-gw
+    istio: ingressgateway
+    istio.io/gateway-name: istio-gw
+  name: istio-gw-istio
+  namespace: istio-gw
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istio-gw-istio
+subjects:
+  - kind: ServiceAccount
+    name: istio-gw-istio # <1>
+----
+<1> Change the name of the service account accordingly. The name has the following pattern `<namespace>-istio`.
+
+You're now able to create the required `Gateway` and the `HTTPRoute` resources for your service.
