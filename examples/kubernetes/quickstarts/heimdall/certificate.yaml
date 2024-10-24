@@ -8,38 +8,23 @@ spec:
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: demo-ca-issuer
+    name: root-ca
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
-  subject:
-    organizations:
-      - heimdall
+  commonName: heimdall-tls
   isCA: false
   privateKey:
-    algorithm: RSA
-    encoding: PKCS1
-    size: 2048
+    algorithm: ECDSA
+    size: 256
   usages:
     - "server auth"
+    - "digital signature"
   dnsNames:
     - heimdall
     - heimdall.heimdall
     - heimdall.heimdall.svc
     - heimdall.heimdall.svc.cluster.local
----
-apiVersion: trust.cert-manager.io/v1alpha1
-kind: Bundle
-metadata:
-  name: demo-ca
-spec:
-  sources:
-    - secret:
-        name: heimdall-tls
-        key: ca.crt
-  target:
-    configMap:
-      key: ca.crt
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -51,18 +36,15 @@ spec:
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: demo-ca-issuer
+    name: root-ca
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
-  subject:
-    organizations:
-      - heimdall
+  commonName: heimdall-sig
   isCA: false
   privateKey:
-    algorithm: RSA
-    encoding: PKCS1
-    size: 2048
+    algorithm: ECDSA
+    size: 256
   usages:
     - "digital signature"
   dnsNames:

@@ -1,0 +1,42 @@
+# below are the missing role and role binding to let the proxy
+# controlled by istio accessing the secret with key/certificate material
+# required to verify server certificates used by ext auth services
+# these are the same as installed by istio when ingress controller is installed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    gateway.istio.io/managed: istio.io-gateway-controller
+    gateway.networking.k8s.io/gateway-name: istio-gw
+    istio: ingressgateway
+    istio.io/gateway-name: istio-gw
+  name: istio-gw-istio
+  namespace: istio-gw
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    gateway.istio.io/managed: istio.io-gateway-controller
+    gateway.networking.k8s.io/gateway-name: istio-gw
+    istio: ingressgateway
+    istio.io/gateway-name: istio-gw
+  name: istio-gw-istio
+  namespace: istio-gw
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istio-gw-istio
+subjects:
+  - kind: ServiceAccount
+    name: istio-gw-istio
