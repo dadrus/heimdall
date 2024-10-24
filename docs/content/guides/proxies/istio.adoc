@@ -1,0 +1,14 @@
+---
+title: "Istio Service Mesh Integration"
+date: 2024-10-23T20:49:17+02:00
+draft: false
+weight: 16
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: Explains how to integrate heimdall with Istio Service Mesh.
+---
+
+:toc:
+
+https://istio.io/[Istio] is an open-source service mesh that provides a uniform way to secure, connect, and observe microservices. It can also act as a Kubernetes-based application gateway by leveraging https://gateway-api.sigs.k8s.io/[Gateway API] resources.
