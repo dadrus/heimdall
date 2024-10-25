@@ -34,6 +34,8 @@ For Istio, this integration involves configuring an `envoyExtAuthzHttp` or `envo
 
 The sections below explain how to achieve this for Istio's Ingress Gateway, as well as using the Kubernetes Gateway API.
 
+NOTE: This guide assumes that Istio and heimdall are installed in the same cluster. If they are not, you will need to register heimdall in Istio's internal service registry using a https://istio.io/latest/docs/reference/config/networking/service-entry/[`ServiceEntry`] resource.
+
 == Common Configuration
 
 === Register the Extension Provider
