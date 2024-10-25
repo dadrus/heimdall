@@ -27,7 +27,7 @@ Technically, the integration works similarly to the link:{{< relref "/guides/pro
 * via gRPC (recommended)
 
 In both approaches, the filter sends a request to an external gRPC or HTTP service (in this case, heimdall) to determine if the incoming HTTP request is authorized. If heimdall responds with a `2xx` status code, the request is forwarded to the upstream service. Otherwise, heimdall’s response is returned to the caller.
-
+heimdall
 For Istio, this integration involves configuring an `envoyExtAuthzHttp` or `envoyExtAuthzGrpc` https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig-ExtensionProvider[ExtensionProvider] for heimdall in the mesh configuration. The configured extension can then be enabled via an https://istio.io/latest/docs/reference/config/security/authorization-policy/[AuthorizationPolicy] resource. Depending on its definition, heimdall can be used globally for all requests served through a particular gateway, or selectively for specific requests only.
 
 The sections below explain how to achieve this for Istio's Ingress Gateway, as well as using the Kubernetes Gateway API.
@@ -42,6 +42,7 @@ As mentioned earlier, registering an extension provider in Istio's mesh configur
 
 2. Add the `extensionProvider` configuration: Insert the following settings into the mesh configuration:
 +
+====
 [source, yaml]
 ----
 apiVersion: v1
@@ -57,8 +58,32 @@ data:
 <1> `heimdall-ext-auth` is the name of our extension provider, which will be referenced later in the `AuthorizationPolicy` configuration.
 <2> We're using a gRPC based implementation here. However, since Istio does not automatically configure Envoy to use HTTP/2 for gRPC calls, it requires an additional `EnvoyFilter` resource. This appears to be a bug in Istio's implementation.
 <3> Heimdall's address within the cluster, which the extension provider will use for communication.
+====
++
+[NOTE]
+====
+Alternatively, you can make use of `envoyExtAuthzHttp` extension provider. In that case insert the following settings:
+[source, yaml]
+----
+apiVersion: v1
+data:
+  mesh: |-
+    # Add the following contents:
+    extensionProviders:
+    - name: heimdall-ext-auth
+      envoyExtAuthzHttp:
+        service: heimdall.heimdall.svc.cluster.local
+        port: "4456"
+        includeRequestHeadersInCheck: [ "authorization", "cookie", "accept", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host" ] # <1>
+        headersToUpstreamOnAllow: [ "authorization" ] # <2>
+----
+<1> Include further headers, you expect to make use of in your heimdall rules.
+<2> Include further headers, you expect to be set in your heimdall rules and which should be forwarded to the upstream service.
+====
 
-3. If you have configured `envoyExtAuthzGrpc` as shown above, deploy the following `EnvoyFilter` resource to correct the cluster configuration that Istio sets up for the Heimdall service.
+3. Deploy the following `EnvoyFilter` resource to correct the cluster configuration that Istio sets up for the heimdall service.
++
+NOTE: This is only required if you made use of the `envoyExtAuthzGrpc` provider as shown above.
 +
 [source, yaml]
 ----
@@ -92,7 +117,9 @@ spec:
 
 This step is optional and only necessary if heimdall is configured to use TLS for inbound traffic.
 
-1. Instruct Istio to trust Heimdall's certificate by applying the following `DestinationRule` resource in the Istio root configuration namespace:
+NOTE: It is highly recommended to secure the communication between the Istio-managed gateway and heimdall. Instead of configuring heimdall to handle TLS directly, you can let Istio inject a proxy into heimdall's pod to manage TLS termination. However, this approach introduces an additional network hop, which could negatively impact performance.
+
+1. Instruct Istio to trust heimdall's certificate by applying the following `DestinationRule` resource in the Istio root configuration namespace:
 +
 [source, yaml]
 ----
@@ -114,7 +141,7 @@ spec:
 
 === Route the requests through heimdall
 
-With the previous configuration in place, we can now instruct Istio to route the ingress traffic through Heimdall first.
+With the previous configuration in place, we can now instruct Istio to route the ingress traffic through heimdall first.
 
 1. Create the following `AuthorizationPolicy` in Istio's root configuration namespace:
 +
