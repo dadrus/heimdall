@@ -27,7 +27,7 @@ Technically, the integration works similarly to the link:{{< relref "/guides/pro
 * via gRPC (recommended)
 
 In both approaches, the filter sends a request to an external gRPC or HTTP service (in this case, heimdall) to determine if the incoming HTTP request is authorized. If heimdall responds with a `2xx` status code, the request is forwarded to the upstream service. Otherwise, heimdall’s response is returned to the caller.
-heimdall
+
 For Istio, this integration involves configuring an `envoyExtAuthzHttp` or `envoyExtAuthzGrpc` https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig-ExtensionProvider[ExtensionProvider] for heimdall in the mesh configuration. The configured extension can then be enabled via an https://istio.io/latest/docs/reference/config/security/authorization-policy/[AuthorizationPolicy] resource. Depending on its definition, heimdall can be used globally for all requests served through a particular gateway, or selectively for specific requests only.
 
 The sections below explain how to achieve this for Istio's Ingress Gateway, as well as using the Kubernetes Gateway API.
