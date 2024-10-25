@@ -5,11 +5,8 @@ apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: http2-protocol-for-heimdall
-  namespace: istio-gw
+  namespace: istio-system
 spec:
-  workloadSelector:
-    labels:
-      istio: ingressgateway
   configPatches:
     - applyTo: CLUSTER
       match:

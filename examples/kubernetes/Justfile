@@ -176,6 +176,9 @@ install-istio with_ingress_gw="true":
     -f istio/istio-values.yaml \
     --wait
 
+  kubectl apply -f istio/envoy-filter.yaml
+  kubectl apply -f istio/destination-rule.yaml
+
 
   if [[ "{{with_ingress_gw}}" == "true" ]]; then
     echo "installing ingress gw"
@@ -265,8 +268,6 @@ install-heimdall router=default_router:
       kubectl apply -f quickstarts/heimdall/heimdall-middleware.yaml
   elif [[ "{{router}}" == "istio-ingress-gw" || "{{router}}" == "istio-gw" ]]; then
       kubectl apply -f quickstarts/heimdall/istio-authorization-policy.yaml
-      kubectl apply -f quickstarts/heimdall/istio-destination-rule.yaml
-      kubectl apply -f quickstarts/heimdall/istio-envoy-filter.yaml
   fi
 
 create-cluster:

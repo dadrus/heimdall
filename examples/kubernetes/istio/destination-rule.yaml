@@ -2,7 +2,7 @@ apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
   name: heimdall
-  namespace: heimdall
+  namespace: istio-system
 spec:
   host: heimdall.heimdall.svc.cluster.local
   trafficPolicy:
