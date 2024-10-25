@@ -1,0 +1,29 @@
+global:
+  logging:
+    level: debug
+  proxy:
+    logLevel: trace
+
+  caAddress: cert-manager-istio-csr.istio-system.svc:443
+
+meshConfig:
+  defaultConfig:
+    discoveryAddress: istiod.istio-system.svc:15012
+  defaultProviders:
+    metrics:
+      - prometheus
+  enablePrometheusMerge: true
+  rootNamespace: istio-system
+  trustDomain: cluster.local
+  extensionProviders:
+    - name: heimdall-ext-auth
+      # Istio doesn't configure HTTP 2 for GRPC communication. EnvoyFilter is required
+      envoyExtAuthzGrpc:
+        service: heimdall.heimdall.svc.cluster.local
+        port: "4456"
+      # alternatively, one can use the config from below. In that case EnvoyFilter is not needed
+      #envoyExtAuthzHttp:
+      #  service: heimdall.heimdall.svc.cluster.local
+      #  port: "4456"
+      #  includeRequestHeadersInCheck: [ "authorization", "cookie", "accept", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host" ]
+      #  headersToUpstreamOnAllow: [ "authorization" ]

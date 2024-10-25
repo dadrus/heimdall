@@ -1,0 +1,13 @@
+app:
+  logLevel: 5 # 1-5
+  logFormat: text # text or json
+
+  certmanager:
+    namespace: istio-system
+    issuer:
+      name: root-ca
+      kind: ClusterIssuer
+
+  tls:
+    certificateDNSNames:
+      - cert-manager-istio-csr.istio-system.svc

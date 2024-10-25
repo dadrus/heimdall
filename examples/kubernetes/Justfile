@@ -10,8 +10,10 @@ haproxy_version := '0.14.6'
 envoy_gw_version := 'v1.0.1'
 traefik_version := '28.0.0'
 metallb_version := '0.14.5'
-certmanager_version := '1.14.5'
-trustmanager_version := '0.9.2'
+certmanager_version := '1.15.3'
+trustmanager_version := '0.12.0'
+certmanager_istio_csr_version := '0.12.0'
+istio_version := '1.23.2'
 
 cluster_name := 'demo-cluster'
 default_router := "contour"
@@ -27,6 +29,7 @@ setup-charts:
   helm repo add datawire https://app.getambassador.io
   helm repo add haproxy https://haproxy-ingress.github.io/charts
   helm repo add traefik https://traefik.github.io/charts
+  helm repo add istio https://istio-release.storage.googleapis.com/charts
   helm repo update
 
 ## Installs Grafana
@@ -154,6 +157,44 @@ install-traefik global_mw="true":
       -f traefik/${valuesFile} \
       --wait
 
+install-istio with_ingress_gw="true":
+  #!/usr/bin/env bash
+  kubectl apply -f istio/namespace.yaml
+  kubectl apply -f istio/certificate.yaml
+
+  helm upgrade --install cert-manager-istio-csr jetstack/cert-manager-istio-csr \
+    -n istio-system --version {{certmanager_istio_csr_version}} \
+    -f istio/istio-csr-values.yaml \
+    --wait
+
+  helm upgrade --install istio-base istio/base \
+    -n istio-system --version {{istio_version}} \
+    --set defaultRevision=default
+
+  helm upgrade --install istiod istio/istiod \
+    -n istio-system --version {{istio_version}} \
+    -f istio/istio-values.yaml \
+    --wait
+
+  kubectl apply -f istio/envoy-filter.yaml
+  kubectl apply -f istio/destination-rule.yaml
+
+
+  if [[ "{{with_ingress_gw}}" == "true" ]]; then
+    echo "installing ingress gw"
+    helm install istio-ingressgateway istio/gateway \
+      -n istio-gw --version {{istio_version}} \
+      --wait
+
+    kubectl apply -f istio/ingress-gateway.yaml
+  else
+    echo "installing k8s gateway"
+    kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
+      { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f -; }
+    kubectl apply -f istio/sa.yaml
+    kubectl apply -f istio/gateway.yaml
+  fi
+
 install-lb:
   #!/usr/bin/env bash
   helm upgrade --install metallb metallb/metallb \
@@ -176,8 +217,17 @@ install-cert-manager:
     --set webhook.featureGates='AdditionalCertificateOutputFormats=true' \
     --wait
 
-  kubectl apply -n cert-manager -f cert-manager/cluster_issuer.yaml
   kubectl apply -n cert-manager -f cert-manager/ca.yaml
+
+  helm upgrade --install trust-manager jetstack/trust-manager \
+      -n cert-manager \
+      --version {{trustmanager_version}} \
+      --set app.trust.namespace=cert-manager \
+      --set secretTargets.enabled=true \
+      --set "secretTargets.authorizedSecrets={cacerts}" \
+      --wait
+
+  kubectl apply -n cert-manager -f cert-manager/cacerts_bundle.yaml
 
 install-echo-service router=default_router:
   kustomize build quickstarts/demo-app/overlays/{{router}} | kubectl apply -f -
@@ -189,19 +239,16 @@ install-heimdall router=default_router:
   #!/usr/bin/env bash
 
   kubectl apply -f quickstarts/heimdall/namespace.yaml
-
-  helm upgrade --install trust-manager jetstack/trust-manager \
-    -n heimdall \
-    --version {{trustmanager_version}} \
-    --set app.trust.namespace=heimdall \
-    --wait
-
   kubectl apply -f quickstarts/heimdall/certificate.yaml
 
   extraArgs='extraArgs={}'
-  if [[ "{{router}}" == "contour" || "{{router}}" == "emissary" || "{{router}}" == "envoygw" ]]; then
+
+  case "{{router}}" in
+    contour | emissary | envoygw | istio-*)
+    echo "will start heimdall for integration via envoy v3 grpc api"
     extraArgs='extraArgs={--envoy-grpc}'
-  fi
+    ;;
+  esac
 
   helm upgrade --install heimdall ../../charts/heimdall \
     -n heimdall \
@@ -210,15 +257,17 @@ install-heimdall router=default_router:
     --set "${extraArgs}" \
     --wait
 
-  if [ "{{router}}" == "contour" ]; then
+  if [[ "{{router}}" == "contour" ]]; then
       kubectl apply -f quickstarts/heimdall/contour-extension-service.yaml
-  elif [ "{{router}}" == "emissary" ]; then
+  elif [[ "{{router}}" == "emissary" ]]; then
       kubectl apply -f quickstarts/heimdall/emissary-auth-service.yaml
-  elif [ "{{router}}" == "envoygw" ]; then
+  elif [[ "{{router}}" == "envoygw" ]]; then
       kubectl apply -f quickstarts/heimdall/backend-tls-policy.yaml
       kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
-  elif [ "{{router}}" == "traefik" ]; then
+  elif [[ "{{router}}" == "traefik" ]]; then
       kubectl apply -f quickstarts/heimdall/heimdall-middleware.yaml
+  elif [[ "{{router}}" == "istio-ingress-gw" || "{{router}}" == "istio-gw" ]]; then
+      kubectl apply -f quickstarts/heimdall/istio-authorization-policy.yaml
   fi
 
 create-cluster:
@@ -244,6 +293,9 @@ install-traefik-ingress-route-decision-demo: setup-cluster (install-traefik "fal
 
 install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-gw")
 
+install-istio-ingress-gw-decision-demo: setup-cluster install-istio (install-heimdall "istio-ingress-gw") (install-echo-service "istio-ingress-gw")
+
+install-istio-gw-decision-demo: setup-cluster (install-istio "false") (install-heimdall "istio-gw") (install-echo-service "istio-gw")
+
 delete-cluster:
   kind delete clusters {{cluster_name}}
-

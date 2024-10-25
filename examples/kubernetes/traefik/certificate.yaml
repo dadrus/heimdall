@@ -19,5 +19,5 @@ spec:
     - 172.18.255.200
   secretName: traefik-tls
   issuerRef:
-    name: demo-ca-issuer
+    name: root-ca
     kind: ClusterIssuer
