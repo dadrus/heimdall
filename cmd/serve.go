@@ -37,6 +37,14 @@ func init() {
 			"If not provided, the lookup sequence is:\n  1. $PWD\n  2. $HOME/.config\n  3. /etc/heimdall/")
 	serveCmd.PersistentFlags().String("env-config-prefix", "HEIMDALLCFG_",
 		"Prefix for the environment variables to consider for\nloading configuration from")
+	serveCmd.PersistentFlags().Bool("insecure", false,
+		"Disables enforcement of all secure configurations entirely")
+	serveCmd.PersistentFlags().Bool("insecure-no-ingress-tls", false,
+		"Disables enforcement of TLS configuration for ingress traffic")
+	serveCmd.PersistentFlags().Bool("insecure-no-egress-tls", false,
+		"Disables enforcement of TLS configuration for egress traffic")
+	serveCmd.PersistentFlags().Bool("insecure-default-rule", false,
+		"Disables enforcement of secure configuration of the default rule")
 	serveCmd.AddCommand(serve.NewProxyCommand())
 	serveCmd.AddCommand(serve.NewDecisionCommand())
 }
