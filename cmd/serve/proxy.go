@@ -50,11 +50,27 @@ func createProxyApp(cmd *cobra.Command) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString("config")
 	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
 
+	insecure, _ := cmd.Flags().GetBool("insecure")
+	insecureDefaultRule, _ := cmd.Flags().GetBool("insecure-default-rule")
+	insecureNoIngressTLS, _ := cmd.Flags().GetBool("insecure-no-ingress-tls")
+	insecureNoEgressTLS, _ := cmd.Flags().GetBool("insecure-no-egress-tls")
+
+	if insecure {
+		insecureDefaultRule = true
+		insecureNoIngressTLS = true
+		insecureNoEgressTLS = true
+	}
+
 	app := fx.New(
 		fx.NopLogger,
 		fx.Supply(
 			config.ConfigurationPath(configPath),
 			config.EnvVarPrefix(envPrefix),
+			config.EnforcementSettings{
+				EnforceSecureDefaultRule: !insecureDefaultRule,
+				EnforceIngressTLS:        !insecureNoIngressTLS,
+				EnforceEgressTLS:         !insecureNoEgressTLS,
+			},
 			config.ProxyMode),
 		internal.Module,
 		proxy.Module,
