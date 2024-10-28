@@ -39,6 +39,14 @@ func init() {
 		"Path to heimdall's configuration file.")
 	validateCmd.PersistentFlags().String("env-config-prefix", "HEIMDALLCFG_",
 		"Prefix for the environment variables to consider for\nloading configuration from")
+	validateCmd.PersistentFlags().Bool("insecure", false,
+		"Disables enforcement of all secure configurations entirely")
+	validateCmd.PersistentFlags().Bool("insecure-no-ingress-tls", false,
+		"Disables enforcement of TLS configuration for ingress traffic")
+	validateCmd.PersistentFlags().Bool("insecure-no-egress-tls", false,
+		"Disables enforcement of TLS configuration for egress traffic")
+	validateCmd.PersistentFlags().Bool("insecure-default-rule", false,
+		"Disables enforcement of secure configuration of the default rule")
 
 	validateCmd.AddCommand(validate.NewValidateConfigCommand())
 	validateCmd.AddCommand(validate.NewValidateRulesCommand())
