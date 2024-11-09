@@ -468,6 +468,8 @@ go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.57.0 h1:DheMAlT
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.57.0/go.mod h1:wZcGmeVO9nzP67aYSLDqXNWK87EZWhi7JWj1v7ZXf94=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.56.0 h1:s7wHG+t8bEoH7ibWk1nk682h7EoWLJ5/8j+TSO3bX/o=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.56.0/go.mod h1:Q8Hsv3d9DwryfIl+ebj4mY81IYVRSPy4QfxroVZwqLo=
+go.opentelemetry.io/contrib/instrumentation/runtime v0.57.0 h1:kJB5wMVorwre8QzEodzTAbzm9FOOah0zvG+V4abNlEE=
+go.opentelemetry.io/contrib/instrumentation/runtime v0.57.0/go.mod h1:Nup4TgnOyEJWmVq9sf/ASH3ZJiAXwWHd5xZCHG7Sg9M=
 go.opentelemetry.io/contrib/propagators/autoprop v0.56.0 h1:FtwGTy9ka2eBVnBotuligqO2V+il+Hp74APIJsWNbd8=
 go.opentelemetry.io/contrib/propagators/autoprop v0.56.0/go.mod h1:XzSaHSuUiWveyQwmofA3IEK23+SpzfSEcVZXpqfBh+E=
 go.opentelemetry.io/contrib/propagators/autoprop v0.57.0 h1:bNPJOdT5154XxzeFmrh8R+PXnV4t3TZEczy8gHEpcpg=
