@@ -11,12 +11,13 @@ on:
       - release
 
 env:
-  GO_VERSION: "1.23.2"
+  GO_VERSION: "1.23.3"
   GOLANGCI_LINT_VERSION: "v1.60.1"
   HELM_VERSION: "3.15.4"
   KUBECONFORM_VERSION: "0.6.7"
   KUBERNETES_API_VERSION: "1.27.0"
   NODE_VERSION: "22.7"
+  RUBY_VERSION: "3.2"
   COSIGN_VERSION: "v2.4.0"
   CYCLONEDX_GOMOD_VERSION: "v1.7.0"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
@@ -154,12 +155,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
-        run: npm i -g @redocly/cli@1.10.5
+        run: npm i -g @redocly/cli@1.25.9
       - name: Run Redocly Lint
         run: redocly lint
 
   lint-dockerfiles:
     runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
     needs:
       - check-changes
     if: > 
@@ -177,7 +180,7 @@ jobs:
         uses: reviewdog/action-hadolint@73fec8b28091e5082c19df69815dd749d97b882a # v1.46.0
         with:
           reporter: github-pr-review
-          fail_on_error: true
+          reviewdog_flags: -fail-level=error
 
   lint-helm-chart:
     runs-on: ubuntu-24.04
@@ -649,11 +652,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
-          node-version: 17.7
+          node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@46ca53beb334a2329bcd0e46a694816a6ae6d173 # v1.201.0
+        uses: ruby/setup-ruby@a2bbe5b1b236842c1cb7dd11e8e3b51e0a616acc # v1.202.0
         with:
-          ruby-version: 3.1.3
+          ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
         run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
       - name: Install dependencies
@@ -704,13 +707,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
-          node-version: 17.7
-      - name: Install mermaid
-        run: npm install -g @mermaid-js/mermaid-cli@10.8.0
+          node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@46ca53beb334a2329bcd0e46a694816a6ae6d173 # v1.201.0
+        uses: ruby/setup-ruby@a2bbe5b1b236842c1cb7dd11e8e3b51e0a616acc # v1.202.0
         with:
-          ruby-version: 2.7
+          ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
         run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
       - name: Install dependencies
@@ -730,11 +731,16 @@ jobs:
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
+      - name: Prepare image version
+        id: image-version
+        run: |
+          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
+          echo "result=$version" >> $GITHUB_OUTPUT
       - name: Update used image tags to the released version
         uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
         with:
           find: "heimdall:dev"
-          replace: "heimdall:${{ needs.prepare-release.outputs.tag_name }}"
+          replace: "heimdall:${{ steps.image-version.outputs.result }}"
           regex: false
           include: docs/**
       - name: Build documentation
