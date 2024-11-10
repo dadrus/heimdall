@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.15.2](https://github.com/dadrus/heimdall/compare/v0.15.1...v0.15.2) (2024-11-10)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to e11d675 ([#1936](https://github.com/dadrus/heimdall/issues/1936)) ([926aaa2](https://github.com/dadrus/heimdall/commit/926aaa2a8fdec5f8771a3e0e421b2590a979c1b4))
+* update golang to v1.23.3 ([#1943](https://github.com/dadrus/heimdall/issues/1943)) ([821606b](https://github.com/dadrus/heimdall/commit/821606b49a5d5f023eaad053d3031fd847c717b9))
+* update golang.org/x/exp digest to 2d47ceb ([#1949](https://github.com/dadrus/heimdall/issues/1949)) ([d677013](https://github.com/dadrus/heimdall/commit/d677013020163014b2c7d8c82ffd5f201b9e7c3b))
+* update google.golang.org/genproto/googleapis/rpc digest to dd2ea8e ([#1938](https://github.com/dadrus/heimdall/issues/1938)) ([01a6c75](https://github.com/dadrus/heimdall/commit/01a6c753296dc4726a36d4655eba5bab0c251fb7))
+* update kubernetes packages to v0.31.2 ([#1921](https://github.com/dadrus/heimdall/issues/1921)) ([21919a9](https://github.com/dadrus/heimdall/commit/21919a921e42bb065bfd64b46c9ae4ea51754c3d))
+* update module github.com/envoyproxy/go-control-plane to v0.13.1 ([#1904](https://github.com/dadrus/heimdall/issues/1904)) ([dcb88fb](https://github.com/dadrus/heimdall/commit/dcb88fbf9ce6db1eef2ff8eeae3dfdbfd3588aaf))
+* update module github.com/fsnotify/fsnotify to v1.8.0 ([#1932](https://github.com/dadrus/heimdall/issues/1932)) ([b8a8c05](https://github.com/dadrus/heimdall/commit/b8a8c0581d062b462374b1882d158de3d7c9ea8c))
+* update module github.com/go-co-op/gocron/v2 to v2.12.3 ([#1933](https://github.com/dadrus/heimdall/issues/1933)) ([0a9185b](https://github.com/dadrus/heimdall/commit/0a9185b6cd293743be146ac602e424d3096ce75e))
+* update module github.com/google/cel-go to v0.22.0 ([#1942](https://github.com/dadrus/heimdall/issues/1942)) ([0583e0e](https://github.com/dadrus/heimdall/commit/0583e0e997276655c0591ceca5f8426ff25f8947))
+* update module github.com/knadh/koanf/v2 to v2.1.2 ([#1940](https://github.com/dadrus/heimdall/issues/1940)) ([cc31181](https://github.com/dadrus/heimdall/commit/cc311816ef48e2bc483668680ee29d0a5e9f571f))
+* update module github.com/redis/rueidis to v1.0.49 ([#1947](https://github.com/dadrus/heimdall/issues/1947)) ([19d38cf](https://github.com/dadrus/heimdall/commit/19d38cfed49be52cc09e27318333b19c7ec04cd3))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.49 ([#1947](https://github.com/dadrus/heimdall/issues/1947)) ([19d38cf](https://github.com/dadrus/heimdall/commit/19d38cfed49be52cc09e27318333b19c7ec04cd3))
+* update module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc to v0.57.0 ([#1950](https://github.com/dadrus/heimdall/issues/1950)) ([798b2fe](https://github.com/dadrus/heimdall/commit/798b2fe8dd82b502edee139778d67461c26b7d6d))
+* update module go.opentelemetry.io/contrib/instrumentation/host to v0.57.0 ([#1951](https://github.com/dadrus/heimdall/issues/1951)) ([ea21fb0](https://github.com/dadrus/heimdall/commit/ea21fb09098b7ba4b5fe8bbbd1ce64524facadde))
+* update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.57.0 ([#1952](https://github.com/dadrus/heimdall/issues/1952)) ([435cfdb](https://github.com/dadrus/heimdall/commit/435cfdb0cbab3d7d2a5d1bb6de3a3a9e40177096))
+* update module go.opentelemetry.io/contrib/instrumentation/runtime to v0.57.0 ([#1953](https://github.com/dadrus/heimdall/issues/1953)) ([3a4fdf1](https://github.com/dadrus/heimdall/commit/3a4fdf1dac73c927190b9e7b13659b7023c17f4c))
+* update module go.opentelemetry.io/contrib/propagators/autoprop to v0.57.0 ([#1954](https://github.com/dadrus/heimdall/issues/1954)) ([e1659c6](https://github.com/dadrus/heimdall/commit/e1659c6273545c81657edd9b732061dc1a50611e))
+* update module google.golang.org/grpc to v1.68.0 ([#1945](https://github.com/dadrus/heimdall/issues/1945)) ([c0d5d9a](https://github.com/dadrus/heimdall/commit/c0d5d9aea66ba4f7f0e303c2fe49761b3ecc7146))
+* update opentelemetry-go monorepo to v1.32.0 ([#1948](https://github.com/dadrus/heimdall/issues/1948)) ([6e42038](https://github.com/dadrus/heimdall/commit/6e4203820741e91f2c5d568e5073b79e1f647b50))
+
 ## [0.15.1](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.15.1) (2024-10-16)
 
 
