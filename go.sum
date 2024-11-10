@@ -102,8 +102,8 @@ github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78 h1:QVw89YDxXxEe+l8gU8E
 github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78/go.mod h1:W+zGtBO5Y1IgJhy4+A9GOqVhqLpfZi+vwmdNXUehLA8=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
-github.com/dadrus/httpsig v0.0.0-20241016052711-ae642499b69d h1:Ca3H/JHlr0Feiq8+rLz3K7wOaw8O/oDN8aLR4iDMT/I=
-github.com/dadrus/httpsig v0.0.0-20241016052711-ae642499b69d/go.mod h1:P31eM5Rh3dqq9FLr1QASaZsk8/8qIiKKUYFKjBC/yYc=
+github.com/dadrus/httpsig v0.0.0-20241109082808-e11d6750f9ea h1:+asJR2dmcH4m9y2aQmI92YZ3DsZQ7aMEjqqIXR7jYA0=
+github.com/dadrus/httpsig v0.0.0-20241109082808-e11d6750f9ea/go.mod h1:P31eM5Rh3dqq9FLr1QASaZsk8/8qIiKKUYFKjBC/yYc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
