@@ -34,16 +34,43 @@ To minimize the memory footprint, heimdall instanciates all defined mechanisms o
 
 The diagram below sketches the logic executed by heimdall for each and every incoming request.
 
-[mermaid, format=svg]
+[ditaa, format=svg]
 ....
-flowchart TD
-    req[Request] --> findRule{1: any\nrule\nmatching\nrequest?}
-    findRule -->|no| err2[404 Not Found]
-    findRule -->|yes| regularPipeline[2: execute\nauthentication & authorization\npipeline]
-    regularPipeline --> failed{failed?}
-    failed -->|yes| errPipeline[execute error pipeline]
-    failed -->|no| success[3: forward request,\nrespectively respond\nto the API gateway]
-    errPipeline --> errResult[4: result of the\nused error handler]
+                       /---------------\
+                       |c035Request    |
+                       \---------------/
+                               |
+                               v
+                     +-------------------+
+                no   | {c}   1. Any      |  yes
+              /------|    rule matching  |------\
+              |      |cED5  request?     |      |
+              |      +-------------------+      |
+              |                                 |
+              v                                 v
+      /---------------\          /-----------------------------\
+      | 404 Not Found |          | 2. execute authentication & |
+      | cE9F          |          |c035authorization pipeline   |
+      \---------------/          \-----------------------------/
+                                                |
+                                                v
+                                      +-------------------+
+                                 yes  |cED5               |   no
+                                /-----|{c}   Failed?      |-----\
+                                |     |                   |     |
+                                |     +-------------------+     |
+                                v                               v
+                      /-------------------\         /------------------------\
+                      |  execute error    |         |3. forward request, or  |
+                      |    pipeline   cE9F|         |   respond to the API   |
+                      \-------------------/         |   gateway         c035 |
+                                |                   \------------------------/
+                                v
+                      /-------------------\
+                      |4. result of the   |
+                      |   used error      |
+                      |   handler     cE9F|
+                      \-------------------/
 ....
 
 . *Any rule matching request?* - This is the first step executed by heimdall in which it tries to find a link:{{< relref "#_matching_of_rules" >}}[matching rule]. If there is no matching rule, heimdall either falls back to the default rule if available, or the request is denied. Otherwise, the rule specific authentication & authorization pipeline is executed.
