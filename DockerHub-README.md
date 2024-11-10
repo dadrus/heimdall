@@ -29,9 +29,6 @@ mechanisms:
     type: jwt
 
 default_rule:
-  methods:
-  - GET
-  - POST
   execute:
   - authenticator: anonymous_authenticator
   - finalizer: create_jwt
