@@ -93,5 +93,4 @@ func TestEnforcementSettings(t *testing.T) {
 			assert.Equal(t, tc.enforceUpstreamTLS, es.EnforceUpstreamTLS)
 		})
 	}
-
 }

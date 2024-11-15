@@ -17,12 +17,12 @@
 package serve
 
 import (
-	"github.com/dadrus/heimdall/cmd/flags"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
