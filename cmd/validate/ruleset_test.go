@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -91,10 +92,10 @@ func TestValidateRuleset(t *testing.T) {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			cmd := NewValidateRulesCommand()
-			cmd.Flags().StringP("config", "c", "", "Path to heimdall's configuration file.")
+			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
 
 			if len(tc.confFile) != 0 {
-				err := cmd.ParseFlags([]string{"--config", tc.confFile})
+				err := cmd.ParseFlags([]string{"--" + flags.Config, tc.confFile})
 				require.NoError(t, err)
 			}
 
@@ -180,19 +181,19 @@ func TestRunValidateRulesCommand(t *testing.T) {
 			cmd.SetOut(buf)
 			cmd.SetErr(buf)
 
-			cmd.Flags().StringP("config", "c", "", "Path to heimdall's configuration file.")
+			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
 
-			flags := []string{}
+			var args []string
 
 			if len(tc.confFile) != 0 {
-				flags = append(flags, "--config", tc.confFile)
+				args = append(args, "--"+flags.Config, tc.confFile)
 			}
 
 			if tc.proxyMode {
-				flags = append(flags, "--proxy-mode")
+				args = append(args, "--"+rulesetValidationFlagProxyMode)
 			}
 
-			err = cmd.ParseFlags(flags)
+			err = cmd.ParseFlags(args)
 			require.NoError(t, err)
 
 			// WHEN
