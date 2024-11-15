@@ -148,12 +148,15 @@ mechanisms:
           headers:
             foo: bar
   finalizers:
-    - id: jwt
-      type: jwt
-      config:
-        ttl: 5m
-        claims: |
-          {"user": {{ quote .Subject.ID }} }
+  #  - id: jwt
+  #    type: jwt
+  #    config:
+  #      ttl: 5m
+  #      claims: |
+  #        {"user": {{ quote .Subject.ID }} }
+  #      signer:
+  #        key_store:
+  #          path: /path/to/file.pem
     - id: bla
       type: header
       config:
@@ -176,7 +179,7 @@ default_rule:
   backtracking_enabled: false
   execute:
     - authenticator: anonymous_authenticator
-    - finalizer: jwt
+    - finalizer: bla
   on_error:
     - error_handler: authenticate_with_kratos
       if: |
@@ -217,8 +220,8 @@ providers:
         prefix: service2
       - url: s3://my-bucket/my-rule-set
 
-  kubernetes:
-    auth_class: foo
+  #kubernetes:
+  #  auth_class: foo
 
 
 
