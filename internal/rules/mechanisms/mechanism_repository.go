@@ -36,14 +36,16 @@ import (
 var ErrNoSuchPipelineObject = errors.New("pipeline object not found")
 
 type creationContext struct {
-	fw  watcher.Watcher
-	khr keyholder.Registry
-	co  certificate.Observer
+	fw         watcher.Watcher
+	khr        keyholder.Registry
+	co         certificate.Observer
+	enforceTLS bool
 }
 
 func (cc *creationContext) Watcher() watcher.Watcher                  { return cc.fw }
 func (cc *creationContext) KeyHolderRegistry() keyholder.Registry     { return cc.khr }
 func (cc *creationContext) CertificateObserver() certificate.Observer { return cc.co }
+func (cc *creationContext) IsTLSEnforced() bool                       { return cc.enforceTLS }
 
 func newMechanismRepository(
 	conf *config.Configuration,
@@ -51,13 +53,15 @@ func newMechanismRepository(
 	fw watcher.Watcher,
 	khr keyholder.Registry,
 	co certificate.Observer,
+	se config.EnforcementSettings,
 ) (*mechanismRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")
 
 	cc := &creationContext{
-		fw:  fw,
-		khr: khr,
-		co:  co,
+		fw:         fw,
+		khr:        khr,
+		co:         co,
+		enforceTLS: se.EnforceEgressTLS,
 	}
 
 	authenticatorMap, err := createPipelineObjects[authenticators.Authenticator, authenticators.CreationContext](
