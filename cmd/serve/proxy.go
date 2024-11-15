@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/proxy"
@@ -47,31 +48,17 @@ func NewProxyCommand() *cobra.Command {
 }
 
 func createProxyApp(cmd *cobra.Command) (*fx.App, error) {
-	configPath, _ := cmd.Flags().GetString("config")
-	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
-
-	insecure, _ := cmd.Flags().GetBool("insecure")
-	insecureDefaultRule, _ := cmd.Flags().GetBool("insecure-default-rule")
-	insecureNoIngressTLS, _ := cmd.Flags().GetBool("insecure-no-ingress-tls")
-	insecureNoEgressTLS, _ := cmd.Flags().GetBool("insecure-no-egress-tls")
-
-	if insecure {
-		insecureDefaultRule = true
-		insecureNoIngressTLS = true
-		insecureNoEgressTLS = true
-	}
+	configPath, _ := cmd.Flags().GetString(flags.Config)
+	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 
 	app := fx.New(
 		fx.NopLogger,
 		fx.Supply(
 			config.ConfigurationPath(configPath),
 			config.EnvVarPrefix(envPrefix),
-			config.EnforcementSettings{
-				EnforceSecureDefaultRule: !insecureDefaultRule,
-				EnforceIngressTLS:        !insecureNoIngressTLS,
-				EnforceEgressTLS:         !insecureNoEgressTLS,
-			},
-			config.ProxyMode),
+			flags.EnforcementSettings(cmd),
+			config.ProxyMode,
+		),
 		internal.Module,
 		proxy.Module,
 	)
