@@ -21,6 +21,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -43,7 +44,7 @@ func NewValidateConfigCommand() *cobra.Command {
 }
 
 func validateConfig(cmd *cobra.Command) error {
-	configPath, _ := cmd.Flags().GetString("config")
+	configPath, _ := cmd.Flags().GetString(flags.Config)
 	if len(configPath) == 0 {
 		return ErrNoConfigFile
 	}

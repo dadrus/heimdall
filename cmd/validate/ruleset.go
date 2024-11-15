@@ -25,6 +25,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keyholder"
@@ -35,6 +36,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
+
+const rulesetValidationFlagProxyMode = "proxy-mode"
 
 var errFunctionNotSupported = errors.New("function not supported")
 
@@ -56,23 +59,23 @@ func NewValidateRulesCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().Bool("proxy-mode", false,
+	cmd.PersistentFlags().Bool(rulesetValidationFlagProxyMode, false,
 		"If specified, rule set validation considers usage in proxy operation mode")
 
 	return cmd
 }
 
 func validateRuleSet(cmd *cobra.Command, args []string) error {
-	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
+	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	logger := zerolog.Nop()
 
-	configPath, _ := cmd.Flags().GetString("config")
+	configPath, _ := cmd.Flags().GetString(flags.Config)
 	if len(configPath) == 0 {
 		return ErrNoConfigFile
 	}
 
 	opMode := config.DecisionMode
-	if proxyMode, _ := cmd.Flags().GetBool("proxy-mode"); proxyMode {
+	if proxyMode, _ := cmd.Flags().GetBool(rulesetValidationFlagProxyMode); proxyMode {
 		opMode = config.ProxyMode
 	}
 
@@ -92,6 +95,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		&watcher.NoopWatcher{},
 		&noopRegistry{},
 		&noopCertificateObserver{},
+		config.EnforcementSettings{},
 	)
 	if err != nil {
 		return err

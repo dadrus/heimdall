@@ -19,27 +19,28 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/cmd/validate"
 )
 
-// nolint: gochecknoglobals
-var validateCmd = &cobra.Command{
-	Use:   "validate",
-	Short: "Commands for validating heimdall's configuration",
-	Run: func(cmd *cobra.Command, _ []string) {
-		cmd.Println(cmd.UsageString())
-	},
-}
-
 // nolint: gochecknoinits
 func init() {
-	RootCmd.AddCommand(validateCmd)
+	RootCmd.AddCommand(newValidateCmd())
+}
 
-	validateCmd.PersistentFlags().StringP("config", "c", "",
+func newValidateCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "validate",
+		Short: "Commands for validating heimdall's configuration",
+	}
+
+	cmd.PersistentFlags().StringP(flags.Config, "c", "",
 		"Path to heimdall's configuration file.")
-	validateCmd.PersistentFlags().String("env-config-prefix", "HEIMDALLCFG_",
+	cmd.PersistentFlags().String(flags.EnvironmentConfigPrefix, "HEIMDALLCFG_",
 		"Prefix for the environment variables to consider for\nloading configuration from")
 
-	validateCmd.AddCommand(validate.NewValidateConfigCommand())
-	validateCmd.AddCommand(validate.NewValidateRulesCommand())
+	cmd.AddCommand(validate.NewValidateConfigCommand())
+	cmd.AddCommand(validate.NewValidateRulesCommand())
+
+	return cmd
 }

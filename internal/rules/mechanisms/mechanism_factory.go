@@ -57,10 +57,11 @@ func NewMechanismFactory(
 	fw watcher.Watcher,
 	khr keyholder.Registry,
 	co certificate.Observer,
+	se config.EnforcementSettings,
 ) (MechanismFactory, error) {
 	logger.Info().Msg("Loading mechanism catalogue")
 
-	repository, err := newMechanismRepository(conf, logger, fw, khr, co)
+	repository, err := newMechanismRepository(conf, logger, fw, khr, co, se)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading mechanism catalogue")
 

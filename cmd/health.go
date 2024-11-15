@@ -27,66 +27,80 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/handler/management"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-// nolint: gochecknoglobals
-var healthCmd = &cobra.Command{
-	Use:     "health",
-	Short:   "Checks the health status of a Heimdall deployment",
-	Example: "heimdall health -e https://heimdall.local",
-	Run: func(cmd *cobra.Command, _ []string) {
-		endpointURL, _ := cmd.Flags().GetString("endpoint")
-		outputFormat, _ := cmd.Flags().GetString("output")
-
-		resp, err := http.DefaultClient.Get(fmt.Sprintf("%s%s", endpointURL, management.EndpointHealth))
-		if err != nil {
-			cmd.PrintErrf("Failed to send request: %v", err)
-			os.Exit(-1)
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			cmd.PrintErrf("Unexpected HTTP status code : %s", resp.Status)
-			os.Exit(-1)
-		}
-
-		rawResp, err := io.ReadAll(resp.Body)
-		if err != nil {
-			cmd.PrintErrf("Failed to read response: %v", err)
-			os.Exit(-1)
-		}
-
-		var structuredResponse map[string]any
-		if err := json.Unmarshal(rawResp, &structuredResponse); err != nil {
-			cmd.PrintErrf("Failed to unmarshal response: %v", err)
-			os.Exit(-1)
-		}
-
-		switch outputFormat {
-		case "json":
-			cmd.Println(stringx.ToString(rawResp))
-		case "yaml":
-			rawYaml, err := yaml.Marshal(structuredResponse)
-			if err != nil {
-				cmd.PrintErrf("Failed to convert response to yaml: %v", err)
-				os.Exit(-1)
-			}
-			cmd.Println(stringx.ToString(rawYaml))
-		default:
-			cmd.Println(structuredResponse["status"])
-		}
-	},
-}
+const (
+	healthFlagEndpoint = "endpoint"
+	healthFlagOutput   = "output"
+)
 
 // nolint: gochecknoinits
 func init() {
-	RootCmd.AddCommand(healthCmd)
+	RootCmd.AddCommand(newHealthCmd())
+}
 
-	healthCmd.PersistentFlags().StringP("endpoint", "e", "", `The base URL of Heimdall's deployment. 
+func newHealthCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "health",
+		Short:   "Checks the health status of a Heimdall deployment",
+		Example: "heimdall health -e https://heimdall.local",
+		Run: func(cmd *cobra.Command, _ []string) {
+			status, err := healthStatus(cmd)
+			if err != nil {
+				cmd.PrintErrf("%v", err)
+
+				os.Exit(1)
+			}
+
+			cmd.Println(status)
+		},
+	}
+
+	cmd.PersistentFlags().StringP(healthFlagEndpoint, "e", "", `The base URL of Heimdall's deployment. 
 Note: The endpoint URL should point to a single Heimdall deployment. 
 If the endpoint URL points to a Load Balancer, these commands will effective test the Load Balancer.`)
-	healthCmd.PersistentFlags().StringP("output", "o", "text", `The format for the result output.
+	cmd.PersistentFlags().StringP(healthFlagOutput, "o", "text", `The format for the result output.
 Can be "json", "text", or "yaml".`)
+
+	return cmd
+}
+
+func healthStatus(cmd *cobra.Command) (string, error) {
+	endpointURL, _ := cmd.Flags().GetString(healthFlagEndpoint)
+	outputFormat, _ := cmd.Flags().GetString(healthFlagOutput)
+
+	resp, err := http.DefaultClient.Get(endpointURL + management.EndpointHealth)
+	if err != nil {
+		return "", fmt.Errorf("Failed to send request: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Unexpected HTTP status code : %s", resp.Status)
+	}
+
+	rawResp, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("Failed to read response: %v", err)
+	}
+
+	var structuredResponse map[string]any
+	if err = json.Unmarshal(rawResp, &structuredResponse); err != nil {
+		return "", fmt.Errorf("Failed to unmarshal response: %v", err)
+	}
+
+	switch outputFormat {
+	case "json":
+		return string(rawResp), nil
+	case "yaml":
+		rawYaml, err := yaml.Marshal(structuredResponse)
+		if err != nil {
+			return "", fmt.Errorf("Failed to convert response to yaml: %v", err)
+		}
+
+		return string(rawYaml), nil
+	default:
+		return fmt.Sprintf("%v", structuredResponse["status"]), nil
+	}
 }

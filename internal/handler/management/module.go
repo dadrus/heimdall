@@ -24,8 +24,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keyholder"
 	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var Module = fx.Invoke( // nolint: gochecknoglobals
@@ -41,11 +43,31 @@ func newLifecycleManager(
 	logger zerolog.Logger,
 	khr keyholder.Registry,
 	cw watcher.Watcher,
+	es config.EnforcementSettings,
 ) *fxlcm.LifecycleManager {
 	cfg := conf.Serve.Management
+	serviceName := "Management"
+
+	if cfg.TLS == nil {
+		if es.EnforceManagementTLS {
+			err := errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"No TLS configured. "+
+					"Please address this issue to ensure the protection of sensitive data during communication, "+
+					"or disable this enforcement if necessary")
+			logger.Fatal().Err(err).
+				Str("_service", serviceName).
+				Msg("Initialization failed")
+
+			return nil
+		}
+
+		logger.Warn().
+			Str("_service", serviceName).
+			Msg("No TLS configured")
+	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Management",
+		ServiceName:    serviceName,
 		ServiceAddress: cfg.Address(),
 		Server:         newService(conf, logger, khr),
 		Logger:         logger,

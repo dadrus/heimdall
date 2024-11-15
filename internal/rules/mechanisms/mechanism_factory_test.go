@@ -551,7 +551,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 			)
 
 			// WHEN
-			factory, err := NewMechanismFactory(tc.conf, log.Logger, nil, nil, nil)
+			factory, err := NewMechanismFactory(tc.conf, log.Logger, nil, nil, nil, config.EnforcementSettings{})
 
 			// THEN
 			if err == nil {

@@ -19,24 +19,45 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/cmd/serve"
 )
 
-// nolint: gochecknoglobals
-var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Starts the heimdall in one of its operations modes (decision or proxy)",
-}
-
 // nolint: gochecknoinits
 func init() {
-	RootCmd.AddCommand(serveCmd)
+	RootCmd.AddCommand(newServeCmd())
+}
 
-	serveCmd.PersistentFlags().StringP("config", "c", "",
+func newServeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Starts the heimdall in one of its operations modes (decision or proxy)",
+	}
+
+	cmd.PersistentFlags().StringP(flags.Config, "c", "",
 		"Path to heimdall's configuration file.\n"+
 			"If not provided, the lookup sequence is:\n  1. $PWD\n  2. $HOME/.config\n  3. /etc/heimdall/")
-	serveCmd.PersistentFlags().String("env-config-prefix", "HEIMDALLCFG_",
+	cmd.PersistentFlags().String(flags.EnvironmentConfigPrefix, "HEIMDALLCFG_",
 		"Prefix for the environment variables to consider for\nloading configuration from")
-	serveCmd.AddCommand(serve.NewProxyCommand())
-	serveCmd.AddCommand(serve.NewDecisionCommand())
+	cmd.PersistentFlags().Bool(flags.SkipAllSecurityEnforcement, false,
+		"Disables enforcement of all secure configurations entirely.\n"+
+			"Effectively it enables all the --skip-*-enforcement flags below.")
+	cmd.PersistentFlags().Bool(flags.SkipAllTLSEnforcement, false,
+		"Disables enforcement of TLS for every in- and outbound connection.\n"+
+			"Effectively it enables all the --skip-*-tls-enforcement flags.")
+	cmd.PersistentFlags().Bool(flags.SkipIngressTLSEnforcement, false,
+		"Disables enforcement of TLS configuration for ingress traffic.")
+	cmd.PersistentFlags().Bool(flags.SkipEgressTLSEnforcement, false,
+		"Disables enforcement of TLS configuration for egress traffic.")
+	cmd.PersistentFlags().Bool(flags.SkipManagementTLSEnforcement, false,
+		"Disables enforcement of TLS configuration for the management\nservice.")
+	cmd.PersistentFlags().Bool(flags.SkipUpstreamTLSEnforcement, false,
+		"Disables enforcement of TLS while proxying the requests to the\nupstream services.")
+	cmd.PersistentFlags().Bool(flags.SkipSecureDefaultRuleEnforcement, false,
+		"Disables enforcement of secure configuration of the default\nrule.")
+
+	cmd.AddCommand(serve.NewProxyCommand())
+	cmd.AddCommand(serve.NewDecisionCommand())
+
+	return cmd
 }
