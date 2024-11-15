@@ -17,6 +17,7 @@
 package serve
 
 import (
+	"github.com/dadrus/heimdall/cmd/flags"
 	"strconv"
 	"testing"
 
@@ -37,7 +38,13 @@ func TestCreateDecisionAppForHTTPRequests(t *testing.T) {
 	t.Setenv("SERVE_DECISION_PORT", strconv.Itoa(port1))
 	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
 
-	_, err = createDecisionApp(NewDecisionCommand())
+	cmd := NewDecisionCommand()
+	cmd.PersistentFlags().Bool(flags.SkipAllSecurityEnforcement, true, "")
+
+	err = cmd.ParseFlags([]string{"--" + flags.SkipAllSecurityEnforcement})
+	require.NoError(t, err)
+
+	_, err = createDecisionApp(cmd)
 	require.NoError(t, err)
 }
 
@@ -54,7 +61,9 @@ func TestCreateDecisionAppForEnvoyGRPCRequests(t *testing.T) {
 	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewDecisionCommand()
-	err = cmd.ParseFlags([]string{"--envoy-grpc"})
+	cmd.PersistentFlags().Bool(flags.SkipAllSecurityEnforcement, true, "")
+
+	err = cmd.ParseFlags([]string{"--" + flags.SkipAllSecurityEnforcement, "--" + serveDecisionFlagEnvoyGRPC})
 	require.NoError(t, err)
 
 	_, err = createDecisionApp(cmd)
