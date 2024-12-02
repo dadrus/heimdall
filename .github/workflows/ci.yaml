@@ -177,7 +177,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Run hadolint
-        uses: reviewdog/action-hadolint@73fec8b28091e5082c19df69815dd749d97b882a # v1.46.0
+        uses: reviewdog/action-hadolint@ef609af16122e20a1588bda22a3086cec4e05024 # v1.47.0
         with:
           reporter: github-pr-review
           reviewdog_flags: -fail-level=error
