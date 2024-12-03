@@ -54,12 +54,6 @@ func TestNewServeCmd(t *testing.T) {
 	assert.Equal(t, "false", skipEgressTLSEnforcementFlag.DefValue)
 	assert.NotEmpty(t, skipEgressTLSEnforcementFlag.Usage)
 
-	skipManagementTLSEnforcementFlag := cmd.PersistentFlags().Lookup(flags.SkipManagementTLSEnforcement)
-	assert.NotNil(t, skipManagementTLSEnforcementFlag)
-	assert.Empty(t, skipManagementTLSEnforcementFlag.Shorthand)
-	assert.Equal(t, "false", skipManagementTLSEnforcementFlag.DefValue)
-	assert.NotEmpty(t, skipManagementTLSEnforcementFlag.Usage)
-
 	skipUpstreamTLSEnforcementFlag := cmd.PersistentFlags().Lookup(flags.SkipUpstreamTLSEnforcement)
 	assert.NotNil(t, skipUpstreamTLSEnforcementFlag)
 	assert.Empty(t, skipUpstreamTLSEnforcementFlag.Shorthand)

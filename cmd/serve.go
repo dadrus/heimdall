@@ -49,8 +49,6 @@ func newServeCmd() *cobra.Command {
 		"Disables enforcement of TLS configuration for ingress traffic.")
 	cmd.PersistentFlags().Bool(flags.SkipEgressTLSEnforcement, false,
 		"Disables enforcement of TLS configuration for egress traffic.")
-	cmd.PersistentFlags().Bool(flags.SkipManagementTLSEnforcement, false,
-		"Disables enforcement of TLS configuration for the management\nservice.")
 	cmd.PersistentFlags().Bool(flags.SkipUpstreamTLSEnforcement, false,
 		"Disables enforcement of TLS while proxying the requests to the\nupstream services.")
 	cmd.PersistentFlags().Bool(flags.SkipSecureDefaultRuleEnforcement, false,
