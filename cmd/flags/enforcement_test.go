@@ -54,14 +54,6 @@ func TestEnforcementSettings(t *testing.T) {
 			enforceUpstreamTLS:       true,
 		},
 		{
-			uc:                       "should not enforce management TLS",
-			args:                     []string{"--" + SkipManagementTLSEnforcement},
-			enforceSecureDefaultRule: true,
-			enforceIngressTLS:        true,
-			enforceEgressTLS:         true,
-			enforceUpstreamTLS:       true,
-		},
-		{
 			uc:                       "should not enforce upstream TLS",
 			args:                     []string{"--" + SkipUpstreamTLSEnforcement},
 			enforceSecureDefaultRule: true,
@@ -76,7 +68,6 @@ func TestEnforcementSettings(t *testing.T) {
 			cmd.PersistentFlags().Bool(SkipAllTLSEnforcement, false, "")
 			cmd.PersistentFlags().Bool(SkipIngressTLSEnforcement, false, "")
 			cmd.PersistentFlags().Bool(SkipEgressTLSEnforcement, false, "")
-			cmd.PersistentFlags().Bool(SkipManagementTLSEnforcement, false, "")
 			cmd.PersistentFlags().Bool(SkipUpstreamTLSEnforcement, false, "")
 			cmd.PersistentFlags().Bool(SkipSecureDefaultRuleEnforcement, false, "")
 
@@ -87,7 +78,6 @@ func TestEnforcementSettings(t *testing.T) {
 
 			es := EnforcementSettings(res)
 			assert.Equal(t, tc.enforceSecureDefaultRule, es.EnforceSecureDefaultRule)
-			assert.Equal(t, tc.enforceManagementTLS, es.EnforceManagementTLS)
 			assert.Equal(t, tc.enforceIngressTLS, es.EnforceIngressTLS)
 			assert.Equal(t, tc.enforceEgressTLS, es.EnforceEgressTLS)
 			assert.Equal(t, tc.enforceUpstreamTLS, es.EnforceUpstreamTLS)

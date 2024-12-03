@@ -9,6 +9,5 @@ const (
 	SkipAllTLSEnforcement            = "insecure-skip-all-tls-enforcement"
 	SkipIngressTLSEnforcement        = "insecure-skip-ingress-tls-enforcement"
 	SkipEgressTLSEnforcement         = "insecure-skip-egress-tls-enforcement"
-	SkipManagementTLSEnforcement     = "insecure-skip-management-tls-enforcement"
 	SkipUpstreamTLSEnforcement       = "insecure-skip-upstream-tls-enforcement"
 )
