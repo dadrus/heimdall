@@ -26,4 +26,5 @@ import (
 type subjectCreator interface {
 	Execute(ctx heimdall.Context) (*subject.Subject, error)
 	IsFallbackOnErrorAllowed() bool
+	IsInsecure() bool
 }
