@@ -86,3 +86,5 @@ func (a *anonymousAuthenticator) IsFallbackOnErrorAllowed() bool {
 func (a *anonymousAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *anonymousAuthenticator) IsInsecure() bool { return true }

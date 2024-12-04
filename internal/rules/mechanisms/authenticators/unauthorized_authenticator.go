@@ -68,3 +68,5 @@ func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
 func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *unauthorizedAuthenticator) IsInsecure() bool { return false }

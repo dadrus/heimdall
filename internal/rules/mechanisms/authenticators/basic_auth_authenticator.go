@@ -191,3 +191,5 @@ func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
 func (a *basicAuthAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *basicAuthAuthenticator) IsInsecure() bool { return false }

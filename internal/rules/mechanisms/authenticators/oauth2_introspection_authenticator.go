@@ -226,6 +226,8 @@ func (a *oauth2IntrospectionAuthenticator) ID() string {
 	return a.id
 }
 
+func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
+
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 	ctx heimdall.Context, claims map[string]any,
 ) (oauth2.ServerMetadata, error) {

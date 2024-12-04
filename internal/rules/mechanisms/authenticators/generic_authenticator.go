@@ -172,6 +172,8 @@ func (a *genericAuthenticator) ID() string {
 	return a.id
 }
 
+func (a *genericAuthenticator) IsInsecure() bool { return false }
+
 func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	cch := cache.Ctx(ctx.AppContext())

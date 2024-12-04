@@ -246,6 +246,8 @@ func (a *jwtAuthenticator) ID() string {
 	return a.id
 }
 
+func (a *jwtAuthenticator) IsInsecure() bool { return false }
+
 func (a *jwtAuthenticator) isCacheEnabled() bool {
 	// cache is enabled if ttl is not configured (in that case the ttl value from either
 	// the jwk cert (if available) or the defaultTTL is used), or if ttl is configured and
