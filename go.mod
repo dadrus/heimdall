@@ -5,7 +5,7 @@ go 1.23.4
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alicebob/miniredis/v2 v2.33.0
-	github.com/dadrus/httpsig v0.0.0-20241109082808-e11d6750f9ea
+	github.com/dadrus/httpsig v0.0.0-20241205180119-a763cb63f470
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
