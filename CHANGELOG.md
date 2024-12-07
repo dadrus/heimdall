@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.15.3](https://github.com/dadrus/heimdall/compare/v0.15.2...v0.15.3) (2024-12-07)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to a763cb6 ([#1965](https://github.com/dadrus/heimdall/issues/1965)) ([cc537d2](https://github.com/dadrus/heimdall/commit/cc537d271057a0e7b6a7cc651d0ddaa28c313a91))
+* update golang to v1.23.4 ([#1999](https://github.com/dadrus/heimdall/issues/1999)) ([84a7cd2](https://github.com/dadrus/heimdall/commit/84a7cd207e963e4852f9218ed01fbaa7958c09f2))
+* update golang.org/x/exp digest to 43b7b7c ([#2001](https://github.com/dadrus/heimdall/issues/2001)) ([591d8a1](https://github.com/dadrus/heimdall/commit/591d8a1c36d89ffca95ea80db4489b88dd944d23))
+* update google.golang.org/genproto/googleapis/rpc digest to a4fef06 ([#2004](https://github.com/dadrus/heimdall/issues/2004)) ([fefccd7](https://github.com/dadrus/heimdall/commit/fefccd7c0142badac20949b48ab44b1c514a7ed3))
+* update kubernetes packages to v0.31.3 ([#1985](https://github.com/dadrus/heimdall/issues/1985)) ([ab79a95](https://github.com/dadrus/heimdall/commit/ab79a95ec8850809dfa686527daa95faffaf8b3f))
+* update module github.com/go-co-op/gocron/v2 to v2.12.4 ([#1984](https://github.com/dadrus/heimdall/issues/1984)) ([2924666](https://github.com/dadrus/heimdall/commit/292466672a86781cb064f153f24c92c1cbccd04b))
+* update module github.com/go-playground/validator/v10 to v10.23.0 ([#1973](https://github.com/dadrus/heimdall/issues/1973)) ([8760824](https://github.com/dadrus/heimdall/commit/8760824bbd482f50742c54d25177ab93285dc9fb))
+* update module github.com/google/cel-go to v0.22.1 ([#1986](https://github.com/dadrus/heimdall/issues/1986)) ([09404f8](https://github.com/dadrus/heimdall/commit/09404f8b2cee44793cffabf259df6f34ea1abae0))
+* update module github.com/redis/rueidis to v1.0.51 ([#1993](https://github.com/dadrus/heimdall/issues/1993)) ([c407e5f](https://github.com/dadrus/heimdall/commit/c407e5f067aa90a41ba1a46a618d24dc23db1ca5))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.51 ([#1994](https://github.com/dadrus/heimdall/issues/1994)) ([b800657](https://github.com/dadrus/heimdall/commit/b8006578b3e1da1fab010e8623d379f1f0304f7a))
+* update module github.com/wi2l/jsondiff to v0.6.1 ([#1974](https://github.com/dadrus/heimdall/issues/1974)) ([f488ebe](https://github.com/dadrus/heimdall/commit/f488ebef693344abfd2982bd012daabfb755e908))
+* update module google.golang.org/grpc to v1.68.1 ([#2000](https://github.com/dadrus/heimdall/issues/2000)) ([c08bc4e](https://github.com/dadrus/heimdall/commit/c08bc4eedc46bcb6437a8373aeee56b320c1d508))
+* update module google.golang.org/protobuf to v1.35.2 ([#1968](https://github.com/dadrus/heimdall/issues/1968)) ([10e34e7](https://github.com/dadrus/heimdall/commit/10e34e7ac024a0bc3c931374a629581657b219ce))
+
 ## [0.15.2](https://github.com/dadrus/heimdall/compare/v0.15.1...v0.15.2) (2024-11-10)
 
 
