@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.15.3](https://github.com/dadrus/heimdall/compare/v0.15.2...v0.15.3) (2024-12-15)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to ede02f5 ([#2028](https://github.com/dadrus/heimdall/issues/2028)) ([2e7c22b](https://github.com/dadrus/heimdall/commit/2e7c22b5f2d92e0ecdf319b1bfb909b6b3f89d28))
+* update golang to v1.23.4 ([#1999](https://github.com/dadrus/heimdall/issues/1999)) ([84a7cd2](https://github.com/dadrus/heimdall/commit/84a7cd207e963e4852f9218ed01fbaa7958c09f2))
+* update golang.org/x/exp digest to 1829a12 ([#2009](https://github.com/dadrus/heimdall/issues/2009)) ([7a3eedd](https://github.com/dadrus/heimdall/commit/7a3eedd683420fd333b37c16a96cc7c914598741))
+* update google.golang.org/genproto/googleapis/rpc digest to e6fa225 ([#2007](https://github.com/dadrus/heimdall/issues/2007)) ([c48cdd6](https://github.com/dadrus/heimdall/commit/c48cdd69eca8ac5b8254c32beb47739df3a9992d))
+* update kubernetes packages to v0.32.0 ([#2014](https://github.com/dadrus/heimdall/issues/2014)) ([1af65e1](https://github.com/dadrus/heimdall/commit/1af65e18385240518d28d690c03bfa786b04d136))
+* update module github.com/go-co-op/gocron/v2 to v2.13.0 ([#2017](https://github.com/dadrus/heimdall/issues/2017)) ([c6c522c](https://github.com/dadrus/heimdall/commit/c6c522cdd1efc18092f3318c3572521fb01e042f))
+* update module github.com/go-playground/validator/v10 to v10.23.0 ([#1973](https://github.com/dadrus/heimdall/issues/1973)) ([8760824](https://github.com/dadrus/heimdall/commit/8760824bbd482f50742c54d25177ab93285dc9fb))
+* update module github.com/goccy/go-json to v0.10.4 ([#2016](https://github.com/dadrus/heimdall/issues/2016)) ([684be26](https://github.com/dadrus/heimdall/commit/684be261e9c4bea1f62550582819dcfbd25679e3))
+* update module github.com/google/cel-go to v0.22.1 ([#1986](https://github.com/dadrus/heimdall/issues/1986)) ([09404f8](https://github.com/dadrus/heimdall/commit/09404f8b2cee44793cffabf259df6f34ea1abae0))
+* update module github.com/grpc-ecosystem/go-grpc-middleware/v2 to v2.2.0 ([#2013](https://github.com/dadrus/heimdall/issues/2013)) ([1f580bc](https://github.com/dadrus/heimdall/commit/1f580bcb0ac76b9de2642ccf1f1279c0fdb1200e))
+* update module github.com/redis/rueidis to v1.0.51 ([#1993](https://github.com/dadrus/heimdall/issues/1993)) ([c407e5f](https://github.com/dadrus/heimdall/commit/c407e5f067aa90a41ba1a46a618d24dc23db1ca5))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.51 ([#1994](https://github.com/dadrus/heimdall/issues/1994)) ([b800657](https://github.com/dadrus/heimdall/commit/b8006578b3e1da1fab010e8623d379f1f0304f7a))
+* update module github.com/wi2l/jsondiff to v0.6.1 ([#1974](https://github.com/dadrus/heimdall/issues/1974)) ([f488ebe](https://github.com/dadrus/heimdall/commit/f488ebef693344abfd2982bd012daabfb755e908))
+* update module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc to v0.58.0 ([#2021](https://github.com/dadrus/heimdall/issues/2021)) ([67dd34e](https://github.com/dadrus/heimdall/commit/67dd34e5f7201ff20b3c01f61761c0a33831a866))
+* update module go.opentelemetry.io/contrib/instrumentation/host to v0.58.0 ([#2022](https://github.com/dadrus/heimdall/issues/2022)) ([ba66098](https://github.com/dadrus/heimdall/commit/ba660988bf91072225918944bafd5c9f518583d6))
+* update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.58.0 ([#2023](https://github.com/dadrus/heimdall/issues/2023)) ([83efbbf](https://github.com/dadrus/heimdall/commit/83efbbf01a0b914b20200d6d1fca4d8f2c1e4541))
+* update module go.opentelemetry.io/contrib/instrumentation/runtime to v0.58.0 ([#2025](https://github.com/dadrus/heimdall/issues/2025)) ([6c32af0](https://github.com/dadrus/heimdall/commit/6c32af0bad77a261145921a055268227899ef939))
+* update module go.opentelemetry.io/contrib/propagators/autoprop to v0.58.0 ([#2026](https://github.com/dadrus/heimdall/issues/2026)) ([eb53f4c](https://github.com/dadrus/heimdall/commit/eb53f4c1038f6122322300509deaf7652f3458be))
+* update module google.golang.org/grpc to v1.69.0 ([#2018](https://github.com/dadrus/heimdall/issues/2018)) ([11b1beb](https://github.com/dadrus/heimdall/commit/11b1bebac180f4557b52072bed33cdba12ffc382))
+* update module google.golang.org/protobuf to v1.35.2 ([#1968](https://github.com/dadrus/heimdall/issues/1968)) ([10e34e7](https://github.com/dadrus/heimdall/commit/10e34e7ac024a0bc3c931374a629581657b219ce))
+* update opentelemetry-go monorepo to v1.33.0 ([#2019](https://github.com/dadrus/heimdall/issues/2019)) ([2192811](https://github.com/dadrus/heimdall/commit/2192811b56088c9b2e4af1362da4bbc118b83b63))
+
 ## [0.15.2](https://github.com/dadrus/heimdall/compare/v0.15.1...v0.15.2) (2024-11-10)
 
 
