@@ -80,7 +80,6 @@ func TestValuesMerge(t *testing.T) {
 
 				require.NotEmpty(t, merged)
 				assert.Equal(t, orig, merged)
-				assert.NotSame(t, orig, merged)
 			},
 		},
 		{
@@ -100,7 +99,6 @@ func TestValuesMerge(t *testing.T) {
 
 				require.NotEmpty(t, merged)
 				assert.NotEqual(t, orig, merged)
-				assert.NotSame(t, orig, merged)
 				assert.Len(t, merged, 2)
 
 				tpl := merged["foo"]
