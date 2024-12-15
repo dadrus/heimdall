@@ -77,8 +77,7 @@ linters-settings:
   gomoddirectives:
     replace-allow-list:
       # to avoid having a CVE in the used version
-      - golang.org/x/net
-      - golang.org/x/text
+      - golang.org/x/crypto
   mnd:
     ignored-functions:
       - '^make'
