@@ -20,6 +20,7 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -31,12 +32,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerCEL {
 				return false, nil, nil
 			}
 
-			auth, err := newCELAuthorizer(ctx, id, conf)
+			auth, err := newCELAuthorizer(app, id, conf)
 
 			return true, auth, err
 		})
@@ -44,16 +45,17 @@ func init() {
 
 type celAuthorizer struct {
 	id          string
+	app         app.Context
 	expressions compiledExpressions
 }
 
-func newCELAuthorizer(ctx CreationContext, id string, rawConfig map[string]any) (*celAuthorizer, error) {
+func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*celAuthorizer, error) {
 	type Config struct {
 		Expressions []Expression `mapstructure:"expressions" validate:"required,gt=0,dive"`
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthorizerCEL, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, AuthorizerCEL, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -68,7 +70,7 @@ func newCELAuthorizer(ctx CreationContext, id string, rawConfig map[string]any) 
 		return nil, err
 	}
 
-	return &celAuthorizer{id: id, expressions: expressions}, nil
+	return &celAuthorizer{id: id, app: app, expressions: expressions}, nil
 }
 
 func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
@@ -83,7 +85,7 @@ func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error)
 		return a, nil
 	}
 
-	return newCELAuthorizer(nil, a.id, rawConfig)
+	return newCELAuthorizer(a.app, a.id, rawConfig)
 }
 
 func (a *celAuthorizer) ID() string { return a.id }

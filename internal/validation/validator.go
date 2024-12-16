@@ -10,24 +10,18 @@ import (
 	entranslations "github.com/go-playground/validator/v10/translations/en"
 )
 
-var DefaultValidator *Validator
-
-func init() {
-	var err error
-
-	if DefaultValidator, err = NewValidator(); err != nil {
-		panic(err)
-	}
+type Validator interface {
+	ValidateStruct(s any) error
 }
 
-type Validator struct {
+type validatorImpl struct {
 	v *validator.Validate
 	t ut.Translator
 }
 
-func (v *Validator) ValidateStruct(s any) error { return wrapError(v.v.Struct(s), v.t) }
+func (v *validatorImpl) ValidateStruct(s any) error { return wrapError(v.v.Struct(s), v.t) }
 
-func NewValidator(opts ...Option) (*Validator, error) {
+func NewValidator(opts ...Option) (Validator, error) {
 	enLoc := en.New()
 	uni := ut.New(enLoc, enLoc)
 	translate, _ := uni.GetTranslator("en")
@@ -67,10 +61,8 @@ func NewValidator(opts ...Option) (*Validator, error) {
 		}
 	}
 
-	return &Validator{
+	return &validatorImpl{
 		v: validate,
 		t: translate,
 	}, nil
 }
-
-func ValidateStruct(s any) error { return DefaultValidator.ValidateStruct(s) }

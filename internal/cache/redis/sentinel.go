@@ -21,9 +21,8 @@ import (
 
 	"github.com/redis/rueidis"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 // by intention. Used only during application bootstrap.
@@ -31,7 +30,7 @@ func init() { // nolint: gochecknoinits
 	cache.Register("redis-sentinel", cache.FactoryFunc(NewSentinelCache))
 }
 
-func NewSentinelCache(conf map[string]any, cw watcher.Watcher, co certificate.Observer) (cache.Cache, error) {
+func NewSentinelCache(app app.Context, conf map[string]any) (cache.Cache, error) {
 	type Config struct {
 		baseConfig `mapstructure:",squash"`
 
@@ -44,12 +43,12 @@ func NewSentinelCache(conf map[string]any, cw watcher.Watcher, co certificate.Ob
 		baseConfig: baseConfig{ClientCache: clientCache{TTL: 5 * time.Minute}}, //nolint:mnd
 	}
 
-	err := decodeConfig(conf, &cfg)
+	err := decodeConfig(app.Validator(), conf, &cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions("redis-sentinel", cw, co)
+	opts, err := cfg.clientOptions(app, "redis-sentinel")
 	if err != nil {
 		return nil, err
 	}

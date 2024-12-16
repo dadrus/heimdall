@@ -23,10 +23,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/cache/noop"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestNewCache(t *testing.T) {
@@ -137,8 +139,19 @@ func TestNewCache(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(tc.conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			cch, err := newCache(tc.conf, log.Logger, nil, nil)
+			cch, err := newCache(appCtx)
 
 			// THEN
 			tc.assert(t, err, cch)

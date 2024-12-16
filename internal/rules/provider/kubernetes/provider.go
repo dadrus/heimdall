@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
@@ -67,14 +68,9 @@ type provider struct {
 	store      cache.Store
 }
 
-func newProvider(
-	logger zerolog.Logger,
-	conf *config.Configuration,
-	k8sCF ConfigFactory,
-	processor rule.SetProcessor,
-	factory rule.Factory,
-) (*provider, error) {
-	rawConf := conf.Providers.Kubernetes
+func newProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, factory rule.Factory) (*provider, error) {
+	rawConf := app.Config().Providers.Kubernetes
+	logger := app.Logger()
 
 	if rawConf == nil {
 		return &provider{}, nil
@@ -111,7 +107,7 @@ func newProvider(
 	logger.Info().Msg("Rule provider configured.")
 
 	return &provider{
-		p:          processor,
+		p:          rsp,
 		l:          logger,
 		cl:         client,
 		ac:         authClass,

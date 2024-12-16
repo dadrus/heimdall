@@ -26,9 +26,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -136,11 +138,18 @@ foo: bar`),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			auth, err := newBasicAuthAuthenticator(nil, tc.id, conf)
+			auth, err := newBasicAuthAuthenticator(appCtx, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -304,13 +313,20 @@ password: baz`),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newBasicAuthAuthenticator(nil, tc.id, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			prototype, err := newBasicAuthAuthenticator(appCtx, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -501,7 +517,13 @@ password: bar`))
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			auth, err := newBasicAuthAuthenticator(nil, tc.id, conf)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			auth, err := newBasicAuthAuthenticator(appCtx, tc.id, conf)
 			require.NoError(t, err)
 
 			ctx := mocks.NewContextMock(t)

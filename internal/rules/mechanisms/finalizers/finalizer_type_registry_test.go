@@ -17,6 +17,7 @@
 package finalizers
 
 import (
+	"github.com/dadrus/heimdall/internal/app"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,7 +58,7 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			finalizer, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			finalizer, err := CreatePrototype(app.NewContextMock(t), "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, finalizer)

@@ -28,6 +28,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -44,12 +45,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorGeneric {
 				return false, nil, nil
 			}
 
-			auth, err := newGenericAuthenticator(ctx, id, conf)
+			auth, err := newGenericAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
@@ -57,6 +58,7 @@ func init() {
 
 type genericAuthenticator struct {
 	id                   string
+	app                  app.Context
 	e                    endpoint.Endpoint
 	ads                  extractors.AuthDataExtractStrategy
 	payload              template.Template
@@ -68,7 +70,7 @@ type genericAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-func newGenericAuthenticator(ctx CreationContext, id string, rawConfig map[string]any) (*genericAuthenticator, error) {
+func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
 		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"required"` //nolint:lll
 		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                    validate:"required"` //nolint:lll
@@ -82,12 +84,13 @@ func newGenericAuthenticator(ctx CreationContext, id string, rawConfig map[strin
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthenticatorGeneric, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, AuthenticatorGeneric, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &genericAuthenticator{
 		id:         id,
+		app:        app,
 		e:          conf.Endpoint,
 		ads:        conf.AuthDataSource,
 		payload:    conf.Payload,
@@ -142,12 +145,13 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthenticatorGeneric, config, &conf); err != nil {
+	if err := decodeConfig(a.app, AuthenticatorGeneric, config, &conf); err != nil {
 		return nil, err
 	}
 
 	return &genericAuthenticator{
 		id:         a.id,
+		app:        a.app,
 		e:          a.e,
 		sf:         a.sf,
 		ads:        a.ads,

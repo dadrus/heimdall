@@ -26,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/proxy"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 // NewProxyCommand represents the proxy command.
@@ -50,14 +51,24 @@ func NewProxyCommand() *cobra.Command {
 func createProxyApp(cmd *cobra.Command) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString(flags.Config)
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
+	es := flags.EnforcementSettings(cmd)
+
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	app := fx.New(
 		fx.NopLogger,
 		fx.Supply(
 			config.ConfigurationPath(configPath),
 			config.EnvVarPrefix(envPrefix),
-			flags.EnforcementSettings(cmd),
+			config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 			config.ProxyMode,
+			fx.Annotate(validator, fx.As(new(validation.Validator))),
 		),
 		internal.Module,
 		proxy.Module,

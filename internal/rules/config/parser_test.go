@@ -23,7 +23,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestParseRules(t *testing.T) {
@@ -345,8 +347,14 @@ rules:
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			// WHEN
-			rules, err := ParseRules(tc.contentType, bytes.NewBuffer(tc.content), false)
+			rules, err := ParseRules(validator, tc.contentType, bytes.NewBuffer(tc.content), false)
 
 			// THEN
 			tc.assert(t, err, rules)
@@ -499,8 +507,14 @@ rules:
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			// WHEN
-			ruleSet, err := parseYAML(bytes.NewBuffer(tc.conf), tc.envSupported)
+			ruleSet, err := parseYAML(validator, bytes.NewBuffer(tc.conf), tc.envSupported)
 
 			// THEN
 			tc.assert(t, err, ruleSet)

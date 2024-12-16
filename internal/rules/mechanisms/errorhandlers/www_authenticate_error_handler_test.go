@@ -25,8 +25,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -77,11 +79,18 @@ if: type(Error) == authentication_error
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			errorHandler, err := newWWWAuthenticateErrorHandler(tc.uc, conf)
+			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -156,13 +165,20 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newWWWAuthenticateErrorHandler(tc.uc, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			prototype, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -250,7 +266,13 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 
 			tc.configureContext(t, mctx)
 
-			errorHandler, err := newWWWAuthenticateErrorHandler("foo", conf)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
 
 			// WHEN

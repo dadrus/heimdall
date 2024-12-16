@@ -17,6 +17,7 @@
 package mechanisms
 
 import (
+	"github.com/dadrus/heimdall/internal/app"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -550,8 +551,12 @@ func TestCreateHandlerFactory(t *testing.T) {
 				ok   bool
 			)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(tc.conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			factory, err := NewMechanismFactory(tc.conf, log.Logger, nil, nil, nil)
+			factory, err := NewMechanismFactory(appCtx)
 
 			// THEN
 			if err == nil {

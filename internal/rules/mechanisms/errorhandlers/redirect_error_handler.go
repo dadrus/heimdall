@@ -21,6 +21,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -32,12 +33,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
 			}
 
-			eh, err := newRedirectErrorHandler(id, conf)
+			eh, err := newRedirectErrorHandler(app, id, conf)
 
 			return true, eh, err
 		})
@@ -49,14 +50,14 @@ type redirectErrorHandler struct {
 	code int
 }
 
-func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
+func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type Config struct {
 		To   template.Template `mapstructure:"to"   validate:"required"`
 		Code int               `mapstructure:"code"`
 	}
 
 	var conf Config
-	if err := decodeConfig(ErrorHandlerRedirect, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app.Validator(), ErrorHandlerRedirect, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 

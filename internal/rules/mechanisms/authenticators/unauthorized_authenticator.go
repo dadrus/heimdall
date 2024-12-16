@@ -17,6 +17,7 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -29,7 +30,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
+		func(_ app.Context, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorUnauthorized {
 				return false, nil, nil
 			}

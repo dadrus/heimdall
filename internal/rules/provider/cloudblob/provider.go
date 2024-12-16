@@ -28,10 +28,11 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/maps"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	rule_config "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -42,14 +43,15 @@ type provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          gocron.Scheduler
+	v          validation.Validator
 	cancel     context.CancelFunc
 	states     sync.Map
 	configured bool
 }
 
-func newProvider(
-	conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger,
-) (*provider, error) {
+func newProvider(app app.Context, rsp rule.SetProcessor) (*provider, error) {
+	conf := app.Config()
+	logger := app.Logger()
 	rawConf := conf.Providers.CloudBlob
 
 	if rawConf == nil {
@@ -92,9 +94,10 @@ func newProvider(
 	}
 
 	prov := &provider{
-		p:          processor,
+		p:          rsp,
 		l:          logger,
 		s:          scheduler,
+		v:          app.Validator(),
 		cancel:     cancel,
 		configured: true,
 	}
@@ -152,7 +155,7 @@ func (p *provider) Stop(_ context.Context) error {
 func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.l.Debug().Msg("Retrieving rule set")
 
-	ruleSets, err := rsf.FetchRuleSets(ctx)
+	ruleSets, err := rsf.FetchRuleSets(ctx, p.v)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			p.l.Debug().Msg("Watcher closed")

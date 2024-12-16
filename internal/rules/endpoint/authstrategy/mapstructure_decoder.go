@@ -21,24 +21,14 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-//go:generate mockery --name CreationContext --structname CreationContextMock  --inpackage --testonly
-
-type CreationContext interface {
-	Watcher() watcher.Watcher
-	KeyHolderRegistry() keyholder.Registry
-	CertificateObserver() certificate.Observer
-}
-
-func DecodeAuthenticationStrategyHookFunc(ctx CreationContext) mapstructure.DecodeHookFunc {
+func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
 		var as endpoint.AuthenticationStrategy
 
@@ -67,11 +57,11 @@ func DecodeAuthenticationStrategyHookFunc(ctx CreationContext) mapstructure.Deco
 
 		switch typed["type"] {
 		case "basic_auth":
-			return decodeStrategy("basic_auth", &BasicAuth{}, typed["config"])
+			return decodeStrategy(ctx.Validator(), "basic_auth", &BasicAuth{}, typed["config"])
 		case "api_key":
-			return decodeStrategy("api_key", &APIKey{}, typed["config"])
+			return decodeStrategy(ctx.Validator(), "api_key", &APIKey{}, typed["config"])
 		case "oauth2_client_credentials":
-			return decodeStrategy("oauth2_client_credentials", &OAuth2ClientCredentials{}, typed["config"])
+			return decodeStrategy(ctx.Validator(), "oauth2_client_credentials", &OAuth2ClientCredentials{}, typed["config"])
 		case "http_message_signatures":
 			return decodeHTTPMessageSignaturesStrategy(ctx, typed["config"])
 		default:
@@ -81,10 +71,10 @@ func DecodeAuthenticationStrategyHookFunc(ctx CreationContext) mapstructure.Deco
 	}
 }
 
-func decodeHTTPMessageSignaturesStrategy(ctx CreationContext, config any) (any, error) {
+func decodeHTTPMessageSignaturesStrategy(ctx app.Context, config any) (any, error) {
 	httpSig := &HTTPMessageSignatures{}
 
-	if _, err := decodeStrategy("http_message_signatures", httpSig, config); err != nil {
+	if _, err := decodeStrategy(ctx.Validator(), "http_message_signatures", httpSig, config); err != nil {
 		return nil, err
 	}
 
@@ -103,6 +93,7 @@ func decodeHTTPMessageSignaturesStrategy(ctx CreationContext, config any) (any, 
 }
 
 func decodeStrategy[S endpoint.AuthenticationStrategy](
+	validator validation.Validator,
 	name string,
 	strategy S,
 	config any,
@@ -124,12 +115,12 @@ func decodeStrategy[S endpoint.AuthenticationStrategy](
 			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
 	}
 
-	if err := dec.Decode(config); err != nil {
+	if err = dec.Decode(config); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
 	}
 
-	if err := validation.ValidateStruct(strategy); err != nil {
+	if err = validator.ValidateStruct(strategy); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed validating '%s' strategy config", name).CausedBy(err)
 	}

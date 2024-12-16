@@ -19,6 +19,7 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
@@ -26,25 +27,25 @@ import (
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorAnonymous {
 				return false, nil, nil
 			}
 
-			auth, err := newAnonymousAuthenticator(ctx, id, conf)
+			auth, err := newAnonymousAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
 }
 
 func newAnonymousAuthenticator(
-	ctx CreationContext,
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
-	if err := decodeConfig(ctx, AuthenticatorAnonymous, rawConfig, &auth); err != nil {
+	if err := decodeConfig(app, AuthenticatorAnonymous, rawConfig, &auth); err != nil {
 		return nil, err
 	}
 
@@ -53,12 +54,14 @@ func newAnonymousAuthenticator(
 	}
 
 	auth.id = id
+	auth.app = app
 
 	return &auth, nil
 }
 
 type anonymousAuthenticator struct {
 	id      string
+	app     app.Context
 	Subject string `mapstructure:"subject"`
 }
 
@@ -75,7 +78,7 @@ func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticato
 		return a, nil
 	}
 
-	return newAnonymousAuthenticator(nil, a.id, config)
+	return newAnonymousAuthenticator(a.app, a.id, config)
 }
 
 func (a *anonymousAuthenticator) IsFallbackOnErrorAllowed() bool {

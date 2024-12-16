@@ -32,10 +32,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
@@ -45,9 +47,10 @@ func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc     string
-		conf   []byte
-		assert func(t *testing.T, err error, prov *provider)
+		uc           string
+		conf         []byte
+		willValidate bool
+		assert       func(t *testing.T, err error, prov *provider)
 	}{
 		{
 			uc:   "with unknown field",
@@ -72,7 +75,8 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc: "without url in one of the configured bucket",
+			uc:           "without url in one of the configured bucket",
+			willValidate: true,
 			conf: []byte(`
 buckets:
   - url: s3://foobar
@@ -103,7 +107,8 @@ buckets:
 			},
 		},
 		{
-			uc: "with watch interval and two buckets configured",
+			uc:           "with watch interval and two buckets configured",
+			willValidate: true,
 			conf: []byte(`
 watch_interval: 5s
 buckets:
@@ -142,8 +147,21 @@ buckets:
 				Providers: config.RuleProviders{CloudBlob: providerConf},
 			}
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().Config().Return(conf)
+
+			if tc.willValidate {
+				validator, err := validation.NewValidator(
+					validation.WithTagValidator(config.EnforcementSettings{}),
+				)
+				require.NoError(t, err)
+
+				appCtx.EXPECT().Validator().Return(validator)
+			}
+
 			// WHEN
-			prov, err := newProvider(conf, mocks.NewRuleSetProcessorMock(t), log.Logger)
+			prov, err := newProvider(appCtx, mocks.NewRuleSetProcessorMock(t))
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -556,8 +574,19 @@ rules:
 				Providers: config.RuleProviders{CloudBlob: providerConf},
 			}
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, mock, zerolog.New(logs))
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Validator().Return(validator)
+
+			prov, err := newProvider(appCtx, mock)
 			require.NoError(t, err)
 
 			ctx := context.Background()

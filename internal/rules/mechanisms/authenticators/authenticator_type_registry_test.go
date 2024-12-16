@@ -21,6 +21,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestCreateAuthenticatorPrototype(t *testing.T) {
@@ -56,8 +59,15 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			auth, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			auth, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, auth)

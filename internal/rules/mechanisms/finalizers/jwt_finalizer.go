@@ -27,6 +27,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -46,12 +47,12 @@ const (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerJwt {
 				return false, nil, nil
 			}
 
-			finalizer, err := newJWTFinalizer(ctx, id, conf)
+			finalizer, err := newJWTFinalizer(app, id, conf)
 
 			return true, finalizer, err
 		})
@@ -59,6 +60,7 @@ func init() {
 
 type jwtFinalizer struct {
 	id           string
+	app          app.Context
 	claims       template.Template
 	ttl          time.Duration
 	headerName   string
@@ -66,7 +68,7 @@ type jwtFinalizer struct {
 	signer       *jwtSigner
 }
 
-func newJWTFinalizer(ctx CreationContext, id string, rawConfig map[string]any) (*jwtFinalizer, error) {
+func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwtFinalizer, error) {
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
 		Scheme string `mapstructure:"scheme"`
@@ -80,19 +82,20 @@ func newJWTFinalizer(ctx CreationContext, id string, rawConfig map[string]any) (
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerJwt, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app.Validator(), FinalizerJwt, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
-	signer, err := newJWTSigner(&conf.Signer, ctx.Watcher())
+	signer, err := newJWTSigner(&conf.Signer, app.Watcher())
 	if err != nil {
 		return nil, err
 	}
 
-	ctx.KeyHolderRegistry().AddKeyHolder(signer)
+	app.KeyHolderRegistry().AddKeyHolder(signer)
 
 	fin := &jwtFinalizer{
 		id:     id,
+		app:    app,
 		claims: conf.Claims,
 		ttl: x.IfThenElseExec(conf.TTL != nil,
 			func() time.Duration { return *conf.TTL },
@@ -106,7 +109,7 @@ func newJWTFinalizer(ctx CreationContext, id string, rawConfig map[string]any) (
 		signer: signer,
 	}
 
-	ctx.CertificateObserver().Add(fin)
+	app.CertificateObserver().Add(fin)
 
 	return fin, nil
 }
@@ -164,12 +167,13 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerJwt, rawConfig, &conf); err != nil {
+	if err := decodeConfig(f.app.Validator(), FinalizerJwt, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &jwtFinalizer{
 		id:     f.id,
+		app:    f.app,
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, f.claims),
 		ttl: x.IfThenElseExec(conf.TTL != nil,
 			func() time.Duration { return *conf.TTL },

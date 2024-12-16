@@ -21,6 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/app"
 )
 
 func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
@@ -56,8 +58,11 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			appCtx := app.NewContextMock(t)
+
 			// WHEN
-			errorHandler, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			errorHandler, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, errorHandler)

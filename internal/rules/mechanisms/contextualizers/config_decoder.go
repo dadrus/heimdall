@@ -19,19 +19,19 @@ package contextualizers
 import (
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(ctx CreationContext, contextualizerType string, input, output any) error {
+func decodeConfig(app app.Context, contextualizerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				authstrategy.DecodeAuthenticationStrategyHookFunc(ctx),
+				authstrategy.DecodeAuthenticationStrategyHookFunc(app),
 				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 				template.DecodeTemplateHookFunc(),
@@ -49,7 +49,7 @@ func decodeConfig(ctx CreationContext, contextualizerType string, input, output 
 			"failed decoding '%s' contextualizer config", contextualizerType).CausedBy(err)
 	}
 
-	if err = validation.ValidateStruct(output); err != nil {
+	if err = app.Validator().ValidateStruct(output); err != nil {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed validating '%s' contextualizer config", contextualizerType).CausedBy(err)
 	}

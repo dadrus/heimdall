@@ -21,7 +21,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestCreateContextualzerPrototype(t *testing.T) {
@@ -57,8 +59,15 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			errorHandler, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			errorHandler, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, errorHandler)

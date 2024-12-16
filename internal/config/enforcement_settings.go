@@ -24,13 +24,19 @@ func (v EnforcementSettings) Validate(fl validator.FieldLevel) bool {
 			return true
 		}
 
-		return strings.HasPrefix("https://", fl.Field().String())
+		return strings.HasPrefix(fl.Field().String(), "https://")
 	case "notnil":
 		if !v.EnforceIngressTLS {
 			return true
 		}
 
 		return fl.Field().Kind() == reflect.Struct
+	case "false":
+		if !v.EnforceEgressTLS {
+			return true
+		}
+
+		return !fl.Field().Bool()
 	default:
 		return false
 	}
@@ -48,6 +54,8 @@ func (v EnforcementSettings) Translate(ut ut.Translator, fe validator.FieldError
 		msg = "must be configured"
 	case "istls":
 		msg = "scheme must be https"
+	case "false":
+		msg = "must be false"
 	}
 
 	translation, err := ut.T("enforced", fe.Field(), msg)

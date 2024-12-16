@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(finalizerType string, input, output any) error {
+func decodeConfig(validator validation.Validator, finalizerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -45,7 +45,7 @@ func decodeConfig(finalizerType string, input, output any) error {
 			"failed decoding '%s' finalizer config", finalizerType).CausedBy(err)
 	}
 
-	if err = validation.ValidateStruct(output); err != nil {
+	if err = validator.ValidateStruct(output); err != nil {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed validating '%s' finalizer config", finalizerType).CausedBy(err)
 	}

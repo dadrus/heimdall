@@ -24,6 +24,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -41,12 +42,12 @@ const (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorBasicAuth {
 				return false, nil, nil
 			}
 
-			auth, err := newBasicAuthAuthenticator(ctx, id, conf)
+			auth, err := newBasicAuthAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
@@ -54,13 +55,14 @@ func init() {
 
 type basicAuthAuthenticator struct {
 	id                   string
+	app                  app.Context
 	userID               string
 	password             string
 	allowFallbackOnError bool
 }
 
 func newBasicAuthAuthenticator(
-	ctx CreationContext,
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*basicAuthAuthenticator, error) {
@@ -71,12 +73,13 @@ func newBasicAuthAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	auth := basicAuthAuthenticator{
 		id:                   id,
+		app:                  app,
 		allowFallbackOnError: conf.AllowFallbackOnError,
 	}
 
@@ -154,12 +157,13 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &basicAuthAuthenticator{
-		id: a.id,
+		id:  a.id,
+		app: a.app,
 		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()

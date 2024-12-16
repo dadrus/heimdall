@@ -32,6 +32,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -49,12 +50,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorOAuth2Introspection {
 				return false, nil, nil
 			}
 
-			auth, err := newOAuth2IntrospectionAuthenticator(ctx, id, conf)
+			auth, err := newOAuth2IntrospectionAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
@@ -62,6 +63,7 @@ func init() {
 
 type oauth2IntrospectionAuthenticator struct {
 	id                   string
+	app                  app.Context
 	r                    oauth2.ServerMetadataResolver
 	a                    oauth2.Expectation
 	sf                   SubjectFactory
@@ -72,7 +74,7 @@ type oauth2IntrospectionAuthenticator struct {
 
 // nolint: funlen
 func newOAuth2IntrospectionAuthenticator(
-	ctx CreationContext,
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*oauth2IntrospectionAuthenticator, error) {
@@ -87,7 +89,7 @@ func newOAuth2IntrospectionAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -150,6 +152,7 @@ func newOAuth2IntrospectionAuthenticator(
 
 	return &oauth2IntrospectionAuthenticator{
 		id:                   id,
+		app:                  app,
 		ads:                  ads,
 		r:                    resolver,
 		a:                    conf.Assertions,
@@ -201,12 +204,13 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &oauth2IntrospectionAuthenticator{
 		id:  a.id,
+		app: a.app,
 		r:   a.r,
 		a:   conf.Assertions.Merge(a.a),
 		sf:  a.sf,

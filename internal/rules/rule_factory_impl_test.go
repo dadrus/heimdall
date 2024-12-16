@@ -310,7 +310,10 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
+				am := mocks2.NewAuthenticatorMock(t)
+				am.EXPECT().IsInsecure().Return(false)
+
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(am, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -350,7 +353,10 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
+				am := mocks2.NewAuthenticatorMock(t)
+				am.EXPECT().IsInsecure().Return(false)
+
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(am, nil)
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateAuthorizer(mock.Anything, "zab", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "foo", mock.Anything).Return(nil, nil)
@@ -387,7 +393,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks(t, handlerFactory)
 
 			// WHEN
-			factory, err := NewRuleFactory(handlerFactory, tc.config, config.DecisionMode, log.Logger)
+			factory, err := NewRuleFactory(handlerFactory, tc.config, config.DecisionMode, log.Logger, true)
 
 			// THEN
 			var (

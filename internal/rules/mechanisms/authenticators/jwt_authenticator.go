@@ -32,6 +32,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -53,12 +54,12 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorJwt {
 				return false, nil, nil
 			}
 
-			auth, err := newJwtAuthenticator(ctx, id, conf)
+			auth, err := newJwtAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
@@ -66,6 +67,7 @@ func init() {
 
 type jwtAuthenticator struct {
 	id                   string
+	app                  app.Context
 	r                    oauth2.ServerMetadataResolver
 	a                    oauth2.Expectation
 	ttl                  *time.Duration
@@ -78,7 +80,7 @@ type jwtAuthenticator struct {
 
 // nolint: funlen
 func newJwtAuthenticator(
-	ctx CreationContext,
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*jwtAuthenticator, error) { // nolint: funlen
@@ -95,7 +97,7 @@ func newJwtAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthenticatorJwt, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, AuthenticatorJwt, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -158,6 +160,7 @@ func newJwtAuthenticator(
 
 	return &jwtAuthenticator{
 		id:                   id,
+		app:                  app,
 		r:                    resolver,
 		a:                    conf.Assertions,
 		ttl:                  conf.CacheTTL,
@@ -219,12 +222,13 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthenticatorJwt, config, &conf); err != nil {
+	if err := decodeConfig(a.app, AuthenticatorJwt, config, &conf); err != nil {
 		return nil, err
 	}
 
 	return &jwtAuthenticator{
 		id:  a.id,
+		app: a.app,
 		r:   a.r,
 		a:   conf.Assertions.Merge(a.a),
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),

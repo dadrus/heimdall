@@ -27,6 +27,8 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/decision"
 	envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
+	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 const serveDecisionFlagEnvoyGRPC = "envoy-grpc"
@@ -59,25 +61,28 @@ func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString(flags.Config)
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	useEnvoyExtAuth, _ := cmd.Flags().GetBool(serveDecisionFlagEnvoyGRPC)
+	es := flags.EnforcementSettings(cmd)
 
-	opts := []fx.Option{
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	app := fx.New(
 		fx.NopLogger,
 		fx.Supply(
 			config.ConfigurationPath(configPath),
 			config.EnvVarPrefix(envPrefix),
-			flags.EnforcementSettings(cmd),
+			config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 			config.DecisionMode,
+			fx.Annotate(validator, fx.As(new(validation.Validator))),
 		),
 		internal.Module,
-	}
-
-	if useEnvoyExtAuth {
-		opts = append(opts, envoy_extauth.Module)
-	} else {
-		opts = append(opts, decision.Module)
-	}
-
-	app := fx.New(opts...)
+		x.IfThenElse(useEnvoyExtAuth, envoy_extauth.Module, decision.Module),
+	)
 
 	return app, app.Err()
 }

@@ -35,8 +35,11 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -239,8 +242,18 @@ func TestNewClusterCache(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config(t))
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Watcher().Maybe().Return(nil)
+			appCtx.EXPECT().CertificateObserver().Maybe().Return(nil)
+
 			// WHEN
-			cch, err := NewClusterCache(conf, nil, nil)
+			cch, err := NewClusterCache(appCtx, conf)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}

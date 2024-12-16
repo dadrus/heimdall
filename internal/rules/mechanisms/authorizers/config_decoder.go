@@ -19,19 +19,19 @@ package authorizers
 import (
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(ctx CreationContext, authorizerType string, input, output any) error {
+func decodeConfig(app app.Context, authorizerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				authstrategy.DecodeAuthenticationStrategyHookFunc(ctx),
+				authstrategy.DecodeAuthenticationStrategyHookFunc(app),
 				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 				template.DecodeTemplateHookFunc(),
@@ -49,7 +49,7 @@ func decodeConfig(ctx CreationContext, authorizerType string, input, output any)
 			"failed decoding '%s' authorizer config", authorizerType).CausedBy(err)
 	}
 
-	if err = validation.ValidateStruct(output); err != nil {
+	if err = app.Validator().ValidateStruct(output); err != nil {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed validating '%s' authorizer config", authorizerType).CausedBy(err)
 	}

@@ -19,6 +19,7 @@ package authorizers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -29,7 +30,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Authorizer, error) {
+		func(_ app.Context, id string, typ string, _ map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerDeny {
 				return false, nil, nil
 			}

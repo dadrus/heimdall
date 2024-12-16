@@ -28,10 +28,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
@@ -45,9 +47,10 @@ func TestNewProvider(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 
 	for _, tc := range []struct {
-		uc     string
-		conf   map[string]any
-		assert func(t *testing.T, err error, prov *Provider)
+		uc           string
+		conf         map[string]any
+		willValidate bool
+		assert       func(t *testing.T, err error, prov *Provider)
 	}{
 		{
 			uc: "not configured provider",
@@ -93,8 +96,9 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successfully created provider without watcher",
-			conf: map[string]any{"src": tmpFile.Name()},
+			uc:           "successfully created provider without watcher",
+			conf:         map[string]any{"src": tmpFile.Name()},
+			willValidate: true,
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
@@ -107,8 +111,9 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successfully created provider with watcher",
-			conf: map[string]any{"src": tmpFile.Name(), "watch": true},
+			uc:           "successfully created provider with watcher",
+			conf:         map[string]any{"src": tmpFile.Name(), "watch": true},
+			willValidate: true,
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
@@ -121,8 +126,9 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successfully created provider with env var support enabled",
-			conf: map[string]any{"src": tmpFile.Name(), "env_vars_enabled": true},
+			uc:           "successfully created provider with env var support enabled",
+			conf:         map[string]any{"src": tmpFile.Name(), "env_vars_enabled": true},
+			willValidate: true,
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
@@ -137,9 +143,20 @@ func TestNewProvider(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			conf := &config.Configuration{Providers: config.RuleProviders{FileSystem: tc.conf}}
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().Config().Return(&config.Configuration{Providers: config.RuleProviders{FileSystem: tc.conf}})
 
-			prov, err := NewProvider(conf, nil, log.Logger)
+			if tc.willValidate {
+				validator, err := validation.NewValidator(
+					validation.WithTagValidator(config.EnforcementSettings{}),
+				)
+				require.NoError(t, err)
+
+				appCtx.EXPECT().Validator().Return(validator)
+			}
+
+			prov, err := NewProvider(appCtx, nil)
 
 			tc.assert(t, err, prov)
 		})
@@ -531,12 +548,18 @@ rules:
 				require.NoError(t, err)
 			}
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			// GIVEN
 			prov := &Provider{
 				src:        setupContents(t, tmpFile, tmpDir),
 				p:          processor,
 				l:          log.Logger,
 				w:          watcher,
+				v:          validator,
 				configured: true,
 			}
 
