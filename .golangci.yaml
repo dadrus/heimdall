@@ -31,7 +31,6 @@ issues:
         - errcheck
         - canonicalheader
         - mnd
-        - err113
         - forcetypeassert
         - iface
 
