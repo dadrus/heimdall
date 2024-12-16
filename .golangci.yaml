@@ -47,8 +47,6 @@ linters-settings:
         json: snake
         yaml: snake
   gci:
-    no-inline-comments: true
-    no-prefix-comments: true
     sections:
       - standard # Captures all standard packages if they do not match another section.
       - default # Contains all imports that could not be matched to another section type.
