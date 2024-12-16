@@ -18,10 +18,10 @@ package module
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/app"
 
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	_ "github.com/dadrus/heimdall/internal/cache/memory" // to register the memory cache
 	_ "github.com/dadrus/heimdall/internal/cache/redis"  // to register the redis cache

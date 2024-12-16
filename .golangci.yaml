@@ -17,9 +17,7 @@ linters:
     - depguard
     - zerologlint
     # depricated
-    - gomnd
-    - execinquery
-
+    - exportloopref
 issues:
   exclude-rules:
     - path: '(.+)_test\.go'
@@ -35,6 +33,7 @@ issues:
         - mnd
         - err113
         - forcetypeassert
+        - iface
 
 linters-settings:
   exhaustive:
@@ -84,3 +83,7 @@ linters-settings:
       - '^make'
       - '^math\.'
       - '^time\.*'
+  gosec:
+    excludes:
+      # See also https://github.com/securego/gosec/issues/1212
+      - G115

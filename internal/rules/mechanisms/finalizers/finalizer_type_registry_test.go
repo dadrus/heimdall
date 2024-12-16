@@ -17,11 +17,12 @@
 package finalizers
 
 import (
-	"github.com/dadrus/heimdall/internal/app"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/app"
 )
 
 func TestCreateFinalizerPrototype(t *testing.T) {

@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,6 +28,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/handler/management"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 const (
@@ -69,35 +72,42 @@ func healthStatus(cmd *cobra.Command) (string, error) {
 	endpointURL, _ := cmd.Flags().GetString(healthFlagEndpoint)
 	outputFormat, _ := cmd.Flags().GetString(healthFlagOutput)
 
-	resp, err := http.DefaultClient.Get(endpointURL + management.EndpointHealth)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		endpointURL+management.EndpointHealth,
+		nil,
+	)
 	if err != nil {
-		return "", fmt.Errorf("Failed to send request: %v", err)
+		return "", errorchain.NewWithMessagef(heimdall.ErrInternal, "Failed to send request: %v", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Failed to send request: %v", err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Unexpected HTTP status code : %s", resp.Status)
+		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Unexpected HTTP status code : %s", resp.Status)
 	}
 
 	rawResp, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("Failed to read response: %v", err)
+		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Failed to read response: %v", err)
 	}
 
 	var structuredResponse map[string]any
 	if err = json.Unmarshal(rawResp, &structuredResponse); err != nil {
-		return "", fmt.Errorf("Failed to unmarshal response: %v", err)
+		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Failed to unmarshal response: %v", err)
 	}
 
 	switch outputFormat {
 	case "json":
 		return string(rawResp), nil
 	case "yaml":
-		rawYaml, err := yaml.Marshal(structuredResponse)
-		if err != nil {
-			return "", fmt.Errorf("Failed to convert response to yaml: %v", err)
-		}
+		rawYaml, _ := yaml.Marshal(structuredResponse)
 
 		return string(rawYaml), nil
 	default:

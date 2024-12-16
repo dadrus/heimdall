@@ -259,7 +259,7 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "fin", finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
@@ -309,7 +309,7 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "fin", finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
@@ -588,7 +588,7 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "fin4", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
@@ -623,7 +623,7 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "fin5", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())

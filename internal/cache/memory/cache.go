@@ -19,11 +19,11 @@ package memory
 import (
 	"context"
 	"errors"
-	"github.com/dadrus/heimdall/internal/app"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 )
 

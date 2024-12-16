@@ -17,7 +17,6 @@
 package mechanisms
 
 import (
-	"github.com/dadrus/heimdall/internal/app"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -25,6 +24,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
