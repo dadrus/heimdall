@@ -1,3 +1,7 @@
 [[IgnoredVulns]]
 id = "GO-2022-0646"
 reason = "The access to the S3 bucket happens in read-only mode without making use of the EncryptionClient."
+
+[[IgnoredVulns]]
+id = "GO-2022-0635"
+reason = "The v2 version of the library, respectively AWS S3 V2 is used by default. Usage of v1 must explicitely be enabled when configuring S3 buckets to get rulesets from."

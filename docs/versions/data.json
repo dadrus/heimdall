@@ -114,5 +114,9 @@
   {
     "version": "v0.15.2",
     "path": "/heimdall/v0.15.2"
+  },
+  {
+    "version": "v0.15.3",
+    "path": "/heimdall/v0.15.3"
   }
 ]
