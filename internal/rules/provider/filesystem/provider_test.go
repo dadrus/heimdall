@@ -47,10 +47,9 @@ func TestNewProvider(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 
 	for _, tc := range []struct {
-		uc           string
-		conf         map[string]any
-		willValidate bool
-		assert       func(t *testing.T, err error, prov *Provider)
+		uc     string
+		conf   map[string]any
+		assert func(t *testing.T, err error, prov *Provider)
 	}{
 		{
 			uc: "not configured provider",
@@ -96,9 +95,8 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:           "successfully created provider without watcher",
-			conf:         map[string]any{"src": tmpFile.Name()},
-			willValidate: true,
+			uc:   "successfully created provider without watcher",
+			conf: map[string]any{"src": tmpFile.Name()},
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
@@ -111,9 +109,8 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:           "successfully created provider with watcher",
-			conf:         map[string]any{"src": tmpFile.Name(), "watch": true},
-			willValidate: true,
+			uc:   "successfully created provider with watcher",
+			conf: map[string]any{"src": tmpFile.Name(), "watch": true},
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
@@ -126,9 +123,8 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:           "successfully created provider with env var support enabled",
-			conf:         map[string]any{"src": tmpFile.Name(), "env_vars_enabled": true},
-			willValidate: true,
+			uc:   "successfully created provider with env var support enabled",
+			conf: map[string]any{"src": tmpFile.Name(), "env_vars_enabled": true},
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
@@ -143,18 +139,15 @@ func TestNewProvider(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 			appCtx.EXPECT().Config().Return(&config.Configuration{Providers: config.RuleProviders{FileSystem: tc.conf}})
-
-			if tc.willValidate {
-				validator, err := validation.NewValidator(
-					validation.WithTagValidator(config.EnforcementSettings{}),
-				)
-				require.NoError(t, err)
-
-				appCtx.EXPECT().Validator().Return(validator)
-			}
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
 
 			prov, err := NewProvider(appCtx, nil)
 

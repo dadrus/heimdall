@@ -47,10 +47,9 @@ func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc           string
-		conf         []byte
-		willValidate bool
-		assert       func(t *testing.T, err error, prov *provider)
+		uc     string
+		conf   []byte
+		assert func(t *testing.T, err error, prov *provider)
 	}{
 		{
 			uc:   "with unknown field",
@@ -75,8 +74,7 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:           "without url in one of the configured bucket",
-			willValidate: true,
+			uc: "without url in one of the configured bucket",
 			conf: []byte(`
 buckets:
   - url: s3://foobar
@@ -107,8 +105,7 @@ buckets:
 			},
 		},
 		{
-			uc:           "with watch interval and two buckets configured",
-			willValidate: true,
+			uc: "with watch interval and two buckets configured",
 			conf: []byte(`
 watch_interval: 5s
 buckets:
@@ -147,18 +144,15 @@ buckets:
 				Providers: config.RuleProviders{CloudBlob: providerConf},
 			}
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 			appCtx.EXPECT().Config().Return(conf)
-
-			if tc.willValidate {
-				validator, err := validation.NewValidator(
-					validation.WithTagValidator(config.EnforcementSettings{}),
-				)
-				require.NoError(t, err)
-
-				appCtx.EXPECT().Validator().Return(validator)
-			}
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
 
 			// WHEN
 			prov, err := newProvider(appCtx, mocks.NewRuleSetProcessorMock(t))
