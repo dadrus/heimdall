@@ -52,7 +52,7 @@ func NewValidator(opts ...Option) (Validator, error) {
 			name = fld.Name
 		}
 
-		return "'" + strings.SplitN(name, ",", 2)[0] + "'" // nolint: mnd
+		return "'" + strings.SplitN(name, ",", 2)[0] + "'" // nolint: gomnd
 	})
 
 	for _, opt := range opts {

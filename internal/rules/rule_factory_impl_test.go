@@ -321,7 +321,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(am, nil)
 			},
-			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
+			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
