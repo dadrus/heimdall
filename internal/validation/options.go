@@ -26,16 +26,6 @@ type ErrorTranslator interface {
 	ErrorMessage(param string) string
 }
 
-type TagNameSupplier interface {
-	TagName(sf reflect.StructField) string
-}
-
-type TagNameSupplierFunc func(sf reflect.StructField) string
-
-func (f TagNameSupplierFunc) TagName(sf reflect.StructField) string {
-	return f(sf)
-}
-
 type Option interface {
 	apply(v *validator.Validate, t ut.Translator) error
 }
@@ -74,13 +64,5 @@ func WithErrorTranslator(et ErrorTranslator) Option {
 				return translation
 			},
 		)
-	})
-}
-
-func WithTagNameSupplier(tns TagNameSupplier) Option {
-	return optionFunc(func(v *validator.Validate, _ ut.Translator) error {
-		v.RegisterTagNameFunc(tns.TagName)
-
-		return nil
 	})
 }
