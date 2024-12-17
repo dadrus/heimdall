@@ -133,8 +133,6 @@ rules:
 Create a `docker-compose.yaml` file with the following contents and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:
 
 ```yaml
-version: "3"
-
 services:
   heimdall:
     image: dadrus/heimdall:latest
@@ -154,7 +152,7 @@ services:
 Start the docker compose environment:
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 Call the proxy service endpoint to emulate behavior of a client application:
