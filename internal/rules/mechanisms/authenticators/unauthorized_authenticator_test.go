@@ -81,3 +81,13 @@ func TestUnauthorizedAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 	require.False(t, isAllowed)
 	require.Equal(t, "unauth", auth.ID())
 }
+
+func TestUnauthorizedAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := unauthorizedAuthenticator{}
+
+	// WHEN & THEN
+	require.False(t, auth.IsInsecure())
+}

@@ -2584,3 +2584,13 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 		})
 	}
 }
+
+func TestJwtAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := jwtAuthenticator{}
+
+	// WHEN & THEN
+	require.False(t, auth.IsInsecure())
+}

@@ -1479,3 +1479,13 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 		})
 	}
 }
+
+func TestGenericAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := genericAuthenticator{}
+
+	// WHEN & THEN
+	require.False(t, auth.IsInsecure())
+}

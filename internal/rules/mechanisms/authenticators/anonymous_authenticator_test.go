@@ -214,3 +214,13 @@ func TestAnonymousAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 	// THEN
 	require.False(t, isAllowed)
 }
+
+func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := anonymousAuthenticator{}
+
+	// WHEN & THEN
+	require.True(t, auth.IsInsecure())
+}

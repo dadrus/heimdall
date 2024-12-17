@@ -1893,3 +1893,13 @@ func TestCacheTTLCalculation(t *testing.T) {
 		})
 	}
 }
+
+func TestOauth2IntrospectionAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := oauth2IntrospectionAuthenticator{}
+
+	// WHEN & THEN
+	require.False(t, auth.IsInsecure())
+}
