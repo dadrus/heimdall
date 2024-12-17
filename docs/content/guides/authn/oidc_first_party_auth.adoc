@@ -227,8 +227,6 @@ EOSQL
 +
 [source, yaml]
 ----
-version: '3.7'
-
 services:
   heimdall: # <1>
     image: dadrus/heimdall:dev
@@ -321,7 +319,7 @@ volumes:
 
 With the above configuration in place, follow these steps to start Keycloak and the database, initialize both, and create the OAuth2-Proxy client:
 
-. In the root directory, run `docker-compose up postgresql keycloak`. Wait until the database is initialized and Keycloak has started.
+. In the root directory, run `docker compose up postgresql keycloak`. Wait until the database is initialized and Keycloak has started.
 . Open your browser and go to `\http://127.0.0.1:8080`. Log in using the admin credentials (both the username and password are set to `admin` in our setup).
 . Create a Realm named `test`. For detailed instructions, refer to the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-a-realm_server_administration_guide[ creating a realm].
 . Within the `test` realm, create an OpenID Client. Follow the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide[creating an OIDC client]. Enable "Client authentication" and "Standard Flow", set `\http://127.0.0.1:9090/oauth2/callback` as the "Valid Redirect URI" and `\http://127.0.0.1:9090/` as the "Home URL" and "Valid post logout redirect URIs" and note the "Client ID" and "Client Secret" (later can be found under the "Credentials" tab after completing the client creation wizard); we will use these to complete the OAuth2-Proxy configuration in our Docker Compose file.
@@ -337,7 +335,7 @@ We can now finalize the configuration and use the proper client id and secret fo
 
 We now have almost everything set up. The final step is to create a few users, including at least one with the `admin` role assigned.
 
-. In the root directory, run `docker-compose up`. Wait until all services are up and running.
+. In the root directory, run `docker compose up`. Wait until all services are up and running.
 . Open your browser and navigate to `\http://127.0.0.1:8080`. Log in using the admin credentials (both username and password are set to `admin`).
 . Select the `test` realm and create an `admin` group with a role named `admin` assigned to it. For guidance, refer to the Keycloak documentation on creating https://www.keycloak.org/docs/latest/server_admin/index.html#proc-managing-groups_server_administration_guide[Groups] and https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-realm-roles_server_administration_guide[Roles].
 . Create several users following the Keycloak documentation on  https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-user_server_administration_guide[managing users], and assign some of them to the `admin` group. Disable email verification during user creation to avoid sending verification emails to potentially non-existent addresses.

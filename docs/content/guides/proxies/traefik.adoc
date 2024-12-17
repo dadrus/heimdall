@@ -111,8 +111,6 @@ The following `docker-compose.yaml` file shows a minimal required configuration.
 
 [source, yaml]
 ----
-version: '3.7'
-
 services:
   proxy:
     image: traefik:2.11.0

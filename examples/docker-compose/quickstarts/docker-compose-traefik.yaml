@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   proxy:
     image: traefik:3.0.0
@@ -11,7 +9,7 @@ services:
       --entryPoints.http.address=":9090" 
       --accesslog --api=true --api.insecure=true
     volumes:
-    - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
     labels:
     - traefik.enable=true
     - traefik.http.routers.traefik_http.service=api@internal
