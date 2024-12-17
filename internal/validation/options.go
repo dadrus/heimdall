@@ -11,7 +11,7 @@ type TagValidator interface {
 	// Tag returns the identifier of the custom validator.
 	Tag() string
 	// Validate implements the actual validation logic.
-	Validate(fl validator.FieldLevel) bool
+	Validate(param string, field reflect.Value) bool
 	// AlwaysValidate informs that the Validate function
 	// should always be called, even if the field is not set
 	AlwaysValidate() bool
@@ -22,8 +22,8 @@ type ErrorTranslator interface {
 	Tag() string
 	// MessageTemplate returns a template for error translation
 	MessageTemplate() string
-	// Translate translates a raised validation error if any.
-	Translate(ut ut.Translator, fe validator.FieldError) string
+	// ErrorMessage provides an error message for the given param.
+	ErrorMessage(param string) string
 }
 
 type TagNameSupplier interface {
@@ -48,7 +48,11 @@ func (f optionFunc) apply(v *validator.Validate, t ut.Translator) error {
 
 func WithTagValidator(tv TagValidator) Option {
 	return optionFunc(func(v *validator.Validate, _ ut.Translator) error {
-		err := v.RegisterValidation(tv.Tag(), tv.Validate, tv.AlwaysValidate())
+		err := v.RegisterValidation(
+			tv.Tag(),
+			func(fl validator.FieldLevel) bool { return tv.Validate(fl.Param(), fl.Field()) },
+			tv.AlwaysValidate(),
+		)
 
 		return err
 	})
@@ -60,7 +64,16 @@ func WithErrorTranslator(et ErrorTranslator) Option {
 			return ut.Add(et.Tag(), et.MessageTemplate(), true)
 		}
 
-		return v.RegisterTranslation(et.Tag(), t, registerFn, et.Translate)
+		return v.RegisterTranslation(et.Tag(), t, registerFn,
+			func(ut ut.Translator, fe validator.FieldError) string {
+				translation, err := ut.T(et.Tag(), fe.Field(), et.ErrorMessage(fe.Param()))
+				if err != nil {
+					return fe.Error()
+				}
+
+				return translation
+			},
+		)
 	})
 }
 

@@ -3,9 +3,6 @@ package config
 import (
 	"reflect"
 	"strings"
-
-	ut "github.com/go-playground/universal-translator"
-	"github.com/go-playground/validator/v10"
 )
 
 type EnforcementSettings struct {
@@ -17,26 +14,26 @@ type EnforcementSettings struct {
 
 func (v EnforcementSettings) Tag() string { return "enforced" }
 
-func (v EnforcementSettings) Validate(fl validator.FieldLevel) bool {
-	switch fl.Param() {
+func (v EnforcementSettings) Validate(param string, field reflect.Value) bool {
+	switch param {
 	case "istls":
 		if !v.EnforceEgressTLS {
 			return true
 		}
 
-		return strings.HasPrefix(fl.Field().String(), "https://")
+		return strings.HasPrefix(field.String(), "https://")
 	case "notnil":
 		if !v.EnforceIngressTLS {
 			return true
 		}
 
-		return fl.Field().Kind() == reflect.Struct
+		return field.Kind() == reflect.Struct
 	case "false":
 		if !v.EnforceEgressTLS {
 			return true
 		}
 
-		return !fl.Field().Bool()
+		return !field.Bool()
 	default:
 		return false
 	}
@@ -46,22 +43,15 @@ func (v EnforcementSettings) AlwaysValidate() bool { return true }
 
 func (v EnforcementSettings) MessageTemplate() string { return "{0} {1}" }
 
-func (v EnforcementSettings) Translate(ut ut.Translator, fe validator.FieldError) string {
-	var msg string
-
-	switch fe.Param() {
+func (v EnforcementSettings) ErrorMessage(param string) string {
+	switch param {
 	case "notnil":
-		msg = "must be configured"
+		return "must be configured"
 	case "istls":
-		msg = "scheme must be https"
+		return "scheme must be https"
 	case "false":
-		msg = "must be false"
+		return "must be false"
+	default:
+		return "parameter is unknown"
 	}
-
-	translation, err := ut.T("enforced", fe.Field(), msg)
-	if err != nil {
-		return fe.Error()
-	}
-
-	return translation
 }
