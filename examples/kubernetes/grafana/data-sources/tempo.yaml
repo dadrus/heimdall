@@ -1,17 +1,22 @@
-apiVersion: integreatly.org/v1alpha1
-kind: GrafanaDataSource
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
 metadata:
   name: tempo-datasource
   namespace: monitoring
 spec:
-  name: tempo-datasource
-  datasources:
-    - name: Tempo
-      type: tempo
-      uid: TEMPO
-      url: http://tempo:3100
-      isDefault: false
-      jsonData:
-        tracesToLogs:
-          datasourceUid: LOKI
-          filterBySpanID: true
+  datasource:
+    name: Tempo
+    type: tempo
+    url: http://tempo-grafana-tempo-query-frontend:3200
+    isDefault: false
+    uid: TEMPO
+    access: proxy
+    jsonData:
+      tracesToLogs:
+        datasourceUid: LOKI
+        filterBySpanID: true
+      tracesToMetrics:
+        datasourceUid: PROMETHEUS
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana

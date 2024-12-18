@@ -1,20 +1,18 @@
-operator:
-  scanAllNamespaces: true
 grafana:
-  dashboardLabelSelectors:
-    - matchLabels:
-        release: grafana
+  labels:
+    dashboards: grafana
   ingress:
     enabled: true
+    ingressClassName: nginx
   config:
     users:
       auto_assign_org_role: Admin
     log:
       level: debug
-    metrics:
-      enabled: true
     security:
       admin_user: admin
       admin_password: monitoring
-    feature_toggles:
-      enable: flameGraph
+operator:
+  prometheus:
+    serviceMonitor:
+      enabled: true
