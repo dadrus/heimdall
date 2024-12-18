@@ -1,15 +1,15 @@
-grafana_version := '2.7.15'
-prometheus_version := '44.2.1'
-loki_version := '2.8.9'
-tempo_version := '0.16.8'
-phlare_version := '0.1.2'
+grafana_version := '4.9.0'
+prometheus_version := '10.2.1'
+loki_version := '4.7.0'
+tempo_version := '3.8.0'
+pyroscope_version := '1.10.0'
 nginx_version := '4.10.1'
 contour_version := '17.0.12'
 emissary_version := '8.9.1'
 haproxy_version := '0.14.6'
 envoy_gw_version := 'v1.0.1'
 traefik_version := '28.0.0'
-metallb_version := '0.14.5'
+metallb_version := '0.14.8'
 certmanager_version := '1.15.3'
 trustmanager_version := '0.12.0'
 certmanager_istio_csr_version := '0.12.0'
@@ -33,57 +33,56 @@ setup-charts:
   helm repo update
 
 ## Installs Grafana
-install-grafana: setup-charts
+install-grafana:
   #!/usr/bin/env bash
   lb_address=$(kubectl get svc -A -o json | jq -r '.items[] | select(.spec.type == "LoadBalancer").status.loadBalancer.ingress[0].ip')
 
   helm upgrade --install grafana bitnami/grafana-operator \
     -n monitoring --create-namespace \
-    --set grafana.ingress.hostname="grafana.${lb_address}.nip.io" \
+    --set grafana.ingress.host="grafana.${lb_address}.nip.io" \
     --set grafana.config.server.root_url="https://grafana.${lb_address}.nip.io" \
     --values grafana/helm-values.yaml \
     --version {{grafana_version}} \
     --wait
-  while : ; do
-    kubectl rollout -n monitoring status deployment grafana-deployment && break
-    sleep 2
-  done
 
+  kubectl apply -f grafana/data-sources/prometheus.yaml
+  kubectl apply -f grafana/data-sources/loki.yaml
+  kubectl apply -f grafana/data-sources/tempo.yaml
+  kubectl apply -f grafana/data-sources/pyroscope.yaml
 
 # Installs Prometheus
-install-prometheus: setup-charts
-  helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
+install-prometheus:
+  helm upgrade --install prometheus bitnami/kube-prometheus \
     -n monitoring --create-namespace \
-    --set grafana.enabled=false \
     --version {{prometheus_version}} \
     --wait
-  kubectl apply -f grafana/data-sources/prometheus.yaml
 
 # Installs Loki
-install-loki: setup-charts
-  helm upgrade --install loki grafana/loki-stack \
+install-loki:
+  helm upgrade --install loki bitnami/grafana-loki \
     -n monitoring --create-namespace \
+    --set metrics.enabled=true \
+    --set metrics.serviceMonitor.enabled=true \
     --version {{loki_version}} \
-    --set grafana.enabled=false \
     --wait
-  kubectl apply -f grafana/data-sources/loki.yaml
 
 # Installs Tempo
-install-tempo: setup-charts
-  helm upgrade --install tempo grafana/tempo \
+install-tempo:
+  helm upgrade --install tempo bitnami/grafana-tempo \
     -n monitoring --create-namespace \
-    --set tempo.searchEnabled=true \
+    --set metrics.enabled=true \
+    --set metrics.serviceMonitor.enabled=true \
+    --set tempo.traces.otlp.grpc=true \
     --version {{tempo_version}} \
     --wait
-  kubectl apply -f grafana/data-sources/tempo.yaml
 
-# Installs Phlare
-install-phlare: setup-charts
-  helm upgrade --install phlare grafana/phlare \
+# Installs Pyroscope
+install-pyroscope:
+  helm upgrade --install pyroscope grafana/pyroscope \
    -n monitoring --create-namespace \
-   --version {{phlare_version}} \
+   --set serviceMonitor.enabled=true \
+   --version {{pyroscope_version}} \
    --wait
-  kubectl apply -f grafana/data-sources/phlare.yaml
 
 install-dashboards:
   #!/usr/bin/env bash
@@ -94,7 +93,7 @@ install-dashboards:
 install-heimdall-pod-monitor:
   kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
 
-install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards install-heimdall-pod-monitor
+install-observability-stack: setup-charts install-prometheus install-loki install-tempo install-pyroscope install-grafana  install-heimdall-pod-monitor #install-dashboards
 
 install-nginx-ingress-controller global_ext_auth="true":
   #!/usr/bin/env bash
@@ -197,8 +196,10 @@ install-istio with_ingress_gw="true":
 
 install-lb:
   #!/usr/bin/env bash
+  kubectl apply -f metallb/namespace.yaml
+
   helm upgrade --install metallb metallb/metallb \
-    -n metallb-system --create-namespace \
+    -n metallb-system \
     --version {{metallb_version}} \
     --wait
 
@@ -299,3 +300,5 @@ install-istio-gw-decision-demo: setup-cluster (install-istio "false") (install-h
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
+
+foo: (install-heimdall "nginx")

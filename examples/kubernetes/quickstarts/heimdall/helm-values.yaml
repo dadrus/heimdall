@@ -24,8 +24,9 @@ admissionController:
 env:
   OTEL_METRICS_EXPORTER: "prometheus"
   OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
-  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo.monitoring:4317"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: "grpc"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo-grafana-tempo-distributor.monitoring:4317"
 
 image:
   tag: dev

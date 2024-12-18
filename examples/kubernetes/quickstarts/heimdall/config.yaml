@@ -1,5 +1,9 @@
 log:
+  format: gelf
   level: trace
+
+profiling:
+  enabled: true
 
 serve:
   decision:
