@@ -25,6 +25,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keyholder"
@@ -33,8 +34,11 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
+
+const rulesetValidationFlagProxyMode = "proxy-mode"
 
 var errFunctionNotSupported = errors.New("function not supported")
 
@@ -56,24 +60,34 @@ func NewValidateRulesCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().Bool("proxy-mode", false,
+	cmd.PersistentFlags().Bool(rulesetValidationFlagProxyMode, false,
 		"If specified, rule set validation considers usage in proxy operation mode")
 
 	return cmd
 }
 
 func validateRuleSet(cmd *cobra.Command, args []string) error {
-	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
+	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	logger := zerolog.Nop()
 
-	configPath, _ := cmd.Flags().GetString("config")
+	configPath, _ := cmd.Flags().GetString(flags.Config)
 	if len(configPath) == 0 {
 		return ErrNoConfigFile
 	}
 
 	opMode := config.DecisionMode
-	if proxyMode, _ := cmd.Flags().GetBool("proxy-mode"); proxyMode {
+	if proxyMode, _ := cmd.Flags().GetBool(rulesetValidationFlagProxyMode); proxyMode {
 		opMode = config.ProxyMode
+	}
+
+	es := flags.EnforcementSettings(cmd)
+
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	if err != nil {
+		return err
 	}
 
 	conf, err := config.NewConfiguration(
@@ -86,23 +100,32 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
-	mFactory, err := mechanisms.NewMechanismFactory(
+	appCtx := &appContext{
+		w:   &watcher.NoopWatcher{},
+		khr: &noopRegistry{},
+		co:  &noopCertificateObserver{},
+		v:   validator,
+		l:   logger,
+		c:   conf,
+	}
+
+	mFactory, err := mechanisms.NewMechanismFactory(appCtx)
+	if err != nil {
+		return err
+	}
+
+	rFactory, err := rules.NewRuleFactory(
+		mFactory,
 		conf,
+		opMode,
 		logger,
-		&watcher.NoopWatcher{},
-		&noopRegistry{},
-		&noopCertificateObserver{},
+		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)
 	if err != nil {
 		return err
 	}
 
-	rFactory, err := rules.NewRuleFactory(mFactory, conf, opMode, logger)
-	if err != nil {
-		return err
-	}
-
-	provider, err := filesystem.NewProvider(conf, rules.NewRuleSetProcessor(&noopRepository{}, rFactory), logger)
+	provider, err := filesystem.NewProvider(appCtx, rules.NewRuleSetProcessor(&noopRepository{}, rFactory))
 	if err != nil {
 		return err
 	}

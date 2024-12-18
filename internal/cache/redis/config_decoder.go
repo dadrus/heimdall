@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(input any, output any) error {
+func decodeConfig(validator validation.Validator, input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -48,7 +48,7 @@ func decodeConfig(input any, output any) error {
 			"failed decoding redis cache config").CausedBy(err)
 	}
 
-	if err = validation.ValidateStruct(output); err != nil {
+	if err = validator.ValidateStruct(output); err != nil {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed validating redis cache config").CausedBy(err)
 	}

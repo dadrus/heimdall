@@ -22,6 +22,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
@@ -33,12 +34,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerOAuth2ClientCredentials {
 				return false, nil, nil
 			}
 
-			finalizer, err := newOAuth2ClientCredentialsFinalizer(id, conf)
+			finalizer, err := newOAuth2ClientCredentialsFinalizer(app, id, conf)
 
 			return true, finalizer, err
 		})
@@ -46,12 +47,14 @@ func init() {
 
 type oauth2ClientCredentialsFinalizer struct {
 	id           string
+	app          app.Context
 	cfg          clientcredentials.Config
 	headerName   string
 	headerScheme string
 }
 
 func newOAuth2ClientCredentialsFinalizer(
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*oauth2ClientCredentialsFinalizer, error) {
@@ -66,7 +69,7 @@ func newOAuth2ClientCredentialsFinalizer(
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app.Validator(), FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -78,6 +81,7 @@ func newOAuth2ClientCredentialsFinalizer(
 
 	return &oauth2ClientCredentialsFinalizer{
 		id:  id,
+		app: app,
 		cfg: conf.Config,
 		headerName: x.IfThenElseExec(conf.Header != nil,
 			func() string { return conf.Header.Name },
@@ -104,7 +108,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
+	if err := decodeConfig(f.app.Validator(), FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -114,6 +118,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 
 	return &oauth2ClientCredentialsFinalizer{
 		id:  f.id,
+		app: f.app,
 		cfg: cfg,
 		headerName: x.IfThenElseExec(conf.Header != nil,
 			func() string { return conf.Header.Name },

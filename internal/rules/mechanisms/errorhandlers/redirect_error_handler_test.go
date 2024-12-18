@@ -26,8 +26,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -111,11 +113,18 @@ code: 301
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			errorHandler, err := newRedirectErrorHandler(tc.uc, conf)
+			errorHandler, err := newRedirectErrorHandler(appCtx, tc.uc, conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -167,13 +176,20 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newRedirectErrorHandler(tc.uc, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			prototype, err := newRedirectErrorHandler(appCtx, tc.uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -293,7 +309,13 @@ code: 300
 
 			tc.configureContext(t, mctx)
 
-			errorHandler, err := newRedirectErrorHandler("foo", conf)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			errorHandler, err := newRedirectErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
 
 			// WHEN

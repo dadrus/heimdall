@@ -18,6 +18,7 @@ package rules
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestConditionalSubjectHandlerExecute(t *testing.T) {
@@ -72,14 +72,14 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 				t.Helper()
 
 				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).
-					Return(true, testsupport.ErrTestPurpose)
+					Return(true, errors.New("test error"))
 				h.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, testsupport.ErrTestPurpose)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 	} {

@@ -21,6 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/app"
 )
 
 func TestCreateFinalizerPrototype(t *testing.T) {
@@ -57,7 +59,7 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			finalizer, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			finalizer, err := CreatePrototype(app.NewContextMock(t), "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, finalizer)

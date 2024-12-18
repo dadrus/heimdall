@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -37,6 +38,12 @@ func TestCreateProxyApp(t *testing.T) {
 	t.Setenv("SERVE_PROXY_PORT", strconv.Itoa(port1))
 	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
 
-	_, err = createProxyApp(NewProxyCommand())
+	cmd := NewProxyCommand()
+	cmd.PersistentFlags().Bool(flags.SkipAllSecurityEnforcement, true, "")
+
+	err = cmd.ParseFlags([]string{"--" + flags.SkipAllSecurityEnforcement})
+	require.NoError(t, err)
+
+	_, err = createProxyApp(cmd)
 	require.NoError(t, err)
 }

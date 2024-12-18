@@ -28,4 +28,5 @@ type Authenticator interface {
 	Execute(ctx heimdall.Context) (*subject.Subject, error)
 	WithConfig(config map[string]any) (Authenticator, error)
 	IsFallbackOnErrorAllowed() bool
+	IsInsecure() bool
 }

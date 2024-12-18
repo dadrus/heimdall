@@ -33,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
@@ -301,6 +302,9 @@ rules:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
 			cch := mocks.NewCacheMock(t)
 			ctx := log.Logger.With().
 				Str("_provider_type", "http_endpoint").
@@ -316,7 +320,7 @@ rules:
 				})
 
 			// WHEN
-			ruleSet, err := tc.ep.FetchRuleSet(ctx)
+			ruleSet, err := tc.ep.FetchRuleSet(ctx, validator)
 
 			// THEN
 			tc.assert(t, err, ruleSet)

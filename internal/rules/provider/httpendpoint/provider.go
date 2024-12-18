@@ -26,8 +26,8 @@ import (
 	"github.com/go-co-op/gocron/v2"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -39,15 +39,15 @@ type provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          gocron.Scheduler
+	v          validation.Validator
 	cancel     context.CancelFunc
 	states     sync.Map
 	configured bool
 }
 
-func newProvider(
-	conf *config.Configuration, cch cache.Cache, processor rule.SetProcessor, logger zerolog.Logger,
-) (*provider, error) {
-	rawConf := conf.Providers.HTTPEndpoint
+func newProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*provider, error) {
+	rawConf := app.Config().Providers.HTTPEndpoint
+	logger := app.Logger()
 
 	if rawConf == nil {
 		return &provider{}, nil
@@ -59,14 +59,8 @@ func newProvider(
 	}
 
 	var providerConf Config
-	if err := decodeConfig(rawConf, &providerConf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed decoding http_endpoint rule provider config").CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&providerConf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating http_endpoint rule provider config").CausedBy(err)
+	if err := decodeConfig(app.Validator(), rawConf, &providerConf); err != nil {
+		return nil, err
 	}
 
 	for _, ep := range providerConf.Endpoints {
@@ -92,9 +86,10 @@ func newProvider(
 	}
 
 	prov := &provider{
-		p:          processor,
+		p:          rsp,
 		l:          logger,
 		s:          scheduler,
+		v:          app.Validator(),
 		cancel:     cancel,
 		configured: true,
 	}
@@ -149,7 +144,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		Str("_endpoint", rsf.ID()).
 		Msg("Retrieving rule set")
 
-	ruleSet, err := rsf.FetchRuleSet(ctx)
+	ruleSet, err := rsf.FetchRuleSet(ctx, p.v)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			p.l.Debug().Msg("Watcher closed")

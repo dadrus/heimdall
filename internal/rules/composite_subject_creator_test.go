@@ -18,6 +18,7 @@ package rules
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestCompositeSubjectCreatorExecution(t *testing.T) {
@@ -79,14 +79,14 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			) {
 				t.Helper()
 
-				first.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
+				first.EXPECT().Execute(ctx).Return(nil, errors.New("test error"))
 				first.EXPECT().IsFallbackOnErrorAllowed().Return(false)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, err, testsupport.ErrTestPurpose)
+				assert.Equal(t, err, errors.New("test error"))
 			},
 		},
 		{
@@ -96,7 +96,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			) {
 				t.Helper()
 
-				first.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
+				first.EXPECT().Execute(ctx).Return(nil, errors.New("test error"))
 				first.EXPECT().IsFallbackOnErrorAllowed().Return(true)
 				second.EXPECT().Execute(ctx).Return(sub, nil)
 			},

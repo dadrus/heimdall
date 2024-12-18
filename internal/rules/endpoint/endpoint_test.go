@@ -462,7 +462,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 					rawData, err := io.ReadAll(request.Body)
 					require.NoError(t, err)
-					assert.Equal(t, []byte(`{"hello":"world"}`), rawData)
+					assert.JSONEq(t, `{"hello":"world"}`, string(rawData))
 				}
 			},
 			assert: func(t *testing.T, response []byte, err error) {

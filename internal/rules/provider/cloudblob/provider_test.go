@@ -32,10 +32,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
@@ -142,8 +144,18 @@ buckets:
 				Providers: config.RuleProviders{CloudBlob: providerConf},
 			}
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			prov, err := newProvider(conf, mocks.NewRuleSetProcessorMock(t), log.Logger)
+			prov, err := newProvider(appCtx, mocks.NewRuleSetProcessorMock(t))
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -556,8 +568,19 @@ rules:
 				Providers: config.RuleProviders{CloudBlob: providerConf},
 			}
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, mock, zerolog.New(logs))
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Validator().Return(validator)
+
+			prov, err := newProvider(appCtx, mock)
 			require.NoError(t, err)
 
 			ctx := context.Background()

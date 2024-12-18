@@ -18,6 +18,7 @@ package rules
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"testing"
 
@@ -31,7 +32,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestRuleExecute(t *testing.T) {
@@ -61,9 +61,11 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
-				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
+				testErr := errors.New("test error")
+
+				authenticator.EXPECT().Execute(ctx).Return(nil, testErr)
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
+				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
@@ -82,15 +84,17 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
-				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
+				testErr := errors.New("test error")
+
+				authenticator.EXPECT().Execute(ctx).Return(nil, testErr)
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, testsupport.ErrTestPurpose2)
+				require.ErrorContains(t, err, "some error")
 				assert.Nil(t, backend)
 			},
 		},
@@ -106,10 +110,12 @@ func TestRuleExecute(t *testing.T) {
 
 				sub := &subject.Subject{ID: "Foo"}
 
+				testErr := errors.New("test error")
+
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				authorizer.EXPECT().Execute(ctx, sub).Return(testErr)
 				authorizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
+				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
@@ -130,16 +136,18 @@ func TestRuleExecute(t *testing.T) {
 
 				sub := &subject.Subject{ID: "Foo"}
 
+				testErr := errors.New("test error")
+
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				authorizer.EXPECT().Execute(ctx, sub).Return(testErr)
 				authorizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, testsupport.ErrTestPurpose2)
+				require.ErrorContains(t, err, "some error")
 				assert.Nil(t, backend)
 			},
 		},
@@ -155,11 +163,13 @@ func TestRuleExecute(t *testing.T) {
 
 				sub := &subject.Subject{ID: "Foo"}
 
+				testErr := errors.New("test error")
+
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
 				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				finalizer.EXPECT().Execute(ctx, sub).Return(testErr)
 				finalizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
+				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
@@ -180,17 +190,19 @@ func TestRuleExecute(t *testing.T) {
 
 				sub := &subject.Subject{ID: "Foo"}
 
+				testErr := errors.New("test error")
+
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
 				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
+				finalizer.EXPECT().Execute(ctx, sub).Return(testErr)
 				finalizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, testsupport.ErrTestPurpose2)
+				require.ErrorContains(t, err, "some error")
 				assert.Nil(t, backend)
 			},
 		},

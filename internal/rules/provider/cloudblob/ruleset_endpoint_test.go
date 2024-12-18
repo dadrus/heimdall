@@ -31,6 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -419,11 +420,14 @@ rules:
 			// GIVEN
 			clearBucket(t)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
 			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T) { t.Helper() })
 			setup(t)
 
 			// WHEN
-			rs, err := tc.endpoint.FetchRuleSets(context.Background())
+			rs, err := tc.endpoint.FetchRuleSets(context.Background(), validator)
 
 			// THEN
 			tc.assert(t, err, rs)

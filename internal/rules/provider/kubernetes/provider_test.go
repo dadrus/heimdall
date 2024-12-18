@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
@@ -106,8 +107,12 @@ func TestNewProvider(t *testing.T) {
 			}
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			prov, err := newProvider(log.Logger, conf, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
+			prov, err := newProvider(appCtx, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -400,7 +405,7 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnCreated(mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -650,7 +655,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnDeleted(mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -934,7 +939,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnUpdated(mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -987,7 +992,11 @@ func TestProviderLifecycle(t *testing.T) {
 			processor := mocks.NewRuleSetProcessorMock(t)
 			setupProcessor(t, processor)
 
-			prov, err := newProvider(log.Logger, conf, k8sCF, processor, mocks.NewFactoryMock(t))
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prov, err := newProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
 
 			ctx := context.Background()

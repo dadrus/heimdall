@@ -37,8 +37,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -340,12 +343,21 @@ func TestNewStandaloneCache(t *testing.T) {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			wm := mocks.NewWatcherMock(t)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config(t, wm))
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Watcher().Maybe().Return(wm)
+			appCtx.EXPECT().CertificateObserver().Maybe().Return(nil)
+
 			// WHEN
-			cch, err := NewStandaloneCache(conf, wm, nil)
+			cch, err := NewStandaloneCache(appCtx, conf)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}

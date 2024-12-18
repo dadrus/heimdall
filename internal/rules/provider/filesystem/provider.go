@@ -30,10 +30,11 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -42,12 +43,15 @@ type Provider struct {
 	w              *fsnotify.Watcher
 	p              rule.SetProcessor
 	l              zerolog.Logger
+	v              validation.Validator
 	states         sync.Map
 	envVarsEnabled bool
 	configured     bool
 }
 
-func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*Provider, error) {
+func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
+	conf := app.Config()
+	logger := app.Logger()
 	rawConf := conf.Providers.FileSystem
 
 	if conf.Providers.FileSystem == nil {
@@ -103,8 +107,9 @@ func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger
 	return &Provider{
 		src:            absPath,
 		w:              watcher,
-		p:              processor,
+		p:              rsp,
 		l:              logger,
+		v:              app.Validator(),
 		configured:     true,
 		envVarsEnabled: providerConf.EnvVarsEnabled,
 	}, nil
@@ -265,7 +270,7 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 
 	md := sha256.New()
 
-	ruleSet, err := config2.ParseRules("application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
+	ruleSet, err := config2.ParseRules(p.v, "application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "failed to parse rule set %s", fileName).
 			CausedBy(err)
