@@ -54,8 +54,7 @@ install-grafana:
 install-prometheus:
   helm upgrade --install prometheus bitnami/kube-prometheus \
     -n monitoring --create-namespace \
-    --version {{prometheus_version}} \
-    --wait
+    --version {{prometheus_version}}
 
 # Installs Loki
 install-loki:
@@ -63,8 +62,7 @@ install-loki:
     -n monitoring --create-namespace \
     --set metrics.enabled=true \
     --set metrics.serviceMonitor.enabled=true \
-    --version {{loki_version}} \
-    --wait
+    --version {{loki_version}}
 
 # Installs Tempo
 install-tempo:
@@ -73,16 +71,14 @@ install-tempo:
     --set metrics.enabled=true \
     --set metrics.serviceMonitor.enabled=true \
     --set tempo.traces.otlp.grpc=true \
-    --version {{tempo_version}} \
-    --wait
+    --version {{tempo_version}}
 
 # Installs Pyroscope
 install-pyroscope:
   helm upgrade --install pyroscope grafana/pyroscope \
    -n monitoring --create-namespace \
    --set serviceMonitor.enabled=true \
-   --version {{pyroscope_version}} \
-   --wait
+   --version {{pyroscope_version}}
 
 install-dashboards:
   #!/usr/bin/env bash
@@ -90,10 +86,7 @@ install-dashboards:
     kubectl apply -f $f
   done
 
-install-heimdall-pod-monitor:
-  kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
-
-install-observability-stack: setup-charts install-prometheus install-loki install-tempo install-pyroscope install-grafana  install-heimdall-pod-monitor #install-dashboards
+install-observability-stack: setup-charts install-prometheus install-loki install-tempo install-pyroscope install-grafana  #install-dashboards
 
 install-nginx-ingress-controller global_ext_auth="true":
   #!/usr/bin/env bash
@@ -271,10 +264,12 @@ install-heimdall router=default_router:
       kubectl apply -f quickstarts/heimdall/istio-authorization-policy.yaml
   fi
 
+  kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
+
 create-cluster:
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
 
-setup-cluster: create-cluster setup-charts install-lb install-cert-manager
+setup-cluster: create-cluster setup-charts install-lb install-cert-manager install-observability-stack
 
 install-ngnix-decision-demo: setup-cluster (install-nginx-ingress-controller "false") (install-heimdall "nginx") (install-echo-service "nginx-route-based")
 
@@ -300,5 +295,3 @@ install-istio-gw-decision-demo: setup-cluster (install-istio "false") (install-h
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
-
-foo: (install-heimdall "nginx")
