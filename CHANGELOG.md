@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.16.0) (2024-12-19)
+
+
+### Documentation
+
+* Integration guide and examples for Istio service mesh ([#1832](https://github.com/dadrus/heimdall/issues/1832)) ([35c2fe2](https://github.com/dadrus/heimdall/commit/35c2fe2bde64f2b3a52d76ea6f45c51e1f1fe373))
+
 ## [0.15.4](https://github.com/dadrus/heimdall/compare/v0.15.3...v0.15.4) (2024-12-19)
 
 
