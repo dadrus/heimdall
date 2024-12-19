@@ -50,9 +50,6 @@ func newService(
 	opFilter := func(req *http.Request) bool { return req.URL.Path != EndpointHealth }
 
 	hc := alice.New(
-		accesslog.New(log),
-		logger.New(log),
-		dump.New(),
 		recovery.New(eh),
 		otelhttp.NewMiddleware("",
 			otelhttp.WithServerName(cfg.Address()),
@@ -67,6 +64,9 @@ func newService(
 			otelmetrics.WithServerName(cfg.Address()),
 			otelmetrics.WithOperationFilter(opFilter),
 		),
+		accesslog.New(log),
+		logger.New(log),
+		dump.New(),
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {
 				return cors.New(

@@ -68,9 +68,6 @@ func newService(
 				func() []string { return []string{} },
 			)...,
 		),
-		accesslog.New(log),
-		logger.New(log),
-		dump.New(),
 		recovery.New(eh),
 		otelhttp.NewMiddleware("",
 			otelhttp.WithServerName(cfg.Address()),
@@ -83,6 +80,9 @@ func newService(
 			otelmetrics.WithSubsystem("decision"),
 			otelmetrics.WithServerName(cfg.Address()),
 		),
+		accesslog.New(log),
+		logger.New(log),
+		dump.New(),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))
 

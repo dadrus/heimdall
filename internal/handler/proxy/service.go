@@ -106,10 +106,6 @@ func newService(
 				func() []string { return []string{} },
 			)...,
 		),
-		accesslog.New(log),
-		logger.New(log),
-		dump.New(),
-		der.handler,
 		recovery.New(eh),
 		otelhttp.NewMiddleware("",
 			otelhttp.WithServerName(cfg.Address()),
@@ -122,6 +118,10 @@ func newService(
 			otelmetrics.WithSubsystem("proxy"),
 			otelmetrics.WithServerName(cfg.Address()),
 		),
+		accesslog.New(log),
+		logger.New(log),
+		dump.New(),
+		der.handler,
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {
 				return cors.New(
