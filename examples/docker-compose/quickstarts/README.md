@@ -31,7 +31,7 @@ In that setup heimdall is not integrated with any other reverse proxy.
 
 In that setup heimdall is integrated with Traefik. All requests are sent to traefik, which then contacts heimdall as external authorization middleware and depending on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
 
-*NOTE:* This setup uses Traefik's Docker provider and mounts the `docker.sock` file into the Traefik container. It also assumes a rootless Docker installation. If your installation differs, you may need to modify the `docker.sock` volume mount in the `docker-compose-traefik.yaml` file, likely changing it to `"/var/run/docker.sock:/var/run/docker.sock:ro"`.
+*NOTE:* This setup uses Traefik's Docker provider and mounts the `docker.sock` file into the Traefik container. Your docker installation may differ requiring a modification of the configured volume mount in the `docker-compose-traefik.yaml` file.
 
 1. Start the environment with
 
