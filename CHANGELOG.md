@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.15.4](https://github.com/dadrus/heimdall/compare/v0.15.3...v0.15.4) (2024-12-19)
+
+
+### Bug Fixes
+
+* Correlation of OTEL Traces and Logs ([#2049](https://github.com/dadrus/heimdall/issues/2049)) ([69c657c](https://github.com/dadrus/heimdall/commit/69c657cda83f8379775d8b9ef82927d9fff15d71))
+
+
+### Dependencies
+
+* update golang.org/x/exp digest to b2144cd ([#2041](https://github.com/dadrus/heimdall/issues/2041)) ([40deb32](https://github.com/dadrus/heimdall/commit/40deb328769d3d06e282a74d8a0037b8ae6d3806))
+* update google.golang.org/genproto/googleapis/rpc digest to 9240e9c ([#2037](https://github.com/dadrus/heimdall/issues/2037)) ([0f5d17c](https://github.com/dadrus/heimdall/commit/0f5d17c5da9dec9b8753a8131b5fafa65d620716))
+* update module github.com/go-co-op/gocron/v2 to v2.14.0 ([#2043](https://github.com/dadrus/heimdall/issues/2043)) ([dbe861c](https://github.com/dadrus/heimdall/commit/dbe861cd07d345a7eba29a83b43c7ee324d94a26))
+* update module golang.org/x/net to v0.33.0 ([#2052](https://github.com/dadrus/heimdall/issues/2052)) ([7d28110](https://github.com/dadrus/heimdall/commit/7d281109f0ea18ac1eb38795d80f4b4fd5088f4e))
+* update module google.golang.org/grpc to v1.69.2 ([#2046](https://github.com/dadrus/heimdall/issues/2046)) ([2a639c0](https://github.com/dadrus/heimdall/commit/2a639c04d50b700611926666a69ed9c585bb9de9))
+* update module google.golang.org/protobuf to v1.36.0 ([#2038](https://github.com/dadrus/heimdall/issues/2038)) ([55eb060](https://github.com/dadrus/heimdall/commit/55eb060545f1f61bfead8c3f28456ec96683efc6))
+
 ## [0.15.3](https://github.com/dadrus/heimdall/compare/v0.15.2...v0.15.3) (2024-12-15)
 
 
