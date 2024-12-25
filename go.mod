@@ -44,7 +44,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.20.5
-	github.com/redis/rueidis v1.0.51
+	github.com/redis/rueidis v1.0.52
 	github.com/redis/rueidis/rueidisotel v1.0.51
 	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.33.0
