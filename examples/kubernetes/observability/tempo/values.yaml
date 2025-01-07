@@ -1,0 +1,14 @@
+tempo:
+  retention: 5h
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: tempo
+        endpoint: minio-hl:9000
+        access_key: minio
+        secret_key: minio123
+        tls_insecure_skip_verify: true
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://prometheus-kube-prometheus-prometheus:9090/api/v1/write"

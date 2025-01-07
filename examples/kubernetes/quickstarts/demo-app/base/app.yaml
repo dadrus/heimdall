@@ -30,7 +30,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1000
-          image: "containous/whoami:latest"
+          image: "ghcr.io/traefik/whoami:v1.10"
           args: [ "--port", "8080", "--name", "echo-app" ]
           ports:
             - name: http-port
