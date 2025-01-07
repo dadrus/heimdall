@@ -315,27 +315,28 @@ create-cluster:
 
 setup-cluster: create-cluster setup-charts install-lb install-cert-manager install-minio-operator install-observability-stack
 
-install-ngnix-decision-demo: setup-cluster (install-nginx-ingress-controller "false") (install-heimdall "nginx") (install-echo-service "nginx-route-based")
+install-ngnix-demo: setup-cluster (install-nginx-ingress-controller "false") (install-heimdall "nginx") (install-echo-service "nginx-route-based")
 
-install-ngnix-global-decision-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx-global")
+install-ngnix-global-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx-global")
 
-install-contour-decision-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
+install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
 
-install-haproxy-decision-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
+install-haproxy-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
 
-install-emissary-decision-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
+install-emissary-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
 
-install-envoygw-decision-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
+install-envoygw-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
 
-install-traefik-ingress-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-ingress")
+install-traefik-ingress-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-ingress")
 
-install-traefik-ingress-route-decision-demo: setup-cluster (install-traefik "false") (install-heimdall "traefik") (install-echo-service "traefik-ingress-route")
+install-traefik-ingress-route-demo: setup-cluster (install-traefik "false") (install-heimdall "traefik") (install-echo-service "traefik-ingress-route")
 
-install-traefik-gw-decision-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-gw")
+install-traefik-gw-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-gw")
 
-install-istio-ingress-gw-decision-demo: setup-cluster install-istio (install-heimdall "istio-ingress-gw") (install-echo-service "istio-ingress-gw")
+install-istio-ingress-gw-demo: setup-cluster install-istio (install-heimdall "istio-ingress-gw") (install-echo-service "istio-ingress-gw")
 
-install-istio-gw-decision-demo: setup-cluster (install-istio "false") (install-heimdall "istio-gw") (install-echo-service "istio-gw")
+install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "istio-gw") (install-echo-service "istio-gw")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
+

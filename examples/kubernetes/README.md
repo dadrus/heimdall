@@ -1,6 +1,6 @@
 # Kubernetes Quickstarts
 
-This directory contains working examples described in the getting started, as well as in the integration guides of the documentation. The demonstration of the decision operation mode is done via integration with the corresponding ingress controllers. As of now, these are [Contour](https://projectcontour.io), the [NGINX Ingress Controller](https://docs.nginx.com/nginx-ingress-controller/) and [HAProxy Ingress Controller](https://haproxy-ingress.github.io/).
+This directory contains working examples described in the getting started, as well as in the integration guides of the documentation. The demonstration of the decision operation mode is done via integration with the different Ingress Controller, respectively Gateway API implementations.
 
 **Note:** The main branch may have breaking changes (see pending release PRs for details under https://github.com/dadrus/heimdall/pulls) which would make the usage of the referenced heimdall images impossible (even though the configuration files and rules reflect the latest changes). In such situations you'll have to use the `dev` image, build a heimdall image by yourself and update the setups to use it, or switch to a tagged (released) version.
 
@@ -18,19 +18,35 @@ To be able to install and play with quickstarts, you need
 
 # Install the demo
 
-Depending on the Ingress Controller you want to install the demo for, execute
+Depending on the Ingress Controller/Gateway API you want to install the demo for, execute
 
 ```bash
-   just install-<ingress controller>-decision-demo
+   just install-<setup-type>-demo
    ```
 
-with `<ingress controller>` being either `contour`, `nginx`, `haproxy`, or `emissary`. That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller to forward all incoming requests to heimdall as external authorization middleware. Depending on the response from heimdall the ingress controller will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client.
+with `<setup-type>` being one of the following options:
+
+* `ngnix` - integration with heimdall happens using annotations on Ingress Resource level.
+* `ngnix-global` - heimdall is integrated globally.
+* `contour` - heimdall is integrated globally.
+* `haproxy` - integration with heimdall happens using annotations on Ingress Resource level.
+* `emissary` - heimdall is integrated globally.
+* `envoygw` - heimdall is integrated on a gateway level.
+* `traefik-ingress` - heimdall is integrated globally. Standard k8s Ingress Resource is used four routing.
+* `traefik-ingress-route` - heimdall is integrated as Middleware resource, which is then referenced in a Traefik's IngressRoute resource of the upstream service.
+* `traefik-gw` - heimdall is integrated globally.
+* `istio-ingress-gw` - heimdall is integrated globally. Routing happens using Istio's VirtualService resource.
+* `istio-gw` - heimdall is integrated on a gateway level.
+
+That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller, gateway api, respectively a vendor specific router implementation to forward incoming requests to heimdall as external authentication/authorization middleware. Depending on the response from heimdall the router implementation will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client. The above setup does also include an observability stack based on grafana components (Alloy, Loki, Tempo, Prometheus, Pyroscope, Grafana) 
 
 Depending on your internet connection, it may take some minutes. So, maybe it's time to grab some coffee :)
 
+**Note:** It might happen that the installation of the MetalLB fails due to a bad IP range configured. In such case, just delete the cluster, change `KIND_SUBNET=$(docker network inspect kind -f "{{(index .IPAM.Config 0).Subnet}}")` to `KIND_SUBNET=$(docker network inspect kind -f "{{(index .IPAM.Config 1).Subnet}}")` or similar (to get an IPv4 subnet) in the `metallb/configure.sh` file and restart the setup of the demo.
+
 # Play with the demo
 
-Check which IP is used for the ingress-controller and set a variable to that value. You can easily achieve this by querying the LB IP address of the used ingress controller with e.g. 
+Check which IP is used for the router implementation and set a variable to that value. You can easily achieve this by querying the LB IP address of the used router with e.g. 
 
 ```bash
 export SERVICE_IP=$(kubectl get svc -n nginx-ingress-controller nginx-ingress-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
@@ -52,6 +68,18 @@ curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/foo
 and check the responses.
 
 Please note: Since nginx does not support 302 response codes from an external auth service, the call to `https://echo-app.local/redir/foo` will result in a 500 error code returned by nginx.
+
+# Observe Telemetry Data
+
+Establish port forwarding for the grafana service with
+
+```bash
+kubectl -n monitoring port-forward service/grafana-grafana-operator-grafana-service 3000:3000
+```
+
+Open http://grafana.127.0.0.1.nip.io:3000 in your browser to access it. Username is set to `admin` and password is `monitoring`.
+
+**Note:** If a traefik based setup is used, you'll also be able to see the entire request traces. For all other setups, tracing is limited to heimdall only (configuration of other routers for OTEL is a TODO).
 
 # Delete the demo
 
