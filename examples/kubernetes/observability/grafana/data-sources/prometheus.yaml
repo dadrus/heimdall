@@ -1,0 +1,16 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: prometheus-datasource
+  namespace: monitoring
+spec:
+  datasource:
+    name: Prometheus
+    type: prometheus
+    url: http://prometheus-kube-prometheus-prometheus:9090
+    isDefault: true
+    uid: PROMETHEUS
+    access: proxy
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana

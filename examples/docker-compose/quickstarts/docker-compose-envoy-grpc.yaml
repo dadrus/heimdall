@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   proxy:
     image: envoyproxy/envoy:v1.29.1

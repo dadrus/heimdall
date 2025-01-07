@@ -40,8 +40,6 @@ To be able to follow this guide, you'll need the following tools installed local
 +
 [source, yaml]
 ----
-version: '3.7'
-
 services:
   heimdall: # <1>
     image: dadrus/heimdall:dev
@@ -211,7 +209,7 @@ In addition, create a file named `jwks.json` with the public key required to ver
 
 The static configuration of our services is in place. Let us now create the actual authorization model and based on it the required heimdall rules.
 
-. Start our setup with `docker-compose up` and wait until all services are up and running.
+. Start our setup with `docker compose up` and wait until all services are up and running.
 
 . Create the OpenFGA store as also described in https://openfga.dev/docs/getting-started/create-store[Create Store] with
 +
@@ -434,5 +432,5 @@ Just stop the environment with `CTRL-C` and delete the created files. If you sta
 
 [source, bash]
 ----
-$ docker-compose down
+$ docker compose down
 ----

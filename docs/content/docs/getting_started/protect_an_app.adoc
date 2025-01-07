@@ -241,8 +241,6 @@ We will add it to the above referenced `/var/www/nginx` folder, when we define o
 +
 [source, yaml]
 ----
-version: '3.7'
-
 services:
   heimdall: # <1>
     image: dadrus/heimdall:dev
@@ -280,8 +278,6 @@ services:
 +
 [source, yaml]
 ----
-version: "3"
-
 services:
   proxy: # <1>
     image: traefik:2.11.0
@@ -345,7 +341,7 @@ Open your terminal and start the services in the directory, the above `docker-co
 
 [source, bash]
 ----
-$ docker-compose up
+$ docker compose up
 ----
 
 == Consume the API
@@ -448,5 +444,5 @@ Just stop the environment with `CTRL-C` and delete the created files. If you sta
 
 [source, bash]
 ----
-$ docker-compose down
+$ docker compose down
 ----
