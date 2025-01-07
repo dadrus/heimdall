@@ -11,6 +11,8 @@ spec:
     isDefault: false
     uid: PYROSCOPE
     access: proxy
+    jsonData:
+      minStep: '15s'
   instanceSelector:
     matchLabels:
       dashboards: grafana

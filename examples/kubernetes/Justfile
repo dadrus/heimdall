@@ -1,21 +1,23 @@
 grafana_version := '4.9.0'
-prometheus_version := '10.2.1'
-loki_version := '4.7.0'
-tempo_version := '3.8.0'
+prometheus_version := '10.2.3'
+loki_version := '6.24.0'
+tempo_version := '1.16.0'
 pyroscope_version := '1.10.0'
-nginx_version := '4.10.1'
+nginx_version := '4.11.3'
 contour_version := '17.0.12'
 emissary_version := '8.9.1'
 haproxy_version := '0.14.6'
 envoy_gw_version := 'v1.0.1'
-traefik_version := '28.0.0'
-metallb_version := '0.14.8'
-certmanager_version := '1.15.3'
-trustmanager_version := '0.12.0'
+traefik_version := '33.2.1'
+metallb_version := '0.14.9'
+certmanager_version := '1.16.2'
+trustmanager_version := '0.14.0'
 certmanager_istio_csr_version := '0.12.0'
 istio_version := '1.23.2'
+minio_operator_version := '6.0.4'
+alloy_version := '0.10.1'
 
-cluster_name := 'demo-cluster'
+cluster_name := 'heimdall-demo'
 default_router := "contour"
 
 setup-charts:
@@ -30,63 +32,87 @@ setup-charts:
   helm repo add haproxy https://haproxy-ingress.github.io/charts
   helm repo add traefik https://traefik.github.io/charts
   helm repo add istio https://istio-release.storage.googleapis.com/charts
+  helm repo add minio-operator https://operator.min.io
   helm repo update
+
+## Installs Alloy
+install-alloy:
+  kubectl apply -f observability/namespace.yaml
+
+  kubectl create configmap --namespace monitoring alloy-config "--from-file=config.alloy=./observability/alloy/config.alloy"
+
+  helm upgrade --install alloy grafana/alloy \
+    -n monitoring --create-namespace \
+    --version {{alloy_version}} \
+    -f observability/alloy/values.yaml \
+    --wait
 
 ## Installs Grafana
 install-grafana:
   #!/usr/bin/env bash
   lb_address=$(kubectl get svc -A -o json | jq -r '.items[] | select(.spec.type == "LoadBalancer").status.loadBalancer.ingress[0].ip')
 
+  kubectl apply -f observability/namespace.yaml
+
   helm upgrade --install grafana bitnami/grafana-operator \
     -n monitoring --create-namespace \
-    --set grafana.ingress.host="grafana.${lb_address}.nip.io" \
     --set grafana.config.server.root_url="https://grafana.${lb_address}.nip.io" \
-    --values grafana/helm-values.yaml \
+    --values observability/grafana/helm-values.yaml \
     --version {{grafana_version}} \
     --wait
 
-  kubectl apply -f grafana/data-sources/prometheus.yaml
-  kubectl apply -f grafana/data-sources/loki.yaml
-  kubectl apply -f grafana/data-sources/tempo.yaml
-  kubectl apply -f grafana/data-sources/pyroscope.yaml
+  kubectl apply -f observability/grafana/data-sources/prometheus.yaml
+  kubectl apply -f observability/grafana/data-sources/loki.yaml
+  kubectl apply -f observability/grafana/data-sources/tempo.yaml
+  kubectl apply -f observability/grafana/data-sources/pyroscope.yaml
 
 # Installs Prometheus
 install-prometheus:
+  kubectl apply -f observability/namespace.yaml
+
   helm upgrade --install prometheus bitnami/kube-prometheus \
     -n monitoring --create-namespace \
-    --version {{prometheus_version}}
+    --set prometheus.enableRemoteWriteReceiver=true \
+    --version {{prometheus_version}} \
+    --wait
+
+install-monitoring-storage:
+  # install minio tenant and wait until the first pod of the statefulset is running
+  kubectl apply -f observability/namespace.yaml
+  kubectl apply -f observability/minio/tenant.yaml
+
+  sleep 10
+  kubectl wait --timeout=90s --for=create pod -l statefulset.kubernetes.io/pod-name=minio-pool-0-0 -n monitoring
+  kubectl wait --timeout=90s --for=condition=ready pod -l statefulset.kubernetes.io/pod-name=minio-pool-0-0 -n monitoring
 
 # Installs Loki
 install-loki:
-  helm upgrade --install loki bitnami/grafana-loki \
+  kubectl apply -f observability/namespace.yaml
+
+  helm upgrade --install loki grafana/loki \
     -n monitoring --create-namespace \
-    --set metrics.enabled=true \
-    --set metrics.serviceMonitor.enabled=true \
-    --version {{loki_version}}
+    --version {{loki_version}} \
+    -f observability/loki/values.yaml
 
 # Installs Tempo
 install-tempo:
-  helm upgrade --install tempo bitnami/grafana-tempo \
+  kubectl apply -f observability/namespace.yaml
+
+  helm upgrade --install tempo grafana/tempo \
     -n monitoring --create-namespace \
-    --set metrics.enabled=true \
-    --set metrics.serviceMonitor.enabled=true \
-    --set tempo.traces.otlp.grpc=true \
-    --version {{tempo_version}}
+    --version {{tempo_version}} \
+    -f observability/tempo/values.yaml
 
 # Installs Pyroscope
 install-pyroscope:
+  kubectl apply -f observability/namespace.yaml
+
   helm upgrade --install pyroscope grafana/pyroscope \
    -n monitoring --create-namespace \
    --set serviceMonitor.enabled=true \
    --version {{pyroscope_version}}
 
-install-dashboards:
-  #!/usr/bin/env bash
-  for f in grafana/dashboards/*.yaml ; do
-    kubectl apply -f $f
-  done
-
-install-observability-stack: setup-charts install-prometheus install-loki install-tempo install-pyroscope install-grafana  #install-dashboards
+install-observability-stack: install-monitoring-storage install-prometheus install-loki install-tempo install-pyroscope install-grafana install-alloy
 
 install-nginx-ingress-controller global_ext_auth="true":
   #!/usr/bin/env bash
@@ -203,12 +229,15 @@ install-cert-manager:
 
   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v{{certmanager_version}}/cert-manager.crds.yaml
 
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+
   helm upgrade --install cert-manager jetstack/cert-manager \
     -n cert-manager --create-namespace \
     --version {{certmanager_version}} \
     --set installCRDs=false \
-    --set featureGates='AdditionalCertificateOutputFormats=true,ExperimentalGatewayAPISupport=true' \
+    --set featureGates='AdditionalCertificateOutputFormats=true' \
     --set webhook.featureGates='AdditionalCertificateOutputFormats=true' \
+    --set "extraArgs={--enable-gateway-api}" \
     --wait
 
   kubectl apply -n cert-manager -f cert-manager/ca.yaml
@@ -222,6 +251,21 @@ install-cert-manager:
       --wait
 
   kubectl apply -n cert-manager -f cert-manager/cacerts_bundle.yaml
+
+install-minio-operator:
+  #!/usr/bin/env bash
+
+  kubectl apply -f minio-operator/namespace.yaml
+  kubectl apply -f minio-operator/tls-certificate.yaml
+
+  helm upgrade --install operator minio-operator/operator \
+    -n minio-operator \
+    --version {{minio_operator_version}} \
+    -f minio-operator/values.yaml \
+    --wait
+
+  kubectl -n minio-operator get secrets sts-tls -o=jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/ca.crt
+  kubectl -n minio-operator create secret generic operator-ca-tls-tenants --from-file=/tmp/ca.crt
 
 install-echo-service router=default_router:
   kustomize build quickstarts/demo-app/overlays/{{router}} | kubectl apply -f -
@@ -269,7 +313,7 @@ install-heimdall router=default_router:
 create-cluster:
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
 
-setup-cluster: create-cluster setup-charts install-lb install-cert-manager install-observability-stack
+setup-cluster: create-cluster setup-charts install-lb install-cert-manager install-minio-operator install-observability-stack
 
 install-ngnix-decision-demo: setup-cluster (install-nginx-ingress-controller "false") (install-heimdall "nginx") (install-echo-service "nginx-route-based")
 

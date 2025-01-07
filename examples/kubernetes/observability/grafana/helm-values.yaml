@@ -1,9 +1,8 @@
 grafana:
   labels:
     dashboards: grafana
-  ingress:
-    enabled: true
-    ingressClassName: nginx
+  service:
+    type: NodePort
   config:
     users:
       auto_assign_org_role: Admin

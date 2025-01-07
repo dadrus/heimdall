@@ -7,7 +7,7 @@ spec:
   datasource:
     name: Loki
     type: loki
-    url: http://loki-grafana-loki-query-frontend:3100
+    url: http://loki-read:3100
     isDefault: false
     uid: LOKI
     access: proxy
@@ -15,7 +15,7 @@ spec:
       derivedFields:
         - name: trace_id
           matcherRegex: 'trace_id\":\"(\w+)\"'
-          url: '$${__value.raw}'
+          url: '${__value.raw}'
           datasourceUid: TEMPO
   instanceSelector:
     matchLabels:
