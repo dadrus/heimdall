@@ -57,7 +57,7 @@ type ServiceConfig struct {
 	ConnectionsLimit ConnectionsLimit `koanf:"connections_limit"`
 	CORS             *CORS            `koanf:"cors,omitempty"`
 	TLS              *TLS             `koanf:"tls,omitempty"             validate:"enforced=notnil"`
-	TrustedProxies   *[]string        `koanf:"trusted_proxies,omitempty"`
+	TrustedProxies   []string         `koanf:"trusted_proxies,omitempty" validate:"enforced=secure_networks"`
 	Respond          RespondConfig    `koanf:"respond"`
 }
 
