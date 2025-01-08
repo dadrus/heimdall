@@ -41,10 +41,8 @@ import (
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-dir-")
 	require.NoError(t, err)
-
-	defer os.Remove(tmpFile.Name())
 
 	for _, tc := range []struct {
 		uc     string
@@ -503,15 +501,11 @@ rules:
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			ctx := context.Background()
-			tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
+			tmpFile, err := os.CreateTemp(t.TempDir(), "test-dir-")
 			require.NoError(t, err)
 
-			defer os.Remove(tmpFile.Name())
-
-			tmpDir, err := os.MkdirTemp(os.TempDir(), "test-rule-")
+			tmpDir, err := os.MkdirTemp(t.TempDir(), "test-rule-")
 			require.NoError(t, err)
-
-			defer os.Remove(tmpDir)
 
 			writeContents := x.IfThenElse(tc.writeContents != nil,
 				tc.writeContents,

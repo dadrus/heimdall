@@ -224,10 +224,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				dir, err := os.MkdirTemp("", "test_dir.*")
-				require.NoError(t, err)
-
-				return dir
+				return t.TempDir()
 			},
 			removeKeyStoreFile: func(t *testing.T, file string) {
 				t.Helper()
@@ -246,7 +243,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				err = file.Chmod(0o200)
@@ -272,7 +269,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				buf := bytes.NewBuffer(pemPKCS8ECEncryptedPrivateKey)
@@ -321,7 +318,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)

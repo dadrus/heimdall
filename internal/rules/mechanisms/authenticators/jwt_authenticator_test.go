@@ -74,13 +74,11 @@ func TestJwtAuthenticatorCreate(t *testing.T) {
 	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
 	require.NoError(t, err)
 
-	file, err := os.CreateTemp("", "test-create-jwt-authenticator-*")
+	file, err := os.CreateTemp(t.TempDir(), "test-create-jwt-authenticator-*")
 	require.NoError(t, err)
 
 	_, err = file.Write(pemBytes)
 	require.NoError(t, err)
-
-	defer os.Remove(file.Name())
 
 	trustStorePath := file.Name()
 
@@ -478,13 +476,11 @@ func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
 	require.NoError(t, err)
 
-	file, err := os.CreateTemp("", "test-create-jwt-authenticator-from-prototype-*")
+	file, err := os.CreateTemp(t.TempDir(), "test-create-jwt-authenticator-from-prototype-*")
 	require.NoError(t, err)
 
 	_, err = file.Write(pemBytes)
 	require.NoError(t, err)
-
-	defer os.Remove(file.Name())
 
 	trustStorePath := file.Name()
 

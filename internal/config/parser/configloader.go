@@ -63,33 +63,15 @@ func (c *configLoader) Load(config any) error {
 		return err
 	}
 
-	loadAndMergeConfig := func(loadConfig func() (*koanf.Koanf, error)) error {
-		konf, err := loadConfig()
-		if err != nil {
-			return err
-		}
-
-		return parser.Load(
-			confmap.Provider(konf.Raw(), ""),
-			nil,
-			koanf.WithMergeFunc(func(src, dest map[string]any) error {
-				for key, val := range src {
-					dest[key] = merge(dest[key], val)
-				}
-
-				return nil
-			}))
-	}
-
 	if len(configFile) != 0 {
-		if err = loadAndMergeConfig(func() (*koanf.Koanf, error) {
+		if err = c.loadAndMergeConfig(parser, func() (*koanf.Koanf, error) {
 			return koanfFromYaml(configFile)
 		}); err != nil {
 			return err
 		}
 	}
 
-	if err = loadAndMergeConfig(func() (*koanf.Koanf, error) {
+	if err = c.loadAndMergeConfig(parser, func() (*koanf.Koanf, error) {
 		return koanfFromEnv(c.o.envPrefix)
 	}); err != nil {
 		return err
@@ -128,6 +110,24 @@ func (c *configLoader) configFile() (string, error) {
 	}
 
 	return "", nil
+}
+
+func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func() (*koanf.Koanf, error)) error {
+	konf, err := loadConfig()
+	if err != nil {
+		return err
+	}
+
+	return parser.Load(
+		confmap.Provider(konf.Raw(), ""),
+		nil,
+		koanf.WithMergeFunc(func(src, dest map[string]any) error {
+			for key, val := range src {
+				dest[key] = merge(dest[key], val)
+			}
+
+			return nil
+		}))
 }
 
 func (c *configLoader) validateSemantics(config any) error {

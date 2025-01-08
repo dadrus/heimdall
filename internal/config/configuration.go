@@ -17,12 +17,12 @@
 package config
 
 import (
-	"github.com/dadrus/heimdall/internal/validation"
 	"os"
 
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/config/parser"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 type Configuration struct { //nolint:musttag

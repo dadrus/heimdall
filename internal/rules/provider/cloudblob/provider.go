@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"sync"
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/maps"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -193,7 +193,7 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 	// check which were present in the past and are not present now
 	// and which are new
 	currentIDs := toRuleSetIDs(ruleSets)
-	oldIDs := maps.Keys(state)
+	oldIDs := slices.Collect(maps.Keys(state))
 
 	removedIDs := slicex.Subtract(oldIDs, currentIDs)
 	newIDs := slicex.Subtract(currentIDs, oldIDs)
