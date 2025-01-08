@@ -66,13 +66,15 @@ func mergeSlices(dest, src any) any {
 		// might be {interface{} | some-type}, which will result in
 		// a panic while calling dstIdx.Set as vDst is typically {[]some-type}
 		item := vSrc.Index(i).Interface()
-		dstIdx := vDst.Index(i)
+		if item == nil {
+			continue
+		}
 
-		avail := vDst.Index(i)
-		if avail.IsZero() {
+		dstIdx := vDst.Index(i)
+		if dstIdx.IsZero() {
 			dstIdx.Set(reflect.ValueOf(item))
-		} else if item != nil {
-			dstIdx.Set(reflect.ValueOf(merge(avail, item)))
+		} else {
+			dstIdx.Set(reflect.ValueOf(merge(dstIdx.Interface(), item)))
 		}
 	}
 
