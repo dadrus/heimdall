@@ -88,7 +88,7 @@ func newService(
 	exec rule.Executor,
 ) *http.Server {
 	der := &deadlineResetter{}
-	cfg := conf.Serve.Proxy
+	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
 		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),

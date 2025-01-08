@@ -42,7 +42,7 @@ func newLifecycleManager(
 	khr keyholder.Registry,
 	cw watcher.Watcher,
 ) *fxlcm.LifecycleManager {
-	cfg := conf.Serve.Management
+	cfg := conf.Management
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Management",

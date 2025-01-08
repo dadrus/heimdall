@@ -44,7 +44,7 @@ func newLifecycleManager(
 	exec rule.Executor,
 	cw watcher.Watcher,
 ) *fxlcm.LifecycleManager {
-	cfg := conf.Serve.Decision
+	cfg := conf.Serve
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Decision",

@@ -43,7 +43,7 @@ func newService(
 	logger zerolog.Logger,
 	exec rule.Executor,
 ) *grpc.Server {
-	cfg := conf.Serve.Decision
+	cfg := conf.Serve
 	accessLogger := accesslogmiddleware.New(logger)
 	recoveryHandler := recovery.WithRecoveryHandler(func(any) error {
 		return status.Error(codes.Internal, "internal error")

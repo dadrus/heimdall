@@ -46,7 +46,7 @@ func newService(
 	log zerolog.Logger,
 	khr keyholder.Registry,
 ) *http.Server {
-	cfg := conf.Serve.Management
+	cfg := conf.Management
 	eh := errorhandler2.New()
 	opFilter := func(req *http.Request) bool { return req.URL.Path != EndpointHealth }
 

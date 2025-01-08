@@ -46,7 +46,7 @@ type requestContext struct {
 }
 
 func newContextFactory(
-	cfg config.ServiceConfig,
+	cfg config.ServeConfig,
 	tlsCfg *tls.Config,
 ) requestcontext.ContextFactory {
 	transport := &http.Transport{
