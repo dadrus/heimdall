@@ -361,7 +361,7 @@ func TestProxyService(t *testing.T) {
 				"(trusted proxy configured)",
 			serviceConf: config.ServiceConfig{
 				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-				TrustedProxies: &[]string{"0.0.0.0/0"},
+				TrustedProxies: []string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -443,7 +443,7 @@ func TestProxyService(t *testing.T) {
 				"(trusted proxy configured)",
 			serviceConf: config.ServiceConfig{
 				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-				TrustedProxies: &[]string{"0.0.0.0/0"},
+				TrustedProxies: []string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
