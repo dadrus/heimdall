@@ -47,7 +47,7 @@ location @error401 {
 
 Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.
 
-In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision, respectively Proxy service. Exceptions are described in the sections below.
+In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`]. Exceptions are described in the sections below.
 
 [#_first_option]
 === Forward only the path and query information

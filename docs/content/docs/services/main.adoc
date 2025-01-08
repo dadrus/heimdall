@@ -2,21 +2,21 @@
 title: "Main Service"
 date: 2022-06-09T18:55:45+02:00
 draft: false
-weight: 42
+weight: 41
 menu:
   docs:
     weight: 2
     parent: "Services"
-description: When heimdall is started exposing this service, you can make use of heimdall's proxy operating mode and use it as a proxy in front of your upstream API or web server
+description: This is heimdalls' main service responsible for driving the actual access control decision process.
 ---
 
 :toc:
 
-To make use of this service you have to start Heimdall with `heimdall serve proxy`. By default, Heimdall listens on `0.0.0.0:4455` endpoint for incoming requests in this mode of operation and also configures useful default timeouts, amount of possible upstream connections is active and idle state, as well as buffer limits. No other options are configured. You can, and should however adjust the configuration for your needs.
+To make use of this service you have to start Heimdall with either `heimdall serve proxy` or `heimdall serve decision`. By default, Heimdall listens on `0.0.0.0:4455` endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.
 
 == Configuration
 
-The configuration of the Proxy endpoint can be adjusted in the `proxy` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+The configuration of the Main endpoint can be adjusted in the `serve` property, which lives on the top level of heimdall's configuration and supports the following properties.
 
 * *`host`*: _string_ (optional)
 +
@@ -32,17 +32,17 @@ By using this property you can override the default timeouts used by heimdall. F
 
 ** *`idle`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
-The maximum amount of time to wait for the next request when keep-alive is enabled. If set to 0, the value of the `read` timeout is used. Defaults to 2 minutes. This value is also used for the maximum amount of time an idle (keep-alive) connection to the upstream will remain idle before closing itself.
+The maximum amount of time to wait for the next request when keep-alive is enabled. If set to 0, the value of the `read` timeout is used. Defaults to 2 minutes. If heimdall is operated in proxy mode, this value is also used for the maximum amount of time an idle (keep-alive) connection to the upstream will remain idle before closing itself.
 
 ** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
-The absolute amount of time allowed to read the entire request, including body. Defaults to 5 seconds. The `read` timeout is also used while waiting for the responses from the upstream service. Here it specifies the amount of time to wait for a server's response headers after fully writing the request (including its body, if any). Upon successful upgrade responses from the upstream service, this timeout is disabled, allowing e.g. for WebSockets proxying. Setting this property to 0s will disable the timeout.
+The absolute amount of time allowed to read the entire request, including body. Defaults to 5 seconds. If heimdall is operated in proxy mode, the `read` timeout is also used while waiting for the responses from the upstream service. Here it specifies the amount of time to wait for a server's response headers after fully writing the request (including its body, if any). Upon successful upgrade responses from the upstream service, this timeout is disabled, allowing e.g. for WebSockets proxying. Setting this property to 0s will disable the timeout.
 +
 CAUTION: Setting this timout to 0 will make heimdall vulnerable to https://en.wikipedia.org/wiki/Slowloris_(computer_security[Slowloris attacks].
 
 ** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
-The maximum duration before timing out writes of the response. Defaults to 10 seconds. Setting this property to 0s will disable the timeout. Compared to the `read` timeout, the `write` timeout is not absolute and reset each time data is written to the output stream. This allows Server-Sent-Events and other unidirectional communication without the need to extend the timeout. As with the `read` timeout, this timeout is disabled upon successful upgrade responses from the upstream service, allowing e.g. for WebSockets proxying.
+The maximum duration before timing out writes of the response. Defaults to 10 seconds. Setting this property to 0s will disable the timeout. Compared to the `read` timeout, the `write` timeout is not absolute and reset each time data is written to the output stream if heimdall is operated in proxy mode. This allows Server-Sent-Events and other unidirectional communication without the need to extend the timeout. As with the `read` timeout, this timeout is disabled upon successful upgrade responses from the upstream service, allowing e.g. for WebSockets proxying.
 
 * *`buffer_limit`*: _BufferLimit_ (optional)
 +
@@ -58,7 +58,7 @@ The maximum size for the write buffer of the response. Defaults to 4KB.
 
 * *`connections_limit`*: _ConnectionsLimit_ (optional)
 +
-Allowed connections limit per upstream service. Following limits can be configured:
+If heimdall is operated in proxy mode, this property configures allowed connections limit per upstream service (ignored in decision mode). Following limits can be configured:
 
 ** *`max_per_host`*: _integer_ (optional)
 +
@@ -99,7 +99,7 @@ NOTE: This mapping is only applicable if the HTTP status code is set by heimdall
 ====
 [source, yaml]
 ----
-proxy:
+serve:
   host: 172.17.0.2
   tls:
     key_store:

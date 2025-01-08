@@ -19,7 +19,7 @@ https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load b
 
 [CAUTION]
 ====
-Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
+Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's main service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
 ====
 
 Traefik can be configured statically, but also load dynamic configuration from many sources managed by so-called providers. The following sections describe how to integrate with heimdall using some of them.

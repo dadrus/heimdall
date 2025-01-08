@@ -55,7 +55,7 @@ In this mode you can integrate heimdall with existing reverse proxies, or API ga
 
 In this mode heimdall can be integrated with most probably all modern API gateways and reverse proxies as a so-called "authentication middleware". Here the reverse proxy, respectively API gateway integrating with heimdall, will forward requests to heimdall by making use of its decision service endpoint for authentication and authorization purposes. As in the link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] mode, heimdall will check if these requests match and satisfy the conditions defined in the available rules. If not, heimdall returns an error to its client (here API gateway/reverse proxy). If the rule execution was successful, it also responds to the API gateway/reverse proxy with `200 OK` (can be overridden if required) and sets headers/cookies, specified in the matched rule, which are then forwarded to the upstream service.
 
-Starting heimdall in this mode happens via the `serve decision` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/services/decision.adoc" >}}[decision service configuration options] for more details.
+Starting heimdall in this mode happens via the `serve decision` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/services/main.adoc" >}}[corresponding configuration options] for more details.
 
 .Decision Service Example
 ====
@@ -129,7 +129,7 @@ In this operation mode you can use heimdall as a reverse proxy in front of your 
 
 In this mode heimdall forwards requests to the upstream service if these satisfy the conditions defined in matched rules. Otherwise, heimdall returns an error to the client. If the execution of the rule was successful, it also forwards additional headers, specified in the rule to the upstream service.
 
-Starting heimdall in this mode happens via the `serve proxy` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/services/proxy.adoc" >}}[proxy service configuration options] for more details.
+Starting heimdall in this mode happens via the `serve proxy` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/services/main.adoc" >}}[main service configuration options] for more details.
 
 .Reverse Proxy Example
 ====

@@ -115,7 +115,7 @@ This method returns the URL as valid URL string of a form `scheme:host/path?quer
 
 * *`ClientIPAddresses`*: _string array_
 +
-The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
+The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see also link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
 * *`Header(name)`*: _method_,
 +
