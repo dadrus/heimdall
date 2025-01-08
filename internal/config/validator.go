@@ -30,7 +30,7 @@ import (
 	"github.com/dadrus/heimdall/schema"
 )
 
-func ValidateConfig(configPath string) error {
+func ValidateConfigSchema(configPath string) error {
 	contents, err := os.ReadFile(configPath)
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
