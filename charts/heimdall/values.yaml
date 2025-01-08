@@ -96,18 +96,13 @@ service:
   # Remove the curly braces after 'annotations:' if you want to specify annotations
   annotations: { }
 
-  # Only used if "operationMode" is set to "decision"
-  decision:
-    # Service port
-    port: 4456
-    # Service port name
-    name: decision
-  # Only used if "operationMode" is set to "proxy"
-  proxy:
+  # Main service
+  main:
     # Service port
     port: 4455
     # Service port name
-    name: proxy
+    name: main
+  # Management service
   management:
     # Service port
     port: 4457
@@ -159,12 +154,9 @@ extraArgs: []
 # heimdall config defaults
 # DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
 serve:
-  decision:
-    port: 4456
-  proxy:
-    port: 4455
-  management:
-    port: 4457
+  port: 4455
+management:
+  port: 4457
 profiling:
   enabled: false
   port: 10251

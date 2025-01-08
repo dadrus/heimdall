@@ -28,6 +28,11 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
+    {{- with .Values.management }}
+    management:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
     {{- with .Values.log }}
     log:
       {{- toYaml . | nindent 6 }}
