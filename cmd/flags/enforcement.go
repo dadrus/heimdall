@@ -8,8 +8,9 @@ import (
 
 func EnforcementSettings(cmd *cobra.Command) config.EnforcementSettings {
 	insecure, _ := cmd.Flags().GetBool(SkipAllSecurityEnforcement)
-	insecureNotTLS, _ := cmd.Flags().GetBool(SkipAllTLSEnforcement)
 	insecureDefaultRule, _ := cmd.Flags().GetBool(SkipSecureDefaultRuleEnforcement)
+	insecureTrustedProxies, _ := cmd.Flags().GetBool(SkipSecureTrustedProxiesEnforcement)
+	insecureNotTLS, _ := cmd.Flags().GetBool(SkipAllTLSEnforcement)
 	insecureNoIngressTLS, _ := cmd.Flags().GetBool(SkipIngressTLSEnforcement)
 	insecureNoEgressTLS, _ := cmd.Flags().GetBool(SkipEgressTLSEnforcement)
 	insecureNoUpstreamTLS, _ := cmd.Flags().GetBool(SkipUpstreamTLSEnforcement)
@@ -17,6 +18,7 @@ func EnforcementSettings(cmd *cobra.Command) config.EnforcementSettings {
 	if insecure {
 		insecureDefaultRule = true
 		insecureNotTLS = true
+		insecureTrustedProxies = true
 	}
 
 	if insecureNotTLS {
@@ -26,9 +28,10 @@ func EnforcementSettings(cmd *cobra.Command) config.EnforcementSettings {
 	}
 
 	return config.EnforcementSettings{
-		EnforceSecureDefaultRule: !insecureDefaultRule,
-		EnforceIngressTLS:        !insecureNoIngressTLS,
-		EnforceEgressTLS:         !insecureNoEgressTLS,
-		EnforceUpstreamTLS:       !insecureNoUpstreamTLS,
+		EnforceSecureDefaultRule:    !insecureDefaultRule,
+		EnforceSecureTrustedProxies: !insecureTrustedProxies,
+		EnforceIngressTLS:           !insecureNoIngressTLS,
+		EnforceEgressTLS:            !insecureNoEgressTLS,
+		EnforceUpstreamTLS:          !insecureNoUpstreamTLS,
 	}
 }
