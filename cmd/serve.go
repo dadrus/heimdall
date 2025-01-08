@@ -34,25 +34,7 @@ func newServeCmd() *cobra.Command {
 		Short: "Starts the heimdall in one of its operations modes (decision or proxy)",
 	}
 
-	cmd.PersistentFlags().StringP(flags.Config, "c", "",
-		"Path to heimdall's configuration file.\n"+
-			"If not provided, the lookup sequence is:\n  1. $PWD\n  2. $HOME/.config\n  3. /etc/heimdall/")
-	cmd.PersistentFlags().String(flags.EnvironmentConfigPrefix, "HEIMDALLCFG_",
-		"Prefix for the environment variables to consider for\nloading configuration from")
-	cmd.PersistentFlags().Bool(flags.SkipAllSecurityEnforcement, false,
-		"Disables enforcement of all secure configurations entirely.\n"+
-			"Effectively it enables all the --skip-*-enforcement flags below.")
-	cmd.PersistentFlags().Bool(flags.SkipAllTLSEnforcement, false,
-		"Disables enforcement of TLS for every in- and outbound connection.\n"+
-			"Effectively it enables all the --skip-*-tls-enforcement flags.")
-	cmd.PersistentFlags().Bool(flags.SkipIngressTLSEnforcement, false,
-		"Disables enforcement of TLS configuration for ingress traffic.")
-	cmd.PersistentFlags().Bool(flags.SkipEgressTLSEnforcement, false,
-		"Disables enforcement of TLS configuration for egress traffic.")
-	cmd.PersistentFlags().Bool(flags.SkipUpstreamTLSEnforcement, false,
-		"Disables enforcement of TLS while proxying the requests to the\nupstream services.")
-	cmd.PersistentFlags().Bool(flags.SkipSecureDefaultRuleEnforcement, false,
-		"Disables enforcement of secure configuration of the default\nrule.")
+	flags.RegisterGlobalFlags(cmd)
 
 	cmd.AddCommand(serve.NewProxyCommand())
 	cmd.AddCommand(serve.NewDecisionCommand())
