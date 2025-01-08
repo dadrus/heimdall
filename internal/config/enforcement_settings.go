@@ -2,19 +2,28 @@ package config
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 )
 
+var insecureNetworks = []string{ // nolint: gochecknoglobals
+	"0.0.0.0/0",
+	"0/0",
+	"0000:0000:0000:0000:0000:0000:0000:0000/0",
+	"::/0",
+}
+
 type EnforcementSettings struct {
-	EnforceSecureDefaultRule bool
-	EnforceIngressTLS        bool
-	EnforceEgressTLS         bool
-	EnforceUpstreamTLS       bool
+	EnforceSecureDefaultRule    bool
+	EnforceSecureTrustedProxies bool
+	EnforceIngressTLS           bool
+	EnforceEgressTLS            bool
+	EnforceUpstreamTLS          bool
 }
 
 func (v EnforcementSettings) Tag() string { return "enforced" }
 
-func (v EnforcementSettings) Validate(param string, field reflect.Value) bool {
+func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { // nolint: cyclop
 	switch param {
 	case "istls":
 		if !v.EnforceEgressTLS {
@@ -34,6 +43,19 @@ func (v EnforcementSettings) Validate(param string, field reflect.Value) bool {
 		}
 
 		return !field.Bool()
+	case "secure_networks":
+		if !v.EnforceSecureTrustedProxies {
+			return true
+		}
+
+		for i := range field.Len() {
+			elem := field.Index(i)
+			if slices.Contains(insecureNetworks, elem.String()) {
+				return false
+			}
+		}
+
+		return true
 	default:
 		return false
 	}
@@ -51,6 +73,8 @@ func (v EnforcementSettings) ErrorMessage(param string) string {
 		return "scheme must be https"
 	case "false":
 		return "must be false"
+	case "secure_networks":
+		return "contains insecure networks"
 	default:
 		return "parameter is unknown"
 	}
