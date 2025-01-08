@@ -1,0 +1,127 @@
+serve:
+  proxy:
+    port: 4469
+    tls:
+      key_store:
+        path: /path/to/file.pem
+    trusted_proxies:
+      - 0.0.0.0/0
+
+  management:
+    tls:
+      key_store:
+        path: /path/to/file.pem
+
+mechanisms:
+  authenticators:
+    - id: anonymous_authenticator
+      type: anonymous
+    - id: unauthorized_authenticator
+      type: unauthorized
+    - id: kratos_session_authenticator
+      type: generic
+      config:
+        identity_info_endpoint:
+          url: https://127.0.0.1:4433/sessions/whoami
+          retry:
+            max_delay: 300ms
+            give_up_after: 2s
+        authentication_data_source:
+          - cookie: ory_kratos_session
+        subject:
+          attributes: "@this"
+          id: "identity.id"
+        allow_fallback_on_error: true
+        cache_ttl: 10m
+        session_lifespan:
+          active: active
+          issued_at: issued_at
+          not_before: authenticated_at
+          not_after: expires_at
+          time_format: "2006-01-02T15:04:05.999999Z07"
+          validity_leeway: 10s
+    - id: hydra_authenticator
+      type: oauth2_introspection
+      config:
+        introspection_endpoint:
+          url: https://hydra:4445/oauth2/introspect
+          retry:
+            max_delay: 300ms
+            give_up_after: 2s
+          auth:
+            type: basic_auth
+            config:
+              user: foo
+              password: bar
+        token_source:
+          - header: Authorization
+            scheme: Bearer
+        assertions:
+          issuers:
+            - https://127.0.0.1:4444/
+          scopes:
+            - foo
+            - bar
+          audience:
+            - bla
+        subject:
+          attributes: "@this"
+          id: sub
+        allow_fallback_on_error: true
+    - id: jwt_authenticator1
+      type: jwt
+      config:
+        jwks_endpoint:
+          url: https://foo/token
+          method: GET
+          http_cache:
+            enabled: true
+        jwt_source:
+          - header: Authorization
+            scheme: Bearer
+        assertions:
+          audience:
+            - bla
+          scopes:
+            - foo
+          allowed_algorithms:
+            - RSA
+          issuers:
+            - bla
+        subject:
+          attributes: "@this"
+          id: "identity.id"
+        cache_ttl: 5m
+        allow_fallback_on_error: true
+    - id: jwt_authenticator2
+      type: jwt
+      config:
+        jwks_endpoint: https://bar/token
+        assertions:
+          audience:
+            - bla
+          scopes:
+            - foo
+          allowed_algorithms:
+            - RSA
+          issuers:
+            - bla
+        allow_fallback_on_error: true
+        validate_jwk: true
+    - id: basic_auth_authenticator
+      type: basic_auth
+      config:
+        user_id: foo
+        password: bar
+        allow_fallback_on_error: false
+  finalizers:
+    - id: bla
+      type: header
+      config:
+        headers:
+          foo-bar: bla
+
+providers:
+  file_system:
+    src: test_rules.yaml
+    watch: true
