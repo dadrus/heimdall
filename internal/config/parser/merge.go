@@ -40,12 +40,8 @@ func merge(dest, src any) any {
 		// nolint: forcetypeassert
 		return mergeMaps(dest.(map[string]any), src.(map[string]any))
 	case reflect.Slice:
-		if vSrc.Type() != vDst.Type() {
-			panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
-		}
-
 		// nolint: forcetypeassert
-		return mergeSlices(dest.([]any), src.([]any))
+		return mergeSlices(dest, src)
 	default:
 		// any other (primitive) type
 		// overriding
@@ -53,24 +49,34 @@ func merge(dest, src any) any {
 	}
 }
 
-func mergeSlices(dest, src []any) []any {
-	if len(dest) < len(src) {
-		oldDest := dest
-		dest = make([]any, len(src))
+func mergeSlices(dest, src any) any {
+	vDst := reflect.ValueOf(dest)
+	vSrc := reflect.ValueOf(src)
 
-		copy(dest, oldDest)
+	if vDst.Len() < vSrc.Len() {
+		oldDest := dest
+		vDst = reflect.MakeSlice(vDst.Type(), vSrc.Len(), vSrc.Len())
+
+		vOldDst := reflect.ValueOf(oldDest)
+		reflect.Copy(vDst, vOldDst)
 	}
 
-	for i, v := range src {
-		avail := dest[i]
-		if avail == nil {
-			dest[i] = v
-		} else if v != nil {
-			dest[i] = merge(avail, v)
+	for i := range vSrc.Len() {
+		// getting the actual item here as the value returned by Index
+		// might be {interface{} | some-type}, which will result in
+		// a panic while calling dstIdx.Set as vDst is typically {[]some-type}
+		item := vSrc.Index(i).Interface()
+		dstIdx := vDst.Index(i)
+
+		avail := vDst.Index(i)
+		if avail.IsZero() {
+			dstIdx.Set(reflect.ValueOf(item))
+		} else if item != nil {
+			dstIdx.Set(reflect.ValueOf(merge(avail, item)))
 		}
 	}
 
-	return dest
+	return vDst.Interface()
 }
 
 func mergeMaps(dest, src map[string]any) map[string]any {
