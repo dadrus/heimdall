@@ -23,6 +23,9 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ConfigLoader interface {
@@ -49,8 +52,8 @@ func (c *configLoader) Load(config any) error {
 		return err
 	}
 
-	if len(configFile) != 0 && c.o.validate != nil {
-		if err := c.o.validate(configFile); err != nil {
+	if len(configFile) != 0 && c.o.validateSyntax != nil {
+		if err = c.o.validateSyntax(configFile); err != nil {
 			return err
 		}
 	}
@@ -79,20 +82,20 @@ func (c *configLoader) Load(config any) error {
 	}
 
 	if len(configFile) != 0 {
-		if err := loadAndMergeConfig(func() (*koanf.Koanf, error) {
+		if err = loadAndMergeConfig(func() (*koanf.Koanf, error) {
 			return koanfFromYaml(configFile)
 		}); err != nil {
 			return err
 		}
 	}
 
-	if err := loadAndMergeConfig(func() (*koanf.Koanf, error) {
+	if err = loadAndMergeConfig(func() (*koanf.Koanf, error) {
 		return koanfFromEnv(c.o.envPrefix)
 	}); err != nil {
 		return err
 	}
 
-	return parser.UnmarshalWithConf("", config, koanf.UnmarshalConf{
+	if err = parser.UnmarshalWithConf("", config, koanf.UnmarshalConf{
 		Tag: "koanf",
 		DecoderConfig: &mapstructure.DecoderConfig{
 			DecodeHook:       mapstructure.ComposeDecodeHookFunc(c.o.decodeHooks...),
@@ -100,7 +103,11 @@ func (c *configLoader) Load(config any) error {
 			Result:           config,
 			WeaklyTypedInput: true,
 		},
-	})
+	}); err != nil {
+		return err
+	}
+
+	return c.validateSemantics(config)
 }
 
 func (c *configLoader) configFile() (string, error) {
@@ -121,4 +128,12 @@ func (c *configLoader) configFile() (string, error) {
 	}
 
 	return "", nil
+}
+
+func (c *configLoader) validateSemantics(config any) error {
+	if err := c.o.validateSemantics(config); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "configuration is invalid").CausedBy(err)
+	}
+
+	return nil
 }
