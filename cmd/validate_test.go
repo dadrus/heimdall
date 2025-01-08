@@ -34,17 +34,18 @@ func TestNewValidateCmd(t *testing.T) {
 	assert.Equal(t, "validate", cmd.Use)
 	assert.NotEmpty(t, cmd.Short)
 
+	// peek just some of the global flags
 	configFlag := cmd.PersistentFlags().Lookup(flags.Config)
 	assert.NotNil(t, configFlag)
 	assert.Equal(t, "c", configFlag.Shorthand)
 	assert.Empty(t, configFlag.DefValue)
 	assert.NotEmpty(t, configFlag.Usage)
 
-	envPrefixFlag := cmd.PersistentFlags().Lookup(flags.EnvironmentConfigPrefix)
-	assert.NotNil(t, envPrefixFlag)
-	assert.Empty(t, envPrefixFlag.Shorthand)
-	assert.Equal(t, "HEIMDALLCFG_", envPrefixFlag.DefValue)
-	assert.NotEmpty(t, envPrefixFlag.Usage)
+	skipSecureDefaultRuleEnforcementFlag := cmd.PersistentFlags().Lookup(flags.SkipSecureDefaultRuleEnforcement)
+	assert.NotNil(t, skipSecureDefaultRuleEnforcementFlag)
+	assert.Empty(t, skipSecureDefaultRuleEnforcementFlag.Shorthand)
+	assert.Equal(t, "false", skipSecureDefaultRuleEnforcementFlag.DefValue)
+	assert.NotEmpty(t, skipSecureDefaultRuleEnforcementFlag.Usage)
 
 	commands := cmd.Commands()
 	assert.Len(t, commands, 2)
