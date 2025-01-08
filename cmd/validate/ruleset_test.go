@@ -190,7 +190,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 			}
 
 			if tc.proxyMode {
-				args = append(args, "--"+rulesetValidationFlagProxyMode)
+				args = append(args, "--"+flags.ValidationInProxyMode)
 			}
 
 			err = cmd.ParseFlags(args)

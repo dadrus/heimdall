@@ -19,10 +19,15 @@ package validate
 import (
 	"os"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 // NewValidateConfigCommand represents the "validate config" command.
@@ -44,10 +49,57 @@ func NewValidateConfigCommand() *cobra.Command {
 }
 
 func validateConfig(cmd *cobra.Command) error {
+	opMode := config.DecisionMode
+	if proxyMode, _ := cmd.Flags().GetBool(flags.ValidationInProxyMode); proxyMode {
+		opMode = config.ProxyMode
+	}
+
+	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	configPath, _ := cmd.Flags().GetString(flags.Config)
+	logger := zerolog.Nop()
+
 	if len(configPath) == 0 {
 		return ErrNoConfigFile
 	}
 
-	return config.ValidateConfig(configPath)
+	es := flags.EnforcementSettings(cmd)
+
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	if err != nil {
+		return err
+	}
+
+	conf, err := config.NewConfiguration(
+		config.EnvVarPrefix(envPrefix),
+		config.ConfigurationPath(configPath),
+		validator,
+	)
+	if err != nil {
+		return err
+	}
+
+	mFactory, err := mechanisms.NewMechanismFactory(&appContext{
+		w:   &watcher.NoopWatcher{},
+		khr: &noopRegistry{},
+		co:  &noopCertificateObserver{},
+		v:   validator,
+		l:   logger,
+		c:   conf,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = rules.NewRuleFactory(
+		mFactory,
+		conf,
+		opMode,
+		logger,
+		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
+	)
+
+	return err
 }

@@ -38,13 +38,11 @@ import (
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 
-const rulesetValidationFlagProxyMode = "proxy-mode"
-
 var errFunctionNotSupported = errors.New("function not supported")
 
 // NewValidateRulesCommand represents the "validate rules" command.
 func NewValidateRulesCommand() *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:     "rules [path to ruleset]",
 		Short:   "Validates heimdall's ruleset",
 		Args:    cobra.ExactArgs(1),
@@ -59,11 +57,6 @@ func NewValidateRulesCommand() *cobra.Command {
 			cmd.Println("Rule set is valid")
 		},
 	}
-
-	cmd.PersistentFlags().Bool(rulesetValidationFlagProxyMode, false,
-		"If specified, rule set validation considers usage in proxy operation mode")
-
-	return cmd
 }
 
 func validateRuleSet(cmd *cobra.Command, args []string) error {
@@ -76,7 +69,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	}
 
 	opMode := config.DecisionMode
-	if proxyMode, _ := cmd.Flags().GetBool(rulesetValidationFlagProxyMode); proxyMode {
+	if proxyMode, _ := cmd.Flags().GetBool(flags.ValidationInProxyMode); proxyMode {
 		opMode = config.ProxyMode
 	}
 
@@ -93,6 +86,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	conf, err := config.NewConfiguration(
 		config.EnvVarPrefix(envPrefix),
 		config.ConfigurationPath(configPath),
+		validator,
 	)
 	if err != nil {
 		return err

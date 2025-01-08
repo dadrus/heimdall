@@ -18,18 +18,37 @@ package validate
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/cmd/flags"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestValidateConfig(t *testing.T) {
-	t.Parallel()
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey, pemx.WithHeader("X-Key-ID", "key")),
+	)
+	require.NoError(t, err)
+
+	testDir := t.TempDir()
+	pemFile := filepath.Join(testDir, "keystore.pem")
+
+	err = os.WriteFile(pemFile, pemBytes, 0o600)
+	require.NoError(t, err)
+
+	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
 
 	for _, tc := range []struct {
 		uc       string
@@ -38,7 +57,7 @@ func TestValidateConfig(t *testing.T) {
 	}{
 		{uc: "no config provided", expError: ErrNoConfigFile},
 		{uc: "invalid config", confFile: "doesnotexist.yaml", expError: os.ErrNotExist},
-		{uc: "valid config", confFile: "test_data/config.yaml"},
+		{uc: "valid config", confFile: "test_data/insecure-trusted-proxies-config.yaml"},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
