@@ -146,7 +146,7 @@ func newService(
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: safecast.MustConvert[int](cfg.BufferLimit.Read),
+		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 		ConnContext:    der.contexter,
 	}

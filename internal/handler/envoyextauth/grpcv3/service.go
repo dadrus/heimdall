@@ -43,14 +43,14 @@ func newService(
 	logger zerolog.Logger,
 	exec rule.Executor,
 ) *grpc.Server {
-	service := conf.Serve.Decision
+	cfg := conf.Serve.Decision
 	accessLogger := accesslogmiddleware.New(logger)
 	recoveryHandler := recovery.WithRecoveryHandler(func(any) error {
 		return status.Error(codes.Internal, "internal error")
 	})
 
 	metrics := otelmetrics.New(
-		otelmetrics.WithServerName(service.Address()),
+		otelmetrics.WithServerName(cfg.Address()),
 		otelmetrics.WithSubsystem("decision"),
 	)
 
@@ -66,13 +66,13 @@ func newService(
 
 	unaryInterceptors = append(unaryInterceptors,
 		errorhandler.New(
-			errorhandler.WithVerboseErrors(service.Respond.Verbose),
-			errorhandler.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
-			errorhandler.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
-			errorhandler.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
-			errorhandler.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
-			errorhandler.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
-			errorhandler.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
+			errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
+			errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+			errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
+			errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
+			errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
+			errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
+			errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 		),
 		// the accesslogger is used here to have access to the error object
 		// as it will be replaced by a CheckResponse object returned to envoy
@@ -86,9 +86,9 @@ func newService(
 	streamInterceptors = append(streamInterceptors, accessLogger.Stream())
 
 	srv := grpc.NewServer(
-		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: service.Timeout.Idle}),
-		grpc.ReadBufferSize(safecast.MustConvert[int](service.BufferLimit.Read)),
-		grpc.WriteBufferSize(safecast.MustConvert[int](service.BufferLimit.Write)),
+		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
+		grpc.ReadBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Read))),
+		grpc.WriteBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Write))),
 		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),

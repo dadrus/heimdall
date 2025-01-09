@@ -172,9 +172,9 @@ func (c baseConfig) clientOptions(
 	return rueidis.ClientOption{
 		ClientName:          "heimdall",
 		DisableCache:        c.ClientCache.Disabled,
-		CacheSizeEachConn:   safecast.MustConvert[int](c.ClientCache.SizePerConnection),
-		WriteBufferEachConn: safecast.MustConvert[int](c.BufferLimit.Write),
-		ReadBufferEachConn:  safecast.MustConvert[int](c.BufferLimit.Read),
+		CacheSizeEachConn:   safecast.MustConvert[int](uint64(c.ClientCache.SizePerConnection)),
+		WriteBufferEachConn: safecast.MustConvert[int](uint64(c.BufferLimit.Write)),
+		ReadBufferEachConn:  safecast.MustConvert[int](uint64(c.BufferLimit.Read)),
 		ConnWriteTimeout:    c.Timeout.Write,
 		MaxFlushDelay:       c.MaxFlushDelay,
 
