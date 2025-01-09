@@ -21,7 +21,6 @@ serve:
       authentication_error:
         code: 404
 
-
 management:
   tls:
     key_store:
