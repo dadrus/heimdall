@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -91,7 +92,7 @@ func newService(
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: int(cfg.BufferLimit.Read),
+		MaxHeaderBytes: safecast.MustConvert[int](cfg.BufferLimit.Read),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
 }

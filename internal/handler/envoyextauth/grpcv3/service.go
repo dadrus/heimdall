@@ -17,6 +17,7 @@
 package grpcv3
 
 import (
+	"github.com/ccoveille/go-safecast"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/rs/zerolog"
@@ -86,8 +87,8 @@ func newService(
 
 	srv := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: service.Timeout.Idle}),
-		grpc.ReadBufferSize(int(service.BufferLimit.Read)),
-		grpc.WriteBufferSize(int(service.BufferLimit.Write)),
+		grpc.ReadBufferSize(safecast.MustConvert[int](service.BufferLimit.Read)),
+		grpc.WriteBufferSize(safecast.MustConvert[int](service.BufferLimit.Write)),
 		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),

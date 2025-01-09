@@ -45,12 +45,14 @@ func (c *conn) Write(data []byte) (int, error) {
 		}
 	}
 
-	n, err := c.Conn.Write(data)
+	bytesWritten, err := c.Conn.Write(data)
 	if c.resetDeadline.Load() {
-		c.bytesWritten.Add(int32(n))
+		//nolint:gosec
+		// no integer overflow during conversion possible
+		c.bytesWritten.Add(int32(bytesWritten))
 	}
 
-	return n, err
+	return bytesWritten, err
 }
 
 func (c *conn) SetDeadline(deadline time.Time) error {

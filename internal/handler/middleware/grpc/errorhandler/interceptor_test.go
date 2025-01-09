@@ -239,6 +239,8 @@ func TestErrorInterceptor(t *testing.T) {
 				handler.On("Check", mock.Anything, mock.Anything).Return(nil, tc.err)
 			} else {
 				handler.On("Check", mock.Anything, mock.Anything).Return(&envoy_auth.CheckResponse{
+					//nolint:gosec
+					// no integer overflow during conversion possible
 					Status: &status.Status{Code: int32(tc.expGRPCCode)},
 					HttpResponse: &envoy_auth.CheckResponse_OkResponse{
 						OkResponse: &envoy_auth.OkHttpResponse{},
@@ -272,6 +274,8 @@ func TestErrorInterceptor(t *testing.T) {
 			srv.Stop()
 			require.NoError(t, err)
 
+			//nolint:gosec
+			// no integer overflow during conversion possible
 			assert.Equal(t, int32(tc.expGRPCCode), resp.GetStatus().GetCode())
 
 			if tc.err != nil {

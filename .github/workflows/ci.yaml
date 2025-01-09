@@ -12,14 +12,15 @@ on:
 
 env:
   GO_VERSION: "1.23.4"
-  GOLANGCI_LINT_VERSION: "v1.60.1"
-  HELM_VERSION: "3.15.4"
+  GOLANGCI_LINT_VERSION: "v1.63.4"
+  HELM_VERSION: "3.16.4"
   KUBECONFORM_VERSION: "0.6.7"
-  KUBERNETES_API_VERSION: "1.27.0"
-  NODE_VERSION: "22.7"
-  RUBY_VERSION: "3.2"
-  COSIGN_VERSION: "v2.4.0"
-  CYCLONEDX_GOMOD_VERSION: "v1.7.0"
+  KUBERNETES_API_VERSION: "1.30.0"
+  NODE_VERSION: "22.13"
+  RUBY_VERSION: "3.4"
+  REDOCLY_CLI_VERSION: "1.27.1"
+  COSIGN_VERSION: "v2.4.1"
+  CYCLONEDX_GOMOD_VERSION: "v1.9.0"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 permissions: read-all
@@ -96,7 +97,6 @@ jobs:
         uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Set up Go
@@ -154,7 +154,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
-        run: npm i -g @redocly/cli@1.25.9
+        run: npm i -g @redocly/cli@{{ env.REDOCLY_CLI_VERSION }}
       - name: Run Redocly Lint
         run: redocly lint
 

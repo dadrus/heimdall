@@ -129,13 +129,12 @@ nested_2:
 			// GIVEN
 			chmod := x.IfThenElse(tc.chmod != nil, tc.chmod, func(t *testing.T, _ *os.File) { t.Helper() })
 
-			tempFile, err := os.CreateTemp("", "config-test-*")
+			tempFile, err := os.CreateTemp(t.TempDir(), "config-test-*")
 			require.NoError(t, err)
 
 			defer tempFile.Close()
 
 			fileName := tempFile.Name()
-			defer os.Remove(fileName)
 
 			_, err = tempFile.Write(tc.config)
 			require.NoError(t, err)

@@ -39,12 +39,10 @@ func TestValidateNotExistingConfigFile(t *testing.T) {
 func TestValidateNotReadableConfigFile(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp("", "test-config-")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-config-")
 	require.NoError(t, err)
 
 	require.NoError(t, tmpFile.Chmod(0o200))
-
-	defer os.Remove(tmpFile.Name())
 
 	err = ValidateConfig(tmpFile.Name())
 
@@ -56,10 +54,8 @@ func TestValidateNotReadableConfigFile(t *testing.T) {
 func TestValidateEmptyConfigFile(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp("", "test-config-")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-config-")
 	require.NoError(t, err)
-
-	defer os.Remove(tmpFile.Name())
 
 	err = ValidateConfig(tmpFile.Name())
 
@@ -71,10 +67,8 @@ func TestValidateEmptyConfigFile(t *testing.T) {
 func TestValidateConfigFileWithInvalidYAMLContent(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp("", "test-config-")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-config-")
 	require.NoError(t, err)
-
-	defer os.Remove(tmpFile.Name())
 
 	_, err = tmpFile.WriteString(`foobar`)
 	require.NoError(t, err)
@@ -89,10 +83,8 @@ func TestValidateConfigFileWithInvalidYAMLContent(t *testing.T) {
 func TestValidateConfigFileWithValidYAMLContentButFailingSchemaValidation(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp("", "test-config-")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-config-")
 	require.NoError(t, err)
-
-	defer os.Remove(tmpFile.Name())
 
 	_, err = tmpFile.WriteString(`foo: bar`)
 	require.NoError(t, err)

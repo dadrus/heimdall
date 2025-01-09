@@ -39,10 +39,8 @@ import (
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-dir-")
 	require.NoError(t, err)
-
-	defer os.Remove(tmpFile.Name())
 
 	for _, tc := range []struct {
 		uc     string
@@ -306,7 +304,7 @@ rules:
 			setupContents: func(t *testing.T, _ *os.File, dir string) string {
 				t.Helper()
 
-				tmpDir, err := os.MkdirTemp(dir, "test-dir-")
+				tmpDir, err := os.MkdirTemp(dir, "test-dir-") //nolint:usetesting
 				require.NoError(t, err)
 
 				tmpFile, err := os.CreateTemp(tmpDir, "test-rule-")
@@ -493,15 +491,10 @@ rules:
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			ctx := context.Background()
-			tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
+			tmpFile, err := os.CreateTemp(t.TempDir(), "test-file-")
 			require.NoError(t, err)
 
-			defer os.Remove(tmpFile.Name())
-
-			tmpDir, err := os.MkdirTemp(os.TempDir(), "test-rule-")
-			require.NoError(t, err)
-
-			defer os.Remove(tmpDir)
+			tmpDir := t.TempDir()
 
 			writeContents := x.IfThenElse(tc.writeContents != nil,
 				tc.writeContents,
