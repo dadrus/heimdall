@@ -1,4 +1,4 @@
-FROM uwebarthel/asciidoctor:1.80.0@sha256:d3324ba3712e7525e57f7088e32e4c42d3f50087619d5a6a852abe89a14fe760
+FROM uwebarthel/asciidoctor:1.81.0@sha256:a151b591c06d47a480cf2694a98913a01f28f660d6faa8df13dc6b5b1ad38b4c
 LABEL maintainer=dadrus@gmx.de
 
 # hadolint ignore=DL3028
