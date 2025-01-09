@@ -31,8 +31,7 @@ const (
 	defaultMaxIdleConnections        = 100
 	defaultMaxIdleConnectionsPerHost = 100
 
-	defaultProxyServicePort      = 4455
-	defaultDecisionServicePort   = 4456
+	defaultServePort             = 4455
 	defaultManagementServicePort = 4457
 	defaultProfilingServicePort  = 10251
 
@@ -44,45 +43,31 @@ const (
 func defaultConfig() Configuration {
 	return Configuration{
 		Serve: ServeConfig{
-			Proxy: ServiceConfig{
-				Port: defaultProxyServicePort,
-				Timeout: Timeout{
-					Read:  defaultReadTimeout,
-					Write: defaultWriteTimeout,
-					Idle:  defaultIdleTimeout,
-				},
-				BufferLimit: BufferLimit{
-					Read:  defaultBufferSize,
-					Write: defaultBufferSize,
-				},
-				ConnectionsLimit: ConnectionsLimit{
-					MaxIdle:        defaultMaxIdleConnections,
-					MaxIdlePerHost: defaultMaxIdleConnectionsPerHost,
-				},
+			Port: defaultServePort,
+			Timeout: Timeout{
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
 			},
-			Decision: ServiceConfig{
-				Port: defaultDecisionServicePort,
-				Timeout: Timeout{
-					Read:  defaultReadTimeout,
-					Write: defaultWriteTimeout,
-					Idle:  defaultIdleTimeout,
-				},
-				BufferLimit: BufferLimit{
-					Read:  defaultBufferSize,
-					Write: defaultBufferSize,
-				},
+			BufferLimit: BufferLimit{
+				Read:  defaultBufferSize,
+				Write: defaultBufferSize,
 			},
-			Management: ServiceConfig{
-				Port: defaultManagementServicePort,
-				Timeout: Timeout{
-					Read:  defaultReadTimeout,
-					Write: defaultWriteTimeout,
-					Idle:  defaultIdleTimeout,
-				},
-				BufferLimit: BufferLimit{
-					Read:  defaultBufferSize,
-					Write: defaultBufferSize,
-				},
+			ConnectionsLimit: ConnectionsLimit{
+				MaxIdle:        defaultMaxIdleConnections,
+				MaxIdlePerHost: defaultMaxIdleConnectionsPerHost,
+			},
+		},
+		Management: ManagementConfig{
+			Port: defaultManagementServicePort,
+			Timeout: Timeout{
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
+			},
+			BufferLimit: BufferLimit{
+				Read:  defaultBufferSize,
+				Write: defaultBufferSize,
 			},
 		},
 		Cache: CacheConfig{

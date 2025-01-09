@@ -62,8 +62,7 @@ body:
       render: yml
       placeholder: |
         serve:
-          decision:
-            port: 1234
+          port: 1234
 
   - id: version
     type: input

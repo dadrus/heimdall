@@ -34,11 +34,11 @@ metadata:
   name: heimdall
   namespace: heimdall
 spec:
-  auth_service: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" <1>
+  auth_service: "https://<heimdall service name>.<namespace>.svc.cluster.local:<port>" <1>
   proto: grpc
   protocol_version: v3 <2>
 ----
-<1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration. If heimdall is not operated in the same namespace as the ingress controller, it is important to configure the full DNS, otherwise Envoy will not be able to resolve the IP of heimdall.
+<1> Configures the controller to use heimdall's main service endpoint with `<heimdall service name>`, `<namespace>` and `<port>` depending on your configuration. If heimdall is not operated in the same namespace as the ingress controller, it is important to configure the full DNS, otherwise Envoy will not be able to resolve the IP of heimdall.
 <2> Sets the used Envoy's ExtAuth GRPC protocol version to v3, as this is the only version supported by heimdall. If not set, Emissary will default to v2.
 
 NOTE: The integration option shown above requires usage of the `--envoy-grpc` flag when starting heimdall. Unlike e.g. Contour, Emissary-Ingress allows however the usage of both, the https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto[Envoy's external authorization GRPC] protocol (used here), and the plain HTTP protocol.

@@ -56,7 +56,7 @@ clusters:
                 address:
                   socket_address:
                     address: heimdall
-                    port_value: 4456
+                    port_value: 4455
   # other cluster entries
 ----
 <1> The name of our cluster
@@ -79,7 +79,7 @@ http_filters:
       transport_api_version: V3 # <2>
       http_service:
         server_uri: # <3>
-          uri: heimdall:4456
+          uri: heimdall:4455
           cluster: ext-authz
           timeout: 0.25s
         authorization_request:
@@ -175,7 +175,7 @@ static_resources:
                     transport_api_version: V3
                     http_service:
                       server_uri:
-                        uri: heimdall:4456
+                        uri: heimdall:4455
                         cluster: ext-authz
                         timeout: 0.25s
                       authorization_request:
@@ -212,7 +212,7 @@ static_resources:
                   address:
                     socket_address:
                       address: heimdall
-                      port_value: 4456
+                      port_value: 4455
     - name: services
       connect_timeout: 5s
       type: strict_dns

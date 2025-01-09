@@ -20,10 +20,10 @@ meshConfig:
       # Istio doesn't configure HTTP 2 for GRPC communication. EnvoyFilter is required
       envoyExtAuthzGrpc:
         service: heimdall.heimdall.svc.cluster.local
-        port: "4456"
+        port: "4455"
       # alternatively, one can use the config from below. In that case EnvoyFilter is not needed
       #envoyExtAuthzHttp:
       #  service: heimdall.heimdall.svc.cluster.local
-      #  port: "4456"
+      #  port: "4455"
       #  includeRequestHeadersInCheck: [ "authorization", "cookie", "accept", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host" ]
       #  headersToUpstreamOnAllow: [ "authorization" ]

@@ -147,7 +147,7 @@ If the event has been emitted for a GRPC request, following fields are set:
 
 * `_grpc_method` - The full GRPC method used.
 
-If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
+If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration]), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
@@ -345,7 +345,7 @@ You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` envir
 All, but custom metrics adhere to the https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/[OpenTelementry semantic conventions]. For that reason, only the custom metrics are listed in the table below.
 
 ==== Metric: `certificate.expiry`
-Number of seconds until a certificate used by a particular service (decision, proxy, management), or mechanism (e.g. jwt finalizer) expires. The metric type is UpDownCounter und the unit is s.
+Number of seconds until a certificate used by a particular service (main, management), or mechanism (e.g. jwt finalizer) expires. The metric type is UpDownCounter und the unit is s.
 
 [cols="2,1,5"]
 |===

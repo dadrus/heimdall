@@ -104,7 +104,7 @@ providers:
     watch: true
 ----
 <1> Since heimdall emits logs on `error` level by default, and we would like to see what is going on, we are setting the log level to `debug`. This way, we'll see not only the results of a particular rule execution (which is what you would see if we set the log level to `info`), but also what is going in a rule. In addition, we disable tracing and metrics collection as these are pulled by default to an OTEL agent to avoid error statements related to unavailability of the agent. You can find more information about available observability options in the link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[Observability] chapter.
-<2> This configuration instructs heimdall to trust `X-Forwarded-*` headers from any sources. We need it here for integration purposes with Traefik, which uses these headers while forwarding requests to heimdall and which IP depends on your local docker configuration. Never do this in production and use allowed IPs instead! Please take also a look at the documentation of link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] property and link:{{< relref "/docs/operations/security.adoc#_http_header_security_considerations" >}}[Security Considerations] for more details.
+<2> This configuration instructs heimdall to trust `X-Forwarded-*` headers from any sources. We need it here for integration purposes with Traefik, which uses these headers while forwarding requests to heimdall and which IP depends on your local docker configuration. Never do this in production and use allowed IPs instead! Please take also a look at the documentation of link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies] property and link:{{< relref "/docs/operations/security.adoc#_http_header_security_considerations" >}}[Security Considerations] for more details.
 <3> Here we define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] to be used in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service specific rules]. In this case we define authenticators, authorizer and finalizers
 <4> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_unauthorized" >}}[unauthorized]` authenticator named `deny_all`. It rejects all requests.
 <5> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous]` authenticator named `anon`. It allows any request passing through and creates a subject with ID set to `anonymous`. You can find more information about the subject and other objects link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].
@@ -294,7 +294,7 @@ services:
     - traefik.enable=true
     - traefik.http.routers.traefik_http.service=api@internal
     - traefik.http.routers.traefik_http.entrypoints=http
-    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456  # <2>
+    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4455  # <2>
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization
 
   heimdall:  # <3>

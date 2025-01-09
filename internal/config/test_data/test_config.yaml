@@ -1,113 +1,87 @@
 serve:
-  decision:
-    host: 127.0.0.1
-    port: 4468
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    buffer_limit:
-      read: 4KB
-      write: 4KB
-    tls:
-      key_store:
-        path: /path/to/keystore/file.pem
-        password: VerySecret!
-      key_id: foo
-      min_version: TLS1.3
-    trusted_proxies:
-      - 192.168.1.0/24
-    respond:
-      verbose: true
-      with:
-        accepted:
-          code: 202
-        precondition_error:
-          code: 400
-        authentication_error:
-          code: 404
-        authorization_error:
-          code: 404
-        communication_error:
-          code: 502
-        internal_error:
-          code: 500
-        no_rule_error:
-          code: 404
+  host: 127.0.0.1
+  port: 4469
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
+  buffer_limit:
+    read: 4KB
+    write: 4KB
+  connections_limit:
+    max_idle: 100
+    max_idle_per_host: 100
+    max_per_host: 20
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - GET
+      - POST
+    allowed_headers:
+      - Authorization
+    exposed_headers:
+      - X-My-Header
+    allow_credentials: true
+    max_age: 1m
+  tls:
+    key_store:
+      path: /path/to/keystore/file.pem
+    min_version: TLS1.2
+    cipher_suites:
+      - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+      - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+  trusted_proxies:
+    - 192.168.1.0/24
+  respond:
+    verbose: true
+    with:
+      accepted:
+        code: 202
+      precondition_error:
+        code: 400
+      authentication_error:
+        code: 404
+      authorization_error:
+        code: 404
+      communication_error:
+        code: 502
+      internal_error:
+        code: 500
+      no_rule_error:
+        code: 404
 
-  proxy:
-    host: 127.0.0.1
-    port: 4469
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    buffer_limit:
-      read: 4KB
-      write: 4KB
-    connections_limit:
-      max_idle: 100
-      max_idle_per_host: 100
-      max_per_host: 20
-    cors:
-      allowed_origins:
-        - example.org
-      allowed_methods:
-        - GET
-        - POST
-      allowed_headers:
-        - Authorization
-      exposed_headers:
-        - X-My-Header
-      allow_credentials: true
-      max_age: 1m
-    tls:
-      key_store:
-        path: /path/to/keystore/file.pem
-      min_version: TLS1.2
-      cipher_suites:
-        - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
-        - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
-        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
-    trusted_proxies:
-      - 192.168.1.0/24
-    respond:
-      with:
-        precondition_error:
-          code: 400
-        authentication_error:
-          code: 404
-
-  management:
-    host: 127.0.0.1
-    port: 4457
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    buffer_limit:
-      read: 4KB
-      write: 4KB
-    cors:
-      allowed_origins:
-        - example.org
-      allowed_methods:
-        - GET
-        - POST
-      allowed_headers:
-        - Authorization
-      exposed_headers:
-        - X-My-Header
-      allow_credentials: true
-      max_age: 1m
-    tls:
-      key_store:
-        path: /path/to/keystore/file.pem
+management:
+  host: 127.0.0.1
+  port: 4457
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
+  buffer_limit:
+    read: 4KB
+    write: 4KB
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - GET
+      - POST
+    allowed_headers:
+      - Authorization
+    exposed_headers:
+      - X-My-Header
+    allow_credentials: true
+    max_age: 1m
+  tls:
+    key_store:
+      path: /path/to/keystore/file.pem
 
 cache:
   type: redis

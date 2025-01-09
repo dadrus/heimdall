@@ -6,7 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/name: echo-app
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
+    nginx.ingress.kubernetes.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4455"
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization"
     nginx.ingress.kubernetes.io/auth-snippet: |
       proxy_set_header         X-Forwarded-Method     $request_method;

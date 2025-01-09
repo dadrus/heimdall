@@ -58,12 +58,9 @@ tests:
           value:
             |-
             serve:
-              decision:
-                port: 4456
-              management:
-                port: 4457
-              proxy:
-                port: 4455
+              port: 4455
+            management:
+              port: 4457
             profiling:
               enabled: false
               host: 0.0.0.0
@@ -72,41 +69,40 @@ tests:
   - it: should allow configuration of any heimdall setting
     set:
       serve:
-        decision:
-          host: 127.0.0.1
-          tls:
-            key_store:
-              path: /path/to/keystore.pem
-              password: VerySecure!
-          timeout:
-            read: 1s
-            write: 2s
-            idle: 30s
-          buffer_limit:
-            read: 4KB
-            write: 10KB
-          trusted_proxies:
-            - 192.168.1.0/24
-          respond:
-            verbose: true
-            with:
-              authentication_error:
-                code: 404
-              authorization_error:
-                code: 404
-        management:
-          host: 127.0.0.1
-          tls:
-            key_store:
-              path: /path/to/keystore.pem
-              password: VerySecure!
-          timeout:
-            read: 1s
-            write: 2s
-            idle: 30s
-          buffer_limit:
-            read: 4KB
-            write: 10KB
+        host: 127.0.0.1
+        tls:
+          key_store:
+            path: /path/to/keystore.pem
+            password: VerySecure!
+        timeout:
+          read: 1s
+          write: 2s
+          idle: 30s
+        buffer_limit:
+          read: 4KB
+          write: 10KB
+        trusted_proxies:
+          - 192.168.1.0/24
+        respond:
+          verbose: true
+          with:
+            authentication_error:
+              code: 404
+            authorization_error:
+              code: 404
+      management:
+        host: 127.0.0.1
+        tls:
+          key_store:
+            path: /path/to/keystore.pem
+            password: VerySecure!
+        timeout:
+          read: 1s
+          write: 2s
+          idle: 30s
+        buffer_limit:
+          read: 4KB
+          write: 10KB
       metrics:
         enabled: true
       profiling:
@@ -174,45 +170,42 @@ tests:
           value:
             |-
             serve:
-              decision:
-                buffer_limit:
-                  read: 4KB
-                  write: 10KB
-                host: 127.0.0.1
-                port: 4456
-                respond:
-                  verbose: true
-                  with:
-                    authentication_error:
-                      code: 404
-                    authorization_error:
-                      code: 404
-                timeout:
-                  idle: 30s
-                  read: 1s
-                  write: 2s
-                tls:
-                  key_store:
-                    password: VerySecure!
-                    path: /path/to/keystore.pem
-                trusted_proxies:
-                - 192.168.1.0/24
-              management:
-                buffer_limit:
-                  read: 4KB
-                  write: 10KB
-                host: 127.0.0.1
-                port: 4457
-                timeout:
-                  idle: 30s
-                  read: 1s
-                  write: 2s
-                tls:
-                  key_store:
-                    password: VerySecure!
-                    path: /path/to/keystore.pem
-              proxy:
-                port: 4455
+              buffer_limit:
+                read: 4KB
+                write: 10KB
+              host: 127.0.0.1
+              port: 4455
+              respond:
+                verbose: true
+                with:
+                  authentication_error:
+                    code: 404
+                  authorization_error:
+                    code: 404
+              timeout:
+                idle: 30s
+                read: 1s
+                write: 2s
+              tls:
+                key_store:
+                  password: VerySecure!
+                  path: /path/to/keystore.pem
+              trusted_proxies:
+              - 192.168.1.0/24
+            management:
+              buffer_limit:
+                read: 4KB
+                write: 10KB
+              host: 127.0.0.1
+              port: 4457
+              timeout:
+                idle: 30s
+                read: 1s
+                write: 2s
+              tls:
+                key_store:
+                  password: VerySecure!
+                  path: /path/to/keystore.pem
             log:
               format: gelf
               level: debug

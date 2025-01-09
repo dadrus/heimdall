@@ -49,7 +49,7 @@ func newService(
 	log zerolog.Logger,
 	exec rule.Executor,
 ) *http.Server {
-	cfg := conf.Serve.Decision
+	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
 		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),

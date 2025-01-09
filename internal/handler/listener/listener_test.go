@@ -96,13 +96,13 @@ func TestNewListener(t *testing.T) {
 	for _, tc := range []struct {
 		uc          string
 		network     string
-		serviceConf config.ServiceConfig
+		serviceConf config.ServeConfig
 		assert      func(t *testing.T, err error, ln net.Listener, port string)
 	}{
 		{
 			uc:          "creation fails",
 			network:     "foo",
-			serviceConf: config.ServiceConfig{},
+			serviceConf: config.ServeConfig{},
 			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
 				t.Helper()
 
@@ -113,7 +113,7 @@ func TestNewListener(t *testing.T) {
 		{
 			uc:          "without TLS",
 			network:     "tcp",
-			serviceConf: config.ServiceConfig{Host: "127.0.0.1"},
+			serviceConf: config.ServeConfig{Host: "127.0.0.1"},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
 
@@ -127,7 +127,7 @@ func TestNewListener(t *testing.T) {
 		{
 			uc:      "fails due to not existent key store for TLS usage",
 			network: "tcp",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				TLS: &config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
 			},
 			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
@@ -141,7 +141,7 @@ func TestNewListener(t *testing.T) {
 		{
 			uc:          "fails due to not specified key store",
 			network:     "tcp",
-			serviceConf: config.ServiceConfig{TLS: &config.TLS{}},
+			serviceConf: config.ServeConfig{TLS: &config.TLS{}},
 			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
 				t.Helper()
 
@@ -153,7 +153,7 @@ func TestNewListener(t *testing.T) {
 		{
 			uc:      "successful with specified key id",
 			network: "tcp",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				TLS: &config.TLS{
 					KeyStore:   config.KeyStore{Path: pemFile.Name()},
 					KeyID:      "key1",
