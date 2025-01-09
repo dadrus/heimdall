@@ -13,7 +13,7 @@ spec:
     grpc:
       backendRef:
         name: heimdall
-        port: 4456
+        port: 4455
         namespace: heimdall
 ---
 

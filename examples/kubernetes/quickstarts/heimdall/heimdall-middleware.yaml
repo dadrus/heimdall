@@ -5,7 +5,7 @@ metadata:
   namespace: heimdall
 spec:
   forwardAuth:
-    address: "https://heimdall.heimdall.svc.cluster.local:4456"
+    address: "https://heimdall.heimdall.svc.cluster.local:4455"
     tls:
       caSecret: heimdall-tls
     authResponseHeaders:

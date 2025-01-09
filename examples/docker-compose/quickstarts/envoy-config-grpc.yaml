@@ -48,7 +48,7 @@ static_resources:
                   address:
                     socket_address:
                       address: heimdall
-                      port_value: 4456
+                      port_value: 4455
     - name: services
       connect_timeout: 5s
       type: strict_dns
