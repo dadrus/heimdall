@@ -182,7 +182,6 @@ func TestRunValidateRulesCommand(t *testing.T) {
 			cmd.SetErr(buf)
 
 			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
-			cmd.Flags().Bool(flags.ValidationInProxyMode, false, "If specified, validation considers usage in proxy operation mode")
 
 			var args []string
 
@@ -191,7 +190,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 			}
 
 			if tc.proxyMode {
-				args = append(args, "--"+flags.ValidationInProxyMode)
+				args = append(args, "--"+validationForProxyMode)
 			}
 
 			err = cmd.ParseFlags(args)

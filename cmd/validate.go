@@ -36,9 +36,6 @@ func newValidateCmd() *cobra.Command {
 
 	flags.RegisterGlobalFlags(cmd)
 
-	cmd.PersistentFlags().Bool(flags.ValidationInProxyMode, false,
-		"If specified, validation considers usage in proxy operation mode")
-
 	cmd.AddCommand(validate.NewValidateConfigCommand())
 	cmd.AddCommand(validate.NewValidateRulesCommand())
 

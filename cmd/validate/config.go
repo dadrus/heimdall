@@ -49,11 +49,6 @@ func NewValidateConfigCommand() *cobra.Command {
 }
 
 func validateConfig(cmd *cobra.Command) error {
-	opMode := config.DecisionMode
-	if proxyMode, _ := cmd.Flags().GetBool(flags.ValidationInProxyMode); proxyMode {
-		opMode = config.ProxyMode
-	}
-
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	configPath, _ := cmd.Flags().GetString(flags.Config)
 	logger := zerolog.Nop()
@@ -96,7 +91,7 @@ func validateConfig(cmd *cobra.Command) error {
 	_, err = rules.NewRuleFactory(
 		mFactory,
 		conf,
-		opMode,
+		config.DecisionMode,
 		logger,
 		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)

@@ -11,6 +11,4 @@ const (
 	SkipIngressTLSEnforcement           = "insecure-skip-ingress-tls-enforcement"
 	SkipEgressTLSEnforcement            = "insecure-skip-egress-tls-enforcement"
 	SkipUpstreamTLSEnforcement          = "insecure-skip-upstream-tls-enforcement"
-
-	ValidationInProxyMode = "proxy-mode"
 )
