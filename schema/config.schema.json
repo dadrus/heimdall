@@ -2233,13 +2233,6 @@
         },
         "tls": {
           "$ref": "#/definitions/tlsConfig"
-        },
-        "trusted_proxies": {
-          "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },
