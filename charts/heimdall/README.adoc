@@ -335,8 +335,8 @@ a| `{}` (empty map)
 
 a| `service.main.port`
 
-The main port exposed by the k8s Service created for heimdall. Only used if the `operationMode` is set to `decision`.
-a| `4456`
+The main port exposed by the k8s Service created for heimdall.
+a| `4455`
 
 a| `service.main.name`
 
