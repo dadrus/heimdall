@@ -38,19 +38,18 @@ spec:
   # ...
 ----
 
-* If TLS is enabled, which, as said above, is required for integration with Contour, by default heimdall is configured to support TLS v1.3 only. However, it looks like Contour does not configure Envoy to support TLS v1.3 so that the communication with heimdall happens via TLS v1.2 and below. For that reason you have to configure the decision service of heimdall to TLS v1.2 being the minimum supported version. Otherwise, Envoy will not be able communicating with heimdall, resulting in `403` responses for any request. The following snippet shows the relevant parts in the heimdall configuration file:
+* If TLS is enabled, which, as said above, is required for integration with Contour, by default heimdall is configured to support TLS v1.3 only. However, it looks like Contour does not configure Envoy to support TLS v1.3 so that the communication with heimdall happens via TLS v1.2 and below. For that reason you have to configure the main service of heimdall to TLS v1.2 being the minimum supported version. Otherwise, Envoy will not be able communicating with heimdall, resulting in `403` responses for any request. The following snippet shows the relevant parts in the heimdall configuration file:
 +
 [source, yaml]
 ----
 # ...
 serve:
-  decision:
-    tls:
-      # important! see explanations above
-      min_version: TLS1.2
-      key_store:
-        # path to the pem file with key and certificates
-        path: /certs/tls-combined.pem
+  tls:
+    # important! see explanations above
+    min_version: TLS1.2
+    key_store:
+      # path to the pem file with key and certificates
+      path: /certs/tls-combined.pem
 # ...
 ----
 

@@ -16,103 +16,75 @@ Below you can find possible contents (not exhaustive) for Heimdall's `config.yam
 [source, yaml]
 ----
 serve:
-  decision:
-    host: 127.0.0.1
-    port: 4468
-    respond:
-      verbose: true
-      with:
-        accepted:
-          code: 201
-        authorization_error:
-          code: 404
-        authentication_error:
-          code: 404
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    buffer_limit:
-      read: 10KB
-      write: 10KB
-    tls:
-      key_store:
-        path: /path/to/key/store.pem
-        password: VerySecure!
-    trusted_proxies:
-      - 192.168.1.0/24
+  host: 127.0.0.1
+  port: 4469
+  respond:
+    verbose: true
+    with:
+      authorization_error:
+        code: 404
+      authentication_error:
+        code: 404
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
+  connections_limit:
+    max_per_host: 10
+    max_idle: 100
+    max_idle_per_host: 50
+  buffer_limit:
+    read: 10KB
+    write: 10KB
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - GET
+      - POST
+    allowed_headers:
+      - Authorization
+    exposed_headers:
+      - X-My-Header
+    allow_credentials: true
+    max_age: 1m
+  tls:
+    key_store:
+      path: /path/to/key/store.pem
+      password: VerySecure!
+    key_id: first_entry
+    min_version: TLS1.2
+    cipher_suites:
+      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+  trusted_proxies:
+    - 192.168.1.0/24
 
-  proxy:
-    host: 127.0.0.1
-    port: 4469
-    respond:
-      verbose: true
-      with:
-        authorization_error:
-          code: 404
-        authentication_error:
-          code: 404
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    connections_limit:
-      max_per_host: 10
-      max_idle: 100
-      max_idle_per_host: 50
-    buffer_limit:
-      read: 10KB
-      write: 10KB
-    cors:
-      allowed_origins:
-        - example.org
-      allowed_methods:
-        - GET
-        - POST
-      allowed_headers:
-        - Authorization
-      exposed_headers:
-        - X-My-Header
-      allow_credentials: true
-      max_age: 1m
-    tls:
-      key_store:
-        path: /path/to/key/store.pem
-        password: VerySecure!
-      key_id: first_entry
-      min_version: TLS1.2
-      cipher_suites:
-        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
-    trusted_proxies:
-      - 192.168.1.0/24
-
-  management:
-    host: 127.0.0.1
-    port: 4457
-    verbose_errors: false
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    cors:
-      allowed_origins:
-        - example.org
-      allowed_methods:
-        - GET
-        - POST
-      allowed_headers:
-        - Authorization
-      exposed_headers:
-        - X-My-Header
-      allow_credentials: true
-      max_age: 1m
-    tls:
-      key_store:
-        path: /path/to/key/store.pem
-      min_version: TLS1.2
+management:
+  host: 127.0.0.1
+  port: 4457
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - GET
+      - POST
+    allowed_headers:
+      - Authorization
+    exposed_headers:
+      - X-My-Header
+    allow_credentials: true
+    max_age: 1m
+  tls:
+    key_store:
+      path: /path/to/key/store.pem
+    min_version: TLS1.2
 
 cache:
   type: redis-sentinel

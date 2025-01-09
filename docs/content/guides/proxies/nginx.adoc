@@ -134,7 +134,7 @@ Global configuration can be achieved by setting the following properties in cont
 
 [source, yaml]
 ----
-global-auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" # <1>
+global-auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<port>" # <1>
 global-auth-response-headers: Authorization # <2>
 global-auth-snippet: | # <3>
   proxy_set_header    X-Forwarded-Method   $request_method;
@@ -142,7 +142,7 @@ global-auth-snippet: | # <3>
   proxy_set_header    X-Forwarded-Host     $http_host;
   proxy_set_header    X-Forwarded-Uri      $request_uri;
 ----
-<1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
+<1> Configures the controller to use heimdall's main service endpoint with `<heimdall service name>`, `<namespace>` and `<port>` depending on your configuration.
 <2> Let NGINX forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
 your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration. If not configured, NGINX will only react on `Set-Cookie` headers in responses from heimdall by default.
 <3> Configures the required headers to pass the information about the used HTTP scheme, host and port, request path and used query parameters to be forwarded to heimdall.
@@ -173,7 +173,7 @@ server-snippet: |
     internal;
     access_log               off;
     proxy_method             $request_method;
-    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>$request_uri;
+    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<port>$request_uri;
     proxy_pass_request_body  off;
     proxy_set_header         Content-Length   "";
     proxy_set_header         Host $http_host;
@@ -190,7 +190,7 @@ One option to integrate heimdall with the NGINX Ingress Controller on the `Ingre
 
 [source, yaml]
 ----
-nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>"
+nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<port>"
 nginx.ingress.kubernetes.io/auth-response-headers: Authorization
 nginx.ingress.kubernetes.io/auth-snippet: |
   proxy_set_header    X-Forwarded-Method   $request_method;
@@ -220,7 +220,7 @@ nginx.ingress.kubernetes.io/server-snippet: |
     internal;
     access_log               off;
     proxy_method             $request_method;
-    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>$request_uri;
+    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<port>$request_uri;
     proxy_pass_request_body  off;
     proxy_set_header         Content-Length   "";
     proxy_set_header         Host $http_host;
