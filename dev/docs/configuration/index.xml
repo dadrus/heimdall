@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 09 Jan 2025 12:14:36 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 09 Jan 2025 14:14:12 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_assertions">Assertions&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -22,33 +22,6 @@
 &lt;div class="listingblock">
 &lt;div class="content">
 &lt;pre class="rouge highlight">&lt;code data-lang="yaml">&lt;span class="na">serve&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">decision&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">127.0.0.1&lt;/span>
- &lt;span class="na">port&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">4468&lt;/span>
- &lt;span class="na">respond&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">verbose&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">with&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">accepted&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">code&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">201&lt;/span>
- &lt;span class="na">authorization_error&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">code&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">404&lt;/span>
- &lt;span class="na">authentication_error&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">code&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">404&lt;/span>
- &lt;span class="na">timeout&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">read&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2s&lt;/span>
- &lt;span class="na">write&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>
- &lt;span class="na">idle&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2m&lt;/span>
- &lt;span class="na">buffer_limit&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">read&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">10KB&lt;/span>
- &lt;span class="na">write&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">10KB&lt;/span>
- &lt;span class="na">tls&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">key_store&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">path&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">/path/to/key/store.pem&lt;/span>
- &lt;span class="na">password&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">VerySecure!&lt;/span>
- &lt;span class="na">trusted_proxies&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">192.168.1.0/24&lt;/span>
-
- &lt;span class="na">proxy&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">127.0.0.1&lt;/span>
  &lt;span class="na">port&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">4469&lt;/span>
  &lt;span class="na">respond&lt;/span>&lt;span class="pi">:&lt;/span>
@@ -95,10 +68,9 @@
  &lt;span class="na">trusted_proxies&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="s">192.168.1.0/24&lt;/span>
 
- &lt;span class="na">management&lt;/span>&lt;span class="pi">:&lt;/span>
+&lt;span class="na">management&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">127.0.0.1&lt;/span>
  &lt;span class="na">port&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">4457&lt;/span>
- &lt;span class="na">verbose_errors&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">false&lt;/span>
  &lt;span class="na">timeout&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">read&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2s&lt;/span>
  &lt;span class="na">write&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>

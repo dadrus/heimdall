@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 09 Jan 2025 12:14:36 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 09 Jan 2025 14:14:12 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph">
 &lt;p>Configuration in heimdall can refer to two different things:&lt;/p>
 &lt;/div>
 &lt;div class="ulist">
@@ -12,7 +12,7 @@
 &lt;/ul>
 &lt;/div>
 &lt;div class="paragraph">
-&lt;p>Elements in the static configuration set up the services, like &lt;a href="../../docs/services/decision/">decision service&lt;/a>, which basically define the entry points, heimdall will listen to, the observability capabilities, like &lt;a href="../../docs/operations/observability/#_logging">logging&lt;/a>, the &lt;a href="../../docs/concepts/mechanisms/">mechanism catalogue&lt;/a>, the &lt;a href="../../docs/rules/default_rule/">default rule&lt;/a>, as well as the &lt;a href="../../docs/rules/providers/">rule providers&lt;/a> (these elements are not expected to change often).&lt;/p>
+&lt;p>Elements in the static configuration set up the services, like the &lt;a href="../../docs/services/main/">main service&lt;/a>, which basically defines the main entry point, heimdall will listen to for the actual access control decision purposes, the observability capabilities, like &lt;a href="../../docs/operations/observability/#_logging">logging&lt;/a>, the &lt;a href="../../docs/concepts/mechanisms/">mechanism catalogue&lt;/a>, the &lt;a href="../../docs/rules/default_rule/">default rule&lt;/a>, as well as the &lt;a href="../../docs/rules/providers/">rule providers&lt;/a> (these elements are not expected to change often).&lt;/p>
 &lt;/div></description></item><item><title>CLI</title><link>https://dadrus.github.io/docs/operations/cli/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/cli/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_usage_patterns">Usage Patterns&lt;/h2>
 &lt;div class="sectionbody">
@@ -83,7 +83,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
 &lt;h2 id="_http_header_security_considerations">HTTP Header Security Considerations&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>If &lt;code>trusted_proxies&lt;/code> property is configured (see also the corresponding &lt;a href="../../docs/services/decision/#_trusted_proxies">Decision&lt;/a> and &lt;a href="../../docs/services/proxy/#_trusted_proxies">Proxy&lt;/a> service configuration options) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:&lt;/p>
+&lt;p>If &lt;code>trusted_proxies&lt;/code> property is configured (see also the corresponding &lt;a href="../../docs/services/main/#_trusted_proxies">configuration options&lt;/a>) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:&lt;/p>
 &lt;/div>
 &lt;div class="ulist">
 &lt;ul>
