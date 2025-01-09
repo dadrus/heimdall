@@ -78,6 +78,8 @@ func (h *interceptor) intercept(
 			Status: &status.Status{Code: int32(codes.FailedPrecondition)},
 			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
 				DeniedResponse: &envoy_auth.DeniedHttpResponse{
+					//nolint:gosec
+					// no integer overflow during conversion possible
 					Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(redirectError.Code)},
 					Headers: []*envoy_core.HeaderValueOption{
 						{

@@ -31,6 +31,8 @@ func NewResponse(code int, msg string, reasons ...string) *Response {
 		AdmissionResponse: admissionv1.AdmissionResponse{
 			Allowed: x.IfThenElse(code == http.StatusOK, true, false),
 			Result: &metav1.Status{
+				//nolint:gosec
+				// no integer overflow during conversion possible
 				Code:    int32(code),
 				Status:  x.IfThenElse(code == http.StatusOK, "Success", "Failure"),
 				Message: msg,

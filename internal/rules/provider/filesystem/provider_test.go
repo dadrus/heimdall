@@ -314,7 +314,7 @@ rules:
 			setupContents: func(t *testing.T, _ *os.File, dir string) string {
 				t.Helper()
 
-				tmpDir, err := os.MkdirTemp(dir, "test-dir-")
+				tmpDir, err := os.MkdirTemp(dir, "test-dir-") //nolint:usetesting
 				require.NoError(t, err)
 
 				tmpFile, err := os.CreateTemp(tmpDir, "test-rule-")
@@ -501,11 +501,10 @@ rules:
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			ctx := context.Background()
-			tmpFile, err := os.CreateTemp(t.TempDir(), "test-dir-")
+			tmpFile, err := os.CreateTemp(t.TempDir(), "test-file-")
 			require.NoError(t, err)
 
-			tmpDir, err := os.MkdirTemp(t.TempDir(), "test-rule-")
-			require.NoError(t, err)
+			tmpDir := t.TempDir()
 
 			writeContents := x.IfThenElse(tc.writeContents != nil,
 				tc.writeContents,

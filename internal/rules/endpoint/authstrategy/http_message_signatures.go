@@ -183,6 +183,9 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 
 	if s.TTL != nil {
 		ttlBytes := make([]byte, int64BytesCount)
+
+		//nolint:gosec
+		// no integer overflow during conversion possible
 		binary.LittleEndian.PutUint64(ttlBytes, uint64(*s.TTL))
 
 		hash.Write(ttlBytes)

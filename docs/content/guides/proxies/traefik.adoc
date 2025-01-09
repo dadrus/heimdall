@@ -19,7 +19,7 @@ https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load b
 
 [CAUTION]
 ====
-Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
+Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's main service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
 ====
 
 Traefik can be configured statically, but also load dynamic configuration from many sources managed by so-called providers. The following sections describe how to integrate with heimdall using some of them.
@@ -47,7 +47,7 @@ http:
   middlewares:
     heimdall: # <2>
       forwardAuth: # <3>
-        address: "https://heimdall:4456" # <4>
+        address: "https://heimdall:4455" # <4>
         authResponseHeaders:
         - Authorization # <5>
 
@@ -73,7 +73,7 @@ metadata: # <1>
   namespace: heimdall
 spec:
   forwardAuth: # <2>
-    address: "http://heimdall.heimdall.svc.cluster.local:4456" # <3>
+    address: "http://heimdall.heimdall.svc.cluster.local:4455" # <3>
     authResponseHeaders: # <4>
       - Authorization
 ----
@@ -125,7 +125,7 @@ services:
     # other config options
     labels:
     # other labels
-    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456 # <3>
+    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4455 # <3>
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization # <4>
 
   heimdall:

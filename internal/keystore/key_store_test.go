@@ -198,11 +198,10 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc                 string
-		password           string
-		keyStoreFile       func(t *testing.T) string
-		removeKeyStoreFile func(t *testing.T, file string)
-		assert             func(t *testing.T, ks keystore.KeyStore, err error)
+		uc           string
+		password     string
+		keyStoreFile func(t *testing.T) string
+		assert       func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
 			uc: "file does not exist",
@@ -211,7 +210,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				return "foobar.pem"
 			},
-			removeKeyStoreFile: func(t *testing.T, _ string) { t.Helper() },
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
@@ -225,11 +223,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				t.Helper()
 
 				return t.TempDir()
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
 			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
@@ -250,11 +243,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				require.NoError(t, err)
 
 				return file.Name()
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
 			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
@@ -280,11 +268,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				require.NoError(t, err)
 
 				return file.Name()
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
 			},
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
@@ -332,11 +315,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				return file.Name()
 			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
-			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
@@ -349,8 +327,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			file := tc.keyStoreFile(t)
-
-			defer tc.removeKeyStoreFile(t, file)
 
 			// WHEN
 			ks, err := keystore.NewKeyStoreFromPEMFile(file, tc.password)

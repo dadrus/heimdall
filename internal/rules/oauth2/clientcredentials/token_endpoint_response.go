@@ -78,7 +78,7 @@ func (e *TokenErrorResponse) Error() string {
 	return builder.String()
 }
 
-type TokenEndpointResponse struct { //nolint: errname
+type TokenEndpointResponse struct { //nolint:errname
 	*TokenInfoResponse
 	*TokenErrorResponse
 }

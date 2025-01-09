@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
 	"github.com/rs/zerolog"
@@ -167,9 +168,9 @@ func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientO
 	return rueidis.ClientOption{
 		ClientName:          "heimdall",
 		DisableCache:        c.ClientCache.Disabled,
-		CacheSizeEachConn:   int(c.ClientCache.SizePerConnection),
-		WriteBufferEachConn: int(c.BufferLimit.Write),
-		ReadBufferEachConn:  int(c.BufferLimit.Read),
+		CacheSizeEachConn:   safecast.MustConvert[int](uint64(c.ClientCache.SizePerConnection)),
+		WriteBufferEachConn: safecast.MustConvert[int](uint64(c.BufferLimit.Write)),
+		ReadBufferEachConn:  safecast.MustConvert[int](uint64(c.BufferLimit.Read)),
 		ConnWriteTimeout:    c.Timeout.Write,
 		MaxFlushDelay:       c.MaxFlushDelay,
 

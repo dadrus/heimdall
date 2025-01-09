@@ -27,6 +27,7 @@ import (
 
 type Configuration struct { //nolint:musttag
 	Serve                ServeConfig          `koanf:"serve"`
+	Management           ManagementConfig     `koanf:"management"`
 	Log                  LoggingConfig        `koanf:"log"`
 	Tracing              TracingConfig        `koanf:"tracing"`
 	Metrics              MetricsConfig        `koanf:"metrics"`

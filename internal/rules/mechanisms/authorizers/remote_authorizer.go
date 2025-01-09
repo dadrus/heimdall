@@ -339,6 +339,9 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[st
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
+
+	//nolint:gosec
+	// no integer overflow during conversion possible
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(a.ttl))
 
 	hash := sha256.New()

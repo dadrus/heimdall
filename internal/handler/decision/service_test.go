@@ -42,7 +42,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
-		serviceConf    config.ServiceConfig
+		serviceConf    config.ServeConfig
 		createRequest  func(t *testing.T, host string) *http.Request
 		configureMocks func(t *testing.T, exec *mocks4.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
@@ -289,7 +289,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - request method, path and hostname " +
 				"all are not taken from the headers (trusted proxy configured and does not match host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: []string{"111.111.111.111"}},
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"111.111.111.111"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -347,7 +347,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only request method is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -386,7 +386,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only host is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -426,7 +426,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only path is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -465,7 +465,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only scheme is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -504,7 +504,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - scheme, host, path and method sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -557,7 +557,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			listener, err := listener.New("tcp", "test", srvConf.Address(), srvConf.TLS, nil, nil)
 			require.NoError(t, err)
 
-			conf := &config.Configuration{Serve: config.ServeConfig{Decision: srvConf}}
+			conf := &config.Configuration{Serve: srvConf}
 			cch := mocks.NewCacheMock(t)
 			exec := mocks4.NewExecutorMock(t)
 

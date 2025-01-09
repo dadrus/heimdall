@@ -333,30 +333,20 @@ a| `service.annotations`
 Enables you to set additional annotations for the created services
 a| `{}` (empty map)
 
-a| `service.decision.port`
+a| `service.main.port`
 
-The port exposed by the k8s Service created for heimdall's decision endpoint. Only used if the `operationMode` is set to `decision`.
-a| `4456`
+The main port exposed by the k8s Service created for heimdall.
+a| `4455`
 
-a| `service.decision.name`
+a| `service.main.name`
 
-The name of the port exposed by the k8s Service created for heimdall's decision endpoint. Only used if the `operationMode` is set to `decision`.
-a| `decision`
-
-a| `service.proxy.port`
-
-The port exposed by the k8s Service created for heimdall's proxy endpoint. Only used if the `operationMode` is set to `proxy`.
-a| `4456`
-
-a| `service.proxy.name`
-
-The name of the port exposed by the k8s Service created for heimdall's proxy endpoint. Only used if the `operationMode` is set to `proxy`.
-a| `proxy`
+The name of the port exposed by the k8s Service created for heimdall.
+a| `main`
 
 a| `service.management.port`
 
-The port exposed by the k8s Service created for heimdall's proxy endpoint. Only used if the `operationMode` is set to `proxy`.
-a| `4456`
+The port exposed by the k8s Service created for heimdall's management endpoint.
+a| `4457`
 
 a| `service.management.name`
 

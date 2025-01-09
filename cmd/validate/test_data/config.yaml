@@ -1,39 +1,31 @@
 serve:
-  decision:
-    port: 4468
-    tls:
-      key_store:
-        path: /path/to/file.pem
-    trusted_proxies:
-      - 0.0.0.0/0
-    respond:
-      verbose: true
-      with:
-        accepted:
-          code: 200
-        authorization_error:
-          code: 404
-        authentication_error:
-          code: 404
+  port: 4468
+  tls:
+    key_store:
+      path: /path/to/file.pem
+    min_version: TLS1.2
+    cipher_suites:
+      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+  trusted_proxies:
+    - 0.0.0.0/0
+  respond:
+    verbose: true
+    with:
+      accepted:
+        code: 200
+      authorization_error:
+        code: 404
+      authentication_error:
+        code: 404
 
-  proxy:
-    port: 4469
-    tls:
-      key_store:
-        path: /path/to/file.pem
-      min_version: TLS1.2
-      cipher_suites:
-        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
-    trusted_proxies:
-      - 0.0.0.0/0
 
-  management:
-    tls:
-      key_store:
-        path: /path/to/file.pem
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem
 
 log:
   level: debug

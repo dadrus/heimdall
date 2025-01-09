@@ -31,17 +31,10 @@ spec:
       targetPort: http-management
       protocol: TCP
       name: {{ .Values.service.management.name }}
-      {{- if eq .Values.operationMode "decision" }}
-    - port: {{ .Values.service.decision.port }}
-      targetPort: http-decision
+    - port: {{ .Values.service.main.port }}
+      targetPort: http-main
       protocol: TCP
-      name: {{ .Values.service.decision.name }}
-      {{- else }}
-    - port: {{ .Values.service.proxy.port }}
-      targetPort: http-proxy
-      protocol: TCP
-      name: {{ .Values.service.proxy.name }}
-      {{- end }}
+      name: {{ .Values.service.main.name }}
       {{- $providers := default dict .Values.providers }}
       {{- $kubernetes := default dict $providers.kubernetes }}
       {{- if $kubernetes.tls }}

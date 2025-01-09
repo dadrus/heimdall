@@ -17,7 +17,7 @@ Configuration in heimdall can refer to two different things:
 * the static startup configuration, which is the scope of this document and
 * the configuration of rules, respectively rule sets, which you can find link:{{< relref "/docs/rules/rule_sets.adoc" >}}[here].
 
-Elements in the static configuration set up the services, like link:{{< relref "/docs/services/decision.adoc" >}}[decision service], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[logging], the link:{{< relref "/docs/concepts/mechanisms.adoc" >}}[mechanism catalogue], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
+Elements in the static configuration set up the services, like the link:{{< relref "/docs/services/main.adoc" >}}[main service], which basically defines the main entry point, heimdall will listen to for the actual access control decision purposes, the observability capabilities, like link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[logging], the link:{{< relref "/docs/concepts/mechanisms.adoc" >}}[mechanism catalogue], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
 
 The rule set contains everything that defines how the requests are handled by heimdall for your system.
 This configuration can change and is seamlessly hot-reloaded, without any request interruption or connection loss.
@@ -138,23 +138,22 @@ HEIMDALLCFG_LOG_LEVEL=info
 
 * Array entries must be defined using `\_<IDX>[_]`, with `IDX` being the index of the array starting with `0` and `_` in brackets being only required, if the value of the configured element has a structure/hierarchy.
 +
-E.g. the `trusted_proxies` property of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] can be configured in a config file as
+E.g. the `trusted_proxies` property of the link:{{< relref "/docs/services/main.adoc" >}}[main service] can be configured in a config file as
 +
 [source,yaml]
 ----
 serve:
-  decision:
-    trusted_proxies:
-      - 192.168.1.0/24
-      - 192.168.2.0/24
+  trusted_proxies:
+    - 192.168.1.0/24
+    - 192.168.2.0/24
 ----
 +
 and using environment variables with
 +
 [source,bash]
 ----
-HEIMDALLCFG_SERVE_DECISION_TRUSTED__PROXIES_0=192.168.1.0/24
-HEIMDALLCFG_SERVE_DECISION_TRUSTED__PROXIES_0=192.168.2.0/24
+HEIMDALLCFG_SERVE_TRUSTED__PROXIES_0=192.168.1.0/24
+HEIMDALLCFG_SERVE_TRUSTED__PROXIES_0=192.168.2.0/24
 ----
 +
 For structured configuration, like the definition of the authenticators in the example above

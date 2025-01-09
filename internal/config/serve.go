@@ -23,6 +23,20 @@ import (
 	"github.com/inhies/go-bytesize"
 )
 
+type ServeConfig struct {
+	Host             string           `koanf:"host"`
+	Port             int              `koanf:"port"`
+	Timeout          Timeout          `koanf:"timeout"`
+	BufferLimit      BufferLimit      `koanf:"buffer_limit"`
+	ConnectionsLimit ConnectionsLimit `koanf:"connections_limit"`
+	CORS             *CORS            `koanf:"cors,omitempty"`
+	TLS              *TLS             `koanf:"tls,omitempty"`
+	TrustedProxies   []string         `koanf:"trusted_proxies,omitempty"`
+	Respond          RespondConfig    `koanf:"respond"`
+}
+
+func (c ServeConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
+
 type BufferLimit struct {
 	Read  bytesize.ByteSize `koanf:"read"  mapstructure:"read"`
 	Write bytesize.ByteSize `koanf:"write" mapstructure:"write"`
@@ -47,26 +61,6 @@ type CORS struct {
 	ExposedHeaders   []string      `koanf:"exposed_headers"`
 	AllowCredentials bool          `koanf:"allow_credentials"`
 	MaxAge           time.Duration `koanf:"max_age,string"`
-}
-
-type ServiceConfig struct {
-	Host             string           `koanf:"host"`
-	Port             int              `koanf:"port"`
-	Timeout          Timeout          `koanf:"timeout"`
-	BufferLimit      BufferLimit      `koanf:"buffer_limit"`
-	ConnectionsLimit ConnectionsLimit `koanf:"connections_limit"`
-	CORS             *CORS            `koanf:"cors,omitempty"`
-	TLS              *TLS             `koanf:"tls,omitempty"             validate:"enforced=notnil"`
-	TrustedProxies   []string         `koanf:"trusted_proxies,omitempty" validate:"enforced=secure_networks"`
-	Respond          RespondConfig    `koanf:"respond"`
-}
-
-func (c ServiceConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
-
-type ServeConfig struct {
-	Proxy      ServiceConfig `koanf:"proxy"`
-	Decision   ServiceConfig `koanf:"decision"`
-	Management ServiceConfig `koanf:"management"`
 }
 
 type ResponseOverride struct {

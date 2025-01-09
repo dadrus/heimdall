@@ -113,17 +113,15 @@ func (suite *ServiceTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 
 	conf := &config.Configuration{
-		Serve: config.ServeConfig{
-			Management: config.ServiceConfig{
-				Host: "127.0.0.1",
-				Port: port,
-				CORS: &config.CORS{},
-			},
+		Management: config.ManagementConfig{
+			Host: "127.0.0.1",
+			Port: port,
+			CORS: &config.CORS{},
 		},
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
 
-	listener, err := listener.New("tcp", "test", conf.Serve.Management.Address(), conf.Serve.Management.TLS, nil, nil)
+	listener, err := listener.New("tcp", "test", conf.Management.Address(), conf.Management.TLS, nil, nil)
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()
 

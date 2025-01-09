@@ -34,12 +34,11 @@ func koanfFromStruct(conf any) (*koanf.Koanf, error) {
 		return nil, err
 	}
 
-	keys := parser.Keys()
 	// Assert all keys are lowercase
-	for i := range keys {
-		if !isLower(keys[i]) {
+	for _, key := range parser.Keys() {
+		if !isLower(key) {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"field %s does not have lowercase key, use the `koanf` tag", keys[i])
+				"field %s does not have lowercase key, use the `koanf` tag", key)
 		}
 	}
 

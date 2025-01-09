@@ -99,7 +99,7 @@ func TestProxyService(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
-		serviceConf    config.ServiceConfig
+		serviceConf    config.ServeConfig
 		enableMetrics  bool
 		disableHTTP2   bool
 		createRequest  func(t *testing.T, host string) *http.Request
@@ -276,7 +276,7 @@ func TestProxyService(t *testing.T) {
 		{
 			uc: "successful rule execution - request method and path are taken from the real request " +
 				"(trusted proxy not configured)",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
@@ -359,7 +359,7 @@ func TestProxyService(t *testing.T) {
 		{
 			uc: "successful rule execution - request method is taken from the header " +
 				"(trusted proxy configured)",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: []string{"0.0.0.0/0"},
 			},
@@ -441,7 +441,7 @@ func TestProxyService(t *testing.T) {
 		{
 			uc: "successful rule execution - request path is taken from the header " +
 				"(trusted proxy configured)",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: []string{"0.0.0.0/0"},
 			},
@@ -522,7 +522,7 @@ func TestProxyService(t *testing.T) {
 		},
 		{
 			uc: "CORS test actual request",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
@@ -607,7 +607,7 @@ func TestProxyService(t *testing.T) {
 		},
 		{
 			uc: "CORS test preflight request",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 10 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
@@ -649,7 +649,7 @@ func TestProxyService(t *testing.T) {
 		},
 		{
 			uc: "test metrics collection",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 10 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
@@ -688,7 +688,7 @@ func TestProxyService(t *testing.T) {
 		},
 		{
 			uc: "http2 usage",
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1000 * time.Second, Write: 1000 * time.Second, Idle: 1000 * time.Second},
 				TLS: &config.TLS{
 					KeyStore: config.KeyStore{
@@ -783,7 +783,7 @@ func TestProxyService(t *testing.T) {
 		{
 			uc:           "http2 not supported by upstream server",
 			disableHTTP2: true,
-			serviceConf: config.ServiceConfig{
+			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TLS: &config.TLS{
 					KeyStore: config.KeyStore{
@@ -932,7 +932,7 @@ func TestProxyService(t *testing.T) {
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Serve:   config.ServeConfig{Proxy: proxyConf},
+				Serve:   proxyConf,
 				Metrics: config.MetricsConfig{Enabled: tc.enableMetrics},
 			}
 			cch := mocks.NewCacheMock(t)
@@ -1034,15 +1034,13 @@ func TestWebSocketSupport(t *testing.T) {
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
-			Proxy: config.ServiceConfig{
-				Timeout: config.Timeout{
-					Read:  1 * time.Second,
-					Write: 1 * time.Second,
-					Idle:  1 * time.Second,
-				},
-				Host: "127.0.0.1",
-				Port: port,
+			Timeout: config.Timeout{
+				Read:  1 * time.Second,
+				Write: 1 * time.Second,
+				Idle:  1 * time.Second,
 			},
+			Host: "127.0.0.1",
+			Port: port,
 		},
 	}
 
@@ -1050,7 +1048,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", "test", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil, nil)
+	listener, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -1059,7 +1057,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	wsURL := url.URL{Scheme: "ws", Host: conf.Serve.Proxy.Address(), Path: "/foo"}
+	wsURL := url.URL{Scheme: "ws", Host: conf.Serve.Address(), Path: "/foo"}
 	con, resp, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
 	require.NoError(t, err)
 
@@ -1134,15 +1132,13 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
-			Proxy: config.ServiceConfig{
-				Timeout: config.Timeout{
-					Read:  40 * time.Millisecond,
-					Write: 50 * time.Millisecond,
-					Idle:  1 * time.Second,
-				},
-				Host: "127.0.0.1",
-				Port: port,
+			Timeout: config.Timeout{
+				Read:  40 * time.Millisecond,
+				Write: 50 * time.Millisecond,
+				Idle:  1 * time.Second,
 			},
+			Host: "127.0.0.1",
+			Port: port,
 		},
 	}
 
@@ -1150,7 +1146,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", "test", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS, nil, nil)
+	listener, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -1159,7 +1155,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, fmt.Sprintf("http://%s/foo", conf.Serve.Proxy.Address()), nil)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, fmt.Sprintf("http://%s/foo", conf.Serve.Address()), nil)
 	require.NoError(t, err)
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Accept", "text/event-stream")

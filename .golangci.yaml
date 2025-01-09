@@ -18,6 +18,7 @@ linters:
     - zerologlint
     # depricated
     - exportloopref
+
 issues:
   exclude-rules:
     - path: '(.+)_test\.go'
@@ -80,7 +81,3 @@ linters-settings:
       - '^make'
       - '^math\.'
       - '^time\.*'
-  gosec:
-    excludes:
-      # See also https://github.com/securego/gosec/issues/1212
-      - G115

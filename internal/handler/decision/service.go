@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -48,7 +49,7 @@ func newService(
 	log zerolog.Logger,
 	exec rule.Executor,
 ) *http.Server {
-	cfg := conf.Serve.Decision
+	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
 		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
@@ -88,7 +89,7 @@ func newService(
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: int(cfg.BufferLimit.Read),
+		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
 }

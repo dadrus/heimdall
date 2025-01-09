@@ -362,6 +362,8 @@ func (c *genericContextualizer) calculateCacheKey(
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
+	//nolint:gosec
+	// no integer overflow during conversion possible
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(c.ttl))
 
 	hash := sha256.New()

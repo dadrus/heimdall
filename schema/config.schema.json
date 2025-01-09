@@ -1655,7 +1655,9 @@
               "description": "Configures signer options for issued JWTs.",
               "type": "object",
               "additionalProperties": false,
-              "required": [ "key_store" ],
+              "required": [
+                "key_store"
+              ],
               "properties": {
                 "name": {
                   "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
@@ -2158,132 +2160,79 @@
       "pattern": "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
     },
     "serve": {
-      "description": "HTTP(s) configuration of exposed services",
+      "description": "HTTP(s) configuration of the main service",
       "additionalProperties": false,
       "type": "object",
       "properties": {
-        "decision": {
-          "description": "Decision service Configuration",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "port": {
-              "description": "The port to listen on.",
-              "type": "integer"
-            },
-            "host": {
-              "description": "The network interface to listen on.",
-              "type": "string",
-              "default": "",
-              "examples": [
-                "localhost",
-                "127.0.0.1"
-              ]
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "tls": {
-              "$ref": "#/definitions/tlsConfig"
-            },
-            "trusted_proxies": {
-              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "respond": {
-              "$ref": "#/definitions/respondWithConfig"
-            }
+        "port": {
+          "description": "The port to listen on.",
+          "type": "integer"
+        },
+        "host": {
+          "description": "The network interface to listen on.",
+          "type": "string",
+          "default": "",
+          "examples": [
+            "localhost",
+            "127.0.0.1"
+          ]
+        },
+        "timeout": {
+          "$ref": "#/definitions/timeoutConfig"
+        },
+        "buffer_limit": {
+          "$ref": "#/definitions/bufferLimitConfig"
+        },
+        "connections_limit": {
+          "$ref": "#/definitions/connectionsLimitConfig"
+        },
+        "cors": {
+          "$ref": "#/definitions/corsConfig"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsConfig"
+        },
+        "trusted_proxies": {
+          "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         },
-        "proxy": {
-          "description": "Proxy service configuration",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "port": {
-              "description": "The port to listen on.",
-              "type": "integer"
-            },
-            "host": {
-              "description": "The network interface to listen on.",
-              "type": "string",
-              "default": "",
-              "examples": [
-                "localhost",
-                "127.0.0.1"
-              ]
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "connections_limit": {
-              "$ref": "#/definitions/connectionsLimitConfig"
-            },
-            "cors": {
-              "$ref": "#/definitions/corsConfig"
-            },
-            "tls": {
-              "$ref": "#/definitions/tlsConfig"
-            },
-            "trusted_proxies": {
-              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "respond": {
-              "$ref": "#/definitions/respondWithConfig"
-            }
-          }
+        "respond": {
+          "$ref": "#/definitions/respondWithConfig"
+        }
+      }
+    },
+    "management": {
+      "description": "Management service configuration",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "port": {
+          "description": "The port to listen on.",
+          "type": "integer"
         },
-        "management": {
-          "description": "Management service configuration",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "port": {
-              "description": "The port to listen on.",
-              "type": "integer"
-            },
-            "host": {
-              "description": "The network interface to listen on.",
-              "type": "string",
-              "default": "",
-              "examples": [
-                "localhost",
-                "127.0.0.1"
-              ]
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "cors": {
-              "$ref": "#/definitions/corsConfig"
-            },
-            "tls": {
-              "$ref": "#/definitions/tlsConfig"
-            },
-            "trusted_proxies": {
-              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
+        "host": {
+          "description": "The network interface to listen on.",
+          "type": "string",
+          "default": "",
+          "examples": [
+            "localhost",
+            "127.0.0.1"
+          ]
+        },
+        "timeout": {
+          "$ref": "#/definitions/timeoutConfig"
+        },
+        "buffer_limit": {
+          "$ref": "#/definitions/bufferLimitConfig"
+        },
+        "cors": {
+          "$ref": "#/definitions/corsConfig"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsConfig"
         }
       }
     },

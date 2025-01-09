@@ -309,7 +309,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				Write: 100 * time.Millisecond,
 				Idle:  1 * time.Second,
 			}
-			ctx := newContextFactory(config.ServiceConfig{Timeout: timeouts}, nil).Create(rw, req)
+			ctx := newContextFactory(config.ServeConfig{Timeout: timeouts}, nil).Create(rw, req)
 
 			backend := tc.setup(t, ctx, targetURL)
 

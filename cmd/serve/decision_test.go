@@ -35,8 +35,8 @@ func TestCreateDecisionAppForHTTPRequests(t *testing.T) {
 	port2, err := testsupport.GetFreePort()
 	require.NoError(t, err)
 
-	t.Setenv("SERVE_DECISION_PORT", strconv.Itoa(port1))
-	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
+	t.Setenv("SERVE_PORT", strconv.Itoa(port1))
+	t.Setenv("MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewDecisionCommand()
 	cmd.PersistentFlags().Bool(flags.SkipAllSecurityEnforcement, true, "")
@@ -57,8 +57,8 @@ func TestCreateDecisionAppForEnvoyGRPCRequests(t *testing.T) {
 	port2, err := testsupport.GetFreePort()
 	require.NoError(t, err)
 
-	t.Setenv("SERVE_DECISION_PORT", strconv.Itoa(port1))
-	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
+	t.Setenv("SERVE_PORT", strconv.Itoa(port1))
+	t.Setenv("MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewDecisionCommand()
 	cmd.PersistentFlags().Bool(flags.SkipAllSecurityEnforcement, true, "")

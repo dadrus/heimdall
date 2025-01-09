@@ -44,7 +44,7 @@ func newLifecycleManager(
 	executor rule.Executor,
 	cw watcher.Watcher,
 ) *fxlcm.LifecycleManager {
-	cfg := conf.Serve.Proxy
+	cfg := conf.Serve
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Proxy",

@@ -135,7 +135,6 @@ nested_2:
 			defer tempFile.Close()
 
 			fileName := tempFile.Name()
-			defer os.Remove(fileName)
 
 			_, err = tempFile.Write(tc.config)
 			require.NoError(t, err)
