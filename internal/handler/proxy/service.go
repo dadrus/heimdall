@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -145,7 +146,7 @@ func newService(
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: int(cfg.BufferLimit.Read),
+		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 		ConnContext:    der.contexter,
 	}

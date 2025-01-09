@@ -5,6 +5,7 @@ go 1.23.4
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alicebob/miniredis/v2 v2.34.0
+	github.com/ccoveille/go-safecast v1.5.0
 	github.com/dadrus/httpsig v0.0.0-20241214150921-ede02f5b33e8
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
@@ -77,7 +78,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.33.0
 	go.uber.org/fx v1.23.0
 	gocloud.dev v0.40.0
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241216192217-9240e9c98484
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.0
@@ -206,6 +206,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
 	golang.org/x/net v0.32.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect

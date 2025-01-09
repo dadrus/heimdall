@@ -198,11 +198,10 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc                 string
-		password           string
-		keyStoreFile       func(t *testing.T) string
-		removeKeyStoreFile func(t *testing.T, file string)
-		assert             func(t *testing.T, ks keystore.KeyStore, err error)
+		uc           string
+		password     string
+		keyStoreFile func(t *testing.T) string
+		assert       func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
 			uc: "file does not exist",
@@ -211,7 +210,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				return "foobar.pem"
 			},
-			removeKeyStoreFile: func(t *testing.T, _ string) { t.Helper() },
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
@@ -224,15 +222,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				dir, err := os.MkdirTemp("", "test_dir.*")
-				require.NoError(t, err)
-
-				return dir
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
+				return t.TempDir()
 			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
@@ -246,18 +236,13 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				err = file.Chmod(0o200)
 				require.NoError(t, err)
 
 				return file.Name()
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
 			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
@@ -272,7 +257,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				buf := bytes.NewBuffer(pemPKCS8ECEncryptedPrivateKey)
@@ -283,11 +268,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				require.NoError(t, err)
 
 				return file.Name()
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
 			},
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
@@ -321,7 +301,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
@@ -335,11 +315,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				return file.Name()
 			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
-			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
@@ -352,8 +327,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			file := tc.keyStoreFile(t)
-
-			defer tc.removeKeyStoreFile(t, file)
 
 			// WHEN
 			ks, err := keystore.NewKeyStoreFromPEMFile(file, tc.password)

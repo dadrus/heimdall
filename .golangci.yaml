@@ -17,8 +17,7 @@ linters:
     - depguard
     - zerologlint
     # depricated
-    - gomnd
-    - execinquery
+    - exportloopref
 
 issues:
   exclude-rules:
@@ -35,6 +34,7 @@ issues:
         - mnd
         - err113
         - forcetypeassert
+        - iface
 
 linters-settings:
   exhaustive:

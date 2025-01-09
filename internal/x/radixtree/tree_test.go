@@ -1,12 +1,12 @@
 package radixtree
 
 import (
+	"maps"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/maps"
 )
 
 func lookupMatcher[V any](matches bool) LookupMatcherFunc[V] {
@@ -416,7 +416,7 @@ func TestTreeClone(t *testing.T) {
 
 	clone := tree.Clone()
 
-	for _, path := range maps.Values(paths) {
+	for _, path := range slices.Collect(maps.Values(paths)) {
 		entry, err := clone.Find(path,
 			LookupMatcherFunc[string](func(_ string, _, _ []string) bool { return true }))
 

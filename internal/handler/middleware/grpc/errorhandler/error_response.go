@@ -43,6 +43,8 @@ func errorResponse(
 	grpcCode codes.Code, httpCodeOverride int, decErr error, verbose bool, mimeType string,
 ) *envoy_auth.CheckResponse {
 	deniedResponse := &envoy_auth.DeniedHttpResponse{
+		//nolint:gosec
+		// no integer overflow during conversion possible
 		Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(httpCodeOverride)},
 	}
 
@@ -69,6 +71,8 @@ func errorResponse(
 	}
 
 	return &envoy_auth.CheckResponse{
+		//nolint:gosec
+		// no integer overflow during conversion possible
 		Status:       &status.Status{Code: int32(grpcCode)},
 		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{DeniedResponse: deniedResponse},
 	}
