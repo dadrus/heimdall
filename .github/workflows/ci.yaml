@@ -20,6 +20,7 @@ env:
   RUBY_VERSION: "3.4"
   COSIGN_VERSION: "v2.4.1"
   CYCLONEDX_GOMOD_VERSION: "v1.9.0"
+  HUGO_VERSION: "0.140.1"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 permissions: read-all
@@ -641,7 +642,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3.0.0
         with:
-          hugo-version: 0.100.1
+          hugo-version: ${{ env.HUGO_VERSION }}
           extended: true
       - name: Setup Node
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
@@ -696,7 +697,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3.0.0
         with:
-          hugo-version: 0.100.1
+          hugo-version: ${{ env.HUGO_VERSION }}
           extended: true
       - name: Setup Node
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
