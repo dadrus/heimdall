@@ -114,7 +114,7 @@ tests:
             app.kubernetes.io/instance: test-release
             app.kubernetes.io/name: foo
 
-  - it: should expose management and decision ports by default
+  - it: should expose management and main ports by default
     asserts:
       - equal:
           path: spec.ports
