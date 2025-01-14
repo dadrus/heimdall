@@ -371,6 +371,8 @@ github.com/redis/rueidis/rueidisotel v1.0.51 h1:rXBRPEk88pm3w/P1DkSG0B9tJONTQAA6
 github.com/redis/rueidis/rueidisotel v1.0.51/go.mod h1:UZyX+MPYhgTlqWlwT7dUkUVkt5tGxEpIE73Ns9Drb44=
 github.com/redis/rueidis/rueidisotel v1.0.52 h1:Z1+vtDVCLf/pI91TI6dHrQSKsQc+CjBlDKMwNwfYEXw=
 github.com/redis/rueidis/rueidisotel v1.0.52/go.mod h1:z+mN49awk0Pn9diRZhT9zs7+7wP0RGyocqd1LC7x1Wk=
+github.com/redis/rueidis/rueidisotel v1.0.53 h1:v6GQIQ/trN74n0mKl4aHaFuOieeEmfIvLqVj/nX9fas=
+github.com/redis/rueidis/rueidisotel v1.0.53/go.mod h1:8I6yLf8ABuWcXZAQTsCJTEWh/6SNmXHDrjnL5AIRFEQ=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
 github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
