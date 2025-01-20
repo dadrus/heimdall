@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(errorHandlerType string, input, output any) error {
+func decodeConfig(validator validation.Validator, errorHandlerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -44,7 +44,7 @@ func decodeConfig(errorHandlerType string, input, output any) error {
 			"failed decoding '%s' error handler config", errorHandlerType).CausedBy(err)
 	}
 
-	if err = validation.ValidateStruct(output); err != nil {
+	if err = validator.ValidateStruct(output); err != nil {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed validating '%s' error handler config", errorHandlerType).CausedBy(err)
 	}

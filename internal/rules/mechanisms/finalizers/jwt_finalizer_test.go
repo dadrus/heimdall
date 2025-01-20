@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -39,6 +40,7 @@ import (
 	mocks3 "github.com/dadrus/heimdall/internal/keyholder/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	mocks2 "github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -65,16 +67,16 @@ func TestCreateJWTFinalizer(t *testing.T) {
 	const expectedTTL = 5 * time.Second
 
 	for _, tc := range []struct {
-		uc               string
-		id               string
-		config           []byte
-		configureContext func(t *testing.T, ctx *CreationContextMock)
-		assert           func(t *testing.T, err error, finalizer *jwtFinalizer)
+		uc                  string
+		id                  string
+		config              []byte
+		configureAppContext func(t *testing.T, ctx *app.ContextMock)
+		assert              func(t *testing.T, err error, finalizer *jwtFinalizer)
 	}{
 		{
-			uc:               "without config",
-			id:               "fin",
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			uc:                  "without config",
+			id:                  "fin",
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -83,10 +85,10 @@ func TestCreateJWTFinalizer(t *testing.T) {
 			},
 		},
 		{
-			uc:               "with empty config",
-			id:               "fin",
-			config:           []byte(``),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			uc:                  "with empty config",
+			id:                  "fin",
+			config:              []byte(``),
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -103,7 +105,7 @@ signer:
     path: /does/not/exist.pem
   key_id: key
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Watcher().Return(mocks2.NewWatcherMock(t))
@@ -124,7 +126,7 @@ signer:
     path: ` + pemFile + `
   key_id: key
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -168,7 +170,7 @@ signer:
   key_store: 
     path: ` + pemFile + `
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -209,7 +211,7 @@ signer:
   key_store: 
     path: ` + pemFile + `
 `),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -229,7 +231,7 @@ signer:
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -279,7 +281,7 @@ signer:
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -324,7 +326,7 @@ claims:
 ttl: 5s
 foo: bar"
 `),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -342,7 +344,7 @@ signer:
 header:
   scheme: Foo
 `),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -361,7 +363,7 @@ signer:
 header:
   name: Foo
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -404,7 +406,7 @@ header:
   name: Foo
   scheme: Bar
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -441,11 +443,16 @@ header:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			ctx := NewCreationContextMock(t)
-			tc.configureContext(t, ctx)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			tc.configureAppContext(t, appCtx)
 
 			// WHEN
-			finalizer, err := newJWTFinalizer(ctx, tc.id, conf)
+			finalizer, err := newJWTFinalizer(appCtx, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -659,12 +666,16 @@ foo: bar
 			co := mocks4.NewObserverMock(t)
 			co.EXPECT().Add(mock.Anything)
 
-			ctx := NewCreationContextMock(t)
-			ctx.EXPECT().Watcher().Return(wm)
-			ctx.EXPECT().KeyHolderRegistry().Return(khr)
-			ctx.EXPECT().CertificateObserver().Return(co)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
 
-			prototype, err := newJWTFinalizer(ctx, tc.id, protoConf)
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Watcher().Return(wm)
+			appCtx.EXPECT().KeyHolderRegistry().Return(khr)
+			appCtx.EXPECT().CertificateObserver().Return(co)
+			appCtx.EXPECT().Validator().Return(validator)
+
+			prototype, err := newJWTFinalizer(appCtx, tc.id, protoConf)
 			require.NoError(t, err)
 
 			// WHEN
@@ -909,14 +920,18 @@ claims: "{{ len .foobar }}"
 			co := mocks4.NewObserverMock(t)
 			co.EXPECT().Add(mock.Anything)
 
-			cctx := NewCreationContextMock(t)
-			cctx.EXPECT().Watcher().Return(wm)
-			cctx.EXPECT().KeyHolderRegistry().Return(khr)
-			cctx.EXPECT().CertificateObserver().Return(co)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Watcher().Return(wm)
+			appCtx.EXPECT().KeyHolderRegistry().Return(khr)
+			appCtx.EXPECT().CertificateObserver().Return(co)
+			appCtx.EXPECT().Validator().Return(validator)
 
 			mctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 
-			finalizer, err := newJWTFinalizer(cctx, tc.id, conf)
+			finalizer, err := newJWTFinalizer(appCtx, tc.id, conf)
 			require.NoError(t, err)
 
 			configureMocks(t, finalizer, mctx, cch, tc.subject)

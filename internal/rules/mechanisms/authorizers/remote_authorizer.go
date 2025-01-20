@@ -31,6 +31,7 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -51,12 +52,12 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerRemote {
 				return false, nil, nil
 			}
 
-			auth, err := newRemoteAuthorizer(ctx, id, conf)
+			auth, err := newRemoteAuthorizer(app, id, conf)
 
 			return true, auth, err
 		})
@@ -64,6 +65,7 @@ func init() {
 
 type remoteAuthorizer struct {
 	id                 string
+	app                app.Context
 	e                  endpoint.Endpoint
 	payload            template.Template
 	expressions        compiledExpressions
@@ -93,7 +95,7 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Contex
 	}
 }
 
-func newRemoteAuthorizer(ctx CreationContext, id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
+func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"                             validate:"required"` //nolint:lll
 		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
@@ -104,7 +106,7 @@ func newRemoteAuthorizer(ctx CreationContext, id string, rawConfig map[string]an
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthorizerRemote, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, AuthorizerRemote, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -121,6 +123,7 @@ func newRemoteAuthorizer(ctx CreationContext, id string, rawConfig map[string]an
 
 	return &remoteAuthorizer{
 		id:                 id,
+		app:                app,
 		e:                  conf.Endpoint,
 		payload:            conf.Payload,
 		expressions:        expressions,
@@ -201,7 +204,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthorizerRemote, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, AuthorizerRemote, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
@@ -212,6 +215,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 
 	return &remoteAuthorizer{
 		id:          a.id,
+		app:         a.app,
 		e:           a.e,
 		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
 		celEnv:      a.celEnv,

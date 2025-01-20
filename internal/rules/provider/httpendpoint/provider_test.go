@@ -18,6 +18,7 @@ package httpendpoint
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -32,11 +33,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
@@ -162,15 +165,25 @@ endpoints:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			conf := &config.Configuration{
 				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
-			cch, err := memory.NewCache(nil, nil, nil)
+			cch, err := memory.NewCache(nil, nil)
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Validator().Return(validator)
+
 			// WHEN
-			prov, err := newProvider(conf, cch, mocks.NewRuleSetProcessorMock(t), log.Logger)
+			prov, err := newProvider(appCtx, mocks.NewRuleSetProcessorMock(t), cch)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -677,7 +690,7 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnCreated(mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -738,7 +751,7 @@ rules:
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose)
+				processor.EXPECT().OnUpdated(mock.Anything).Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -787,7 +800,7 @@ rules:
 				t.Helper()
 
 				call := processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).NotBefore(call)
+				processor.EXPECT().OnDeleted(mock.Anything).Return(errors.New("test error")).NotBefore(call)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -819,10 +832,20 @@ rules:
 
 			logs := &strings.Builder{}
 
-			cch, err := memory.NewCache(nil, nil, nil)
+			cch, err := memory.NewCache(nil, nil)
 			require.NoError(t, err)
 
-			prov, err := newProvider(conf, cch, processor, zerolog.New(logs))
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Validator().Return(validator)
+
+			prov, err := newProvider(appCtx, processor, cch)
 			require.NoError(t, err)
 
 			ctx := context.Background()

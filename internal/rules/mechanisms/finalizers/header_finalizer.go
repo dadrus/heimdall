@@ -19,6 +19,7 @@ package finalizers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -30,12 +31,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerHeader {
 				return false, nil, nil
 			}
 
-			finalizer, err := newHeaderFinalizer(id, conf)
+			finalizer, err := newHeaderFinalizer(app, id, conf)
 
 			return true, finalizer, err
 		})
@@ -43,21 +44,23 @@ func init() {
 
 type headerFinalizer struct {
 	id      string
+	app     app.Context
 	headers map[string]template.Template
 }
 
-func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, error) {
+func newHeaderFinalizer(app app.Context, id string, rawConfig map[string]any) (*headerFinalizer, error) {
 	type Config struct {
 		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerHeader, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app.Validator(), FinalizerHeader, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &headerFinalizer{
 		id:      id,
+		app:     app,
 		headers: conf.Headers,
 	}, nil
 }
@@ -98,7 +101,7 @@ func (f *headerFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
 		return f, nil
 	}
 
-	return newHeaderFinalizer(f.id, config)
+	return newHeaderFinalizer(f.app, f.id, config)
 }
 
 func (f *headerFinalizer) ID() string { return f.id }

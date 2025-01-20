@@ -34,9 +34,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks3 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -138,11 +141,17 @@ auth:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(nil),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})
@@ -336,11 +345,17 @@ auth:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(nil),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})
@@ -499,11 +514,19 @@ auth:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(nil),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})
@@ -562,7 +585,7 @@ func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing
 	for _, tc := range []struct {
 		uc               string
 		config           []byte
-		configureContext func(t *testing.T, ccm *CreationContextMock)
+		configureContext func(t *testing.T, ccm *app.ContextMock)
 		assert           func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		{
@@ -682,7 +705,7 @@ auth:
       key_store:
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+			configureContext: func(t *testing.T, ccm *app.ContextMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
@@ -709,7 +732,7 @@ auth:
       key_store:
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+			configureContext: func(t *testing.T, ccm *app.ContextMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
@@ -751,7 +774,7 @@ auth:
         password: secret
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+			configureContext: func(t *testing.T, ccm *app.ContextMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
@@ -780,18 +803,25 @@ auth:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			ccm := NewCreationContextMock(t)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+				func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			)
-			configureContext(t, ccm)
+			configureContext(t, appCtx)
 
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(ccm),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})

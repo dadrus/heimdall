@@ -20,9 +20,10 @@ import (
 	"context"
 
 	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 type RuleSetFetcher interface {
-	FetchRuleSet(ctx context.Context) (*config.RuleSet, error)
+	FetchRuleSet(ctx context.Context, validator validation.Validator) (*config.RuleSet, error)
 	ID() string
 }

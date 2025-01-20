@@ -62,7 +62,7 @@ func (v *validationError) Error() string {
 			idx++
 		}
 
-		return strings.Join(messages, ", ")
+		return "validation error: " + strings.Join(messages, ", ")
 	}
 
 	return v.err.Error()

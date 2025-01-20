@@ -19,6 +19,7 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -29,7 +30,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
+		func(_ app.Context, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorUnauthorized {
 				return false, nil, nil
 			}
@@ -68,3 +69,5 @@ func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
 func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *unauthorizedAuthenticator) IsInsecure() bool { return false }

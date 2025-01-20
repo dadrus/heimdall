@@ -19,6 +19,7 @@ package finalizers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
@@ -28,7 +29,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
+		func(_ app.Context, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerNoop {
 				return false, nil, nil
 			}

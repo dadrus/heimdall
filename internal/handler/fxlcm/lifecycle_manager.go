@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 //go:generate mockery --name Server --structname ServerMock
@@ -56,9 +57,14 @@ func (m *LifecycleManager) Start(_ context.Context) error {
 	}
 
 	go func() {
-		m.Logger.Info().
+		isSecure := m.TLSConf != nil
+
+		x.IfThenElseExec(isSecure,
+			func() *zerolog.Event { return m.Logger.Info() },
+			func() *zerolog.Event { return m.Logger.Warn() }).
 			Str("_address", ln.Addr().String()).
 			Str("_service", m.ServiceName).
+			Bool("_secure", isSecure).
 			Msg("Starting listening")
 
 		if err = m.Server.Serve(ln); err != nil {

@@ -45,7 +45,7 @@ const (
 )
 
 type Config struct {
-	TokenURL     string         `mapstructure:"token_url"     validate:"required,url"`
+	TokenURL     string         `mapstructure:"token_url"     validate:"required,url,enforced=istls"`
 	ClientID     string         `mapstructure:"client_id"     validate:"required"`
 	ClientSecret string         `mapstructure:"client_secret" validate:"required"`
 	AuthMethod   AuthMethod     `mapstructure:"auth_method"   validate:"omitempty,oneof=basic_auth request_body"`

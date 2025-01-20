@@ -28,10 +28,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
@@ -135,9 +137,17 @@ func TestNewProvider(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			conf := &config.Configuration{Providers: config.RuleProviders{FileSystem: tc.conf}}
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
 
-			prov, err := NewProvider(conf, nil, log.Logger)
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().Config().Return(&config.Configuration{Providers: config.RuleProviders{FileSystem: tc.conf}})
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			prov, err := NewProvider(appCtx, nil)
 
 			tc.assert(t, err, prov)
 		})
@@ -524,12 +534,18 @@ rules:
 				require.NoError(t, err)
 			}
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			// GIVEN
 			prov := &Provider{
 				src:        setupContents(t, tmpFile, tmpDir),
 				p:          processor,
 				l:          log.Logger,
 				w:          watcher,
+				v:          validator,
 				configured: true,
 			}
 

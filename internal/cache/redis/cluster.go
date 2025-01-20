@@ -19,9 +19,8 @@ package redis
 import (
 	"time"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 // by intention. Used only during application bootstrap.
@@ -29,7 +28,7 @@ func init() { // nolint: gochecknoinits
 	cache.Register("redis-cluster", cache.FactoryFunc(NewClusterCache))
 }
 
-func NewClusterCache(conf map[string]any, cw watcher.Watcher, co certificate.Observer) (cache.Cache, error) {
+func NewClusterCache(app app.Context, conf map[string]any) (cache.Cache, error) {
 	type Config struct {
 		baseConfig `mapstructure:",squash"`
 
@@ -40,12 +39,12 @@ func NewClusterCache(conf map[string]any, cw watcher.Watcher, co certificate.Obs
 		baseConfig: baseConfig{ClientCache: clientCache{TTL: 5 * time.Minute}}, //nolint:mnd
 	}
 
-	err := decodeConfig(conf, &cfg)
+	err := decodeConfig(app.Validator(), conf, &cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions("redis-cluster", cw, co)
+	opts, err := cfg.clientOptions(app, "redis-cluster")
 	if err != nil {
 		return nil, err
 	}

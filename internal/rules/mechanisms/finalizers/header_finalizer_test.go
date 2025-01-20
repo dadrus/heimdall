@@ -23,9 +23,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -118,11 +120,18 @@ headers:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			finalizer, err := newHeaderFinalizer(tc.id, conf)
+			finalizer, err := newHeaderFinalizer(appCtx, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -202,13 +211,20 @@ headers:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newHeaderFinalizer(tc.id, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			prototype, err := newHeaderFinalizer(appCtx, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -314,7 +330,13 @@ headers:
 
 			configureContext(t, ctx)
 
-			finalizer, err := newHeaderFinalizer(tc.id, conf)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
+			finalizer, err := newHeaderFinalizer(appCtx, tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN

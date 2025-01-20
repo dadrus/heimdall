@@ -19,17 +19,13 @@ package mechanisms
 import (
 	"errors"
 
-	"github.com/rs/zerolog"
-
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -51,16 +47,11 @@ type MechanismFactory interface {
 	CreateErrorHandler(version, id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
 
-func NewMechanismFactory(
-	conf *config.Configuration,
-	logger zerolog.Logger,
-	fw watcher.Watcher,
-	khr keyholder.Registry,
-	co certificate.Observer,
-) (MechanismFactory, error) {
+func NewMechanismFactory(app app.Context) (MechanismFactory, error) {
+	logger := app.Logger()
 	logger.Info().Msg("Loading mechanism catalogue")
 
-	repository, err := newMechanismRepository(conf, logger, fw, khr, co)
+	repository, err := newMechanismRepository(app)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading mechanism catalogue")
 
