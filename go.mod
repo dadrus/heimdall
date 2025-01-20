@@ -1,6 +1,6 @@
 module github.com/dadrus/heimdall
 
-go 1.23.4
+go 1.23.5
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -9,7 +9,6 @@ require (
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
-	github.com/envoyproxy/go-control-plane v0.13.4
 	github.com/envoyproxy/go-control-plane/envoy v1.32.3
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/felixge/httpsnoop v1.0.4
@@ -224,9 +223,4 @@ require (
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
-)
-
-replace (
-	golang.org/x/crypto v0.30.0 => golang.org/x/crypto v0.31.0
-	golang.org/x/net v0.32.0 => golang.org/x/net v0.33.0
 )
