@@ -11,7 +11,7 @@ on:
       - release
 
 env:
-  GO_VERSION: "1.23.4"
+  GO_VERSION: "1.23.5"
   GOLANGCI_LINT_VERSION: "v1.63.4"
   HELM_VERSION: "3.16.4"
   KUBECONFORM_VERSION: "0.6.7"
@@ -37,7 +37,7 @@ jobs:
       ci_config_changed: ${{steps.ci-changes.outputs.count > 0}}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -94,7 +94,7 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -119,7 +119,7 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -132,7 +132,7 @@ jobs:
           go_version: "${{ env.GO_VERSION }}"
           golangci_lint_version: "${{ env.GOLANGCI_LINT_VERSION }}"
           reporter: github-pr-review
-          fail_on_error: true
+          fail_level: error
 
   lint-api:
     runs-on: ubuntu-24.04
@@ -143,7 +143,7 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
 
@@ -154,7 +154,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
-        run: npm i -g @redocly/cli@1.27.1
+        run: npm i -g @redocly/cli@1.25.9
       - name: Run Redocly Lint
         run: redocly lint
 
@@ -169,7 +169,7 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
 
@@ -190,7 +190,7 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
 
@@ -224,7 +224,7 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -253,7 +253,7 @@ jobs:
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
 
@@ -283,7 +283,7 @@ jobs:
       tag_name: ${{ steps.release_prepare.outputs.tag_name }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Prepare Release
@@ -312,7 +312,7 @@ jobs:
             goos: windows
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -323,7 +323,7 @@ jobs:
           go-version: "${{ env.GO_VERSION }}"
       - name: Build
         run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ github.sha }}" -o ./build/
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: github.ref == 'refs/heads/main'
         with:
           name: build-result-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -340,7 +340,7 @@ jobs:
       id-token: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -385,7 +385,7 @@ jobs:
       (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true'))
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -406,7 +406,7 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+        uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3.3.0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
       - name: Collect container meta-info
@@ -419,7 +419,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build images
         if: github.ref != 'refs/heads/main'
-        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -443,7 +443,7 @@ jobs:
       - name: Build and push dev images to container registry
         if: github.ref == 'refs/heads/main'
         id: publish-image
-        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -494,7 +494,7 @@ jobs:
       - prepare-release
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -518,7 +518,7 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+        uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3.3.0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
       - name: Login to DockerHub
@@ -542,7 +542,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build and push images to container registry
         id: publish-image
-        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -600,7 +600,7 @@ jobs:
     if: needs.prepare-release.outputs.release_created
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -631,7 +631,7 @@ jobs:
       (needs.check-changes.outputs.docs_changed == 'true' || needs.check-changes.outputs.ci_config_changed == 'true')
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -649,7 +649,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@401c19e14f474b54450cd3905bb8b86e2c8509cf # v1.204.0
+        uses: ruby/setup-ruby@28c4deda893d5a96a6b2d958c5b47fc18d65c9d3 # v1.213.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
@@ -686,7 +686,7 @@ jobs:
     if: needs.prepare-release.outputs.release_created
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -704,7 +704,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@401c19e14f474b54450cd3905bb8b86e2c8509cf # v1.204.0
+        uses: ruby/setup-ruby@28c4deda893d5a96a6b2d958c5b47fc18d65c9d3 # v1.213.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
@@ -764,10 +764,10 @@ jobs:
           publish_dir: ./docs/versions
           keep_files: true
       - name: Setup GitSign
-        uses: chainguard-dev/actions/setup-gitsign@0c26ac0ebfc8e53f8c2debe657cc2c5f6fe26663 # main
+        uses: chainguard-dev/actions/setup-gitsign@15db5d054137fadf2fee7e5fad9149f88b60b4e2 # main
       - name: Create a PR for the updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
-        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
           title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
           commit-message: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
