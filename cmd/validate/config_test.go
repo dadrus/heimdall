@@ -65,12 +65,12 @@ func TestValidateConfig(t *testing.T) {
 			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
 
 			if len(tc.confFile) != 0 {
-				err := cmd.ParseFlags([]string{"--" + flags.Config, tc.confFile})
+				err = cmd.ParseFlags([]string{"--" + flags.Config, tc.confFile})
 				require.NoError(t, err)
 			}
 
 			// WHEN
-			err := validateConfig(cmd)
+			err = validateConfig(cmd)
 
 			// THEN
 			if tc.expError != nil {
