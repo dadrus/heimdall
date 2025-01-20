@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.15.5](https://github.com/dadrus/heimdall/compare/v0.15.4...v0.15.5) (2025-01-20)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 6cb9b82 ([#2108](https://github.com/dadrus/heimdall/issues/2108)) ([23dfb03](https://github.com/dadrus/heimdall/commit/23dfb032ccb98ed9cac7a9ba705abd42725e74fe))
+* update golang to v1.23.5 ([#2109](https://github.com/dadrus/heimdall/issues/2109)) ([af4eee7](https://github.com/dadrus/heimdall/commit/af4eee721d301b29986831f8691a13233f513526))
+* update google.golang.org/genproto/googleapis/rpc digest to 1a7da9e ([#2105](https://github.com/dadrus/heimdall/issues/2105)) ([e2a1698](https://github.com/dadrus/heimdall/commit/e2a1698242a61dd10bb41ee938ca27312e0d0e57))
+* update kubernetes packages to v0.32.1 ([#2107](https://github.com/dadrus/heimdall/issues/2107)) ([266fa95](https://github.com/dadrus/heimdall/commit/266fa95b6c6dda78e3fd99ce4e00164e077e95ec))
+* update module github.com/envoyproxy/go-control-plane to v0.13.4 ([#2080](https://github.com/dadrus/heimdall/issues/2080)) ([ca83050](https://github.com/dadrus/heimdall/commit/ca83050b80ba0495042e25b425d648910c4fddab))
+* update module github.com/go-co-op/gocron/v2 to v2.14.2 ([#2085](https://github.com/dadrus/heimdall/issues/2085)) ([9ab4019](https://github.com/dadrus/heimdall/commit/9ab4019e33eefc68f7912bfc981513818c270d52))
+* update module github.com/go-playground/validator/v10 to v10.24.0 ([#2097](https://github.com/dadrus/heimdall/issues/2097)) ([52620e5](https://github.com/dadrus/heimdall/commit/52620e52b63aafc9115ad96df16fc280b83ccf0a))
+* update module github.com/redis/rueidis to v1.0.53 ([#2099](https://github.com/dadrus/heimdall/issues/2099)) ([d8187ee](https://github.com/dadrus/heimdall/commit/d8187eeadf5944b85d340e6624df9515d4852e08))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.53 ([#2100](https://github.com/dadrus/heimdall/issues/2100)) ([b472480](https://github.com/dadrus/heimdall/commit/b472480789e8c85c3bbafea0f8e019fc50a4a8fb))
+* update module google.golang.org/grpc to v1.69.4 ([#2098](https://github.com/dadrus/heimdall/issues/2098)) ([f0b67d8](https://github.com/dadrus/heimdall/commit/f0b67d80cf0345cdbfd241a511fec18962b580e3))
+* update module google.golang.org/protobuf to v1.36.3 ([#2103](https://github.com/dadrus/heimdall/issues/2103)) ([a67f183](https://github.com/dadrus/heimdall/commit/a67f1832f4a0117944a2dd5e8688a1ec61f574d2))
+* update opentelemetry-go monorepo v1.34.0 ([#2111](https://github.com/dadrus/heimdall/issues/2111)) ([28e3249](https://github.com/dadrus/heimdall/commit/28e3249ccf4b2ce0985515885bfcf5021ee86f17))
+* update opentelemetry-go-contrib monorepo to v0.59.0 ([#2112](https://github.com/dadrus/heimdall/issues/2112)) ([9ec1e1f](https://github.com/dadrus/heimdall/commit/9ec1e1f6e2c560766d9c0d25c2b15c24402b1223))
+
 ## [0.15.4](https://github.com/dadrus/heimdall/compare/v0.15.3...v0.15.4) (2024-12-19)
 
 
