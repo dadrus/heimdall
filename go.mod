@@ -10,7 +10,7 @@ require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane/envoy v1.32.3
-	github.com/evanphx/json-patch/v5 v5.9.0
+	github.com/evanphx/json-patch/v5 v5.9.10
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-co-op/gocron/v2 v2.14.2
