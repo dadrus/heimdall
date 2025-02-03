@@ -9,7 +9,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
-	github.com/envoyproxy/go-control-plane/envoy v1.32.3
+	github.com/envoyproxy/go-control-plane/envoy v1.32.4
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/fsnotify/fsnotify v1.8.0
@@ -135,7 +135,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dunglas/httpsfv v1.0.2 // indirect
 	github.com/ebitengine/purego v0.8.2 // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.1.0 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
