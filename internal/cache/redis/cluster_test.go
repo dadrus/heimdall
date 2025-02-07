@@ -44,7 +44,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestNewClusterCache(t *testing.T) {
+func TestClusterCache(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
@@ -254,8 +254,12 @@ func TestNewClusterCache(t *testing.T) {
 
 			// WHEN
 			cch, err := NewClusterCache(appCtx, conf)
+
 			if err == nil {
-				defer cch.Stop(context.TODO())
+				err = cch.Start(context.TODO())
+				if err == nil {
+					defer cch.Stop(context.TODO())
+				}
 			}
 
 			// THEN

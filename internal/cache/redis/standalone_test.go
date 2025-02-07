@@ -47,7 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestNewStandaloneCache(t *testing.T) {
+func TestStandaloneCache(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
@@ -359,7 +359,10 @@ func TestNewStandaloneCache(t *testing.T) {
 			// WHEN
 			cch, err := NewStandaloneCache(appCtx, conf)
 			if err == nil {
-				defer cch.Stop(context.TODO())
+				err = cch.Start(context.TODO())
+				if err == nil {
+					defer cch.Stop(context.TODO())
+				}
 			}
 
 			// THEN

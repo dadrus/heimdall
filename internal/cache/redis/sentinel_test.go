@@ -41,7 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestNewSentinelCache(t *testing.T) {
+func TestSentinelCache(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
@@ -198,7 +198,10 @@ func TestNewSentinelCache(t *testing.T) {
 			// WHEN
 			cch, err := NewSentinelCache(appCtx, conf)
 			if err == nil {
-				defer cch.Stop(context.TODO())
+				err = cch.Start(context.TODO())
+				if err == nil {
+					defer cch.Stop(context.TODO())
+				}
 			}
 
 			// THEN
