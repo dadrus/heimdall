@@ -56,6 +56,12 @@ func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { 
 		}
 
 		return true
+	case "https":
+		if !v.EnforceUpstreamTLS {
+			return true
+		}
+
+		return field.String() == "https"
 	default:
 		return false
 	}
@@ -75,6 +81,8 @@ func (v EnforcementSettings) ErrorMessage(param string) string {
 		return "must be false"
 	case "secure_networks":
 		return "contains insecure networks"
+	case "https":
+		return "must be https"
 	default:
 		return "parameter is unknown"
 	}
