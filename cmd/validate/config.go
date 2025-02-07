@@ -24,10 +24,12 @@ import (
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // NewValidateConfigCommand represents the "validate config" command.
@@ -54,7 +56,7 @@ func validateConfig(cmd *cobra.Command) error {
 	logger := zerolog.Nop()
 
 	if len(configPath) == 0 {
-		return ErrNoConfigFile
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no config file provided")
 	}
 
 	es := flags.EnforcementSettings(cmd)
