@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/cmd/flags"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -50,16 +51,121 @@ func TestValidateConfig(t *testing.T) {
 
 	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
 
-	for _, tc := range []struct {
-		uc       string
+	for name, tc := range map[string]struct {
 		confFile string
-		expError error
+		assert   func(t *testing.T, err error)
 	}{
-		{uc: "no config provided", expError: ErrNoConfigFile},
-		{uc: "invalid config", confFile: "doesnotexist.yaml", expError: os.ErrNotExist},
-		{uc: "valid config", confFile: "test_data/insecure-trusted-proxies-config.yaml"},
+		"no config provided": {
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no config")
+			},
+		},
+		"not existing config": {
+			confFile: "doesnotexist.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, os.ErrNotExist)
+			},
+		},
+		"insecure trusted proxies configured": {
+			confFile: "test_data/insecure-trusted-proxies-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'serve'.'trusted_proxies' contains insecure networks")
+			},
+		},
+		"no TLS configured": {
+			confFile: "test_data/no-tls-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'serve'.'tls' must be configured")
+				require.ErrorContains(t, err, "'management'.'tls' must be configured")
+			},
+		},
+		"no https configured for generic authenticator": {
+			confFile: "test_data/no-https-endpoint-in-generic-authenticator-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'identity_info_endpoint'.'url' scheme must be https")
+			},
+		},
+		"no https configured for jwks_endpoint in jwt authenticator": {
+			confFile: "test_data/no-https-jwks-endpoint-in-jwt-authenticator-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'jwks_endpoint'.'url' scheme must be https")
+			},
+		},
+		"no https configured for metadata_endpoint in jwt authenticator": {
+			confFile: "test_data/no-https-metadata-endpoint-in-jwt-authenticator-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'metadata_endpoint'.'url' scheme must be https")
+			},
+		},
+		"no https configured for oath2 introspection authenticator enpoint": {
+			confFile: "test_data/no-https-endpoint-in-oauth2-introspection-authenticator-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'introspection_endpoint'.'url' scheme must be https")
+			},
+		},
+		"no https configured for remote authorizer endpoint": {
+			confFile: "test_data/no-https-endpoint-in-remote-authorizer-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'endpoint'.'url' scheme must be https")
+			},
+		},
+		"no https configured for oauth2 client credentials finalizer": {
+			confFile: "test_data/no-https-endpoint-in-oauth2-client-credentials-finalizer-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'token_url' scheme must be https")
+			},
+		},
+		"no https configured for generic contextualzer": {
+			confFile: "test_data/no-https-endpoint-in-generic-contextualizer-config.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'endpoint'.'url' scheme must be https")
+			},
+		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			cmd := NewValidateConfigCommand()
 			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
@@ -73,12 +179,7 @@ func TestValidateConfig(t *testing.T) {
 			err = validateConfig(cmd)
 
 			// THEN
-			if tc.expError != nil {
-				require.Error(t, err)
-				require.ErrorIs(t, err, tc.expError)
-			} else {
-				require.NoError(t, err)
-			}
+			tc.assert(t, err)
 		})
 	}
 }
