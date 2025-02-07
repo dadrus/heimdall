@@ -146,7 +146,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 		},
 		"everything is valid for decision mode usage": {
 			confFile:  configFile,
-			rulesFile: "test_data/valid-ruleset.yaml",
+			rulesFile: "test_data/ruleset-valid.yaml",
 		},
 		"invalid for proxy usage": {
 			proxyMode: true,
