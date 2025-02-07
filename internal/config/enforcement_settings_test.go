@@ -35,48 +35,63 @@ func TestEnforcementSettingsValidate(t *testing.T) {
 		shouldBeValid bool
 	}{
 		"istls is not enforced": {
-			param:         "istls",
+			param:         paramIsTLS,
 			shouldBeValid: true,
 		},
 		"istls is enforced and fails": {
-			param: "istls",
+			param: paramIsTLS,
 			es:    EnforcementSettings{EnforceEgressTLS: true},
 			field: reflect.ValueOf("http://foo.bar"),
 		},
 		"istls is enforced and succeeds": {
-			param:         "istls",
+			param:         paramIsTLS,
 			es:            EnforcementSettings{EnforceEgressTLS: true},
 			field:         reflect.ValueOf("https://foo.bar"),
 			shouldBeValid: true,
 		},
 		"notnil is not enforced": {
-			param:         "notnil",
+			param:         paramNotNil,
 			shouldBeValid: true,
 		},
 		"notnil is enforced and fails": {
-			param: "notnil",
+			param: paramNotNil,
 			es:    EnforcementSettings{EnforceIngressTLS: true},
 			field: reflect.ValueOf(""),
 		},
 		"notnil is enforced and succeeds": {
-			param:         "notnil",
+			param:         paramNotNil,
 			es:            EnforcementSettings{EnforceIngressTLS: true},
 			field:         reflect.ValueOf(TLS{}),
 			shouldBeValid: true,
 		},
 		"false is not enforced": {
-			param:         "false",
+			param:         paramFalse,
 			shouldBeValid: true,
 		},
 		"false is enforced and fails": {
-			param: "false",
+			param: paramFalse,
 			es:    EnforcementSettings{EnforceEgressTLS: true},
 			field: reflect.ValueOf(true),
 		},
 		"false is enforced and succeeds": {
-			param:         "false",
+			param:         paramFalse,
 			es:            EnforcementSettings{EnforceEgressTLS: true},
 			field:         reflect.ValueOf(false),
+			shouldBeValid: true,
+		},
+		"https is not enforced": {
+			param:         paramHTTPS,
+			shouldBeValid: true,
+		},
+		"https is enforced and fails": {
+			param: paramHTTPS,
+			es:    EnforcementSettings{EnforceUpstreamTLS: true},
+			field: reflect.ValueOf(true),
+		},
+		"https is enforced and succeeds": {
+			param:         paramHTTPS,
+			es:            EnforcementSettings{EnforceUpstreamTLS: true},
+			field:         reflect.ValueOf("https"),
 			shouldBeValid: true,
 		},
 		"unknown param": {
@@ -93,10 +108,11 @@ func TestEnforcementSettingsErrorMessage(t *testing.T) {
 	t.Parallel()
 
 	for param, msg := range map[string]string{
-		"istls":  "scheme must be https",
-		"notnil": "must be configured",
-		"false":  "must be false",
-		"foo":    "parameter is unknown",
+		paramIsTLS:  "scheme must be https",
+		paramNotNil: "must be configured",
+		paramFalse:  "must be false",
+		paramHTTPS:  "must be https",
+		"foo":       "parameter is unknown",
 	} {
 		t.Run(param, func(t *testing.T) {
 			assert.Equal(t, msg, EnforcementSettings{}.ErrorMessage(param))
