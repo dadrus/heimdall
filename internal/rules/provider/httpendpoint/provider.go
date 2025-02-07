@@ -59,7 +59,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 	}
 
 	var providerConf Config
-	if err := decodeConfig(app.Validator(), rawConf, &providerConf); err != nil {
+	if err := decodeConfig(app, rawConf, &providerConf); err != nil {
 		return nil, err
 	}
 

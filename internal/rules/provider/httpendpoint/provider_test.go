@@ -180,7 +180,7 @@ endpoints:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
 
 			// WHEN
 			prov, err := NewProvider(appCtx, mocks.NewRuleSetProcessorMock(t), cch)
