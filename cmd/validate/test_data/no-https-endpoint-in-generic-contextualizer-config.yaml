@@ -1,0 +1,32 @@
+serve:
+  port: 4468
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+mechanisms:
+  authenticators:
+    - id: some_authenticator
+      type: anonymous
+
+  contextualizers:
+    - id: some_contextualizer
+      type: generic
+      config:
+        endpoint:
+          url: http://example.com
+          method: GET
+
+  finalizers:
+    - id: some_finalizer
+      type: noop
+
+providers:
+  file_system:
+    src: test_rules.yaml
+    watch: true

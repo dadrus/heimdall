@@ -1,0 +1,35 @@
+serve:
+  port: 4468
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+mechanisms:
+  authenticators:
+    - id: some_authenticator
+      type: anonymous
+
+  authorizers:
+    - id: some_authorizer
+      type: remote
+      config:
+        endpoint:
+          url: http://example.com
+          method: POST
+        payload: foo
+        expressions:
+          - expression: "Payload.foo == 'bar'"
+
+  finalizers:
+    - id: some_finalizer
+      type: noop
+
+providers:
+  file_system:
+    src: test_rules.yaml
+    watch: true
