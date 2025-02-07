@@ -10,7 +10,7 @@ serve:
       - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
       - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
   trusted_proxies:
-    - 0.0.0.0/0
+    - 10.10.10.0/0
   respond:
     verbose: true
     with:
@@ -227,7 +227,7 @@ default_rule:
 
 providers:
   file_system:
-    src: test_rules.yaml
+    src: test_data/ruleset-valid.yaml
     watch: true
 
   http_endpoint:
