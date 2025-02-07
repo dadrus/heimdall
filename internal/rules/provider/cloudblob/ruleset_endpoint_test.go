@@ -19,7 +19,6 @@ package cloudblob
 import (
 	"context"
 	"fmt"
-	"github.com/dadrus/heimdall/internal/app"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -30,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/validation"

@@ -13,6 +13,14 @@ var InsecureNetworks = []string{ // nolint: gochecknoglobals
 	"::/0",
 }
 
+const (
+	paramIsTLLS         = "istls"
+	paramNotNil         = "notnil"
+	paramFalse          = "false"
+	paramSecureNetworks = "secure_networks"
+	paramHTTPS          = "https"
+)
+
 type EnforcementSettings struct {
 	EnforceSecureDefaultRule    bool
 	EnforceSecureTrustedProxies bool
@@ -25,25 +33,25 @@ func (v EnforcementSettings) Tag() string { return "enforced" }
 
 func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { // nolint: cyclop
 	switch param {
-	case "istls":
+	case paramIsTLLS:
 		if !v.EnforceEgressTLS {
 			return true
 		}
 
 		return strings.HasPrefix(field.String(), "https://")
-	case "notnil":
+	case paramNotNil:
 		if !v.EnforceIngressTLS {
 			return true
 		}
 
 		return field.Kind() == reflect.Struct
-	case "false":
+	case paramFalse:
 		if !v.EnforceEgressTLS {
 			return true
 		}
 
 		return !field.Bool()
-	case "secure_networks":
+	case paramSecureNetworks:
 		if !v.EnforceSecureTrustedProxies {
 			return true
 		}
@@ -56,7 +64,7 @@ func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { 
 		}
 
 		return true
-	case "https":
+	case paramHTTPS:
 		if !v.EnforceUpstreamTLS {
 			return true
 		}
@@ -73,15 +81,15 @@ func (v EnforcementSettings) MessageTemplate() string { return "{0} {1}" }
 
 func (v EnforcementSettings) ErrorMessage(param string) string {
 	switch param {
-	case "notnil":
+	case paramNotNil:
 		return "must be configured"
-	case "istls":
+	case paramIsTLLS:
 		return "scheme must be https"
-	case "false":
+	case paramFalse:
 		return "must be false"
-	case "secure_networks":
+	case paramSecureNetworks:
 		return "contains insecure networks"
-	case "https":
+	case paramHTTPS:
 		return "must be https"
 	default:
 		return "parameter is unknown"
