@@ -23,7 +23,9 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/x/httpx"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 var untrustedHeader = []string{ //nolint:gochecknoglobals
@@ -65,13 +67,18 @@ func New(logger zerolog.Logger, proxies ...string) func(http.Handler) http.Handl
 		if strings.Contains(ipAddr, "/") {
 			_, ipNet, err := net.ParseCIDR(ipAddr)
 			if err != nil {
-				logger.Warn().Err(err).Msgf("Trusted proxies IP range %q could not be parsed", ipAddr)
+				logger.Warn().Err(err).
+					Msgf("Trusted proxies entry %q could not be parsed and will be ignored", ipAddr)
 			} else {
 				ipHolders = append(ipHolders, ipNet)
 			}
 		} else {
 			ipHolders = append(ipHolders, simpleIP(net.ParseIP(ipAddr)))
 		}
+	}
+
+	if slicex.Intersects(proxies, config.InsecureNetworks) {
+		logger.Warn().Msgf("Configured trusted proxies contain insecure networks")
 	}
 
 	trustedProxies := trustedProxySet(ipHolders)
