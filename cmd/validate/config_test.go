@@ -185,6 +185,25 @@ func TestValidateConfig(t *testing.T) {
 				require.ErrorContains(t, err, "'endpoints'[0].'url' scheme must be https")
 			},
 		},
+		"tls is disabled for redis cache": {
+			confFile: "test_data/config-no-tls-in-redis-cache.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed validating redis")
+				require.ErrorContains(t, err, "'tls'.'disabled' must be false")
+			},
+		},
+		"valid config": {
+			confFile: "test_data/config-valid.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
