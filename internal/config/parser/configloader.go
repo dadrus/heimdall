@@ -96,7 +96,7 @@ func (c *configLoader) configFile() (string, error) {
 	if len(c.o.configFile) != 0 {
 		_, err := os.Stat(c.o.configFile)
 		if err != nil {
-			return "", err
+			return "", errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
 		}
 
 		return c.o.configFile, nil
@@ -118,7 +118,7 @@ func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func()
 		return err
 	}
 
-	return parser.Load(
+	err = parser.Load(
 		confmap.Provider(konf.Raw(), ""),
 		nil,
 		koanf.WithMergeFunc(func(src, dest map[string]any) error {
@@ -128,6 +128,12 @@ func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func()
 
 			return nil
 		}))
+
+	if err != nil {
+		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
+	}
+
+	return nil
 }
 
 func (c *configLoader) validateSemantics(config any) error {
