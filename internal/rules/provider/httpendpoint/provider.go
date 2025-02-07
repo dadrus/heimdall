@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type provider struct {
+type Provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          gocron.Scheduler
@@ -45,12 +45,12 @@ type provider struct {
 	configured bool
 }
 
-func newProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*provider, error) {
+func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Provider, error) {
 	rawConf := app.Config().Providers.HTTPEndpoint
 	logger := app.Logger()
 
 	if rawConf == nil {
-		return &provider{}, nil
+		return &Provider{}, nil
 	}
 
 	type Config struct {
@@ -85,7 +85,7 @@ func newProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*prov
 			"failed creating scheduler for http_endpoint rule provider").CausedBy(err)
 	}
 
-	prov := &provider{
+	prov := &Provider{
 		p:          rsp,
 		l:          logger,
 		s:          scheduler,
@@ -115,7 +115,7 @@ func newProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*prov
 	return prov, nil
 }
 
-func (p *provider) Start(_ context.Context) error {
+func (p *Provider) Start(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -127,7 +127,7 @@ func (p *provider) Start(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) Stop(_ context.Context) error {
+func (p *Provider) Stop(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -139,7 +139,7 @@ func (p *provider) Stop(_ context.Context) error {
 	return p.s.Shutdown()
 }
 
-func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
+func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.l.Debug().
 		Str("_endpoint", rsf.ID()).
 		Msg("Retrieving rule set")
@@ -178,7 +178,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) error {
+func (p *Provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) error {
 	var hash []byte
 
 	if value, ok := p.states.Load(stateID); ok { //nolint:nestif

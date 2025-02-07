@@ -39,7 +39,7 @@ import (
 
 type BucketState map[string][]byte
 
-type provider struct {
+type Provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          gocron.Scheduler
@@ -49,13 +49,13 @@ type provider struct {
 	configured bool
 }
 
-func newProvider(app app.Context, rsp rule.SetProcessor) (*provider, error) {
+func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 	conf := app.Config()
 	logger := app.Logger()
 	rawConf := conf.Providers.CloudBlob
 
 	if rawConf == nil {
-		return &provider{}, nil
+		return &Provider{}, nil
 	}
 
 	type Config struct {
@@ -93,7 +93,7 @@ func newProvider(app app.Context, rsp rule.SetProcessor) (*provider, error) {
 			"failed creating scheduler for cloud_blob rule provider").CausedBy(err)
 	}
 
-	prov := &provider{
+	prov := &Provider{
 		p:          rsp,
 		l:          logger,
 		s:          scheduler,
@@ -128,7 +128,7 @@ func newProvider(app app.Context, rsp rule.SetProcessor) (*provider, error) {
 	return prov, nil
 }
 
-func (p *provider) Start(_ context.Context) error {
+func (p *Provider) Start(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (p *provider) Start(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) Stop(_ context.Context) error {
+func (p *Provider) Stop(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -152,7 +152,7 @@ func (p *provider) Stop(_ context.Context) error {
 	return p.s.Shutdown()
 }
 
-func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
+func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.l.Debug().Msg("Retrieving rule set")
 
 	ruleSets, err := rsf.FetchRuleSets(ctx, p.v)
@@ -189,7 +189,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state BucketState, buketID string) error {
+func (p *Provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state BucketState, buketID string) error {
 	// check which were present in the past and are not present now
 	// and which are new
 	currentIDs := toRuleSetIDs(ruleSets)
@@ -245,7 +245,7 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 	return nil
 }
 
-func (p *provider) getBucketState(key string) BucketState {
+func (p *Provider) getBucketState(key string) BucketState {
 	value, _ := p.states.LoadOrStore(key, make(BucketState))
 
 	return value.(BucketState) // nolint: forcetypeassert

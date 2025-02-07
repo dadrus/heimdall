@@ -57,12 +57,12 @@ func TestNewProvider(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   []byte
-		assert func(t *testing.T, err error, prov *provider)
+		assert func(t *testing.T, err error, prov *Provider)
 	}{
 		{
 			uc:   "with unknown field",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -73,7 +73,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "with empty configuration",
 			conf: []byte(`{}`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "with auth_class configured",
 			conf: []byte(`auth_class: foo`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestNewProvider(t *testing.T) {
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			prov, err := newProvider(appCtx, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
+			prov, err := NewProvider(appCtx, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -996,7 +996,7 @@ func TestProviderLifecycle(t *testing.T) {
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prov, err := newProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
+			prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
 
 			ctx := context.Background()

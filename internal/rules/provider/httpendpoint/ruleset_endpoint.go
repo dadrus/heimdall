@@ -33,7 +33,7 @@ import (
 )
 
 type ruleSetEndpoint struct {
-	endpoint.Endpoint `mapstructure:",squash"`
+	endpoint.Endpoint `mapstructure:",squash"  validate:"required"`
 }
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }

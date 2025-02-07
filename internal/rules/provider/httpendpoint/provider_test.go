@@ -51,12 +51,12 @@ func TestNewProvider(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   []byte
-		assert func(t *testing.T, err error, prov *provider)
+		assert func(t *testing.T, err error, prov *Provider)
 	}{
 		{
 			uc:   "with unknown field",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -67,7 +67,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "without endpoints",
 			conf: []byte(`watch_interval: 5s`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -82,7 +82,7 @@ watch_interval: 5s
 endpoints:
 - foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -96,7 +96,7 @@ endpoints:
 endpoints:
 - method: POST
 `),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -110,7 +110,7 @@ endpoints:
 endpoints:
 - url: https://foo.bar
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -137,7 +137,7 @@ endpoints:
 - url: https://foo.bar
 - url: https://bar.foo
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -183,7 +183,7 @@ endpoints:
 			appCtx.EXPECT().Validator().Return(validator)
 
 			// WHEN
-			prov, err := newProvider(appCtx, mocks.NewRuleSetProcessorMock(t), cch)
+			prov, err := NewProvider(appCtx, mocks.NewRuleSetProcessorMock(t), cch)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -845,7 +845,7 @@ rules:
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Validator().Return(validator)
 
-			prov, err := newProvider(appCtx, processor, cch)
+			prov, err := NewProvider(appCtx, processor, cch)
 			require.NoError(t, err)
 
 			ctx := context.Background()

@@ -49,12 +49,12 @@ func TestNewProvider(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   []byte
-		assert func(t *testing.T, err error, prov *provider)
+		assert func(t *testing.T, err error, prov *Provider)
 	}{
 		{
 			uc:   "with unknown field",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -65,7 +65,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "without buckets",
 			conf: []byte(`watch_interval: 5s`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -80,7 +80,7 @@ buckets:
   - url: s3://foobar
   - prefix: bar
 `),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -96,7 +96,7 @@ buckets:
   - url: s3://foobar
   - foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -113,7 +113,7 @@ buckets:
   - url: s3://barfoo/foo&foo=bar
     prefix: bar
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -155,7 +155,7 @@ buckets:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 
 			// WHEN
-			prov, err := newProvider(appCtx, mocks.NewRuleSetProcessorMock(t))
+			prov, err := NewProvider(appCtx, mocks.NewRuleSetProcessorMock(t))
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -580,7 +580,7 @@ rules:
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Validator().Return(validator)
 
-			prov, err := newProvider(appCtx, mock)
+			prov, err := NewProvider(appCtx, mock)
 			require.NoError(t, err)
 
 			ctx := context.Background()

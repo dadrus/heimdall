@@ -54,7 +54,7 @@ import (
 
 type ConfigFactory func() (*rest.Config, error)
 
-type provider struct {
+type Provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	cl         v1alpha4.Client
@@ -68,12 +68,12 @@ type provider struct {
 	store      cache.Store
 }
 
-func newProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, factory rule.Factory) (*provider, error) {
+func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, factory rule.Factory) (*Provider, error) {
 	rawConf := app.Config().Providers.Kubernetes
 	logger := app.Logger()
 
 	if rawConf == nil {
-		return &provider{}, nil
+		return &Provider{}, nil
 	}
 
 	k8sConf, err := k8sCF()
@@ -106,7 +106,7 @@ func newProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	logger.Info().Msg("Rule provider configured.")
 
-	return &provider{
+	return &Provider{
 		p:          rsp,
 		l:          logger,
 		cl:         client,
@@ -117,7 +117,7 @@ func newProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 	}, nil
 }
 
-func (p *provider) newController(ctx context.Context, namespace string) (cache.Store, cache.Controller) {
+func (p *Provider) newController(ctx context.Context, namespace string) (cache.Store, cache.Controller) {
 	repository := p.cl.RuleSetRepository(namespace)
 
 	return cache.NewInformerWithOptions(cache.InformerOptions{
@@ -137,7 +137,7 @@ func (p *provider) newController(ctx context.Context, namespace string) (cache.S
 	})
 }
 
-func (p *provider) Start(ctx context.Context) error { //nolint:contextcheck
+func (p *Provider) Start(ctx context.Context) error { //nolint:contextcheck
 	if !p.configured {
 		return nil
 	}
@@ -171,7 +171,7 @@ func (p *provider) Start(ctx context.Context) error { //nolint:contextcheck
 	return p.adc.Start(ctx)
 }
 
-func (p *provider) Stop(ctx context.Context) error {
+func (p *Provider) Stop(ctx context.Context) error {
 	if !p.configured || p.stopped {
 		return nil
 	}
@@ -200,14 +200,14 @@ func (p *provider) Stop(ctx context.Context) error {
 	}
 }
 
-func (p *provider) filter(obj any) bool {
+func (p *Provider) filter(obj any) bool {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 
 	return rs.Spec.AuthClassName == p.ac
 }
 
-func (p *provider) addRuleSet(obj any) {
+func (p *Provider) addRuleSet(obj any) {
 	if p.stopped {
 		return
 	}
@@ -243,7 +243,7 @@ func (p *provider) addRuleSet(obj any) {
 	}
 }
 
-func (p *provider) updateRuleSet(oldObj, newObj any) {
+func (p *Provider) updateRuleSet(oldObj, newObj any) {
 	if p.stopped {
 		return
 	}
@@ -286,7 +286,7 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 	}
 }
 
-func (p *provider) deleteRuleSet(obj any) {
+func (p *Provider) deleteRuleSet(obj any) {
 	if p.stopped {
 		return
 	}
@@ -322,7 +322,7 @@ func (p *provider) deleteRuleSet(obj any) {
 	}
 }
 
-func (p *provider) toRuleSetConfiguration(rs *v1alpha4.RuleSet) *config2.RuleSet {
+func (p *Provider) toRuleSetConfiguration(rs *v1alpha4.RuleSet) *config2.RuleSet {
 	return &config2.RuleSet{
 		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
@@ -334,12 +334,12 @@ func (p *provider) toRuleSetConfiguration(rs *v1alpha4.RuleSet) *config2.RuleSet
 	}
 }
 
-func (p *provider) mapVersion(_ string) string {
+func (p *Provider) mapVersion(_ string) string {
 	// currently the only possible version is v1alpha4, which is mapped to the version "1alpha4" used internally
 	return "1alpha4"
 }
 
-func (p *provider) updateStatus(
+func (p *Provider) updateStatus(
 	ctx context.Context,
 	rs *v1alpha4.RuleSet,
 	status metav1.ConditionStatus,
@@ -414,7 +414,7 @@ func (p *provider) updateStatus(
 	}
 }
 
-func (p *provider) finalize(ctx context.Context) {
+func (p *Provider) finalize(ctx context.Context) {
 	for _, rs := range slicex.Filter(
 		// nolint: forcetypeassert
 		slicex.Map(p.store.List(), func(s any) *v1alpha4.RuleSet { return s.(*v1alpha4.RuleSet) }),
