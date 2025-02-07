@@ -539,13 +539,16 @@ rules:
 			)
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// GIVEN
 			prov := &Provider{
 				src:        setupContents(t, tmpFile, tmpDir),
 				p:          processor,
 				l:          log.Logger,
 				w:          watcher,
-				v:          validator,
+				app:        appCtx,
 				configured: true,
 			}
 
@@ -558,6 +561,7 @@ rules:
 
 			// THEN
 			tc.assert(t, err, prov, processor)
+			appCtx.AssertExpectations(t)
 		})
 	}
 }

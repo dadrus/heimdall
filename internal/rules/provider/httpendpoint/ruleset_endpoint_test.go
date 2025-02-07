@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -305,6 +306,9 @@ rules:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			cch := mocks.NewCacheMock(t)
 			ctx := log.Logger.With().
 				Str("_provider_type", "http_endpoint").
@@ -320,10 +324,11 @@ rules:
 				})
 
 			// WHEN
-			ruleSet, err := tc.ep.FetchRuleSet(ctx, validator)
+			ruleSet, err := tc.ep.FetchRuleSet(ctx, appCtx)
 
 			// THEN
 			tc.assert(t, err, ruleSet)
+			appCtx.AssertExpectations(t)
 		})
 	}
 }

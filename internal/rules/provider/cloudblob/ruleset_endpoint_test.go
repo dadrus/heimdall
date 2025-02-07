@@ -19,6 +19,7 @@ package cloudblob
 import (
 	"context"
 	"fmt"
+	"github.com/dadrus/heimdall/internal/app"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -423,14 +424,18 @@ rules:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T) { t.Helper() })
 			setup(t)
 
 			// WHEN
-			rs, err := tc.endpoint.FetchRuleSets(context.Background(), validator)
+			rs, err := tc.endpoint.FetchRuleSets(context.Background(), appCtx)
 
 			// THEN
 			tc.assert(t, err, rs)
+			appCtx.AssertExpectations(t)
 		})
 	}
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -353,11 +354,15 @@ rules:
 			)
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			rules, err := ParseRules(validator, tc.contentType, bytes.NewBuffer(tc.content), false)
+			rules, err := ParseRules(appCtx, tc.contentType, bytes.NewBuffer(tc.content), false)
 
 			// THEN
 			tc.assert(t, err, rules)
+			appCtx.AssertExpectations(t)
 		})
 	}
 }
@@ -513,11 +518,15 @@ rules:
 			)
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			ruleSet, err := parseYAML(validator, bytes.NewBuffer(tc.conf), tc.envSupported)
+			ruleSet, err := parseYAML(appCtx, bytes.NewBuffer(tc.conf), tc.envSupported)
 
 			// THEN
 			tc.assert(t, err, ruleSet)
+			appCtx.AssertExpectations(t)
 		})
 	}
 }

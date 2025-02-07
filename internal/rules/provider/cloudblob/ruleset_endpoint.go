@@ -29,9 +29,9 @@ import (
 	_ "gocloud.dev/blob/s3blob"    // to support aws s3 blobs
 	"gocloud.dev/gcerrors"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -46,7 +46,7 @@ func (e *ruleSetEndpoint) ID() string {
 
 func (e *ruleSetEndpoint) FetchRuleSets(
 	ctx context.Context,
-	validator validation.Validator,
+	app app.Context,
 ) ([]*config.RuleSet, error) {
 	bucket, err := blob.OpenBucket(ctx, e.URL.String())
 	if err != nil {
@@ -57,16 +57,16 @@ func (e *ruleSetEndpoint) FetchRuleSets(
 	defer bucket.Close()
 
 	if len(e.URL.Path) != 0 {
-		return e.readSingleBlob(ctx, bucket, validator)
+		return e.readSingleBlob(ctx, bucket, app)
 	}
 
-	return e.readAllBlobs(ctx, bucket, validator)
+	return e.readAllBlobs(ctx, bucket, app)
 }
 
 func (e *ruleSetEndpoint) readAllBlobs(
 	ctx context.Context,
 	bucket *blob.Bucket,
-	validator validation.Validator,
+	app app.Context,
 ) ([]*config.RuleSet, error) {
 	var ruleSets []*config.RuleSet
 
@@ -82,7 +82,7 @@ func (e *ruleSetEndpoint) readAllBlobs(
 			return nil, mapError(err, "failed iterate blobs")
 		}
 
-		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key, validator)
+		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key, app)
 		if err != nil {
 			if errors.Is(err, config.ErrEmptyRuleSet) {
 				continue
@@ -100,9 +100,9 @@ func (e *ruleSetEndpoint) readAllBlobs(
 func (e *ruleSetEndpoint) readSingleBlob(
 	ctx context.Context,
 	bucket *blob.Bucket,
-	validator validation.Validator,
+	app app.Context,
 ) ([]*config.RuleSet, error) {
-	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path, validator)
+	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path, app)
 	if err != nil {
 		if errors.Is(err, config.ErrEmptyRuleSet) {
 			return []*config.RuleSet{}, nil
@@ -118,7 +118,7 @@ func (e *ruleSetEndpoint) readRuleSet(
 	ctx context.Context,
 	bucket *blob.Bucket,
 	key string,
-	validator validation.Validator,
+	app app.Context,
 ) (
 	*config.RuleSet, error,
 ) {
@@ -134,7 +134,7 @@ func (e *ruleSetEndpoint) readRuleSet(
 
 	defer reader.Close()
 
-	contents, err := config.ParseRules(validator, attrs.ContentType, reader, false)
+	contents, err := config.ParseRules(app, attrs.ContentType, reader, false)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").

@@ -561,8 +561,8 @@ rules:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			mock := mocks.NewRuleSetProcessorMock(t)
-			setupProcessor(t, mock)
+			rspMock := mocks.NewRuleSetProcessorMock(t)
+			setupProcessor(t, rspMock)
 
 			conf := &config.Configuration{
 				Providers: config.RuleProviders{CloudBlob: providerConf},
@@ -578,9 +578,9 @@ rules:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
 
-			prov, err := NewProvider(appCtx, mock)
+			prov, err := NewProvider(appCtx, rspMock)
 			require.NoError(t, err)
 
 			ctx := context.Background()
@@ -594,7 +594,7 @@ rules:
 
 			// THEN
 			require.NoError(t, err)
-			tc.assert(t, tc, logs, mock)
+			tc.assert(t, tc, logs, rspMock)
 		})
 	}
 }

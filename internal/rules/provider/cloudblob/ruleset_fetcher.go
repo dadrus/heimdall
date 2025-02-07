@@ -19,11 +19,11 @@ package cloudblob
 import (
 	"context"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/validation"
 )
 
 type RuleSetFetcher interface {
-	FetchRuleSets(ctx context.Context, validator validation.Validator) ([]*config.RuleSet, error)
+	FetchRuleSets(ctx context.Context, app app.Context) ([]*config.RuleSet, error)
 	ID() string
 }

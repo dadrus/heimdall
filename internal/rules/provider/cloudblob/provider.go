@@ -32,7 +32,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	rule_config "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -43,7 +42,7 @@ type Provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          gocron.Scheduler
-	v          validation.Validator
+	app        app.Context
 	cancel     context.CancelFunc
 	states     sync.Map
 	configured bool
@@ -97,7 +96,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		p:          rsp,
 		l:          logger,
 		s:          scheduler,
-		v:          app.Validator(),
+		app:        app,
 		cancel:     cancel,
 		configured: true,
 	}
@@ -155,7 +154,7 @@ func (p *Provider) Stop(_ context.Context) error {
 func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.l.Debug().Msg("Retrieving rule set")
 
-	ruleSets, err := rsf.FetchRuleSets(ctx, p.v)
+	ruleSets, err := rsf.FetchRuleSets(ctx, p.app)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			p.l.Debug().Msg("Watcher closed")
