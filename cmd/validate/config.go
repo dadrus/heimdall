@@ -23,10 +23,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/cmd/flags"
+	"github.com/dadrus/heimdall/internal/cache"
+	_ "github.com/dadrus/heimdall/internal/cache/module"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
+	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
+	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -78,25 +83,55 @@ func validateConfig(cmd *cobra.Command) error {
 		return err
 	}
 
-	mFactory, err := mechanisms.NewMechanismFactory(&appContext{
+	appCtx := &appContext{
 		w:   &watcher.NoopWatcher{},
 		khr: &noopRegistry{},
 		co:  &noopCertificateObserver{},
 		v:   validator,
 		l:   logger,
 		c:   conf,
-	})
+	}
+
+	mFactory, err := mechanisms.NewMechanismFactory(appCtx)
 	if err != nil {
 		return err
 	}
 
-	_, err = rules.NewRuleFactory(
+	rFactory, err := rules.NewRuleFactory(
 		mFactory,
 		conf,
 		config.DecisionMode,
 		logger,
 		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)
+	if err != nil {
+		return err
+	}
+
+	cch, err := cache.Create(appCtx, conf.Cache.Type, conf.Cache.Config)
+	if err != nil {
+		return err
+	}
+
+	rProcessor := rules.NewRuleSetProcessor(&noopRepository{}, rFactory)
+
+	_, err = filesystem.NewProvider(appCtx, rProcessor)
+	if err != nil {
+		return err
+	}
+
+	_, err = cloudblob.NewProvider(appCtx, rProcessor)
+	if err != nil {
+		return err
+	}
+
+	_, err = httpendpoint.NewProvider(appCtx, rProcessor, cch)
+	if err != nil {
+		return err
+	}
+
+	// ignoring kubernetes provider for now as there are no insecure
+	// settings possible
 
 	return err
 }

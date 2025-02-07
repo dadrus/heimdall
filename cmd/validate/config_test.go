@@ -74,7 +74,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"insecure trusted proxies configured": {
-			confFile: "test_data/insecure-trusted-proxies-config.yaml",
+			confFile: "test_data/config-insecure-trusted-proxies.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -83,8 +83,8 @@ func TestValidateConfig(t *testing.T) {
 				require.ErrorContains(t, err, "'serve'.'trusted_proxies' contains insecure networks")
 			},
 		},
-		"no TLS configured": {
-			confFile: "test_data/no-tls-config.yaml",
+		"no TLS configured for ingres services": {
+			confFile: "test_data/config-no-tls-config-for-ingres-services.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -95,7 +95,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"no https configured for generic authenticator": {
-			confFile: "test_data/no-https-endpoint-in-generic-authenticator-config.yaml",
+			confFile: "test_data/config-no-https-endpoint-in-generic-authenticator.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -105,7 +105,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"no https configured for jwks_endpoint in jwt authenticator": {
-			confFile: "test_data/no-https-jwks-endpoint-in-jwt-authenticator-config.yaml",
+			confFile: "test_data/config-no-https-jwks-endpoint-in-jwt-authenticator.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -115,7 +115,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"no https configured for metadata_endpoint in jwt authenticator": {
-			confFile: "test_data/no-https-metadata-endpoint-in-jwt-authenticator-config.yaml",
+			confFile: "test_data/config-no-https-metadata-endpoint-in-jwt-authenticator.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -125,7 +125,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"no https configured for oath2 introspection authenticator enpoint": {
-			confFile: "test_data/no-https-endpoint-in-oauth2-introspection-authenticator-config.yaml",
+			confFile: "test_data/config-no-https-endpoint-in-oauth2-introspection-authenticator.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -135,7 +135,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"no https configured for remote authorizer endpoint": {
-			confFile: "test_data/no-https-endpoint-in-remote-authorizer-config.yaml",
+			confFile: "test_data/config-no-https-endpoint-in-remote-authorizer.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -145,7 +145,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"no https configured for oauth2 client credentials finalizer": {
-			confFile: "test_data/no-https-endpoint-in-oauth2-client-credentials-finalizer-config.yaml",
+			confFile: "test_data/config-no-https-endpoint-in-oauth2-client-credentials-finalizer.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -155,13 +155,34 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"no https configured for generic contextualzer": {
-			confFile: "test_data/no-https-endpoint-in-generic-contextualizer-config.yaml",
+			confFile: "test_data/config-no-https-endpoint-in-generic-contextualizer.yaml",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "'endpoint'.'url' scheme must be https")
+			},
+		},
+		"no https in oauth2 client credentials authentication strategy": {
+			confFile: "test_data/config-no-https-in-oauth2-client-credentials-authentication-strategy.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed validating 'oauth2_client_credentials' strategy")
+				require.ErrorContains(t, err, "'token_url' scheme must be https")
+			},
+		},
+		"no https in http endpoint rule provider": {
+			confFile: "test_data/config-no-https-in-http-endpoint-provider.yaml",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'endpoints'[0].'url' scheme must be https")
 			},
 		},
 	} {
