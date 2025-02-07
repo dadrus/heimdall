@@ -53,7 +53,7 @@ func TestValidateRuleset(t *testing.T) {
 	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	raw, err := os.ReadFile("test_data/config.yaml")
+	raw, err := os.ReadFile("test_data/config-valid.yaml")
 	require.NoError(t, err)
 
 	content, err := envsubst.EvalEnv(stringx.ToString(raw))
@@ -86,7 +86,7 @@ func TestValidateRuleset(t *testing.T) {
 		{
 			uc:        "everything is valid",
 			confFile:  configFile,
-			rulesFile: "test_data/valid-ruleset.yaml",
+			rulesFile: "test_data/ruleset-valid.yaml",
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
@@ -131,7 +131,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	raw, err := os.ReadFile("test_data/config.yaml")
+	raw, err := os.ReadFile("test_data/config-valid.yaml")
 	require.NoError(t, err)
 
 	content, err := envsubst.EvalEnv(stringx.ToString(raw))
@@ -160,14 +160,14 @@ func TestRunValidateRulesCommand(t *testing.T) {
 			uc:        "invalid for proxy usage",
 			proxyMode: true,
 			confFile:  configFile,
-			rulesFile: "test_data/invalid-ruleset-for-proxy-usage.yaml",
+			rulesFile: "test_data/ruleset-invalid-for-proxy-usage.yaml",
 			expError:  "requires forward_to",
 		},
 		{
 			uc:        "everything is valid for proxy mode usage",
 			proxyMode: true,
 			confFile:  configFile,
-			rulesFile: "test_data/valid-ruleset.yaml",
+			rulesFile: "test_data/ruleset-valid.yaml",
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
