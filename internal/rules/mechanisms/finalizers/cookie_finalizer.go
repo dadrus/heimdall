@@ -54,8 +54,9 @@ func newCookieFinalizer(app app.Context, id string, rawConfig map[string]any) (*
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), FinalizerCookie, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for cookie finalizer '%s'", id).CausedBy(err)
 	}
 
 	return &cookieFinalizer{

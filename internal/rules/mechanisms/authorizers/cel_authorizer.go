@@ -55,8 +55,9 @@ func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*ce
 	}
 
 	var conf Config
-	if err := decodeConfig(app, AuthorizerCEL, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for cel authorizer '%s'", id).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())

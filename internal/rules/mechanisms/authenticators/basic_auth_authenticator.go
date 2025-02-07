@@ -73,8 +73,9 @@ func newBasicAuthAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(app, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for basic auth authenticator '%s'", id).CausedBy(err)
 	}
 
 	auth := basicAuthAuthenticator{
@@ -157,8 +158,9 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for basic auth authenticator '%s'", a.id).CausedBy(err)
 	}
 
 	return &basicAuthAuthenticator{

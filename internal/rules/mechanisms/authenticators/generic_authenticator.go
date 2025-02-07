@@ -84,8 +84,9 @@ func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]an
 	}
 
 	var conf Config
-	if err := decodeConfig(app, AuthenticatorGeneric, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic authenticator '%s'", id).CausedBy(err)
 	}
 
 	return &genericAuthenticator{
@@ -145,8 +146,9 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, AuthenticatorGeneric, config, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, config, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic authenticator '%s'", a.id).CausedBy(err)
 	}
 
 	return &genericAuthenticator{

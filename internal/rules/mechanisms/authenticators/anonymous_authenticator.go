@@ -17,6 +17,7 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -45,8 +46,9 @@ func newAnonymousAuthenticator(
 ) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
-	if err := decodeConfig(app, AuthenticatorAnonymous, rawConfig, &auth); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &auth); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for anonymous authenticator '%s'", id).CausedBy(err)
 	}
 
 	if len(auth.Subject) == 0 {

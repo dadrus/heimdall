@@ -82,8 +82,9 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), FinalizerJwt, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for jwt finalizer '%s'", id).CausedBy(err)
 	}
 
 	signer, err := newJWTSigner(&conf.Signer, app.Watcher())
@@ -167,8 +168,9 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), FinalizerJwt, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for jwt finalizer '%s'", f.id).CausedBy(err)
 	}
 
 	return &jwtFinalizer{

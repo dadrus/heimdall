@@ -54,8 +54,9 @@ func newHeaderFinalizer(app app.Context, id string, rawConfig map[string]any) (*
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), FinalizerHeader, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for header finalizer '%s'", id).CausedBy(err)
 	}
 
 	return &headerFinalizer{

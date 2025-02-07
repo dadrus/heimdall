@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -69,8 +70,9 @@ func newOAuth2ClientCredentialsFinalizer(
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_client_credentials finalizer '%s'", id).CausedBy(err)
 	}
 
 	conf.AuthMethod = x.IfThenElse(
@@ -108,8 +110,9 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_client_credentials finalizer '%s'", f.id).CausedBy(err)
 	}
 
 	cfg := f.cfg

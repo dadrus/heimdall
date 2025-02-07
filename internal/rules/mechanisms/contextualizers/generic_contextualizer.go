@@ -97,8 +97,9 @@ func newGenericContextualizer(
 	}
 
 	var conf Config
-	if err := decodeConfig(app, ContextualizerGeneric, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic contextualizer '%s'", id).CausedBy(err)
 	}
 
 	ttl := defaultTTL
@@ -192,8 +193,9 @@ func (c *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}
 
 	var conf Config
-	if err := decodeConfig(c.app, ContextualizerGeneric, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(c.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic contextualizer '%s'", c.id).CausedBy(err)
 	}
 
 	return &genericContextualizer{

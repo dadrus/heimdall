@@ -60,7 +60,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed validating")
+				assert.Contains(t, err.Error(), "validation error")
 				assert.Contains(t, err.Error(), "token_url")
 				assert.Contains(t, err.Error(), "client_id")
 				assert.Contains(t, err.Error(), "client_secret")
@@ -74,7 +74,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed validating")
+				assert.Contains(t, err.Error(), "validation error")
 				assert.Contains(t, err.Error(), "token_url")
 				assert.Contains(t, err.Error(), "client_id")
 				assert.Contains(t, err.Error(), "client_secret")

@@ -106,8 +106,9 @@ func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (
 	}
 
 	var conf Config
-	if err := decodeConfig(app, AuthorizerRemote, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for remote authorizer '%s'", id).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
@@ -204,8 +205,9 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, AuthorizerRemote, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for remote authorizer '%s'", a.id).CausedBy(err)
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)

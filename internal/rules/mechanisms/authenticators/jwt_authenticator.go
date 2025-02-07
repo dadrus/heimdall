@@ -97,8 +97,9 @@ func newJwtAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(app, AuthenticatorJwt, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for jwt authenticator '%s'", id).CausedBy(err)
 	}
 
 	if conf.JWKSEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
@@ -222,8 +223,9 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, AuthenticatorJwt, config, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, config, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for jwt authenticator '%s'", a.id).CausedBy(err)
 	}
 
 	return &jwtAuthenticator{

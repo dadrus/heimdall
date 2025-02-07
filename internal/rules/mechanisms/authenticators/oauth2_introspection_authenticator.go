@@ -89,8 +89,9 @@ func newOAuth2IntrospectionAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(app, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_introspection authenticator '%s'", id).CausedBy(err)
 	}
 
 	if conf.IntrospectionEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
@@ -204,8 +205,9 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_introspection authenticator '%s'", a.id).CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{
