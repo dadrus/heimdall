@@ -14,7 +14,7 @@ var InsecureNetworks = []string{ // nolint: gochecknoglobals
 }
 
 const (
-	paramIsTLLS         = "istls"
+	paramIsTLS          = "istls"
 	paramNotNil         = "notnil"
 	paramFalse          = "false"
 	paramSecureNetworks = "secure_networks"
@@ -33,7 +33,7 @@ func (v EnforcementSettings) Tag() string { return "enforced" }
 
 func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { // nolint: cyclop
 	switch param {
-	case paramIsTLLS:
+	case paramIsTLS:
 		if !v.EnforceEgressTLS {
 			return true
 		}
@@ -83,7 +83,7 @@ func (v EnforcementSettings) ErrorMessage(param string) string {
 	switch param {
 	case paramNotNil:
 		return "must be configured"
-	case paramIsTLLS:
+	case paramIsTLS:
 		return "scheme must be https"
 	case paramFalse:
 		return "must be false"
