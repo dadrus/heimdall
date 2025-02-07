@@ -24,6 +24,7 @@ import (
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/cache"
+	// without this import available cache configs are not registered
 	_ "github.com/dadrus/heimdall/internal/cache/module"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
