@@ -54,6 +54,8 @@ func NewValidateRulesCommand() *cobra.Command {
 				cmd.PrintErrf("%v\n", err)
 
 				os.Exit(1)
+
+				return
 			}
 
 			cmd.Println("Rule set is valid")

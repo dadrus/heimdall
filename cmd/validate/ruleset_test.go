@@ -62,34 +62,29 @@ func TestValidateRuleset(t *testing.T) {
 	err = os.WriteFile(configFile, []byte(content), 0o600)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		confFile  string
 		rulesFile string
 		expError  error
 	}{
-		{
-			uc:       "no config provided",
+		"no config provided": {
 			expError: ErrNoConfigFile,
 		},
-		{
-			uc:       "invalid configconfig file",
+		"invalid configconfig file": {
 			confFile: "doesnotexist.yaml",
 			expError: os.ErrNotExist,
 		},
-		{
-			uc:        "invalid rule set file",
+		"invalid rule set file": {
 			confFile:  configFile,
 			rulesFile: "doesnotexist.yaml",
 			expError:  os.ErrNotExist,
 		},
-		{
-			uc:        "everything is valid",
+		"everything is valid": {
 			confFile:  configFile,
 			rulesFile: "test_data/ruleset-valid.yaml",
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			cmd := NewValidateRulesCommand()
 			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
@@ -140,37 +135,38 @@ func TestRunValidateRulesCommand(t *testing.T) {
 	err = os.WriteFile(configFile, []byte(content), 0o600)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		confFile  string
 		rulesFile string
 		proxyMode bool
 		expError  string
 	}{
-		{
-			uc:       "validation fails",
+		"validation fails": {
 			expError: "no config file",
 		},
-		{
-			uc:        "everything is valid for decision mode usage",
+		"everything is valid for decision mode usage": {
 			confFile:  configFile,
 			rulesFile: "test_data/valid-ruleset.yaml",
 		},
-		{
-			uc:        "invalid for proxy usage",
+		"invalid for proxy usage": {
 			proxyMode: true,
 			confFile:  configFile,
 			rulesFile: "test_data/ruleset-invalid-for-proxy-usage.yaml",
 			expError:  "requires forward_to",
 		},
-		{
-			uc:        "everything is valid for proxy mode usage",
+		"everything is valid for proxy mode usage": {
 			proxyMode: true,
 			confFile:  configFile,
 			rulesFile: "test_data/ruleset-valid.yaml",
 		},
+		"using http scheme for upstream communication": {
+			proxyMode: true,
+			confFile:  configFile,
+			rulesFile: "test_data/ruleset-no-https-for-upstream.yaml",
+			expError:  "'rules'[0].'forward_to'.'rewrite'.'scheme' must be https",
+		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			exit, err := testsupport.PatchOSExit(t, func(int) {})
 			require.NoError(t, err)
