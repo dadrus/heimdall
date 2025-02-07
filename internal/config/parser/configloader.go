@@ -128,7 +128,6 @@ func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func()
 
 			return nil
 		}))
-
 	if err != nil {
 		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
 	}

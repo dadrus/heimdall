@@ -34,8 +34,8 @@ type redisCache struct {
 	ttl  time.Duration
 }
 
-func newRedisCache(opts rueidis.ClientOption, ttl time.Duration) (*redisCache, error) {
-	return &redisCache{opts: opts, ttl: ttl}, nil
+func newRedisCache(opts rueidis.ClientOption, ttl time.Duration) *redisCache {
+	return &redisCache{opts: opts, ttl: ttl}
 }
 
 func (c *redisCache) Start(_ context.Context) error {

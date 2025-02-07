@@ -52,5 +52,5 @@ func NewClusterCache(app app.Context, conf map[string]any) (cache.Cache, error) 
 	opts.InitAddress = cfg.Nodes
 	opts.ShuffleInit = true
 
-	return newRedisCache(opts, cfg.ClientCache.TTL)
+	return newRedisCache(opts, cfg.ClientCache.TTL), nil
 }
