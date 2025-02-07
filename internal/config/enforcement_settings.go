@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var insecureNetworks = []string{ // nolint: gochecknoglobals
+var InsecureNetworks = []string{ // nolint: gochecknoglobals
 	"0.0.0.0/0",
 	"0/0",
 	"0000:0000:0000:0000:0000:0000:0000:0000/0",
@@ -50,7 +50,7 @@ func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { 
 
 		for i := range field.Len() {
 			elem := field.Index(i)
-			if slices.Contains(insecureNetworks, elem.String()) {
+			if slices.Contains(InsecureNetworks, elem.String()) {
 				return false
 			}
 		}
