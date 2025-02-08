@@ -11,8 +11,7 @@ import (
 func TestEnforcementSettings(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc                          string
+	for uc, tc := range map[string]struct {
 		args                        []string
 		enforceSecureDefaultRule    bool
 		enforceSecureTrustedProxies bool
@@ -21,18 +20,15 @@ func TestEnforcementSettings(t *testing.T) {
 		enforceEgressTLS            bool
 		enforceUpstreamTLS          bool
 	}{
-		{
-			uc:   "should skip security settings entirely",
+		"should skip security settings entirely": {
 			args: []string{"--" + SkipAllSecurityEnforcement},
 		},
-		{
-			uc:                          "should skip TLS enforcement only",
+		"should skip TLS enforcement only": {
 			args:                        []string{"--" + SkipAllTLSEnforcement},
 			enforceSecureDefaultRule:    true,
 			enforceSecureTrustedProxies: true,
 		},
-		{
-			uc:                          "should not enforce secure default rule",
+		"should not enforce secure default rule": {
 			args:                        []string{"--" + SkipSecureDefaultRuleEnforcement},
 			enforceManagementTLS:        true,
 			enforceIngressTLS:           true,
@@ -40,8 +36,7 @@ func TestEnforcementSettings(t *testing.T) {
 			enforceUpstreamTLS:          true,
 			enforceSecureTrustedProxies: true,
 		},
-		{
-			uc:                       "should not enforce secure trusted proxies",
+		"should not enforce secure trusted proxies": {
 			args:                     []string{"--" + SkipSecureTrustedProxiesEnforcement},
 			enforceSecureDefaultRule: true,
 			enforceManagementTLS:     true,
@@ -49,8 +44,7 @@ func TestEnforcementSettings(t *testing.T) {
 			enforceEgressTLS:         true,
 			enforceUpstreamTLS:       true,
 		},
-		{
-			uc:                          "should not enforce ingress TLS",
+		"should not enforce ingress TLS": {
 			args:                        []string{"--" + SkipIngressTLSEnforcement},
 			enforceSecureDefaultRule:    true,
 			enforceSecureTrustedProxies: true,
@@ -58,8 +52,7 @@ func TestEnforcementSettings(t *testing.T) {
 			enforceEgressTLS:            true,
 			enforceUpstreamTLS:          true,
 		},
-		{
-			uc:                          "should not enforce egress TLS",
+		"should not enforce egress TLS": {
 			args:                        []string{"--" + SkipEgressTLSEnforcement},
 			enforceSecureDefaultRule:    true,
 			enforceSecureTrustedProxies: true,
@@ -67,8 +60,7 @@ func TestEnforcementSettings(t *testing.T) {
 			enforceIngressTLS:           true,
 			enforceUpstreamTLS:          true,
 		},
-		{
-			uc:                          "should not enforce upstream TLS",
+		"should not enforce upstream TLS": {
 			args:                        []string{"--" + SkipUpstreamTLSEnforcement},
 			enforceSecureDefaultRule:    true,
 			enforceSecureTrustedProxies: true,
@@ -77,7 +69,7 @@ func TestEnforcementSettings(t *testing.T) {
 			enforceEgressTLS:            true,
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			cmd := &cobra.Command{Use: "test"}
 			cmd.PersistentFlags().Bool(SkipAllSecurityEnforcement, false, "")
 			cmd.PersistentFlags().Bool(SkipAllTLSEnforcement, false, "")
