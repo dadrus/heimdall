@@ -52,7 +52,7 @@ type redirectErrorHandler struct {
 
 func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type Config struct {
-		To   template.Template `mapstructure:"to"   validate:"required"`
+		To   template.Template `mapstructure:"to"   validate:"required,enforced=istls"`
 		Code int               `mapstructure:"code"`
 	}
 
