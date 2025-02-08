@@ -8,5 +8,5 @@ services:
     command: -c /envoy.yaml
 
   heimdall:
-    command: -c /etc/heimdall/config.yaml serve decision --envoy-grpc
+    command: serve decision -c /etc/heimdall/config.yaml --insecure --envoy-grpc
 

@@ -7,7 +7,7 @@ services:
       - heimdall-keys:/etc/heimdall/keys
 
   heimdall:
-    image: dadrus/heimdall:dev
+    image: heimdall:local
     depends_on:
       heimdall-init:
         condition: service_started
