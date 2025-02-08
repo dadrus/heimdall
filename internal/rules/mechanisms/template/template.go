@@ -37,10 +37,15 @@ var ErrTemplateRender = errors.New("template error")
 type Template interface {
 	Render(values map[string]any) (string, error)
 	Hash() []byte
+	String() string
 }
 
-type templateImpl struct {
+type templateImpl struct { //nolint:recvcheck
+	// recvcheck disabled by intention, as otherwise validations, which require Stringer implementation,
+	// but receive a value (not a pointer) do not work
+
 	t    *template.Template
+	orig string
 	hash []byte
 }
 
@@ -64,7 +69,7 @@ func New(val string) (Template, error) {
 	hash := sha256.New()
 	hash.Write(stringx.ToBytes(val))
 
-	return &templateImpl{t: tmpl, hash: hash.Sum(nil)}, nil
+	return &templateImpl{t: tmpl, orig: val, hash: hash.Sum(nil)}, nil
 }
 
 func (t *templateImpl) Render(values map[string]any) (string, error) {
@@ -79,6 +84,8 @@ func (t *templateImpl) Render(values map[string]any) (string, error) {
 }
 
 func (t *templateImpl) Hash() []byte { return t.hash }
+
+func (t templateImpl) String() string { return t.orig }
 
 func urlEncode(value any) string {
 	switch t := value.(type) {
