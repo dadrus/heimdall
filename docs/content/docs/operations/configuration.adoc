@@ -92,7 +92,7 @@ mechanisms:
     type: oauth2_introspection
     config:
       introspection_endpoint:
-        url: http://hydra:4445/oauth2/introspect
+        url: https://hydra:4445/oauth2/introspect
         auth:
           type: basic_auth
           config:

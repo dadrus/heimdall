@@ -161,7 +161,7 @@ match:
         - name: identifier
           type: glob
           value: "[a-z]"
-  scheme: http
+  scheme: https
   hosts:
     - type: exact
       value: my-service.local
@@ -171,7 +171,7 @@ match:
 forward_to:
   host: backend-a:8080
   rewrite:
-    scheme: http
+    scheme: https
     strip_path_prefix: /api/v1
 execute:
   # the following just demonstrates how to make use of specific

@@ -587,7 +587,7 @@ Specifies how long heimdall should cache the response if the endpoint referenced
 ====
 [source, text]
 ----
-http://foo.bar
+https://foo.bar
 ----
 ====
 
@@ -596,7 +596,7 @@ http://foo.bar
 
 [source, yaml]
 ----
-url: http://foo.bar
+url: https://foo.bar
 method: GET
 retry:
   give_up_after: 5s

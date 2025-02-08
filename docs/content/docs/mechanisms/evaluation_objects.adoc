@@ -54,7 +54,7 @@ Subject = {
     "exp": "1670600805",
     "jti": "7b91ed8a-0251-4e02-8d51-9792785851e8",
     "iat": "1670600305",
-    "iss": "http://testauthserver.local",
+    "iss": "https://testauthserver.local",
     "nbf": "1670600305",
     "extra": {
         "foo": ["bar", "baz"]
@@ -249,7 +249,7 @@ Values = {
 
 Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
-To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
+To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
 * `urlenc` - Encodes a given string using url encoding. Is handy if you need to generate request body or query parameters e.g. for communication with further systems.
 
@@ -264,7 +264,7 @@ Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` 
 
 .Rendering a JSON object
 ====
-Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
+Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
 
 [source, gotemplate]
 ----
@@ -288,7 +288,7 @@ This will result in the following JSON object:
 {
     "subject_id": "foo",
     "email": "foo@bar.baz",
-    "request_url": "http://foobar.baz/zab?foo=bar",
+    "request_url": "https://foobar.baz/zab?foo=bar",
     "foo_value": "bar",
     "request_method": "POST",
     "x_foo_value": "bar",
@@ -299,7 +299,7 @@ This will result in the following JSON object:
 
 .Access to captured path segments
 ====
-Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
+Imagine, we have a `POST` request to the URL `\https://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
 
 [source, yaml]
 ----

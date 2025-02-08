@@ -144,7 +144,7 @@ mechanisms:
     type: generic
     config:
       identity_info_endpoint:
-        url: http://127.0.0.1:4433/sessions/whoami
+        url: https://127.0.0.1:4433/sessions/whoami
         auth:
           auth:
             type: basic_auth
@@ -166,7 +166,7 @@ mechanisms:
     type: oauth2_introspection
     config:
       introspection_endpoint:
-        url: http://hydra:4445/oauth2/introspect
+        url: https://hydra:4445/oauth2/introspect
         retry:
           max_delay: 300ms
           give_up_after: 2s
@@ -183,7 +183,7 @@ mechanisms:
         - body_parameter: access_token
       assertions:
         issuers:
-          - http://127.0.0.1:4444/
+          - https://127.0.0.1:4444/
         scopes:
           - foo
           - bar
@@ -197,7 +197,7 @@ mechanisms:
     type: jwt
     config:
       metadata_endpoint:
-        url: http://auth-server/.well-known/oauth-authorization-server
+        url: https://auth-server/.well-known/oauth-authorization-server
         disable_issuer_identifier_verification: true
         http_cache:
           enabled: true
@@ -229,7 +229,7 @@ mechanisms:
     type: remote
     config:
       endpoint:
-        url: http://my-authz-system/{{ .Values.some-key }}
+        url: https://my-authz-system/{{ .Values.some-key }}
         method: POST
         headers:
           foo-bar: "{{ .Subject.ID }}"
@@ -266,19 +266,19 @@ mechanisms:
           type: oauth2_client_credentials
           config:
             auth_method: request_body
-            token_url: http://bar.foo
+            token_url: https://bar.foo
             client_id: foo
             client_secret: bar
             cache_ttl: 20s
             header:
               name: X-Foo
               scheme: Bar
-      payload: http://foo
+      payload: foo
   - id: profile_data_contextualizer
     type: generic
     config:
       endpoint:
-        url: http://profile
+        url: https://profile
         headers:
           foo: bar
       continue_pipeline_on_error: true
@@ -328,7 +328,7 @@ mechanisms:
   - id: authenticate_with_kratos
     type: redirect
     config:
-      to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+      to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
 default_rule:
   backtracking_enabled: false
@@ -350,10 +350,10 @@ providers:
   http_endpoint:
     watch_interval: 5m
     endpoints:
-      - url: http://foo.bar/ruleset1
+      - url: https://foo.bar/ruleset1
         http_cache:
           enabled: false
-      - url: http://foo.bar/ruleset2
+      - url: https://foo.bar/ruleset2
         retry:
           give_up_after: 5s
           max_delay: 250ms

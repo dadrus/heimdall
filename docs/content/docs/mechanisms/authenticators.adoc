@@ -204,7 +204,7 @@ config:
 
 Usually, you would not only like to verify the validity of a token, but also a couple of claims. This can be achieved by a link:{{< relref "authorizers.adoc#_local_cel" >}}[CEL Authorizer]. However, there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place and does not need so much configuration as shown above.
 
-In this configuration the authenticator extracts the token from the `Authorization` header and request the information about the corresponding user from the `\http://my-auth.system/introspect` endpoint by sending the extracted token in the body of the request in a parameter named `token`.
+In this configuration the authenticator extracts the token from the `Authorization` header and request the information about the corresponding user from the `\https://my-auth.system/introspect` endpoint by sending the extracted token in the body of the request in a parameter named `token`.
 ====
 
 .Configuration to work with Google's Firebase.
@@ -255,7 +255,7 @@ The https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server
 +
 The configuration of this property is mutually exclusive with `introspection_endpoint`. If used, at least the `url` must be configured, can be templated and has access to the `TokenIssuer` object already introduced above (with the same limitations).
 +
-The `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json` as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
+The `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json` as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to https://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
 +
 In addition to the properties specified by the link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[`endpoint`] type, following properties are available:
 
@@ -291,10 +291,10 @@ id: at_opaque
 type: oauth2_introspection
 config:
   introspection_endpoint:
-    url: http://hydra:4445/oauth2/introspect
+    url: https://hydra:4445/oauth2/introspect
   assertions:
     issuers:
-      - http://127.0.0.1:4444/
+      - https://127.0.0.1:4444/
 ----
 ====
 
@@ -306,14 +306,14 @@ id: keycloak
 type: metadata_endpoint
 config:
   metadata_endpoint:
-    url: http://keycloak:8080/realms/{{ trimPrefix "https://my-auth-server/realms/" .TokenIssuer }}/.well-known/openid-configuration
+    url: https://keycloak:8080/realms/{{ trimPrefix "https://my-auth-server/realms/" .TokenIssuer }}/.well-known/openid-configuration
   # Note that no assertions are configured here, since it'll be resolved via the metadata endpoint
 ----
 
 This example does also show how to make use of templating if the format of the access token is JWT.
 
 The external domain of the auth server in this example is `\https://my-auth-server.com`.
-If the `iss` claim of the issued JWT is set to `\https://my-auth-server.com/realms/my-app`, the above line will build an internal URL to the metadata endpoint of the same server and profile/realm, which is that case would be `\http://keycloak:8080/realms/my-app/.well-known/openid-configuration`
+If the `iss` claim of the issued JWT is set to `\https://my-auth-server.com/realms/my-app`, the above line will build an internal URL to the metadata endpoint of the same server and profile/realm, which is that case would be `\https://keycloak:8080/realms/my-app/.well-known/openid-configuration`
 
 ====
 
@@ -337,7 +337,7 @@ The https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server
 +
 The configuration of this property is mutually exclusive with `jwks_endpoint`. If used, at least the `url` must be configured. As with the `jwks_endpoint`, the path part of the `url` can be templated and has access to the `TokenIssuer` object already introduced above.
 +
-As with the `jwks_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
+As with the `jwks_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to https://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
 +
 In addition to the properties specified by the link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[`endpoint`] type, following properties are available:
 
@@ -383,10 +383,10 @@ id: at_jwt
 type: jwt
 config:
   jwks_endpoint:
-    url: http://hydra:4444/.well-known/jwks.json
+    url: https://hydra:4444/.well-known/jwks.json
   assertions:
     issuers:
-      - http://127.0.0.1:4444/
+      - https://127.0.0.1:4444/
 ----
 ====
 
@@ -398,7 +398,7 @@ id: keycloak
 type: jwt
 config:
   metadata_endpoint:
-    url: http://keycloak:8080/realms/my-app/.well-known/openid-configuration
+    url: https://keycloak:8080/realms/my-app/.well-known/openid-configuration
   # Note that no assertions are configured here, since it'll be resolved via the metadata endpoint
 ----
 ====
