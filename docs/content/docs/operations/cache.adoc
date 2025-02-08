@@ -132,6 +132,9 @@ TLS settings. By default, the communication to Redis happens over TLS. This requ
 ** *`disabled`*: _boolean_ (optional)
 +
 Disables TLS. Defaults to `false`.
++
+NOTE: This property can be set to `true` only if heimdall is started with the `--insecure-skip-egress-tls-enforcement` flag, which allows insecure communication with any configured service.
+
 
 === Redis Single Instance
 
