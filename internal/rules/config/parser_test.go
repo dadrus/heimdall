@@ -506,7 +506,7 @@ rules:
   execute:
     - authenticator: test
 `),
-			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
