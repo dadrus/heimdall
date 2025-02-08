@@ -47,14 +47,12 @@ import (
 func TestNewClientCredentialsFinalizer(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		id     string
-		config []byte
-		assert func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer)
+	for uc, tc := range map[string]struct {
+		enforceTLS bool
+		config     []byte
+		assert     func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer)
 	}{
-		{
-			uc: "without configuration",
+		"without configuration": {
 			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
@@ -66,8 +64,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "client_secret")
 			},
 		},
-		{
-			uc:     "with empty configuration",
+		"with empty configuration": {
 			config: []byte(``),
 			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -80,8 +77,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "client_secret")
 			},
 		},
-		{
-			uc: "with unsupported attributes",
+		"with unsupported attributes": {
 			config: []byte(`
 token_url: https://foo.bar
 foo: bar
@@ -94,8 +90,7 @@ foo: bar
 				assert.Contains(t, err.Error(), "invalid keys")
 			},
 		},
-		{
-			uc: "with bad auth method attributes",
+		"with bad auth method attributes": {
 			config: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -110,9 +105,8 @@ auth_method: bar
 				assert.Contains(t, err.Error(), "'auth_method' must be one of [basic_auth request_body]")
 			},
 		},
-		{
-			uc: "with minimal valid config",
-			id: "minimal",
+		"with minimal valid config with enforced and used TLS": {
+			enforceTLS: true,
 			config: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -124,7 +118,7 @@ client_secret: bar
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
 
-				assert.Equal(t, "minimal", finalizer.ID())
+				assert.Equal(t, "fin", finalizer.ID())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -135,9 +129,22 @@ client_secret: bar
 				assert.Equal(t, "Authorization", finalizer.headerName)
 			},
 		},
-		{
-			uc: "with full valid config",
-			id: "full",
+		"with minimal valid config with enforced but not used TLS": {
+			enforceTLS: true,
+			config: []byte(`
+token_url: http://foo.bar
+client_id: foo
+client_secret: bar
+`),
+			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'token_url' scheme must be https")
+			},
+		},
+		"with full valid config": {
 			config: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -157,7 +164,7 @@ header:
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
 
-				assert.Equal(t, "full", finalizer.ID())
+				assert.Equal(t, "fin", finalizer.ID())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -172,13 +179,15 @@ header:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
 			validator, err := validation.NewValidator(
-				validation.WithTagValidator(config.EnforcementSettings{}),
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
 			)
 			require.NoError(t, err)
 
@@ -186,7 +195,7 @@ header:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 
 			// WHEN
-			finalizer, err := newOAuth2ClientCredentialsFinalizer(appCtx, tc.id, conf)
+			finalizer, err := newOAuth2ClientCredentialsFinalizer(appCtx, "fin", conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -197,16 +206,12 @@ header:
 func TestCreateClientCredentialsFinalizerFromPrototype(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
-		id              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer)
 	}{
-		{
-			uc: "no new configuration provided",
-			id: "1",
+		"no new configuration provided": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -225,9 +230,7 @@ header:
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		{
-			uc: "empty configuration provided",
-			id: "2",
+		"empty configuration provided": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -245,12 +248,10 @@ header:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "2", configured.ID())
+				assert.Equal(t, "fin", configured.ID())
 			},
 		},
-		{
-			uc: "scopes reconfigured",
-			id: "3",
+		"scopes reconfigured": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -286,9 +287,7 @@ scopes:
 				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
 			},
 		},
-		{
-			uc: "ttl reconfigured",
-			id: "3",
+		"ttl reconfigured": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -320,8 +319,7 @@ cache_ttl: 12s
 				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
 			},
 		},
-		{
-			uc: "unsupported attributes while reconfiguring",
+		"unsupported attributes while reconfiguring": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -342,9 +340,7 @@ foo: 10s
 				require.Nil(t, configured)
 			},
 		},
-		{
-			uc: "header name reconfigured",
-			id: "3",
+		"header name reconfigured": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -378,7 +374,7 @@ header:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
@@ -393,7 +389,7 @@ header:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 
-			prototype, err := newOAuth2ClientCredentialsFinalizer(appCtx, tc.id, pc)
+			prototype, err := newOAuth2ClientCredentialsFinalizer(appCtx, "fin", pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -471,16 +467,14 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		finalizer      *oauth2ClientCredentialsFinalizer
 		configureMocks func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool)
 	}{
-		{
-			uc: "reusing response from cache",
+		"reusing response from cache": {
 			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:         "test",
 				headerName: "Authorization",
@@ -501,8 +495,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				assert.False(t, tokenEndpointCalled)
 			},
 		},
-		{
-			uc: "error while unmarshalling successful response",
+		"error while unmarshalling successful response": {
 			finalizer: &oauth2ClientCredentialsFinalizer{
 				id: "test",
 				cfg: clientcredentials.Config{
@@ -530,8 +523,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrInternal)
 			},
 		},
-		{
-			uc: "full configuration, no cache hit and token has expires_in claim",
+		"full configuration, no cache hit and token has expires_in claim": {
 			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "X-My-Header",
@@ -589,7 +581,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			endpointCalled = false
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
