@@ -193,7 +193,7 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "https://test.com", auth.e.URL)
 				assert.Equal(t, http.MethodPost, auth.e.Method)
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
