@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -38,7 +39,14 @@ func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { 
 			return true
 		}
 
-		return strings.HasPrefix(field.String(), "https://")
+		var value string
+		if str, ok := field.Interface().(fmt.Stringer); ok {
+			value = str.String()
+		} else {
+			value = field.String()
+		}
+
+		return strings.HasPrefix(value, "https")
 	case paramNotNil:
 		if !v.EnforceIngressTLS {
 			return true
