@@ -48,13 +48,12 @@ import (
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		conf   []byte
-		assert func(t *testing.T, err error, prov *Provider)
+	for uc, tc := range map[string]struct {
+		enforceTLS bool
+		conf       []byte
+		assert     func(t *testing.T, err error, prov *Provider)
 	}{
-		{
-			uc:   "with unknown field",
+		"with unknown field": {
 			conf: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -64,8 +63,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc:   "without endpoints",
+		"without endpoints": {
 			conf: []byte(`watch_interval: 5s`),
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -75,8 +73,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "'endpoints' is a required field")
 			},
 		},
-		{
-			uc: "with watch interval and unsupported endpoint property configured",
+		"with watch interval and unsupported endpoint property configured": {
 			conf: []byte(`
 watch_interval: 5s
 endpoints:
@@ -90,8 +87,7 @@ endpoints:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with one endpoint without url",
+		"with one endpoint without url": {
 			conf: []byte(`
 endpoints:
 - method: POST
@@ -104,8 +100,8 @@ endpoints:
 				assert.Contains(t, err.Error(), "'endpoints'[0].'url' is a required field")
 			},
 		},
-		{
-			uc: "with only one endpoint and its url configured",
+		"with enforced TLS, only one endpoint and its url configured to use TLS": {
+			enforceTLS: true,
 			conf: []byte(`
 endpoints:
 - url: https://foo.bar
@@ -129,13 +125,27 @@ endpoints:
 				assert.True(t, lr.IsZero())
 			},
 		},
-		{
-			uc: "with two endpoints and watch interval configured",
+		"with enforced TLS and one of the configured endpoints not using TLS": {
+			enforceTLS: true,
+			conf: []byte(`
+endpoints:
+- url: https://foo.bar
+- url: http://foo.bar
+`),
+			assert: func(t *testing.T, err error, _ *Provider) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'endpoints'[1].'url' scheme must be https")
+			},
+		},
+		"with two endpoints and watch interval configured": {
 			conf: []byte(`
 watch_interval: 5m
 endpoints:
-- url: https://foo.bar
-- url: https://bar.foo
+- url: http://foo.bar
+- url: http://bar.foo
 `),
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
@@ -160,13 +170,15 @@ endpoints:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
 			validator, err := validation.NewValidator(
-				validation.WithTagValidator(config.EnforcementSettings{}),
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
 			)
 			require.NoError(t, err)
 
@@ -212,15 +224,13 @@ func TestProviderLifecycle(t *testing.T) {
 
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		conf           []byte
 		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
 		writeResponse  ResponseWriter
 		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc: "with rule set loading error due server error response",
+		"with rule set loading error due server error response": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -240,8 +250,7 @@ endpoints:
 				assert.Contains(t, messages, "No updates received")
 			},
 		},
-		{
-			uc: "with empty server response",
+		"with empty server response": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -260,8 +269,7 @@ endpoints:
 				assert.Contains(t, logs.String(), "No updates received")
 			},
 		},
-		{
-			uc: "with not empty server response and without watch interval",
+		"with not empty server response and without watch interval": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -307,8 +315,7 @@ rules:
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "with not empty server response and with watch interval",
+		"with not empty server response and with watch interval": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -355,8 +362,7 @@ rules:
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "first request successful, second request with 500, successive requests successful without changes",
+		"first request successful, second request with 500, successive requests successful without changes": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -443,8 +449,7 @@ rules:
 				assert.Empty(t, ruleSet.Rules)
 			},
 		},
-		{
-			uc: "successive changes to the rule set in each retrieval",
+		"successive changes to the rule set in each retrieval": {
 			conf: []byte(`
 watch_interval: 200ms
 endpoints:
@@ -564,8 +569,7 @@ rules:
 				assert.Equal(t, "foz", ruleSets[2].Rules[0].ID)
 			},
 		},
-		{
-			uc: "response is cached",
+		"response is cached": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -612,8 +616,7 @@ rules:
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "response is not cached, as caching is disabled",
+		"response is not cached, as caching is disabled": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -664,8 +667,7 @@ rules:
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "previously unknown rule set with error on creation",
+		"previously unknown rule set with error on creation": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -701,8 +703,7 @@ rules:
 				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
 			},
 		},
-		{
-			uc: "updated rule set with error on update",
+		"updated rule set with error on update": {
 			conf: []byte(`
 watch_interval: 200ms
 endpoints:
@@ -762,8 +763,7 @@ rules:
 				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
 			},
 		},
-		{
-			uc: "deleted rule set with error on delete",
+		"deleted rule set with error on delete": {
 			conf: []byte(`
 watch_interval: 200ms
 endpoints:
@@ -812,7 +812,7 @@ rules:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			requestCount = 0
 
