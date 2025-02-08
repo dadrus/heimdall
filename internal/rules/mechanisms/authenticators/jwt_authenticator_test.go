@@ -287,7 +287,7 @@ jwks_endpoint:
 assertions:
   issuers:
     - foobar`),
-			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)

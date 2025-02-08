@@ -190,7 +190,7 @@ assertions:
   issuers:
     - foobar
 `),
-			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
+			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)

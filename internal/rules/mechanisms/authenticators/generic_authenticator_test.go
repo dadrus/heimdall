@@ -302,7 +302,7 @@ payload: |
   { "foo": {{ quote .AuthenticationData }} }
 subject:
   id: some_template`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)

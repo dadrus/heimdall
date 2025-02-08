@@ -119,7 +119,7 @@ endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			assert: func(t *testing.T, err error, contextualizer *genericContextualizer) {
+			assert: func(t *testing.T, err error, _ *genericContextualizer) {
 				t.Helper()
 
 				require.Error(t, err)

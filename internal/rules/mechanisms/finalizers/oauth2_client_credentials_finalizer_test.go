@@ -136,7 +136,7 @@ token_url: http://foo.bar
 client_id: foo
 client_secret: bar
 `),
-			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
