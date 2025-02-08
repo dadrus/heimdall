@@ -84,13 +84,12 @@ func TestStandaloneCache(t *testing.T) {
 	_, err = pemFile.Write(pemBytes)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
-		config func(t *testing.T, mock *mocks.WatcherMock) []byte
-		assert func(t *testing.T, err error, cch cache.Cache)
+	for uc, tc := range map[string]struct {
+		enforceTLS bool
+		config     func(t *testing.T, mock *mocks.WatcherMock) []byte
+		assert     func(t *testing.T, err error, cch cache.Cache)
 	}{
-		{
-			uc: "empty config",
+		"empty config": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -104,8 +103,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.ErrorContains(t, err, "'address' is a required field")
 			},
 		},
-		{
-			uc: "empty address provided",
+		"empty address provided": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -119,8 +117,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.ErrorContains(t, err, "'address' is a required field")
 			},
 		},
-		{
-			uc: "config contains unsupported properties",
+		"config contains unsupported properties": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -134,8 +131,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed decoding redis cache config")
 			},
 		},
-		{
-			uc: "not existing address provided",
+		"not existing address provided": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -149,8 +145,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed creating redis client")
 			},
 		},
-		{
-			uc: "successful cache creation without TLS and without credentials",
+		"successful cache creation without TLS and without credentials": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -176,8 +171,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.Equal(t, []byte("bar"), data)
 			},
 		},
-		{
-			uc: "successful cache creation without TLS but with static credentials",
+		"successful cache creation without TLS but with static credentials": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -203,8 +197,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.Equal(t, []byte("bar"), data)
 			},
 		},
-		{
-			uc: "cache creation fails due to failing watcher registration for external credentials",
+		"cache creation fails due to failing watcher registration for external credentials": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -231,8 +224,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed registering client credentials watcher")
 			},
 		},
-		{
-			uc: "with failing TLS config",
+		"with failing TLS config": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -246,8 +238,24 @@ func TestStandaloneCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
-		{
-			uc: "successful cache creation with TLS and external credentials",
+		"with TLS enforced, but disabled": {
+			enforceTLS: true,
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+				t.Helper()
+
+				return []byte(
+					`{address: "foo.local:12345", tls: { disabled: true} }`,
+				)
+			},
+			assert: func(t *testing.T, err error, _ cache.Cache) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'tls'.'disabled' must be false")
+			},
+		},
+		"successful cache creation with TLS and external credentials": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -294,8 +302,7 @@ func TestStandaloneCache(t *testing.T) {
 				require.Equal(t, []byte("bar"), data)
 			},
 		},
-		{
-			uc: "successful cache creation with mutual TLS",
+		"successful cache creation with mutual TLS": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
 				t.Helper()
 
@@ -340,11 +347,14 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			wm := mocks.NewWatcherMock(t)
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
+
 			validator, err := validation.NewValidator(
-				validation.WithTagValidator(config.EnforcementSettings{}),
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
 			)
 			require.NoError(t, err)
 
