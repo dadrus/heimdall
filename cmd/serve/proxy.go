@@ -30,23 +30,21 @@ func NewProxyCommand() *cobra.Command {
 		Use:     "proxy",
 		Short:   "Starts heimdall in Reverse Proxy operation mode",
 		Example: "heimdall serve proxy",
-		RunE:    runProxyMode,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			app, err := createApp(
+				cmd,
+				fx.Options(
+					proxy.Module,
+					fx.Supply(config.ProxyMode),
+				),
+			)
+			if err != nil {
+				return err
+			}
+
+			app.Run()
+
+			return nil
+		},
 	}
-}
-
-func runProxyMode(cmd *cobra.Command, _ []string) error {
-	app, err := createApp(
-		cmd,
-		fx.Options(
-			proxy.Module,
-			fx.Supply(config.ProxyMode),
-		),
-	)
-	if err != nil {
-		return err
-	}
-
-	app.Run()
-
-	return nil
 }

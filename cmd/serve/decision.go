@@ -34,30 +34,28 @@ func NewDecisionCommand() *cobra.Command {
 		Use:     "decision",
 		Short:   "Starts heimdall in Decision operation mode",
 		Example: "heimdall serve decision",
-		RunE:    runDecisionMode,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			useEnvoyExtAuth, _ := cmd.Flags().GetBool(serveDecisionFlagEnvoyGRPC)
+
+			app, err := createApp(
+				cmd,
+				fx.Options(
+					x.IfThenElse(useEnvoyExtAuth, envoy_extauth.Module, decision.Module),
+					fx.Supply(config.DecisionMode),
+				),
+			)
+			if err != nil {
+				return err
+			}
+
+			app.Run()
+
+			return nil
+		},
 	}
 
 	cmd.PersistentFlags().Bool(serveDecisionFlagEnvoyGRPC, false,
 		"If specified, decision mode is started for integration with envoy extauth gRPC service")
 
 	return cmd
-}
-
-func runDecisionMode(cmd *cobra.Command, _ []string) error {
-	useEnvoyExtAuth, _ := cmd.Flags().GetBool(serveDecisionFlagEnvoyGRPC)
-
-	app, err := createApp(
-		cmd,
-		fx.Options(
-			x.IfThenElse(useEnvoyExtAuth, envoy_extauth.Module, decision.Module),
-			fx.Supply(config.DecisionMode),
-		),
-	)
-	if err != nil {
-		return err
-	}
-
-	app.Run()
-
-	return nil
 }
