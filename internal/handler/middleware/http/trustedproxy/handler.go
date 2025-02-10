@@ -78,7 +78,7 @@ func New(logger zerolog.Logger, proxies ...string) func(http.Handler) http.Handl
 	}
 
 	if slicex.Intersects(proxies, config.InsecureNetworks) {
-		logger.Warn().Msgf("Configured trusted proxies contain insecure networks")
+		logger.Warn().Msg("Configured trusted proxies contain insecure networks. NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	trustedProxies := trustedProxySet(ipHolders)
