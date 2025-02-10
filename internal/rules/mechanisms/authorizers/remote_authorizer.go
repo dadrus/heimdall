@@ -96,6 +96,9 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Contex
 }
 
 func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating remote authorizer")
+
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"                             validate:"required"` //nolint:lll
 		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
@@ -120,6 +123,11 @@ func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (
 	expressions, err := compileExpressions(conf.Expressions, env)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the endpoint used in remote authorizer. NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	return &remoteAuthorizer{

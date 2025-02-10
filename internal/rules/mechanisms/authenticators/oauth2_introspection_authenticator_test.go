@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -348,6 +349,7 @@ metadata_endpoint:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			a, err := newOAuth2IntrospectionAuthenticator(appCtx, "auth1", conf)
@@ -596,6 +598,7 @@ subject:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newOAuth2IntrospectionAuthenticator(appCtx, "auth2", pc)
 			require.NoError(t, err)

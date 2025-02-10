@@ -19,6 +19,7 @@ package contextualizers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -65,6 +66,7 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
 
 			// WHEN
 			errorHandler, err := CreatePrototype(appCtx, "foo", tc.typ, nil)

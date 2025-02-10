@@ -18,6 +18,7 @@ package errorhandlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -51,6 +52,9 @@ type redirectErrorHandler struct {
 }
 
 func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating redirect error handler")
+
 	type Config struct {
 		To   template.Template `mapstructure:"to"   validate:"required,enforced=istls"`
 		Code int               `mapstructure:"code"`
@@ -59,6 +63,12 @@ func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]an
 	var conf Config
 	if err := decodeConfig(app.Validator(), ErrorHandlerRedirect, rawConfig, &conf); err != nil {
 		return nil, err
+	}
+
+	if strings.HasPrefix(conf.To.String(), "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the redirect endpoint used in redirect error handler. " +
+				"NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	return &redirectErrorHandler{

@@ -86,6 +86,9 @@ func newGenericContextualizer(
 	id string,
 	rawConfig map[string]any,
 ) (*genericContextualizer, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating generic contextualizer")
+
 	type Config struct {
 		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
@@ -100,6 +103,11 @@ func newGenericContextualizer(
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", id).CausedBy(err)
+	}
+
+	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the endpoint used in generic contextualizer. NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	ttl := defaultTTL

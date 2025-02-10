@@ -20,16 +20,21 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 	// GIVEN
-	prototype := newDenyAuthorizer("foo")
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Logger().Return(log.Logger)
+
+	prototype := newDenyAuthorizer(appCtx, "foo")
 
 	// WHEN
 	conf1, err1 := prototype.WithConfig(nil)
@@ -59,7 +64,10 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().AppContext().Return(context.Background())
 
-	auth := newDenyAuthorizer("bar")
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Logger().Return(log.Logger)
+
+	auth := newDenyAuthorizer(appCtx, "bar")
 
 	// WHEN
 	err := auth.Execute(ctx, nil)

@@ -44,6 +44,9 @@ func newAnonymousAuthenticator(
 	id string,
 	rawConfig map[string]any,
 ) (*anonymousAuthenticator, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating anonymous authenticator")
+
 	var auth anonymousAuthenticator
 
 	if err := decodeConfig(app, rawConfig, &auth); err != nil {

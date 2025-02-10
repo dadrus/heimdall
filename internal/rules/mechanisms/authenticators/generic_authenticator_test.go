@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -322,6 +323,7 @@ subject:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
@@ -725,6 +727,7 @@ forward_cookies:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newGenericAuthenticator(appCtx, tc.id, pc)
 			require.NoError(t, err)

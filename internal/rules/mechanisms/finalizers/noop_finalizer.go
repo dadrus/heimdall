@@ -29,16 +29,21 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ app.Context, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerNoop {
 				return false, nil, nil
 			}
 
-			return true, newNoopFinalizer(id), nil
+			return true, newNoopFinalizer(app, id), nil
 		})
 }
 
-func newNoopFinalizer(id string) *noopFinalizer { return &noopFinalizer{id: id} }
+func newNoopFinalizer(app app.Context, id string) *noopFinalizer {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating noop finalizer")
+
+	return &noopFinalizer{id: id}
+}
 
 type noopFinalizer struct {
 	id string

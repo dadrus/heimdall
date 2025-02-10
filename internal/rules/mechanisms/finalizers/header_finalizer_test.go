@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -129,6 +130,7 @@ headers:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			finalizer, err := newHeaderFinalizer(appCtx, tc.id, conf)
@@ -223,6 +225,7 @@ headers:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newHeaderFinalizer(appCtx, tc.id, pc)
 			require.NoError(t, err)
@@ -335,6 +338,7 @@ headers:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			finalizer, err := newHeaderFinalizer(appCtx, tc.id, conf)
 			require.NoError(t, err)

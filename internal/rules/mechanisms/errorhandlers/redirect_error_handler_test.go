@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -135,6 +136,7 @@ code: 301
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			errorHandler, err := newRedirectErrorHandler(appCtx, uc, conf)
@@ -199,6 +201,7 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newRedirectErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
@@ -323,6 +326,7 @@ code: 300
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			errorHandler, err := newRedirectErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)

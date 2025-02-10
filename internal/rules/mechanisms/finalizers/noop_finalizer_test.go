@@ -20,9 +20,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
@@ -30,10 +32,13 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Logger().Return(log.Logger)
+
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().AppContext().Return(context.Background())
 
-	finalizer := newNoopFinalizer("foo")
+	finalizer := newNoopFinalizer(appCtx, "foo")
 
 	// WHEN
 	err := finalizer.Execute(ctx, nil)
@@ -48,7 +53,10 @@ func TestCreateNoopFinalizerFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype := newNoopFinalizer("baz")
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Logger().Return(log.Logger)
+
+	prototype := newNoopFinalizer(appCtx, "baz")
 
 	// WHEN
 	fin1, err1 := prototype.WithConfig(nil)

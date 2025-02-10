@@ -19,6 +19,7 @@ package authorizers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -65,6 +66,7 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
 
 			// WHEN
 			auth, err := CreatePrototype(appCtx, "foo", tc.typ, nil)

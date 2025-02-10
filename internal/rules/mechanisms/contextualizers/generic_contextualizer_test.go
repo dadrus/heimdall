@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -186,6 +187,7 @@ continue_pipeline_on_error: true
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			contextualizer, err := newGenericContextualizer(appCtx, "contextualizer", conf)
@@ -487,6 +489,7 @@ continue_pipeline_on_error: false
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newGenericContextualizer(appCtx, "contextualizer", pc)
 			require.NoError(t, err)

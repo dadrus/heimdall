@@ -72,12 +72,15 @@ type oauth2IntrospectionAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-// nolint: funlen
+// nolint: funlen, cyclop
 func newOAuth2IntrospectionAuthenticator(
 	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*oauth2IntrospectionAuthenticator, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating oauth2_introspection authenticator")
+
 	type Config struct {
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
@@ -94,9 +97,23 @@ func newOAuth2IntrospectionAuthenticator(
 			"failed decoding config for oauth2_introspection authenticator '%s'", id).CausedBy(err)
 	}
 
-	if conf.IntrospectionEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"'issuers' is a required field if introspection endpoint is used")
+	if conf.IntrospectionEndpoint != nil {
+		if len(conf.Assertions.TrustedIssuers) == 0 {
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"'issuers' is a required field if introspection endpoint is used")
+		}
+
+		if strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
+			logger.Warn().Str("_id", id).
+				Msg("No TLS configured for the introspection endpoint used in oauth2_introspection authenticator. " +
+					"NEVER DO THIS IN PRODUCTION!!!")
+		}
+	}
+
+	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the metadata endpoint used in oauth2_introspection authenticator. " +
+				"NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {

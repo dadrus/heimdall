@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -147,6 +148,7 @@ foo: bar`),
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			auth, err := newBasicAuthAuthenticator(appCtx, tc.id, conf)
@@ -325,6 +327,7 @@ password: baz`),
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newBasicAuthAuthenticator(appCtx, tc.id, pc)
 			require.NoError(t, err)
@@ -522,6 +525,7 @@ password: bar`))
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			auth, err := newBasicAuthAuthenticator(appCtx, tc.id, conf)
 			require.NoError(t, err)

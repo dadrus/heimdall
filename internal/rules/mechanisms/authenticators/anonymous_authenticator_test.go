@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -88,6 +89,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			auth, err := newAnonymousAuthenticator(appCtx, tc.id, conf)
@@ -165,6 +167,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newAnonymousAuthenticator(appCtx, tc.id, pc)
 			require.NoError(t, err)

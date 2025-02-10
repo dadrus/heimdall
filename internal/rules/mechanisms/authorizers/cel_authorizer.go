@@ -50,6 +50,9 @@ type celAuthorizer struct {
 }
 
 func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*celAuthorizer, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating cel authorizer")
+
 	type Config struct {
 		Expressions []Expression `mapstructure:"expressions" validate:"required,gt=0,dive"`
 	}

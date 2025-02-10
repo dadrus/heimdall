@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -448,6 +449,7 @@ header:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			tc.configureAppContext(t, appCtx)
 
@@ -674,6 +676,7 @@ foo: bar
 			appCtx.EXPECT().KeyHolderRegistry().Return(khr)
 			appCtx.EXPECT().CertificateObserver().Return(co)
 			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newJWTFinalizer(appCtx, tc.id, protoConf)
 			require.NoError(t, err)
@@ -928,6 +931,7 @@ claims: "{{ len .foobar }}"
 			appCtx.EXPECT().KeyHolderRegistry().Return(khr)
 			appCtx.EXPECT().CertificateObserver().Return(co)
 			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 

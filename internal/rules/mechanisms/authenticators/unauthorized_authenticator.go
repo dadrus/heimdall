@@ -30,12 +30,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ app.Context, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorUnauthorized {
 				return false, nil, nil
 			}
 
-			return true, newUnauthorizedAuthenticator(id), nil
+			return true, newUnauthorizedAuthenticator(app, id), nil
 		})
 }
 
@@ -43,7 +43,10 @@ type unauthorizedAuthenticator struct {
 	id string
 }
 
-func newUnauthorizedAuthenticator(id string) *unauthorizedAuthenticator {
+func newUnauthorizedAuthenticator(app app.Context, id string) *unauthorizedAuthenticator {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating unauthorized authenticator")
+
 	return &unauthorizedAuthenticator{id: id}
 }
 

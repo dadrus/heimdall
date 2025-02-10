@@ -19,6 +19,7 @@ package finalizers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -59,7 +60,10 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			finalizer, err := CreatePrototype(app.NewContextMock(t), "foo", tc.typ, nil)
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
+			finalizer, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, finalizer)

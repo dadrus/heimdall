@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -149,6 +150,7 @@ expressions:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			a, err := newCELAuthorizer(appCtx, tc.id, conf)
@@ -233,6 +235,7 @@ expressions:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newCELAuthorizer(appCtx, tc.id, pc)
 			require.NoError(t, err)
@@ -365,6 +368,7 @@ expressions:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			auth, err := newCELAuthorizer(appCtx, tc.id, conf)
 			require.NoError(t, err)

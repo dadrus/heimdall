@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -130,6 +131,7 @@ cookies:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			finalizer, err := newCookieFinalizer(appCtx, tc.id, conf)
@@ -224,6 +226,7 @@ cookies:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newCookieFinalizer(appCtx, tc.id, pc)
 			require.NoError(t, err)
@@ -336,6 +339,7 @@ cookies:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			finalizer, err := newCookieFinalizer(appCtx, tc.id, conf)
 			require.NoError(t, err)

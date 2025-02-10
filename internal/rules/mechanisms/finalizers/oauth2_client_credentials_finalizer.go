@@ -18,6 +18,7 @@ package finalizers
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -59,6 +60,9 @@ func newOAuth2ClientCredentialsFinalizer(
 	id string,
 	rawConfig map[string]any,
 ) (*oauth2ClientCredentialsFinalizer, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating oauth2_client_credentials finalizer")
+
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
 		Scheme string `mapstructure:"scheme"`
@@ -73,6 +77,12 @@ func newOAuth2ClientCredentialsFinalizer(
 	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for oauth2_client_credentials finalizer '%s'", id).CausedBy(err)
+	}
+
+	if strings.HasPrefix(conf.TokenURL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the token_url used in oauth2_client_credentials finalizer. " +
+				"NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	conf.AuthMethod = x.IfThenElse(

@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -193,6 +194,7 @@ header:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			finalizer, err := newOAuth2ClientCredentialsFinalizer(appCtx, "fin", conf)
@@ -388,6 +390,7 @@ header:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newOAuth2ClientCredentialsFinalizer(appCtx, "fin", pc)
 			require.NoError(t, err)

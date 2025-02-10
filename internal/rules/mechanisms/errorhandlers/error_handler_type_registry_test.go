@@ -19,6 +19,7 @@ package errorhandlers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -60,6 +61,7 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
 
 			// WHEN
 			errorHandler, err := CreatePrototype(appCtx, "foo", tc.typ, nil)

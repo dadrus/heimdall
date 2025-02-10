@@ -49,6 +49,9 @@ type wwwAuthenticateErrorHandler struct {
 func newWWWAuthenticateErrorHandler(
 	app app.Context, id string, rawConfig map[string]any,
 ) (*wwwAuthenticateErrorHandler, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating www-authenticate error handler")
+
 	type Config struct {
 		Realm string `mapstructure:"realm"`
 	}

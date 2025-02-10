@@ -29,12 +29,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ app.Context, id string, typ string, _ map[string]any) (bool, Authorizer, error) {
+		func(app app.Context, id string, typ string, _ map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerAllow {
 				return false, nil, nil
 			}
 
-			return true, newAllowAuthorizer(id), nil
+			return true, newAllowAuthorizer(app, id), nil
 		})
 }
 
@@ -42,7 +42,10 @@ type allowAuthorizer struct {
 	id string
 }
 
-func newAllowAuthorizer(id string) *allowAuthorizer {
+func newAllowAuthorizer(app app.Context, id string) *allowAuthorizer {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating allow authorizer")
+
 	return &allowAuthorizer{id: id}
 }
 

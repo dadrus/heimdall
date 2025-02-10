@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -88,6 +89,7 @@ if: type(Error) == authentication_error
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
 			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, conf)
@@ -177,6 +179,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, pc)
 			require.NoError(t, err)
@@ -271,6 +274,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)

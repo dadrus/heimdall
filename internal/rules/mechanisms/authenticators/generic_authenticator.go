@@ -71,6 +71,11 @@ type genericAuthenticator struct {
 }
 
 func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]any) (*genericAuthenticator, error) {
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating generic authenticator")
+
+	logger.Debug()
+
 	type Config struct {
 		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"required"` //nolint:lll
 		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                    validate:"required"` //nolint:lll
@@ -87,6 +92,11 @@ func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]an
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for generic authenticator '%s'", id).CausedBy(err)
+	}
+
+	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the endpoint used in generic authenticator. NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	return &genericAuthenticator{

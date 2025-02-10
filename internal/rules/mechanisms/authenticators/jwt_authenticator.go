@@ -78,12 +78,15 @@ type jwtAuthenticator struct {
 	validateJWKCert      bool
 }
 
-// nolint: funlen
+// nolint: funlen, cyclop
 func newJwtAuthenticator(
 	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*jwtAuthenticator, error) { // nolint: funlen
+	logger := app.Logger()
+	logger.Debug().Str("_id", id).Msg("Creating jwt authenticator")
+
 	type Config struct {
 		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
 		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
@@ -102,9 +105,23 @@ func newJwtAuthenticator(
 			"failed decoding config for jwt authenticator '%s'", id).CausedBy(err)
 	}
 
-	if conf.JWKSEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
+	if conf.JWKSEndpoint != nil {
+		if len(conf.Assertions.TrustedIssuers) == 0 {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
+		}
+
+		if strings.HasPrefix(conf.JWKSEndpoint.URL, "http://") {
+			logger.Warn().Str("_id", id).
+				Msg("No TLS configured for the jwks endpoint used in jwt authenticator. " +
+					"NEVER DO THIS IN PRODUCTION!!!")
+		}
+	}
+
+	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the metadata endpoint used in jwt authenticator. " +
+				"NEVER DO THIS IN PRODUCTION!!!")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
