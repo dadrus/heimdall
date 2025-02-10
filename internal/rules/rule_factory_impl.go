@@ -36,14 +36,14 @@ func NewRuleFactory(
 	conf *config.Configuration,
 	mode config.OperationMode,
 	logger zerolog.Logger,
-	edr config.SecureDefaultRule,
+	sdr config.SecureDefaultRule,
 ) (rule.Factory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
 	rf := &ruleFactory{
 		hf:                hf,
 		hasDefaultRule:    false,
-		secureDefaultRule: bool(edr),
+		secureDefaultRule: bool(sdr),
 		logger:            logger,
 		mode:              mode,
 	}
