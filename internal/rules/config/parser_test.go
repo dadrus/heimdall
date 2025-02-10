@@ -489,7 +489,7 @@ rules:
 				assert.Equal(t, "foo", rul.Matcher.Routes[0].Path)
 			},
 		},
-		"enforced but disable TLS for upstream communication": {
+		"enforced but disabled TLS for upstream communication": {
 			enforceUpstreamTLS: true,
 			conf: []byte(`
 version: "1"
