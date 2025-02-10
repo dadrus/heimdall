@@ -304,8 +304,12 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
 	}
 
-	if f.secureDefaultRule && authenticators[0].IsInsecure() {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "insecure default rule configured")
+	if authenticators[0].IsInsecure() {
+		if f.secureDefaultRule {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration, "insecure default rule configured")
+		}
+
+		logger.Warn().Msg("Insecure default rule configured. NEVER DO IT IN PRODUCTION!!!")
 	}
 
 	f.defaultRule = &ruleImpl{
