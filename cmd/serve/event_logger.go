@@ -11,7 +11,7 @@ type eventLogger struct {
 	l zerolog.Logger
 }
 
-func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit
+func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo, cyclop, funlen
 	switch evt := event.(type) {
 	case *fxevent.OnStartExecuting:
 		l.l.Trace().

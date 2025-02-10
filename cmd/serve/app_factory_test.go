@@ -12,9 +12,8 @@ import (
 )
 
 func TestCreateApp(t *testing.T) {
-	//t.Parallel()
-	// this test verifies that all dependencies are resolved
-	// and nothing has been forgotten
+	t.Parallel()
+
 	cmd := &cobra.Command{}
 	flags.RegisterGlobalFlags(cmd)
 
