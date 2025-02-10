@@ -22,6 +22,7 @@ func createApp(cmd *cobra.Command, mainModule fx.Option) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString(flags.Config)
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	cli := bytes.NewBufferString(cmd.CommandPath())
+	es := flags.EnforcementSettings(cmd)
 	securityEnforcementDisabled := false
 
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
@@ -34,8 +35,6 @@ func createApp(cmd *cobra.Command, mainModule fx.Option) (*fx.App, error) {
 			securityEnforcementDisabled = true
 		}
 	})
-
-	es := flags.EnforcementSettings(cmd)
 
 	validator, err := validation.NewValidator(
 		validation.WithTagValidator(es),
