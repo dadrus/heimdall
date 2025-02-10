@@ -17,17 +17,12 @@
 package serve
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/cmd/flags"
-	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/decision"
 	envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -39,16 +34,7 @@ func NewDecisionCommand() *cobra.Command {
 		Use:     "decision",
 		Short:   "Starts heimdall in Decision operation mode",
 		Example: "heimdall serve decision",
-		Run: func(cmd *cobra.Command, _ []string) {
-			app, err := createDecisionApp(cmd)
-			if err != nil {
-				cmd.PrintErrf("Failed to initialize decision service: %v", err)
-
-				os.Exit(1)
-			}
-
-			app.Run()
-		},
+		RunE:    runDecisionMode,
 	}
 
 	cmd.PersistentFlags().Bool(serveDecisionFlagEnvoyGRPC, false,
@@ -57,32 +43,21 @@ func NewDecisionCommand() *cobra.Command {
 	return cmd
 }
 
-func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
-	configPath, _ := cmd.Flags().GetString(flags.Config)
-	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
+func runDecisionMode(cmd *cobra.Command, _ []string) error {
 	useEnvoyExtAuth, _ := cmd.Flags().GetBool(serveDecisionFlagEnvoyGRPC)
-	es := flags.EnforcementSettings(cmd)
 
-	validator, err := validation.NewValidator(
-		validation.WithTagValidator(es),
-		validation.WithErrorTranslator(es),
+	app, err := createApp(
+		cmd,
+		fx.Options(
+			x.IfThenElse(useEnvoyExtAuth, envoy_extauth.Module, decision.Module),
+			fx.Supply(config.DecisionMode),
+		),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	app := fx.New(
-		fx.NopLogger,
-		fx.Supply(
-			config.ConfigurationPath(configPath),
-			config.EnvVarPrefix(envPrefix),
-			config.SecureDefaultRule(es.EnforceSecureDefaultRule),
-			config.DecisionMode,
-			fx.Annotate(validator, fx.As(new(validation.Validator))),
-		),
-		internal.Module,
-		x.IfThenElse(useEnvoyExtAuth, envoy_extauth.Module, decision.Module),
-	)
+	app.Run()
 
-	return app, app.Err()
+	return nil
 }

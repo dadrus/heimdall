@@ -17,16 +17,11 @@
 package serve
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/cmd/flags"
-	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/proxy"
-	"github.com/dadrus/heimdall/internal/validation"
 )
 
 // NewProxyCommand represents the proxy command.
@@ -35,44 +30,23 @@ func NewProxyCommand() *cobra.Command {
 		Use:     "proxy",
 		Short:   "Starts heimdall in Reverse Proxy operation mode",
 		Example: "heimdall serve proxy",
-		Run: func(cmd *cobra.Command, _ []string) {
-			app, err := createProxyApp(cmd)
-			if err != nil {
-				cmd.PrintErrf("Failed to initialize proxy service: %v", err)
-
-				os.Exit(1)
-			}
-
-			app.Run()
-		},
+		RunE:    runProxyMode,
 	}
 }
 
-func createProxyApp(cmd *cobra.Command) (*fx.App, error) {
-	configPath, _ := cmd.Flags().GetString(flags.Config)
-	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
-	es := flags.EnforcementSettings(cmd)
-
-	validator, err := validation.NewValidator(
-		validation.WithTagValidator(es),
-		validation.WithErrorTranslator(es),
+func runProxyMode(cmd *cobra.Command, _ []string) error {
+	app, err := createApp(
+		cmd,
+		fx.Options(
+			proxy.Module,
+			fx.Supply(config.ProxyMode),
+		),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	app := fx.New(
-		fx.NopLogger,
-		fx.Supply(
-			config.ConfigurationPath(configPath),
-			config.EnvVarPrefix(envPrefix),
-			config.SecureDefaultRule(es.EnforceSecureDefaultRule),
-			config.ProxyMode,
-			fx.Annotate(validator, fx.As(new(validation.Validator))),
-		),
-		internal.Module,
-		proxy.Module,
-	)
+	app.Run()
 
-	return app, app.Err()
+	return nil
 }

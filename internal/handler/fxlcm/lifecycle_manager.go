@@ -19,6 +19,8 @@ package fxlcm
 import (
 	"context"
 	"errors"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"net"
 	"net/http"
 
@@ -51,9 +53,9 @@ type LifecycleManager struct {
 func (m *LifecycleManager) Start(_ context.Context) error {
 	ln, err := listener.New("tcp", m.ServiceName, m.ServiceAddress, m.TLSConf, m.FileWatcher, m.CertificateObserver)
 	if err != nil {
-		m.Logger.Fatal().Err(err).Str("_service", m.ServiceName).Msg("Could not create listener")
-
-		return err
+		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"Could not create listener for %s service", m.ServiceName).
+			CausedBy(err)
 	}
 
 	go func() {

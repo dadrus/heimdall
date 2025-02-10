@@ -27,14 +27,12 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/metrics"
 	"github.com/dadrus/heimdall/internal/handler/profiling"
 	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/otel"
 	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
-	"github.com/dadrus/heimdall/version"
 )
 
 type appContext struct {
@@ -54,13 +52,8 @@ func (c *appContext) Logger() zerolog.Logger                    { return c.l }
 func (c *appContext) Config() *config.Configuration             { return c.c }
 
 var Module = fx.Options( //nolint:gochecknoglobals
-	config.Module,
-	logging.Module,
 	watcher.Module,
 	keyholder.Module,
-	fx.Invoke(func(logger zerolog.Logger) {
-		logger.Info().Str("_version", version.Version).Msg("Starting heimdall")
-	}),
 	fx.Provide(func(
 		watcher watcher.Watcher,
 		khr keyholder.Registry,
