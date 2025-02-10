@@ -45,7 +45,7 @@ type unauthorizedAuthenticator struct {
 
 func newUnauthorizedAuthenticator(app app.Context, id string) *unauthorizedAuthenticator {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating unauthorized authenticator")
+	logger.Info().Str("_id", id).Msg("Creating unauthorized authenticator")
 
 	return &unauthorizedAuthenticator{id: id}
 }

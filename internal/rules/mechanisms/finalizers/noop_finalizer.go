@@ -40,7 +40,7 @@ func init() {
 
 func newNoopFinalizer(app app.Context, id string) *noopFinalizer {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating noop finalizer")
+	logger.Info().Str("_id", id).Msg("Creating noop finalizer")
 
 	return &noopFinalizer{id: id}
 }

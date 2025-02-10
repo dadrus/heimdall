@@ -50,7 +50,7 @@ type cookieFinalizer struct {
 
 func newCookieFinalizer(app app.Context, id string, rawConfig map[string]any) (*cookieFinalizer, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating cookie finalizer")
+	logger.Info().Str("_id", id).Msg("Creating cookie finalizer")
 
 	type Config struct {
 		Cookies map[string]template.Template `mapstructure:"cookies" validate:"required,gt=0"`

@@ -45,7 +45,7 @@ type denyAuthorizer struct {
 
 func newDenyAuthorizer(app app.Context, id string) *denyAuthorizer {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating deny authorizer")
+	logger.Info().Str("_id", id).Msg("Creating deny authorizer")
 
 	return &denyAuthorizer{id: id}
 }

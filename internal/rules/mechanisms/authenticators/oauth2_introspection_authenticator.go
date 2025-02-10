@@ -79,7 +79,7 @@ func newOAuth2IntrospectionAuthenticator(
 	rawConfig map[string]any,
 ) (*oauth2IntrospectionAuthenticator, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating oauth2_introspection authenticator")
+	logger.Info().Str("_id", id).Msg("Creating oauth2_introspection authenticator")
 
 	type Config struct {
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign

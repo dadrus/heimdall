@@ -97,7 +97,7 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Contex
 
 func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating remote authorizer")
+	logger.Info().Str("_id", id).Msg("Creating remote authorizer")
 
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"                             validate:"required"` //nolint:lll

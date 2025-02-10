@@ -87,7 +87,7 @@ func newGenericContextualizer(
 	rawConfig map[string]any,
 ) (*genericContextualizer, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating generic contextualizer")
+	logger.Info().Str("_id", id).Msg("Creating generic contextualizer")
 
 	type Config struct {
 		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`

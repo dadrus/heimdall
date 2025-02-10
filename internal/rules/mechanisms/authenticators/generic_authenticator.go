@@ -72,9 +72,7 @@ type genericAuthenticator struct {
 
 func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating generic authenticator")
-
-	logger.Debug()
+	logger.Info().Str("_id", id).Msg("Creating generic authenticator")
 
 	type Config struct {
 		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"required"` //nolint:lll

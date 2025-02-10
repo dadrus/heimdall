@@ -44,7 +44,7 @@ type allowAuthorizer struct {
 
 func newAllowAuthorizer(app app.Context, id string) *allowAuthorizer {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating allow authorizer")
+	logger.Info().Str("_id", id).Msg("Creating allow authorizer")
 
 	return &allowAuthorizer{id: id}
 }

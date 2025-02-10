@@ -61,7 +61,7 @@ func newOAuth2ClientCredentialsFinalizer(
 	rawConfig map[string]any,
 ) (*oauth2ClientCredentialsFinalizer, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating oauth2_client_credentials finalizer")
+	logger.Info().Str("_id", id).Msg("Creating oauth2_client_credentials finalizer")
 
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`

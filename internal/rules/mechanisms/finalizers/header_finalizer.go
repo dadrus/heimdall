@@ -50,7 +50,7 @@ type headerFinalizer struct {
 
 func newHeaderFinalizer(app app.Context, id string, rawConfig map[string]any) (*headerFinalizer, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating header finalizer")
+	logger.Info().Str("_id", id).Msg("Creating header finalizer")
 
 	type Config struct {
 		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`

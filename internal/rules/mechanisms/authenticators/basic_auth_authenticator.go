@@ -67,7 +67,7 @@ func newBasicAuthAuthenticator(
 	rawConfig map[string]any,
 ) (*basicAuthAuthenticator, error) {
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating basic auth authenticator")
+	logger.Info().Str("_id", id).Msg("Creating basic auth authenticator")
 
 	type Config struct {
 		UserID               string `mapstructure:"user_id"                 validate:"required"`

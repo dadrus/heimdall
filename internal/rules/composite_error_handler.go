@@ -44,7 +44,7 @@ func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) error
 		return nil
 	}
 
-	logger.Warn().Msg("No applicable error handler found")
+	logger.Debug().Msg("No applicable error handler found")
 
 	return exErr
 }

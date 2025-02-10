@@ -282,7 +282,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return nil
 	}
 
-	logger.Debug().Msg("Loading default rule")
+	logger.Info().Msg("Loading default rule")
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(
 		config2.CurrentRuleSetVersion,

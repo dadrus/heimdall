@@ -85,7 +85,7 @@ func newJwtAuthenticator(
 	rawConfig map[string]any,
 ) (*jwtAuthenticator, error) { // nolint: funlen
 	logger := app.Logger()
-	logger.Debug().Str("_id", id).Msg("Creating jwt authenticator")
+	logger.Info().Str("_id", id).Msg("Creating jwt authenticator")
 
 	type Config struct {
 		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign

@@ -19,8 +19,6 @@ package mechanisms
 import (
 	"errors"
 
-	"github.com/rs/zerolog"
-
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
@@ -40,7 +38,7 @@ func newMechanismRepository(app app.Context) (*mechanismRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")
 
 	authenticatorMap, err := createPipelineObjects[authenticators.Authenticator](
-		app, conf.Prototypes.Authenticators, logger, authenticators.CreatePrototype)
+		app, conf.Prototypes.Authenticators, authenticators.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authenticators definitions")
 
@@ -50,7 +48,7 @@ func newMechanismRepository(app app.Context) (*mechanismRepository, error) {
 	logger.Debug().Msg("Loading definitions for authorizers")
 
 	authorizerMap, err := createPipelineObjects[authorizers.Authorizer](
-		app, conf.Prototypes.Authorizers, logger, authorizers.CreatePrototype)
+		app, conf.Prototypes.Authorizers, authorizers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authorizers definitions")
 
@@ -60,7 +58,7 @@ func newMechanismRepository(app app.Context) (*mechanismRepository, error) {
 	logger.Debug().Msg("Loading definitions for contextualizer")
 
 	contextualizerMap, err := createPipelineObjects[contextualizers.Contextualizer](
-		app, conf.Prototypes.Contextualizers, logger, contextualizers.CreatePrototype)
+		app, conf.Prototypes.Contextualizers, contextualizers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading contextualizer definitions")
 
@@ -70,7 +68,7 @@ func newMechanismRepository(app app.Context) (*mechanismRepository, error) {
 	logger.Debug().Msg("Loading definitions for finalizers")
 
 	finalizerMap, err := createPipelineObjects[finalizers.Finalizer](
-		app, conf.Prototypes.Finalizers, logger, finalizers.CreatePrototype)
+		app, conf.Prototypes.Finalizers, finalizers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading finalizer definitions")
 
@@ -80,7 +78,7 @@ func newMechanismRepository(app app.Context) (*mechanismRepository, error) {
 	logger.Debug().Msg("Loading definitions for error handler")
 
 	ehMap, err := createPipelineObjects[errorhandlers.ErrorHandler](
-		app, conf.Prototypes.ErrorHandlers, logger, errorhandlers.CreatePrototype)
+		app, conf.Prototypes.ErrorHandlers, errorhandlers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading error handler definitions")
 
@@ -99,14 +97,11 @@ func newMechanismRepository(app app.Context) (*mechanismRepository, error) {
 func createPipelineObjects[T any](
 	app app.Context,
 	pObjects []config.Mechanism,
-	logger zerolog.Logger,
 	create func(app app.Context, id string, typ string, c map[string]any) (T, error),
 ) (map[string]T, error) {
 	objects := make(map[string]T)
 
 	for _, pe := range pObjects {
-		logger.Debug().Str("_id", pe.ID).Str("_type", pe.Type).Msg("Loading mechanism definition")
-
 		if len(pe.Condition) != 0 {
 			pe.Config["if"] = pe.Condition
 		}
