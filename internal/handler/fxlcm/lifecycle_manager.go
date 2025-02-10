@@ -29,7 +29,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -59,15 +58,16 @@ func (m *LifecycleManager) Start(_ context.Context) error {
 	}
 
 	go func() {
-		isSecure := m.TLSConf != nil
-
-		x.IfThenElseExec(isSecure,
-			func() *zerolog.Event { return m.Logger.Info() },
-			func() *zerolog.Event { return m.Logger.Warn() }).
+		m.Logger.Info().
 			Str("_address", ln.Addr().String()).
 			Str("_service", m.ServiceName).
-			Bool("_secure", isSecure).
 			Msg("Starting listening")
+
+		if m.TLSConf != nil {
+			m.Logger.Warn().
+				Str("_service", m.ServiceName).
+				Msg("TLS is disabled. NEVER DO THIS IN PRODUCTION!!!")
+		}
 
 		if err = m.Server.Serve(ln); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
