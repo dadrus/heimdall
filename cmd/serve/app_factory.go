@@ -1,8 +1,12 @@
 package serve
 
 import (
+	"bytes"
+	"slices"
+
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 
@@ -17,6 +21,19 @@ import (
 func createApp(cmd *cobra.Command, mainModule fx.Option) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString(flags.Config)
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
+	cli := bytes.NewBufferString(cmd.CommandPath())
+	securityEnforcementDisabled := false
+
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		cli.WriteString(" --")
+		cli.WriteString(flag.Name)
+		cli.WriteString(" ")
+		cli.WriteString(flag.Value.String())
+
+		if slices.Contains(flags.InsecureFlags, flag.Name) {
+			securityEnforcementDisabled = true
+		}
+	})
 
 	es := flags.EnforcementSettings(cmd)
 
@@ -40,7 +57,12 @@ func createApp(cmd *cobra.Command, mainModule fx.Option) (*fx.App, error) {
 	logger := logging.NewLogger(cfg.Log)
 	logger.Info().
 		Str("_version", version.Version).
+		Str("_cli", cli.String()).
 		Msg("Starting heimdall")
+
+	if securityEnforcementDisabled {
+		logger.Warn().Msg("Enforcement of secure settings disabled")
+	}
 
 	app := fx.New(
 		fx.Supply(

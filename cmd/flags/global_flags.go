@@ -12,3 +12,13 @@ const (
 	SkipEgressTLSEnforcement            = "insecure-skip-egress-tls-enforcement"
 	SkipUpstreamTLSEnforcement          = "insecure-skip-upstream-tls-enforcement"
 )
+
+var InsecureFlags = []string{ //nolint: gochecknoglobals
+	SkipAllSecurityEnforcement,
+	SkipSecureTrustedProxiesEnforcement,
+	SkipSecureDefaultRuleEnforcement,
+	SkipAllTLSEnforcement,
+	SkipIngressTLSEnforcement,
+	SkipEgressTLSEnforcement,
+	SkipUpstreamTLSEnforcement,
+}
