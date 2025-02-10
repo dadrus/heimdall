@@ -11,7 +11,7 @@ type eventLogger struct {
 	l zerolog.Logger
 }
 
-func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo, cyclop, funlen
+func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo, cyclop, funlen, maintidx
 	switch evt := event.(type) {
 	case *fxevent.OnStartExecuting:
 		l.l.Trace().
@@ -68,18 +68,18 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Msg("Module supplied")
 		}
 	case *fxevent.Provided:
-		for _, rtype := range evt.OutputTypeNames {
-			l.l.Trace().
-				Str("_type", rtype).
-				Str("_module", evt.ModuleName).
-				Str("_constructor", evt.ConstructorName).
-				Bool("_private", evt.Private).
-				Strs("_stacktrace", evt.StackTrace).
-				Strs("_moduleTrace", evt.ModuleTrace).
-				Msg("Module provided")
-		}
-
-		if evt.Err != nil {
+		if evt.Err == nil {
+			for _, rtype := range evt.OutputTypeNames {
+				l.l.Trace().
+					Str("_type", rtype).
+					Str("_module", evt.ModuleName).
+					Str("_constructor", evt.ConstructorName).
+					Bool("_private", evt.Private).
+					Strs("_stacktrace", evt.StackTrace).
+					Strs("_moduleTrace", evt.ModuleTrace).
+					Msg("Module provided")
+			}
+		} else {
 			l.l.Error().
 				Err(evt.Err).
 				Str("_module", evt.ModuleName).
@@ -88,16 +88,16 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Msg("Error encountered while providing module")
 		}
 	case *fxevent.Replaced:
-		for _, rtype := range evt.OutputTypeNames {
-			l.l.Trace().
-				Str("_type", rtype).
-				Str("_module", evt.ModuleName).
-				Strs("_stacktrace", evt.StackTrace).
-				Strs("_moduleTrace", evt.ModuleTrace).
-				Msg("Module replaced")
-		}
-
-		if evt.Err != nil {
+		if evt.Err == nil {
+			for _, rtype := range evt.OutputTypeNames {
+				l.l.Trace().
+					Str("_type", rtype).
+					Str("_module", evt.ModuleName).
+					Strs("_stacktrace", evt.StackTrace).
+					Strs("_moduleTrace", evt.ModuleTrace).
+					Msg("Module replaced")
+			}
+		} else {
 			l.l.Error().
 				Err(evt.Err).
 				Str("_module", evt.ModuleName).
@@ -106,17 +106,17 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Msg("Error encountered while replacing module")
 		}
 	case *fxevent.Decorated:
-		for _, rtype := range evt.OutputTypeNames {
-			l.l.Trace().
-				Str("_type", rtype).
-				Str("_module", evt.ModuleName).
-				Str("_decorator", evt.DecoratorName).
-				Strs("_stacktrace", evt.StackTrace).
-				Strs("_moduleTrace", evt.ModuleTrace).
-				Msg("Module decorated")
-		}
-
-		if evt.Err != nil {
+		if evt.Err == nil {
+			for _, rtype := range evt.OutputTypeNames {
+				l.l.Trace().
+					Str("_type", rtype).
+					Str("_module", evt.ModuleName).
+					Str("_decorator", evt.DecoratorName).
+					Strs("_stacktrace", evt.StackTrace).
+					Strs("_moduleTrace", evt.ModuleTrace).
+					Msg("Module decorated")
+			}
+		} else {
 			l.l.Error().
 				Err(evt.Err).
 				Str("_module", evt.ModuleName).
@@ -153,6 +153,12 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Str("_function", evt.FunctionName).
 				Str("_stack", evt.Trace).
 				Msg("Invoke failed")
+		} else {
+			l.l.Trace().
+				Str("_module", evt.ModuleName).
+				Str("_function", evt.FunctionName).
+				Str("_stack", evt.Trace).
+				Msg("Invoked module")
 		}
 	case *fxevent.Stopping:
 		l.l.Trace().
@@ -176,6 +182,9 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 			l.l.Error().
 				Err(evt.Err).
 				Msg("Rollback failed")
+		} else {
+			l.l.Trace().
+				Msg("Rollback succeeded")
 		}
 	case *fxevent.Started:
 		if evt.Err != nil {
