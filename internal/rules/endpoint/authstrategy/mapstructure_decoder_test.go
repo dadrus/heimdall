@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -140,6 +141,7 @@ auth:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
 
 			var typ Type
 
@@ -334,6 +336,7 @@ auth:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
 
 			var typ Type
 
@@ -517,6 +520,7 @@ auth:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
 
 			var typ Type
 
@@ -796,6 +800,7 @@ auth:
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,

@@ -18,6 +18,7 @@ package authstrategy
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 
@@ -61,7 +62,20 @@ func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHo
 		case "api_key":
 			return decodeStrategy(ctx.Validator(), "api_key", &APIKey{}, typed["config"])
 		case "oauth2_client_credentials":
-			return decodeStrategy(ctx.Validator(), "oauth2_client_credentials", &OAuth2ClientCredentials{}, typed["config"])
+			strategy := &OAuth2ClientCredentials{}
+
+			res, err := decodeStrategy(ctx.Validator(), "oauth2_client_credentials", strategy, typed["config"])
+			if err != nil {
+				return nil, err
+			}
+
+			if strings.HasPrefix(strategy.TokenURL, "http://") {
+				logger := ctx.Logger()
+				logger.Warn().Msg("No TLS configured for the oauth2_client_credentials strategy. " +
+					"NEVER DO THIS IN PRODUCTION!!!")
+			}
+
+			return res, nil
 		case "http_message_signatures":
 			return decodeHTTPMessageSignaturesStrategy(ctx, typed["config"])
 		default:
