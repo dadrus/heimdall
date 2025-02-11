@@ -328,7 +328,6 @@ rules:
 
 			// THEN
 			tc.assert(t, err, ruleSet)
-			appCtx.AssertExpectations(t)
 		})
 	}
 }

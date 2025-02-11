@@ -435,7 +435,6 @@ rules:
 
 			// THEN
 			tc.assert(t, err, rs)
-			appCtx.AssertExpectations(t)
 		})
 	}
 }

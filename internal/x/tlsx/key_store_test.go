@@ -79,8 +79,6 @@ func TestKeyStoreCertificate(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-
-			ccm.AssertExpectations(t)
 		})
 	}
 }

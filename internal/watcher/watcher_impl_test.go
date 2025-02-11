@@ -75,10 +75,4 @@ func TestWatcherLifeCycle(t *testing.T) {
 
 	f2.WriteString("baz")
 	time.Sleep(100 * time.Millisecond)
-
-	// THEN
-	cl1.AssertExpectations(t)
-	cl2.AssertExpectations(t)
-	cl3.AssertExpectations(t)
-	cl4.AssertExpectations(t)
 }

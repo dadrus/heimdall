@@ -561,7 +561,6 @@ rules:
 
 			// THEN
 			tc.assert(t, err, prov, processor)
-			appCtx.AssertExpectations(t)
 		})
 	}
 }

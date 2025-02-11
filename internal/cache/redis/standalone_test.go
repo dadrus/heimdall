@@ -377,7 +377,6 @@ func TestStandaloneCache(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, cch)
-			wm.AssertExpectations(t)
 		})
 	}
 }
