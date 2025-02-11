@@ -28,8 +28,11 @@ func createApp(cmd *cobra.Command, mainModule fx.Option) (*fx.App, error) {
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		cli.WriteString(" --")
 		cli.WriteString(flag.Name)
-		cli.WriteString(" ")
-		cli.WriteString(flag.Value.String())
+
+		if flag.Value.Type() != "bool" {
+			cli.WriteString(" ")
+			cli.WriteString(flag.Value.String())
+		}
 
 		if slices.Contains(flags.InsecureFlags, flag.Name) {
 			securityEnforcementDisabled = true
