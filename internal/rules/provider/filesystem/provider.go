@@ -128,8 +128,7 @@ func (p *Provider) Start(_ context.Context) error {
 	}
 
 	if p.w == nil {
-		p.l.Warn().
-			Msg("Watcher for file_system provider is not configured. Updates to rules will have no effects.")
+		p.l.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect.")
 
 		return nil
 	}

@@ -100,6 +100,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 			definition = gocron.DurationJob(*providerConf.WatchInterval)
 		} else {
 			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
+			logger.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect.")
 		}
 
 		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, ep)); err != nil {
