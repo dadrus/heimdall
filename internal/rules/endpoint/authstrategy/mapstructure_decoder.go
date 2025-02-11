@@ -29,7 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc {
+func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc { //nolint:cyclop
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
 		var as endpoint.AuthenticationStrategy
 
