@@ -63,7 +63,7 @@ func (m *LifecycleManager) Start(_ context.Context) error {
 			Str("_service", m.ServiceName).
 			Msg("Starting listening")
 
-		if m.TLSConf != nil {
+		if m.TLSConf == nil {
 			m.Logger.Warn().
 				Str("_service", m.ServiceName).
 				Msg("TLS is disabled. NEVER DO THIS IN PRODUCTION!!!")
