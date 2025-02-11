@@ -94,7 +94,7 @@ func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]an
 
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
 		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the endpoint used in generic authenticator. NEVER DO THIS IN PRODUCTION!!!")
+			Msg("No TLS configured for the endpoint used in generic authenticator")
 	}
 
 	return &genericAuthenticator{

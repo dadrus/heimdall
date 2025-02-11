@@ -105,15 +105,13 @@ func newOAuth2IntrospectionAuthenticator(
 
 		if strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
 			logger.Warn().Str("_id", id).
-				Msg("No TLS configured for the introspection endpoint used in oauth2_introspection authenticator. " +
-					"NEVER DO THIS IN PRODUCTION!!!")
+				Msg("No TLS configured for the introspection endpoint used in oauth2_introspection authenticator")
 		}
 	}
 
 	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
 		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the metadata endpoint used in oauth2_introspection authenticator. " +
-				"NEVER DO THIS IN PRODUCTION!!!")
+			Msg("No TLS configured for the metadata endpoint used in oauth2_introspection authenticator")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {

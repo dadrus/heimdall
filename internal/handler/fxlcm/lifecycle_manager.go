@@ -66,7 +66,7 @@ func (m *LifecycleManager) Start(_ context.Context) error {
 		if m.TLSConf == nil {
 			m.Logger.Warn().
 				Str("_service", m.ServiceName).
-				Msg("TLS is disabled. NEVER DO THIS IN PRODUCTION!!!")
+				Msg("TLS is disabled.")
 		}
 
 		if err = m.Server.Serve(ln); err != nil {

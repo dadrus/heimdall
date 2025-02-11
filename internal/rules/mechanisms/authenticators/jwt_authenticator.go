@@ -113,15 +113,13 @@ func newJwtAuthenticator(
 
 		if strings.HasPrefix(conf.JWKSEndpoint.URL, "http://") {
 			logger.Warn().Str("_id", id).
-				Msg("No TLS configured for the jwks endpoint used in jwt authenticator. " +
-					"NEVER DO THIS IN PRODUCTION!!!")
+				Msg("No TLS configured for the jwks endpoint used in jwt authenticator")
 		}
 	}
 
 	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
 		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the metadata endpoint used in jwt authenticator. " +
-				"NEVER DO THIS IN PRODUCTION!!!")
+			Msg("No TLS configured for the metadata endpoint used in jwt authenticator")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {

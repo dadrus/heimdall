@@ -309,7 +309,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration, "insecure default rule configured")
 		}
 
-		logger.Warn().Msg("Insecure default rule configured. NEVER DO IT IN PRODUCTION!!!")
+		logger.Warn().Msg("Insecure default rule configured")
 	}
 
 	f.defaultRule = &ruleImpl{

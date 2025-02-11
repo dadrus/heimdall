@@ -107,7 +107,7 @@ func newGenericContextualizer(
 
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
 		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the endpoint used in generic contextualizer. NEVER DO THIS IN PRODUCTION!!!")
+			Msg("No TLS configured for the endpoint used in generic contextualizer")
 	}
 
 	ttl := defaultTTL

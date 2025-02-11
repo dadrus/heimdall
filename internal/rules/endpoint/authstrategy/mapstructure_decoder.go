@@ -71,8 +71,7 @@ func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHo
 
 			if strings.HasPrefix(strategy.TokenURL, "http://") {
 				logger := ctx.Logger()
-				logger.Warn().Msg("No TLS configured for the oauth2_client_credentials strategy. " +
-					"NEVER DO THIS IN PRODUCTION!!!")
+				logger.Warn().Msg("No TLS configured for the oauth2_client_credentials strategy")
 			}
 
 			return res, nil

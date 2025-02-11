@@ -67,8 +67,7 @@ func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]an
 
 	if strings.HasPrefix(conf.To.String(), "http://") {
 		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the redirect endpoint used in redirect error handler. " +
-				"NEVER DO THIS IN PRODUCTION!!!")
+			Msg("No TLS configured for the redirect endpoint used in redirect error handler")
 	}
 
 	return &redirectErrorHandler{

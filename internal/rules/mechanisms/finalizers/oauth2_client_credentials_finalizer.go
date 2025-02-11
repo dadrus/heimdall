@@ -81,8 +81,7 @@ func newOAuth2ClientCredentialsFinalizer(
 
 	if strings.HasPrefix(conf.TokenURL, "http://") {
 		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the token_url used in oauth2_client_credentials finalizer. " +
-				"NEVER DO THIS IN PRODUCTION!!!")
+			Msg("No TLS configured for the token_url used in oauth2_client_credentials finalizer")
 	}
 
 	conf.AuthMethod = x.IfThenElse(
