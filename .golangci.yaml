@@ -17,7 +17,7 @@ linters:
     - depguard
     - zerologlint
     # depricated
-    - exportloopref
+    - tenv
 
 issues:
   exclude-rules:
