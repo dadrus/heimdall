@@ -14,7 +14,7 @@
       "semanticCommitType": "deps"
     }
   ],
-  "ignorePaths": ["charts/heimdall/values.yaml"],
+  "ignorePaths": ["charts/**"],
   "configMigration": true,
   "baseBranches": ["release"],
   "assigneesFromCodeOwners": true,
