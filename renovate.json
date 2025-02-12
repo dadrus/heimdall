@@ -14,6 +14,9 @@
       "semanticCommitType": "deps"
     }
   ],
+  "helmv3": {
+    "ignorePaths": ["**/values.yaml"]
+  },
   "configMigration": true,
   "baseBranches": ["release"],
   "assigneesFromCodeOwners": true,
