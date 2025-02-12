@@ -108,7 +108,10 @@ func newProvider(
 			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
 		}
 
-		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, ep)); err != nil {
+		if _, err = prov.s.NewJob(definition,
+			gocron.NewTask(prov.watchChanges, ep),
+			gocron.WithContext(ctx),
+		); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d http_endpoint", idx).
 				CausedBy(err)
