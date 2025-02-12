@@ -1,8 +1,7 @@
-# syntax = docker/dockerfile:experimental
 # Builder image to build the app
 ARG USER=heimdall
 
-FROM --platform=$BUILDPLATFORM golang:1.23.6-bookworm@sha256:441f59f8a2104b99320e1f5aaf59a81baabbc36c81f4e792d5715ef09dd29355 as builder
+FROM --platform=$BUILDPLATFORM golang:1.23.6-bookworm@sha256:441f59f8a2104b99320e1f5aaf59a81baabbc36c81f4e792d5715ef09dd29355 AS builder
 ARG USER
 ARG TARGETARCH
 ARG VERSION="unknown"
