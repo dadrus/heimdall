@@ -70,7 +70,7 @@ type jwtFinalizer struct {
 
 func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwtFinalizer, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating header finalizer")
+	logger.Info().Str("_id", id).Msg("Creating jwt finalizer")
 
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
