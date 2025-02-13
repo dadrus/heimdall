@@ -128,7 +128,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	provider, err := filesystem.NewProvider(appCtx, rules.NewRuleSetProcessor(&noopRepository{}, rFactory))
+	provider, err := filesystem.NewProvider(appCtx, rules.NewRuleSetProcessor(&noopRepository{}, rFactory, opMode))
 	if err != nil {
 		return err
 	}

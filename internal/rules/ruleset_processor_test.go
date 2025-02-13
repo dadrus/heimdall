@@ -19,6 +19,7 @@ package rules
 import (
 	"context"
 	"errors"
+	config2 "github.com/dadrus/heimdall/internal/config"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,7 +114,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 			tc.configure(t, factory, repo)
 
-			processor := NewRuleSetProcessor(repo, factory)
+			processor := NewRuleSetProcessor(repo, factory, config2.DecisionMode)
 
 			// WHEN
 			err := processor.OnCreated(context.TODO(), tc.ruleset)
@@ -209,7 +210,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 			tc.configure(t, factory, repo)
 
-			processor := NewRuleSetProcessor(repo, factory)
+			processor := NewRuleSetProcessor(repo, factory, config2.ProxyMode)
 
 			// WHEN
 			err := processor.OnUpdated(context.TODO(), tc.ruleset)
@@ -272,7 +273,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			repo := mocks.NewRepositoryMock(t)
 			tc.configure(t, repo)
 
-			processor := NewRuleSetProcessor(repo, mocks.NewFactoryMock(t))
+			processor := NewRuleSetProcessor(repo, mocks.NewFactoryMock(t), config2.DecisionMode)
 
 			// WHEN
 			err := processor.OnDeleted(context.TODO(), tc.ruleset)

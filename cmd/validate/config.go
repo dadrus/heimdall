@@ -113,7 +113,7 @@ func validateConfig(cmd *cobra.Command) error {
 		return err
 	}
 
-	rProcessor := rules.NewRuleSetProcessor(&noopRepository{}, rFactory)
+	rProcessor := rules.NewRuleSetProcessor(&noopRepository{}, rFactory, config.DecisionMode)
 
 	_, err = filesystem.NewProvider(appCtx, rProcessor)
 	if err != nil {

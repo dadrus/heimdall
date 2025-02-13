@@ -37,10 +37,11 @@ type ruleSetProcessor struct {
 	op config2.OperationMode
 }
 
-func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory) rule.SetProcessor {
+func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory, op config2.OperationMode) rule.SetProcessor {
 	return &ruleSetProcessor{
-		r: repository,
-		f: factory,
+		r:  repository,
+		f:  factory,
+		op: op,
 	}
 }
 
