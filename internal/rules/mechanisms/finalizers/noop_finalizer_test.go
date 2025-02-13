@@ -35,8 +35,8 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().AppContext().Return(context.Background())
+	ctx := mocks.NewRequestContextMock(t)
+	ctx.EXPECT().Context().Return(context.Background())
 
 	finalizer := newNoopFinalizer(appCtx, "foo")
 

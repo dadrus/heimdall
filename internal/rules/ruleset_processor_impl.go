@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -59,7 +60,7 @@ func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, erro
 	return rules, nil
 }
 
-func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) error {
+func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSet) error {
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
@@ -69,10 +70,10 @@ func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) error {
 		return err
 	}
 
-	return p.r.AddRuleSet(ruleSet.Source, rules)
+	return p.r.AddRuleSet(ctx, ruleSet.Source, rules)
 }
 
-func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) error {
+func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error {
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
@@ -82,9 +83,9 @@ func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) error {
 		return err
 	}
 
-	return p.r.UpdateRuleSet(ruleSet.Source, rules)
+	return p.r.UpdateRuleSet(ctx, ruleSet.Source, rules)
 }
 
-func (p *ruleSetProcessor) OnDeleted(ruleSet *config.RuleSet) error {
-	return p.r.DeleteRuleSet(ruleSet.Source)
+func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *config.RuleSet) error {
+	return p.r.DeleteRuleSet(ctx, ruleSet.Source)
 }

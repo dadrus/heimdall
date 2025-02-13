@@ -726,7 +726,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 		subject        *subject.Subject
 		configureMocks func(t *testing.T,
 			fin *jwtFinalizer,
-			ctx *heimdallmocks.ContextMock,
+			ctx *heimdallmocks.RequestContextMock,
 			cch *mocks.CacheMock,
 			sub *subject.Subject)
 		assert func(t *testing.T, err error)
@@ -759,7 +759,7 @@ signer:
     path: ` + pemFile + `
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -785,7 +785,7 @@ signer:
 ttl: 1m
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -819,7 +819,7 @@ claims: '{
   "foo": {{ .Outputs.foo | quote }}
 }'`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -847,7 +847,7 @@ signer:
 claims: "foo: bar"
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -878,7 +878,7 @@ signer:
 claims: "{{ len .foobar }}"
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -904,7 +904,7 @@ claims: "{{ len .foobar }}"
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock, _ *mocks.CacheMock, _ *subject.Subject) {
+				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.RequestContextMock, _ *mocks.CacheMock, _ *subject.Subject) {
 					t.Helper()
 				})
 
@@ -912,7 +912,7 @@ claims: "{{ len .foobar }}"
 			require.NoError(t, err)
 
 			cch := mocks.NewCacheMock(t)
-			mctx := heimdallmocks.NewContextMock(t)
+			mctx := heimdallmocks.NewRequestContextMock(t)
 
 			wm := mocks2.NewWatcherMock(t)
 			wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
@@ -933,7 +933,7 @@ claims: "{{ len .foobar }}"
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			mctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
+			mctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
 
 			finalizer, err := newJWTFinalizer(appCtx, tc.id, conf)
 			require.NoError(t, err)

@@ -44,8 +44,8 @@ type ruleImpl struct {
 	eh                 compositeErrorHandler
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
 	if r.isDefault {
 		logger.Info().Msg("Executing default rule")
@@ -123,8 +123,8 @@ type routeImpl struct {
 	matcher RouteMatcher
 }
 
-func (r *routeImpl) Matches(ctx heimdall.Context, keys, values []string) bool {
-	logger := zerolog.Ctx(ctx.AppContext()).With().
+func (r *routeImpl) Matches(ctx heimdall.RequestContext, keys, values []string) bool {
+	logger := zerolog.Ctx(ctx.Context()).With().
 		Str("_source", r.rule.srcID).
 		Str("_id", r.rule.id).
 		Str("route", r.path).

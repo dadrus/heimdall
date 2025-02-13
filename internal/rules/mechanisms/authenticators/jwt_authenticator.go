@@ -188,8 +188,8 @@ func newJwtAuthenticator(
 	}, nil
 }
 
-func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using JWT authenticator")
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
@@ -312,8 +312,11 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 	}
 }
 
-func (a *jwtAuthenticator) serverMetadata(ctx heimdall.Context, claims map[string]any) (oauth2.ServerMetadata, error) {
-	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"TokenIssuer": claims["iss"]})
+func (a *jwtAuthenticator) serverMetadata(
+	ctx heimdall.RequestContext,
+	claims map[string]any,
+) (oauth2.ServerMetadata, error) {
+	metadata, err := a.r.Get(ctx.Context(), map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
@@ -328,7 +331,7 @@ func (a *jwtAuthenticator) serverMetadata(ctx heimdall.Context, claims map[strin
 	return metadata, nil
 }
 
-func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyToken(ctx heimdall.RequestContext, token *jwt.JSONWebToken) (json.RawMessage, error) {
 	claims := map[string]any{}
 	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to deserialize JWT").
@@ -359,23 +362,23 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebT
 }
 
 func (a *jwtAuthenticator) verifyTokenWithoutKID(
-	ctx heimdall.Context,
+	ctx heimdall.RequestContext,
 	token *jwt.JSONWebToken,
 	tokenClaims map[string]any,
 	ep *endpoint.Endpoint,
 	assertions *oauth2.Expectation,
 ) (json.RawMessage, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Info().Msg("No kid present in the JWT")
 
 	var rawClaims json.RawMessage
 
-	req, err := a.createRequest(ctx.AppContext(), ep, tokenClaims)
+	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
 	if err != nil {
 		return nil, err
 	}
 
-	jwks, err := a.fetchJWKS(ctx.AppContext(), ep.CreateClient(req.URL.Hostname()), req)
+	jwks, err := a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
 	if err != nil {
 		return nil, err
 	}
@@ -407,24 +410,24 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 }
 
 func (a *jwtAuthenticator) getKey(
-	ctx heimdall.Context, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
+	ctx heimdall.RequestContext, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
 ) (*jose.JSONWebKey, error) {
-	cch := cache.Ctx(ctx.AppContext())
-	logger := zerolog.Ctx(ctx.AppContext())
+	cch := cache.Ctx(ctx.Context())
+	logger := zerolog.Ctx(ctx.Context())
 
 	var (
 		cacheKey string
 		jwks     *jose.JSONWebKeySet
 	)
 
-	req, err := a.createRequest(ctx.AppContext(), ep, tokenClaims)
+	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
 	if err != nil {
 		return nil, err
 	}
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
-		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var jwk jose.JSONWebKey
 
 			if err = json.Unmarshal(entry, &jwk); err == nil {
@@ -435,7 +438,7 @@ func (a *jwtAuthenticator) getKey(
 		}
 	}
 
-	jwks, err = a.fetchJWKS(ctx.AppContext(), ep.CreateClient(req.URL.Hostname()), req)
+	jwks, err = a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +462,7 @@ func (a *jwtAuthenticator) getKey(
 	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
 		data, _ := json.Marshal(jwk)
 
-		if err = cch.Set(ctx.AppContext(), cacheKey, data, cacheTTL); err != nil {
+		if err = cch.Set(ctx.Context(), cacheKey, data, cacheTTL); err != nil {
 			logger.Warn().Err(err).Msg("Failed to cache JWK")
 		}
 	}

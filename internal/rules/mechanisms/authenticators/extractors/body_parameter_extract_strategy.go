@@ -27,7 +27,7 @@ type BodyParameterExtractStrategy struct {
 	Name string
 }
 
-func (es BodyParameterExtractStrategy) GetAuthData(ctx heimdall.Context) (string, error) {
+func (es BodyParameterExtractStrategy) GetAuthData(ctx heimdall.RequestContext) (string, error) {
 	data := ctx.Request().Body()
 
 	entries, ok := data.(map[string]any)

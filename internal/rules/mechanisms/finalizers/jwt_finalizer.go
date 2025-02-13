@@ -118,8 +118,8 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 	return fin, nil
 }
 
-func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", f.id).Msg("Finalizing using JWT finalizer")
 
 	if sub == nil {
@@ -128,7 +128,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 			WithErrorContext(f)
 	}
 
-	cch := cache.Ctx(ctx.AppContext())
+	cch := cache.Ctx(ctx.Context())
 
 	var (
 		jwtToken string
@@ -136,7 +136,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 	)
 
 	cacheKey := f.calculateCacheKey(ctx, sub)
-	if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+	if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 		logger.Debug().Msg("Reusing JWT from cache")
 
 		jwtToken = stringx.ToString(entry)
@@ -149,7 +149,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 		}
 
 		if len(cacheKey) != 0 && f.ttl > defaultCacheLeeway {
-			if err = cch.Set(ctx.AppContext(), cacheKey, stringx.ToBytes(jwtToken), f.ttl-defaultCacheLeeway); err != nil {
+			if err = cch.Set(ctx.Context(), cacheKey, stringx.ToBytes(jwtToken), f.ttl-defaultCacheLeeway); err != nil {
 				logger.Warn().Err(err).Msg("Failed to cache JWT token")
 			}
 		}
@@ -193,8 +193,8 @@ func (f *jwtFinalizer) ID() string { return f.id }
 
 func (f *jwtFinalizer) ContinueOnError() bool { return false }
 
-func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.Subject) (string, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")
 
 	claims := map[string]any{}
@@ -232,7 +232,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 	return token, nil
 }
 
-func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub *subject.Subject) string {
+func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub *subject.Subject) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)

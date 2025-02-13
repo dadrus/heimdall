@@ -23,5 +23,5 @@ import (
 //go:generate mockery --name AuthDataExtractStrategy --structname AuthDataExtractStrategyMock
 
 type AuthDataExtractStrategy interface {
-	GetAuthData(ctx heimdall.Context) (string, error)
+	GetAuthData(ctx heimdall.RequestContext) (string, error)
 }

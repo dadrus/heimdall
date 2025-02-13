@@ -191,8 +191,8 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	subjectID := "anon"
 	auth := anonymousAuthenticator{Subject: subjectID, id: "anon_auth"}
 
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().AppContext().Return(context.Background())
+	ctx := mocks.NewRequestContextMock(t)
+	ctx.EXPECT().Context().Return(context.Background())
 
 	// WHEN
 	sub, err := auth.Execute(ctx)

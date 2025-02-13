@@ -77,8 +77,8 @@ func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*ce
 	return &celAuthorizer{id: id, app: app, expressions: expressions}, nil
 }
 
-func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using CEL authorizer")
 
 	return a.expressions.eval(map[string]any{"Subject": sub, "Request": ctx.Request(), "Outputs": ctx.Outputs()}, a)

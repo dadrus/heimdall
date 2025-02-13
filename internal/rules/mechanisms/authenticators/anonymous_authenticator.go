@@ -70,8 +70,8 @@ type anonymousAuthenticator struct {
 	Subject string `mapstructure:"subject"`
 }
 
-func (a *anonymousAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using anonymous authenticator")
 
 	return &subject.Subject{ID: a.Subject, Attributes: make(map[string]any)}, nil

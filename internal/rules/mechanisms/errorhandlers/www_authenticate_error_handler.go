@@ -70,8 +70,8 @@ func newWWWAuthenticateErrorHandler(
 
 func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }
 
-func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ error) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using www-authenticate error handler")
 
 	ctx.AddHeaderForUpstream("WWW-Authenticate", "Basic realm="+eh.realm)

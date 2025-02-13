@@ -106,7 +106,7 @@ code: 301
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with full valid configuration", redEH.ID())
 
-				ctx := mocks.NewContextMock(t)
+				ctx := mocks.NewRequestContextMock(t)
 				ctx.EXPECT().Request().
 					Return(&heimdall.Request{
 						URL: &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
@@ -231,13 +231,13 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config           []byte
 		error            error
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
+		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
 		"with template rendering error": {
 			config: []byte(`to: http://foo.bar={{ len .foobar }}`),
 			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -253,7 +253,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 		"without return to url templating": {
 			config: []byte(`to: http://foo.bar`),
 			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -279,7 +279,7 @@ to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 300
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				requestURL, err := url.Parse("http://test.org")
@@ -314,8 +314,8 @@ code: 300
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewContextMock(t)
-			mctx.EXPECT().AppContext().Return(context.Background())
+			mctx := mocks.NewRequestContextMock(t)
+			mctx.EXPECT().Context().Return(context.Background())
 
 			tc.configureContext(t, mctx)
 

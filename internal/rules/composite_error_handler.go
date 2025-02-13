@@ -26,8 +26,8 @@ import (
 
 type compositeErrorHandler []errorHandler
 
-func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (eh compositeErrorHandler) Execute(ctx heimdall.RequestContext, exErr error) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Handling pipeline error")
 
 	for _, handler := range eh {

@@ -250,7 +250,7 @@ func TestCookieFinalizerExecute(t *testing.T) {
 		uc               string
 		id               string
 		config           []byte
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
+		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		createSubject    func(t *testing.T) *subject.Subject
 		assert           func(t *testing.T, err error)
 	}{
@@ -284,7 +284,7 @@ cookies:
   x_foo: '{{ .Request.Header "X-Foo" }}'
   x_bar: '{{ .Outputs.foo }}'
 `),
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				reqf := mocks.NewRequestFunctionsMock(t)
@@ -322,13 +322,13 @@ cookies:
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *mocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *mocks.RequestContextMock) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewContextMock(t)
-			mctx.EXPECT().AppContext().Return(context.Background())
+			mctx := mocks.NewRequestContextMock(t)
+			mctx.EXPECT().Context().Return(context.Background())
 
 			sub := createSubject(t)
 

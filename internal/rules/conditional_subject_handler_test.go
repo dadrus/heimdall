@@ -89,8 +89,8 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			handler := rulemocks.NewSubjectHandlerMock(t)
 			decorator := conditionalSubjectHandler{c: condition, h: handler}
 
-			ctx := mocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.Background())
+			ctx := mocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(context.Background())
 
 			tc.configureMocks(t, condition, handler)
 

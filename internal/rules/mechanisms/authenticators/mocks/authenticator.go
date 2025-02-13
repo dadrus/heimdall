@@ -25,7 +25,7 @@ func (_m *AuthenticatorMock) EXPECT() *AuthenticatorMock_Expecter {
 }
 
 // Execute provides a mock function with given fields: ctx
-func (_m *AuthenticatorMock) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (_m *AuthenticatorMock) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
@@ -34,10 +34,10 @@ func (_m *AuthenticatorMock) Execute(ctx heimdall.Context) (*subject.Subject, er
 
 	var r0 *subject.Subject
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (*subject.Subject, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) (*subject.Subject, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) *subject.Subject); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) *subject.Subject); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
@@ -45,7 +45,7 @@ func (_m *AuthenticatorMock) Execute(ctx heimdall.Context) (*subject.Subject, er
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if rf, ok := ret.Get(1).(func(heimdall.RequestContext) error); ok {
 		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -60,14 +60,14 @@ type AuthenticatorMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx heimdall.RequestContext
 func (_e *AuthenticatorMock_Expecter) Execute(ctx interface{}) *AuthenticatorMock_Execute_Call {
 	return &AuthenticatorMock_Execute_Call{Call: _e.mock.On("Execute", ctx)}
 }
 
-func (_c *AuthenticatorMock_Execute_Call) Run(run func(ctx heimdall.Context)) *AuthenticatorMock_Execute_Call {
+func (_c *AuthenticatorMock_Execute_Call) Run(run func(ctx heimdall.RequestContext)) *AuthenticatorMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context))
+		run(args[0].(heimdall.RequestContext))
 	})
 	return _c
 }
@@ -77,7 +77,7 @@ func (_c *AuthenticatorMock_Execute_Call) Return(_a0 *subject.Subject, _a1 error
 	return _c
 }
 
-func (_c *AuthenticatorMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (*subject.Subject, error)) *AuthenticatorMock_Execute_Call {
+func (_c *AuthenticatorMock_Execute_Call) RunAndReturn(run func(heimdall.RequestContext) (*subject.Subject, error)) *AuthenticatorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

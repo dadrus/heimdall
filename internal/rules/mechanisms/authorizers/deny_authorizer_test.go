@@ -61,8 +61,8 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 	// GIVEN
 	var identifier interface{ ID() string }
 
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().AppContext().Return(context.Background())
+	ctx := mocks.NewRequestContextMock(t)
+	ctx.EXPECT().Context().Return(context.Background())
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)

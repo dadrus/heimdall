@@ -49,8 +49,8 @@ func newAllowAuthorizer(app app.Context, id string) *allowAuthorizer {
 	return &allowAuthorizer{id: id}
 }
 
-func (a *allowAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *allowAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using allow authorizer")
 
 	return nil

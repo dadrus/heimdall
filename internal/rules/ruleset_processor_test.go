@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -71,7 +72,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateRule(config.CurrentRuleSetVersion, mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
-				repo.EXPECT().AddRuleSet(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				repo.EXPECT().AddRuleSet(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -94,7 +95,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				rul := &mocks.RuleMock{}
 
 				mhf.EXPECT().CreateRule(config.CurrentRuleSetVersion, mock.Anything, mock.Anything).Return(rul, nil)
-				repo.EXPECT().AddRuleSet("test", mock.MatchedBy(func(rules []rule.Rule) bool {
+				repo.EXPECT().AddRuleSet(mock.Anything, "test", mock.MatchedBy(func(rules []rule.Rule) bool {
 					return len(rules) == 1 && rules[0] == rul
 				})).Return(nil)
 			},
@@ -115,7 +116,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			processor := NewRuleSetProcessor(repo, factory)
 
 			// WHEN
-			err := processor.OnCreated(tc.ruleset)
+			err := processor.OnCreated(context.TODO(), tc.ruleset)
 
 			// THEN
 			tc.assert(t, err)
@@ -167,7 +168,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
-				repo.EXPECT().UpdateRuleSet(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				repo.EXPECT().UpdateRuleSet(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -190,7 +191,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				rul := &mocks.RuleMock{}
 
 				mhf.EXPECT().CreateRule(config.CurrentRuleSetVersion, mock.Anything, mock.Anything).Return(rul, nil)
-				repo.EXPECT().UpdateRuleSet("test", mock.MatchedBy(func(rules []rule.Rule) bool {
+				repo.EXPECT().UpdateRuleSet(mock.Anything, "test", mock.MatchedBy(func(rules []rule.Rule) bool {
 					return len(rules) == 1 && rules[0] == rul
 				})).Return(nil)
 			},
@@ -211,7 +212,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			processor := NewRuleSetProcessor(repo, factory)
 
 			// WHEN
-			err := processor.OnUpdated(tc.ruleset)
+			err := processor.OnUpdated(context.TODO(), tc.ruleset)
 
 			// THEN
 			tc.assert(t, err)
@@ -238,7 +239,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			configure: func(t *testing.T, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				repo.EXPECT().DeleteRuleSet("test").Return(errors.New("test error"))
+				repo.EXPECT().DeleteRuleSet(context.TODO(), "test").Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -257,7 +258,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			configure: func(t *testing.T, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				repo.EXPECT().DeleteRuleSet("test").Return(nil)
+				repo.EXPECT().DeleteRuleSet(context.TODO(), "test").Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -274,7 +275,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			processor := NewRuleSetProcessor(repo, mocks.NewFactoryMock(t))
 
 			// WHEN
-			err := processor.OnDeleted(tc.ruleset)
+			err := processor.OnDeleted(context.TODO(), tc.ruleset)
 
 			// THEN
 			tc.assert(t, err)

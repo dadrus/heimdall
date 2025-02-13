@@ -306,7 +306,7 @@ func TestProxyService(t *testing.T) {
 				})
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -389,7 +389,7 @@ func TestProxyService(t *testing.T) {
 				})
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -471,7 +471,7 @@ func TestProxyService(t *testing.T) {
 				})
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -559,7 +559,7 @@ func TestProxyService(t *testing.T) {
 				})
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -735,7 +735,7 @@ func TestProxyService(t *testing.T) {
 				})
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -830,7 +830,7 @@ func TestProxyService(t *testing.T) {
 				})
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -928,7 +928,7 @@ func TestProxyService(t *testing.T) {
 			proxyConf.Host = "127.0.0.1"
 			proxyConf.Port = port
 
-			listener, err := listener.New("tcp", "test", proxyConf.Address(), proxyConf.TLS, nil, nil)
+			lstnr, err := listener.New("tcp", "test", proxyConf.Address(), proxyConf.TLS, nil, nil)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
@@ -947,7 +947,7 @@ func TestProxyService(t *testing.T) {
 			defer proxy.Shutdown(context.Background())
 
 			go func() {
-				proxy.Serve(listener)
+				proxy.Serve(lstnr)
 			}()
 
 			time.Sleep(50 * time.Millisecond)
@@ -1024,7 +1024,7 @@ func TestWebSocketSupport(t *testing.T) {
 	})
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx heimdall.Context) bool {
+		mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 
@@ -1048,11 +1048,11 @@ func TestWebSocketSupport(t *testing.T) {
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
+	lstnr, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {
-		proxy.Serve(listener)
+		proxy.Serve(lstnr)
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -1122,7 +1122,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	})
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx heimdall.Context) bool {
+		mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 
@@ -1146,11 +1146,11 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
+	lstnr, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {
-		proxy.Serve(listener)
+		proxy.Serve(lstnr)
 	}()
 
 	time.Sleep(50 * time.Millisecond)

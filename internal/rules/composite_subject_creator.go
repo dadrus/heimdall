@@ -28,8 +28,8 @@ import (
 
 type compositeSubjectCreator []subjectCreator
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
 	var (
 		sub *subject.Subject
@@ -50,7 +50,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 			break
 		}
 
-		accesscontext.SetSubject(ctx.AppContext(), sub.ID)
+		accesscontext.SetSubject(ctx.Context(), sub.ID)
 
 		return sub, nil
 	}

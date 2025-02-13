@@ -27,7 +27,7 @@ type QueryParameterExtractStrategy struct {
 	Name string
 }
 
-func (es QueryParameterExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
+func (es QueryParameterExtractStrategy) GetAuthData(s heimdall.RequestContext) (string, error) {
 	if val := s.Request().URL.Query().Get(es.Name); len(val) != 0 {
 		return strings.TrimSpace(val), nil
 	}

@@ -138,12 +138,17 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 type noopRepository struct{}
 
-func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) {
+func (*noopRepository) FindRule(_ heimdall.RequestContext) (rule.Rule, error) {
 	return nil, errFunctionNotSupported
 }
-func (*noopRepository) AddRuleSet(_ string, _ []rule.Rule) error    { return nil }
-func (*noopRepository) UpdateRuleSet(_ string, _ []rule.Rule) error { return errFunctionNotSupported }
-func (*noopRepository) DeleteRuleSet(_ string) error                { return errFunctionNotSupported }
+func (*noopRepository) AddRuleSet(_ context.Context, _ string, _ []rule.Rule) error { return nil }
+func (*noopRepository) UpdateRuleSet(_ context.Context, _ string, _ []rule.Rule) error {
+	return errFunctionNotSupported
+}
+
+func (*noopRepository) DeleteRuleSet(_ context.Context, _ string) error {
+	return errFunctionNotSupported
+}
 
 type noopRegistry struct{}
 

@@ -39,7 +39,7 @@ func TestCompositeExtractCookieValueWithoutScheme(t *testing.T) {
 	fnt.EXPECT().Cookie(cookieName).Return(actualValue)
 	fnt.EXPECT().Header(headerName).Return("")
 
-	ctx := mocks.NewContextMock(t)
+	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 
 	strategy := CompositeExtractStrategy{
@@ -67,7 +67,7 @@ func TestCompositeExtractHeaderValueWithScheme(t *testing.T) {
 	fnt := mocks.NewRequestFunctionsMock(t)
 	fnt.EXPECT().Header(headerName).Return(headerScheme + " " + actualValue)
 
-	ctx := mocks.NewContextMock(t)
+	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{
 		RequestFunctions: fnt,
 		URL:              &heimdall.URL{URL: url.URL{}},
@@ -98,7 +98,7 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	fnt := mocks.NewRequestFunctionsMock(t)
 	fnt.EXPECT().Header(headerName).Return(headerScheme + " " + actualValue)
 
-	ctx := mocks.NewContextMock(t)
+	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 
 	strategy := CompositeExtractStrategy{

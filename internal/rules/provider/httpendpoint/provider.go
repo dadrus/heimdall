@@ -170,7 +170,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		}
 	}
 
-	if err = p.ruleSetsUpdated(ruleSet, rsf.ID()); err != nil {
+	if err = p.ruleSetsUpdated(ctx, ruleSet, rsf.ID()); err != nil {
 		p.l.Warn().Err(err).
 			Str("_src", rsf.ID()).
 			Msg("Failed to apply rule set changes")
@@ -179,7 +179,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *Provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) error {
+func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *config2.RuleSet, stateID string) error {
 	var hash []byte
 
 	if value, ok := p.states.Load(stateID); ok { //nolint:nestif
@@ -188,7 +188,7 @@ func (p *Provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) err
 		// rule set was known
 		if len(ruleSet.Rules) == 0 {
 			// rule set removed
-			if err := p.p.OnDeleted(ruleSet); err != nil {
+			if err := p.p.OnDeleted(ctx, ruleSet); err != nil {
 				return err
 			}
 
@@ -197,7 +197,7 @@ func (p *Provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) err
 			return nil
 		} else if !bytes.Equal(hash, ruleSet.Hash) {
 			// rule set updated
-			if err := p.p.OnUpdated(ruleSet); err != nil {
+			if err := p.p.OnUpdated(ctx, ruleSet); err != nil {
 				return err
 			}
 
@@ -207,7 +207,7 @@ func (p *Provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) err
 		}
 	} else if len(ruleSet.Rules) != 0 {
 		// previously unknown rule set
-		if err := p.p.OnCreated(ruleSet); err != nil {
+		if err := p.p.OnCreated(ctx, ruleSet); err != nil {
 			return err
 		}
 

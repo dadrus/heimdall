@@ -79,8 +79,8 @@ func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]an
 
 func (eh *redirectErrorHandler) ID() string { return eh.id }
 
-func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ error) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using redirect error handler")
 
 	toURL, err := eh.to.Render(map[string]any{

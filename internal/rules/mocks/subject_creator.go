@@ -23,7 +23,7 @@ func (_m *SubjectCreatorMock) EXPECT() *SubjectCreatorMock_Expecter {
 }
 
 // Execute provides a mock function with given fields: ctx
-func (_m *SubjectCreatorMock) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (_m *SubjectCreatorMock) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
@@ -32,10 +32,10 @@ func (_m *SubjectCreatorMock) Execute(ctx heimdall.Context) (*subject.Subject, e
 
 	var r0 *subject.Subject
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (*subject.Subject, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) (*subject.Subject, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) *subject.Subject); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) *subject.Subject); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
@@ -43,7 +43,7 @@ func (_m *SubjectCreatorMock) Execute(ctx heimdall.Context) (*subject.Subject, e
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if rf, ok := ret.Get(1).(func(heimdall.RequestContext) error); ok {
 		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -58,14 +58,14 @@ type SubjectCreatorMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx heimdall.RequestContext
 func (_e *SubjectCreatorMock_Expecter) Execute(ctx interface{}) *SubjectCreatorMock_Execute_Call {
 	return &SubjectCreatorMock_Execute_Call{Call: _e.mock.On("Execute", ctx)}
 }
 
-func (_c *SubjectCreatorMock_Execute_Call) Run(run func(ctx heimdall.Context)) *SubjectCreatorMock_Execute_Call {
+func (_c *SubjectCreatorMock_Execute_Call) Run(run func(ctx heimdall.RequestContext)) *SubjectCreatorMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context))
+		run(args[0].(heimdall.RequestContext))
 	})
 	return _c
 }
@@ -75,7 +75,7 @@ func (_c *SubjectCreatorMock_Execute_Call) Return(_a0 *subject.Subject, _a1 erro
 	return _c
 }
 
-func (_c *SubjectCreatorMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (*subject.Subject, error)) *SubjectCreatorMock_Execute_Call {
+func (_c *SubjectCreatorMock_Execute_Call) RunAndReturn(run func(heimdall.RequestContext) (*subject.Subject, error)) *SubjectCreatorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

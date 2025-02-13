@@ -170,7 +170,7 @@ func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHe
 func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
-func (r *RequestContext) AppContext() context.Context             { return r.req.Context() }
+func (r *RequestContext) Context() context.Context                { return r.req.Context() }
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) PipelineError() error                    { return r.err }
 func (r *RequestContext) Outputs() map[string]any {

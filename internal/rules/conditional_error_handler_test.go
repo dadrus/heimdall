@@ -90,8 +90,8 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 			handler := rulemocks.NewErrorHandlerMock(t)
 			decorator := conditionalErrorHandler{c: condition, h: handler}
 
-			ctx := mocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.Background())
+			ctx := mocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(context.Background())
 
 			tc.configureMocks(t, condition, handler)
 

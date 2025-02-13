@@ -50,8 +50,8 @@ func newUnauthorizedAuthenticator(app app.Context, id string) *unauthorizedAuthe
 	return &unauthorizedAuthenticator{id: id}
 }
 
-func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using unauthorized authenticator")
 
 	return nil, errorchain.

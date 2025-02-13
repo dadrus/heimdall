@@ -80,7 +80,7 @@ type authorizationInformation struct {
 	Payload any         `json:"payload"`
 }
 
-func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimdall.Context) {
+func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimdall.RequestContext) {
 	for _, headerName := range headerNames {
 		headerValue := ai.Headers.Get(headerName)
 		if len(headerValue) != 0 {
@@ -89,7 +89,7 @@ func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimd
 	}
 }
 
-func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Context) {
+func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.RequestContext) {
 	if ai.Payload != nil {
 		ctx.Outputs()[key] = ai.Payload
 	}
@@ -143,8 +143,8 @@ func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (
 	}, nil
 }
 
-func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using remote authorizer")
 
 	if sub == nil {
@@ -153,7 +153,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 			WithErrorContext(a)
 	}
 
-	cch := cache.Ctx(ctx.AppContext())
+	cch := cache.Ctx(ctx.Context())
 
 	var (
 		cacheKey string
@@ -167,7 +167,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(sub, vals, payload)
-		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var ai authorizationInformation
 
 			if err = json.Unmarshal(entry, &ai); err == nil {
@@ -187,7 +187,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		if a.ttl > 0 && len(cacheKey) != 0 {
 			data, _ := json.Marshal(authInfo)
 
-			if err = cch.Set(ctx.AppContext(), cacheKey, data, a.ttl); err != nil {
+			if err = cch.Set(ctx.Context(), cacheKey, data, a.ttl); err != nil {
 				logger.Warn().Err(err).Msg("Failed to cache authorization information")
 			}
 		}
@@ -242,12 +242,12 @@ func (a *remoteAuthorizer) ID() string { return a.id }
 func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 
 func (a *remoteAuthorizer) doAuthorize(
-	ctx heimdall.Context,
+	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*authorizationInformation, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling remote authorization endpoint")
 
 	endpointRenderer := endpoint.RenderFunc(func(tplString string) (string, error) {
@@ -265,7 +265,7 @@ func (a *remoteAuthorizer) doAuthorize(
 		})
 	})
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), strings.NewReader(payload), endpointRenderer)
+	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
 			WithErrorContext(a).
@@ -303,8 +303,8 @@ func (a *remoteAuthorizer) doAuthorize(
 	return &authorizationInformation{Headers: resp.Header, Payload: data}, nil
 }
 
-func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *remoteAuthorizer) readResponse(ctx heimdall.RequestContext, resp *http.Response) (any, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthorization,
@@ -370,15 +370,15 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[st
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *remoteAuthorizer) verify(ctx heimdall.RequestContext, result any) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Verifying authorization response")
 
 	return a.expressions.eval(map[string]any{"Payload": result}, a)
 }
 
 func (a *remoteAuthorizer) renderTemplates(
-	ctx heimdall.Context,
+	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 ) (map[string]string, string, error) {
 	var (

@@ -259,7 +259,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 		uc                         string
 		id                         string
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		{
@@ -269,7 +269,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ *subject.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -313,7 +313,7 @@ expressions:
   - expression: Request.URL.Captures.foo == "bar"
   - expression: Outputs.foo == "bar"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject) {
 				t.Helper()
 
 				sub.ID = "foobar"
@@ -356,8 +356,8 @@ expressions:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			ctx := mocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.Background())
+			ctx := mocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(context.Background())
 
 			sub := &subject.Subject{}
 

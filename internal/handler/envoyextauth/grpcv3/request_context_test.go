@@ -84,7 +84,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.Equal(t, "foo", ctx.Request().Cookie("bar"))
 	require.Equal(t, "baz", ctx.Request().Cookie("foo"))
 	require.Empty(t, ctx.Request().Cookie("baz"))
-	require.NotNil(t, ctx.AppContext())
+	require.NotNil(t, ctx.Context())
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
 }
 
@@ -103,12 +103,12 @@ func TestFinalizeRequestContext(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc            string
-		updateContext func(t *testing.T, ctx heimdall.Context)
+		updateContext func(t *testing.T, ctx heimdall.RequestContext)
 		assert        func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		{
 			uc: "successful with some header",
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
@@ -138,7 +138,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 		},
 		{
 			uc: "successful with some cookies",
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.AddCookieForUpstream("some-cookie", "value-1")
@@ -165,7 +165,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 		},
 		{
 			uc: "successful with header and cookie",
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream", "some-value")
@@ -193,7 +193,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 		},
 		{
 			uc: "erroneous with header and cookie",
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.SetPipelineError(errors.New("test error"))

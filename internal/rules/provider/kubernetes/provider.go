@@ -129,9 +129,9 @@ func (p *Provider) newController(ctx context.Context, namespace string) (cache.S
 		Handler: cache.FilteringResourceEventHandler{
 			FilterFunc: p.filter,
 			Handler: cache.ResourceEventHandlerFuncs{
-				AddFunc:    p.addRuleSet,
-				DeleteFunc: p.deleteRuleSet,
-				UpdateFunc: p.updateRuleSet,
+				AddFunc:    func(obj any) { p.addRuleSet(ctx, obj) },
+				DeleteFunc: func(obj any) { p.deleteRuleSet(ctx, obj) },
+				UpdateFunc: func(oldObj, newObj any) { p.updateRuleSet(ctx, oldObj, newObj) },
 			},
 		},
 	})
@@ -207,7 +207,7 @@ func (p *Provider) filter(obj any) bool {
 	return rs.Spec.AuthClassName == p.ac
 }
 
-func (p *Provider) addRuleSet(obj any) {
+func (p *Provider) addRuleSet(ctx context.Context, obj any) {
 	if p.stopped {
 		return
 	}
@@ -218,11 +218,11 @@ func (p *Provider) addRuleSet(obj any) {
 	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 	conf := p.toRuleSetConfiguration(rs)
 
-	if err := p.p.OnCreated(conf); err != nil {
+	if err := p.p.OnCreated(ctx, conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
 
 		p.updateStatus(
-			context.Background(),
+			ctx,
 			rs,
 			metav1.ConditionFalse,
 			v1alpha4.ConditionRuleSetActivationFailed,
@@ -232,7 +232,7 @@ func (p *Provider) addRuleSet(obj any) {
 		)
 	} else {
 		p.updateStatus(
-			context.Background(),
+			ctx,
 			rs,
 			metav1.ConditionTrue,
 			v1alpha4.ConditionRuleSetActive,
@@ -243,7 +243,7 @@ func (p *Provider) addRuleSet(obj any) {
 	}
 }
 
-func (p *Provider) updateRuleSet(oldObj, newObj any) {
+func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 	if p.stopped {
 		return
 	}
@@ -261,11 +261,11 @@ func (p *Provider) updateRuleSet(oldObj, newObj any) {
 
 	conf := p.toRuleSetConfiguration(newRS)
 
-	if err := p.p.OnUpdated(conf); err != nil {
+	if err := p.p.OnUpdated(ctx, conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
 
 		p.updateStatus(
-			context.Background(),
+			ctx,
 			newRS,
 			metav1.ConditionFalse,
 			v1alpha4.ConditionRuleSetActivationFailed,
@@ -275,7 +275,7 @@ func (p *Provider) updateRuleSet(oldObj, newObj any) {
 		)
 	} else {
 		p.updateStatus(
-			context.Background(),
+			ctx,
 			newRS,
 			metav1.ConditionTrue,
 			v1alpha4.ConditionRuleSetActive,
@@ -286,7 +286,7 @@ func (p *Provider) updateRuleSet(oldObj, newObj any) {
 	}
 }
 
-func (p *Provider) deleteRuleSet(obj any) {
+func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 	if p.stopped {
 		return
 	}
@@ -297,11 +297,11 @@ func (p *Provider) deleteRuleSet(obj any) {
 	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 	conf := p.toRuleSetConfiguration(rs)
 
-	if err := p.p.OnDeleted(conf); err != nil {
+	if err := p.p.OnDeleted(ctx, conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
 
 		p.updateStatus(
-			context.Background(),
+			ctx,
 			rs,
 			metav1.ConditionTrue,
 			v1alpha4.ConditionRuleSetUnloadingFailed,
@@ -311,7 +311,7 @@ func (p *Provider) deleteRuleSet(obj any) {
 		)
 	} else {
 		p.updateStatus(
-			context.Background(),
+			ctx,
 			rs,
 			metav1.ConditionFalse,
 			v1alpha4.ConditionRuleSetUnloaded,

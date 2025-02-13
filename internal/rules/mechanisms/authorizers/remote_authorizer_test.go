@@ -198,8 +198,8 @@ values:
 
 				require.NoError(t, err)
 
-				ctx := heimdallmocks.NewContextMock(t)
-				ctx.EXPECT().AppContext().Return(context.Background()).Maybe()
+				ctx := heimdallmocks.NewRequestContextMock(t)
+				ctx.EXPECT().Context().Return(context.Background()).Maybe()
 
 				rfunc := heimdallmocks.NewRequestFunctionsMock(t)
 
@@ -552,7 +552,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		authorizer       *remoteAuthorizer
 		subject          *subject.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
+		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub *subject.Subject)
 		assert           func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any)
 	}{
@@ -597,7 +597,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "my-id-bar-bar", string(data))
 				}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -671,7 +671,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "application/json"
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -752,7 +752,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseCode = http.StatusOK
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -808,7 +808,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -856,7 +856,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ID:         "my id",
 				Attributes: map[string]any{"bar": "baz"},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -914,7 +914,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusUnauthorized
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -948,7 +948,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "text/text"
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -975,7 +975,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "foo"},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1068,7 +1068,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1145,7 +1145,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1185,7 +1185,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1216,7 +1216,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1251,7 +1251,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *heimdallmocks.RequestContextMock) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
@@ -1261,8 +1261,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
+			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
 			configureContext(t, ctx)

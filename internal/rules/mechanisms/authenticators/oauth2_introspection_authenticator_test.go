@@ -681,7 +681,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		authenticator  *oauth2IntrospectionAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *heimdallmocks.RequestContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *oauth2IntrospectionAuthenticator)
@@ -690,7 +690,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		"with failing auth data source": {
 			authenticator: &oauth2IntrospectionAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -722,7 +722,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -754,7 +754,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -789,7 +789,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -836,7 +836,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -898,7 +898,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -963,7 +963,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1034,7 +1034,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1122,7 +1122,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1210,7 +1210,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1275,7 +1275,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1316,7 +1316,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1389,7 +1389,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1495,7 +1495,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1582,7 +1582,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1649,7 +1649,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.ContextMock,
+					_ *heimdallmocks.RequestContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *oauth2IntrospectionAuthenticator,
@@ -1662,8 +1662,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
+			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)

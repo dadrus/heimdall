@@ -37,8 +37,8 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 
 	var identifier interface{ ID() string }
 
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().AppContext().Return(context.Background())
+	ctx := mocks.NewRequestContextMock(t)
+	ctx.EXPECT().Context().Return(context.Background())
 
 	auth := newUnauthorizedAuthenticator(appCtx, "unauth")
 

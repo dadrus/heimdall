@@ -114,7 +114,7 @@ func (_c *RuleMock_EqualTo_Call) RunAndReturn(run func(rule.Rule) bool) *RuleMoc
 }
 
 // Execute provides a mock function with given fields: ctx
-func (_m *RuleMock) Execute(ctx heimdall.Context) (rule.Backend, error) {
+func (_m *RuleMock) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
@@ -123,10 +123,10 @@ func (_m *RuleMock) Execute(ctx heimdall.Context) (rule.Backend, error) {
 
 	var r0 rule.Backend
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (rule.Backend, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) (rule.Backend, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) rule.Backend); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) rule.Backend); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
@@ -134,7 +134,7 @@ func (_m *RuleMock) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if rf, ok := ret.Get(1).(func(heimdall.RequestContext) error); ok {
 		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -149,14 +149,14 @@ type RuleMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx heimdall.RequestContext
 func (_e *RuleMock_Expecter) Execute(ctx interface{}) *RuleMock_Execute_Call {
 	return &RuleMock_Execute_Call{Call: _e.mock.On("Execute", ctx)}
 }
 
-func (_c *RuleMock_Execute_Call) Run(run func(ctx heimdall.Context)) *RuleMock_Execute_Call {
+func (_c *RuleMock_Execute_Call) Run(run func(ctx heimdall.RequestContext)) *RuleMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context))
+		run(args[0].(heimdall.RequestContext))
 	})
 	return _c
 }
@@ -166,7 +166,7 @@ func (_c *RuleMock_Execute_Call) Return(_a0 rule.Backend, _a1 error) *RuleMock_E
 	return _c
 }
 
-func (_c *RuleMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (rule.Backend, error)) *RuleMock_Execute_Call {
+func (_c *RuleMock_Execute_Call) RunAndReturn(run func(heimdall.RequestContext) (rule.Backend, error)) *RuleMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

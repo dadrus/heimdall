@@ -69,8 +69,8 @@ func newCookieFinalizer(app app.Context, id string, rawConfig map[string]any) (*
 	}, nil
 }
 
-func (f *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *cookieFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", f.id).Msg("Finalizing using cookie finalizer")
 
 	if sub == nil {

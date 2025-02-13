@@ -210,13 +210,13 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 		uc               string
 		config           []byte
 		error            error
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
+		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
 		{
 			uc:    "with default realm",
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
@@ -239,7 +239,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			uc:     "with custom realm",
 			config: []byte(`realm: "Your password please"`),
 			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
@@ -264,8 +264,8 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewContextMock(t)
-			mctx.EXPECT().AppContext().Return(context.Background())
+			mctx := mocks.NewRequestContextMock(t)
+			mctx.EXPECT().Context().Return(context.Background())
 
 			tc.configureContext(t, mctx)
 

@@ -28,7 +28,7 @@ type HeaderValueExtractStrategy struct {
 	Scheme string
 }
 
-func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
+func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.RequestContext) (string, error) {
 	if val := s.Request().Header(es.Name); len(val) != 0 {
 		if len(es.Scheme) != 0 && !strings.HasPrefix(val, es.Scheme+" ") {
 			return "", errorchain.NewWithMessagef(heimdall.ErrArgument,

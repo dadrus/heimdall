@@ -183,14 +183,19 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		return nil
 	}
 
-	if err = p.ruleSetsUpdated(ruleSets, state, rsf.ID()); err != nil {
+	if err = p.ruleSetsUpdated(ctx, ruleSets, state, rsf.ID()); err != nil {
 		p.l.Warn().Err(err).Str("_endpoint", rsf.ID()).Msg("Failed to apply rule set changes")
 	}
 
 	return nil
 }
 
-func (p *Provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state BucketState, buketID string) error {
+func (p *Provider) ruleSetsUpdated(
+	ctx context.Context,
+	ruleSets []*rule_config.RuleSet,
+	state BucketState,
+	buketID string,
+) error {
 	// check which were present in the past and are not present now
 	// and which are new
 	currentIDs := toRuleSetIDs(ruleSets)
@@ -207,7 +212,7 @@ func (p *Provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 			},
 		}
 
-		if err := p.p.OnDeleted(conf); err != nil {
+		if err := p.p.OnDeleted(ctx, conf); err != nil {
 			return err
 		}
 
@@ -231,9 +236,9 @@ func (p *Provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 		var err error
 
 		if isNew {
-			err = p.p.OnCreated(ruleSet)
+			err = p.p.OnCreated(ctx, ruleSet)
 		} else if hasChanged {
-			err = p.p.OnUpdated(ruleSet)
+			err = p.p.OnUpdated(ctx, ruleSet)
 		}
 
 		if err != nil {

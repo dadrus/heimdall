@@ -472,7 +472,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		finalizer      *oauth2ClientCredentialsFinalizer
-		configureMocks func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock)
+		configureMocks func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool)
@@ -482,7 +482,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				id:         "test",
 				headerName: "Authorization",
 			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				rawData, err := json.Marshal(clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
@@ -507,7 +507,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					ClientSecret: "foo",
 				},
 			},
-			configureMocks: func(t *testing.T, _ *mocks.ContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, _ *mocks.RequestContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -543,7 +543,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					Scopes: []string{"baz", "zab"},
 				},
 			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -588,13 +588,13 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			endpointCalled = false
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks.ContextMock, _ *mocks2.CacheMock) { t.Helper() },
+				func(t *testing.T, _ *mocks.RequestContextMock, _ *mocks2.CacheMock) { t.Helper() },
 			)
 
 			cch := mocks2.NewCacheMock(t)
-			ctx := mocks.NewContextMock(t)
+			ctx := mocks.NewRequestContextMock(t)
 
-			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
+			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
 			configureMocks(t, ctx, cch)
 
 			assertRequest = tc.assertRequest

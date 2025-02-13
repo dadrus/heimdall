@@ -114,8 +114,8 @@ func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]an
 	}, nil
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using generic authenticator")
 
 	authData, err := a.ads.GetAuthData(ctx)
@@ -188,9 +188,9 @@ func (a *genericAuthenticator) ID() string {
 
 func (a *genericAuthenticator) IsInsecure() bool { return false }
 
-func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authData string) ([]byte, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
-	cch := cache.Ctx(ctx.AppContext())
+func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+	logger := zerolog.Ctx(ctx.Context())
+	cch := cache.Ctx(ctx.Context())
 
 	var (
 		cacheKey string
@@ -199,7 +199,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(authData)
-		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing subject information from cache")
 
 			return entry, nil
@@ -225,7 +225,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 	}
 
 	if cacheTTL := a.getCacheTTL(session); cacheTTL > 0 {
-		if err = cch.Set(ctx.AppContext(), cacheKey, payload, cacheTTL); err != nil {
+		if err = cch.Set(ctx.Context(), cacheKey, payload, cacheTTL); err != nil {
 			logger.Warn().Err(err).Msg("Failed to cache subject information")
 		}
 	}
@@ -233,7 +233,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context, authData string) ([]byte, error) {
+func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
 	req, err := a.createRequest(ctx, authData)
 	if err != nil {
 		return nil, err
@@ -262,8 +262,8 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context, aut
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData string) (*http.Request, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authData string) (*http.Request, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
 	var body io.Reader
 
@@ -282,7 +282,7 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 		body = strings.NewReader(value)
 	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), body,
+	req, err := a.e.CreateRequest(ctx.Context(), body,
 		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {

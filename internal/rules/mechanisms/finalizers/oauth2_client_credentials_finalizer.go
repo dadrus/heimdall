@@ -141,11 +141,11 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Finalizing using oauth2_client_credentials finalizer")
 
-	token, err := f.cfg.Token(ctx.AppContext())
+	token, err := f.cfg.Token(ctx.Context())
 	if err != nil {
 		return err
 	}

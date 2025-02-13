@@ -39,18 +39,18 @@ func TestRuleExecutorExecute(t *testing.T) {
 		uc             string
 		expErr         error
 		createRequest  func(t *testing.T) *http.Request
-		configureMocks func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
+		configureMocks func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		{
 			uc:     "no matching rules",
 			expErr: heimdall.ErrNoRuleFound,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{URL: *matchingURL}}
 
-				ctx.EXPECT().AppContext().Return(context.Background())
+				ctx.EXPECT().Context().Return(context.Background())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(nil, heimdall.ErrNoRuleFound)
 			},
@@ -58,12 +58,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 		{
 			uc:     "rule execution fails with authentication error",
 			expErr: heimdall.ErrAuthentication,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
 
-				ctx.EXPECT().AppContext().Return(context.Background())
+				ctx.EXPECT().Context().Return(context.Background())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
@@ -71,13 +71,13 @@ func TestRuleExecutorExecute(t *testing.T) {
 		},
 		{
 			uc: "rule execution succeeds",
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
 				upstream := mocks4.NewBackendMock(t)
 				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
 
-				ctx.EXPECT().AppContext().Return(context.Background())
+				ctx.EXPECT().Context().Return(context.Background())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(upstream, nil)
@@ -88,7 +88,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			// GIVEN
 			repo := mocks4.NewRepositoryMock(t)
 			rule := mocks4.NewRuleMock(t)
-			ctx := mocks2.NewContextMock(t)
+			ctx := mocks2.NewRequestContextMock(t)
 
 			tc.configureMocks(t, ctx, repo, rule)
 

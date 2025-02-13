@@ -51,3 +51,46 @@ func (c *ArgumentCaptor[T]) Value() T {
 func ArgumentCaptorFrom[T any](m *mock.Mock, name string) *ArgumentCaptor[T] {
 	return m.TestData().Get(name).Data().(*ArgumentCaptor[T]) // nolint: forcetypeassert
 }
+
+type ArgumentCaptor2[T1 any, T2 any] struct {
+	capturedArgs1 []T1
+	capturedArgs2 []T2
+}
+
+func NewArgumentCaptor2[T1 any, T2 any](m *mock.Mock, name string) *ArgumentCaptor2[T1, T2] {
+	captor := &ArgumentCaptor2[T1, T2]{}
+
+	m.TestData().Set(name, captor)
+
+	return captor
+}
+
+func (c *ArgumentCaptor2[T1, T2]) Capture(val1 T1, val2 T2) {
+	c.capturedArgs1 = append(c.capturedArgs1, val1)
+	c.capturedArgs2 = append(c.capturedArgs2, val2)
+}
+
+func (c *ArgumentCaptor2[T1, T2]) Values() ([]T1, []T2) {
+	return c.capturedArgs1, c.capturedArgs2
+}
+
+func (c *ArgumentCaptor2[T1, T2]) Value() (T1, T2) {
+	var (
+		def1 T1
+		def2 T2
+	)
+
+	if len(c.capturedArgs1)-1 >= 0 {
+		def1 = c.capturedArgs1[0]
+	}
+
+	if len(c.capturedArgs2)-1 >= 0 {
+		def2 = c.capturedArgs2[0]
+	}
+
+	return def1, def2
+}
+
+func ArgumentCaptor2From[T1 any, T2 any](m *mock.Mock, name string) *ArgumentCaptor2[T1, T2] {
+	return m.TestData().Get(name).Data().(*ArgumentCaptor2[T1, T2]) // nolint: forcetypeassert
+}

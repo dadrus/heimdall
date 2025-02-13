@@ -24,6 +24,6 @@ import (
 //go:generate mockery --name executionCondition --structname ExecutionConditionMock
 
 type executionCondition interface {
-	CanExecuteOnSubject(ctx heimdall.Context, sub *subject.Subject) (bool, error)
-	CanExecuteOnError(ctx heimdall.Context, err error) (bool, error)
+	CanExecuteOnSubject(ctx heimdall.RequestContext, sub *subject.Subject) (bool, error)
+	CanExecuteOnError(ctx heimdall.RequestContext, err error) (bool, error)
 }

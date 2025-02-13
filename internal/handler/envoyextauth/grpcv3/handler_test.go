@@ -157,7 +157,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Path == "/test" &&

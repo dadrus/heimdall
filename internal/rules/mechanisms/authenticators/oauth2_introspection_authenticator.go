@@ -178,8 +178,8 @@ func newOAuth2IntrospectionAuthenticator(
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using OAuth2 introspect authenticator")
 
 	accessToken, err := a.ads.GetAuthData(ctx)
@@ -250,7 +250,7 @@ func (a *oauth2IntrospectionAuthenticator) ID() string {
 func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
 
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
-	ctx heimdall.Context, claims map[string]any,
+	ctx heimdall.RequestContext, claims map[string]any,
 ) (oauth2.ServerMetadata, error) {
 	args := map[string]any{}
 
@@ -258,7 +258,7 @@ func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 		args["TokenIssuer"] = claims["iss"]
 	}
 
-	metadata, err := a.r.Get(ctx.AppContext(), args)
+	metadata, err := a.r.Get(ctx.Context(), args)
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
@@ -285,9 +285,12 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
-func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {
-	cch := cache.Ctx(ctx.AppContext())
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
+	ctx heimdall.RequestContext,
+	token string,
+) ([]byte, error) {
+	cch := cache.Ctx(ctx.Context())
+	logger := zerolog.Ctx(ctx.Context())
 
 	var cacheKey string
 
@@ -301,14 +304,14 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		return nil, err
 	}
 
-	req, err := a.createRequest(ctx.AppContext(), metadata.IntrospectionEndpoint, token, claims)
+	req, err := a.createRequest(ctx.Context(), metadata.IntrospectionEndpoint, token, claims)
 	if err != nil {
 		return nil, err
 	}
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), token)
-		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing introspection response from cache")
 
 			return entry, nil
@@ -337,7 +340,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	}
 
 	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
-		if err = cch.Set(ctx.AppContext(), cacheKey, rawResp, cacheTTL); err != nil {
+		if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
 			logger.Warn().Err(err).Msg("Failed to cache introspection response")
 		}
 	}
@@ -382,9 +385,9 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 }
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx heimdall.Context, client *http.Client, req *http.Request,
+	ctx heimdall.RequestContext, client *http.Client, req *http.Request,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Debug().Msg("Retrieving information about the access token from the introspection endpoint")
 

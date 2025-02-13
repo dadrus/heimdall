@@ -43,7 +43,7 @@ func TestRuleExecute(t *testing.T) {
 		slashHandling  config.EncodedSlashesHandling
 		configureMocks func(
 			t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *heimdallmocks.RequestContextMock,
 			authenticator *mocks.SubjectCreatorMock,
 			authorizer *mocks.SubjectHandlerMock,
 			finalizer *mocks.SubjectHandlerMock,
@@ -53,7 +53,7 @@ func TestRuleExecute(t *testing.T) {
 	}{
 		{
 			uc: "authenticator fails, but error handler succeeds",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -76,7 +76,7 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator fails, and error handler fails",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -100,7 +100,7 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer fails, but error handler succeeds",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -126,7 +126,7 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer fails and error handler fails",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -153,7 +153,7 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer succeeds, finalizer fails, but error handler succeeds",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -180,7 +180,7 @@ func TestRuleExecute(t *testing.T) {
 		},
 		{
 			uc: "authenticator succeeds, authorizer succeeds, finalizer fails and error handler fails",
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -212,7 +212,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, _ *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, _ *mocks.SubjectCreatorMock,
 				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock, _ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
@@ -239,7 +239,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
@@ -278,7 +278,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
@@ -316,7 +316,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &config.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
@@ -354,7 +354,7 @@ func TestRuleExecute(t *testing.T) {
 				Host:        "foo.bar",
 				URLRewriter: &config.URLRewriter{PathPrefixToCut: "/api/v1"},
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				_ *mocks.ErrorHandlerMock,
 			) {
@@ -381,8 +381,8 @@ func TestRuleExecute(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := heimdallmocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.Background())
+			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(context.Background())
 
 			authenticator := mocks.NewSubjectCreatorMock(t)
 			authorizer := mocks.NewSubjectHandlerMock(t)

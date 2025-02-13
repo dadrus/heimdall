@@ -50,8 +50,8 @@ func newDenyAuthorizer(app app.Context, id string) *denyAuthorizer {
 	return &denyAuthorizer{id: id}
 }
 
-func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using deny authorizer")
 
 	return errorchain.

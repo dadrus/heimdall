@@ -295,8 +295,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -307,7 +307,7 @@ rules:
 				assert.Equal(t, 1, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -342,8 +342,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -354,7 +354,7 @@ rules:
 				assert.Equal(t, 3, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -415,12 +415,12 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Twice()
 
-				processor.EXPECT().OnDeleted(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -431,7 +431,7 @@ rules:
 				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Values()
+				_, ruleSets := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Values()
 				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Equal(t, "test", ruleSets[0].Name)
@@ -444,7 +444,7 @@ rules:
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "bar", ruleSets[1].Rules[0].ID)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Empty(t, ruleSet.Rules)
 			},
@@ -526,12 +526,12 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
-				processor.EXPECT().OnUpdated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Times(3)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -542,14 +542,14 @@ rules:
 				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 
-				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Values()
+				_, ruleSets := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Values()
 				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Equal(t, "test", ruleSets[0].Name)
@@ -596,8 +596,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -608,7 +608,7 @@ rules:
 				assert.Equal(t, 1, requestCount)
 				assert.GreaterOrEqual(t, strings.Count(logs.String(), "No updates received"), 3)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -645,8 +645,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -659,7 +659,7 @@ rules:
 				noUpdatesCount := strings.Count(logs.String(), "No updates received")
 				assert.GreaterOrEqual(t, noUpdatesCount, 3)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -692,7 +692,7 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(errors.New("test error")).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -751,8 +751,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -799,8 +799,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				call := processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything).Return(errors.New("test error")).NotBefore(call)
+				call := processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error")).NotBefore(call)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
