@@ -31,9 +31,10 @@ const serveDecisionFlagEnvoyGRPC = "envoy-grpc"
 // NewDecisionCommand represents the "serve decision" command.
 func NewDecisionCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "decision",
-		Short:   "Starts heimdall in Decision operation mode",
-		Example: "heimdall serve decision",
+		Use:          "decision",
+		Short:        "Starts heimdall in Decision operation mode",
+		Example:      "heimdall serve decision",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			useEnvoyExtAuth, _ := cmd.Flags().GetBool(serveDecisionFlagEnvoyGRPC)
 
