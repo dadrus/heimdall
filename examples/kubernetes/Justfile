@@ -279,12 +279,12 @@ install-heimdall router=default_router:
   kubectl apply -f quickstarts/heimdall/namespace.yaml
   kubectl apply -f quickstarts/heimdall/certificate.yaml
 
-  extraArgs='extraArgs={}'
+  extraArgs='extraArgs={--insecure-skip-secure-trusted-proxies-enforcement,--insecure-skip-secure-default-rule-enforcement}'
 
   case "{{router}}" in
     contour | emissary | envoygw | istio-*)
     echo "will start heimdall for integration via envoy v3 grpc api"
-    extraArgs='extraArgs={--envoy-grpc}'
+    extraArgs='extraArgs={--envoy-grpc,--insecure-skip-secure-trusted-proxies-enforcement,--insecure-skip-secure-default-rule-enforcement}'
     ;;
   esac
 
@@ -339,4 +339,3 @@ install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
-
