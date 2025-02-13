@@ -74,9 +74,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 	}
 
 	logger = logger.With().Str("_provider_type", "cloud_blob").Logger()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.With().Logger().WithContext(ctx)
+	ctx, cancel := context.WithCancel(logger.WithContext(context.Background()))
 
 	scheduler, err := gocron.NewScheduler(
 		gocron.WithLocation(time.UTC),
@@ -124,7 +122,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		}
 	}
 
-	logger.Info().Msg("Rule provider configured.")
+	logger.Info().Msg("Rule provider configured")
 
 	return prov, nil
 }
@@ -134,7 +132,7 @@ func (p *Provider) Start(_ context.Context) error {
 		return nil
 	}
 
-	p.l.Info().Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule provider")
 
 	go p.s.Start()
 
@@ -154,7 +152,8 @@ func (p *Provider) Stop(_ context.Context) error {
 }
 
 func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
-	p.l.Debug().Msg("Retrieving rule set")
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().Msg("Retrieving rule set")
 
 	ruleSets, err := rsf.FetchRuleSets(ctx, p.app)
 	if err != nil {
@@ -164,7 +163,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			return nil
 		}
 
-		p.l.Warn().
+		logger.Warn().
 			Err(err).
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
@@ -178,13 +177,13 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 	// if no rule sets are available and no rule sets were known from the past
 	if len(ruleSets) == 0 && len(state) == 0 {
-		p.l.Debug().Str("_endpoint", rsf.ID()).Msg("No updates received")
+		logger.Debug().Str("_endpoint", rsf.ID()).Msg("No updates received")
 
 		return nil
 	}
 
 	if err = p.ruleSetsUpdated(ctx, ruleSets, state, rsf.ID()); err != nil {
-		p.l.Warn().Err(err).Str("_endpoint", rsf.ID()).Msg("Failed to apply rule set changes")
+		logger.Warn().Err(err).Str("_endpoint", rsf.ID()).Msg("Failed to apply rule set changes")
 	}
 
 	return nil
@@ -196,6 +195,8 @@ func (p *Provider) ruleSetsUpdated(
 	state BucketState,
 	buketID string,
 ) error {
+	logger := zerolog.Ctx(ctx)
+
 	// check which were present in the past and are not present now
 	// and which are new
 	currentIDs := toRuleSetIDs(ruleSets)
@@ -225,7 +226,7 @@ func (p *Provider) ruleSetsUpdated(
 		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Source], ruleSet.Hash)
 
 		if !isNew && !hasChanged {
-			p.l.Debug().
+			logger.Debug().
 				Str("_bucket", buketID).
 				Str("_rule_set", ruleSet.Source).
 				Msg("No updates received")

@@ -67,8 +67,11 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 	}
 
 	logger = logger.With().Str("_provider_type", "http_endpoint").Logger()
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.WithContext(cache.WithContext(ctx, cch))
+	ctx, cancel := context.WithCancel(
+		logger.WithContext(
+			cache.WithContext(context.Background(), cch),
+		),
+	)
 
 	scheduler, err := gocron.NewScheduler(
 		gocron.WithLocation(time.UTC),
@@ -99,7 +102,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 		if providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0 {
 			definition = gocron.DurationJob(*providerConf.WatchInterval)
 		} else {
-			logger.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect.")
+			logger.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect")
 
 			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
 		}
@@ -111,7 +114,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 		}
 	}
 
-	logger.Info().Msg("Rule provider configured.")
+	logger.Info().Msg("Rule provider configured")
 
 	return prov, nil
 }
@@ -121,7 +124,7 @@ func (p *Provider) Start(_ context.Context) error {
 		return nil
 	}
 
-	p.l.Info().Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule provider")
 
 	p.s.Start()
 
@@ -141,19 +144,20 @@ func (p *Provider) Stop(_ context.Context) error {
 }
 
 func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
-	p.l.Debug().
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().
 		Str("_endpoint", rsf.ID()).
 		Msg("Retrieving rule set")
 
 	ruleSet, err := rsf.FetchRuleSet(ctx, p.app)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			p.l.Debug().Msg("Watcher closed")
+			logger.Debug().Msg("Watcher closed")
 
 			return nil
 		}
 
-		p.l.Warn().Err(err).
+		logger.Warn().Err(err).
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
@@ -171,7 +175,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	}
 
 	if err = p.ruleSetsUpdated(ctx, ruleSet, rsf.ID()); err != nil {
-		p.l.Warn().Err(err).
+		logger.Warn().Err(err).
 			Str("_src", rsf.ID()).
 			Msg("Failed to apply rule set changes")
 	}
@@ -180,6 +184,8 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 }
 
 func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *config2.RuleSet, stateID string) error {
+	logger := zerolog.Ctx(ctx)
+
 	var hash []byte
 
 	if value, ok := p.states.Load(stateID); ok { //nolint:nestif
@@ -216,7 +222,7 @@ func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *config2.RuleSet
 		return nil
 	}
 
-	p.l.Debug().
+	logger.Debug().
 		Str("_endpoint", stateID).
 		Msg("No updates received")
 

@@ -119,8 +119,9 @@ func (p *Provider) Start(ctx context.Context) error {
 		return nil
 	}
 
-	p.l.Info().Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule provider")
 
+	ctx = p.l.WithContext(ctx)
 	if err := p.loadInitialRuleSet(ctx); err != nil {
 		p.l.Error().Err(err).Msg("Failed loading initial rule sets")
 
@@ -128,13 +129,13 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 
 	if p.w == nil {
-		p.l.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect.")
+		p.l.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect")
 
 		return nil
 	}
 
 	if err := p.w.Add(p.src); err != nil {
-		p.l.Error().Err(err).Msg("Failed to start rule definitions provider")
+		p.l.Error().Err(err).Msg("Failed to start rule provider")
 
 		return err
 	}

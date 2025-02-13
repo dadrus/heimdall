@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -61,6 +63,9 @@ func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, erro
 }
 
 func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSet) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("_name", ruleSet.Name).Msg("New rule set received")
+
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
@@ -74,6 +79,9 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSe
 }
 
 func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("_name", ruleSet.Name).Msg("Update of a rule set received")
+
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
@@ -87,5 +95,8 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *config.RuleSe
 }
 
 func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *config.RuleSet) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("_name", ruleSet.Name).Msg("Deletion of a rule set received")
+
 	return p.r.DeleteRuleSet(ctx, ruleSet.Source)
 }
