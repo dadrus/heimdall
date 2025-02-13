@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Getting Started on Heimdall</title><link>https://dadrus.github.io/docs/getting_started/</link><description>Recent content in Getting Started on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 12 Feb 2025 08:32:17 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/getting_started/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Getting Started on Heimdall</title><link>https://dadrus.github.io/docs/getting_started/</link><description>Recent content in Getting Started on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 13 Feb 2025 15:50:55 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/getting_started/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_what_is_heimdall">What is heimdall?&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -62,21 +62,21 @@
 &lt;h2 id="_overview">Overview&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>In this guide we’re going to configure two setups, both protecting a service which exposes a couple of endpoints:&lt;/p>
+&lt;p>In this guide, we’ll configure two setups to protect a service that exposes a few endpoints:&lt;/p>
 &lt;/div>
 &lt;div class="ulist">
 &lt;ul>
 &lt;li>
-&lt;p>The &lt;code>/public&lt;/code> endpoint is as the name implies public. Every request to it should be forwarded as is.&lt;/p>
+&lt;p>The &lt;code>/public&lt;/code> endpoint is, as the name implies, public. Every request to it should be forwarded as is.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>The &lt;code>/user&lt;/code> endpoint should only be accessible to users with the role &lt;code>user&lt;/code>.&lt;/p>
+&lt;p>The &lt;code>/user&lt;/code> endpoint should only be accessible to users with the &lt;code>user&lt;/code> role.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>The &lt;code>/admin&lt;/code> endpoint should only be accessible to users with the role &lt;code>admin&lt;/code> and&lt;/p>
+&lt;p>The &lt;code>/admin&lt;/code> endpoint should only be accessible to users with the &lt;code>admin&lt;/code> role.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>the &lt;code>/private&lt;/code> endpoint, as well as any other potentially exposed endpoint should not be accessible at all. So all requests should be rejected.&lt;/p>
+&lt;p>The &lt;code>/private&lt;/code> endpoint, along with any other potentially exposed endpoints, should not be accessible at all. All requests to it should be rejected.&lt;/p>
 &lt;/li>
 &lt;/ul>
 &lt;/div></description></item></channel></rss>

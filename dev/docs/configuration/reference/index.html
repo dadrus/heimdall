@@ -137,7 +137,7 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
     <span class=na>type</span><span class=pi>:</span> <span class=s>generic</span>
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>identity_info_endpoint</span><span class=pi>:</span>
-        <span class=na>url</span><span class=pi>:</span> <span class=s>http://127.0.0.1:4433/sessions/whoami</span>
+        <span class=na>url</span><span class=pi>:</span> <span class=s>https://127.0.0.1:4433/sessions/whoami</span>
         <span class=na>auth</span><span class=pi>:</span>
           <span class=na>auth</span><span class=pi>:</span>
             <span class=na>type</span><span class=pi>:</span> <span class=s>basic_auth</span>
@@ -159,7 +159,7 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
     <span class=na>type</span><span class=pi>:</span> <span class=s>oauth2_introspection</span>
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>introspection_endpoint</span><span class=pi>:</span>
-        <span class=na>url</span><span class=pi>:</span> <span class=s>http://hydra:4445/oauth2/introspect</span>
+        <span class=na>url</span><span class=pi>:</span> <span class=s>https://hydra:4445/oauth2/introspect</span>
         <span class=na>retry</span><span class=pi>:</span>
           <span class=na>max_delay</span><span class=pi>:</span> <span class=s>300ms</span>
           <span class=na>give_up_after</span><span class=pi>:</span> <span class=s>2s</span>
@@ -176,7 +176,7 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
         <span class=pi>-</span> <span class=na>body_parameter</span><span class=pi>:</span> <span class=s>access_token</span>
       <span class=na>assertions</span><span class=pi>:</span>
         <span class=na>issuers</span><span class=pi>:</span>
-          <span class=pi>-</span> <span class=s>http://127.0.0.1:4444/</span>
+          <span class=pi>-</span> <span class=s>https://127.0.0.1:4444/</span>
         <span class=na>scopes</span><span class=pi>:</span>
           <span class=pi>-</span> <span class=s>foo</span>
           <span class=pi>-</span> <span class=s>bar</span>
@@ -190,7 +190,7 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
     <span class=na>type</span><span class=pi>:</span> <span class=s>jwt</span>
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>metadata_endpoint</span><span class=pi>:</span>
-        <span class=na>url</span><span class=pi>:</span> <span class=s>http://auth-server/.well-known/oauth-authorization-server</span>
+        <span class=na>url</span><span class=pi>:</span> <span class=s>https://auth-server/.well-known/oauth-authorization-server</span>
         <span class=na>disable_issuer_identifier_verification</span><span class=pi>:</span> <span class=kc>true</span>
         <span class=na>http_cache</span><span class=pi>:</span>
           <span class=na>enabled</span><span class=pi>:</span> <span class=kc>true</span>
@@ -222,7 +222,7 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
     <span class=na>type</span><span class=pi>:</span> <span class=s>remote</span>
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>endpoint</span><span class=pi>:</span>
-        <span class=na>url</span><span class=pi>:</span> <span class=s>http://my-authz-system/{{ .Values.some-key }}</span>
+        <span class=na>url</span><span class=pi>:</span> <span class=s>https://my-authz-system/{{ .Values.some-key }}</span>
         <span class=na>method</span><span class=pi>:</span> <span class=s>POST</span>
         <span class=na>headers</span><span class=pi>:</span>
           <span class=na>foo-bar</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>{{</span><span class=nv> </span><span class=s>.Subject.ID</span><span class=nv> </span><span class=s>}}&#34;</span>
@@ -251,7 +251,7 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
     <span class=na>type</span><span class=pi>:</span> <span class=s>generic</span>
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>endpoint</span><span class=pi>:</span>
-        <span class=na>url</span><span class=pi>:</span> <span class=s>http://foo.bar</span>
+        <span class=na>url</span><span class=pi>:</span> <span class=s>https://foo.bar</span>
         <span class=na>method</span><span class=pi>:</span> <span class=s>GET</span>
         <span class=na>headers</span><span class=pi>:</span>
           <span class=na>bla</span><span class=pi>:</span> <span class=s>bla</span>
@@ -259,19 +259,19 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
           <span class=na>type</span><span class=pi>:</span> <span class=s>oauth2_client_credentials</span>
           <span class=na>config</span><span class=pi>:</span>
             <span class=na>auth_method</span><span class=pi>:</span> <span class=s>request_body</span>
-            <span class=na>token_url</span><span class=pi>:</span> <span class=s>http://bar.foo</span>
+            <span class=na>token_url</span><span class=pi>:</span> <span class=s>https://bar.foo</span>
             <span class=na>client_id</span><span class=pi>:</span> <span class=s>foo</span>
             <span class=na>client_secret</span><span class=pi>:</span> <span class=s>bar</span>
             <span class=na>cache_ttl</span><span class=pi>:</span> <span class=s>20s</span>
             <span class=na>header</span><span class=pi>:</span>
               <span class=na>name</span><span class=pi>:</span> <span class=s>X-Foo</span>
               <span class=na>scheme</span><span class=pi>:</span> <span class=s>Bar</span>
-      <span class=na>payload</span><span class=pi>:</span> <span class=s>http://foo</span>
+      <span class=na>payload</span><span class=pi>:</span> <span class=s>foo</span>
   <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>profile_data_contextualizer</span>
     <span class=na>type</span><span class=pi>:</span> <span class=s>generic</span>
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>endpoint</span><span class=pi>:</span>
-        <span class=na>url</span><span class=pi>:</span> <span class=s>http://profile</span>
+        <span class=na>url</span><span class=pi>:</span> <span class=s>https://profile</span>
         <span class=na>headers</span><span class=pi>:</span>
           <span class=na>foo</span><span class=pi>:</span> <span class=s>bar</span>
       <span class=na>continue_pipeline_on_error</span><span class=pi>:</span> <span class=kc>true</span>
@@ -321,7 +321,7 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
   <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>authenticate_with_kratos</span>
     <span class=na>type</span><span class=pi>:</span> <span class=s>redirect</span>
     <span class=na>config</span><span class=pi>:</span>
-      <span class=na>to</span><span class=pi>:</span> <span class=s>http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}</span>
+      <span class=na>to</span><span class=pi>:</span> <span class=s>https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}</span>
 
 <span class=na>default_rule</span><span class=pi>:</span>
   <span class=na>backtracking_enabled</span><span class=pi>:</span> <span class=kc>false</span>
@@ -343,10 +343,10 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
   <span class=na>http_endpoint</span><span class=pi>:</span>
     <span class=na>watch_interval</span><span class=pi>:</span> <span class=s>5m</span>
     <span class=na>endpoints</span><span class=pi>:</span>
-      <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>http://foo.bar/ruleset1</span>
+      <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>https://foo.bar/ruleset1</span>
         <span class=na>http_cache</span><span class=pi>:</span>
           <span class=na>enabled</span><span class=pi>:</span> <span class=kc>false</span>
-      <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>http://foo.bar/ruleset2</span>
+      <span class=pi>-</span> <span class=na>url</span><span class=pi>:</span> <span class=s>https://foo.bar/ruleset2</span>
         <span class=na>retry</span><span class=pi>:</span>
           <span class=na>give_up_after</span><span class=pi>:</span> <span class=s>5s</span>
           <span class=na>max_delay</span><span class=pi>:</span> <span class=s>250ms</span>
@@ -375,5 +375,5 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
       <span class=na>key_store</span><span class=pi>:</span>
         <span class=na>path</span><span class=pi>:</span> <span class=s>/path/to/pem.file</span>
         <span class=na>password</span><span class=pi>:</span> <span class=s>VerySecret!</span>
-      <span class=na>min_version</span><span class=pi>:</span> <span class=s>TLS1.3</span></code></pre></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Jan 9, 2025</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../docs/configuration/types/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentcolor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
+      <span class=na>min_version</span><span class=pi>:</span> <span class=s>TLS1.3</span></code></pre></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Feb 13, 2025</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../docs/configuration/types/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentcolor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
 Type Definitions</a></div></div></main></div><footer class="footer py-4 py-md-5 px-4 px-md-3 mt-3"><div class=container><div class=row><div class="col-lg-3 mb-3"><p class=fs-5>Heimdall</p><ul class="list-unstyled small text-muted"><li class=mb-2>2022-2024 © Heimdall Project Authors. All rights reserved.</li><li class=mb-2><a href=https://github.com/dadrus/heimdall/blob/master/LICENSE>Apache 2.0 licensed</a></li></ul></div><div class="col-6 col-lg-2 offset-lg-1 mb-3"><h5>Links</h5><ul class=list-unstyled><li class=mb-2><a href=../../../>Home</a></li><li class=mb-2><a href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=mb-2><a href=../../../guides/>Guides</a></li><li class=mb-2><a href=../../../openapi/>API</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Guides</h5><ul class=list-unstyled><li class=mb-2><a href=../../../guides/proxies/>API Gateways & Proxies</a></li><li class=mb-2><a href=../../../guides/authz/>Authorization Services</a></li><li class=mb-2><a href=../../../guides/authn/>Authentication Protocols & Services</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Community</h5><ul class=list-unstyled><li class=mb-2><a href=https://github.com/dadrus/heimdall>Github</a></li><li class=mb-2><a href=https://discord.gg/qQgg8xKuyb>Discord</a></li></ul></div></div></div></footer><script src=../../../js/main.js defer></script></body></html>

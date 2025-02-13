@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Rules on Heimdall</title><link>https://dadrus.github.io/docs/rules/</link><description>Recent content in Rules on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 12 Feb 2025 08:32:17 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/rules/index.xml" rel="self" type="application/rss+xml"/><item><title>Regular Rule</title><link>https://dadrus.github.io/docs/rules/regular_rule/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/regular_rule/</guid><description>&lt;div class="paragraph">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Rules on Heimdall</title><link>https://dadrus.github.io/docs/rules/</link><description>Recent content in Rules on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 13 Feb 2025 15:50:55 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/rules/index.xml" rel="self" type="application/rss+xml"/><item><title>Regular Rule</title><link>https://dadrus.github.io/docs/rules/regular_rule/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/regular_rule/</guid><description>&lt;div class="paragraph">
 &lt;p>In the simplest case, a regular rule reuses mechanisms from the previously defined &lt;a href="../../docs/mechanisms/catalogue/">catalogue&lt;/a> in its pipelines. In more complex scenarios, a rule can reconfigure parts of the mechanisms being used. The specific parts that can be reconfigured or overridden depend on the mechanism itself and are described in the mechanism-specific documentation. Reconfiguration is always limited to the particular rule’s pipeline and does not affect other rules.&lt;/p>
 &lt;/div>
 &lt;div class="sect1">
@@ -10,7 +10,7 @@
 &lt;h2 id="_configuration">Configuration&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>The configuration of the default rule can be done by making use of the &lt;code>default_rule&lt;/code> property and configuring the options shown below.&lt;/p>
+&lt;p>The default rule can be configured using the &lt;code>default_rule&lt;/code> property supporting the options shown below.&lt;/p>
 &lt;/div>
 &lt;div class="admonitionblock note">
 &lt;table>
@@ -20,15 +20,18 @@
 &lt;/td>
 &lt;td class="content">
 &lt;div class="paragraph">
-&lt;p>The default rule does not support all the properties, which can be configured in an &lt;a href="../../docs/rules/regular_rule/">regular rule&lt;/a>.&lt;/p>
+&lt;p>The default rule does not support all properties available in a &lt;a href="../../docs/rules/regular_rule/">regular rule&lt;/a>.&lt;/p>
 &lt;/div>
 &lt;div class="ulist">
 &lt;ul>
 &lt;li>
-&lt;p>It can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.&lt;/p>
+&lt;p>It cannot be used to forward requests to an upstream service protected by heimdall. If heimdall is operating in reverse proxy mode, the default rule should be configured to reject requests. Otherwise, Heimdall will respond with an error.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>A default rule does also reject requests with encoded slashes in the path of the URL with &lt;code>400 Bad Request&lt;/code>, which can be configured on the level of a regular rule.&lt;/p>
+&lt;p>The default rule also rejects requests containing encoded slashes in the URL path with a &lt;code>400 Bad Request&lt;/code> response. In a regular rule, this behavior can be configured.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The authentication stage cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). However, this enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-secure-default-rule-enforcement&lt;/code> flag.&lt;/p>
 &lt;/li>
 &lt;/ul>
 &lt;/div></description></item><item><title>Rule Sets</title><link>https://dadrus.github.io/docs/rules/rule_sets/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/rule_sets/</guid><description>&lt;div class="paragraph">

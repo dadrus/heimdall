@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 12 Feb 2025 08:32:17 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 13 Feb 2025 15:50:55 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_what_is_heimdall">What is heimdall?&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -62,21 +62,21 @@
 &lt;h2 id="_overview">Overview&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>In this guide we’re going to configure two setups, both protecting a service which exposes a couple of endpoints:&lt;/p>
+&lt;p>In this guide, we’ll configure two setups to protect a service that exposes a few endpoints:&lt;/p>
 &lt;/div>
 &lt;div class="ulist">
 &lt;ul>
 &lt;li>
-&lt;p>The &lt;code>/public&lt;/code> endpoint is as the name implies public. Every request to it should be forwarded as is.&lt;/p>
+&lt;p>The &lt;code>/public&lt;/code> endpoint is, as the name implies, public. Every request to it should be forwarded as is.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>The &lt;code>/user&lt;/code> endpoint should only be accessible to users with the role &lt;code>user&lt;/code>.&lt;/p>
+&lt;p>The &lt;code>/user&lt;/code> endpoint should only be accessible to users with the &lt;code>user&lt;/code> role.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>The &lt;code>/admin&lt;/code> endpoint should only be accessible to users with the role &lt;code>admin&lt;/code> and&lt;/p>
+&lt;p>The &lt;code>/admin&lt;/code> endpoint should only be accessible to users with the &lt;code>admin&lt;/code> role.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>the &lt;code>/private&lt;/code> endpoint, as well as any other potentially exposed endpoint should not be accessible at all. So all requests should be rejected.&lt;/p>
+&lt;p>The &lt;code>/private&lt;/code> endpoint, along with any other potentially exposed endpoints, should not be accessible at all. All requests to it should be rejected.&lt;/p>
 &lt;/li>
 &lt;/ul>
 &lt;/div></description></item><item><title>Contour Integration</title><link>https://dadrus.github.io/guides/proxies/contour/</link><pubDate>Wed, 02 Aug 2023 17:10:52 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/contour/</guid><description>&lt;div class="paragraph">
@@ -406,45 +406,55 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
 &lt;div class="paragraph">
 &lt;p>Configuration of that backend happens by making use of the &lt;code>cache&lt;/code> property in heimdall’s configuration, which supports the following options:&lt;/p>
 &lt;/div></description></item><item><title>Security</title><link>https://dadrus.github.io/docs/operations/security/</link><pubDate>Mon, 15 Aug 2022 08:33:35 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/security/</guid><description>&lt;div class="sect1">
-&lt;h2 id="_http_header_security_considerations">HTTP Header Security Considerations&lt;/h2>
+&lt;h2 id="_defaults">Defaults&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>If &lt;code>trusted_proxies&lt;/code> property is configured (see also the corresponding &lt;a href="./docs/services/main/#_trusted_proxies">configuration options&lt;/a>) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:&lt;/p>
+&lt;p>The following configurations and behaviors are enforced by default:&lt;/p>
 &lt;/div>
 &lt;div class="ulist">
 &lt;ul>
 &lt;li>
-&lt;p>The value for the used HTTP scheme is taken from the &lt;code>X-Forwarded-Proto&lt;/code> header.&lt;/p>
+&lt;p>All inbound communication must use TLS. TLS configuration is required for all services and endpoints exposed by heimdall. This enforcement can be disabled (not recommended) by starting Heimdall with the &lt;code>--insecure-skip-ingress-tls-enforcement&lt;/code> flag.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>The value for the used HTTP host and port is taken from the &lt;code>X-Forwarded-Host&lt;/code> header.&lt;/p>
+&lt;p>All outbound communication must use TLS. TLS configuration is required for all services and endpoints heimdall communicates with. This enforcement can be disabled (not recommended) by starting Heimdall with the &lt;code>--insecure-skip-egress-tls-enforcement&lt;/code> flag.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>The value for the used HTTP path is taken from &lt;code>X-Forwarded-Uri&lt;/code> header, which may also contain query parameters.&lt;/p>
+&lt;p>If Heimdall is used in &lt;a href="./docs/concepts/operating_modes/#_proxy_mode">proxy mode&lt;/a>, communication with upstream services while proxying requests must use TLS. This enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-upstream-tls-enforcement&lt;/code> flag.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>The value for the used HTTP method is taken from the &lt;code>X-Forwarded-Method&lt;/code> header.&lt;/p>
+&lt;p>Configuring the &lt;a href="./docs/services/main/#_trusted_proxies">&lt;code>trusted_proxies&lt;/code>&lt;/a> property to allow insecure networks (&lt;code>0.0.0.0/0&lt;/code>, &lt;code>0/0&lt;/code>, &lt;code>0000:0000:0000:0000:0000:0000:0000:0000/0&lt;/code>, and &lt;code>::/0&lt;/code>) is prohibited. See also &lt;a href="./docs/operations/security/#_http_header_security_considerations">HTTP Header Security Considerations&lt;/a>. This enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-secure-trusted-proxies-enforcement&lt;/code> flag.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The authentication stage of the &lt;a href="./docs/rules/default_rule/">default rule&lt;/a> cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). This enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-secure-default-rule-enforcement&lt;/code> flag.&lt;/p>
 &lt;/li>
 &lt;/ul>
 &lt;/div></description></item><item><title>Main Service</title><link>https://dadrus.github.io/docs/services/main/</link><pubDate>Thu, 09 Jun 2022 18:55:45 +0200</pubDate><guid>https://dadrus.github.io/docs/services/main/</guid><description>&lt;div class="paragraph">
-&lt;p>To make use of this service you have to start Heimdall with either &lt;code>heimdall serve proxy&lt;/code> or &lt;code>heimdall serve decision&lt;/code>. By default, Heimdall listens on &lt;code>0.0.0.0:4455&lt;/code> endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.&lt;/p>
+&lt;p>To make use of this service you have to start heimdall with either &lt;code>heimdall serve proxy&lt;/code> or &lt;code>heimdall serve decision&lt;/code>. By default, heimdall listens on &lt;code>0.0.0.0:4455&lt;/code> endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.&lt;/p>
 &lt;/div>
 &lt;div class="sect1">
 &lt;h2 id="_configuration">Configuration&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>The configuration of the Main endpoint can be adjusted in the &lt;code>serve&lt;/code> property, which lives on the top level of heimdall’s configuration and supports the following properties.&lt;/p>
+&lt;p>The configuration of this service can be adjusted in the &lt;code>serve&lt;/code> property, which lives on the top level of heimdall’s configuration and supports the following properties.&lt;/p>
 &lt;/div></description></item><item><title>Management Service</title><link>https://dadrus.github.io/docs/services/management/</link><pubDate>Thu, 09 Jun 2022 18:55:36 +0200</pubDate><guid>https://dadrus.github.io/docs/services/management/</guid><description>&lt;div class="paragraph">
-&lt;p>By default, Heimdall listens on &lt;code>0.0.0.0:4457&lt;/code> endpoint for incoming requests and also configures useful default timeouts as well as buffer limits. No other options are configured. You can however adjust the configuration for your needs.&lt;/p>
+&lt;p>By default, heimdall listens on &lt;code>0.0.0.0:4457&lt;/code> for incoming requests and applies useful default timeouts and buffer limits. No additional options are configured by default, but you can adjust them as needed.&lt;/p>
 &lt;/div>
 &lt;div class="paragraph">
-&lt;p>This service exposes the health and the JWKS endpoints.&lt;/p>
+&lt;p>This service exposes the health and JWKS endpoints.&lt;/p>
 &lt;/div>
 &lt;div class="sect1">
 &lt;h2 id="_configuration">Configuration&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>The configuration for of the Management endpoint can be adjusted in the &lt;code>management&lt;/code> property, which lives in the &lt;code>serve&lt;/code> property of heimdall’s configuration and supports the following properties.&lt;/p>
+&lt;p>The configuration of the management endpoint is defined under the &lt;code>management&lt;/code> property. It supports the following properties.&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>&lt;code>host&lt;/code>&lt;/strong>: &lt;em>string&lt;/em> (optional)&lt;/p>
+&lt;div class="paragraph">
+&lt;p>Use this property to specify the TCP/IP address on which heimdall should listen for incoming connections. E.g. the entry &lt;code>0.0.0.0&lt;/code> allows listening on all network interfaces for IPv4 and is the default setting.&lt;/p>
 &lt;/div></description></item><item><title>Catalogue</title><link>https://dadrus.github.io/docs/mechanisms/catalogue/</link><pubDate>Thu, 11 Jan 2024 15:01:21 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/catalogue/</guid><description>&lt;div class="paragraph">
 &lt;p>As described in &lt;a href="./docs/concepts/mechanisms/">Concepts&lt;/a> section, mechanisms must be defined and configured before these can be used in rules. That is happening in the so-called mechanisms catalogue. On start up heimdall instantiates all defined and configured mechanisms and makes these available for usage in rules.&lt;/p>
 &lt;/div>
@@ -519,7 +529,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
 &lt;h2 id="_configuration">Configuration&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>The configuration of the default rule can be done by making use of the &lt;code>default_rule&lt;/code> property and configuring the options shown below.&lt;/p>
+&lt;p>The default rule can be configured using the &lt;code>default_rule&lt;/code> property supporting the options shown below.&lt;/p>
 &lt;/div>
 &lt;div class="admonitionblock note">
 &lt;table>
@@ -529,15 +539,18 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
 &lt;/td>
 &lt;td class="content">
 &lt;div class="paragraph">
-&lt;p>The default rule does not support all the properties, which can be configured in an &lt;a href="./docs/rules/regular_rule/">regular rule&lt;/a>.&lt;/p>
+&lt;p>The default rule does not support all properties available in a &lt;a href="./docs/rules/regular_rule/">regular rule&lt;/a>.&lt;/p>
 &lt;/div>
 &lt;div class="ulist">
 &lt;ul>
 &lt;li>
-&lt;p>It can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.&lt;/p>
+&lt;p>It cannot be used to forward requests to an upstream service protected by heimdall. If heimdall is operating in reverse proxy mode, the default rule should be configured to reject requests. Otherwise, Heimdall will respond with an error.&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>A default rule does also reject requests with encoded slashes in the path of the URL with &lt;code>400 Bad Request&lt;/code>, which can be configured on the level of a regular rule.&lt;/p>
+&lt;p>The default rule also rejects requests containing encoded slashes in the URL path with a &lt;code>400 Bad Request&lt;/code> response. In a regular rule, this behavior can be configured.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The authentication stage cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). However, this enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-secure-default-rule-enforcement&lt;/code> flag.&lt;/p>
 &lt;/li>
 &lt;/ul>
 &lt;/div></description></item><item><title>Rule Sets</title><link>https://dadrus.github.io/docs/rules/rule_sets/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/rule_sets/</guid><description>&lt;div class="paragraph">
@@ -720,7 +733,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">generic&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">identity_info_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://127.0.0.1:4433/sessions/whoami&lt;/span>
+ &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://127.0.0.1:4433/sessions/whoami&lt;/span>
  &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">basic_auth&lt;/span>
@@ -742,7 +755,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_introspection&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">introspection_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://hydra:4445/oauth2/introspect&lt;/span>
+ &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://hydra:4445/oauth2/introspect&lt;/span>
  &lt;span class="na">retry&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">max_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">300ms&lt;/span>
  &lt;span class="na">give_up_after&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2s&lt;/span>
@@ -759,7 +772,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="pi">-&lt;/span> &lt;span class="na">body_parameter&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">access_token&lt;/span>
  &lt;span class="na">assertions&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">issuers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">http://127.0.0.1:4444/&lt;/span>
+ &lt;span class="pi">-&lt;/span> &lt;span class="s">https://127.0.0.1:4444/&lt;/span>
  &lt;span class="na">scopes&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="s">foo&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="s">bar&lt;/span>
@@ -773,7 +786,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">metadata_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://auth-server/.well-known/oauth-authorization-server&lt;/span>
+ &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://auth-server/.well-known/oauth-authorization-server&lt;/span>
  &lt;span class="na">disable_issuer_identifier_verification&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
  &lt;span class="na">http_cache&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
@@ -805,7 +818,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">remote&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://my-authz-system/{{ .Values.some-key }}&lt;/span>
+ &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://my-authz-system/{{ .Values.some-key }}&lt;/span>
  &lt;span class="na">method&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">POST&lt;/span>
  &lt;span class="na">headers&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">foo-bar&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">{{&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">.Subject.ID&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">}}&amp;#34;&lt;/span>
@@ -834,7 +847,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">generic&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://foo.bar&lt;/span>
+ &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://foo.bar&lt;/span>
  &lt;span class="na">method&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">GET&lt;/span>
  &lt;span class="na">headers&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">bla&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bla&lt;/span>
@@ -842,19 +855,19 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_client_credentials&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">auth_method&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">request_body&lt;/span>
- &lt;span class="na">token_url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://bar.foo&lt;/span>
+ &lt;span class="na">token_url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://bar.foo&lt;/span>
  &lt;span class="na">client_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
  &lt;span class="na">client_secret&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
  &lt;span class="na">cache_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">20s&lt;/span>
  &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">X-Foo&lt;/span>
  &lt;span class="na">scheme&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Bar&lt;/span>
- &lt;span class="na">payload&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://foo&lt;/span>
+ &lt;span class="na">payload&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">profile_data_contextualizer&lt;/span>
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">generic&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://profile&lt;/span>
+ &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://profile&lt;/span>
  &lt;span class="na">headers&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">foo&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
  &lt;span class="na">continue_pipeline_on_error&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
@@ -904,7 +917,7 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">authenticate_with_kratos&lt;/span>
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">redirect&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">to&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}&lt;/span>
+ &lt;span class="na">to&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}&lt;/span>
 
 &lt;span class="na">default_rule&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">backtracking_enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">false&lt;/span>
@@ -926,10 +939,10 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">http_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">watch_interval&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5m&lt;/span>
  &lt;span class="na">endpoints&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://foo.bar/ruleset1&lt;/span>
+ &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://foo.bar/ruleset1&lt;/span>
  &lt;span class="na">http_cache&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">false&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">http://foo.bar/ruleset2&lt;/span>
+ &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://foo.bar/ruleset2&lt;/span>
  &lt;span class="na">retry&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">give_up_after&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>
  &lt;span class="na">max_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">250ms&lt;/span>

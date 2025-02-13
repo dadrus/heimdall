@@ -10,7 +10,7 @@ info:
     url: https://github.com/dadrus/heimdall/blob/main/LICENSE
 
 servers:
-  - url: http://heimdall.management.local
+  - url: https://heimdall.management.local
     description: Management Server
 
 tags:
@@ -181,7 +181,7 @@ security: []
 paths:
   /metrics:
     servers:
-      - url: http://metrics.heimdall.local
+      - url: https://metrics.heimdall.local
         description: Metrics Service
     get:
       summary: Get available Prometheus style metrics
@@ -201,7 +201,7 @@ paths:
 
   /debug/pprof:
     servers:
-      - url: http://profiling.heimdall.local
+      - url: https://profiling.heimdall.local
         description: Profiling Service
     get:
       summary: Get available profiles
@@ -219,7 +219,7 @@ paths:
 
   /debug/pprof/{profile_name}:
     servers:
-      - url: http://profiling.heimdall.local
+      - url: https://profiling.heimdall.local
         description: Profiling Service
     get:
       summary: Get profiling samples for a specific profile.
@@ -302,7 +302,7 @@ paths:
 
   /.well-known/health:
     servers:
-      - url: http://heimdall.management.local
+      - url: https://heimdall.management.local
         description: Management Server
     get:
       description: |
@@ -325,7 +325,7 @@ paths:
 
   /.well-known/jwks:
     servers:
-      - url: http://heimdall.management.local
+      - url: https://heimdall.management.local
         description: Management Server
     get:
       description: |
@@ -387,7 +387,7 @@ paths:
 
   /validate-ruleset:
     servers:
-      - url: http://heimdall.decision.kuberetes.svc
+      - url: https://heimdall.decision.kuberetes.svc
         description: RuleSet Validation Admission Controller
     post:
       summary: Validate RuleSet
@@ -579,7 +579,7 @@ paths:
 
   /{path_and_query_params}:
     servers:
-      - url: http://heimdall.proxy.local
+      - url: https://heimdall.proxy.local
         description: Main Service
     get:
       summary: Main endpoint
