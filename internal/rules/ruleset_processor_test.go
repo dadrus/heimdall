@@ -19,13 +19,13 @@ package rules
 import (
 	"context"
 	"errors"
-	config2 "github.com/dadrus/heimdall/internal/config"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	config2 "github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
