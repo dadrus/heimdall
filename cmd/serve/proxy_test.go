@@ -42,7 +42,6 @@ func TestRunProxyMode(t *testing.T) {
 	t.Setenv("HEIMDALLCFG_MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewProxyCommand()
-	cmd.SilenceUsage = true
 	flags.RegisterGlobalFlags(cmd)
 
 	err = cmd.ParseFlags([]string{"--" + flags.SkipAllSecurityEnforcement})
@@ -58,7 +57,6 @@ func TestRunProxyMode(t *testing.T) {
 
 func TestRunProxyModeFails(t *testing.T) {
 	cmd := NewProxyCommand()
-	cmd.SilenceUsage = true
 	flags.RegisterGlobalFlags(cmd)
 
 	err := cmd.Execute()

@@ -42,7 +42,6 @@ func TestRunDecisionModeForEnvoyGRPCRequests(t *testing.T) {
 	t.Setenv("HEIMDALLCFG_MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewDecisionCommand()
-	cmd.SilenceUsage = true
 	flags.RegisterGlobalFlags(cmd)
 
 	err = cmd.ParseFlags([]string{"--" + flags.SkipAllSecurityEnforcement, "--" + serveDecisionFlagEnvoyGRPC})
@@ -69,7 +68,6 @@ func TestRunDecisionModeForHTTPRequests(t *testing.T) {
 	t.Setenv("HEIMDALLCFG_MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewDecisionCommand()
-	cmd.SilenceUsage = true
 	flags.RegisterGlobalFlags(cmd)
 
 	err = cmd.ParseFlags([]string{"--" + flags.SkipAllSecurityEnforcement})
@@ -96,7 +94,6 @@ func TestRunDecisionModeFails(t *testing.T) {
 	t.Setenv("HEIMDALLCFG_MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewDecisionCommand()
-	cmd.SilenceUsage = true
 	flags.RegisterGlobalFlags(cmd)
 
 	err = cmd.Execute()
