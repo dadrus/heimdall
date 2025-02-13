@@ -73,7 +73,7 @@ metadata: # <1>
   namespace: heimdall
 spec:
   forwardAuth: # <2>
-    address: "http://heimdall.heimdall.svc.cluster.local:4455" # <3>
+    address: "https://heimdall.heimdall.svc.cluster.local:4455" # <3>
     authResponseHeaders: # <4>
       - Authorization
 ----
@@ -125,7 +125,7 @@ services:
     # other config options
     labels:
     # other labels
-    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4455 # <3>
+    - traefik.http.middlewares.heimdall.forwardauth.address=https://heimdall:4455 # <3>
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization # <4>
 
   heimdall:

@@ -258,7 +258,7 @@ mechanisms:
     type: generic
     config:
       endpoint:
-        url: http://foo.bar
+        url: https://foo.bar
         method: GET
         headers:
           bla: bla
