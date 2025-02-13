@@ -23,12 +23,15 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -136,11 +139,19 @@ foo: bar`),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			auth, err := newBasicAuthAuthenticator(nil, tc.id, conf)
+			auth, err := newBasicAuthAuthenticator(appCtx, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -304,13 +315,21 @@ password: baz`),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newBasicAuthAuthenticator(nil, tc.id, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newBasicAuthAuthenticator(appCtx, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -340,13 +359,13 @@ password: bar`))
 	for _, tc := range []struct {
 		uc               string
 		id               string
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
+		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
 			uc: "no required header present",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -372,7 +391,7 @@ password: bar`))
 		{
 			uc: "base64 decoding error",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -398,7 +417,7 @@ password: bar`))
 		{
 			uc: "malformed encoding",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -425,7 +444,7 @@ password: bar`))
 		{
 			uc: "invalid user id",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -452,7 +471,7 @@ password: bar`))
 		{
 			uc: "invalid password",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -479,7 +498,7 @@ password: bar`))
 		{
 			uc: "valid credentials",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -501,11 +520,18 @@ password: bar`))
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			auth, err := newBasicAuthAuthenticator(nil, tc.id, conf)
+			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
-			ctx := mocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.Background())
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			auth, err := newBasicAuthAuthenticator(appCtx, tc.id, conf)
+			require.NoError(t, err)
+
+			ctx := mocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(context.Background())
 			tc.configureContext(t, ctx)
 
 			// WHEN
@@ -515,4 +541,14 @@ password: bar`))
 			tc.assert(t, err, sub)
 		})
 	}
+}
+
+func TestBasicAuthAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := basicAuthAuthenticator{}
+
+	// WHEN & THEN
+	require.False(t, auth.IsInsecure())
 }

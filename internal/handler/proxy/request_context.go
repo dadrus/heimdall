@@ -80,7 +80,7 @@ func newContextFactory(
 }
 
 func (r *requestContext) Finalize(upstream rule.Backend) error {
-	logger := zerolog.Ctx(r.AppContext())
+	logger := zerolog.Ctx(r.Context())
 
 	if err := r.PipelineError(); err != nil {
 		return err

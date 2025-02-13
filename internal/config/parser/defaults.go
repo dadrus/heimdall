@@ -18,5 +18,6 @@ package parser
 
 // nolint: gochecknoglobals
 var defaultOptions = opts{
-	validate: func(_ string) error { return nil },
+	validateSyntax:    func(_ string) error { return nil },
+	validateSemantics: func(_ any) error { return nil },
 }

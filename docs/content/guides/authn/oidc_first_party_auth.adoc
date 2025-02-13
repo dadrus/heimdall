@@ -232,7 +232,7 @@ services:
     image: dadrus/heimdall:dev
     ports:
       - "9090:4455"
-    command: -c /etc/heimdall/config.yaml serve proxy
+    command: serve proxy --c /etc/heimdall/config.yaml --insecure
     volumes:
       - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
       - ./rules:/etc/heimdall/rules:ro
@@ -304,6 +304,8 @@ volumes:
   postgres-db:
 ----
 <1> Here, we configure heimdall to use the previously defined configuration.
++
+NOTE: We're using the `--insecure` flag here to simplify our setup, which disables enforcement of some security settings you can learn about more link:{{< relref "/docs/operations/security.adoc#_defaults" >}}[here].
 <2> This section sets up the main service that we’ll be protecting.
 <3> This section defines the OAuth2-Proxy configuration, which heimdall will use to handle the Authorization Code Grant flow and manage the authentication session with a `SESSION` cookie.
 <4> The client ID and client secret values are placeholders. We will configure these in Keycloak.

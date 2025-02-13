@@ -20,12 +20,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -119,11 +122,19 @@ cookies:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			finalizer, err := newCookieFinalizer(tc.id, conf)
+			finalizer, err := newCookieFinalizer(appCtx, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -203,13 +214,21 @@ cookies:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newCookieFinalizer(tc.id, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newCookieFinalizer(appCtx, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -231,7 +250,7 @@ func TestCookieFinalizerExecute(t *testing.T) {
 		uc               string
 		id               string
 		config           []byte
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
+		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		createSubject    func(t *testing.T) *subject.Subject
 		assert           func(t *testing.T, err error)
 	}{
@@ -265,7 +284,7 @@ cookies:
   x_foo: '{{ .Request.Header "X-Foo" }}'
   x_bar: '{{ .Outputs.foo }}'
 `),
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				reqf := mocks.NewRequestFunctionsMock(t)
@@ -303,19 +322,26 @@ cookies:
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *mocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *mocks.RequestContextMock) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewContextMock(t)
-			mctx.EXPECT().AppContext().Return(context.Background())
+			mctx := mocks.NewRequestContextMock(t)
+			mctx.EXPECT().Context().Return(context.Background())
 
 			sub := createSubject(t)
 
 			configureContext(t, mctx)
 
-			finalizer, err := newCookieFinalizer(tc.id, conf)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			finalizer, err := newCookieFinalizer(appCtx, tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN

@@ -29,8 +29,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -419,11 +421,17 @@ rules:
 			// GIVEN
 			clearBucket(t)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T) { t.Helper() })
 			setup(t)
 
 			// WHEN
-			rs, err := tc.endpoint.FetchRuleSets(context.Background())
+			rs, err := tc.endpoint.FetchRuleSets(context.Background(), appCtx)
 
 			// THEN
 			tc.assert(t, err, rs)

@@ -51,3 +51,7 @@ func (b *Backend) DeepCopyInto(out *Backend) {
 	// error responses
 	json.Unmarshal(jsonStr, out) //nolint:errcheck
 }
+
+func (b *Backend) IsInsecure() bool {
+	return b != nil && b.URLRewriter != nil && b.URLRewriter.Scheme == "http"
+}

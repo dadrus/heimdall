@@ -20,11 +20,14 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -81,8 +84,15 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			auth, err := newAnonymousAuthenticator(nil, tc.id, conf)
+			auth, err := newAnonymousAuthenticator(appCtx, tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -145,13 +155,21 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newAnonymousAuthenticator(nil, tc.id, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newAnonymousAuthenticator(appCtx, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -173,8 +191,8 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	subjectID := "anon"
 	auth := anonymousAuthenticator{Subject: subjectID, id: "anon_auth"}
 
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().AppContext().Return(context.Background())
+	ctx := mocks.NewRequestContextMock(t)
+	ctx.EXPECT().Context().Return(context.Background())
 
 	// WHEN
 	sub, err := auth.Execute(ctx)
@@ -198,4 +216,14 @@ func TestAnonymousAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 
 	// THEN
 	require.False(t, isAllowed)
+}
+
+func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := anonymousAuthenticator{}
+
+	// WHEN & THEN
+	require.True(t, auth.IsInsecure())
 }

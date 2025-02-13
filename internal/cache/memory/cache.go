@@ -23,9 +23,8 @@ import (
 
 	"github.com/jellydator/ttlcache/v3"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 var ErrNoCacheEntry = errors.New("no cache entry")
@@ -35,7 +34,7 @@ func init() { // nolint: gochecknoinits
 	cache.Register("in-memory", cache.FactoryFunc(NewCache))
 }
 
-func NewCache(_ map[string]any, _ watcher.Watcher, _ certificate.Observer) (cache.Cache, error) {
+func NewCache(_ app.Context, _ map[string]any) (cache.Cache, error) {
 	return &Cache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}, nil
 }
 

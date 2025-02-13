@@ -22,25 +22,28 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestCreateRedirectErrorHandler(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		config []byte
-		assert func(t *testing.T, err error, redEH *redirectErrorHandler)
+	for uc, tc := range map[string]struct {
+		enforceTLS bool
+		config     []byte
+		assert     func(t *testing.T, err error, redEH *redirectErrorHandler)
 	}{
-		{
-			uc:     "configuration without required 'to' parameter",
+		"configuration without required 'to' parameter": {
 			config: []byte(`code: 302`),
 			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
 				t.Helper()
@@ -50,8 +53,7 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 				assert.Contains(t, err.Error(), "'to' is a required field")
 			},
 		},
-		{
-			uc: "with unexpected fields in configuration",
+		"with unexpected fields in configuration": {
 			config: []byte(`
 to: http://foo.bar
 if: true == false
@@ -64,25 +66,35 @@ if: true == false
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc:     "with minimal valid configuration",
-			config: []byte(`to: http://foo.bar`),
+		"with minimal valid configuration, enforced and used TLS": {
+			enforceTLS: true,
+			config:     []byte(`to: https://foo.bar`),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
-				assert.Equal(t, "with minimal valid configuration", redEH.ID())
+				assert.Equal(t, "with minimal valid configuration, enforced and used TLS", redEH.ID())
 
 				toURL, err := redEH.to.Render(nil)
 				require.NoError(t, err)
 
-				assert.Equal(t, "http://foo.bar", toURL)
+				assert.Equal(t, "https://foo.bar", toURL)
 				assert.Equal(t, http.StatusFound, redEH.code)
 			},
 		},
-		{
-			uc: "with full valid configuration",
+		"with minimal valid configuration, enforced but not used TLS": {
+			enforceTLS: true,
+			config:     []byte(`to: http://foo.bar`),
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.Contains(t, err.Error(), "'to' scheme must be https")
+			},
+		},
+		"with full valid configuration": {
 			config: []byte(`
 to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 301
@@ -94,7 +106,7 @@ code: 301
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with full valid configuration", redEH.ID())
 
-				ctx := mocks.NewContextMock(t)
+				ctx := mocks.NewRequestContextMock(t)
 				ctx.EXPECT().Request().
 					Return(&heimdall.Request{
 						URL: &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
@@ -110,12 +122,24 @@ code: 301
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			errorHandler, err := newRedirectErrorHandler(tc.uc, conf)
+			errorHandler, err := newRedirectErrorHandler(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -126,14 +150,12 @@ code: 301
 func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler)
 	}{
-		{
-			uc:              "no new configuration provided",
+		"no new configuration provided": {
 			prototypeConfig: []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
 				t.Helper()
@@ -142,8 +164,7 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		{
-			uc:              "empty configuration provided",
+		"empty configuration provided": {
 			prototypeConfig: []byte(`to: http://foo.bar`),
 			config:          []byte(``),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
@@ -153,8 +174,7 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		{
-			uc:              "unsupported configuration provided",
+		"unsupported configuration provided": {
 			prototypeConfig: []byte(`to: http://foo.bar`),
 			config:          []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, _ *redirectErrorHandler, _ *redirectErrorHandler) {
@@ -166,14 +186,24 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newRedirectErrorHandler(tc.uc, pc)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newRedirectErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -198,18 +228,16 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 func TestRedirectErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc               string
+	for uc, tc := range map[string]struct {
 		config           []byte
 		error            error
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
+		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
-		{
-			uc:     "with template rendering error",
+		"with template rendering error": {
 			config: []byte(`to: http://foo.bar={{ len .foobar }}`),
 			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -222,11 +250,10 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to render")
 			},
 		},
-		{
-			uc:     "without return to url templating",
+		"without return to url templating": {
 			config: []byte(`to: http://foo.bar`),
 			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -246,14 +273,13 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "with template and code set",
+		"with template and code set": {
 			config: []byte(`
 to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 300
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				requestURL, err := url.Parse("http://test.org")
@@ -283,17 +309,26 @@ code: 300
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewContextMock(t)
-			mctx.EXPECT().AppContext().Return(context.Background())
+			mctx := mocks.NewRequestContextMock(t)
+			mctx.EXPECT().Context().Return(context.Background())
 
 			tc.configureContext(t, mctx)
 
-			errorHandler, err := newRedirectErrorHandler("foo", conf)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			errorHandler, err := newRedirectErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
 
 			// WHEN

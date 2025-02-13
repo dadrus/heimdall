@@ -19,6 +19,7 @@ package errorhandlers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -28,12 +29,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerWWWAuthenticate {
 				return false, nil, nil
 			}
 
-			eh, err := newWWWAuthenticateErrorHandler(id, conf)
+			eh, err := newWWWAuthenticateErrorHandler(app, id, conf)
 
 			return true, eh, err
 		})
@@ -41,29 +42,36 @@ func init() {
 
 type wwwAuthenticateErrorHandler struct {
 	id    string
+	app   app.Context
 	realm string
 }
 
-func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
+func newWWWAuthenticateErrorHandler(
+	app app.Context, id string, rawConfig map[string]any,
+) (*wwwAuthenticateErrorHandler, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating www-authenticate error handler")
+
 	type Config struct {
 		Realm string `mapstructure:"realm"`
 	}
 
 	var conf Config
-	if err := decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app.Validator(), ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &wwwAuthenticateErrorHandler{
 		id:    id,
+		app:   app,
 		realm: x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
 	}, nil
 }
 
 func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }
 
-func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ error) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using www-authenticate error handler")
 
 	ctx.AddHeaderForUpstream("WWW-Authenticate", "Basic realm="+eh.realm)
@@ -86,12 +94,13 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 		err  error
 	)
 
-	if err = decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+	if err = decodeConfig(eh.app.Validator(), ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &wwwAuthenticateErrorHandler{
 		id:    eh.id,
+		app:   eh.app,
 		realm: conf.Realm,
 	}, nil
 }

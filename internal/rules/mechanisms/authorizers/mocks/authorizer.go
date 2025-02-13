@@ -66,11 +66,11 @@ func (_c *AuthorizerMock_ContinueOnError_Call) RunAndReturn(run func() bool) *Au
 }
 
 // Execute provides a mock function with given fields: _a0, _a1
-func (_m *AuthorizerMock) Execute(_a0 heimdall.Context, _a1 *subject.Subject) error {
+func (_m *AuthorizerMock) Execute(_a0 heimdall.RequestContext, _a1 *subject.Subject) error {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context, *subject.Subject) error); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext, *subject.Subject) error); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
@@ -85,15 +85,15 @@ type AuthorizerMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - _a0 heimdall.Context
+//   - _a0 heimdall.RequestContext
 //   - _a1 *subject.Subject
 func (_e *AuthorizerMock_Expecter) Execute(_a0 interface{}, _a1 interface{}) *AuthorizerMock_Execute_Call {
 	return &AuthorizerMock_Execute_Call{Call: _e.mock.On("Execute", _a0, _a1)}
 }
 
-func (_c *AuthorizerMock_Execute_Call) Run(run func(_a0 heimdall.Context, _a1 *subject.Subject)) *AuthorizerMock_Execute_Call {
+func (_c *AuthorizerMock_Execute_Call) Run(run func(_a0 heimdall.RequestContext, _a1 *subject.Subject)) *AuthorizerMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context), args[1].(*subject.Subject))
+		run(args[0].(heimdall.RequestContext), args[1].(*subject.Subject))
 	})
 	return _c
 }
@@ -103,7 +103,7 @@ func (_c *AuthorizerMock_Execute_Call) Return(_a0 error) *AuthorizerMock_Execute
 	return _c
 }
 
-func (_c *AuthorizerMock_Execute_Call) RunAndReturn(run func(heimdall.Context, *subject.Subject) error) *AuthorizerMock_Execute_Call {
+func (_c *AuthorizerMock_Execute_Call) RunAndReturn(run func(heimdall.RequestContext, *subject.Subject) error) *AuthorizerMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1,3 +1,45 @@
+serve:
+  port: 4468
+  tls:
+    key_store:
+      path: /path/to/file.pem
+    min_version: TLS1.2
+    cipher_suites:
+      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+  trusted_proxies:
+    - 10.10.10.0/0
+  respond:
+    verbose: true
+    with:
+      accepted:
+        code: 200
+      authorization_error:
+        code: 404
+      authentication_error:
+        code: 404
+
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+log:
+  level: debug
+  format: text
+
+metrics:
+  enabled: false
+
+profiling:
+  enabled: true
+  host: 0.0.0.0
+
+tracing:
+  span_processor: simple
+
 mechanisms:
   authenticators:
     - id: anonymous_authenticator
@@ -8,7 +50,7 @@ mechanisms:
       type: generic
       config:
         identity_info_endpoint:
-          url: http://127.0.0.1:4433/sessions/whoami
+          url: https://127.0.0.1:4433/sessions/whoami
           retry:
             max_delay: 300ms
             give_up_after: 2s
@@ -30,7 +72,7 @@ mechanisms:
       type: oauth2_introspection
       config:
         introspection_endpoint:
-          url: http://hydra:4445/oauth2/introspect
+          url: https://hydra:4445/oauth2/introspect
           retry:
             max_delay: 300ms
             give_up_after: 2s
@@ -44,7 +86,7 @@ mechanisms:
             scheme: Bearer
         assertions:
           issuers:
-            - http://127.0.0.1:4444/
+            - https://127.0.0.1:4444/
           scopes:
             - foo
             - bar
@@ -58,7 +100,7 @@ mechanisms:
       type: jwt
       config:
         jwks_endpoint:
-          url: http://foo/token
+          url: https://foo/token
           method: GET
           http_cache:
             enabled: true
@@ -82,7 +124,7 @@ mechanisms:
     - id: jwt_authenticator2
       type: jwt
       config:
-        jwks_endpoint: http://bar/token
+        jwks_endpoint: https://bar/token
         assertions:
           audience:
             - bla
@@ -109,7 +151,7 @@ mechanisms:
       type: remote
       config:
         endpoint:
-          url: http://keto
+          url: https://keto
           method: POST
           headers:
             foo-bar: "{{ .Subject.ID }}"
@@ -128,17 +170,17 @@ mechanisms:
       type: generic
       config:
         endpoint:
-          url: http://foo.bar
+          url: https://foo.bar
           method: GET
           headers:
             bla: bla
-        payload: http://foo
+        payload: foo
         continue_pipeline_on_error: true
     - id: profile_data_contextualizer
       type: generic
       config:
         endpoint:
-          url: http://profile
+          url: https://profile
           headers:
             foo: bar
   finalizers:
@@ -169,12 +211,12 @@ mechanisms:
     - id: authenticate_with_kratos
       type: redirect
       config:
-        to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+        to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
 default_rule:
   backtracking_enabled: false
   execute:
-    - authenticator: anonymous_authenticator
+    - authenticator: unauthorized_authenticator
     - finalizer: jwt
   on_error:
     - error_handler: authenticate_with_kratos
@@ -185,16 +227,16 @@ default_rule:
 
 providers:
   file_system:
-    src: test_rules.yaml
+    src: test_data/ruleset-valid.yaml
     watch: true
 
   http_endpoint:
     watch_interval: 5m
     endpoints:
-      - url: http://foo.bar/rules.yaml
+      - url: https://foo.bar/rules.yaml
         http_cache:
           enabled: true
-      - url: http://bar.foo/rules.yaml
+      - url: https://bar.foo/rules.yaml
         headers:
           bla: bla
         retry:

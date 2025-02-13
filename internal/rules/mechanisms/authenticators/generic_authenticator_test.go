@@ -26,12 +26,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -39,6 +42,7 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -46,14 +50,12 @@ import (
 func TestGenericAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc          string
-		id          string
+	for uc, tc := range map[string]struct {
+		enforceTLS  bool
 		config      []byte
 		assertError func(t *testing.T, err error, auth *genericAuthenticator)
 	}{
-		{
-			uc: "config with undefined fields",
+		"config with undefined fields": {
 			config: []byte(`
 foo: bar
 identity_info_endpoint:
@@ -68,8 +70,7 @@ subject:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "missing url config",
+		"missing url config": {
 			config: []byte(`
 authentication_data_source:
   - header: foo-header
@@ -83,8 +84,7 @@ subject:
 				assert.Contains(t, err.Error(), "'identity_info_endpoint' is a required field")
 			},
 		},
-		{
-			uc: "bad url config",
+		"bad url config": {
 			config: []byte(`
 identity_info_endpoint:
   url: test.com
@@ -100,8 +100,7 @@ subject:
 				assert.Contains(t, err.Error(), "'identity_info_endpoint'.'url' must be a valid URL")
 			},
 		},
-		{
-			uc: "missing subject config",
+		"missing subject config": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -115,8 +114,7 @@ authentication_data_source:
 				assert.Contains(t, err.Error(), "'subject' is a required field")
 			},
 		},
-		{
-			uc: "missing authentication data source config",
+		"missing authentication data source config": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -130,8 +128,7 @@ subject:
 				assert.Contains(t, err.Error(), "'authentication_data_source' is a required field")
 			},
 		},
-		{
-			uc: "missing subject id config",
+		"missing subject id config": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -147,9 +144,7 @@ authentication_data_source:
 				assert.Contains(t, err.Error(), "'subject'.'id' is a required field")
 			},
 		},
-		{
-			uc: "with valid configuration but disabled cache",
-			id: "auth1",
+		"with valid configuration but disabled cache": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -182,12 +177,11 @@ subject:
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
-		{
-			uc: "with valid configuration and enabled cache",
-			id: "auth1",
+		"with valid configuration and enabled cache and TLS enforcement": {
+			enforceTLS: true,
 			config: []byte(`
 identity_info_endpoint:
-  url: http://test.com
+  url: https://test.com
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
@@ -200,7 +194,7 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "https://test.com", auth.e.URL)
 				assert.Equal(t, http.MethodPost, auth.e.Method)
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
@@ -216,9 +210,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
-		{
-			uc: "with valid configuration enabling fallback on errors and header forwarding",
-			id: "auth1",
+		"with valid configuration enabling fallback on errors and header forwarding": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -253,9 +245,7 @@ allow_fallback_on_error: true`),
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
-		{
-			uc: "with session lifespan config and forward header",
-			id: "auth1",
+		"with session lifespan config and forward header": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -302,13 +292,44 @@ session_lifespan:
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
+		"with disabled, but enforced TLS of identity info endpoint url": {
+			enforceTLS: true,
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+authentication_data_source:
+  - header: foo-header
+payload: |
+  { "foo": {{ quote .AuthenticationData }} }
+subject:
+  id: some_template`),
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'identity_info_endpoint'.'url' scheme must be https")
+			},
+		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newGenericAuthenticator(nil, tc.id, conf)
+			auth, err := newGenericAuthenticator(appCtx, "auth1", conf)
 
 			// THEN
 			tc.assertError(t, err, auth)
@@ -319,16 +340,14 @@ session_lifespan:
 func TestGenericAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
+	for uc, tc := range map[string]struct {
 		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *genericAuthenticator,
 			configured *genericAuthenticator)
 	}{
-		{
-			uc: "prototype config without cache configured and empty target config",
+		"prototype config without cache configured and empty target config": {
 			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
@@ -356,8 +375,7 @@ allow_fallback_on_error: true`),
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
-		{
-			uc: "with unsupported fields in target config",
+		"with unsupported fields in target config": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -377,8 +395,7 @@ subject:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "prototype config without cache, config with cache",
+		"prototype config without cache, config with cache": {
 			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
@@ -416,8 +433,7 @@ subject:
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
-		{
-			uc: "prototype config with disabled fallback on error, config with enabled fallback on error",
+		"prototype config with disabled fallback on error, config with enabled fallback on error": {
 			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
@@ -448,8 +464,7 @@ subject:
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
-		{
-			uc: "prototype config with cache ttl, config with cache tll",
+		"prototype config with cache ttl, config with cache tll": {
 			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
@@ -487,8 +502,7 @@ cache_ttl: 15s`),
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
-		{
-			uc: "prototype with session lifespan config and empty target config",
+		"prototype with session lifespan config and empty target config": {
 			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
@@ -536,8 +550,7 @@ session_lifespan:
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
-		{
-			uc: "reconfiguration of identity_info_endpoint not possible",
+		"reconfiguration of identity_info_endpoint not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -560,8 +573,7 @@ identity_info_endpoint:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "reconfiguration of authentication_data_source not possible",
+		"reconfiguration of authentication_data_source not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -584,8 +596,7 @@ authentication_data_source:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "reconfiguration of subject not possible",
+		"reconfiguration of subject not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -608,8 +619,7 @@ subject:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "reconfiguration of session_lifespan not possible",
+		"reconfiguration of session_lifespan not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -632,8 +642,7 @@ session_lifespan:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "reconfiguration of payload not possible",
+		"reconfiguration of payload not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -656,8 +665,7 @@ payload: |
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "reconfiguration of header to be forwarded not possible",
+		"reconfiguration of header to be forwarded not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -680,8 +688,7 @@ forward_headers:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "reconfiguration of cookies to be forwarded not possible",
+		"reconfiguration of cookies to be forwarded not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -705,14 +712,24 @@ forward_cookies:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newGenericAuthenticator(nil, tc.id, pc)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newGenericAuthenticator(appCtx, tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -771,22 +788,20 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		authenticator  *genericAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *heimdallmocks.RequestContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *genericAuthenticator)
 		assert func(t *testing.T, err error, sub *subject.Subject)
 	}{
-		{
-			uc:            "with failing auth data source",
+		"with failing auth data source": {
 			authenticator: &genericAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -809,8 +824,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with error while rendering payload",
+		"with error while rendering payload": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: srv.URL},
@@ -822,7 +836,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				}(),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -845,14 +859,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with error while rendering query parameter",
+		"with error while rendering query parameter": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -875,14 +888,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with endpoint communication error (dns)",
+		"with endpoint communication error (dns)": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -905,14 +917,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with unexpected response code from server",
+		"with unexpected response code from server": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: srv.URL},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -940,8 +951,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with error while extracting subject information",
+		"with error while extracting subject information": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e: endpoint.Endpoint{
@@ -955,7 +965,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf: &SubjectInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -993,8 +1003,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "successful execution without cache usage, forwarding auth data in payload, header & query",
+		"successful execution without cache usage, forwarding auth data in payload, header & query": {
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
 					URL:    srv.URL + "?foo={{ .AuthenticationData }}",
@@ -1013,7 +1022,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				}(),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1055,8 +1064,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Len(t, sub.Attributes, 1)
 			},
 		},
-		{
-			uc: "successful execution with positive cache hit",
+		"successful execution with positive cache hit": {
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -1070,7 +1078,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1092,8 +1100,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Len(t, sub.Attributes, 1)
 			},
 		},
-		{
-			uc: "successful execution with negative cache hit and header forwarding",
+		"successful execution with negative cache hit and header forwarding": {
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -1107,7 +1114,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ttl:        5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *genericAuthenticator,
@@ -1150,8 +1157,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Len(t, sub.Attributes, 1)
 			},
 		},
-		{
-			uc: "execution with not active session and cookie forwarding",
+		"execution with not active session and cookie forwarding": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e: endpoint.Endpoint{
@@ -1167,7 +1173,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1214,8 +1220,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "execution with error while parsing session lifespan",
+		"execution with error while parsing session lifespan": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e: endpoint.Endpoint{
@@ -1230,7 +1235,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1269,8 +1274,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "execution with session lifespan ttl limiting the configured ttl",
+		"execution with session lifespan ttl limiting the configured ttl": {
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -1290,7 +1294,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1336,7 +1340,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			endpointCalled = false
 			responseHeaders = nil
@@ -1352,7 +1356,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.ContextMock,
+					_ *heimdallmocks.RequestContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *genericAuthenticator,
@@ -1364,8 +1368,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			tc.authenticator.ads = ads
 
 			cch := mocks.NewCacheMock(t)
-			ctx := heimdallmocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
+			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
@@ -1382,14 +1386,12 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
+	for uc, tc := range map[string]struct {
 		authenticator   *genericAuthenticator
 		sessionLifespan *SessionLifespan
 		assert          func(t *testing.T, ttl time.Duration)
 	}{
-		{
-			uc:            "cache disabled",
+		"cache disabled": {
 			authenticator: &genericAuthenticator{},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
@@ -1397,8 +1399,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, time.Duration(0), ttl)
 			},
 		},
-		{
-			uc:            "cache enabled, session lifespan not available",
+		"cache enabled, session lifespan not available": {
 			authenticator: &genericAuthenticator{ttl: 5 * time.Minute},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
@@ -1406,8 +1407,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, 5*time.Minute, ttl)
 			},
 		},
-		{
-			uc:              "cache enabled, session lifespan available, but not_after is not available",
+		"cache enabled, session lifespan available, but not_after is not available": {
 			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
 			sessionLifespan: &SessionLifespan{},
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1416,9 +1416,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, 5*time.Minute, ttl)
 			},
 		},
-		{
-			uc: "cache enabled, session lifespan available with not_after set to a future date exceeding configured" +
-				" ttl",
+		"cache enabled, session lifespan available with not_after set to a future date exceeding configured ttl": {
 			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
 			sessionLifespan: &SessionLifespan{exp: time.Now().Add(24 * time.Hour)},
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1427,9 +1425,8 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, 5*time.Minute, ttl)
 			},
 		},
-		{
-			uc: "cache enabled, session lifespan available with not_after set to a date so that the configured ttl " +
-				"would exceed the lifespan",
+		"cache enabled, session lifespan available with not_after set to a date so that the configured ttl " +
+			"would exceed the lifespan": {
 			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
 			sessionLifespan: &SessionLifespan{exp: time.Now().Add(30 * time.Second)},
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1438,8 +1435,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, 20*time.Second, ttl) // leeway of 10 sec considered
 			},
 		},
-		{
-			uc:              "cache enabled, session lifespan available with not_after set to a date which disables ttl",
+		"cache enabled, session lifespan available with not_after set to a date which disables ttl": {
 			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
 			sessionLifespan: &SessionLifespan{exp: time.Now().Add(5 * time.Second)},
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1449,7 +1445,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			ttl := tc.authenticator.getCacheTTL(tc.sessionLifespan)
 
@@ -1457,4 +1453,14 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 			tc.assert(t, ttl)
 		})
 	}
+}
+
+func TestGenericAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := genericAuthenticator{}
+
+	// WHEN & THEN
+	require.False(t, auth.IsInsecure())
 }

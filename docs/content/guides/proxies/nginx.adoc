@@ -75,7 +75,7 @@ location = /_auth {  <4>
   internal;
   access_log               off;
   proxy_method             $request_method; <5>
-  proxy_pass               http://heimdall:4455$request_uri; <6>
+  proxy_pass               https://heimdall:4455$request_uri; <6>
   proxy_pass_request_body  off; <7>
   proxy_set_header         Content-Length   "";
   proxy_set_header         Host $http_host; <8>
@@ -106,7 +106,7 @@ NOTE: Proper configuration of `trusted_proxies` is mandatory if using this optio
 
 location = /_auth {
   internal;
-  proxy_pass               http://heimdall:4455;  <1>
+  proxy_pass               https://heimdall:4455;  <1>
   proxy_pass_request_body  off;
   proxy_set_header         Content-Length         "";
   proxy_set_header         X-Forwarded-Method     $request_method;  <2>
@@ -134,7 +134,7 @@ Global configuration can be achieved by setting the following properties in cont
 
 [source, yaml]
 ----
-global-auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<port>" # <1>
+global-auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<port>" # <1>
 global-auth-response-headers: Authorization # <2>
 global-auth-snippet: | # <3>
   proxy_set_header    X-Forwarded-Method   $request_method;
@@ -173,7 +173,7 @@ server-snippet: |
     internal;
     access_log               off;
     proxy_method             $request_method;
-    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<port>$request_uri;
+    proxy_pass               https://<heimdall service name>.<namespace>.svc.cluster.local:<port>$request_uri;
     proxy_pass_request_body  off;
     proxy_set_header         Content-Length   "";
     proxy_set_header         Host $http_host;
@@ -190,7 +190,7 @@ One option to integrate heimdall with the NGINX Ingress Controller on the `Ingre
 
 [source, yaml]
 ----
-nginx.ingress.kubernetes.io/auth-url: "http://<heimdall service name>.<namespace>.svc.cluster.local:<port>"
+nginx.ingress.kubernetes.io/auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<port>"
 nginx.ingress.kubernetes.io/auth-response-headers: Authorization
 nginx.ingress.kubernetes.io/auth-snippet: |
   proxy_set_header    X-Forwarded-Method   $request_method;
@@ -220,7 +220,7 @@ nginx.ingress.kubernetes.io/server-snippet: |
     internal;
     access_log               off;
     proxy_method             $request_method;
-    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<port>$request_uri;
+    proxy_pass               https://<heimdall service name>.<namespace>.svc.cluster.local:<port>$request_uri;
     proxy_pass_request_body  off;
     proxy_set_header         Content-Length   "";
     proxy_set_header         Host $http_host;

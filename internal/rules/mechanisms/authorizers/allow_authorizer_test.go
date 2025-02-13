@@ -20,15 +20,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 	// GIVEN
-	prototype := newAllowAuthorizer("baz")
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Logger().Return(log.Logger)
+
+	prototype := newAllowAuthorizer(appCtx, "baz")
 
 	// WHEN
 	conf1, err1 := prototype.WithConfig(nil)
@@ -49,10 +54,13 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 
 func TestAllowAuthorizerExecute(t *testing.T) {
 	// GIVEN
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().AppContext().Return(context.Background())
+	ctx := mocks.NewRequestContextMock(t)
+	ctx.EXPECT().Context().Return(context.Background())
 
-	auth := newAllowAuthorizer("baz")
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Logger().Return(log.Logger)
+
+	auth := newAllowAuthorizer(appCtx, "baz")
 
 	// WHEN
 	err := auth.Execute(ctx, nil)

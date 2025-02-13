@@ -22,10 +22,9 @@ import (
 	_ "net/http/pprof" //nolint:gosec
 	"time"
 
-	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
@@ -48,7 +47,10 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) lifecycleManager {
+func newLifecycleManager(app app.Context) lifecycleManager {
+	conf := app.Config()
+	logger := app.Logger()
+
 	cfg := conf.Profiling
 	if !cfg.Enabled {
 		logger.Info().Msg("Profiling service disabled")

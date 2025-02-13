@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,29 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package testsupport
+package serve
 
-import "errors"
+import (
+	"testing"
 
-var (
-	ErrTestPurpose  = errors.New("error raised in a test")
-	ErrTestPurpose2 = errors.New("another error raised in a test")
+	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/cmd/flags"
+	"github.com/dadrus/heimdall/internal/config"
 )
+
+func TestCreateApp(t *testing.T) {
+	t.Parallel()
+
+	cmd := &cobra.Command{}
+	flags.RegisterGlobalFlags(cmd)
+
+	err := cmd.ParseFlags([]string{"--" + flags.SkipAllSecurityEnforcement})
+	require.NoError(t, err)
+
+	app, err := createApp(cmd, fx.Supply(config.DecisionMode))
+	require.NoError(t, err)
+	require.NotNil(t, app)
+}

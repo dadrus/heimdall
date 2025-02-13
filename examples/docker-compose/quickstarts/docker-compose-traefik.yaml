@@ -18,7 +18,7 @@ services:
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization
 
   heimdall:
-    command: -c /etc/heimdall/config.yaml serve decision
+    command: serve decision -c /etc/heimdall/config.yaml --insecure
 
   upstream:
     labels:

@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"errors"
 	"net/url"
 	"testing"
 
@@ -36,17 +37,17 @@ import (
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestRuleFactoryNew(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc             string
-		config         *config.Configuration
-		configureMocks func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
-		assert         func(t *testing.T, err error, ruleFactory *ruleFactory)
+		uc                       string
+		config                   *config.Configuration
+		enforceSecureDefaultRule bool
+		configureMocks           func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
+		assert                   func(t *testing.T, err error, ruleFactory *ruleFactory)
 	}{
 		{
 			uc:     "new factory without default rule",
@@ -151,13 +152,14 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		{
@@ -193,13 +195,14 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthorizer(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateAuthorizer(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		{
@@ -236,13 +239,13 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "foo", mock.Anything).
-					Return(nil, testsupport.ErrTestPurpose)
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		{
@@ -255,13 +258,14 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateFinalizer(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateFinalizer(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		{
@@ -274,13 +278,14 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateErrorHandler(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateErrorHandler(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		{
@@ -299,7 +304,8 @@ func TestRuleFactoryNew(t *testing.T) {
 			},
 		},
 		{
-			uc: "new factory with default rule, configured with all required elements",
+			uc:                       "new factory with insecure default rule, but enforced security settings",
+			enforceSecureDefaultRule: true,
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -310,7 +316,34 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
+				am := mocks2.NewAuthenticatorMock(t)
+				am.EXPECT().IsInsecure().Return(true)
+
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(am, nil)
+			},
+			assert: func(t *testing.T, err error, _ *ruleFactory) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "insecure default rule")
+			},
+		},
+		{
+			uc: "new factory with not security enforced default rule, configured with all required elements",
+			config: &config.Configuration{
+				Default: &config.DefaultRule{
+					Execute: []config.MechanismConfig{
+						{"authenticator": "bar"},
+					},
+				},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+				t.Helper()
+
+				auth := mocks2.NewAuthenticatorMock(t)
+				auth.EXPECT().IsInsecure().Return(true)
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(auth, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -350,7 +383,9 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
+				auth := mocks2.NewAuthenticatorMock(t)
+				auth.EXPECT().IsInsecure().Return(false)
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(auth, nil)
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateAuthorizer(mock.Anything, "zab", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "foo", mock.Anything).Return(nil, nil)
@@ -387,7 +422,13 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks(t, handlerFactory)
 
 			// WHEN
-			factory, err := NewRuleFactory(handlerFactory, tc.config, config.DecisionMode, log.Logger)
+			factory, err := NewRuleFactory(
+				handlerFactory,
+				tc.config,
+				config.DecisionMode,
+				log.Logger,
+				config.SecureDefaultRule(tc.enforceSecureDefaultRule),
+			)
 
 			// THEN
 			var (
@@ -523,13 +564,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				assert.ErrorContains(t, err, "test error")
 			},
 		},
 		{
@@ -542,13 +584,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateErrorHandler("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateErrorHandler("test", "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				assert.ErrorContains(t, err, "test error")
 			},
 		},
 		{

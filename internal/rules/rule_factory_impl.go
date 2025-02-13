@@ -36,10 +36,17 @@ func NewRuleFactory(
 	conf *config.Configuration,
 	mode config.OperationMode,
 	logger zerolog.Logger,
+	sdr config.SecureDefaultRule,
 ) (rule.Factory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
-	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger, mode: mode}
+	rf := &ruleFactory{
+		hf:                hf,
+		hasDefaultRule:    false,
+		secureDefaultRule: bool(sdr),
+		logger:            logger,
+		mode:              mode,
+	}
 
 	if err := rf.initWithDefaultRule(conf.Default, logger); err != nil {
 		logger.Error().Err(err).Msg("Loading default rule failed")
@@ -55,6 +62,7 @@ type ruleFactory struct {
 	logger              zerolog.Logger
 	defaultRule         *ruleImpl
 	hasDefaultRule      bool
+	secureDefaultRule   bool
 	mode                config.OperationMode
 	defaultBacktracking bool
 }
@@ -274,7 +282,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return nil
 	}
 
-	logger.Debug().Msg("Loading default rule")
+	logger.Info().Msg("Loading default rule")
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(
 		config2.CurrentRuleSetVersion,
@@ -294,6 +302,14 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	if len(authenticators) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
+	}
+
+	if authenticators[0].IsInsecure() {
+		if f.secureDefaultRule {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration, "insecure default rule configured")
+		}
+
+		logger.Warn().Msg("Insecure default rule configured")
 	}
 
 	f.defaultRule = &ruleImpl{

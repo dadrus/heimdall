@@ -24,6 +24,7 @@ import (
 //go:generate mockery --name subjectCreator --structname SubjectCreatorMock
 
 type subjectCreator interface {
-	Execute(ctx heimdall.Context) (*subject.Subject, error)
+	Execute(ctx heimdall.RequestContext) (*subject.Subject, error)
 	IsFallbackOnErrorAllowed() bool
+	IsInsecure() bool
 }

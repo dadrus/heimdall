@@ -19,14 +19,12 @@ package grpcv3
 import (
 	"context"
 
-	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 var Module = fx.Invoke( // nolint: gochecknoglobals
@@ -37,13 +35,9 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(
-	conf *config.Configuration,
-	logger zerolog.Logger,
-	exec rule.Executor,
-	cch cache.Cache,
-	cw watcher.Watcher,
-) *fxlcm.LifecycleManager {
+func newLifecycleManager(app app.Context, exec rule.Executor, cch cache.Cache) *fxlcm.LifecycleManager {
+	conf := app.Config()
+	logger := app.Logger()
 	cfg := conf.Serve
 
 	return &fxlcm.LifecycleManager{
@@ -54,6 +48,6 @@ func newLifecycleManager(
 		},
 		Logger:      logger,
 		TLSConf:     cfg.TLS,
-		FileWatcher: cw,
+		FileWatcher: app.Watcher(),
 	}
 }

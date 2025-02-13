@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,28 +26,33 @@ import (
 	entranslations "github.com/go-playground/validator/v10/translations/en"
 )
 
-var (
-	validate  *validator.Validate //nolint:gochecknoglobals
-	translate ut.Translator       //nolint:gochecknoglobals
-)
+type Validator interface {
+	ValidateStruct(s any) error
+}
 
-//nolint:gochecknoinits
-func init() {
+type validatorImpl struct {
+	v *validator.Validate
+	t ut.Translator
+}
+
+func (v *validatorImpl) ValidateStruct(s any) error { return wrapError(v.v.Struct(s), v.t) }
+
+func NewValidator(opts ...Option) (Validator, error) {
 	enLoc := en.New()
 	uni := ut.New(enLoc, enLoc)
-	translate, _ = uni.GetTranslator("en")
-	validate = validator.New(validator.WithRequiredStructEnabled())
+	translate, _ := uni.GetTranslator("en")
+	validate := validator.New(validator.WithRequiredStructEnabled())
 
 	if err := entranslations.RegisterDefaultTranslations(validate, translate); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if err := registerTranslations(validate, translate); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	getTagValue := func(tag reflect.StructTag) string {
-		for _, tagName := range []string{"mapstructure", "json", "yaml"} {
+		for _, tagName := range []string{"mapstructure", "json", "yaml", "koanf"} {
 			val := tag.Get(tagName)
 			if len(val) != 0 {
 				return val
@@ -58,8 +63,22 @@ func init() {
 	}
 
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		return "'" + strings.SplitN(getTagValue(fld.Tag), ",", 2)[0] + "'" // nolint: mnd
-	})
-}
+		name := getTagValue(fld.Tag)
+		if len(name) == 0 {
+			name = fld.Name
+		}
 
-func ValidateStruct(s any) error { return wrapError(validate.Struct(s), translate) }
+		return "'" + strings.SplitN(name, ",", 2)[0] + "'" // nolint: mnd
+	})
+
+	for _, opt := range opts {
+		if err := opt.apply(validate, translate); err != nil {
+			return nil, err
+		}
+	}
+
+	return &validatorImpl{
+		v: validate,
+		t: translate,
+	}, nil
+}

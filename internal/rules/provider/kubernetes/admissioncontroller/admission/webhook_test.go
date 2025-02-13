@@ -337,7 +337,6 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			defer resp.Body.Close()
 
 			tc.assert(t, resp)
-			handler.AssertExpectations(t)
 		})
 	}
 }

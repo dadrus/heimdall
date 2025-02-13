@@ -472,7 +472,6 @@ func TestControllerLifecycle(t *testing.T) {
 			}
 
 			tc.assert(t, err, resp)
-			rf.AssertExpectations(t)
 		})
 	}
 }

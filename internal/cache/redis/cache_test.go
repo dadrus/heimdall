@@ -25,18 +25,32 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestCacheUsage(t *testing.T) {
 	t.Parallel()
 
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(config.EnforcementSettings{}),
+	)
+	require.NoError(t, err)
+
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Validator().Return(validator)
+
 	db := miniredis.RunT(t)
-	cch, err := NewStandaloneCache(map[string]any{
-		"address":      db.Addr(),
-		"client_cache": map[string]any{"disabled": true},
-		"tls":          map[string]any{"disabled": true},
-	}, nil, nil)
+	cch, err := NewStandaloneCache(
+		appCtx,
+		map[string]any{
+			"address":      db.Addr(),
+			"client_cache": map[string]any{"disabled": true},
+			"tls":          map[string]any{"disabled": true},
+		},
+	)
 	require.NoError(t, err)
 
 	cch.Start(context.TODO())

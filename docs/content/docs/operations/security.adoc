@@ -12,6 +12,28 @@ description: To operate heimdall in a secure way, you should configure heimdall 
 
 :toc:
 
+== Defaults
+
+The following configurations and behaviors are enforced by default:
+
+* All inbound communication must use TLS. TLS configuration is required for all services and endpoints exposed by heimdall. This enforcement can be disabled (not recommended) by starting Heimdall with the `--insecure-skip-ingress-tls-enforcement` flag.
+
+* All outbound communication must use TLS. TLS configuration is required for all services and endpoints heimdall communicates with. This enforcement can be disabled (not recommended) by starting Heimdall with the `--insecure-skip-egress-tls-enforcement` flag.
+
+* If Heimdall is used in link:{{< relref "/docs/concepts/operating_modes.adoc#_proxy_mode" >}}[proxy mode], communication with upstream services while proxying requests must use TLS. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-upstream-tls-enforcement` flag.
+
+* Configuring the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`] property to allow insecure networks (`0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0`) is prohibited. See also link:{{< relref "security.adoc#_http_header_security_considerations" >}}[HTTP Header Security Considerations]. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag.
+
+* The authentication stage of the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-default-rule-enforcement` flag.
+
+[NOTE]
+====
+For development purposes, all of the above settings can be disabled at once by starting heimdall with the `--insecure` flag.
+
+If any of the above enforcement settings are disabled and an insecure configuration is used, warnings will be logged.
+====
+
+
 == HTTP Header Security Considerations
 
 If `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configuration options]) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:

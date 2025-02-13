@@ -8,4 +8,4 @@ services:
     command: -c /envoy.yaml
 
   heimdall:
-    command: -c /etc/heimdall/config.yaml serve decision
+    command: serve decision -c /etc/heimdall/config.yaml --insecure

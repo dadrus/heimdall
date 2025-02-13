@@ -21,12 +21,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -77,11 +80,19 @@ if: type(Error) == authentication_error
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			errorHandler, err := newWWWAuthenticateErrorHandler(tc.uc, conf)
+			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -156,13 +167,21 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newWWWAuthenticateErrorHandler(tc.uc, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -191,13 +210,13 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 		uc               string
 		config           []byte
 		error            error
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
+		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
 		{
 			uc:    "with default realm",
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
@@ -220,7 +239,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			uc:     "with custom realm",
 			config: []byte(`realm: "Your password please"`),
 			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
@@ -245,12 +264,19 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewContextMock(t)
-			mctx.EXPECT().AppContext().Return(context.Background())
+			mctx := mocks.NewRequestContextMock(t)
+			mctx.EXPECT().Context().Return(context.Background())
 
 			tc.configureContext(t, mctx)
 
-			errorHandler, err := newWWWAuthenticateErrorHandler("foo", conf)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
 
 			// WHEN

@@ -35,13 +35,16 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestNewClusterCache(t *testing.T) {
+func TestClusterCache(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
@@ -78,13 +81,12 @@ func TestNewClusterCache(t *testing.T) {
 	_, err = pemFile.Write(pemBytes)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
-		config func(t *testing.T) []byte
-		assert func(t *testing.T, err error, cch cache.Cache)
+	for uc, tc := range map[string]struct {
+		enforceTLS bool
+		config     func(t *testing.T) []byte
+		assert     func(t *testing.T, err error, cch cache.Cache)
 	}{
-		{
-			uc: "empty config",
+		"empty config": {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -98,8 +100,7 @@ func TestNewClusterCache(t *testing.T) {
 				require.ErrorContains(t, err, "'nodes' must contain more than 0 items")
 			},
 		},
-		{
-			uc: "empty nodes config provided",
+		"empty nodes config provided": {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -113,8 +114,7 @@ func TestNewClusterCache(t *testing.T) {
 				require.ErrorContains(t, err, "'nodes'[0] is a required field")
 			},
 		},
-		{
-			uc: "config contains unsupported properties",
+		"config contains unsupported properties": {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -128,8 +128,7 @@ func TestNewClusterCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed decoding redis cache config")
 			},
 		},
-		{
-			uc: "not existing address provided",
+		"not existing address provided": {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -143,8 +142,7 @@ func TestNewClusterCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed creating redis client")
 			},
 		},
-		{
-			uc: "successful cache creation without TLS",
+		"successful cache creation without TLS": {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -171,8 +169,7 @@ func TestNewClusterCache(t *testing.T) {
 				require.Equal(t, []byte("bar"), data)
 			},
 		},
-		{
-			uc: "with failing TLS config",
+		"with failing TLS config": {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -188,8 +185,24 @@ func TestNewClusterCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
-		{
-			uc: "successful cache creation with TLS",
+		"with TLS enforced, but disabled": {
+			enforceTLS: true,
+			config: func(t *testing.T) []byte {
+				t.Helper()
+
+				return []byte(
+					"{nodes: [ 'foo:1234' ], client_cache: {disabled: true}, tls: { disabled: true} }",
+				)
+			},
+			assert: func(t *testing.T, err error, _ cache.Cache) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'tls'.'disabled' must be false")
+			},
+		},
+		"successful cache creation with TLS": {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -234,15 +247,32 @@ func TestNewClusterCache(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config(t))
 			require.NoError(t, err)
 
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
+
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Watcher().Maybe().Return(nil)
+			appCtx.EXPECT().CertificateObserver().Maybe().Return(nil)
+
 			// WHEN
-			cch, err := NewClusterCache(conf, nil, nil)
+			cch, err := NewClusterCache(appCtx, conf)
+
 			if err == nil {
-				defer cch.Stop(context.TODO())
+				err = cch.Start(context.TODO())
+				if err == nil {
+					defer cch.Stop(context.TODO())
+				}
 			}
 
 			// THEN

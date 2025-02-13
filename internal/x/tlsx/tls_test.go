@@ -358,8 +358,6 @@ func TestToTLSConfig(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, conf)
-
-			wm.AssertExpectations(t)
 		})
 	}
 }

@@ -124,7 +124,10 @@ Can be used to rewrite further parts of the original URL before forwarding the r
 
 *** *`scheme`*: _string_ (optional)
 +
-Specifies the URL scheme to use for forwarding the request.
+Specifies the URL scheme to use when forwarding the request. Defaults to the scheme used in the original request.
++
+NOTE: Unless heimdall is started with the `--insecure-skip-upstream-tls-enforcement` flag, only `https` is allowed as the scheme.
+
 
 *** *`strip_path_prefix`*: _string_ (optional)
 +
@@ -158,7 +161,7 @@ match:
         - name: identifier
           type: glob
           value: "[a-z]"
-  scheme: http
+  scheme: https
   hosts:
     - type: exact
       value: my-service.local
@@ -168,7 +171,7 @@ match:
 forward_to:
   host: backend-a:8080
   rewrite:
-    scheme: http
+    scheme: https
     strip_path_prefix: /api/v1
 execute:
   # the following just demonstrates how to make use of specific

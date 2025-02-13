@@ -390,6 +390,8 @@ This strategy implements the https://datatracker.ietf.org/doc/html/rfc6749#secti
 * *`token_url`*: _string_ (mandatory)
 +
 The token endpoint of the authorization server.
++
+NOTE: Usage of TLS is enforced as long as heimdall is not started with `--insecure-skip-egress-tls-enforcement` flag, which allows insecure communication to any of the configured services.
 
 * *`client_id`*: _string_ (mandatory)
 +
@@ -537,15 +539,19 @@ So with `10s` you can define the duration of 10 seconds and with `2h` you can sa
 
 == Endpoint
 
-The Endpoint type defines properties required for the communication with an endpoint.
+The `Endpoint` type defines the properties required for communication with an endpoint.
 
-If only the URL is required to be set, you can specify it by using just a string. If more than the URL is required to be specified, following properties are available:
+If only the URL needs to be set, you can specify it as a string. If additional properties are required, the following options are available:
 
 * *`url`* _string_ (mandatory)
 +
-The actual url of the endpoint. Depending on the mechanism, a URL can be templated
+The URL of the endpoint. Depending on the mechanism, the URL can be templated.
 +
-NOTE: If templating is used, user info, scheme and host parts of the URL cannot be templated. Attempts to do so will result in runtime errors.
+[NOTE]
+====
+* If templating is used, the user info, scheme, and host parts of the URL cannot be templated. Attempts to do so will result in runtime errors.
+* TLS is enforced unless heimdall is started with the `--insecure-skip-egress-tls-enforcement` flag, which allows insecure communication with any configured service.
+====
 
 * *`method`* _string_ (optional)
 +
@@ -581,7 +587,7 @@ Specifies how long heimdall should cache the response if the endpoint referenced
 ====
 [source, text]
 ----
-http://foo.bar
+https://foo.bar
 ----
 ====
 
@@ -590,7 +596,7 @@ http://foo.bar
 
 [source, yaml]
 ----
-url: http://foo.bar
+url: https://foo.bar
 method: GET
 retry:
   give_up_after: 5s

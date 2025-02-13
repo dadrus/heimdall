@@ -19,8 +19,12 @@ package authorizers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
@@ -56,8 +60,16 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
 			// WHEN
-			auth, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			auth, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, auth)

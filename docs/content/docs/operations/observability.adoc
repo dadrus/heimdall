@@ -289,14 +289,14 @@ All of these are supported by heimdall. In addition, following exporters can be 
 
 === Example Configuration
 
-The environment variables set below configure heimdall to use Jaeger propagator and to export the spans via OTLP over grpc to the collector available under `\http://collector:4317`.
+The environment variables set below configure heimdall to use Jaeger propagator and to export the spans via OTLP over grpc to the collector available under `\https://collector:4317`.
 
 [source,text]
 ----
 OTEL_PROPAGATORS=jaeger
 OTEL_TRACES_EXPORTER=otlp
 OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
-OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://collector:4317
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://collector:4317
 ----
 
 If your environment supports OpenTelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.

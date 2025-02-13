@@ -24,6 +24,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -111,9 +112,12 @@ func TestNewLifecycleManager(t *testing.T) {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			conf := tc.setup(t)
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			lm := newLifecycleManager(conf, log.Logger)
+			lm := newLifecycleManager(appCtx)
 
 			// THEN
 			tc.assert(t, lm)

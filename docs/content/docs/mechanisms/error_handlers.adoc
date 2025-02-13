@@ -54,16 +54,16 @@ WARNING: Heimdall does not check the configured code for HTTP redirect validity!
 .Redirect error handler configuration
 ====
 
-The redirect error handler below is configured to kick in if the error is either `authentication_error` or `authorization_error` and the request come from a browser (HTTP `Accept` header contains `text/html`). If this condition holds true it will redirect the client to `\http://127.0.0.1:4433/self-service/login/browser` and add the `return_to` query parameter set to the URL encoded value of the current url as well.
+The redirect error handler below is configured to kick in if the error is either `authentication_error` or `authorization_error` and the request come from a browser (HTTP `Accept` header contains `text/html`). If this condition holds true it will redirect the client to `\https://127.0.0.1:4433/self-service/login/browser` and add the `return_to` query parameter set to the URL encoded value of the current url as well.
 
-So, e.g. if heimdall was handling the request for `\http://my-service.local/foo` and run into an error like described above, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\http://127.0.0.1:4433/self-service/login/browser?return_to=http%3A%2F%2Fmy-service.local%2Ffoo`
+So, e.g. if heimdall was handling the request for `\https://my-service.local/foo` and run into an error like described above, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`
 
 [source, yaml]
 ----
 id: authenticate_with_kratos
 type: redirect
 config:
-  to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+  to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 ----
 
 ====

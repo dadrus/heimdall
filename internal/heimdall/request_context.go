@@ -21,15 +21,15 @@ import (
 	"net/url"
 )
 
-//go:generate mockery --name Context --structname ContextMock
+//go:generate mockery --name RequestContext --structname RequestContextMock
 
-type Context interface {
+type RequestContext interface {
 	Request() *Request
 
 	AddHeaderForUpstream(name, value string)
 	AddCookieForUpstream(name, value string)
 
-	AppContext() context.Context
+	Context() context.Context
 
 	SetPipelineError(err error)
 

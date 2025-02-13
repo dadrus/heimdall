@@ -30,7 +30,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -42,12 +42,15 @@ type Provider struct {
 	w              *fsnotify.Watcher
 	p              rule.SetProcessor
 	l              zerolog.Logger
+	app            app.Context
 	states         sync.Map
 	envVarsEnabled bool
 	configured     bool
 }
 
-func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*Provider, error) {
+func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
+	conf := app.Config()
+	logger := app.Logger()
 	rawConf := conf.Providers.FileSystem
 
 	if conf.Providers.FileSystem == nil {
@@ -103,40 +106,41 @@ func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger
 	return &Provider{
 		src:            absPath,
 		w:              watcher,
-		p:              processor,
+		p:              rsp,
 		l:              logger,
+		app:            app,
 		configured:     true,
 		envVarsEnabled: providerConf.EnvVarsEnabled,
 	}, nil
 }
 
-func (p *Provider) Start(_ context.Context) error {
+func (p *Provider) Start(ctx context.Context) error {
 	if !p.configured {
 		return nil
 	}
 
-	p.l.Info().Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule provider")
 
-	if err := p.loadInitialRuleSet(); err != nil {
+	ctx = p.l.WithContext(ctx)
+	if err := p.loadInitialRuleSet(ctx); err != nil {
 		p.l.Error().Err(err).Msg("Failed loading initial rule sets")
 
 		return err
 	}
 
 	if p.w == nil {
-		p.l.Warn().
-			Msg("Watcher for file_system provider is not configured. Updates to rules will have no effects.")
+		p.l.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect")
 
 		return nil
 	}
 
 	if err := p.w.Add(p.src); err != nil {
-		p.l.Error().Err(err).Msg("Failed to start rule definitions provider")
+		p.l.Error().Err(err).Msg("Failed to start rule provider")
 
 		return err
 	}
 
-	go p.watchFiles()
+	go p.watchFiles(ctx)
 
 	return nil
 }
@@ -155,7 +159,7 @@ func (p *Provider) Stop(_ context.Context) error {
 	return nil
 }
 
-func (p *Provider) watchFiles() {
+func (p *Provider) watchFiles(ctx context.Context) {
 	p.l.Debug().Msg("Watching rule files for changes")
 
 	for {
@@ -167,7 +171,7 @@ func (p *Provider) watchFiles() {
 				return
 			}
 
-			if err := p.ruleSetsChanged(evt); err != nil {
+			if err := p.ruleSetsChanged(ctx, evt); err != nil {
 				p.l.Warn().Err(err).Str("_src", evt.Name).Msg("Failed to apply rule set changes")
 			}
 		case err, ok := <-p.w.Errors:
@@ -182,7 +186,7 @@ func (p *Provider) watchFiles() {
 	}
 }
 
-func (p *Provider) ruleSetsChanged(evt fsnotify.Event) error {
+func (p *Provider) ruleSetsChanged(ctx context.Context, evt fsnotify.Event) error {
 	p.l.Debug().
 		Str("_event", evt.String()).
 		Str("_src", evt.Name).
@@ -192,19 +196,19 @@ func (p *Provider) ruleSetsChanged(evt fsnotify.Event) error {
 
 	switch {
 	case evt.Has(fsnotify.Create) || evt.Has(fsnotify.Write) || evt.Has(fsnotify.Chmod):
-		err = p.ruleSetCreatedOrUpdated(evt.Name)
+		err = p.ruleSetCreatedOrUpdated(ctx, evt.Name)
 	case evt.Has(fsnotify.Remove):
-		err = p.ruleSetDeleted(evt.Name)
+		err = p.ruleSetDeleted(ctx, evt.Name)
 	}
 
 	return err
 }
 
-func (p *Provider) ruleSetCreatedOrUpdated(fileName string) error {
+func (p *Provider) ruleSetCreatedOrUpdated(ctx context.Context, fileName string) error {
 	ruleSet, err := p.loadRuleSet(fileName)
 	if err != nil {
 		if errors.Is(err, config2.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
-			return p.ruleSetDeleted(fileName)
+			return p.ruleSetDeleted(ctx, fileName)
 		}
 
 		return err
@@ -219,9 +223,9 @@ func (p *Provider) ruleSetCreatedOrUpdated(fileName string) error {
 
 	switch {
 	case len(hash) == 0:
-		err = p.p.OnCreated(ruleSet)
+		err = p.p.OnCreated(ctx, ruleSet)
 	case !bytes.Equal(hash, ruleSet.Hash):
-		err = p.p.OnUpdated(ruleSet)
+		err = p.p.OnUpdated(ctx, ruleSet)
 	default:
 		return nil
 	}
@@ -235,7 +239,7 @@ func (p *Provider) ruleSetCreatedOrUpdated(fileName string) error {
 	return nil
 }
 
-func (p *Provider) ruleSetDeleted(fileName string) error {
+func (p *Provider) ruleSetDeleted(ctx context.Context, fileName string) error {
 	if _, ok := p.states.Load(fileName); !ok {
 		return nil
 	}
@@ -247,7 +251,7 @@ func (p *Provider) ruleSetDeleted(fileName string) error {
 		},
 	}
 
-	if err := p.p.OnDeleted(conf); err != nil {
+	if err := p.p.OnDeleted(ctx, conf); err != nil {
 		return err
 	}
 
@@ -265,7 +269,7 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 
 	md := sha256.New()
 
-	ruleSet, err := config2.ParseRules("application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
+	ruleSet, err := config2.ParseRules(p.app, "application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "failed to parse rule set %s", fileName).
 			CausedBy(err)
@@ -280,7 +284,7 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 	return ruleSet, nil
 }
 
-func (p *Provider) loadInitialRuleSet() error {
+func (p *Provider) loadInitialRuleSet(ctx context.Context) error {
 	p.l.Info().Msg("Loading initial rule set")
 
 	sources, err := p.sources()
@@ -289,7 +293,7 @@ func (p *Provider) loadInitialRuleSet() error {
 	}
 
 	for _, src := range sources {
-		if err = p.ruleSetCreatedOrUpdated(src); err != nil {
+		if err = p.ruleSetCreatedOrUpdated(ctx, src); err != nil {
 			return err
 		}
 	}

@@ -19,15 +19,18 @@ package httpendpoint
 import (
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(input any, output any) error {
+func decodeConfig(app app.Context, input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				authstrategy.DecodeAuthenticationStrategyHookFunc(nil),
+				authstrategy.DecodeAuthenticationStrategyHookFunc(app),
 				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 			),
@@ -35,8 +38,19 @@ func decodeConfig(input any, output any) error {
 			ErrorUnused: true,
 		})
 	if err != nil {
-		return err
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed decoding http_endpoint rule provider config").CausedBy(err)
 	}
 
-	return dec.Decode(input)
+	if err = dec.Decode(input); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed decoding http_endpoint rule provider config").CausedBy(err)
+	}
+
+	if err = app.Validator().ValidateStruct(output); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating http_endpoint rule provider config").CausedBy(err)
+	}
+
+	return nil
 }

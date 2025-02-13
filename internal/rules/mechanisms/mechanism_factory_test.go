@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
@@ -550,8 +551,12 @@ func TestCreateHandlerFactory(t *testing.T) {
 				ok   bool
 			)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(tc.conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			factory, err := NewMechanismFactory(tc.conf, log.Logger, nil, nil, nil)
+			factory, err := NewMechanismFactory(appCtx)
 
 			// THEN
 			if err == nil {

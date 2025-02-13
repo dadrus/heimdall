@@ -64,10 +64,7 @@ func newService(
 	hc := alice.New(
 		trustedproxy.New(
 			log,
-			x.IfThenElseExec(cfg.TrustedProxies != nil,
-				func() []string { return *cfg.TrustedProxies },
-				func() []string { return []string{} },
-			)...,
+			cfg.TrustedProxies...,
 		),
 		recovery.New(eh),
 		otelhttp.NewMiddleware("",
