@@ -19,8 +19,6 @@ package validate
 import (
 	"context"
 	"errors"
-	"os"
-
 	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
@@ -45,21 +43,12 @@ var errFunctionNotSupported = errors.New("function not supported")
 // NewValidateRulesCommand represents the "validate rules" command.
 func NewValidateRulesCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "rules [path to ruleset]",
-		Short:   "Validates heimdall's ruleset",
-		Args:    cobra.ExactArgs(1),
-		Example: "heimdall validate rules -c myconfig.yaml myruleset.yaml",
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := validateRuleSet(cmd, args); err != nil {
-				cmd.PrintErrf("%v\n", err)
-
-				os.Exit(1)
-
-				return
-			}
-
-			cmd.Println("Rule set is valid")
-		},
+		Use:          "rules [path to ruleset]",
+		Short:        "Validates heimdall's ruleset",
+		Args:         cobra.ExactArgs(1),
+		Example:      "heimdall validate rules -c myconfig.yaml",
+		SilenceUsage: true,
+		RunE:         validateRuleSet,
 	}
 
 	cmd.PersistentFlags().Bool(validationForProxyMode, false,
@@ -133,7 +122,13 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return provider.Start(context.Background())
+	if err = provider.Start(context.Background()); err != nil {
+		return err
+	}
+
+	cmd.Println("Rule set is valid")
+
+	return nil
 }
 
 type noopRepository struct{}

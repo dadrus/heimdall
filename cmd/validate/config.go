@@ -17,8 +17,6 @@
 package validate
 
 import (
-	"os"
-
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
@@ -40,22 +38,15 @@ import (
 // NewValidateConfigCommand represents the "validate config" command.
 func NewValidateConfigCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:     "config",
-		Short:   "Validates heimdall's configuration",
-		Example: "heimdall validate config -c myconfig.yaml",
-		Run: func(cmd *cobra.Command, _ []string) {
-			if err := validateConfig(cmd); err != nil {
-				cmd.PrintErrf("%v\n", err)
-
-				os.Exit(1)
-			}
-
-			cmd.Println("Configuration is valid")
-		},
+		Use:          "config",
+		Short:        "Validates heimdall's configuration",
+		Example:      "heimdall validate config -c myconfig.yaml",
+		SilenceUsage: true,
+		RunE:         validateConfig,
 	}
 }
 
-func validateConfig(cmd *cobra.Command) error {
+func validateConfig(cmd *cobra.Command, _ []string) error {
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	configPath, _ := cmd.Flags().GetString(flags.Config)
 	logger := zerolog.Nop()
@@ -132,6 +123,8 @@ func validateConfig(cmd *cobra.Command) error {
 
 	// ignoring kubernetes provider for now as there are no insecure
 	// settings possible
+
+	cmd.Println("Configuration is valid")
 
 	return nil
 }

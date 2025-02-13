@@ -17,7 +17,6 @@
 package validate
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -25,13 +24,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestValidateConfig(t *testing.T) {
@@ -208,7 +205,7 @@ func TestValidateConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			cmd := NewValidateConfigCommand()
-			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
+			flags.RegisterGlobalFlags(cmd)
 
 			if len(tc.confFile) != 0 {
 				err = cmd.ParseFlags([]string{"--" + flags.Config, tc.confFile})
@@ -216,54 +213,10 @@ func TestValidateConfig(t *testing.T) {
 			}
 
 			// WHEN
-			err = validateConfig(cmd)
+			err = validateConfig(cmd, []string{})
 
 			// THEN
 			tc.assert(t, err)
-		})
-	}
-}
-
-func TestRunValidateConfigCommand(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc       string
-		confFile string
-		expError string
-	}{
-		{uc: "invalid config", confFile: "doesnotexist.yaml", expError: "no such file or dir"},
-		{uc: "valid config", confFile: "test_data/config.yaml"},
-	} {
-		t.Run(tc.uc, func(t *testing.T) {
-			// GIVEN
-			exit, err := testsupport.PatchOSExit(t, func(int) {})
-			require.NoError(t, err)
-
-			cmd := NewValidateConfigCommand()
-
-			buf := bytes.NewBuffer([]byte{})
-			cmd.SetOut(buf)
-			cmd.SetErr(buf)
-
-			cmd.Flags().StringP(flags.Config, "c", "", "Path to heimdall's configuration file.")
-
-			if len(tc.confFile) != 0 {
-				err := cmd.ParseFlags([]string{"--" + flags.Config, tc.confFile})
-				require.NoError(t, err)
-			}
-
-			// WHEN
-			cmd.Run(cmd, []string{})
-
-			log := buf.String()
-			if len(tc.expError) != 0 {
-				assert.Contains(t, log, tc.expError)
-				assert.True(t, exit.Called)
-				assert.Equal(t, 1, exit.Code)
-			} else {
-				assert.Contains(t, log, "Configuration is valid")
-			}
 		})
 	}
 }
