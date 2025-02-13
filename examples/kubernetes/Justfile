@@ -279,6 +279,7 @@ install-heimdall router=default_router:
   kubectl apply -f quickstarts/heimdall/namespace.yaml
   kubectl apply -f quickstarts/heimdall/certificate.yaml
 
+  # Don't use these flags in production. They disable secure defaults for simplicity reasons only.
   extraArgs='extraArgs={--insecure-skip-secure-trusted-proxies-enforcement,--insecure-skip-secure-default-rule-enforcement}'
 
   case "{{router}}" in
