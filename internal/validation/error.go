@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
