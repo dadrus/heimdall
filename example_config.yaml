@@ -214,8 +214,8 @@ providers:
         prefix: service2
       - url: s3://my-bucket/my-rule-set
 
-  #kubernetes:
-  #  auth_class: foo
+  kubernetes:
+    auth_class: foo
 
 
 
