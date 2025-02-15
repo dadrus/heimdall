@@ -416,3 +416,42 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].name
           value: heimdall
+
+  - it: should configure probes
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+
+  - it: should configure HTTPS scheme for probes if management service has TLS configured
+    template: deployment.yaml
+    set:
+      serve.management.tls:
+        min_version: TLS1.2
+        key_store:
+          path: /path/file.pem
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+              scheme: HTTPS
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+              scheme: HTTPS
