@@ -134,10 +134,16 @@ spec:
             httpGet:
               path: /.well-known/health
               port: http-management
+              {{ if .Values.serve.management.tls }}
+              scheme: HTTPS
+              {{ end }}
           readinessProbe:
             httpGet:
               path: /.well-known/health
               port: http-management
+              {{ if .Values.serve.management.tls }}
+              scheme: HTTPS
+              {{ end }}
           resources:
             {{- toYaml .Values.deployment.resources | nindent 12 }}
       nodeSelector:
