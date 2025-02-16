@@ -24,7 +24,7 @@ operationMode: decision # decision or proxy
 image:
   repository: ghcr.io/dadrus/heimdall
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "@sha256:a58abe2db01b7ae0f5e1e987b4ca4ee7ce06d947f16ea08733c17a384c8e3fc0"
   pullSecrets: [ ]
 
 nameOverride: ""
