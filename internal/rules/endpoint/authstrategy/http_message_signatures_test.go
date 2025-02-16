@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -365,14 +364,14 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			require.NoError(t, err)
 
 			req, err := http.NewRequestWithContext(
-				context.Background(),
+				t.Context(),
 				http.MethodGet,
 				"http//example.com/test",
 				strings.NewReader(`{"hello": "world"}`),
 			)
 			require.NoError(t, err)
 
-			err = tc.conf.Apply(context.Background(), req)
+			err = tc.conf.Apply(t.Context(), req)
 
 			tc.assert(t, err, req)
 		})

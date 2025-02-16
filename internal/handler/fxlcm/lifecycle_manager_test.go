@@ -17,7 +17,6 @@
 package fxlcm
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -107,7 +106,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 			}
 
 			// WHEN
-			err = lcm.Start(context.TODO())
+			err = lcm.Start(t.Context())
 
 			time.Sleep(50 * time.Millisecond)
 
@@ -171,7 +170,7 @@ func TestLifecycleManagerStop(t *testing.T) {
 			}
 
 			// WHEN
-			err := lcm.Stop(context.TODO())
+			err := lcm.Stop(t.Context())
 
 			// THEN
 			tc.assert(t, err, tb.CollectedLog())

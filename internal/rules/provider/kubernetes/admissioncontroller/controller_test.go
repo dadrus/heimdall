@@ -18,7 +18,6 @@ package admissioncontroller
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -133,7 +132,7 @@ func TestControllerLifecycle(t *testing.T) {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, nil)
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, nil)
 				require.NoError(t, err)
 
 				return req
@@ -156,7 +155,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err := json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -218,7 +217,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err = json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -301,7 +300,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err = json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -394,7 +393,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err = json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -456,12 +455,12 @@ func TestControllerLifecycle(t *testing.T) {
 			)
 			client := x.IfThenElse(tc.tls != nil, tlsClient, notTLSClient)
 
-			err = controller.Start(context.TODO())
+			err = controller.Start(t.Context())
 			require.NoError(t, err)
 
 			time.Sleep(20 * time.Millisecond)
 
-			defer controller.Stop(context.TODO())
+			defer controller.Stop(t.Context())
 
 			// WHEN
 			resp, err := client.Do(tc.request(t, serviceAddress))

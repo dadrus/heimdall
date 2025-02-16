@@ -216,7 +216,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			client := envoy_auth.NewAuthorizationClient(conn)
 
 			// WHEN
-			resp, err := client.Check(context.Background(), &envoy_auth.CheckRequest{
+			resp, err := client.Check(t.Context(), &envoy_auth.CheckRequest{
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{
 						Http: &envoy_auth.AttributeContext_HttpRequest{

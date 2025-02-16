@@ -17,7 +17,6 @@
 package proxy
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -114,7 +113,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodGet,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -147,7 +146,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -180,7 +179,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -213,7 +212,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -246,7 +245,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -283,7 +282,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					strings.NewReader("hello"))
@@ -367,7 +366,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					"http://"+host+"/%5Bid%5D/foobar",
 					strings.NewReader("hello"))
@@ -449,7 +448,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					strings.NewReader("hello"))
@@ -537,7 +536,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodGet,
 					fmt.Sprintf("http://%s/foobar", host),
 					strings.NewReader("hello"))
@@ -622,7 +621,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodOptions,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil)
@@ -665,7 +664,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodOptions,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil)
@@ -716,7 +715,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodGet,
 					fmt.Sprintf("https://%s/foobar", host),
 					strings.NewReader("hello"))
@@ -811,7 +810,7 @@ func TestProxyService(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodGet,
 					fmt.Sprintf("https://%s/foobar", host),
 					strings.NewReader("hello"))
@@ -944,7 +943,7 @@ func TestProxyService(t *testing.T) {
 
 			proxy := newService(conf, cch, log.Logger, exec)
 
-			defer proxy.Shutdown(context.Background())
+			defer proxy.Shutdown(t.Context())
 
 			go func() {
 				proxy.Serve(lstnr)
@@ -964,7 +963,7 @@ func TestProxyService(t *testing.T) {
 
 			var rm metricdata.ResourceMetrics
 
-			err = exp.Collect(context.TODO(), &rm)
+			err = exp.Collect(t.Context(), &rm)
 
 			if tc.enableMetrics {
 				require.NoError(t, err)
@@ -1046,7 +1045,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
-	defer proxy.Shutdown(context.Background())
+	defer proxy.Shutdown(t.Context())
 
 	lstnr, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
@@ -1144,7 +1143,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
 
-	defer proxy.Shutdown(context.Background())
+	defer proxy.Shutdown(t.Context())
 
 	lstnr, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
@@ -1155,7 +1154,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, fmt.Sprintf("http://%s/foo", conf.Serve.Address()), nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/foo", conf.Serve.Address()), nil)
 	require.NoError(t, err)
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Accept", "text/event-stream")

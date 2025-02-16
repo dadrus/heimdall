@@ -17,7 +17,6 @@
 package authorizers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -55,7 +54,7 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 func TestAllowAuthorizerExecute(t *testing.T) {
 	// GIVEN
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)

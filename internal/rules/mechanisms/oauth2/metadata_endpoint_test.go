@@ -17,7 +17,6 @@
 package oauth2
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -331,7 +330,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 			ep := &MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: tc.buildURL(t, srv.URL)}}
 
 			// WHEN
-			sm, err := ep.Get(context.TODO(), tc.args)
+			sm, err := ep.Get(t.Context(), tc.args)
 
 			// THEN
 			tc.assert(t, endpointCalled, err, sm)

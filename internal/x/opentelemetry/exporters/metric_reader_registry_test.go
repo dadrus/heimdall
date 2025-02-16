@@ -17,7 +17,6 @@
 package exporters
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -134,7 +133,7 @@ func TestCreateMetricReaders(t *testing.T) {
 			setup(t)
 
 			// WHEN
-			readers, err := createMetricsReaders(context.Background(), tc.names...)
+			readers, err := createMetricsReaders(t.Context(), tc.names...)
 
 			// THEN
 			tc.assert(t, err, readers)

@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +31,7 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 
 	// GIVEN
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 	ctx.EXPECT().SetPipelineError(heimdall.ErrConfiguration)
 
 	errorHandler := newDefaultErrorHandler("foo")

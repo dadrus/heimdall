@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -38,7 +37,7 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	var identifier interface{ ID() string }
 
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	auth := newUnauthorizedAuthenticator(appCtx, "unauth")
 

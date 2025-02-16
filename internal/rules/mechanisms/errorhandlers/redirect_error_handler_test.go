@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -315,7 +314,7 @@ code: 300
 			require.NoError(t, err)
 
 			mctx := mocks.NewRequestContextMock(t)
-			mctx.EXPECT().Context().Return(context.Background())
+			mctx.EXPECT().Context().Return(t.Context())
 
 			tc.configureContext(t, mctx)
 

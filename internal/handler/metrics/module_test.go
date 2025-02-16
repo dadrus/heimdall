@@ -17,7 +17,6 @@
 package metrics
 
 import (
-	"context"
 	"strconv"
 	"testing"
 
@@ -47,8 +46,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, noopManager{}, lm)
-				require.NoError(t, lm.Start(context.TODO()))
-				require.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(t.Context()))
+				require.NoError(t, lm.Stop(t.Context()))
 			},
 		},
 		{
@@ -63,8 +62,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, noopManager{}, lm)
-				require.NoError(t, lm.Start(context.TODO()))
-				require.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(t.Context()))
+				require.NoError(t, lm.Stop(t.Context()))
 			},
 		},
 		{
@@ -79,8 +78,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, noopManager{}, lm)
-				require.NoError(t, lm.Start(context.TODO()))
-				require.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(t.Context()))
+				require.NoError(t, lm.Stop(t.Context()))
 			},
 		},
 		{
@@ -104,8 +103,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, &fxlcm.LifecycleManager{}, lm)
-				require.NoError(t, lm.Start(context.TODO()))
-				require.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(t.Context()))
+				require.NoError(t, lm.Stop(t.Context()))
 			},
 		},
 	} {

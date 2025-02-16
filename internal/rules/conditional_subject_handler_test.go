@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -90,7 +89,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			decorator := conditionalSubjectHandler{c: condition, h: handler}
 
 			ctx := mocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(context.Background())
+			ctx.EXPECT().Context().Return(t.Context())
 
 			tc.configureMocks(t, condition, handler)
 

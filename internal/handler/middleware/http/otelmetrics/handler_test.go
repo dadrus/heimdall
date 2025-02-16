@@ -17,7 +17,6 @@
 package otelmetrics
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -133,7 +132,7 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(),
+				t.Context(),
 				tc.method,
 				fmt.Sprintf("%s%s", srv.URL, tc.path),
 				nil,
@@ -148,7 +147,7 @@ func TestHandlerExecution(t *testing.T) {
 
 			var rm metricdata.ResourceMetrics
 
-			err = exp.Collect(context.TODO(), &rm)
+			err = exp.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
 			// THEN

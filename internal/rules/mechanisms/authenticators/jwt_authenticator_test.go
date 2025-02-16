@@ -166,7 +166,7 @@ assertions:
 				// endpoint settings
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
 				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
@@ -231,7 +231,7 @@ cache_ttl: 5s`),
 				// endpoint settings
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
 				assert.Equal(t, "https://test.com", md.JWKSEndpoint.URL)
 				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
@@ -330,7 +330,7 @@ trust_store: ` + trustStorePath),
 				// endpoint settings
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
 				assert.Equal(t, "POST", md.JWKSEndpoint.Method)
@@ -2308,7 +2308,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			cch := mocks.NewCacheMock(t)
 
 			ctx := heimdallmocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
+			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)

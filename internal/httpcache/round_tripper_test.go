@@ -17,7 +17,6 @@
 package httpcache
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -76,7 +75,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 			cch, err := memory.NewCache(nil, nil)
 			require.NoError(t, err)
 
-			ctx := cache.WithContext(context.Background(), cch)
+			ctx := cache.WithContext(t.Context(), cch)
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, nil)
 			require.NoError(t, err)
 

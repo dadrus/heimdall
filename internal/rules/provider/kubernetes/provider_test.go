@@ -999,7 +999,7 @@ func TestProviderLifecycle(t *testing.T) {
 			prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			// WHEN
 			err = prov.Start(ctx)

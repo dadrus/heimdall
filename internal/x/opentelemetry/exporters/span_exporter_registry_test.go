@@ -17,7 +17,6 @@
 package exporters
 
 import (
-	"context"
 	"testing"
 
 	instana "github.com/instana/go-otel-exporter"
@@ -136,7 +135,7 @@ func TestCreateSpanExporters(t *testing.T) {
 			setup(t)
 
 			// WHEN
-			expts, err := createSpanExporters(context.Background(), tc.names...)
+			expts, err := createSpanExporters(t.Context(), tc.names...)
 
 			// THEN
 			tc.assert(t, err, expts)

@@ -17,7 +17,6 @@
 package accesslog
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -304,7 +303,7 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(),
+				t.Context(),
 				tc.method,
 				srv.URL+"/test",
 				nil,

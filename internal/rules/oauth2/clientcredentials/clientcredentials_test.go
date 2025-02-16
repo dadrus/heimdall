@@ -17,7 +17,6 @@
 package clientcredentials
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"net/http"
@@ -592,7 +591,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			buildResponse = tc.buildResponse
 
 			cch := mocks.NewCacheMock(t)
-			ctx := cache.WithContext(context.Background(), cch)
+			ctx := cache.WithContext(t.Context(), cch)
 
 			configureMocks(t, cch)
 

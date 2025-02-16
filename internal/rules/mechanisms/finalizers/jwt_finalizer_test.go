@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -933,7 +932,7 @@ claims: "{{ len .foobar }}"
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			mctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
+			mctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			finalizer, err := newJWTFinalizer(appCtx, tc.id, conf)
 			require.NoError(t, err)

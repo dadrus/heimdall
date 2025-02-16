@@ -17,7 +17,6 @@
 package cloudblob
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"net/url"
@@ -431,7 +430,7 @@ rules:
 			setup(t)
 
 			// WHEN
-			rs, err := tc.endpoint.FetchRuleSets(context.Background(), appCtx)
+			rs, err := tc.endpoint.FetchRuleSets(t.Context(), appCtx)
 
 			// THEN
 			tc.assert(t, err, rs)

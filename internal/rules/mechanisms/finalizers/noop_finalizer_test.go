@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -36,7 +35,7 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	finalizer := newNoopFinalizer(appCtx, "foo")
 

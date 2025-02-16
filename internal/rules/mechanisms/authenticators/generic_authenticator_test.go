@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -1369,7 +1368,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 			ctx := heimdallmocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
+			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)

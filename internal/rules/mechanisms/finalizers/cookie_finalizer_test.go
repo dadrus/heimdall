@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -328,7 +327,7 @@ cookies:
 			require.NoError(t, err)
 
 			mctx := mocks.NewRequestContextMock(t)
-			mctx.EXPECT().Context().Return(context.Background())
+			mctx.EXPECT().Context().Return(t.Context())
 
 			sub := createSubject(t)
 

@@ -17,7 +17,6 @@
 package authorizers
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -357,7 +356,7 @@ expressions:
 			require.NoError(t, err)
 
 			ctx := mocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(context.Background())
+			ctx.EXPECT().Context().Return(t.Context())
 
 			sub := &subject.Subject{}
 

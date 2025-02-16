@@ -17,7 +17,6 @@
 package authorizers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -62,7 +61,7 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 	var identifier interface{ ID() string }
 
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)

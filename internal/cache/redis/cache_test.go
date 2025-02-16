@@ -17,7 +17,6 @@
 package redis
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -53,8 +52,8 @@ func TestCacheUsage(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	cch.Start(context.TODO())
-	defer cch.Stop(context.TODO())
+	cch.Start(t.Context())
+	defer cch.Stop(t.Context())
 
 	for _, tc := range []struct {
 		uc             string
@@ -68,7 +67,7 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				err := cch.Set(context.Background(), "foo", []byte("bar"), 10*time.Minute)
+				err := cch.Set(t.Context(), "foo", []byte("bar"), 10*time.Minute)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, data []byte) {
@@ -84,7 +83,7 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				err := cch.Set(context.Background(), "bar", []byte("baz"), 1*time.Millisecond)
+				err := cch.Set(t.Context(), "bar", []byte("baz"), 1*time.Millisecond)
 				require.NoError(t, err)
 
 				db.FastForward(200 * time.Millisecond)
@@ -114,7 +113,7 @@ func TestCacheUsage(t *testing.T) {
 			// WHEN
 			tc.configureCache(t, cch)
 
-			data, err := cch.Get(context.Background(), tc.key)
+			data, err := cch.Get(t.Context(), tc.key)
 
 			// THEN
 			tc.assert(t, err, data)

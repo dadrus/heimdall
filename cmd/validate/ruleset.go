@@ -19,6 +19,7 @@ package validate
 import (
 	"context"
 	"errors"
+
 	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"

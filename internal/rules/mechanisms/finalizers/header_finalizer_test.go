@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -347,7 +346,7 @@ headers:
 			require.NoError(t, err)
 
 			ctx := mocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(context.Background()).Maybe()
+			ctx.EXPECT().Context().Return(t.Context()).Maybe()
 
 			configureContext(t, ctx)
 

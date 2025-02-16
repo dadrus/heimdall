@@ -848,7 +848,7 @@ rules:
 			prov, err := NewProvider(appCtx, processor, cch)
 			require.NoError(t, err)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			writeResponse = x.IfThenElse(tc.writeResponse != nil,
 				tc.writeResponse,

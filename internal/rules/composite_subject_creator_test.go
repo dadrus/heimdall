@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -112,7 +111,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			sub := &subject.Subject{ID: "foo"}
 
 			ctx := mocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(context.Background())
+			ctx.EXPECT().Context().Return(t.Context())
 
 			auth1 := rulemocks.NewSubjectCreatorMock(t)
 			auth2 := rulemocks.NewSubjectCreatorMock(t)

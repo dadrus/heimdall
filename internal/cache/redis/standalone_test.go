@@ -17,7 +17,6 @@
 package redis
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -162,10 +161,10 @@ func TestStandaloneCache(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, cch)
 
-				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
+				err = cch.Set(t.Context(), "foo", []byte("bar"), 1*time.Second)
 				require.NoError(t, err)
 
-				data, err := cch.Get(context.TODO(), "foo")
+				data, err := cch.Get(t.Context(), "foo")
 				require.NoError(t, err)
 
 				require.Equal(t, []byte("bar"), data)
@@ -188,10 +187,10 @@ func TestStandaloneCache(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, cch)
 
-				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
+				err = cch.Set(t.Context(), "foo", []byte("bar"), 1*time.Second)
 				require.NoError(t, err)
 
-				data, err := cch.Get(context.TODO(), "foo")
+				data, err := cch.Get(t.Context(), "foo")
 				require.NoError(t, err)
 
 				require.Equal(t, []byte("bar"), data)
@@ -293,10 +292,10 @@ func TestStandaloneCache(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, cch)
 
-				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
+				err = cch.Set(t.Context(), "foo", []byte("bar"), 1*time.Second)
 				require.NoError(t, err)
 
-				data, err := cch.Get(context.TODO(), "foo")
+				data, err := cch.Get(t.Context(), "foo")
 				require.NoError(t, err)
 
 				require.Equal(t, []byte("bar"), data)
@@ -337,10 +336,10 @@ func TestStandaloneCache(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, cch)
 
-				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
+				err = cch.Set(t.Context(), "foo", []byte("bar"), 1*time.Second)
 				require.NoError(t, err)
 
-				data, err := cch.Get(context.TODO(), "foo")
+				data, err := cch.Get(t.Context(), "foo")
 				require.NoError(t, err)
 
 				require.Equal(t, []byte("bar"), data)
@@ -369,9 +368,9 @@ func TestStandaloneCache(t *testing.T) {
 			// WHEN
 			cch, err := NewStandaloneCache(appCtx, conf)
 			if err == nil {
-				err = cch.Start(context.TODO())
+				err = cch.Start(t.Context())
 				if err == nil {
-					defer cch.Stop(context.TODO())
+					defer cch.Stop(t.Context())
 				}
 			}
 

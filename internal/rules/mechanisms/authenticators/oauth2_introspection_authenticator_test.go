@@ -139,7 +139,7 @@ assertions:
 				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
 				assert.Equal(t, "https://foobar.local", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPost, md.IntrospectionEndpoint.Method)
@@ -233,7 +233,7 @@ allow_fallback_on_error: true
 				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPatch, md.IntrospectionEndpoint.Method)
@@ -1663,7 +1663,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			cch := mocks.NewCacheMock(t)
 
 			ctx := heimdallmocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
+			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)

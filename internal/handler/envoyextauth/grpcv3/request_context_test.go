@@ -17,7 +17,6 @@
 package grpcv3
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -64,7 +63,7 @@ func TestNewRequestContext(t *testing.T) {
 
 	ctx := NewRequestContext(
 		metadata.NewIncomingContext(
-			context.Background(),
+			t.Context(),
 			md,
 		),
 		checkReq,
@@ -234,7 +233,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 					},
 				},
 			}
-			ctx := NewRequestContext(context.Background(), checkReq)
+			ctx := NewRequestContext(t.Context(), checkReq)
 
 			tc.updateContext(t, ctx)
 
@@ -302,7 +301,7 @@ func TestRequestContextBody(t *testing.T) {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			ctx := NewRequestContext(
-				context.Background(),
+				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
 						Request: &envoy_auth.AttributeContext_Request{

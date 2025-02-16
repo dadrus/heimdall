@@ -18,7 +18,6 @@ package httpx
 
 import (
 	"bufio"
-	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -122,7 +121,7 @@ func TestTraceRoundTripperRoundTrip(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb}).Level(tc.logLevel)
 
-			ctx := logger.WithContext(context.Background())
+			ctx := logger.WithContext(t.Context())
 
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://foo.bar?baz=foo", strings.NewReader("Foobar"))
 			require.NoError(t, err)
