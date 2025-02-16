@@ -105,6 +105,8 @@ github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46t
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/dadrus/httpsig v0.0.0-20250116073724-6cb9b821dc18 h1:gMhSqlq8QNshOZyP2P0TFCn1LO8d+jjTN+8TOHUkEOk=
 github.com/dadrus/httpsig v0.0.0-20250116073724-6cb9b821dc18/go.mod h1:H3xgNqWy8LLwXM6sDfR/GhJQ/cP/YXFN4LgEcJSxdIE=
+github.com/dadrus/httpsig v0.0.0-20250216103225-523cd6a7598f h1:h7ru1IfVa9kk8XcldtnWivKpORFSjvPSF7ttgwQVShU=
+github.com/dadrus/httpsig v0.0.0-20250216103225-523cd6a7598f/go.mod h1:H3xgNqWy8LLwXM6sDfR/GhJQ/cP/YXFN4LgEcJSxdIE=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
