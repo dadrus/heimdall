@@ -17,7 +17,6 @@
 package httpendpoint
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -313,7 +312,7 @@ rules:
 			ctx := log.Logger.With().
 				Str("_provider_type", "http_endpoint").
 				Logger().
-				WithContext(cache.WithContext(context.Background(), cch))
+				WithContext(cache.WithContext(t.Context(), cch))
 
 			writeResponse = x.IfThenElse(tc.writeResponse != nil,
 				tc.writeResponse,

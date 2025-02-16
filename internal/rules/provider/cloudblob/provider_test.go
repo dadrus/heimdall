@@ -583,7 +583,7 @@ rules:
 			prov, err := NewProvider(appCtx, rspMock)
 			require.NoError(t, err)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			setupBucket(t)
 

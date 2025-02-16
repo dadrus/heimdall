@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -97,7 +96,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 			}
 
 			// WHEN
-			err := tc.strategy.Apply(context.Background(), req)
+			err := tc.strategy.Apply(t.Context(), req)
 
 			// THEN
 			tc.assert(t, err, req)

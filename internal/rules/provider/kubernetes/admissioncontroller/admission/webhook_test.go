@@ -110,7 +110,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, nil)
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, nil)
 				require.NoError(t, err)
 
 				return req
@@ -143,7 +143,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, strings.NewReader("foo"))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, strings.NewReader("foo"))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -179,7 +179,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, strings.NewReader(testRequestPayload))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, strings.NewReader(testRequestPayload))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -225,7 +225,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				query := url.Values{
 					"timeout": []string{"5s"},
 				}
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL+"?"+query.Encode(),
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL+"?"+query.Encode(),
 					strings.NewReader(testRequestPayload))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
@@ -272,7 +272,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				query := url.Values{
 					"timeout": []string{"5g"},
 				}
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL+"?"+query.Encode(),
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL+"?"+query.Encode(),
 					strings.NewReader(testRequestPayload))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")

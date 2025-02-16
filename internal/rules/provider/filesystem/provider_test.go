@@ -500,7 +500,7 @@ rules:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			tmpFile, err := os.CreateTemp(t.TempDir(), "test-file-")
 			require.NoError(t, err)
 

@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"net/url"
 	"testing"
@@ -382,7 +381,7 @@ func TestRuleExecute(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			ctx := heimdallmocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(context.Background())
+			ctx.EXPECT().Context().Return(t.Context())
 
 			authenticator := mocks.NewSubjectCreatorMock(t)
 			authorizer := mocks.NewSubjectHandlerMock(t)

@@ -238,7 +238,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 			// WHEN
 			// we're not interested in the response and the error
-			client.Check(context.Background(), &envoy_auth.CheckRequest{
+			client.Check(t.Context(), &envoy_auth.CheckRequest{
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{
 						Http: &envoy_auth.AttributeContext_HttpRequest{
@@ -255,7 +255,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 			var rm metricdata.ResourceMetrics
 
-			err = exp.Collect(context.TODO(), &rm)
+			err = exp.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
 			tc.assert(t, &rm)
@@ -304,7 +304,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 
 	// WHEN
 	// we're not interested in the response and the error
-	_, err = client.Test(context.Background(), &mocks2.TestRequest{})
+	_, err = client.Test(t.Context(), &mocks2.TestRequest{})
 
 	// THEN
 	require.Error(t, err)
@@ -313,7 +313,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 
 	var rm metricdata.ResourceMetrics
 
-	err = exp.Collect(context.TODO(), &rm)
+	err = exp.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	handler.AssertExpectations(t)
 

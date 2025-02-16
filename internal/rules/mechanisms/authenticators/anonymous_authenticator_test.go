@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -192,7 +191,7 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	auth := anonymousAuthenticator{Subject: subjectID, id: "anon_auth"}
 
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	// WHEN
 	sub, err := auth.Execute(ctx)

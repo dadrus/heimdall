@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -531,7 +530,7 @@ password: bar`))
 			require.NoError(t, err)
 
 			ctx := mocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(context.Background())
+			ctx.EXPECT().Context().Return(t.Context())
 			tc.configureContext(t, ctx)
 
 			// WHEN

@@ -17,7 +17,6 @@
 package decision
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -53,7 +52,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodGet,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -84,7 +83,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -115,7 +114,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -146,7 +145,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -178,7 +177,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -233,7 +232,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -294,7 +293,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -352,7 +351,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -391,7 +390,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -431,7 +430,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -470,7 +469,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -509,7 +508,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -566,7 +565,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			client := &http.Client{Transport: &http.Transport{}}
 
 			decision := newService(conf, cch, log.Logger, exec)
-			defer decision.Shutdown(context.Background())
+			defer decision.Shutdown(t.Context())
 
 			go func() {
 				decision.Serve(listener)

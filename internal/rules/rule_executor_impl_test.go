@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -50,7 +49,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				req := &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{URL: *matchingURL}}
 
-				ctx.EXPECT().Context().Return(context.Background())
+				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(nil, heimdall.ErrNoRuleFound)
 			},
@@ -63,7 +62,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
 
-				ctx.EXPECT().Context().Return(context.Background())
+				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
@@ -77,7 +76,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 				upstream := mocks4.NewBackendMock(t)
 				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
 
-				ctx.EXPECT().Context().Return(context.Background())
+				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(upstream, nil)

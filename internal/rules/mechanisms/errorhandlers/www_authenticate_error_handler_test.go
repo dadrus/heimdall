@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -265,7 +264,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			require.NoError(t, err)
 
 			mctx := mocks.NewRequestContextMock(t)
-			mctx.EXPECT().Context().Return(context.Background())
+			mctx.EXPECT().Context().Return(t.Context())
 
 			tc.configureContext(t, mctx)
 

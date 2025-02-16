@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"net/http"
@@ -594,7 +593,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			cch := mocks2.NewCacheMock(t)
 			ctx := mocks.NewRequestContextMock(t)
 
-			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
+			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			configureMocks(t, ctx, cch)
 
 			assertRequest = tc.assertRequest

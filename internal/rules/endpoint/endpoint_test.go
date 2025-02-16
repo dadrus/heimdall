@@ -18,7 +18,6 @@ package endpoint
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -354,7 +353,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 			}
 
 			// WHEN
-			req, err := tc.endpoint.CreateRequest(context.Background(), body, tc.renderer)
+			req, err := tc.endpoint.CreateRequest(t.Context(), body, tc.renderer)
 
 			// THEN
 			tc.assert(t, req, err)
@@ -490,7 +489,7 @@ func TestEndpointSendRequest(t *testing.T) {
 			}
 
 			// WHEN
-			response, err := tc.endpoint.SendRequest(context.Background(), body, nil)
+			response, err := tc.endpoint.SendRequest(t.Context(), body, nil)
 
 			// THEN
 			tc.assert(t, response, err)

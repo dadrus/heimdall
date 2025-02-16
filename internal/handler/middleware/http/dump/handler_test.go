@@ -17,7 +17,6 @@
 package dump
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -97,7 +96,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(),
+				t.Context(),
 				http.MethodGet,
 				srv.URL+"/test",
 				strings.NewReader("Foobar"),

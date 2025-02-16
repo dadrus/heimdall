@@ -17,7 +17,6 @@
 package certificate
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -301,14 +300,14 @@ func TestCertificateExpirationCollector(t *testing.T) {
 			var rm1, rm2 metricdata.ResourceMetrics
 
 			// WHEN
-			err = exp.Collect(context.TODO(), &rm1)
+			err = exp.Collect(t.Context(), &rm1)
 			require.NoError(t, err)
 
 			// THEN
 			tc.assert(t, &rm1, 1)
 
 			// WHEN
-			err = exp.Collect(context.TODO(), &rm2)
+			err = exp.Collect(t.Context(), &rm2)
 			require.NoError(t, err)
 
 			// THEN

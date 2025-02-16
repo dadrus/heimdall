@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -34,7 +33,7 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	testErr := errors.New("test error")
 
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
 	eh1.EXPECT().Execute(ctx, testErr).Return(errErrorHandlerNotApplicable)
@@ -58,7 +57,7 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	testErr := errors.New("test error")
 
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
 	eh1.EXPECT().Execute(ctx, testErr).Return(nil)
@@ -81,7 +80,7 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	testErr := errors.New("test error")
 
 	ctx := mocks.NewRequestContextMock(t)
-	ctx.EXPECT().Context().Return(context.Background())
+	ctx.EXPECT().Context().Return(t.Context())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
 	eh1.EXPECT().Execute(ctx, testErr).Return(errErrorHandlerNotApplicable)

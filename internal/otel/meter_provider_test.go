@@ -17,7 +17,6 @@
 package otel
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -74,7 +73,7 @@ func TestInitMeterProvider(t *testing.T) {
 				t.Setenv("OTEL_METRICS_EXPORTER", "none")
 				lcMock.On("Append",
 					mock.MatchedBy(func(hook fx.Hook) bool {
-						return hook.OnStop(context.Background()) == nil
+						return hook.OnStop(t.Context()) == nil
 					}),
 				)
 			},

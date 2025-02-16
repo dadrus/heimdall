@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"net/http"
@@ -219,7 +218,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			buildResponse = tc.buildResponse
 
 			cch := mocks.NewCacheMock(t)
-			ctx := cache.WithContext(context.Background(), cch)
+			ctx := cache.WithContext(t.Context(), cch)
 
 			configureMocks(t, cch)
 

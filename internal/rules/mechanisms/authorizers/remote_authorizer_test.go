@@ -17,7 +17,6 @@
 package authorizers
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -199,7 +198,7 @@ values:
 				require.NoError(t, err)
 
 				ctx := heimdallmocks.NewRequestContextMock(t)
-				ctx.EXPECT().Context().Return(context.Background()).Maybe()
+				ctx.EXPECT().Context().Return(t.Context()).Maybe()
 
 				rfunc := heimdallmocks.NewRequestFunctionsMock(t)
 
@@ -1262,7 +1261,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			cch := mocks.NewCacheMock(t)
 
 			ctx := heimdallmocks.NewRequestContextMock(t)
-			ctx.EXPECT().Context().Return(cache.WithContext(context.Background(), cch))
+			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
 			configureContext(t, ctx)

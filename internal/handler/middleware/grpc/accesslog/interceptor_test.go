@@ -68,7 +68,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			outgoingContext: func(t *testing.T) context.Context {
 				t.Helper()
 
-				return context.Background()
+				return t.Context()
 			},
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
@@ -128,10 +128,10 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				}
 
 				otel.GetTextMapPropagator().Inject(
-					trace.ContextWithRemoteSpanContext(context.Background(), parentCtx),
+					trace.ContextWithRemoteSpanContext(t.Context(), parentCtx),
 					propagation.MapCarrier(md))
 
-				return metadata.NewOutgoingContext(context.Background(), metadata.New(md))
+				return metadata.NewOutgoingContext(t.Context(), metadata.New(md))
 			},
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
@@ -176,7 +176,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			outgoingContext: func(t *testing.T) context.Context {
 				t.Helper()
 
-				return context.Background()
+				return t.Context()
 			},
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
@@ -326,7 +326,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	client := mocks2.NewTestClient(conn)
 
 	// WHEN
-	_, err = client.Test(context.Background(), &mocks2.TestRequest{})
+	_, err = client.Test(t.Context(), &mocks2.TestRequest{})
 
 	// THEN
 	require.Error(t, err)

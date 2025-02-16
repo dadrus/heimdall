@@ -17,7 +17,6 @@
 package otel
 
 import (
-	"context"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -80,7 +79,7 @@ func TestInitTraceProvider(t *testing.T) {
 
 				lcMock.On("Append",
 					mock.MatchedBy(func(hook fx.Hook) bool {
-						return hook.OnStop(context.Background()) == nil
+						return hook.OnStop(t.Context()) == nil
 					}),
 				)
 			},

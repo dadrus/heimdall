@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -117,7 +116,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			processor := NewRuleSetProcessor(repo, factory, config2.DecisionMode)
 
 			// WHEN
-			err := processor.OnCreated(context.TODO(), tc.ruleset)
+			err := processor.OnCreated(t.Context(), tc.ruleset)
 
 			// THEN
 			tc.assert(t, err)
@@ -213,7 +212,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			processor := NewRuleSetProcessor(repo, factory, config2.ProxyMode)
 
 			// WHEN
-			err := processor.OnUpdated(context.TODO(), tc.ruleset)
+			err := processor.OnUpdated(t.Context(), tc.ruleset)
 
 			// THEN
 			tc.assert(t, err)
@@ -240,7 +239,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			configure: func(t *testing.T, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				repo.EXPECT().DeleteRuleSet(context.TODO(), "test").Return(errors.New("test error"))
+				repo.EXPECT().DeleteRuleSet(t.Context(), "test").Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -259,7 +258,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			configure: func(t *testing.T, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				repo.EXPECT().DeleteRuleSet(context.TODO(), "test").Return(nil)
+				repo.EXPECT().DeleteRuleSet(t.Context(), "test").Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -276,7 +275,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			processor := NewRuleSetProcessor(repo, mocks.NewFactoryMock(t), config2.DecisionMode)
 
 			// WHEN
-			err := processor.OnDeleted(context.TODO(), tc.ruleset)
+			err := processor.OnDeleted(t.Context(), tc.ruleset)
 
 			// THEN
 			tc.assert(t, err)

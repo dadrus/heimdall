@@ -17,7 +17,6 @@
 package requestcontext
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -106,7 +105,7 @@ func TestExtractURL(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			req, err := http.NewRequestWithContext(
-				context.TODO(),
+				t.Context(),
 				http.MethodGet,
 				"http://heimdall.test.local/test%2Ffoo/bar/%5Bval%5D",
 				nil,

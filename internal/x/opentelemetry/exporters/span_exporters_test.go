@@ -17,7 +17,6 @@
 package exporters
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,7 +28,7 @@ func TestNewSpanExportersWithoutSetEnvVariable(t *testing.T) {
 	t.Parallel()
 
 	// WHEN
-	expts, err := NewSpanExporters(context.Background())
+	expts, err := NewSpanExporters(t.Context())
 
 	// THEN
 	require.NoError(t, err)
@@ -42,7 +41,7 @@ func TestNewSpanExportersWithSetEnvVariable(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "none")
 
 	// WHEN
-	expts, err := NewSpanExporters(context.Background())
+	expts, err := NewSpanExporters(t.Context())
 
 	// THEN
 	require.NoError(t, err)

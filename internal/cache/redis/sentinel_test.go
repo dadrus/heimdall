@@ -17,7 +17,6 @@
 package redis
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -212,9 +211,9 @@ func TestSentinelCache(t *testing.T) {
 			// WHEN
 			cch, err := NewSentinelCache(appCtx, conf)
 			if err == nil {
-				err = cch.Start(context.TODO())
+				err = cch.Start(t.Context())
 				if err == nil {
-					defer cch.Stop(context.TODO())
+					defer cch.Stop(t.Context())
 				}
 			}
 

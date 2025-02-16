@@ -154,7 +154,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 
 	// WHEN
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	req, err := http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
 	suite.Require().NoError(err)
 
 	resp, err := client.Do(req)
@@ -217,7 +217,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	suite.khr.EXPECT().Keys().Return(keys)
 
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	req, err := http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
 	suite.Require().NoError(err)
 
 	resp1, err := client.Do(req)
@@ -230,7 +230,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	etagValue := resp1.Header.Get("ETag")
 	suite.Require().NotEmpty(etagValue)
 
-	req, err = http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	req, err = http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
 	suite.Require().NoError(err)
 	req.Header.Set("If-None-Match", etagValue)
 
@@ -249,7 +249,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 func (suite *ServiceTestSuite) TestHealthRequest() {
 	// GIVEN
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/health", nil)
+	req, err := http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/health", nil)
 	suite.Require().NoError(err)
 
 	// WHEN

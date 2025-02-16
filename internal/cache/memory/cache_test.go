@@ -17,7 +17,6 @@
 package memory
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -42,7 +41,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache cache.Cache) {
 				t.Helper()
 
-				err := cache.Set(context.TODO(), "foo", []byte("bar"), 10*time.Minute)
+				err := cache.Set(t.Context(), "foo", []byte("bar"), 10*time.Minute)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, data []byte) {
@@ -58,7 +57,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache cache.Cache) {
 				t.Helper()
 
-				err := cache.Set(context.TODO(), "bar", []byte("baz"), 1*time.Microsecond)
+				err := cache.Set(t.Context(), "bar", []byte("baz"), 1*time.Microsecond)
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -91,7 +90,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 			// WHEN
 			tc.configureCache(t, cache)
 
-			value, err := cache.Get(context.TODO(), tc.key)
+			value, err := cache.Get(t.Context(), tc.key)
 
 			// THEN
 			tc.assert(t, err, value)
@@ -103,14 +102,14 @@ func TestMemoryCacheExpiration(t *testing.T) {
 	t.Parallel()
 
 	cache, _ := NewCache(nil, nil)
-	cache.Set(context.TODO(), "baz", []byte("bar"), 1*time.Second)
+	cache.Set(t.Context(), "baz", []byte("bar"), 1*time.Second)
 
 	hits := 0
 
 	for range 8 {
 		time.Sleep(250 * time.Millisecond)
 
-		value, err := cache.Get(context.TODO(), "baz")
+		value, err := cache.Get(t.Context(), "baz")
 		if err == nil {
 			hits++
 
