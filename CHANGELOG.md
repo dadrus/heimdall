@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.15.6](https://github.com/dadrus/heimdall/compare/v0.15.5...v0.15.6) (2025-02-16)
+
+
+### Bug Fixes
+
+* HTTPS scheme configured for the probes if the management service is configured with TLS ([#2176](https://github.com/dadrus/heimdall/issues/2176)) ([8eacfb2](https://github.com/dadrus/heimdall/commit/8eacfb2156f0fbde227bb179b086add7ac079f03))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 523cd6a ([#2182](https://github.com/dadrus/heimdall/issues/2182)) ([6608472](https://github.com/dadrus/heimdall/commit/6608472ead9bc80b92c320faacb87c5d2ba42ff6))
+* update golang to v1.24.0 ([#2170](https://github.com/dadrus/heimdall/issues/2170)) ([2de5e01](https://github.com/dadrus/heimdall/commit/2de5e015ca1a056e453f4025c357e06b3f78104b))
+* update golang.org/x/exp digest to eff6e97 ([#2179](https://github.com/dadrus/heimdall/issues/2179)) ([c2046ed](https://github.com/dadrus/heimdall/commit/c2046ed64f3625893580895abfbc3b70bad1451c))
+* update google.golang.org/genproto/googleapis/rpc digest to 5a70512 ([#2169](https://github.com/dadrus/heimdall/issues/2169)) ([1b82319](https://github.com/dadrus/heimdall/commit/1b82319f5b0d478a1bf2895a861fcf7af0ce62e9))
+* update kubernetes packages to v0.32.2 ([#2172](https://github.com/dadrus/heimdall/issues/2172)) ([85dbb2a](https://github.com/dadrus/heimdall/commit/85dbb2a4639c019e8284728f792aea7fb2ab2dbd))
+* update module github.com/dlclark/regexp2 to v1.11.5 ([#2163](https://github.com/dadrus/heimdall/issues/2163)) ([02005af](https://github.com/dadrus/heimdall/commit/02005af533dc86b2a5ae8cfba7501e194a3ca82c))
+* update module github.com/envoyproxy/go-control-plane/envoy to v1.32.4 ([#2147](https://github.com/dadrus/heimdall/issues/2147)) ([5bdddee](https://github.com/dadrus/heimdall/commit/5bdddeebb6bf9cd92b8bbf3e8f1c44a50bb132de))
+* update module github.com/evanphx/json-patch/v5 to v5.9.11 ([#2144](https://github.com/dadrus/heimdall/issues/2144)) ([ce30a8d](https://github.com/dadrus/heimdall/commit/ce30a8d0ee82d37797932b6b8efca97ba22470bf))
+* update module github.com/go-co-op/gocron/v2 to v2.15.0 ([#2134](https://github.com/dadrus/heimdall/issues/2134)) ([6f38b20](https://github.com/dadrus/heimdall/commit/6f38b203217167b0864e7b3e6a455dd2b38163a3))
+* update module github.com/go-playground/validator/v10 to v10.25.0 ([#2178](https://github.com/dadrus/heimdall/issues/2178)) ([ba12308](https://github.com/dadrus/heimdall/commit/ba1230859320cb2c955a3c65c7feff0c6431b1b7))
+* update module github.com/goccy/go-json to v0.10.5 ([#2142](https://github.com/dadrus/heimdall/issues/2142)) ([bee7233](https://github.com/dadrus/heimdall/commit/bee72330d0ee5fe20bcd2bafe9dddb21eaaf3c04))
+* update module github.com/google/cel-go to v0.23.2 ([#2145](https://github.com/dadrus/heimdall/issues/2145)) ([807fa38](https://github.com/dadrus/heimdall/commit/807fa38bf6f6d5fe36401dd2f2d8be166b89c78d))
+* update module github.com/redis/rueidis to v1.0.54 ([#2148](https://github.com/dadrus/heimdall/issues/2148)) ([53eb595](https://github.com/dadrus/heimdall/commit/53eb5954a534803e8b08f13be72fa648d1146185))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.54 ([#2149](https://github.com/dadrus/heimdall/issues/2149)) ([0eec13c](https://github.com/dadrus/heimdall/commit/0eec13c4110326d7002d86b6959e55e2c6d01a1f))
+* update module github.com/spf13/cobra to v1.9.0 ([#2180](https://github.com/dadrus/heimdall/issues/2180)) ([103bb9a](https://github.com/dadrus/heimdall/commit/103bb9a81949b89cb307260080e23cbef2d11550))
+* update module google.golang.org/grpc to v1.70.0 ([#2127](https://github.com/dadrus/heimdall/issues/2127)) ([4eb855c](https://github.com/dadrus/heimdall/commit/4eb855c6e285bbb5904c482cca0ee5a69e34b102))
+* update module google.golang.org/protobuf to v1.36.5 ([#2157](https://github.com/dadrus/heimdall/issues/2157)) ([812263a](https://github.com/dadrus/heimdall/commit/812263a194fae71167fb56c54bad3b6a304d6689))
+* update module k8s.io/client-go to v0.32.2 ([#2173](https://github.com/dadrus/heimdall/issues/2173)) ([80d7687](https://github.com/dadrus/heimdall/commit/80d7687a347f410ad6c5bc25db3fe756a98b8a72))
+
 ## [0.15.5](https://github.com/dadrus/heimdall/compare/v0.15.4...v0.15.5) (2025-01-20)
 
 

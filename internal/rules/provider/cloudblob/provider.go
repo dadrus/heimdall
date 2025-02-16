@@ -115,7 +115,10 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
 		}
 
-		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, bucket)); err != nil {
+		if _, err = prov.s.NewJob(definition,
+			gocron.NewTask(prov.watchChanges, bucket),
+			gocron.WithContext(ctx),
+		); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d cloud_blob", idx).
 				CausedBy(err)

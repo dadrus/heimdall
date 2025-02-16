@@ -11,7 +11,7 @@ on:
       - release
 
 env:
-  GO_VERSION: "1.23.5"
+  GO_VERSION: "1.24.0"
   GOLANGCI_LINT_VERSION: "v1.64.2"
   HELM_VERSION: "3.16.4"
   KUBECONFORM_VERSION: "0.6.7"
@@ -100,7 +100,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Set up Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Get google/go-licenses package
@@ -150,7 +150,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup Node
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
@@ -176,7 +176,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Run hadolint
-        uses: reviewdog/action-hadolint@a588cf93c77060a2836b260c6f0860dc102e8d83 # v1.48.2
+        uses: reviewdog/action-hadolint@48e0d147329dca2fa1663f4a9b6b715b57dcfe28 # v1.50.0
         with:
           reporter: github-pr-review
           reviewdog_flags: -fail-level=error
@@ -260,13 +260,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Set up Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
       - name: Code Coverage
-        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
         with:
           files: coverage.cov
           verbose: true
@@ -318,7 +318,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Set up Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Build
@@ -348,11 +348,11 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Install Cosign
-        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+        uses: sigstore/cosign-installer@c56c2d3e59e4281cc41dea2217323ba5694b171e # v3.8.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Install CycloneDX gomod
@@ -363,7 +363,7 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf # v6.1.0
+        uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # v6.2.1
         with:
           args: release --clean
         env:
@@ -392,11 +392,11 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Install Cosign
         if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+        uses: sigstore/cosign-installer@c56c2d3e59e4281cc41dea2217323ba5694b171e # v3.8.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Generate SBOM
@@ -406,9 +406,9 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3.3.0
+        uses: docker/setup-qemu-action@4574d27a4764455b42196d70a065bc6853246a25 # v3.4.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
+        uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
       - name: Collect container meta-info
         id: meta
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
@@ -419,7 +419,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build images
         if: github.ref != 'refs/heads/main'
-        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
+        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -443,7 +443,7 @@ jobs:
       - name: Build and push dev images to container registry
         if: github.ref == 'refs/heads/main'
         id: publish-image
-        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
+        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -505,11 +505,11 @@ jobs:
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
       - name: Install Cosign
-        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+        uses: sigstore/cosign-installer@c56c2d3e59e4281cc41dea2217323ba5694b171e # v3.8.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Generate SBOM
@@ -518,9 +518,9 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3.3.0
+        uses: docker/setup-qemu-action@4574d27a4764455b42196d70a065bc6853246a25 # v3.4.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
+        uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
       - name: Login to DockerHub
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
@@ -542,7 +542,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build and push images to container registry
         id: publish-image
-        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
+        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
         with:
           context: .
           file: ./docker/Dockerfile
@@ -645,11 +645,11 @@ jobs:
           hugo-version: ${{ env.HUGO_VERSION }}
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@28c4deda893d5a96a6b2d958c5b47fc18d65c9d3 # v1.213.0
+        uses: ruby/setup-ruby@28d088d34a0b0b7ba0823b7952c77004560a3a6f # v1.220.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
@@ -700,11 +700,11 @@ jobs:
           hugo-version: ${{ env.HUGO_VERSION }}
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@28c4deda893d5a96a6b2d958c5b47fc18d65c9d3 # v1.213.0
+        uses: ruby/setup-ruby@28d088d34a0b0b7ba0823b7952c77004560a3a6f # v1.220.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
@@ -764,7 +764,7 @@ jobs:
           publish_dir: ./docs/versions
           keep_files: true
       - name: Setup GitSign
-        uses: chainguard-dev/actions/setup-gitsign@15db5d054137fadf2fee7e5fad9149f88b60b4e2 # main
+        uses: chainguard-dev/actions/setup-gitsign@300b446c0eb21e051cc749e5ed117e3a39ed4dbe # main
       - name: Create a PR for the updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
         uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
