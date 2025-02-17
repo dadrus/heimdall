@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -66,6 +67,7 @@ type jwtFinalizer struct {
 	headerName   string
 	headerScheme string
 	signer       *jwtSigner
+	v            values.Values
 }
 
 func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwtFinalizer, error) {
@@ -82,6 +84,7 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
 		Claims template.Template `mapstructure:"claims"`
 		Header *HeaderConfig     `mapstructure:"header"`
+		Values values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -111,6 +114,7 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 			func() string { return conf.Header.Scheme },
 			func() string { return "Bearer" }),
 		signer: signer,
+		v:      conf.Values,
 	}
 
 	app.CertificateObserver().Add(fin)
@@ -168,6 +172,7 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	type Config struct {
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
 		Claims template.Template `mapstructure:"claims"`
+		Values values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -186,6 +191,7 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 		headerName:   f.headerName,
 		headerScheme: f.headerScheme,
 		signer:       f.signer,
+		v:            f.v.Merge(conf.Values),
 	}, nil
 }
 
