@@ -2,7 +2,7 @@
 title: "Istio Service Mesh Integration"
 date: 2024-10-23T20:49:17+02:00
 draft: false
-weight: 16
+weight: 17
 menu:
   guides:
     parent: "API Gateways & Proxies"
