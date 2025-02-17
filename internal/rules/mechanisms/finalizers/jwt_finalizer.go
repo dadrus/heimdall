@@ -82,9 +82,9 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 	type Config struct {
 		Signer SignerConfig      `mapstructure:"signer" validate:"required"`
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
-		Claims template.Template `mapstructure:"claims"`
+		Claims template.Template `mapstructure:"claims" validate:"excluded_with=Values"`
+		Values values.Values     `mapstructure:"values" validate:"excluded_with=Claims"`
 		Header *HeaderConfig     `mapstructure:"header"`
-		Values values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -171,8 +171,8 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 
 	type Config struct {
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
-		Claims template.Template `mapstructure:"claims"`
-		Values values.Values     `mapstructure:"values"`
+		Claims template.Template `mapstructure:"claims" validate:"excluded_with=Values"`
+		Values values.Values     `mapstructure:"values" validate:"excluded_with=Claims"`
 	}
 
 	var conf Config
@@ -203,12 +203,24 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")
 
-	claims := map[string]any{}
+	result := map[string]any{}
 
 	if f.claims != nil {
-		vals, err := f.claims.Render(map[string]any{
+		vals, err := f.v.Render(map[string]any{
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
+		})
+		if err != nil {
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render values").
+				WithErrorContext(f).
+				CausedBy(err)
+		}
+
+		claims, err := f.claims.Render(map[string]any{
+			"Subject": sub,
+			"Outputs": ctx.Outputs(),
+			"Values":  vals,
 		})
 		if err != nil {
 			return "", errorchain.
@@ -217,9 +229,9 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 				CausedBy(err)
 		}
 
-		logger.Debug().Str("_value", vals).Msg("Rendered template")
+		logger.Debug().Str("_value", claims).Msg("Rendered template")
 
-		if err = json.Unmarshal(stringx.ToBytes(vals), &claims); err != nil {
+		if err = json.Unmarshal(stringx.ToBytes(claims), &result); err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
 				WithErrorContext(f).
@@ -227,7 +239,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 		}
 	}
 
-	token, err := f.signer.Sign(sub.ID, f.ttl, claims)
+	token, err := f.signer.Sign(sub.ID, f.ttl, result)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to sign token").
