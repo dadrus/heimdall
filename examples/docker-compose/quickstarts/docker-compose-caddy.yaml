@@ -1,0 +1,10 @@
+services:
+  edge-router:
+    image: caddy:2.9.1-alpine
+    ports:
+      - "9090:9090"
+    volumes:
+      - "./Caddyfile:/etc/caddy/Caddyfile:ro"
+
+  heimdall:
+    command: serve decision -c /etc/heimdall/config.yaml --insecure
