@@ -1,4 +1,24 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>API Gateways &amp; Proxies on Heimdall</title><link>https://dadrus.github.io/guides/proxies/</link><description>Recent content in API Gateways &amp; Proxies on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 16 Feb 2025 18:26:42 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/proxies/index.xml" rel="self" type="application/rss+xml"/><item><title>Contour Integration</title><link>https://dadrus.github.io/guides/proxies/contour/</link><pubDate>Wed, 02 Aug 2023 17:10:52 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/contour/</guid><description>&lt;div class="paragraph">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>API Gateways &amp; Proxies on Heimdall</title><link>https://dadrus.github.io/guides/proxies/</link><description>Recent content in API Gateways &amp; Proxies on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 17 Feb 2025 11:36:59 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/proxies/index.xml" rel="self" type="application/rss+xml"/><item><title>Caddy Integration</title><link>https://dadrus.github.io/guides/proxies/caddy/</link><pubDate>Mon, 17 Feb 2025 10:43:16 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/caddy/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://caddyserver.com">Caddy&lt;/a> is a modern web server and reverse proxy known for its automatic HTTPS and simplicity. Heimdall can be integrated with Caddy using the &lt;a href="https://caddyserver.com/docs/caddyfile/directives/forward_auth">forward_auth&lt;/a> directive. If heimdall responds with a 2XX status code, Caddy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with Caddy requires heimdall being operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_configuration_options">Configuration Options&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Since Caddy offers extensive configuration options and heimdall supports multiple integration methods, you can choose any of the examples below. Each setup ensures heimdall can construct the URL of the protected backend server for rule matching purposes.&lt;/p>
+&lt;/div></description></item><item><title>Contour Integration</title><link>https://dadrus.github.io/guides/proxies/contour/</link><pubDate>Wed, 02 Aug 2023 17:10:52 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/contour/</guid><description>&lt;div class="paragraph">
 &lt;p>&lt;a href="https://projectcontour.io/">Contour&lt;/a> is an ingress controller for Kubernetes, implementing a control plane for &lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a> edge and a service proxy.&lt;/p>
 &lt;/div>
 &lt;div class="sect1">

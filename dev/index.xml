@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 16 Feb 2025 18:26:42 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 17 Feb 2025 11:36:59 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_what_is_heimdall">What is heimdall?&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -79,6 +79,34 @@
 &lt;p>The &lt;code>/private&lt;/code> endpoint, along with any other potentially exposed endpoints, should not be accessible at all. All requests to it should be rejected.&lt;/p>
 &lt;/li>
 &lt;/ul>
+&lt;/div></description></item><item><title>Caddy Integration</title><link>https://dadrus.github.io/guides/proxies/caddy/</link><pubDate>Mon, 17 Feb 2025 10:43:16 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/caddy/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://caddyserver.com">Caddy&lt;/a> is a modern web server and reverse proxy known for its automatic HTTPS and simplicity. Heimdall can be integrated with Caddy using the &lt;a href="https://caddyserver.com/docs/caddyfile/directives/forward_auth">forward_auth&lt;/a> directive. If heimdall responds with a 2XX status code, Caddy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with Caddy requires heimdall being operated in &lt;a href="./docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_configuration_options">Configuration Options&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Since Caddy offers extensive configuration options and heimdall supports multiple integration methods, you can choose any of the examples below. Each setup ensures heimdall can construct the URL of the protected backend server for rule matching purposes.&lt;/p>
+&lt;/div></description></item><item><title>Pipelines</title><link>https://dadrus.github.io/docs/concepts/pipelines/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/pipelines/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_overview">Overview&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Pipelines are specified in &lt;a href="./docs/concepts/rules/">rules&lt;/a> and are used to authenticate and authorize the particular requests, as well as to handle encountered errors.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>As described in the &lt;a href="./docs/getting_started/discover_heimdall/">Discover heimdall&lt;/a> chapter and also shown in the diagram below, central aspects of heimdall are upstream specific pipelines, which allow you orchestrating different services to authenticate, enrich and authorize incoming HTTP requests, transform the resulting subject information into a format, or obtain credentials required for the communication with the particular upstream services.&lt;/p>
 &lt;/div></description></item><item><title>Contour Integration</title><link>https://dadrus.github.io/guides/proxies/contour/</link><pubDate>Wed, 02 Aug 2023 17:10:52 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/contour/</guid><description>&lt;div class="paragraph">
 &lt;p>&lt;a href="https://projectcontour.io/">Contour&lt;/a> is an ingress controller for Kubernetes, implementing a control plane for &lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a> edge and a service proxy.&lt;/p>
 &lt;/div>
@@ -92,26 +120,6 @@
 &lt;/li>
 &lt;li>
 &lt;p>Being security first ingress controller, Contour enforces TLS for communication between Envoy and any external authorization service. For that reason, heimdall must be configured with an appropriate key material and certificate. Same is actually also true for the http route definition of the actual upstream service. The only exception is when configuring Contour using heimdall as a global external auth service.&lt;/p>
-&lt;/li>
-&lt;/ul>
-&lt;/div></description></item><item><title>Pipelines</title><link>https://dadrus.github.io/docs/concepts/pipelines/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/pipelines/</guid><description>&lt;div class="sect1">
-&lt;h2 id="_overview">Overview&lt;/h2>
-&lt;div class="sectionbody">
-&lt;div class="paragraph">
-&lt;p>Pipelines are specified in &lt;a href="./docs/concepts/rules/">rules&lt;/a> and are used to authenticate and authorize the particular requests, as well as to handle encountered errors.&lt;/p>
-&lt;/div>
-&lt;div class="paragraph">
-&lt;p>As described in the &lt;a href="./docs/getting_started/discover_heimdall/">Discover heimdall&lt;/a> chapter and also shown in the diagram below, central aspects of heimdall are upstream specific pipelines, which allow you orchestrating different services to authenticate, enrich and authorize incoming HTTP requests, transform the resulting subject information into a format, or obtain credentials required for the communication with the particular upstream services.&lt;/p>
-&lt;/div></description></item><item><title>Emissary Ingress Integration</title><link>https://dadrus.github.io/guides/proxies/emissary/</link><pubDate>Mon, 21 Aug 2023 15:23:41 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/emissary/</guid><description>&lt;div class="paragraph">
-&lt;p>&lt;a href="https://www.getambassador.io/products/api-gateway">Emissary-Ingress&lt;/a> is an Envoy-powered open source, high performance ingress controller and API Gateway for Kubernetes from &lt;a href="https://www.getambassador.io/">Ambassador Labs&lt;/a>. Integration happens by letting Emissary-Ingress delegating authentication and authorization to heimdall. If heimdall answers with a 2XX code, the ingress controller will grant access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.&lt;/p>
-&lt;/div>
-&lt;div class="sect1">
-&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
-&lt;div class="sectionbody">
-&lt;div class="ulist">
-&lt;ul>
-&lt;li>
-&lt;p>Integration with Emissary-Ingress requires heimdall being operated in &lt;a href="./docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
 &lt;/li>
 &lt;/ul>
 &lt;/div></description></item><item><title>Mechanisms</title><link>https://dadrus.github.io/docs/concepts/mechanisms/</link><pubDate>Tue, 29 Nov 2022 22:31:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/mechanisms/</guid><description>&lt;div class="sect1">
@@ -138,6 +146,20 @@
 &lt;p>&lt;a href="./docs/mechanisms/error_handlers/">Error Handlers&lt;/a>, which are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.&lt;/p>
 &lt;/li>
 &lt;/ul>
+&lt;/div></description></item><item><title>Emissary Ingress Integration</title><link>https://dadrus.github.io/guides/proxies/emissary/</link><pubDate>Mon, 21 Aug 2023 15:23:41 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/emissary/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://www.getambassador.io/products/api-gateway">Emissary-Ingress&lt;/a> is an Envoy-powered open source, high performance ingress controller and API Gateway for Kubernetes from &lt;a href="https://www.getambassador.io/">Ambassador Labs&lt;/a>. Integration happens by letting Emissary-Ingress delegating authentication and authorization to heimdall. If heimdall answers with a 2XX code, the ingress controller will grant access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with Emissary-Ingress requires heimdall being operated in &lt;a href="./docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item><item><title>Rules</title><link>https://dadrus.github.io/docs/concepts/rules/</link><pubDate>Tue, 29 Nov 2022 22:33:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/rules/</guid><description>&lt;div class="paragraph">
+&lt;p>You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some &amp;#34;tuning&amp;#34; to be applied to better suit your needs.&lt;/p>
 &lt;/div></description></item><item><title>Envoy Integration</title><link>https://dadrus.github.io/guides/proxies/envoy/</link><pubDate>Sun, 18 Dec 2022 00:13:59 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/envoy/</guid><description>&lt;div class="paragraph">
 &lt;p>&lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a> is a high performance distributed proxy designed for single services and applications, as well as a communication bus and “universal data plane” designed for large microservice “service mesh” architectures.&lt;/p>
 &lt;/div>
@@ -171,8 +193,14 @@
 &lt;/div>
 &lt;div class="paragraph">
 &lt;p>In both cases, the filter calls an external gRPC or HTTP service to check whether an incoming HTTP request is authorized or not. If the request is deemed unauthorized, then the request will be denied normally with 403 (Forbidden) response.&lt;/p>
-&lt;/div></description></item><item><title>Rules</title><link>https://dadrus.github.io/docs/concepts/rules/</link><pubDate>Tue, 29 Nov 2022 22:33:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/rules/</guid><description>&lt;div class="paragraph">
-&lt;p>You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some &amp;#34;tuning&amp;#34; to be applied to better suit your needs.&lt;/p>
+&lt;/div></description></item><item><title>Rule Provider</title><link>https://dadrus.github.io/docs/concepts/provider/</link><pubDate>Tue, 29 Nov 2022 22:31:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/provider/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_rules_sets">Rules Sets&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Regular, respectively upstream specific rules must somehow be organized, versioned and also loaded. So, there must be some structure allowing all of that. That structure is defined by the so-called rule sets.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>A rule set can be considered to be just a file containing a list of rules and some additional meta information, like format version, name of the rule set and alike. Rule sets do also allow ordering of rules, e.g. with most specific matching expressions first allowing simpler matching expressions.&lt;/p>
 &lt;/div></description></item><item><title>Envoy Gateway Integration</title><link>https://dadrus.github.io/guides/proxies/envoy_gateway/</link><pubDate>Thu, 02 May 2024 13:02:43 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/envoy_gateway/</guid><description>&lt;div class="paragraph">
 &lt;p>&lt;a href="https://gateway.envoyproxy.io">Envoy Gateway&lt;/a> is an open source project for managing &lt;a href="https://www.envoyproxy.io/">Envoy Proxy&lt;/a> as a Kubernetes-based application gateway by making use of the &lt;a href="https://gateway-api.sigs.k8s.io/">Gateway API&lt;/a> resources.&lt;/p>
 &lt;/div>
@@ -202,22 +230,6 @@
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
 &lt;p>Technically, the integration happens the same way as with &lt;a href="./guides/proxies/envoy/">Envoy&lt;/a> itself by making use of the &lt;a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html">External Authorization&lt;/a> filter, and can be done in two ways:&lt;/p>
-&lt;/div></description></item><item><title>Rule Provider</title><link>https://dadrus.github.io/docs/concepts/provider/</link><pubDate>Tue, 29 Nov 2022 22:31:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/provider/</guid><description>&lt;div class="sect1">
-&lt;h2 id="_rules_sets">Rules Sets&lt;/h2>
-&lt;div class="sectionbody">
-&lt;div class="paragraph">
-&lt;p>Regular, respectively upstream specific rules must somehow be organized, versioned and also loaded. So, there must be some structure allowing all of that. That structure is defined by the so-called rule sets.&lt;/p>
-&lt;/div>
-&lt;div class="paragraph">
-&lt;p>A rule set can be considered to be just a file containing a list of rules and some additional meta information, like format version, name of the rule set and alike. Rule sets do also allow ordering of rules, e.g. with most specific matching expressions first allowing simpler matching expressions.&lt;/p>
-&lt;/div></description></item><item><title>HAProxy Integration</title><link>https://dadrus.github.io/guides/proxies/haproxy/</link><pubDate>Tue, 08 Aug 2023 07:32:14 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/haproxy/</guid><description>&lt;div class="paragraph">
-&lt;p>&lt;a href="https://www.haproxy.com/">HAProxy&lt;/a> (High Availability Proxy) is a popular open source, fast, and reliable solution providing load balancer and reverse proxy features for TCP- and HTTP-based applications, capable handling heavy load traffic and rerouting requests seamlessly across multiple workloads (e.g. web, application, database).&lt;/p>
-&lt;/div>
-&lt;div class="sect1">
-&lt;h2 id="_vanilla_haproxy">Vanilla HAProxy&lt;/h2>
-&lt;div class="sectionbody">
-&lt;div class="paragraph">
-&lt;p>HAProxy is highly extensible thanks to Lua scripting support. For that reason the vanilla HAProxy does not implement any means of external authorization support and requires custom Lua code to achieve integration with heimdall.&lt;/p>
 &lt;/div></description></item><item><title>Operating Modes</title><link>https://dadrus.github.io/docs/concepts/operating_modes/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/operating_modes/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_decision_mode">Decision Mode&lt;/h2>
 &lt;div class="sectionbody">
@@ -232,6 +244,14 @@
 &lt;/div>
 &lt;div class="paragraph">
 &lt;p>In this mode heimdall can be integrated with most probably all modern API gateways and reverse proxies as a so-called &amp;#34;authentication middleware&amp;#34;. Here the reverse proxy, respectively API gateway integrating with heimdall, will forward requests to heimdall by making use of its main service endpoint for authentication and authorization purposes. As in the &lt;a href="#_proxy_mode">Reverse Proxy&lt;/a> mode, heimdall will check if these requests match and satisfy the conditions defined in the available rules. If not, heimdall returns an error to its client (here API gateway/reverse proxy). If the rule execution was successful, it also responds to the API gateway/reverse proxy with &lt;code>200 OK&lt;/code> (can be overridden if required) and sets headers/cookies, specified in the matched rule, which are then forwarded to the upstream service.&lt;/p>
+&lt;/div></description></item><item><title>HAProxy Integration</title><link>https://dadrus.github.io/guides/proxies/haproxy/</link><pubDate>Tue, 08 Aug 2023 07:32:14 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/haproxy/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://www.haproxy.com/">HAProxy&lt;/a> (High Availability Proxy) is a popular open source, fast, and reliable solution providing load balancer and reverse proxy features for TCP- and HTTP-based applications, capable handling heavy load traffic and rerouting requests seamlessly across multiple workloads (e.g. web, application, database).&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_vanilla_haproxy">Vanilla HAProxy&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>HAProxy is highly extensible thanks to Lua scripting support. For that reason the vanilla HAProxy does not implement any means of external authorization support and requires custom Lua code to achieve integration with heimdall.&lt;/p>
 &lt;/div></description></item><item><title>Istio Service Mesh Integration</title><link>https://dadrus.github.io/guides/proxies/istio/</link><pubDate>Wed, 23 Oct 2024 20:49:17 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/istio/</guid><description>&lt;div class="paragraph">
 &lt;p>&lt;a href="https://istio.io/">Istio&lt;/a> is an open-source service mesh that extends Kubernetes’ capabilities, providing a uniform way to observe, secure, and connect microservices. It also functions as a Kubernetes-based application gateway, using either its built-in &lt;a href="https://istio.io/latest/docs/concepts/traffic-management/#gateways">Ingress Gateway&lt;/a>, the Kubernetes &lt;a href="https://istio.io/latest/docs/tasks/traffic-management/ingress/kubernetes-ingress/">Ingress&lt;/a>, or the &lt;a href="https://gateway-api.sigs.k8s.io/">Gateway API&lt;/a> resources for configuration.&lt;/p>
 &lt;/div>
