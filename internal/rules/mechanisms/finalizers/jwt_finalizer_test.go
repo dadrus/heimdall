@@ -66,16 +66,12 @@ func TestCreateJWTFinalizer(t *testing.T) {
 
 	const expectedTTL = 5 * time.Second
 
-	for _, tc := range []struct {
-		uc                  string
-		id                  string
+	for uc, tc := range map[string]struct {
 		config              []byte
 		configureAppContext func(t *testing.T, ctx *app.ContextMock)
 		assert              func(t *testing.T, err error, finalizer *jwtFinalizer)
 	}{
-		{
-			uc:                  "without config",
-			id:                  "fin",
+		"without config": {
 			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
@@ -84,9 +80,7 @@ func TestCreateJWTFinalizer(t *testing.T) {
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
 		},
-		{
-			uc:                  "with empty config",
-			id:                  "fin",
+		"with empty config": {
 			config:              []byte(``),
 			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
@@ -96,9 +90,7 @@ func TestCreateJWTFinalizer(t *testing.T) {
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
 		},
-		{
-			uc: "with not existing key store for signer",
-			id: "fin",
+		"with not existing key store for signer": {
 			config: []byte(`
 signer:
   key_store:
@@ -117,9 +109,7 @@ signer:
 				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
-		{
-			uc: "with signer only",
-			id: "fin",
+		"with signer only": {
 			config: []byte(`
 signer:
   key_store:
@@ -150,7 +140,7 @@ signer:
 				require.NotNil(t, finalizer)
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with signer only", finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -160,9 +150,7 @@ signer:
 				assert.Equal(t, privKey, finalizer.signer.key)
 			},
 		},
-		{
-			uc: "with ttl and signer",
-			id: "fin",
+		"with ttl and signer": {
 			config: []byte(`
 ttl: 5s
 signer:
@@ -194,7 +182,7 @@ signer:
 				require.NotNil(t, finalizer)
 				assert.Equal(t, expectedTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with ttl and signer", finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -203,8 +191,7 @@ signer:
 				assert.Equal(t, privKey, finalizer.signer.key)
 			},
 		},
-		{
-			uc: "with too short ttl",
+		"with too short ttl": {
 			config: []byte(`
 ttl: 5ms
 signer:
@@ -220,9 +207,7 @@ signer:
 				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
-		{
-			uc: "with claims and key store",
-			id: "fin",
+		"with claims and key store": {
 			config: []byte(`
 signer:
   name: foo
@@ -260,7 +245,7 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with claims and key store", finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				assert.False(t, finalizer.ContinueOnError())
@@ -270,9 +255,7 @@ claims:
 				assert.Equal(t, privKey, finalizer.signer.key)
 			},
 		},
-		{
-			uc: "with claims, signer and ttl",
-			id: "fin",
+		"with claims, signer and ttl": {
 			config: []byte(`
 ttl: 5s
 signer:
@@ -310,7 +293,7 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with claims, signer and ttl", finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				assert.False(t, finalizer.ContinueOnError())
@@ -320,8 +303,7 @@ claims:
 				assert.Equal(t, privKey, finalizer.signer.key)
 			},
 		},
-		{
-			uc: "with unknown entries in configuration",
+		"with unknown entries in configuration": {
 			config: []byte(`
 ttl: 5s
 foo: bar"
@@ -335,8 +317,7 @@ foo: bar"
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with bad header config",
+		"with bad header config": {
 			config: []byte(`
 signer:
   key_store: 
@@ -353,9 +334,7 @@ header:
 				assert.Contains(t, err.Error(), "'header'.'name' is a required field")
 			},
 		},
-		{
-			uc: "with valid header config without scheme",
-			id: "fin",
+		"with valid header config without scheme": {
 			config: []byte(`
 signer:
   key_store: 
@@ -386,7 +365,7 @@ header:
 				require.NotNil(t, finalizer)
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with valid header config without scheme", finalizer.ID())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Empty(t, finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -395,9 +374,7 @@ header:
 				assert.Equal(t, privKey, finalizer.signer.key)
 			},
 		},
-		{
-			uc: "with valid header config with scheme",
-			id: "fin",
+		"with valid header config with scheme": {
 			config: []byte(`
 signer:
   key_store: 
@@ -429,7 +406,7 @@ header:
 				require.NotNil(t, finalizer)
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with valid header config with scheme", finalizer.ID())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Equal(t, "Bar", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -439,7 +416,7 @@ header:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
@@ -453,7 +430,7 @@ header:
 			tc.configureAppContext(t, appCtx)
 
 			// WHEN
-			finalizer, err := newJWTFinalizer(appCtx, tc.id, conf)
+			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -480,16 +457,12 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 
 	const expectedTTL = 5 * time.Second
 
-	for _, tc := range []struct {
-		uc              string
-		id              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer)
 	}{
-		{
-			uc: "no new configuration provided",
-			id: "fin1",
+		"no new configuration provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -500,13 +473,11 @@ signer:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "fin1", configured.ID())
+				assert.Equal(t, "no new configuration provided", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		{
-			uc: "empty configuration provided",
-			id: "fin2",
+		"empty configuration provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -518,13 +489,11 @@ signer:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "fin2", configured.ID())
+				assert.Equal(t, "empty configuration provided", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		{
-			uc: "configuration with ttl only provided",
-			id: "fin3",
+		"configuration with ttl only provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -541,14 +510,13 @@ signer:
 				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
-				assert.Equal(t, "fin3", configured.ID())
+				assert.Equal(t, "configuration with ttl only provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
-		{
-			uc: "configuration with too short ttl",
+		"configuration with too short ttl": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -563,9 +531,7 @@ signer:
 				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
-		{
-			uc: "configuration with claims only provided",
-			id: "fin4",
+		"configuration with claims only provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -590,15 +556,13 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin4", configured.ID())
+				assert.Equal(t, "configuration with claims only provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
-		{
-			uc: "configuration with both ttl and claims provided",
-			id: "fin5",
+		"configuration with both ttl and claims provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -625,14 +589,13 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin5", configured.ID())
+				assert.Equal(t, "configuration with both ttl and claims provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
-		{
-			uc: "with unknown entries in configuration",
+		"with unknown entries in configuration": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -651,7 +614,7 @@ foo: bar
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			protoConf, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
@@ -677,7 +640,7 @@ foo: bar
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newJWTFinalizer(appCtx, tc.id, protoConf)
+			prototype, err := newJWTFinalizer(appCtx, uc, protoConf)
 			require.NoError(t, err)
 
 			// WHEN
@@ -718,9 +681,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc             string
-		id             string
+	for uc, tc := range map[string]struct {
 		config         []byte
 		subject        *subject.Subject
 		configureMocks func(t *testing.T,
@@ -730,9 +691,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 			sub *subject.Subject)
 		assert func(t *testing.T, err error)
 	}{
-		{
-			uc: "with 'nil' subject",
-			id: "fin1",
+		"with 'nil' subject": {
 			config: []byte(`
 signer:
   key_store:
@@ -747,11 +706,10 @@ signer:
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "fin1", identifier.ID())
+				assert.Equal(t, "with 'nil' subject", identifier.ID())
 			},
 		},
-		{
-			uc: "with used prefilled cache",
+		"with used prefilled cache": {
 			config: []byte(`
 signer:
   key_store:
@@ -775,8 +733,7 @@ signer:
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "with no cache hit and without custom claims",
+		"with no cache hit and without custom claims": {
 			config: []byte(`
 signer:
   key_store:
@@ -802,8 +759,7 @@ ttl: 1m
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "with no cache hit, with custom claims and custom header",
+		"with no cache hit, with custom claims and custom header": {
 			config: []byte(`
 signer:
   key_store:
@@ -836,9 +792,7 @@ claims: '{
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "with custom claims template, which does not result in a JSON object",
-			id: "jun2",
+		"with custom claims template, which does not result in a JSON object": {
 			config: []byte(`
 signer:
   key_store:
@@ -864,12 +818,10 @@ claims: "foo: bar"
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "jun2", identifier.ID())
+				assert.Equal(t, "with custom claims template, which does not result in a JSON object", identifier.ID())
 			},
 		},
-		{
-			uc: "with custom claims template, which fails during rendering",
-			id: "jun3",
+		"with custom claims template, which fails during rendering": {
 			config: []byte(`
 signer:
   key_store:
@@ -895,11 +847,11 @@ claims: "{{ len .foobar }}"
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "jun3", identifier.ID())
+				assert.Equal(t, "with custom claims template, which fails during rendering", identifier.ID())
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
@@ -934,7 +886,7 @@ claims: "{{ len .foobar }}"
 
 			mctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
-			finalizer, err := newJWTFinalizer(appCtx, tc.id, conf)
+			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
 			configureMocks(t, finalizer, mctx, cch, tc.subject)
