@@ -171,8 +171,8 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 
 	type Config struct {
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
-		Claims template.Template `mapstructure:"claims" validate:"excluded_with=Values"`
-		Values values.Values     `mapstructure:"values" validate:"excluded_with=Claims"`
+		Claims template.Template `mapstructure:"claims"`
+		Values values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config

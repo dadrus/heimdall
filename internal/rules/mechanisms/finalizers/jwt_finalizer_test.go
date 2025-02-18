@@ -589,12 +589,23 @@ claims: '{ "sub": {{ quote .Value.foo }} }'
 values:
   foo: '{{ quote .Subject.ID }}'
 `),
-			assert: func(t *testing.T, err error, _ *jwtFinalizer, _ *jwtFinalizer) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "excluded field")
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, defaultJWTTTL, configured.ttl)
+				assert.Nil(t, prototype.claims)
+				assert.NotEqual(t, prototype.claims, configured.claims)
+				require.NotNil(t, configured.claims)
+				assert.Equal(t, "configuration with claims and values", configured.ID())
+				assert.NotEmpty(t, configured.v)
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
+				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with both ttl and claims provided": {
