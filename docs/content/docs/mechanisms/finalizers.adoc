@@ -94,7 +94,11 @@ The configuration of the key material used for signature creation purposes, as w
 
 * *`claims`*: _string_ (optional, overridable)
 +
-Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
+Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with custom claims you would like to add to the JWT. The template can make use of link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] objects.
+
+* *`values`* _map of strings_ (optional, overridable)
++
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object, to render parts of the claims property. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] objects.
 
 * *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
