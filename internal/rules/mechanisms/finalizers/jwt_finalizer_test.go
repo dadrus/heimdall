@@ -869,7 +869,7 @@ claims: '{
 				require.NoError(t, err)
 			},
 		},
-		"with no cache hit, with custom claims and and values": {
+		"with no cache hit, with custom claims and values": {
 			config: []byte(`
 signer:
   key_store:
