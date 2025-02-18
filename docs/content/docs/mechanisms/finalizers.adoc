@@ -144,6 +144,7 @@ In a rule that references the `jwt_finalizer`, additional claims can be dynamica
         user_id: '{{ .Subject.ID }}'
   - # Other mechanisms
 ----
+====
 
 == OAuth2 Client Credentials
 
