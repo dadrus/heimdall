@@ -141,6 +141,7 @@ signer:
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with signer only", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -148,6 +149,7 @@ signer:
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, "key", finalizer.signer.keyID)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
 		"with ttl and signer": {
@@ -183,12 +185,14 @@ signer:
 				assert.Equal(t, expectedTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with ttl and signer", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "foo", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
 		"with too short ttl": {
@@ -246,6 +250,7 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "with claims and key store", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				assert.False(t, finalizer.ContinueOnError())
@@ -253,6 +258,7 @@ claims:
 				assert.Equal(t, "foo", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
 		"with claims, signer and ttl": {
@@ -261,8 +267,7 @@ ttl: 5s
 signer:
   key_store: 
     path: ` + pemFile + `
-claims: 
-  '{ "sub": {{ quote .Subject.ID }} }'
+claims: '{ "sub": {{ quote .Subject.ID }} }'
 `),
 			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
@@ -294,6 +299,7 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "with claims, signer and ttl", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				assert.False(t, finalizer.ContinueOnError())
@@ -301,6 +307,7 @@ claims:
 				assert.Equal(t, "heimdall", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
 		"with unknown entries in configuration": {
@@ -366,22 +373,28 @@ header:
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with valid header config without scheme", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Empty(t, finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "heimdall", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
-		"with valid header config with scheme": {
+		"with all possible entries": {
 			config: []byte(`
+ttl: 1m
 signer:
   key_store: 
     path: ` + pemFile + `
 header:
   name: Foo
   scheme: Bar
+claims: '{{ .Values.foo }}'
+values:
+  foo: '{{ .Subject.ID }}'
 `),
 			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
@@ -404,15 +417,18 @@ header:
 
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
-				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
-				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "with valid header config with scheme", finalizer.ID())
+				assert.Equal(t, time.Minute, finalizer.ttl)
+				assert.NotNil(t, finalizer.claims)
+				assert.Equal(t, "with all possible entries", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Equal(t, "Bar", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "heimdall", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Len(t, finalizer.v, 1)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
 	} {
@@ -562,6 +578,25 @@ claims:
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
+		"configuration with claims and values": {
+			prototypeConfig: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+`),
+			config: []byte(`
+claims: '{ "sub": {{ quote .Value.foo }} }'
+values:
+  foo: '{{ quote .Subject.ID }}'
+`),
+			assert: func(t *testing.T, err error, _ *jwtFinalizer, _ *jwtFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "excluded field")
+			},
+		},
 		"configuration with both ttl and claims provided": {
 			prototypeConfig: []byte(`
 signer:
@@ -590,6 +625,37 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with both ttl and claims provided", configured.ID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
+				assert.Equal(t, prototype.signer, configured.signer)
+			},
+		},
+		"configuration with values": {
+			prototypeConfig: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+claims: '{ "foo": {{ quote .Values.foo }} }'
+values:
+  foo: bar
+`),
+			config: []byte(`
+values:
+  foo: '{{ quote .Subject.ID }}'
+`),
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, defaultJWTTTL, configured.ttl)
+				assert.Equal(t, prototype.claims, configured.claims)
+				require.NotNil(t, configured.claims)
+				assert.Equal(t, "configuration with values", configured.ID())
+				assert.NotEmpty(t, configured.v)
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
@@ -792,6 +858,35 @@ claims: '{
 				require.NoError(t, err)
 			},
 		},
+		"with no cache hit, with custom claims and and values": {
+			config: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+claims: '{{- dict "foo" .Values.foo "bar" .Values.bar | toJson -}}'
+values:
+  foo: '{{ .Subject.ID | quote }}'
+  bar: '{{ .Outputs.bar | quote }}'
+`),
+			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock, _ *subject.Subject,
+			) {
+				t.Helper()
+
+				ctx.EXPECT().AddHeaderForUpstream("Authorization",
+					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
+				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
 		"with custom claims template, which does not result in a JSON object": {
 			config: []byte(`
 signer:
@@ -843,11 +938,42 @@ claims: "{{ len .foobar }}"
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render")
+				assert.Contains(t, err.Error(), "failed to render claims")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "with custom claims template, which fails during rendering", identifier.ID())
+			},
+		},
+		"with values template, which fails during rendering": {
+			config: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+claims: "{{ quote .Values.foo }}"
+values:
+  foo: '{{ len .fooo }}'
+`),
+			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock, _ *subject.Subject,
+			) {
+				t.Helper()
+
+				ctx.EXPECT().Outputs().Return(map[string]any{})
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render values")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "with values template, which fails during rendering", identifier.ID())
 			},
 		},
 	} {
