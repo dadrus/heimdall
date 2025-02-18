@@ -125,9 +125,27 @@ config:
       {{ $user_name := .Subject.Attributes.identity.user_name -}}
       "email": {{ quote .Subject.Attributes.identity.email }},
       "email_verified": {{ .Subject.Attributes.identity.email_verified }},
-      "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }}
+      "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }},
+      "extra": {{ .Values | toJson }}
     }
 ----
+
+In a rule making use of the finalizer defined above, you could add further custom claims, which would be placed within the `"extra"` claim without the need to redefine the `claims` property, like .e.g shown below.
+
+[source, yaml]
+----
+- id: some_rule
+  # other rule properties
+  execute:
+  - # other mechanisms
+  - finalizer: jwt_finalizer
+    config:
+      values:
+        foo: bar
+        user_id: '{{ .Subject. ID }}'
+  - # other mechanisms
+----
+
 ====
 
 == OAuth2 Client Credentials
