@@ -82,8 +82,8 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 	type Config struct {
 		Signer SignerConfig      `mapstructure:"signer" validate:"required"`
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
-		Claims template.Template `mapstructure:"claims" validate:"excluded_with=Values"`
-		Values values.Values     `mapstructure:"values" validate:"excluded_with=Claims"`
+		Claims template.Template `mapstructure:"claims"`
+		Values values.Values     `mapstructure:"values"`
 		Header *HeaderConfig     `mapstructure:"header"`
 	}
 
