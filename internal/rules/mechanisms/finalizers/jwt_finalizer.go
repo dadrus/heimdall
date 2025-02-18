@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -66,6 +67,7 @@ type jwtFinalizer struct {
 	headerName   string
 	headerScheme string
 	signer       *jwtSigner
+	v            values.Values
 }
 
 func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwtFinalizer, error) {
@@ -81,6 +83,7 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 		Signer SignerConfig      `mapstructure:"signer" validate:"required"`
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
 		Claims template.Template `mapstructure:"claims"`
+		Values values.Values     `mapstructure:"values"`
 		Header *HeaderConfig     `mapstructure:"header"`
 	}
 
@@ -111,6 +114,7 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 			func() string { return conf.Header.Scheme },
 			func() string { return "Bearer" }),
 		signer: signer,
+		v:      conf.Values,
 	}
 
 	app.CertificateObserver().Add(fin)
@@ -168,6 +172,7 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	type Config struct {
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
 		Claims template.Template `mapstructure:"claims"`
+		Values values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -186,6 +191,7 @@ func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 		headerName:   f.headerName,
 		headerScheme: f.headerScheme,
 		signer:       f.signer,
+		v:            f.v.Merge(conf.Values),
 	}, nil
 }
 
@@ -197,12 +203,24 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")
 
-	claims := map[string]any{}
+	result := map[string]any{}
 
 	if f.claims != nil {
-		vals, err := f.claims.Render(map[string]any{
+		vals, err := f.v.Render(map[string]any{
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
+		})
+		if err != nil {
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render values").
+				WithErrorContext(f).
+				CausedBy(err)
+		}
+
+		claims, err := f.claims.Render(map[string]any{
+			"Subject": sub,
+			"Outputs": ctx.Outputs(),
+			"Values":  vals,
 		})
 		if err != nil {
 			return "", errorchain.
@@ -211,9 +229,9 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 				CausedBy(err)
 		}
 
-		logger.Debug().Str("_value", vals).Msg("Rendered template")
+		logger.Debug().Str("_value", claims).Msg("Rendered template")
 
-		if err = json.Unmarshal(stringx.ToBytes(vals), &claims); err != nil {
+		if err = json.Unmarshal(stringx.ToBytes(claims), &result); err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
 				WithErrorContext(f).
@@ -221,7 +239,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 		}
 	}
 
-	token, err := f.signer.Sign(sub.ID, f.ttl, claims)
+	token, err := f.signer.Sign(sub.ID, f.ttl, result)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to sign token").
@@ -248,6 +266,11 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub *subje
 		func() []byte { return []byte{} }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
+
+	for key, val := range f.v {
+		hash.Write(stringx.ToBytes(key))
+		hash.Write(val.Hash())
+	}
 
 	rawSub, _ := json.Marshal(ctx.Outputs())
 	hash.Write(rawSub)

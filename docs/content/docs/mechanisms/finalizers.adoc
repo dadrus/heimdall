@@ -82,29 +82,33 @@ config:
 
 == JWT
 
-This finalizer enables transformation of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] objects as custom claims into a token in a https://www.rfc-editor.org/rfc/rfc7519[JWT] format, which is then made available to your upstream service in either the HTTP `Authorization` header with `Bearer` scheme set, or in a custom header. Your upstream service can then verify the signature of the JWT by making use of heimdall's JWKS endpoint to retrieve the required public keys/certificates from.
+This finalizer enables transformation of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] objects into custom claims within a https://www.rfc-editor.org/rfc/rfc7519[JWT]. The resulting token is then made available to your upstream service in either the HTTP `Authorization` header (using the `Bearer` scheme) or in a custom header. Your upstream service can verify the JWT's signature using heimdall's JWKS endpoint to retrieve the necessary public keys/certificates.
 
-To enable the usage of this finalizer, you have to set the `type` property to `jwt`.
+To enable this finalizer, set the `type` property to `jwt`.
 
-Configuration using the `config` property is optional. Following properties are available:
+Configuration using the `config` property is mandatory. The following properties are available:
 
 * *`signer`*: _link:{{< relref "/docs/configuration/types.adoc#_signer" >}}[Signer]_ (mandatory, not overridable)
 +
-The configuration of the key material used for signature creation purposes, as well as the name used for the `iss` claim.
+Defines the key material for signing the JWT, as well as the `iss` claim.
 
 * *`claims`*: _string_ (optional, overridable)
 +
-Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
+A link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] specifying custom claims for the JWT. The template can use link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] objects.
+
+* *`values`*: _map of strings_ (optional, overridable)
++
+A key-value map accessible as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] in the template engine for rendering claims. Values in this map can also be templated with access to link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`].
 
 * *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
-Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets the `iat` and the `nbf` claims to the current system time. The value of the `exp` claim is then influenced by the `ttl` property.
+Defines the JWT's validity period. Defaults to 5 minutes. Heimdall automatically sets the `iat` and `nbf` claims to the current system time, and `exp` is calculated based on the `ttl` value.
 
 * *`header`*: _object_ (optional, not overridable)
 +
-Defines the `name` and `scheme` to be used for the header. Defaults to `Authorization` with scheme `Bearer`. If defined, the `name` property must be set. If `scheme` is not defined, no scheme will be prepended to the resulting JWT.
+Specifies the HTTP header `name` and optional `scheme` for passing the JWT. Defaults to `Authorization` with scheme `Bearer`. If defined, `name` is required, and if `scheme` is omitted, the JWT is set as a raw value.
 
-The generated JWT is always cached until 5 seconds before its expiration. The cache key is calculated from the entire configuration of the finalizer instance and the available information about the current subject.
+The generated JWT is cached until 5 seconds before expiration. The cache key is computed based on the finalizer's configuration, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] attributes.
 
 .JWT finalizer configuration
 ====
@@ -121,8 +125,24 @@ config:
       {{ $user_name := .Subject.Attributes.identity.user_name -}}
       "email": {{ quote .Subject.Attributes.identity.email }},
       "email_verified": {{ .Subject.Attributes.identity.email_verified }},
-      "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }}
+      "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }},
+      "extra": {{ .Values | toJson }}
     }
+----
+In a rule that references the `jwt_finalizer`, additional claims can be dynamically inserted into the `"extra"` claim without redefining `claims`:
+
+[source,yaml]
+----
+- id: some_rule
+  # Other rule properties
+  execute:
+  - # Other mechanisms
+  - finalizer: jwt_finalizer
+    config:
+      values:
+        foo: bar
+        user_id: '{{ .Subject.ID }}'
+  - # Other mechanisms
 ----
 ====
 
