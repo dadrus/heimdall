@@ -153,7 +153,7 @@ and using environment variables with
 [source,bash]
 ----
 HEIMDALLCFG_SERVE_TRUSTED__PROXIES_0=192.168.1.0/24
-HEIMDALLCFG_SERVE_TRUSTED__PROXIES_0=192.168.2.0/24
+HEIMDALLCFG_SERVE_TRUSTED__PROXIES_1=192.168.2.0/24
 ----
 +
 For structured configuration, like the definition of the authenticators in the example above
@@ -190,5 +190,3 @@ and using the environment variables with
 ----
 HEIMDALLCFG_TRACING_SPAN__PROCESSOR=simple
 ----
-
-

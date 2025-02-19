@@ -146,7 +146,7 @@ services:
 
 == Traefik as Ingress Controller
 
-If you have Traefik as Ingress Controller in your Kubernetes cluster, you can simply integrate heimdall globally as descibed in link:{{< relref "#_global_configuration" >}}[Global Configuration] chapter above and make use of the standard https://kubernetes.io/docs/concepts/services-networking/ingress/[Ingress resource].
+If you have Traefik as Ingress Controller in your Kubernetes cluster, you can simply integrate heimdall globally as described in link:{{< relref "#_global_configuration" >}}[Global Configuration] chapter above and make use of the standard https://kubernetes.io/docs/concepts/services-networking/ingress/[Ingress resource].
 
 If you are using traefik's proprietary https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-ingressroute[`IngressRoute`] custom resource instead of kubernetes standard https://kubernetes.io/docs/concepts/services-networking/ingress/[`Ingress`] one, you can also reference the https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-middleware[`Middleware`] resource locally. This option is shown in the snippet below.
 
@@ -181,9 +181,8 @@ NOTE: By default, `IngressRoute` resources are not allowed to reference resource
 
 == Traefik as Gateway API implementation
 
-If you have Traefik as https://gateway-api.sigs.k8s.io/[Gateway API] implementation in your Kubernetes cluster, you can simply integrate heimdall globally as descibed in link:{{< relref "#_kubernetes_deployment" >}}[Global Configuration] chapter above and make use of the standard https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`] resource.
+If you have Traefik as https://gateway-api.sigs.k8s.io/[Gateway API] implementation in your Kubernetes cluster, you can simply integrate heimdall globally as described in link:{{< relref "#_kubernetes_deployment" >}}[Global Configuration] chapter above and make use of the standard https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`] resource.
 
 == Additional Resources
 
 A fully working example with Traefik is shown in the link:{{< relref "/docs/getting_started/protect_an_app.adoc" >}}[Protect an Application] quickstart and is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
-

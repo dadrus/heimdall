@@ -44,6 +44,6 @@ The following table gives an overview about existing providers
 
 | link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[Kubernetes]
 | Custom Resource
-| Loads rule sets made available to a kubernetes cluster as customer resources.
+| Loads rule sets made available to a kubernetes cluster as custom resources.
 
 |===

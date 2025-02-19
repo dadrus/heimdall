@@ -12,7 +12,7 @@ description: Error handlers kick in when any of the stages of the regular rule p
 
 :toc:
 
-Some of the error handlers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+Some of the error handlers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overridable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 == Default
 

@@ -417,7 +417,7 @@ The scopes required for the access token.
 
 * *`cache_ttl`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
-How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration inforation is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the values of `token_url`, `client_id`, `client_secret` and the `scopes` properties.
+How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration information is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the values of `token_url`, `client_id`, `client_secret` and the `scopes` properties.
 
 * *`header`*: _object_ (optional, overridable)
 +

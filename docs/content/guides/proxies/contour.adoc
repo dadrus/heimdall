@@ -95,7 +95,7 @@ A global configuration allows you to setup a single external authorization confi
 [source, yaml]
 ----
 globalExtAuth:
-  extensionService: <namespace in which heimdall is installed>/<name of the extention service>
+  extensionService: <namespace in which heimdall is installed>/<name of the extension service>
   failOpen: false
   responseTimeout: 1s
 ----

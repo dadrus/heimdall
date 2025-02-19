@@ -26,7 +26,7 @@ For authentication, we'll use JWTs containing the respective roles. Authorizatio
 In both setups, we'll create minimal but complete environments using Docker Compose with:
 
 * https://doc.traefik.io/traefik/[Traefik] as the edge proxy,
-* https://hub.docker.com/r/containous/whoami/[containous/whoami] (a service that echoes back everything it receives), mimicking our service exposing the endpoints described above,
+* https://hub.docker.com/r/traefik/whoami/[traefik/whoami] (a service that echoes back everything it receives), mimicking our service exposing the endpoints described above,
 * an https://nginx.org/en/[NGINX] server serving the public key for verifying the JWTs (mimicking the JWKS endpoint typically exposed by an OIDC provider),
 * https://www.openpolicyagent.org/[OPA], which evaluates the authorization policy,
 * heimdall, orchestrating everything to enforce the above requirements.
@@ -256,7 +256,7 @@ services:
     command: serve proxy -c /etc/heimdall/config.yaml --insecure
 
   upstream: # <2>
-    image: containous/whoami:latest
+    image: traefik/whoami:latest
     command:
     - --port=8081
 
@@ -311,7 +311,7 @@ services:
     command: serve decision -c /etc/heimdall/config.yaml --insecure
 
   upstream:  # <4>
-    image: containous/whoami:latest
+    image: traefik/whoami:latest
     command:
     - --port=8081
     labels:
