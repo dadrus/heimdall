@@ -12,20 +12,20 @@ description: Rules defines what should happen to particular requests and under w
 
 :toc:
 
-You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs.
+You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behavior. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs.
 
 == Rule Types
 
 Heimdall supports two types of rules:
 
 * The link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream specific rule], also called the regular rule. You can define as many regular rules, as required. These rules are dynamic by nature and can come and go together with the upstream service defining these.
-* The link:{{< relref "/docs/rules/regular_rule.adoc" >}}[default rule], which, if defined, is used by the regular rules to inherit their behaviour and is also executed if no other rule matches.
+* The link:{{< relref "/docs/rules/regular_rule.adoc" >}}[default rule], which, if defined, is used by the regular rules to inherit their behavior and is also executed if no other rule matches.
 
 == Memory Footprint
 
 Even the first paragraphs compare mechanisms and the rules with a catalogue of car parts and a real car, things are a bit more complex in reality.
 
-To minimize the memory footprint, heimdall instanciates all defined mechanisms on start up. And since all mechanisms are stateless, following is happening at runtime, when the rule is loaded:
+To minimize the memory footprint, heimdall instantiates all defined mechanisms on start up. And since all mechanisms are stateless, the following is happening at runtime, when the rule is loaded:
 
 * If a rule, respectively its pipeline just references a mechanism without providing additional configuration, the already instantiated mechanism is used.
 * Otherwise, if the pipeline overrides any parts of the default mechanism configuration, a shallow copy of the referenced mechanism instance (created at start up) is created, and only those parts, which differ are replaced with new objects, representing the pipeline specific configuration.
@@ -76,7 +76,7 @@ The diagram below sketches the logic executed by heimdall for each and every inc
 . *Any rule matching request?* - This is the first step executed by heimdall in which it tries to find a link:{{< relref "#_matching_of_rules" >}}[matching rule]. If there is no matching rule, heimdall either falls back to the default rule if available, or the request is denied. Otherwise, the rule specific authentication & authorization pipeline is executed.
 . *Execute authentication & authorization pipeline* - when a rule is matched, the mechanisms defined in its authentication & authorization pipeline are executed.
 . *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "/docs/concepts/operating_modes.adoc" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
-. *Execute error pipeline* is executed if any of the mechanisms, defined in the authentiction & authorization pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
+. *Execute error pipeline* is executed if any of the mechanisms, defined in the authentication & authorization pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
 
 == Matching of Rules
 
@@ -137,7 +137,7 @@ try {
 
 with `findMatchingRule` returning a specific instance of a class implementing our `Rule` interface matching the request.
 
-Since there is some default behaviour in place, like error handling, if the error pipeline is empty, and some stages of the authentication & authorization pipeline is optional, internally, there is some kind of base rule in place, all other rules inherit from. So something like shown in the snippet below.
+Since there is some default behavior in place, like error handling, if the error pipeline is empty, and some stages of the authentication & authorization pipeline is optional, internally, there is some kind of base rule in place, all other rules inherit from. So something like shown in the snippet below.
 
 [source, java]
 ----
@@ -191,4 +191,3 @@ public class SpecificRule extends DefaultRule {
 ----
 
 NOTE: You cannot override a single mechanism of a particular stage. As soon as you define a single mechanism in a pipeline, belonging to the one or the other stage, the entire stage is overridden.
-

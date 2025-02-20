@@ -87,7 +87,7 @@ The password to be used
 
 * *`client_cache`*: _ClientCache_ (optional)
 +
-Configurs the client cache to reduce roundtrip time. Following settings are possible:
+Configures the client cache to reduce roundtrip time. Following settings are possible:
 
 ** *`disabled`*: _boolean_ (optional)
 +

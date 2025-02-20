@@ -29,7 +29,7 @@ Technically, the integration happens the same way as with link:{{< relref "/guid
 
 In both cases, the filter calls an external gRPC or HTTP service (here heimdall) to check whether an incoming HTTP request is authorized or not. If heimdall responses with `2xx` the request is forwarded to the upstream service, otherwise the response from heimdall is returned to the caller.
 
-In case of Envoy Gateway the abovesaid configuration happens via a https://gateway.envoyproxy.io/contributions/design/security-policy/[`SecurityPolicy`] custom resource, that can be linked to a https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`], https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`], or a https://gateway-api.sigs.k8s.io/api-types/grpcroute[`GRPCRoute`] resource.
+In the case of Envoy Gateway the configuration described above happens via a https://gateway.envoyproxy.io/contributions/design/security-policy/[`SecurityPolicy`] custom resource, that can be linked to a https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`], https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`], or a https://gateway-api.sigs.k8s.io/api-types/grpcroute[`GRPCRoute`] resource.
 
 NOTE: As of today, there is a limitation in the implementation of the Envoy Gateway - it does not allow cross-namespace reference of external auth services (see also https://github.com/envoyproxy/gateway/issues/3322[envoyproxy/gateway#3322]). That means, the https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`], the https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource and heimdall must be deployed in the same namespace.
 

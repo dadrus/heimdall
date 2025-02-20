@@ -26,7 +26,7 @@ With `text` and `gelf` being the available formats. `text` is the default format
 +
 WARNING: Usage of `text` (default) format is not recommended for production deployments as it requires more computational resources and is hence slow.
 +
-.Configuring logging to emit logs using GELD format.
+.Configuring logging to emit logs using GELF format.
 ====
 [source, yaml]
 ----
@@ -217,7 +217,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described below and can be used to tune the behaviour.
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described below and can be used to tune the behavior.
 
 === Configuration
 
@@ -271,7 +271,7 @@ Since not every service in a multi-service system may set or understand the abov
 
 All of these are supported by heimdall. In addition, following propagators can be configured as well:
 
-* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.footnote:[Datadog supports the OTLP protokoll. For that reason, there is no exporter available.]
+* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.footnote:[Datadog supports the OTLP protocol. For that reason, there is no exporter available.]
 
 Configured propagators are used for inbound, as well as for outbound traffic.
 

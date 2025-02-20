@@ -53,7 +53,7 @@ services:
     command: serve proxy -c /etc/heimdall/config.yaml --insecure
 
   upstream: # <2>
-    image: containous/whoami:latest
+    image: traefik/whoami:latest
     container_name: upstream
     command:
     - --port=8081

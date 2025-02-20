@@ -27,7 +27,7 @@ There are also some further endpoints, which you'll learn about during the setup
 
 Technically, the setup includes:
 
-* https://hub.docker.com/r/containous/whoami/[containous/whoami] - A service that echoes back everything it receives, simulating our main service with endpoints mentioned above.
+* https://hub.docker.com/r/traefik/whoami/[traefik/whoami] - A service that echoes back everything it receives, simulating our main service with endpoints mentioned above.
 * https://www.keycloak.org/[Keycloak] - Our identity provider.
 * https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] - Handles the Authorization Code Grant flow for the actual user login.
 * heimdall - Manages everything to enforce the requirements outlined above.
@@ -239,7 +239,7 @@ services:
       - ./signer.pem:/etc/heimdall/signer.pem:ro
 
   upstream: # <2>
-    image: containous/whoami:latest
+    image: traefik/whoami:latest
     command: --port=8081
 
   oauth2-proxy: # <3>

@@ -176,7 +176,7 @@ With this configuration completed, you can proceed to deploy the necessary gatew
 
 Simply create the Ingress https://istio.io/latest/docs/reference/config/networking/gateway/[`Gateway`] resource and define the https://istio.io/latest/docs/reference/config/networking/virtual-service/[`VirtualService`] resources for your services according to your requirements. No further configuration is necessary.
 
-== Kubenetes Gateway API
+== Kubernetes Gateway API
 
 As of this writing, Istio's implementation of the Gateway API appears incomplete. It lacks the necessary `Role` and `RoleBinding` to access the `Secret` containing additional CA certificates. Without these, the Envoy instances cannot access the secret, preventing them from trusting heimdall's certificate. To resolve this, apply the following resources in the namespace where the https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-gateway[`Gateway`] will be installed:
 [source, yaml]
