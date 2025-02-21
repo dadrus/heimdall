@@ -47,9 +47,7 @@ NOTE: When creating query parameters by making use of templates, don't forget to
 
 * *`code`*: _int_ (optional, not overridable)
 +
-The code to be used for the redirect. Defaults to `302 Found`.
-+
-WARNING: Heimdall does not check the configured code for HTTP redirect validity!
+The code to be used for the redirect. Defaults to `302 Found`. Both `301 Moved Permanently` and `302 Found` are authorized.
 
 .Redirect error handler configuration
 ====
