@@ -296,10 +296,13 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		return nil, err
 	}
 
-	// configured assertions take precedence over those available in the metadata
-	assertions := a.a.Merge(oauth2.Expectation{
-		TrustedIssuers: []string{metadata.Issuer},
-	})
+	// verification of the issuer is optional according to RFC 7662. The below implementation
+	// ensures it is done only if explicitly configured.
+	assertions := a.a
+	if len(introspectResp.Issuer) != 0 {
+		// configured assertions take precedence over those available in the metadata
+		assertions = assertions.Merge(a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}}))
+	}
 
 	if err = introspectResp.Validate(assertions); err != nil {
 		return nil, errorchain.
