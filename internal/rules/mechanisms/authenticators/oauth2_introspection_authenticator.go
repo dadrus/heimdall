@@ -79,7 +79,7 @@ func newOAuth2IntrospectionAuthenticator(
 	type Config struct {
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
-		Assertions            oauth2.Expectation                  `mapstructure:"assertions"              validate:"required_with=IntrospectionEndpoint"`                                        //nolint:lll,tagalign
+		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`                                                                                                    //nolint:lll,tagalign
 		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
@@ -89,11 +89,6 @@ func newOAuth2IntrospectionAuthenticator(
 	var conf Config
 	if err := decodeConfig(ctx, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
 		return nil, err
-	}
-
-	if conf.IntrospectionEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"'issuers' is a required field if introspection endpoint is used")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -301,10 +296,13 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		return nil, err
 	}
 
-	// configured assertions take precedence over those available in the metadata
-	assertions := a.a.Merge(oauth2.Expectation{
-		TrustedIssuers: []string{metadata.Issuer},
-	})
+	// verification of the issuer is optional according to RFC 7662. The below implementation
+	// ensures it is done only if explicitly configured.
+	assertions := a.a
+	if len(introspectResp.Issuer) != 0 {
+		// configured assertions take precedence over those available in the metadata
+		assertions = assertions.Merge(a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}}))
+	}
 
 	if err = introspectResp.Validate(assertions); err != nil {
 		return nil, errorchain.

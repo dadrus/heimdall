@@ -80,9 +80,6 @@ mechanisms:
     config:
       introspection_endpoint:
         url: http://hydra:4445/oauth2/introspect
-    assertions:
-      issuers:
-        - http://127.0.0.1:4444/
   authorizers:
   - id: deny_all_authz
     type: deny

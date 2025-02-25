@@ -74,7 +74,7 @@ func TestExpectationAssertIssuer(t *testing.T) {
 		assert func(t *testing.T, err error)
 	}{
 		{
-			uc:     "assertion fails",
+			uc:     "assertion fails on no match",
 			exp:    Expectation{TrustedIssuers: []string{"bar"}},
 			issuer: "foo",
 			assert: func(t *testing.T, err error) {
@@ -84,8 +84,18 @@ func TestExpectationAssertIssuer(t *testing.T) {
 			},
 		},
 		{
-			uc:     "assertion succeeds",
+			uc:     "assertion succeeds on match",
 			exp:    Expectation{TrustedIssuers: []string{"foo"}},
+			issuer: "foo",
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		{
+			uc:     "assertion succeeds if no trusted issuer is specified",
+			exp:    Expectation{},
 			issuer: "foo",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
