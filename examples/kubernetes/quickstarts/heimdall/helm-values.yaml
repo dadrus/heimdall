@@ -28,4 +28,4 @@ env:
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo.monitoring:4317"
 
 image:
-  tag: 0.15.2
+  tag: 0.15.7
