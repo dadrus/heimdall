@@ -57,6 +57,10 @@ func (e Expectation) AssertAlgorithm(alg string) error {
 }
 
 func (e Expectation) AssertIssuer(issuer string) error {
+	if len(e.TrustedIssuers) == 0 {
+		return nil
+	}
+
 	if !slices.Contains(e.TrustedIssuers, issuer) {
 		return errorchain.NewWithMessagef(ErrAssertion, "issuer %s is not trusted", issuer)
 	}

@@ -1855,7 +1855,7 @@
       ],
       "properties": {
         "type": {
-          "const": "www-authenticate"
+          "const": "www_authenticate"
         },
         "id": {
           "description": "The unique id of the error handler to be used in the rule definition",

@@ -89,31 +89,11 @@ subject:
 				assert.Contains(t, err.Error(), "'introspection_endpoint' is a required field")
 			},
 		},
-		"with missing trusted issuers assertion config when not using metadata endpoint": {
-			config: []byte(`
-introspection_endpoint:
-  url: http://foobar.local
-assertions:
-  audience:
-    - foobar
-subject:
-  id: some_template
-`),
-			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'issuers' is a required field")
-			},
-		},
 		"minimal introspection endpoint based config with malformed url": {
 			config: []byte(`
 introspection_endpoint:
   url: "{{ .IssuerName }}"
-assertions:
-  issuers:
-    - foobar`),
+`),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
@@ -127,9 +107,6 @@ assertions:
 			config: []byte(`
 introspection_endpoint:
   url: https://foobar.local
-assertions:
-  issuers:
-    - foobar
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -154,8 +131,7 @@ assertions:
 				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
-				assert.Len(t, auth.a.TrustedIssuers, 1)
-				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
+				assert.Empty(t, auth.a.TrustedIssuers)
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.Audiences)
@@ -179,7 +155,7 @@ assertions:
 
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, "with minimal introspection endpoint based config with used enforced TLS", auth.ID())
 			},
 		},
 		"with minimal introspection endpoint based config with enforced but disabled TLS": {
@@ -187,9 +163,6 @@ assertions:
 			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
-assertions:
-  issuers:
-    - foobar
 `),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -273,7 +246,7 @@ allow_fallback_on_error: true
 
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, "with valid introspection endpoint based config with overwrites", auth.ID())
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -331,7 +304,7 @@ metadata_endpoint:
 
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, "with minimal metadata endpoint based config", auth.ID())
 			},
 		},
 	} {
@@ -352,7 +325,7 @@ metadata_endpoint:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			a, err := newOAuth2IntrospectionAuthenticator(appCtx, "auth1", conf)
+			a, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -386,7 +359,7 @@ subject:
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "without target config", configured.ID())
 			},
 		},
 		"with unsupported fields": {
@@ -447,7 +420,7 @@ assertions:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "with overwrites without cache", configured.ID())
 			},
 		},
 		"prototype config without cache, target config with cache overwrite": {
@@ -475,7 +448,7 @@ subject:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config without cache, target config with cache overwrite", configured.ID())
 			},
 		},
 		"metadata endpoint based prototype config without cache, config with overwrites incl cache": {
@@ -516,7 +489,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "metadata endpoint based prototype config without cache, config with overwrites incl cache", configured.ID())
 			},
 		},
 		"prototype config with cache, target config with overwrites including cache": {
@@ -551,7 +524,7 @@ cache_ttl: 15s
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config with cache, target config with overwrites including cache", configured.ID())
 			},
 		},
 		"prototype config with defaults, target config with fallback on error enabled": {
@@ -579,7 +552,7 @@ subject:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config with defaults, target config with fallback on error enabled", configured.ID())
 			},
 		},
 	} {
@@ -600,7 +573,7 @@ subject:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newOAuth2IntrospectionAuthenticator(appCtx, "auth2", pc)
+			prototype, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -944,7 +917,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		"with disabled cache and failing response validation (issuer not trusted)": {
+		"with disabled cache and failing response validation (explicitly configured issuer is not trusted)": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -1020,7 +993,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		"with configured issuer taking precedence over the one resolved via metadata": {
+		"configured issuer takes precedence over the one resolved via metadata": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: &oauth2.MetadataEndpoint{
@@ -1105,6 +1078,194 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		"issuer from resolved metadata is ignored if no issuer is set in the introspection response and no issuer is configured explicitly": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: &oauth2.MetadataEndpoint{
+					Endpoint: endpoint.Endpoint{
+						URL:       oidcSrv.URL,
+						HTTPCache: &endpoint.HTTPCache{Enabled: false},
+					},
+					DisableIssuerIdentifierVerification: true,
+				},
+				sf:  &SubjectInfo{IDFrom: "sub"},
+				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
+				ttl: &zeroTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkIntrospectionRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodPost, req.Method)
+
+					require.NoError(t, req.ParseForm())
+					assert.Len(t, req.Form, 2)
+					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
+					assert.Equal(t, "test_access_token", req.Form.Get("token"))
+				}
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "Bearer",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+				})
+				require.NoError(t, err)
+
+				introspectionResponseContentType = "application/json"
+				introspectionResponseContent = rawIntrospectResponse
+				introspectionResponseCode = http.StatusOK
+
+				checkMetadataRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodGet, req.Method)
+				}
+
+				metadataResponseContentType = "application/json"
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"introspection_endpoint": srv.URL,
+					"issuer":                 "foobar",
+				})
+				require.NoError(t, err)
+				metadataResponseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, introspectionEndpointCalled)
+
+				require.NoError(t, err)
+				require.NotNil(t, sub)
+
+				assert.Equal(t, "foo", sub.ID)
+				require.Len(t, sub.Attributes, 9)
+				assert.Equal(t, "foo bar", sub.Attributes["scope"])
+				assert.Equal(t, true, sub.Attributes["active"]) //nolint:testifylint
+				assert.Equal(t, "unknown", sub.Attributes["username"])
+				assert.Equal(t, "bar", sub.Attributes["aud"])
+				assert.Equal(t, "Bearer", sub.Attributes["token_type"])
+				assert.NotEmpty(t, sub.Attributes["nbf"])
+				assert.NotEmpty(t, sub.Attributes["iat"])
+				assert.NotEmpty(t, sub.Attributes["exp"])
+			},
+		},
+		"issuer from resolved metadata is not ignored if it is set in the introspection response and no issuer is configured explicitly": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: &oauth2.MetadataEndpoint{
+					Endpoint: endpoint.Endpoint{
+						URL:       oidcSrv.URL,
+						HTTPCache: &endpoint.HTTPCache{Enabled: false},
+					},
+					DisableIssuerIdentifierVerification: true,
+				},
+				sf:  &SubjectInfo{IDFrom: "sub"},
+				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
+				ttl: &zeroTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkIntrospectionRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodPost, req.Method)
+
+					require.NoError(t, req.ParseForm())
+					assert.Len(t, req.Form, 2)
+					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
+					assert.Equal(t, "test_access_token", req.Form.Get("token"))
+				}
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "Bearer",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+				})
+				require.NoError(t, err)
+
+				introspectionResponseContentType = "application/json"
+				introspectionResponseContent = rawIntrospectResponse
+				introspectionResponseCode = http.StatusOK
+
+				checkMetadataRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodGet, req.Method)
+				}
+
+				metadataResponseContentType = "application/json"
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"introspection_endpoint": srv.URL,
+					"issuer":                 "foobar",
+				})
+				require.NoError(t, err)
+				metadataResponseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, introspectionEndpointCalled)
+
+				require.NoError(t, err)
+				require.NotNil(t, sub)
+
+				assert.Equal(t, "foo", sub.ID)
+				require.Len(t, sub.Attributes, 10)
+				assert.Equal(t, "foo bar", sub.Attributes["scope"])
+				assert.Equal(t, true, sub.Attributes["active"]) //nolint:testifylint
+				assert.Equal(t, "unknown", sub.Attributes["username"])
+				assert.Equal(t, "bar", sub.Attributes["aud"])
+				assert.Equal(t, "foobar", sub.Attributes["iss"])
+				assert.Equal(t, "Bearer", sub.Attributes["token_type"])
+				assert.NotEmpty(t, sub.Attributes["nbf"])
+				assert.NotEmpty(t, sub.Attributes["iat"])
+				assert.NotEmpty(t, sub.Attributes["exp"])
 			},
 		},
 		"with error while creating subject from introspection response": {
@@ -1686,7 +1847,6 @@ func TestCacheTTLCalculation(t *testing.T) {
 	positiveBigTTL := 10 * time.Minute
 
 	for uc, tc := range map[string]struct {
-		uc            string
 		authenticator *oauth2IntrospectionAuthenticator
 		response      func() *oauth2.IntrospectionResponse
 		assert        func(t *testing.T, ttl time.Duration)
