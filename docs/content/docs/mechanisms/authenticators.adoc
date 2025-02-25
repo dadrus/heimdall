@@ -267,9 +267,9 @@ Upon retrieval of the server metadata, both, the https://datatracker.ietf.org/do
 +
 Where to get the access token from. Defaults to retrieve it from the `Authorization` header, the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type).
 
-* *`assertions`*: _link:{{< relref "/docs/configuration/types.adoc#_assertions" >}}[Assertions]_ (dependent, overridable)
+* *`assertions`*: _link:{{< relref "/docs/configuration/types.adoc#_assertions" >}}[Assertions]_ (optional, overridable)
 +
-Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration. If `metadata_endpoint` is used, the list of issuers is optional, as the issuer will be resolved via the auth server metadata document. Otherwise, the list of issuers is mandatory.
+Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.
 
 * *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
@@ -292,9 +292,6 @@ type: oauth2_introspection
 config:
   introspection_endpoint:
     url: http://hydra:4445/oauth2/introspect
-  assertions:
-    issuers:
-      - http://127.0.0.1:4444/
 ----
 ====
 
@@ -307,7 +304,6 @@ type: metadata_endpoint
 config:
   metadata_endpoint:
     url: http://keycloak:8080/realms/{{ trimPrefix "https://my-auth-server/realms/" .TokenIssuer }}/.well-known/openid-configuration
-  # Note that no assertions are configured here, since it'll be resolved via the metadata endpoint
 ----
 
 This example does also show how to make use of templating if the format of the access token is JWT.
