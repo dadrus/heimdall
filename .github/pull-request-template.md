@@ -53,9 +53,9 @@ Remove the boxes, which are not applicable and put an `x` in the boxes that appl
 You can also fill these out after creating the PR.
 -->
 
-- [ ] I agree to follow this project's [Code of Conduct](../CODE_OF_CONDUCT.md).
-- [ ] I have read, and I am following this repository's [Contributing Guidelines](../CONTRIBUTING.md).
-- [ ] I have read the [Security Policy](../SECURITY.md).
+- [ ] I agree to follow this project's [Code of Conduct](../blob/main/CODE_OF_CONDUCT.md).
+- [ ] I have read, and I am following this repository's [Contributing Guidelines](../blob/main/CONTRIBUTING.md).
+- [ ] I have read the [Security Policy](../blob/main/SECURITY.md).
 - [ ] I have referenced an issue describing the bug/feature request.
 - [ ] I have added tests that prove the correctness of my implementation.
 - [ ] I have updated the documentation.
