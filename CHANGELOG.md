@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.15.7](https://github.com/dadrus/heimdall/compare/v0.15.6...v0.15.7) (2025-02-25)
+
+
+### Bug Fixes
+
+* `oauth2_introspection` authenticator does not require issuer assertion configuration ([#2219](https://github.com/dadrus/heimdall/issues/2219)) ([6d95700](https://github.com/dadrus/heimdall/commit/6d957002d3136066ff67ab51ffdea114f01d615b))
+* `www_authenticate` error handler schema typo ([#2201](https://github.com/dadrus/heimdall/issues/2201)) ([67be2d0](https://github.com/dadrus/heimdall/commit/67be2d0076b41ad25207e89b74383a1a850e2f06))
+
+
+### Dependencies
+
+* update golang.org/x/exp digest to aa4b98e ([#2194](https://github.com/dadrus/heimdall/issues/2194)) ([ec315dc](https://github.com/dadrus/heimdall/commit/ec315dc9357cee50298a32ad53dc3451091c60c6))
+* update google.golang.org/genproto/googleapis/rpc digest to 546df14 ([#2213](https://github.com/dadrus/heimdall/issues/2213)) ([e7a98b1](https://github.com/dadrus/heimdall/commit/e7a98b12c40198065a115827fc246fdd7d01e1bf))
+* update module github.com/go-co-op/gocron/v2 to v2.16.0 ([#2216](https://github.com/dadrus/heimdall/issues/2216)) ([a22a6f1](https://github.com/dadrus/heimdall/commit/a22a6f16b7d44231c82fe3be28bdb2dc6970b91f))
+* update module github.com/go-jose/go-jose/v4 to v4.0.5 [security] ([#2214](https://github.com/dadrus/heimdall/issues/2214)) ([ae3d680](https://github.com/dadrus/heimdall/commit/ae3d68021739d8bb26e3d0d49283517b1c8480bb))
+* update module github.com/grpc-ecosystem/go-grpc-middleware/v2 to v2.3.0 ([#2192](https://github.com/dadrus/heimdall/issues/2192)) ([d4c2d83](https://github.com/dadrus/heimdall/commit/d4c2d8387b0bcbd024db8293de8a19ca8508be7d))
+* update module github.com/prometheus/client_golang to v1.21.0 ([#2197](https://github.com/dadrus/heimdall/issues/2197)) ([221cccc](https://github.com/dadrus/heimdall/commit/221cccc05dd4e6f9b05647bae6818861e13cc751))
+* update module github.com/redis/rueidis to v1.0.55 ([#2210](https://github.com/dadrus/heimdall/issues/2210)) ([df2291f](https://github.com/dadrus/heimdall/commit/df2291f47a0dfbc3667561b6a8ca2546f7539422))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.55 ([#2211](https://github.com/dadrus/heimdall/issues/2211)) ([953722c](https://github.com/dadrus/heimdall/commit/953722c02019f446bca0b88230949a1b146ea579))
+* update module github.com/spf13/cobra to v1.9.1 ([#2188](https://github.com/dadrus/heimdall/issues/2188)) ([c0590d6](https://github.com/dadrus/heimdall/commit/c0590d6c66a405f72a895606365ff1287d869491))
+
 ## [0.15.6](https://github.com/dadrus/heimdall/compare/v0.15.5...v0.15.6) (2025-02-16)
 
 
