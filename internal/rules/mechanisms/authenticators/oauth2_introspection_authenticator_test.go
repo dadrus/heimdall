@@ -47,14 +47,11 @@ import (
 func TestOAuth2IntrospectionAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		uc     string
-		id     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, a *oauth2IntrospectionAuthenticator)
 	}{
-		{
-			uc: "with unsupported fields",
+		"with unsupported fields": {
 			config: []byte(`
 assertions:
   issuers:
@@ -71,8 +68,7 @@ foo: bar
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with missing introspection url config",
+		"with missing introspection url config": {
 			config: []byte(`
 assertions:
   issuers:
@@ -88,34 +84,11 @@ subject:
 				assert.Contains(t, err.Error(), "'introspection_endpoint' is a required field")
 			},
 		},
-		{
-			uc: "with missing trusted issuers assertion config when not using metadata endpoint",
-			config: []byte(`
-introspection_endpoint:
-  url: http://foobar.local
-assertions:
-  audience:
-    - foobar
-subject:
-  id: some_template
-`),
-			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'issuers' is a required field")
-			},
-		},
-		{
-			uc: "minimal introspection endpoint based config with malformed url",
-			id: "auth1",
+		"minimal introspection endpoint based config with malformed url": {
 			config: []byte(`
 introspection_endpoint:
   url: "{{ .IssuerName }}"
-assertions:
-  issuers:
-    - foobar`),
+`),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
@@ -124,15 +97,10 @@ assertions:
 				require.ErrorContains(t, err, "'introspection_endpoint'.'url' must be a valid URL")
 			},
 		},
-		{
-			uc: "with minimal introspection endpoint based config",
-			id: "auth1",
+		"with minimal introspection endpoint based config": {
 			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
-assertions:
-  issuers:
-    - foobar
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -157,8 +125,7 @@ assertions:
 				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
-				assert.Len(t, auth.a.TrustedIssuers, 1)
-				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
+				assert.Empty(t, auth.a.TrustedIssuers)
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.Audiences)
@@ -182,12 +149,10 @@ assertions:
 
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, "with minimal introspection endpoint based config", auth.ID())
 			},
 		},
-		{
-			uc: "with valid introspection endpoint based config with overwrites",
-			id: "auth1",
+		"with valid introspection endpoint based config with overwrites": {
 			config: []byte(`
 introspection_endpoint:
   url: http://test.com
@@ -261,12 +226,10 @@ allow_fallback_on_error: true
 
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, "with valid introspection endpoint based config with overwrites", auth.ID())
 			},
 		},
-		{
-			uc: "minimal metadata endpoint based configuration with malformed endpoint",
-			id: "auth1",
+		"minimal metadata endpoint based configuration with malformed endpoint": {
 			config: []byte(`
 metadata_endpoint:
   url: "{{ .IssuerName }}"
@@ -279,9 +242,7 @@ metadata_endpoint:
 				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
 			},
 		},
-		{
-			uc: "with minimal metadata endpoint based config",
-			id: "auth1",
+		"with minimal metadata endpoint based config": {
 			config: []byte(`
 metadata_endpoint:
   url: http://foobar.local
@@ -323,19 +284,17 @@ metadata_endpoint:
 
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, "with minimal metadata endpoint based config", auth.ID())
 			},
 		},
-	}
-
-	for _, tc := range testCases {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+	} {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newOAuth2IntrospectionAuthenticator(nil, tc.id, conf)
+			a, err := newOAuth2IntrospectionAuthenticator(nil, uc, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -346,17 +305,13 @@ metadata_endpoint:
 func TestOAuth2IntrospectionAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
-		id              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 			configured *oauth2IntrospectionAuthenticator)
 	}{
-		{
-			uc: "without target config",
-			id: "auth2",
+		"without target config": {
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -373,11 +328,10 @@ subject:
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "without target config", configured.ID())
 			},
 		},
-		{
-			uc: "with unsupported fields",
+		"with unsupported fields": {
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -397,9 +351,7 @@ subject:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with overwrites without cache",
-			id: "auth2",
+		"with overwrites without cache": {
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -437,12 +389,10 @@ assertions:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "with overwrites without cache", configured.ID())
 			},
 		},
-		{
-			uc: "prototype config without cache, target config with cache overwrite",
-			id: "auth2",
+		"prototype config without cache, target config with cache overwrite": {
 			prototypeConfig: []byte(`
 metadata_endpoint:
   url: http://foobar.local
@@ -467,12 +417,10 @@ subject:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config without cache, target config with cache overwrite", configured.ID())
 			},
 		},
-		{
-			uc: "metadata endpoint based prototype config without cache, config with overwrites incl cache",
-			id: "auth2",
+		"metadata endpoint based prototype config without cache, config with overwrites incl cache": {
 			prototypeConfig: []byte(`
 metadata_endpoint:
   url: http://test.com
@@ -510,12 +458,10 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "metadata endpoint based prototype config without cache, config with overwrites incl cache", configured.ID())
 			},
 		},
-		{
-			uc: "prototype config with cache, target config with overwrites including cache",
-			id: "auth2",
+		"prototype config with cache, target config with overwrites including cache": {
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -547,12 +493,10 @@ cache_ttl: 15s
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config with cache, target config with overwrites including cache", configured.ID())
 			},
 		},
-		{
-			uc: "prototype config with defaults, target config with fallback on error enabled",
-			id: "auth2",
+		"prototype config with defaults, target config with fallback on error enabled": {
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -577,18 +521,18 @@ subject:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config with defaults, target config with fallback on error enabled", configured.ID())
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newOAuth2IntrospectionAuthenticator(nil, tc.id, pc)
+			prototype, err := newOAuth2IntrospectionAuthenticator(nil, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -665,8 +609,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	defer srv.Close()
 	defer oidcSrv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		authenticator  *oauth2IntrospectionAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
@@ -676,8 +619,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			auth *oauth2IntrospectionAuthenticator)
 		assert func(t *testing.T, err error, sub *subject.Subject)
 	}{
-		{
-			uc:            "with failing auth data source",
+		"with failing auth data source": {
 			authenticator: &oauth2IntrospectionAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -703,8 +645,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with disabled cache and endpoint communication error (dns)",
+		"with disabled cache and endpoint communication error (dns)": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -736,8 +677,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with disabled cache and unexpected response code from the endpoint",
+		"with disabled cache and unexpected response code from the endpoint": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -774,8 +714,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with disabled cache and unexpected response code from the metadata endpoint",
+		"with disabled cache and unexpected response code from the metadata endpoint": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id:  "auth3",
 				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
@@ -811,8 +750,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with disabled cache and failing unmarshalling of the introspection service response",
+		"with disabled cache and failing unmarshalling of the introspection service response": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -873,8 +811,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with disabled cache and failing response validation (token not active)",
+		"with disabled cache and failing response validation (token not active)": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -939,8 +876,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with disabled cache and failing response validation (issuer not trusted)",
+		"with disabled cache and failing response validation (issuer not trusted)": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -1016,8 +952,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with configured issuer taking precedence over the one resolved via metadata",
+		"with configured issuer taking precedence over the one resolved via metadata": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: &oauth2.MetadataEndpoint{
@@ -1104,8 +1039,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with error while creating subject from introspection response",
+		"with error while creating subject from introspection response": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: &oauth2.MetadataEndpoint{
@@ -1193,8 +1127,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with no introspection endpoint set in the metadata",
+		"with no introspection endpoint set in the metadata": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: &oauth2.MetadataEndpoint{
@@ -1252,8 +1185,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		{
-			uc: "with disabled cache and template error while executing introspection endpoint",
+		"with disabled cache and template error while executing introspection endpoint": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
@@ -1294,8 +1226,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.ErrorContains(t, err, "failed to render URL")
 			},
 		},
-		{
-			uc: "with disabled cache and successful execution using templated introspection endpoint",
+		"with disabled cache and successful execution using templated introspection endpoint": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
@@ -1382,8 +1313,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes["exp"])
 			},
 		},
-		{
-			uc: "with disabled cache and successful execution using templated metadata endpoint",
+		"with disabled cache and successful execution using templated metadata endpoint": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .TokenIssuer }}"}},
 				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
@@ -1476,8 +1406,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes["exp"])
 			},
 		},
-		{
-			uc: "with default cache, without cache hit and successful execution",
+		"with default cache, without cache hit and successful execution": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
@@ -1564,8 +1493,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes["exp"])
 			},
 		},
-		{
-			uc: "with default cache, with cache hit and successful execution",
+		"with default cache, with cache hit and successful execution": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
@@ -1633,7 +1561,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			introspectionEndpointCalled = false
 			introspectionResponseContentType = ""
@@ -1689,14 +1617,12 @@ func TestCacheTTLCalculation(t *testing.T) {
 	positiveSmallTTL := 10 * time.Second
 	positiveBigTTL := 10 * time.Minute
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		authenticator *oauth2IntrospectionAuthenticator
 		response      func() *oauth2.IntrospectionResponse
 		assert        func(t *testing.T, ttl time.Duration)
 	}{
-		{
-			uc:            "default (nil) ttl settings and no exp in response",
+		"default (nil) ttl settings and no exp in response": {
 			authenticator: &oauth2IntrospectionAuthenticator{},
 			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1705,8 +1631,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "default (nil) ttl settings and exp in response which would result in negative ttl with 10s leeway",
+		"default (nil) ttl settings and exp in response which would result in negative ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(8 * time.Second).Unix())
@@ -1721,8 +1646,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "default (nil) ttl settings and exp in response which would result in 0 ttl with 10s leeway",
+		"default (nil) ttl settings and exp in response which would result in 0 ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(10 * time.Second).Unix())
@@ -1737,8 +1661,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "default (nil) ttl settings and exp in response which would result in positive ttl with 10s leeway",
+		"default (nil) ttl settings and exp in response which would result in positive ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(12 * time.Second).Unix())
@@ -1753,8 +1676,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, 2*time.Second, ttl)
 			},
 		},
-		{
-			uc:            "negative ttl settings and exp not set in response",
+		"negative ttl settings and exp not set in response": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1763,8 +1685,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "zero ttl settings and exp not set in response",
+		"zero ttl settings and exp not set in response": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &zeroTTL},
 			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1773,8 +1694,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "positive ttl settings and exp not set in response",
+		"positive ttl settings and exp not set in response": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveSmallTTL},
 			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
@@ -1783,8 +1703,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, positiveSmallTTL, ttl)
 			},
 		},
-		{
-			uc:            "negative ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway",
+		"negative ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(15 * time.Second).Unix())
@@ -1799,8 +1718,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "zero ttl settings and exp set to a value response, which would result in 0s ttl with 10s leeway",
+		"zero ttl settings and exp set to a value response, which would result in 0s ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(10 * time.Second).Unix())
@@ -1815,8 +1733,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "zero ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway",
+		"zero ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(12 * time.Second).Unix())
@@ -1831,8 +1748,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, zeroTTL, ttl)
 			},
 		},
-		{
-			uc:            "ttl settings smaller compared to ttl calculation on exp set in response",
+		"ttl settings smaller compared to ttl calculation on exp set in response": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveSmallTTL},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(12 * time.Minute).Unix())
@@ -1847,8 +1763,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, positiveSmallTTL, ttl)
 			},
 		},
-		{
-			uc:            "ttl settings bigger compared to ttl calculation on exp set in response",
+		"ttl settings bigger compared to ttl calculation on exp set in response": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveBigTTL},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(15 * time.Second).Unix())
@@ -1864,7 +1779,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			ttl := tc.authenticator.getCacheTTL(tc.response())
 
