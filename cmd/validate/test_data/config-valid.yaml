@@ -212,6 +212,10 @@ mechanisms:
       type: redirect
       config:
         to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+    - id: authenticate_with_www_authenticate
+      type: www_authenticate
+      config:
+        realm: Please authenticate
 
 default_rule:
   backtracking_enabled: false
