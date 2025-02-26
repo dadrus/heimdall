@@ -329,7 +329,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				t.Helper()
 
 				rule1 := &ruleImpl{id: "test2", srcID: "baz", hash: []byte{1}}
-				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/baz/bar", matcher: compositeMatcher{}})
+				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/baz/bar", matcher: andMatcher{}})
 
 				err := repo.AddRuleSet("baz", []rule.Rule{rule1})
 				require.NoError(t, err)

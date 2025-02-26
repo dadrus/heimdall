@@ -141,7 +141,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			&routeImpl{
 				rule:    rul,
 				path:    rc.Path,
-				matcher: compositeMatcher{sm, mm, hm, ppm},
+				matcher: andMatcher{sm, mm, hm, ppm},
 			})
 	}
 
