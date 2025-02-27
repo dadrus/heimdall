@@ -1,6 +1,29 @@
 # Changelog
 
 
+## [0.16.0](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.16.0) (2025-02-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* Configuration settings for services exposed by heimdall simplified ([#2089](https://github.com/dadrus/heimdall/issues/2089))
+
+### Features
+
+* `jwt` finalizer extended to support templating via `values` property ([#2193](https://github.com/dadrus/heimdall/issues/2193)) ([bf833c4](https://github.com/dadrus/heimdall/commit/bf833c48fa62e2f8e3388980dcd306a16da8a019))
+* Enforcement of secure configuration with Opt-Out ([#1972](https://github.com/dadrus/heimdall/issues/1972)) ([4d89e58](https://github.com/dadrus/heimdall/commit/4d89e580df7ebf30e8f124c2d853bdc2bd75c010))
+
+
+### Code Refactorings
+
+* Configuration settings for services exposed by heimdall simplified ([#2089](https://github.com/dadrus/heimdall/issues/2089)) ([02d91d6](https://github.com/dadrus/heimdall/commit/02d91d658727e55e4dcb62801725ab8ef57b128f))
+
+
+### Documentation
+
+* Caddy integration guide and demo examples ([#2191](https://github.com/dadrus/heimdall/issues/2191)) ([3ba8c7b](https://github.com/dadrus/heimdall/commit/3ba8c7b117b6730debc4f46a2346ebe36ac505a5))
+* Integration guide and examples for Istio service mesh ([#1832](https://github.com/dadrus/heimdall/issues/1832)) ([35c2fe2](https://github.com/dadrus/heimdall/commit/35c2fe2bde64f2b3a52d76ea6f45c51e1f1fe373))
+
 ## [0.15.7](https://github.com/dadrus/heimdall/compare/v0.15.6...v0.15.7) (2025-02-25)
 
 
