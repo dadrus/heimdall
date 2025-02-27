@@ -101,13 +101,11 @@ func TestFinalizeRequestContext(t *testing.T) {
 		return nil
 	}
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		updateContext func(t *testing.T, ctx heimdall.Context)
 		assert        func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
-		{
-			uc: "successful with some header",
+		"successful with some different header": {
 			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
@@ -136,8 +134,33 @@ func TestFinalizeRequestContext(t *testing.T) {
 				assert.Equal(t, "some-value-2", header.GetValue())
 			},
 		},
-		{
-			uc: "successful with some cookies",
+		"successful with multiple header with same name but different values": {
+			updateContext: func(t *testing.T, ctx heimdall.Context) {
+				t.Helper()
+
+				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
+				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-2")
+				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-3")
+			},
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
+
+				okResponse := response.GetOkResponse()
+				require.NotNil(t, okResponse)
+
+				require.Len(t, okResponse.GetHeaders(), 1)
+
+				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream-1")
+				require.NotNil(t, header)
+				assert.Equal(t, "some-value-1,some-value-2,some-value-3", header.GetValue())
+			},
+		},
+		"successful with some cookies": {
 			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
@@ -163,8 +186,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 				assert.Contains(t, okResponse.GetHeaders()[0].GetHeader().GetValue(), "some-other-cookie=value-2")
 			},
 		},
-		{
-			uc: "successful with header and cookie",
+		"successful with multiple header and cookie": {
 			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
@@ -191,8 +213,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 				assert.Equal(t, "some-cookie=value-1", header.GetValue())
 			},
 		},
-		{
-			uc: "erroneous with header and cookie",
+		"erroneous with header and cookie": {
 			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
@@ -210,7 +231,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			httpReq := &envoy_auth.AttributeContext_HttpRequest{
 				Method:   http.MethodPatch,
@@ -250,56 +271,48 @@ func TestFinalizeRequestContext(t *testing.T) {
 func TestRequestContextBody(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		ct     string
 		body   []byte
 		expect any
 	}{
-		{
-			uc:     "No body",
+		"No body": {
 			ct:     "empty",
 			body:   nil,
 			expect: "",
 		},
-		{
-			uc:     "No body",
+		"Empty body": {
 			ct:     "empty",
 			body:   []byte(""),
 			expect: "",
 		},
-		{
-			uc:     "Wrong content type",
+		"Wrong content type": {
 			ct:     "application/json",
 			body:   []byte("foo: bar"),
 			expect: "foo: bar",
 		},
-		{
-			uc:     "x-www-form-urlencoded encoded",
+		"x-www-form-urlencoded encoded": {
 			ct:     "application/x-www-form-urlencoded; charset=utf-8",
 			body:   []byte("content=heimdall"),
 			expect: map[string]any{"content": []string{"heimdall"}},
 		},
-		{
-			uc:     "json encoded",
+		"json encoded": {
 			ct:     "application/json; charset=utf-8",
 			body:   []byte(`{ "content": "heimdall" }`),
 			expect: map[string]any{"content": "heimdall"},
 		},
-		{
-			uc:     "yaml encoded",
+		"yaml encoded": {
 			ct:     "application/yaml; charset=utf-8",
 			body:   []byte("content: heimdall"),
 			expect: map[string]any{"content": "heimdall"},
 		},
-		{
-			uc:     "plain text",
+		"plain text": {
 			ct:     "text/plain",
 			body:   []byte("content=heimdall"),
 			expect: "content=heimdall",
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			ctx := NewRequestContext(
 				context.Background(),

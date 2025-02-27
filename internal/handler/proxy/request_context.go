@@ -129,9 +129,18 @@ func (r *requestContext) rewriteRequest(targetURL *url.URL) func(req *httputil.P
 		proxyReq.Out.Header.Del("X-Forwarded-Uri")
 		proxyReq.Out.Header.Del("X-Forwarded-Path")
 
+		// delete those headers which are set by heimdall first
+		// we do this to prevent spoofing
 		uh := r.UpstreamHeaders()
-		for k := range uh {
-			proxyReq.Out.Header.Set(k, uh.Get(k))
+		for name := range uh {
+			proxyReq.Out.Header.Del(name)
+		}
+
+		// add them now
+		for name, values := range uh {
+			for _, value := range values {
+				proxyReq.Out.Header.Add(name, value)
+			}
 		}
 
 		if host := uh.Get("Host"); len(host) != 0 {

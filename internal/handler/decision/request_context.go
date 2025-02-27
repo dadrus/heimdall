@@ -52,8 +52,10 @@ func (r *requestContext) Finalize(_ rule.Backend) error {
 	zerolog.Ctx(r.AppContext()).Debug().Msg("Creating response")
 
 	uh := r.UpstreamHeaders()
-	for k := range uh {
-		r.rw.Header().Set(k, uh.Get(k))
+	for name, values := range uh {
+		for _, value := range values {
+			r.rw.Header().Add(name, value)
+		}
 	}
 
 	for k, v := range r.UpstreamCookies() {
