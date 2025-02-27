@@ -32,14 +32,12 @@ import (
 func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		code   int
 		setup  func(t *testing.T, rc requestcontext.Context)
 		assert func(t *testing.T, err error, rec *httptest.ResponseRecorder)
 	}{
-		{
-			uc: "finalize returns error",
+		"finalize returns error": {
 			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 
@@ -51,8 +49,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:   "only response code is set",
+		"only response code is set": {
 			code: http.StatusNoContent,
 			setup: func(t *testing.T, _ requestcontext.Context) {
 				t.Helper()
@@ -66,8 +63,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, http.StatusNoContent, rec.Code)
 			},
 		},
-		{
-			uc:   "only response code and headers are set",
+		"response code and single header are set": {
 			code: http.StatusMultiStatus,
 			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
@@ -84,8 +80,28 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, http.StatusMultiStatus, rec.Code)
 			},
 		},
-		{
-			uc:   "only response code and cookies are set",
+		"response code and multiple header with same name but different values are set": {
+			code: http.StatusMultiStatus,
+			setup: func(t *testing.T, rc requestcontext.Context) {
+				t.Helper()
+
+				rc.AddHeaderForUpstream("X-Foo", "bar")
+				rc.AddHeaderForUpstream("X-Foo", "foo")
+			},
+			assert: func(t *testing.T, err error, rec *httptest.ResponseRecorder) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Len(t, rec.Header(), 1)
+				values := rec.Header().Values("X-Foo")
+				assert.Len(t, values, 2)
+				assert.ElementsMatch(t, values, []string{"bar", "foo"})
+
+				assert.Equal(t, http.StatusMultiStatus, rec.Code)
+			},
+		},
+		"response code and single cookie are set": {
 			code: http.StatusAccepted,
 			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
@@ -102,14 +118,14 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, http.StatusAccepted, rec.Code)
 			},
 		},
-		{
-			uc:   "everything is set",
+		"multiple headers and cookies are set": {
 			code: http.StatusOK,
 			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 
 				rc.AddHeaderForUpstream("X-Foo", "bar")
 				rc.AddHeaderForUpstream("X-Bar", "foo")
+				rc.AddHeaderForUpstream("X-Bar", "bar")
 				rc.AddCookieForUpstream("x-foo", "bar")
 				rc.AddCookieForUpstream("x-bar", "foo")
 			},
@@ -121,13 +137,13 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Len(t, rec.Header(), 3)
 				assert.Contains(t, rec.Header().Values("Set-Cookie"), "x-bar=foo")
 				assert.Contains(t, rec.Header().Values("Set-Cookie"), "x-foo=bar")
-				assert.Equal(t, "bar", rec.Header().Get("X-Foo"))
-				assert.Equal(t, "foo", rec.Header().Get("X-Bar"))
+				assert.ElementsMatch(t, rec.Header().Values("X-Foo"), []string{"bar"})
+				assert.ElementsMatch(t, rec.Header().Values("X-Bar"), []string{"bar", "foo"})
 				assert.Equal(t, http.StatusOK, rec.Code)
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			rw := httptest.NewRecorder()
 
