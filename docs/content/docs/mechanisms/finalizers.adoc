@@ -41,6 +41,8 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 Enables configuration of arbitrary headers with any values build from available information (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
 
+In cases where multiple values are required for a single header name (e.g., impersonation groups in Kubernetes), the `header` finalizer will split newline-separated values into separate headers.
+
 .Header finalizer configuration
 ====
 [source, yaml]
@@ -52,6 +54,10 @@ config:
     X-User-ID: '{{ quote .Subject.ID }}'
     X-User-Email: '{{ index .Subject.Attributes "email" | quote }}'
     Host: '{{ .Request.Header "Host" | quote  }}'
+    Impersonate-Group: |
+      {{- range .Subject.Attributes.groups }}
+      {{ . }}
+      {{- end }}
 ----
 ====
 

@@ -335,6 +335,31 @@ headers:
 				require.NoError(t, err)
 			},
 		},
+		"support multiple headers with same name using newlines": {
+			config: []byte(`
+headers:
+  Impersonation-Group: |
+    {{- range .Subject.Attributes.groups }}
+    {{ . }}
+    {{- end }}
+`),
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group1")
+				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group2")
+				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group3")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{})
+				ctx.EXPECT().Outputs().Return(map[string]any{})
+			},
+			subject: &subject.Subject{Attributes: map[string]any{"groups": []string{"group1", "group2", "group3"}}},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
