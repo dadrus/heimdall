@@ -54,8 +54,9 @@ func TestRequestContextFinalize(t *testing.T) {
 				return nil
 			},
 		},
-		"no headers set": {
+		"no headers set, ipv6 is used": {
 			upstreamCalled: true,
+			useIPv6:        true,
 			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
@@ -73,8 +74,8 @@ func TestRequestContextFinalize(t *testing.T) {
 				require.Len(t, req.Header, 6)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
-				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
+				assert.Equal(t, "for=\"[a746:9bbd:955b:e17e:cede:9748:0bf5:f2ea]\";host=foo.bar;proto=https", req.Header.Get("Forwarded"))
+				assert.Equal(t, "a746:9bbd:955b:e17e:cede:9748:0bf5:f2ea", req.Header.Get("X-Forwarded-For"))
 				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
