@@ -2,6 +2,36 @@ apiVersion: v1
 entries:
   heimdall:
   - apiVersion: v2
+    appVersion: 0.15.8
+    created: "2025-03-03T12:37:36.726191794Z"
+    description: A cloud native Identity Aware Proxy and Access Control Decision Service
+    digest: c0bad33d81d08e043618126524a280ffe8561ced85149cd9665301d793112838
+    home: https://dadrus.github.io/heimdall/
+    keywords:
+    - zero-trust
+    - authentication
+    - authorization
+    - access-control
+    - access-management
+    - policy-enforcement
+    - oauth2
+    - openid-connect
+    - iap
+    - auth-proxy
+    - identity-aware-proxy
+    - auth-filter
+    kubeVersion: ^1.27.0
+    maintainers:
+    - email: dadrus@gmx.de
+      name: Dimitrij Drus
+    name: heimdall
+    sources:
+    - https://github.com/dadrus/heimdall
+    type: application
+    urls:
+    - https://dadrus.github.io/heimdall/charts/heimdall-0.14.8.tgz
+    version: 0.14.8
+  - apiVersion: v2
     appVersion: 0.15.7
     created: "2025-02-25T13:16:24.647776922Z"
     description: A cloud native Identity Aware Proxy and Access Control Decision Service
@@ -985,4 +1015,4 @@ entries:
     urls:
     - https://dadrus.github.io/heimdall/charts/heimdall-0.1.0.tgz
     version: 0.1.0
-generated: "2025-02-25T13:16:24.645782848Z"
+generated: "2025-03-03T12:37:36.725016862Z"
