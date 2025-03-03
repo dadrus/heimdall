@@ -36,7 +36,7 @@ The link:{{< relref "#_path_expression" >}}[Path Expression] describing the requ
 
 *** *`path_params`*: _PathParameterConditions_ (optional)
 +
-Additional conditions for the values captured by named wildcards in the path expression. Each entry supports the following properties:
+Additional conditions which must be met for the values captured by named wildcards in the path expression. All defined conditions must succeed for the request path to be considered a match. Each entry supports the following properties:
 
 **** *`name`*: _string_ (mandatory)
 +
@@ -59,7 +59,7 @@ Enables or disables backtracking when a request matches the path expressions but
 
 ** *`hosts`*: _HostMatcher array_ (optional)
 +
-Defines a set of hosts to match against the HTTP Host header. Each entry has the following properties:
+Defines a set of hosts to match against the HTTP Host header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. Each entry has the following properties:
 
 *** *`type`*: _string_ (mandatory)
 +

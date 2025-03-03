@@ -40,9 +40,9 @@ type RouteMatcher interface {
 	Matches(request *heimdall.Request, keys, values []string) error
 }
 
-type compositeMatcher []RouteMatcher
+type andMatcher []RouteMatcher
 
-func (c compositeMatcher) Matches(request *heimdall.Request, keys, values []string) error {
+func (c andMatcher) Matches(request *heimdall.Request, keys, values []string) error {
 	for _, matcher := range c {
 		if err := matcher.Matches(request, keys, values); err != nil {
 			return err
@@ -50,6 +50,20 @@ func (c compositeMatcher) Matches(request *heimdall.Request, keys, values []stri
 	}
 
 	return nil
+}
+
+type orMatcher []RouteMatcher
+
+func (c orMatcher) Matches(request *heimdall.Request, keys, values []string) error {
+	var err error
+
+	for _, matcher := range c {
+		if err = matcher.Matches(request, keys, values); err == nil {
+			return nil
+		}
+	}
+
+	return err
 }
 
 type schemeMatcher string
@@ -156,7 +170,7 @@ func createMethodMatcher(methods []string) (methodMatcher, error) {
 }
 
 func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
-	matchers := make(compositeMatcher, len(hosts))
+	matchers := make(orMatcher, len(hosts))
 
 	for idx, host := range hosts {
 		var (
@@ -191,7 +205,7 @@ func createPathParamsMatcher(
 	params []config.ParameterMatcher,
 	esh config.EncodedSlashesHandling,
 ) (RouteMatcher, error) {
-	matchers := make(compositeMatcher, len(params))
+	matchers := make(andMatcher, len(params))
 
 	for idx, param := range params {
 		var (
