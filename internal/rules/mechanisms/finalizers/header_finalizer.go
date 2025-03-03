@@ -17,6 +17,8 @@
 package finalizers
 
 import (
+	"strings"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -94,7 +96,13 @@ func (f *headerFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subj
 
 		logger.Debug().Str("_value", value).Msg("Rendered template")
 
-		ctx.AddHeaderForUpstream(name, value)
+		// Split the rendered value into multiple values if newline-separated
+		values := strings.Split(value, "\n")
+		for _, v := range values {
+			if len(v) != 0 {
+				ctx.AddHeaderForUpstream(name, v)
+			}
+		}
 	}
 
 	return nil
