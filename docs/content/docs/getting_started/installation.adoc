@@ -187,3 +187,6 @@ The definition of the `PodMonitor` above assumes, you've installed heimdall in t
 
 If your Prometheus deployment is not done through the operator, you don't need to do anything, as the chart already sets the relevant annotations: `prometheus.io/scrape`, `prometheus.io/path` and `prometheus.io/port`.
 
+== Nix Package Manager
+
+See the https://search.nixos.org/packages?channel=unstable&show=heimdall-proxy[nix package directory] for instructions on how to install `heimdall` through the nix platform.
