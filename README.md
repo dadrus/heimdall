@@ -61,6 +61,6 @@ The project is considered production-ready and is already in use by multiple org
 ## If you ...
 
 * ... like the project - please give it a :star:
-* ... miss something, or found a bug, [file a ticket](https://github.com/dadrus/heimdall/issues). You are also very welcome to contribute :wink:
+* ... miss something, or found a bug, [file a ticket](https://github.com/dadrus/heimdall/issues). You are also very welcome to [contribute](CONTRIBUTING.md) :wink:
 * ... would like to support, reach out to me via [Discord](https://discord.gg/qQgg8xKuyb)
 * ... need help, head over to [Discord](https://discord.gg/qQgg8xKuyb) as well
