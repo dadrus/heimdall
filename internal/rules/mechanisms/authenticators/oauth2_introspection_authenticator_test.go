@@ -154,7 +154,6 @@ introspection_endpoint:
 				assert.Equal(t, "sub", sess.IDFrom)
 
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
-
 				assert.Equal(t, "with minimal introspection endpoint based config with used enforced TLS", auth.ID())
 			},
 		},

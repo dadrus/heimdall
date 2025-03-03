@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.15.8](https://github.com/dadrus/heimdall/compare/v0.15.7...v0.15.8) (2025-03-03)
+
+
+### Bug Fixes
+
+* `X-Forwarded-For`, `-Proto`, `-Host` and `Forwarded` are always send to the upstream in proxy mode ([#2250](https://github.com/dadrus/heimdall/issues/2250)) ([41ff9fa](https://github.com/dadrus/heimdall/commit/41ff9fa55c32673da2d297d48340fdcbc5d1b946))
+* IPv6 address is properly encoded in the `for` directive of the `Forwarded` header ([#2250](https://github.com/dadrus/heimdall/issues/2250)) ([41ff9fa](https://github.com/dadrus/heimdall/commit/41ff9fa55c32673da2d297d48340fdcbc5d1b946))
+* Matching multiple hosts implements OR logic now ([#2234](https://github.com/dadrus/heimdall/issues/2234)) ([521baf4](https://github.com/dadrus/heimdall/commit/521baf413727e3f375eb05869f299379bebb84e8))
+* Multiple header with same name but different values ([#2242](https://github.com/dadrus/heimdall/issues/2242)) ([2c749b4](https://github.com/dadrus/heimdall/commit/2c749b447d21e7b15cb866f3a3478eddd44feda5))
+
+
+### Dependencies
+
+* update golang.org/x/exp digest to dead583 ([#2249](https://github.com/dadrus/heimdall/issues/2249)) ([664a117](https://github.com/dadrus/heimdall/commit/664a117f38efba0673559f061d2d91b9669995db))
+* update google.golang.org/genproto/googleapis/rpc digest to 55c9018 ([#2247](https://github.com/dadrus/heimdall/issues/2247)) ([ab1fa42](https://github.com/dadrus/heimdall/commit/ab1fa425260e0d355ceb3a8e541626b70a100270))
+* update module github.com/google/cel-go to v0.24.1 ([#2240](https://github.com/dadrus/heimdall/issues/2240)) ([9aa4632](https://github.com/dadrus/heimdall/commit/9aa4632fbf316a79fa48b987ca6ccc52701d20a1))
+
 
 ## [0.15.7](https://github.com/dadrus/heimdall/compare/v0.15.6...v0.15.7) (2025-02-25)
 
