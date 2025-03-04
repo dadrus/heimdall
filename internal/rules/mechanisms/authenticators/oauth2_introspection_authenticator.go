@@ -97,6 +97,10 @@ func newOAuth2IntrospectionAuthenticator(
 			"failed decoding config for oauth2_introspection authenticator '%s'", id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
 		logger.Warn().Str("_id", id).
 			Msg("No TLS configured for the introspection endpoint used in oauth2_introspection authenticator")
@@ -216,6 +220,11 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for oauth2_introspection authenticator '%s'", a.id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	return &oauth2IntrospectionAuthenticator{

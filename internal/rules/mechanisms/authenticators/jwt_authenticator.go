@@ -105,6 +105,10 @@ func newJwtAuthenticator(
 			"failed decoding config for jwt authenticator '%s'", id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	if conf.JWKSEndpoint != nil {
 		if len(conf.Assertions.TrustedIssuers) == 0 {
 			return nil, errorchain.
@@ -241,6 +245,11 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	if err := decodeConfig(a.app, config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for jwt authenticator '%s'", a.id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	return &jwtAuthenticator{

@@ -81,6 +81,10 @@ func newBasicAuthAuthenticator(
 			"failed decoding config for basic auth authenticator '%s'", id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	auth := basicAuthAuthenticator{
 		id:                   id,
 		app:                  app,
@@ -164,6 +168,12 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for basic auth authenticator '%s'", a.id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).
+			Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	return &basicAuthAuthenticator{
