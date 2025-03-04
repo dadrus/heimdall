@@ -70,7 +70,7 @@ The password of the subject to be verified.
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
+**Deprecated** and scheduled for removal in version 0.17.0. In heimdall versions prior to 0.16.0, setting this property to `true` allowed the pipeline to fall back to the next authenticator if the current one failed to verify the credentials. If this property is configured, a warning will be issued.
 
 .Configuration of Basic Auth authenticator
 ====
@@ -124,7 +124,7 @@ How long to cache the response. If not set, response caching if disabled. The ca
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
+**Deprecated** and scheduled for removal in version 0.17.0. In heimdall versions prior to 0.16.0, setting this property to `true` allowed the pipeline to fall back to the next authenticator if the current one failed to verify the credentials. If this property is configured, a warning will be issued.
 
 * *`session_lifespan`*: _link:{{< relref "/docs/configuration/types.adoc#_session_lifespan" >}}[Session Lifespan]_ (optional, not overridable)
 +
@@ -281,7 +281,7 @@ How long to cache the response. If not set, caching of the introspection respons
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
+**Deprecated** and scheduled for removal in version 0.17.0. In heimdall versions prior to 0.16.0, setting this property to `true` allowed the pipeline to fall back to the next authenticator if the current one failed to verify the credentials. If this property is configured, a warning will be issued.
 
 .Minimal possible configuration based on the Introspection endpoint
 ====
@@ -359,7 +359,7 @@ How long to cache the key from the JWKS response, which was used for signature v
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
+**Deprecated** and scheduled for removal in version 0.17.0. In heimdall versions prior to 0.16.0, setting this property to `true` allowed the pipeline to fall back to the next authenticator if the current one failed to verify the credentials. If this property is configured, a warning will be issued.
 
 * *`validate_jwk`*: _boolean_ (optional, not overridable)
 +
