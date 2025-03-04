@@ -88,6 +88,10 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 		return nil, r.eh.Execute(ctx, err)
 	}
 
+	return r.createBackend(request), nil
+}
+
+func (r *ruleImpl) createBackend(request *heimdall.Request) rule.Backend {
 	var upstream rule.Backend
 
 	if r.backend != nil {
@@ -98,7 +102,7 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 		}
 	}
 
-	return upstream, nil
+	return upstream
 }
 
 func (r *ruleImpl) ID() string { return r.id }

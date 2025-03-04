@@ -195,7 +195,11 @@ func (f *ruleFactory) createExecutePipeline(
 					"an authenticator is defined after some other non authenticator type")
 			}
 
-			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), getConfig(pipelineStep["config"]))
+			authenticator, err := f.hf.CreateAuthenticator( //nolint: forcetypeassert
+				version,
+				id.(string),
+				getConfig(pipelineStep["config"]),
+			)
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -258,7 +262,7 @@ func (f *ruleFactory) createOnErrorPipeline(
 				return nil, err
 			}
 
-			handler, err := f.hf.CreateErrorHandler(version, id.(string), conf)
+			handler, err := f.hf.CreateErrorHandler(version, id.(string), conf) //nolint: forcetypeassert
 			if err != nil {
 				return nil, err
 			}
@@ -354,7 +358,7 @@ func createHandler[T subjectHandler](
 		return nil, err
 	}
 
-	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"]))
+	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"])) //nolint: forcetypeassert
 	if err != nil {
 		return nil, err
 	}

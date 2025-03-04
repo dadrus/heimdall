@@ -67,6 +67,7 @@ func TestBackendDeepCopyInto(t *testing.T) {
 
 	// GIVEN
 	var out Backend
+
 	trueVal := true
 
 	in := Backend{
