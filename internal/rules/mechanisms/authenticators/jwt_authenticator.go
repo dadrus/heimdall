@@ -268,10 +268,6 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}, nil
 }
 
-func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
-}
-
 func (a *jwtAuthenticator) ID() string {
 	return a.id
 }

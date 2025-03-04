@@ -187,10 +187,6 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}, nil
 }
 
-func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
-}
-
 func (a *genericAuthenticator) ID() string {
 	return a.id
 }

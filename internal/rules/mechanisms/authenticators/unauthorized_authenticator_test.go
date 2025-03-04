@@ -75,23 +75,6 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	assert.Equal(t, "unauth", uaa.ID())
 }
 
-func TestUnauthorizedAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Logger().Return(log.Logger)
-
-	auth := newUnauthorizedAuthenticator(appCtx, "unauth")
-
-	// WHEN
-	isAllowed := auth.IsFallbackOnErrorAllowed()
-
-	// THEN
-	require.False(t, isAllowed)
-	require.Equal(t, "unauth", auth.ID())
-}
-
 func TestUnauthorizedAuthenticatorIsInsecure(t *testing.T) {
 	t.Parallel()
 

@@ -171,7 +171,7 @@ subject:
 				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "auth1", auth.ID())
 			},
@@ -204,7 +204,7 @@ cache_ttl: 5s`),
 				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "auth1", auth.ID())
 			},
@@ -239,7 +239,7 @@ allow_fallback_on_error: true`),
 				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.True(t, auth.allowFallbackOnError)
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "auth1", auth.ID())
 			},
@@ -280,7 +280,7 @@ session_lifespan:
 				assert.Empty(t, auth.fwdCookies)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 				assert.NotNil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "foo", auth.sessionLifespanConf.ActiveField)
 				assert.Equal(t, "bar", auth.sessionLifespanConf.IssuedAtField)
@@ -427,7 +427,7 @@ subject:
 				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.Equal(t, "auth2", configured.ID())
 			},
@@ -457,8 +457,8 @@ subject:
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.True(t, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.Equal(t, "auth2", configured.ID())
 			},
@@ -496,7 +496,7 @@ cache_ttl: 15s`),
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, 5*time.Second, prototype.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.Equal(t, "auth2", configured.ID())
 			},
@@ -537,7 +537,7 @@ session_lifespan:
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.NotNil(t, configured.sessionLifespanConf)
 				assert.Equal(t, "foo", configured.sessionLifespanConf.ActiveField)

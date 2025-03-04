@@ -64,11 +64,6 @@ func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator,
 	return a, nil
 }
 
-func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
-	// not allowed, as this authenticator fails always
-	return false
-}
-
 func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }

@@ -241,10 +241,6 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
-}
-
 func (a *oauth2IntrospectionAuthenticator) ID() string {
 	return a.id
 }
