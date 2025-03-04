@@ -24,4 +24,5 @@ import (
 
 type Backend interface {
 	URL() *url.URL
+	ForwardHostHeader() bool
 }
