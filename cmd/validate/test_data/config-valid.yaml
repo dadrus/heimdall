@@ -59,7 +59,6 @@ mechanisms:
         subject:
           attributes: "@this"
           id: "identity.id"
-        allow_fallback_on_error: true
         cache_ttl: 10m
         session_lifespan:
           active: active
@@ -95,7 +94,6 @@ mechanisms:
         subject:
           attributes: "@this"
           id: sub
-        allow_fallback_on_error: true
     - id: jwt_authenticator1
       type: jwt
       config:
@@ -120,7 +118,6 @@ mechanisms:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 5m
-        allow_fallback_on_error: true
     - id: jwt_authenticator2
       type: jwt
       config:
@@ -134,14 +131,12 @@ mechanisms:
             - RSA
           issuers:
             - bla
-        allow_fallback_on_error: true
         validate_jwk: true
     - id: basic_auth_authenticator
       type: basic_auth
       config:
         user_id: foo
         password: bar
-        allow_fallback_on_error: false
   authorizers:
     - id: allow_all_authorizer
       type: allow
