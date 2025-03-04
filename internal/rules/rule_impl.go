@@ -91,8 +91,10 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 	var upstream rule.Backend
 
 	if r.backend != nil {
-		upstream = &backend{
+		upstream = backend{
 			targetURL: r.backend.CreateURL(&request.URL.URL),
+			forwardHostHeader: r.backend.ForwardHostHeader == nil ||
+				(r.backend.ForwardHostHeader != nil && *r.backend.ForwardHostHeader),
 		}
 	}
 
@@ -148,10 +150,13 @@ func (r *routeImpl) Path() string { return r.path }
 func (r *routeImpl) Rule() rule.Rule { return r.rule }
 
 type backend struct {
-	targetURL *url.URL
+	targetURL         *url.URL
+	forwardHostHeader bool
 }
 
-func (b *backend) URL() *url.URL { return b.targetURL }
+func (b backend) URL() *url.URL { return b.targetURL }
+
+func (b backend) ForwardHostHeader() bool { return b.forwardHostHeader }
 
 func unescape(value string, handling config.EncodedSlashesHandling) string {
 	if handling == config.EncodedSlashesOn {
