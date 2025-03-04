@@ -42,7 +42,7 @@ require (
 	github.com/knadh/koanf/v2 v2.1.2
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.2.0
-	github.com/prometheus/client_golang v1.21.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/redis/rueidis v1.0.55
 	github.com/redis/rueidis/rueidisotel v1.0.55
 	github.com/rs/cors v1.11.1
