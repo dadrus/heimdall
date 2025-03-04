@@ -17,8 +17,6 @@
 package rules
 
 import (
-	"errors"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
@@ -41,7 +39,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
 
-			if (errors.Is(err, heimdall.ErrArgument) || a.IsFallbackOnErrorAllowed()) && idx < len(ca) {
+			if idx < len(ca)-1 {
 				logger.Info().Msg("Falling back to next configured one.")
 
 				continue

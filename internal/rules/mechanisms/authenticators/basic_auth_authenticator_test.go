@@ -64,7 +64,7 @@ password: bar`),
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
@@ -91,7 +91,7 @@ allow_fallback_on_error: true
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.True(t, auth.allowFallbackOnError)
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
@@ -197,8 +197,8 @@ allow_fallback_on_error: true
 				require.NoError(t, err)
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.True(t, configured.allowFallbackOnError)
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -219,7 +219,7 @@ password: baz`),
 
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -239,7 +239,7 @@ password: baz`),
 
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -259,7 +259,7 @@ user_id: baz`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -280,7 +280,7 @@ password: bar`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
@@ -301,7 +301,7 @@ password: baz`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "auth2", configured.ID())
 
 				md := sha256.New()

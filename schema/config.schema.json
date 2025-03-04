@@ -1252,7 +1252,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             },
             "session_lifespan": {
               "$ref": "#/definitions/sessionLifespanConfiguration"
@@ -1319,7 +1320,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             }
           }
         }
@@ -1383,7 +1385,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             },
             "validate_jwk": {
               "type": "boolean",
@@ -1431,7 +1434,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             }
           }
         }

@@ -81,6 +81,10 @@ func newBasicAuthAuthenticator(
 			"failed decoding config for basic auth authenticator '%s'", id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	auth := basicAuthAuthenticator{
 		id:                   id,
 		app:                  app,
@@ -166,6 +170,12 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 			"failed decoding config for basic auth authenticator '%s'", a.id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).
+			Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	return &basicAuthAuthenticator{
 		id:  a.id,
 		app: a.app,
@@ -191,10 +201,6 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
 	}, nil
-}
-
-func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
 }
 
 func (a *basicAuthAuthenticator) ID() string {

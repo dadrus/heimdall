@@ -139,7 +139,6 @@ mechanisms:
     config:
       user_id: bar
       password: baz
-      allow_fallback_on_error: true
   - id: kratos_session_authenticator
     type: generic
     config:
@@ -161,7 +160,6 @@ mechanisms:
       subject:
         attributes: "@this"
         id: "identity.id"
-      allow_fallback_on_error: true
   - id: hydra_authenticator
     type: oauth2_introspection
     config:
@@ -192,7 +190,6 @@ mechanisms:
       subject:
         attributes: "@this"
         id: "sub"
-      allow_fallback_on_error: true
   - id: jwt_authenticator
     type: jwt
     config:
@@ -218,7 +215,6 @@ mechanisms:
         attributes: "@this"
         id: "identity.id"
       cache_ttl: 5m
-      allow_fallback_on_error: true
 
   authorizers:
   - id: allow_all_authorizer

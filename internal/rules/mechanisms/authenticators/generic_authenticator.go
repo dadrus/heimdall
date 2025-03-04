@@ -92,6 +92,10 @@ func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]an
 			"failed decoding config for generic authenticator '%s'", id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
 		logger.Warn().Str("_id", id).
 			Msg("No TLS configured for the endpoint used in generic authenticator")
@@ -159,6 +163,11 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 			"failed decoding config for generic authenticator '%s'", a.id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	return &genericAuthenticator{
 		id:         a.id,
 		app:        a.app,
@@ -176,10 +185,6 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 			func() bool { return a.allowFallbackOnError }),
 		sessionLifespanConf: a.sessionLifespanConf,
 	}, nil
-}
-
-func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
 }
 
 func (a *genericAuthenticator) ID() string {
