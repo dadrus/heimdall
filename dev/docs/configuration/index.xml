@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 03 Mar 2025 14:57:06 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 05 Mar 2025 08:24:49 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_assertions">Assertions&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -145,7 +145,6 @@
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">user_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
  &lt;span class="na">password&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">baz&lt;/span>
- &lt;span class="na">allow_fallback_on_error&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">kratos_session_authenticator&lt;/span>
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">generic&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
@@ -167,7 +166,6 @@
  &lt;span class="na">subject&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">attributes&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">@this&amp;#34;&lt;/span>
  &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">identity.id&amp;#34;&lt;/span>
- &lt;span class="na">allow_fallback_on_error&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">hydra_authenticator&lt;/span>
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_introspection&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
@@ -198,7 +196,6 @@
  &lt;span class="na">subject&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">attributes&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">@this&amp;#34;&lt;/span>
  &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">sub&amp;#34;&lt;/span>
- &lt;span class="na">allow_fallback_on_error&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt_authenticator&lt;/span>
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
@@ -224,7 +221,6 @@
  &lt;span class="na">attributes&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">@this&amp;#34;&lt;/span>
  &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">identity.id&amp;#34;&lt;/span>
  &lt;span class="na">cache_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5m&lt;/span>
- &lt;span class="na">allow_fallback_on_error&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
 
  &lt;span class="na">authorizers&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">allow_all_authorizer&lt;/span>
