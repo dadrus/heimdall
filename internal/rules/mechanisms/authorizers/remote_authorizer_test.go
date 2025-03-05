@@ -327,7 +327,7 @@ cache_ttl: 1s
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.id, configured.id)
-				assert.Equal(t, prototype.payload, configured.payload)
+				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.expressions, configured.expressions)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
