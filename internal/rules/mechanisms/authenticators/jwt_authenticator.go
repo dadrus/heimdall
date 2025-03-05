@@ -105,6 +105,10 @@ func newJwtAuthenticator(
 			"failed decoding config for jwt authenticator '%s'", id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	if conf.JWKSEndpoint != nil {
 		if len(conf.Assertions.TrustedIssuers) == 0 {
 			return nil, errorchain.
@@ -243,6 +247,11 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 			"failed decoding config for jwt authenticator '%s'", a.id).CausedBy(err)
 	}
 
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
 	return &jwtAuthenticator{
 		id:  a.id,
 		app: a.app,
@@ -257,10 +266,6 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 		validateJWKCert: a.validateJWKCert,
 		trustStore:      a.trustStore,
 	}, nil
-}
-
-func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
 }
 
 func (a *jwtAuthenticator) ID() string {

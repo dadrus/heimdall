@@ -204,7 +204,7 @@ assertions:
 				assert.Nil(t, auth.ttl)
 
 				// fallback settings
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
@@ -270,7 +270,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 
 				// fallback settings
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
@@ -368,7 +368,7 @@ trust_store: ` + trustStorePath),
 				assert.Nil(t, auth.ttl)
 
 				// fallback settings
-				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.True(t, auth.allowFallbackOnError)
 
 				// jwk validation settings
 				assert.False(t, auth.validateJWKCert)
@@ -450,7 +450,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 
 				// fallback settings
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
@@ -575,7 +575,7 @@ assertions:
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
@@ -616,7 +616,7 @@ cache_ttl: 5s`),
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
@@ -655,7 +655,7 @@ assertions:
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
@@ -684,7 +684,7 @@ cache_ttl: 5s`),
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
@@ -725,7 +725,7 @@ assertions:
 				assert.Len(t, configured.a.ScopesMatcher, 2)
 				assert.Contains(t, configured.a.ScopesMatcher, "foo")
 				assert.Contains(t, configured.a.ScopesMatcher, "bar")
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
@@ -752,8 +752,8 @@ allow_fallback_on_error: true
 				assert.Equal(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 
-				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.True(t, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 

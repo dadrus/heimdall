@@ -156,7 +156,6 @@ mechanisms:
         subject:
           attributes: "@this"
           id: "identity.id"
-        allow_fallback_on_error: true
         cache_ttl: 10m
         session_lifespan:
           active: active
@@ -230,7 +229,6 @@ mechanisms:
         subject:
           attributes: "@this"
           id: sub
-        allow_fallback_on_error: true
     - id: oauth2_introspection_using_metadata_endpoint
       type: oauth2_introspection
       config:
@@ -262,7 +260,6 @@ mechanisms:
         subject:
           attributes: "@this"
           id: sub
-        allow_fallback_on_error: true
     - id: jwt_authenticator_using_jwks_endpoint
       type: jwt
       config:
@@ -287,7 +284,6 @@ mechanisms:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 5m
-        allow_fallback_on_error: true
         validate_jwk: true
         trust_store: /opt/heimdall/trust_store.pem
     - id: jwt_authenticator_using_metadata_endpoint
@@ -308,14 +304,12 @@ mechanisms:
             - RSA
           issuers:
             - bla
-        allow_fallback_on_error: true
         validate_jwk: true
     - id: basic_auth_authenticator
       type: basic_auth
       config:
         user_id: foo
         password: bar
-        allow_fallback_on_error: false
   authorizers:
     - id: allow_all_authorizer
       type: allow

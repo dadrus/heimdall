@@ -153,7 +153,7 @@ introspection_endpoint:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 				assert.Equal(t, "with minimal introspection endpoint based config with used enforced TLS", auth.ID())
 			},
 		},
@@ -243,7 +243,7 @@ allow_fallback_on_error: true
 				assert.True(t, ok)
 				assert.Equal(t, "some_claim", sess.IDFrom)
 
-				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.True(t, auth.allowFallbackOnError)
 
 				assert.Equal(t, "with valid introspection endpoint based config with overwrites", auth.ID())
 			},
@@ -301,7 +301,7 @@ metadata_endpoint:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 
 				assert.Equal(t, "with minimal metadata endpoint based config", auth.ID())
 			},
@@ -418,7 +418,7 @@ assertions:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "with overwrites without cache", configured.ID())
 			},
 		},
@@ -446,7 +446,7 @@ subject:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config without cache, target config with cache overwrite", configured.ID())
 			},
 		},
@@ -486,7 +486,7 @@ cache_ttl: 5s`),
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 
 				assert.Equal(t, "metadata endpoint based prototype config without cache, config with overwrites incl cache", configured.ID())
 			},
@@ -522,7 +522,7 @@ cache_ttl: 15s
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config with cache, target config with overwrites including cache", configured.ID())
 			},
 		},
@@ -549,8 +549,8 @@ subject:
 				assert.Equal(t, prototype.a, configured.a)
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.True(t, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config with defaults, target config with fallback on error enabled", configured.ID())
 			},
 		},
