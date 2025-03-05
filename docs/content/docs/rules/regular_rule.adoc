@@ -59,7 +59,7 @@ Enables or disables backtracking when a request matches the path expressions but
 
 ** *`hosts`*: _HostMatcher array_ (optional)
 +
-Defines a set of hosts to match against the HTTP Host header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. Each entry has the following properties:
+Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. Each entry has the following properties:
 
 *** *`type`*: _string_ (mandatory)
 +
@@ -110,21 +110,25 @@ CAUTION: Handling URL-encoded slashes may differ across the proxies in front of 
 
 * *`forward_to`*: _RequestForwarder_ (mandatory in Proxy operation mode)
 +
-Specifies where to forward proxied requests when heimdall is operating in proxy mode. The following properties are supported:
+Defines the destination for proxied requests when heimdall operates in proxy mode. The following properties are supported:
 
 ** *`host`*: _string_ (mandatory)
 +
-Host (and port) for forwarding the request. If no `rewrite` property (see below) is defined, the original URL's scheme, path, and other components are preserved. E.g. if the original request is `\https://mydomain.com/api/v1/something?foo=bar&bar=baz` and the value of this property is set to `my-backend:8080`, the url used to forward the request to the upstream will be `\https://my-backend:8080/api/v1/something?foo=bar&bar=baz`
+Specifies the host (and port) to which the request should be forwarded. If no `rewrite` property (see below) is defined, the original URL's scheme, path, and other components remain unchanged. For example, if the original request is `https://mydomain.com/api/v1/something?foo=bar&bar=baz` and this property is set to `my-backend:8080`, the forwarded request will be sent to `https://my-backend:8080/api/v1/something?foo=bar&bar=baz`.
+
+** *`forward_host_header`*: _boolean_ (optional)
 +
-NOTE: The `Host` header is not preserved when forwarding the request. To preserve it, use of the link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] in your `execute` pipeline and set it accordingly. The example below demonstrates that.
+Controls whether the `Host` header is forwarded to the upstream. Defaults to `true`.
++
+**Note:** If a link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] sets the `Host` header in the `execute` pipeline, its value takes precedence over this setting.
 
 ** *`rewrite`*: _OriginalURLRewriter_ (optional)
 +
-Can be used to rewrite further parts of the original URL before forwarding the request. If specified, at least one of the following supported (middleware) properties must be specified:
+Allows modifying additional parts of the original URL before forwarding the request. If set, at least one of the following supported (middleware) properties must be defined:
 
 *** *`scheme`*: _string_ (optional)
 +
-Specifies the URL scheme to use when forwarding the request. Defaults to the scheme used in the original request.
+Specifies the URL scheme to use when forwarding the request. Defaults to the scheme of the original request.
 +
 NOTE: Unless heimdall is started with the `--insecure-skip-upstream-tls-enforcement` flag, only `https` is allowed as the scheme.
 
@@ -180,15 +184,6 @@ execute:
   - authorizer: bar
   - contextualizer: foo
   - finalizer: zab
-  # the following one demonstrates how to preserve the
-  # Host header from the original request, while forwarding
-  # it to the upstream service
-  - finalizer: preserve-host
-    # the config property can be omitted, if already configured
-    # in the header finalizer mechanism
-    config:
-      headers:
-        Host: '{{ .Request.Header "Host" | quote }}'
 on_error:
   - error_handler: foobar
 ----

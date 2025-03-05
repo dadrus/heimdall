@@ -36,8 +36,10 @@ import (
 func TestRuleExecute(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
+	falseValue := false
+	trueValue := true
+
+	for uc, tc := range map[string]struct {
 		backend        *config.Backend
 		slashHandling  config.EncodedSlashesHandling
 		configureMocks func(
@@ -50,8 +52,7 @@ func TestRuleExecute(t *testing.T) {
 		)
 		assert func(t *testing.T, err error, backend rule.Backend, captures map[string]string)
 	}{
-		{
-			uc: "authenticator fails, but error handler succeeds",
+		"authenticator fails, but error handler succeeds": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -72,8 +73,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Nil(t, backend)
 			},
 		},
-		{
-			uc: "authenticator fails, and error handler fails",
+		"authenticator fails, and error handler fails": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -95,8 +95,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Nil(t, backend)
 			},
 		},
-		{
-			uc: "authenticator succeeds, authorizer fails, but error handler succeeds",
+		"authenticator succeeds, authorizer fails, but error handler succeeds": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -121,8 +120,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Nil(t, backend)
 			},
 		},
-		{
-			uc: "authenticator succeeds, authorizer fails and error handler fails",
+		"authenticator succeeds, authorizer fails and error handler fails": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -148,8 +146,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Nil(t, backend)
 			},
 		},
-		{
-			uc: "authenticator succeeds, authorizer succeeds, finalizer fails, but error handler succeeds",
+		"authenticator succeeds, authorizer succeeds, finalizer fails, but error handler succeeds": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -175,8 +172,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Nil(t, backend)
 			},
 		},
-		{
-			uc: "authenticator succeeds, authorizer succeeds, finalizer fails and error handler fails",
+		"authenticator succeeds, authorizer succeeds, finalizer fails and error handler fails": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -203,8 +199,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Nil(t, backend)
 			},
 		},
-		{
-			uc:            "all handler succeed with disallowed urlencoded slashes",
+		"all handler succeed with disallowed urlencoded slashes": {
 			slashHandling: config.EncodedSlashesOff,
 			backend: &config.Backend{
 				Host: "foo.bar",
@@ -230,8 +225,7 @@ func TestRuleExecute(t *testing.T) {
 				require.ErrorContains(t, err, "path contains encoded slash")
 			},
 		},
-		{
-			uc:            "all handler succeed with urlencoded slashes on without urlencoded slash",
+		"all handler succeed with urlencoded slashes on without urlencoded slash": {
 			slashHandling: config.EncodedSlashesOn,
 			backend: &config.Backend{
 				Host: "foo.bar",
@@ -263,14 +257,14 @@ func TestRuleExecute(t *testing.T) {
 
 				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
 				assert.Equal(t, expectedURL, backend.URL())
+				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api", captures["first"])
 				assert.Equal(t, "v1", captures["second"])
 				assert.Equal(t, "foo[id]", captures["third"])
 			},
 		},
-		{
-			uc:            "all handler succeed with urlencoded slashes on with urlencoded slash",
+		"all handler succeed with urlencoded slashes on with urlencoded slash": {
 			slashHandling: config.EncodedSlashesOn,
 			backend: &config.Backend{
 				Host: "foo.bar",
@@ -302,13 +296,13 @@ func TestRuleExecute(t *testing.T) {
 
 				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
 				assert.Equal(t, expectedURL, backend.URL())
+				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api/v1", captures["first"])
 				assert.Equal(t, "foo[id]", captures["second"])
 			},
 		},
-		{
-			uc:            "all handler succeed with urlencoded slashes on with urlencoded slash but without decoding it",
+		"all handler succeed with urlencoded slashes on with urlencoded slash but without decoding it": {
 			slashHandling: config.EncodedSlashesOnNoDecode,
 			backend: &config.Backend{
 				Host: "foo.bar",
@@ -340,13 +334,13 @@ func TestRuleExecute(t *testing.T) {
 
 				expectedURL, _ := url.Parse("http://foo.bar/api%2Fv1/foo%5Bid%5D")
 				assert.Equal(t, expectedURL, backend.URL())
+				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api%2Fv1", captures["first"])
 				assert.Equal(t, "foo[id]", captures["second"])
 			},
 		},
-		{
-			uc: "stripping path prefix",
+		"stripping path prefix": {
 			backend: &config.Backend{
 				Host:        "foo.bar",
 				URLRewriter: &config.URLRewriter{PathPrefixToCut: "/api/v1"},
@@ -373,10 +367,71 @@ func TestRuleExecute(t *testing.T) {
 
 				expectedURL, _ := url.Parse("http://foo.bar/foo")
 				assert.Equal(t, expectedURL, backend.URL())
+				assert.True(t, backend.ForwardHostHeader())
+			},
+		},
+		"not forwarding Host header": {
+			backend: &config.Backend{
+				Host:              "foo.bar",
+				ForwardHostHeader: &falseValue,
+			},
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
+				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
+				_ *mocks.ErrorHandlerMock,
+			) {
+				t.Helper()
+
+				sub := &subject.Subject{ID: "Foo"}
+
+				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
+				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
+				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+
+				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+			},
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo")
+				assert.Equal(t, expectedURL, backend.URL())
+				assert.False(t, backend.ForwardHostHeader())
+			},
+		},
+		"explicitly forwarding Host header": {
+			backend: &config.Backend{
+				Host:              "foo.bar",
+				ForwardHostHeader: &trueValue,
+			},
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
+				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
+				_ *mocks.ErrorHandlerMock,
+			) {
+				t.Helper()
+
+				sub := &subject.Subject{ID: "Foo"}
+
+				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
+				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
+				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+
+				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+			},
+			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo")
+				assert.Equal(t, expectedURL, backend.URL())
+				assert.True(t, backend.ForwardHostHeader())
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			ctx := heimdallmocks.NewRequestContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())

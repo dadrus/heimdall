@@ -85,7 +85,7 @@ func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
 	}
 
 	if name, ok := typed["matching_strategy"]; ok {
-		createMatcher, err = matcherFactory(name.(string))
+		createMatcher, err = matcherFactory(name.(string)) //nolint: forcetypeassert
 		if err != nil {
 			return nil, err
 		}

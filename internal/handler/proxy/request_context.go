@@ -105,7 +105,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 			errHolder.err = errorchain.NewWithMessage(heimdall.ErrCommunication, "Failed to proxy request").
 				CausedBy(err)
 		},
-		Rewrite: r.rewriteRequest(upstream.URL()),
+		Rewrite: r.rewriteRequest(upstream.URL(), upstream.ForwardHostHeader()),
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(r.transport),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
@@ -119,7 +119,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 	return errHolder.err
 }
 
-func (r *requestContext) rewriteRequest(targetURL *url.URL) func(req *httputil.ProxyRequest) {
+func (r *requestContext) rewriteRequest(targetURL *url.URL, passHostHeader bool) func(req *httputil.ProxyRequest) {
 	return func(proxyReq *httputil.ProxyRequest) {
 		proxyReq.Out.Method = r.Request().Method
 		proxyReq.Out.URL = targetURL
@@ -133,6 +133,13 @@ func (r *requestContext) rewriteRequest(targetURL *url.URL) func(req *httputil.P
 		r.addUpstreamHeader(proxyReq.Out)
 		r.addUpstreamCookies(proxyReq.Out)
 		r.rewriteForwardedHeader(proxyReq.In, proxyReq.Out)
+
+		if host := proxyReq.Out.Header.Get("Host"); len(host) != 0 {
+			proxyReq.Out.Host = host
+			proxyReq.Out.Header.Del("Host")
+		} else if passHostHeader {
+			proxyReq.Out.Host = proxyReq.In.Host
+		}
 	}
 }
 
@@ -144,7 +151,7 @@ func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 	forwardedFor := in.Header.Get("X-Forwarded-For")
 	forwarded := in.Header.Get("Forwarded")
 	proto := x.IfThenElse(in.TLS != nil, "https", "http")
-	clientIP := httpx.IPFromHostPort(r.req.RemoteAddr)
+	clientIP := httpx.IPFromHostPort(in.RemoteAddr)
 
 	out.Header.Set("X-Forwarded-For", x.IfThenElseExec(len(forwardedFor) == 0,
 		func() string { return clientIP },
@@ -196,10 +203,5 @@ func (r *requestContext) addUpstreamHeader(req *http.Request) {
 		for _, value := range values {
 			req.Header.Add(name, value)
 		}
-	}
-
-	if host := uh.Get("Host"); len(host) != 0 {
-		req.Host = host
-		req.Header.Del("Host")
 	}
 }
