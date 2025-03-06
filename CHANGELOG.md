@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.15.9](https://github.com/dadrus/heimdall/compare/v0.15.8...v0.15.9) (2025-03-06)
+
+
+### Bug Fixes
+
+* Resolved panic triggered by using an empty string as a template value ([#2274](https://github.com/dadrus/heimdall/issues/2274)) ([7b8eacc](https://github.com/dadrus/heimdall/commit/7b8eacc02648e64237ce0c33af3c70e9bd1034de))
+
+
+### Dependencies
+
+* update golang to v1.24.1 ([#2266](https://github.com/dadrus/heimdall/issues/2266)) ([0b1b1b3](https://github.com/dadrus/heimdall/commit/0b1b1b3abd8911bb84b38f29233d793863c6f30d))
+* update golang.org/x/exp digest to 054e65f ([#2270](https://github.com/dadrus/heimdall/issues/2270)) ([f3ad941](https://github.com/dadrus/heimdall/commit/f3ad94157da67fe4971c11ea88b3f7257797ec41))
+* update google.golang.org/genproto/googleapis/rpc digest to a0af3ef ([#2258](https://github.com/dadrus/heimdall/issues/2258)) ([bb7f477](https://github.com/dadrus/heimdall/commit/bb7f477b493b7cac7974575d43d59b57d8e8f31b))
+* update module github.com/grpc-ecosystem/go-grpc-middleware/v2 to v2.3.1 ([#2271](https://github.com/dadrus/heimdall/issues/2271)) ([0700616](https://github.com/dadrus/heimdall/commit/07006167c46bbb0bf2d96974113d2201ebdcac64))
+* update module github.com/prometheus/client_golang to v1.21.1 ([#2262](https://github.com/dadrus/heimdall/issues/2262)) ([2dd0df4](https://github.com/dadrus/heimdall/commit/2dd0df46cb973b42fbb589e7851ec2822bb78464))
+* update module golang.org/x/oauth2 to 0.28.0 ([#2275](https://github.com/dadrus/heimdall/issues/2275)) ([df6f5bf](https://github.com/dadrus/heimdall/commit/df6f5bfd95238dedc1b85c5068a3a6cfa1ad8954))
+* update module google.golang.org/grpc to v1.71.0 ([#2263](https://github.com/dadrus/heimdall/issues/2263)) ([b4fca46](https://github.com/dadrus/heimdall/commit/b4fca4663a5184cb7aac4727dbba07fa6e092a40))
+* update opentelemetry-go monorepo to v1.35.0 ([#2269](https://github.com/dadrus/heimdall/issues/2269)) ([37c550f](https://github.com/dadrus/heimdall/commit/37c550ff83d204266d39d3e70c42fb528784c7bc))
+
 ## [0.15.8](https://github.com/dadrus/heimdall/compare/v0.15.7...v0.15.8) (2025-03-03)
 
 
