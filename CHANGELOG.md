@@ -1,6 +1,33 @@
 # Changelog
 
 
+## [0.16.0](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.16.0) (2025-03-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* Configuration settings for services exposed by heimdall simplified ([#2089](https://github.com/dadrus/heimdall/issues/2089))
+
+### Features
+
+* `jwt` finalizer extended to support templating via `values` property ([#2193](https://github.com/dadrus/heimdall/issues/2193)) ([bf833c4](https://github.com/dadrus/heimdall/commit/bf833c48fa62e2f8e3388980dcd306a16da8a019))
+* Enforcement of secure configuration with Opt-Out ([#1972](https://github.com/dadrus/heimdall/issues/1972)) ([4d89e58](https://github.com/dadrus/heimdall/commit/4d89e580df7ebf30e8f124c2d853bdc2bd75c010))
+* **header-finalizer:** support multiple headers with same name ([#2244](https://github.com/dadrus/heimdall/issues/2244)) ([0413eb9](https://github.com/dadrus/heimdall/commit/0413eb94388b6e8e166cc862d6fdde32795edc73))
+* More convenient `Host` header forwarding in proxy mode ([#2265](https://github.com/dadrus/heimdall/issues/2265)) ([c3ece0f](https://github.com/dadrus/heimdall/commit/c3ece0fbf7d1febd08bfd2a54358624eecb12422))
+* Simpler auth stage fallbacks ([#2260](https://github.com/dadrus/heimdall/issues/2260)) ([87bf663](https://github.com/dadrus/heimdall/commit/87bf663b521ab2f599da238292ddbcb94f2667c1))
+
+
+### Code Refactorings
+
+* Configuration settings for services exposed by heimdall simplified ([#2089](https://github.com/dadrus/heimdall/issues/2089)) ([02d91d6](https://github.com/dadrus/heimdall/commit/02d91d658727e55e4dcb62801725ab8ef57b128f))
+
+
+### Documentation
+
+* Caddy integration guide and demo examples ([#2191](https://github.com/dadrus/heimdall/issues/2191)) ([3ba8c7b](https://github.com/dadrus/heimdall/commit/3ba8c7b117b6730debc4f46a2346ebe36ac505a5))
+* Extend installation section to include Heimdall installation via Nix package manager ([#2257](https://github.com/dadrus/heimdall/issues/2257)) ([6e9cbc6](https://github.com/dadrus/heimdall/commit/6e9cbc63e7a9821caf067b9c034d249ecd88c985))
+* Integration guide and examples for Istio service mesh ([#1832](https://github.com/dadrus/heimdall/issues/1832)) ([35c2fe2](https://github.com/dadrus/heimdall/commit/35c2fe2bde64f2b3a52d76ea6f45c51e1f1fe373))
+
 ## [0.15.9](https://github.com/dadrus/heimdall/compare/v0.15.8...v0.15.9) (2025-03-06)
 
 
