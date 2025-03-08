@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.10](https://github.com/dadrus/heimdall/compare/v0.15.9...v0.15.10) (2025-03-08)
+
+
+### Dependencies
+
+* update opentelemetry-go-contrib monorepo to v0.60.0 ([#2280](https://github.com/dadrus/heimdall/issues/2280)) ([8017315](https://github.com/dadrus/heimdall/commit/801731589145825e89c2e8292ef333279e9eb9bd))
+
 ## [0.15.9](https://github.com/dadrus/heimdall/compare/v0.15.8...v0.15.9) (2025-03-06)
 
 
