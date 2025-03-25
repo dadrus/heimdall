@@ -100,7 +100,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Set up Go
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Get google/go-licenses package
@@ -127,7 +127,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Review code
-        uses: reviewdog/action-golangci-lint@dd3fda91790ca90e75049e5c767509dc0ec7d99b # v2.7.0
+        uses: reviewdog/action-golangci-lint@f9bba13753278f6a73b27a56a3ffb1bfda90ed71 # v2.8.0
         with:
           go_version: "${{ env.GO_VERSION }}"
           golangci_lint_version: "${{ env.GOLANGCI_LINT_VERSION }}"
@@ -146,11 +146,10 @@ jobs:
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup Node
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
@@ -172,11 +171,10 @@ jobs:
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Run hadolint
-        uses: reviewdog/action-hadolint@48e0d147329dca2fa1663f4a9b6b715b57dcfe28 # v1.50.0
+        uses: reviewdog/action-hadolint@fc7ee4a9f71e521bc43e370819247b70e5327540 # v1.50.2
         with:
           reporter: github-pr-review
           reviewdog_flags: -fail-level=error
@@ -256,11 +254,10 @@ jobs:
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Set up Go
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Test
@@ -272,32 +269,11 @@ jobs:
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  prepare-release:
-    runs-on: ubuntu-24.04
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release'
-    permissions:
-      pull-requests: write
-      contents: write
-    outputs:
-      release_created: ${{ steps.release_prepare.outputs.release_created }}
-      tag_name: ${{ steps.release_prepare.outputs.tag_name }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
-        with:
-          egress-policy: audit
-      - name: Prepare Release
-        id: release_prepare
-        uses: googleapis/release-please-action@5792afc6b46e9bb55deda9eda973a18c226bc3fc # v4.1.5
-        with:
-          target-branch: ${{ github.ref_name }}
-
   build-binaries:
     runs-on: ubuntu-24.04
     needs:
       - test
-      - prepare-release
-    if: always() && needs.prepare-release.outputs.release_created == false && needs.test.result == 'success'
+    if: needs.test.result == 'success'
     strategy:
       matrix:
         # build and publish in parallel: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
@@ -318,58 +294,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Set up Go
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Build
         run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ github.sha }}" -o ./build/
-      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: github.ref == 'refs/heads/main'
         with:
           name: build-result-${{ matrix.goos }}-${{ matrix.goarch }}
           path: ./build/*
           retention-days: 30
 
-  release-binaries:
-    runs-on: ubuntu-24.04
-    needs:
-      - prepare-release
-    if: needs.prepare-release.outputs.release_created
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
-        with:
-          egress-policy: audit
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          fetch-depth: 0
-      - name: Set up Go
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
-        with:
-          go-version: "${{ env.GO_VERSION }}"
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
-        with:
-          cosign-release: "${{ env.COSIGN_VERSION }}"
-      - name: Install CycloneDX gomod
-        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.4.1
-      - name: Generate SBOM
-        uses: CycloneDX/gh-gomod-generate-sbom@efc74245d6802c8cefd925620515442756c70d8f # v2.0.0
-        with:
-          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
-          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # v6.2.1
-        with:
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # this job builds container images for PRs, as well as publishes these on merges to main
   build-dev-container-images:
     runs-on: ubuntu-24.04
     permissions:
@@ -378,11 +314,8 @@ jobs:
     needs:
       - test
       - check-changes
-      - prepare-release
     if: >
-      github.ref == 'refs/heads/main' &&
-      needs.prepare-release.outputs.release_created == false && 
-      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true'))
+      needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true')
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
@@ -396,7 +329,7 @@ jobs:
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Generate SBOM
@@ -429,13 +362,13 @@ jobs:
           tags: ${{ github.repository }}:local
       - name: Login to DockerHub
         if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub
         if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -483,152 +416,14 @@ jobs:
           COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-sbom
         run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
 
-  # this job releases container images
-  release-container-images:
-    if: needs.prepare-release.outputs.release_created
-    runs-on: ubuntu-24.04
-    permissions:
-      packages: write
-      id-token: write
-    needs:
-      - prepare-release
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
-        with:
-          egress-policy: audit
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Prepare image version
-        id: image-version
-        run: |
-          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo "result=$version" >> $GITHUB_OUTPUT
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
-        with:
-          cosign-release: "${{ env.COSIGN_VERSION }}"
-      - name: Set up Go # required as the sbom generator is compiled using go < 1.21
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
-        with:
-          go-version: "${{ env.GO_VERSION }}"
-      - name: Generate SBOM
-        uses: CycloneDX/gh-gomod-generate-sbom@efc74245d6802c8cefd925620515442756c70d8f # v2.0.0
-        with:
-          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
-          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
-      - name: Login to DockerHub
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Login to GitHub
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Collect Docker meta-info
-        id: meta
-        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
-        with:
-          images: ${{ github.repository }}
-          labels: |
-            org.opencontainers.image.version=${{ steps.image-version.outputs.result }}
-            org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
-      - name: Build and push images to container registry
-        id: publish-image
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
-        with:
-          context: .
-          file: ./docker/Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/arm
-          push: true
-          build-args: VERSION=${{ needs.prepare-release.outputs.tag_name }}
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: |
-            ${{ github.repository }}:latest
-            ${{ github.repository }}:${{ steps.image-version.outputs.result }}
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ steps.image-version.outputs.result }}
-      # DockerHub
-      - name: Sign the image published in DockerHub
-        if: steps.publish-image.conclusion == 'success'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COSIGN_REPOSITORY: ${{ github.repository }}-signatures
-        run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
-      - name: Attest and attach SBOM to the image published in DockerHub
-        if: steps.publish-image.conclusion == 'success'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COSIGN_REPOSITORY: ${{ github.repository }}-sbom
-        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
-      - name: Update DockerHub repository description & readme
-        uses: peter-evans/dockerhub-description@e98e4d1628a5f3be2be7c231e50981aee98723ae # v4.0.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          short-description: ${{ github.event.repository.description }}
-          readme-filepath: ./DockerHub-README.md
-      # GHCR
-      - name: Sign the image published in GitHub
-        if: steps.publish-image.conclusion == 'success'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-signatures
-        run: cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
-      - name: Attest and attach SBOM to the image published in GitHub
-        if: steps.publish-image.conclusion == 'success'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-sbom
-        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
-
-  release-helm-chart:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    needs:
-      - prepare-release
-      - release-container-images
-    if: needs.prepare-release.outputs.release_created
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
-        with:
-          egress-policy: audit
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Prepare image version
-        id: image-version
-        run: |
-          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo "result=$version" >> $GITHUB_OUTPUT
-      - name: Publish Helm Chart
-        uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # v1.7.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          target_dir: charts
-          linting: off
-          app_version: ${{ steps.image-version.outputs.result }}
-
   build-dev-documentation:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     needs:
-      - prepare-release
       - check-changes
     if: >
-      github.ref == 'refs/heads/main' &&
-      needs.prepare-release.outputs.release_created == false && 
-      (needs.check-changes.outputs.docs_changed == 'true' || needs.check-changes.outputs.ci_config_changed == 'true')
+      needs.check-changes.outputs.docs_changed == 'true' || needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
@@ -645,11 +440,11 @@ jobs:
           hugo-version: ${{ env.HUGO_VERSION }}
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@277ba2a127aba66d45bad0fa2dc56f80dbfedffa # v1.222.0
+        uses: ruby/setup-ruby@1a615958ad9d422dd932dc1d5823942ee002799f # v1.227.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
@@ -674,106 +469,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/public
           destination_dir: dev
-
-  release-documentation:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      id-token: write
-      pull-requests: write
-    needs:
-      - prepare-release
-    if: needs.prepare-release.outputs.release_created
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
-        with:
-          egress-policy: audit
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          submodules: true  # Fetch Hugo themes (true OR recursive)
-          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3.0.0
-        with:
-          hugo-version: ${{ env.HUGO_VERSION }}
-          extended: true
-      - name: Setup Node
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Setup ruby
-        uses: ruby/setup-ruby@277ba2a127aba66d45bad0fa2dc56f80dbfedffa # v1.222.0
-        with:
-          ruby-version: ${{ env.RUBY_VERSION }}
-      - name: Install asciidoctor
-        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
-      - name: Install dependencies
-        working-directory: ./docs
-        run: npm install
-      - name: Update version string to new released version
-        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
-        with:
-          find: "x-current-version"
-          replace: "${{ needs.prepare-release.outputs.tag_name }}"
-          regex: false
-          include: docs/**
-      - name: Update uri for redirecting to new version
-        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
-        with:
-          find: "x-released-version"
-          replace: "${{ needs.prepare-release.outputs.tag_name }}"
-          regex: false
-          include: docs/**
-      - name: Prepare image version
-        id: image-version
-        run: |
-          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo "result=$version" >> $GITHUB_OUTPUT
-      - name: Update used image tags to the released version
-        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
-        with:
-          find: "heimdall:dev"
-          replace: "heimdall:${{ steps.image-version.outputs.result }}"
-          regex: false
-          include: docs/**
-      - name: Build documentation
-        working-directory: ./docs
-        run: hugo --minify -d ./public
-      - name: Update versions JSON document
-        id: update-version-json
-        run: |
-          cat ./docs/versions/data.json | jq '. + [{ "version": "${{ needs.prepare-release.outputs.tag_name }}", "path": "/heimdall/${{ needs.prepare-release.outputs.tag_name }}" }]' | tee ./docs/versions/data.json
-      - name: Deploy documentation
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/public
-          destination_dir: ${{ needs.prepare-release.outputs.tag_name }}
-      - name: Deploy redirect to new released version
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/redirect
-          keep_files: true
-      - name: Deploy versions JSON document
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/versions
-          keep_files: true
-      - name: Setup GitSign
-        uses: chainguard-dev/actions/setup-gitsign@58b5d1b6769b7e88dfa5c85bbc81a5a02eaca5bc # main
-      - name: Create a PR for the updated versions JSON document
-        if: steps.update-version-json.outcome == 'success'
-        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
-        with:
-          title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
-          commit-message: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
-          body: >
-            data.json updated by the release-documentation job to include the entry 
-            referencing the released ${{ needs.prepare-release.outputs.tag_name }} documentation version
-          add-paths: |
-            docs/versions/*.json
-          sign-commits: true
