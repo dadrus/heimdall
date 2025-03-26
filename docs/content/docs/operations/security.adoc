@@ -104,18 +104,25 @@ NOTE: As of today secret reloading is only supported for link:{{< relref "/docs/
 
 == Verification of Heimdall Artifacts
 
-Heimdall binaries and container images are signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] and the https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature]. Additionally, SLSA provenance is generated for released binaries and container images, providing a higher level of assurance about the build process in accordance with https://slsa.dev/spec/v1.0/levels#build-l3-hardened-builds[SLSA Level 3] requirements.
+Heimdall releases include three types of artifacts: archived binaries, container images, and Helm Charts (as OCI images). Each is signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] with its https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature]. Additionally, SLSA provenance is generated for all released artifacts, providing a higher level of assurance about the build process in accordance with https://slsa.dev/spec/v1.0/levels#build-l3-hardened-builds[SLSA Level 3] requirements. This chapter explains how to verify the signatures and provenance for each artifact type.
+
+NOTE: The Helm Chart is also released to gh-pages, but this version is neither signed nor accompanied by provenance.
 
 === Prerequisites
 
-* Install https://docs.sigstore.dev/docs/system_config/installation/[Cosign]
-* Install https://github.com/slsa-framework/slsa-verifier#installation[slsa-verifier]
+To verify the artifacts, install the following tools:
+
+* https://docs.sigstore.dev/docs/system_config/installation/[Cosign]
+* https://github.com/slsa-framework/slsa-verifier#installation[slsa-verifier]
+* https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md[crane] (for Helm chart OCI image verification)
+
+These tools are required for verifying signatures and provenance across all artifact types.
 
 === Container Image Verification
 
 ==== Signature Verification with Cosign
 
-The signatures are stored in a repository named `dadrus/heimdall-signatures`. To verify the released container image using Cosign, execute the following command:
+Signatures for container images are stored in `dadrus/heimdall-signatures`. To verify a released container image, run:
 
 [source, bash]
 ----
@@ -125,9 +132,9 @@ cosign verify dadrus/heimdall:<tag> \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
 ----
 
-NOTE: If you pull heimdall images from ghcr.io, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-signatures` becomes `ghcr.io/dadrus/heimdall-signatures` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
+NOTE: For images from GHCR, use `ghcr.io/dadrus/heimdall-signatures` and `ghcr.io/dadrus/heimdall:<tag>`. For `dev` tagged images, adjust `--certificate-identity-regexp` to `https://github.com/dadrus/heimdall/.github/workflows/ci.yaml*`.
 
-In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
+On success, Cosign outputs JSON (similar to the example below) and exits with `0`.
 
 [source, json]
 ----
@@ -170,30 +177,72 @@ In successful verification case, cosign will print similar output to the one sho
 ]
 ----
 
-For released images, the `Subject` value ends with `@refs/tags/<release version>`, as indicated in the snippet above. The `dev` tagged images can be verified similarly, but the `--certificate-identity-regexp` flag needs to be set to `https://github.com/dadrus/heimdall/.github/workflows/ci.yaml*`, since these images are built and signed by a different workflow.
+For released images, the `Subject` value ends with `@refs/tags/<release version>`, as indicated in the snippet above.
 
 ==== Provenance Verification with slsa-verifier
 
-To verify the SLSA provenance of the container image using `slsa-verifier`, execute the following commands:
+To verify the SLSA provenance of a container image, first obtain its digest:
 
 [source, bash]
 ----
 IMAGE=$(docker inspect dadrus/heimdall:<tag> | jq -r '.[0].RepoDigests[0]')
 # instead of docker, you can also use podman, crane, or similar tools
+----
+
+Then verify:
+
+[source, bash]
+----
 slsa-verifier verify-image "${IMAGE}" \
   --source-uri github.com/dadrus/heimdall \
   --source-tag v<tag>
 ----
 
-NOTE: If you pull heimdall image from ghcr.io, use `ghcr.io/dadrus/heimdall:<tag>` as reference to get the image digest.
+NOTE: Use `ghcr.io/dadrus/heimdall:<tag>` for GHCR images.
+
+On success, `slsa-verifier` prints a success message and exits with `0`.
+
+=== Helm Chart Verification
+
+==== Signature Verification with Cosign
+
+To verify the Helm Chart OCI image signature, run:
+
+[source, bash]
+----
+cosign verify ghcr.io/dadrus/heimdall/chart/heimdall:<tag> \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/release.yaml* \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
+----
+
+Replace `<tag>` with the chart version (e.g., `0.15.0`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
+
+==== Provenance Verification with slsa-verifier
+
+To verify the Helm Chart’s provenance, obtain its digest:
+
+[source, bash]
+----
+IMAGE=ghcr.io/dadrus/heimdall/chart/heimdall:<tag>
+DIGEST=$(crane digest "${IMAGE}")
+----
+
+Then verify:
+
+[source, bash]
+----
+slsa-verifier verify-image "${IMAGE}@${DIGEST}" \
+  --source-uri github.com/dadrus/heimdall \
+  --source-tag <heimdall release version>
+----
+
+Replace `<tag>` with the chart version (e.g., `0.15.0`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
 
 === Release Binary Verification
 
 ==== Signature Verification with Cosign
 
-The detached signatures and certificates for all released archives are published together with the corresponding platform-specific archive. The names of the signature files adhere to the `<archive>.sig` naming pattern, and the names of the certificate files adhere to the `<archive>.pem` naming pattern, with `<archive>` being the archive for a platform-specific build.
-
-To verify the signature of the archive, hence its contents including the platform-specific heimdall binary, execute the following command:
+Detached signatures and certificates for all released archives are published alongside each platform-specific archive (e.g., `<archive>.sig` and `<archive>.pem`). To verify the signature of an archive, including its platform-specific heimdall binary, run:
 
 [source, bash]
 ----
@@ -204,18 +253,11 @@ cosign verify-blob /path/to/the/downloaded/<archive> \
   --certificate /path/to/the/downloaded/<archive>.pem
 ----
 
-In successful verification case, cosign will print the following output and exit with `0`.
-
-[source, bash]
-----
-Verified OK
-----
+On successful verification, Cosign outputs `Verified OK` and exits with `0`.
 
 ==== Provenance Verification with slsa-verifier
 
-The SLSA provenance for each release archive is published alongside the archive and follows the `heimdall_<release version>.intoto.jsonl` naming pattern. This file contains the provenance information generated during the SLSA Level 3 compliant build process.
-
-To verify the provenance of the archive, execute the following command:
+SLSA provenance is published as `heimdall_<release version>.intoto.jsonl` for all released archives. To verify the provenance for a particular archive, run:
 
 [source, bash]
 ----
@@ -226,7 +268,9 @@ slsa-verifier verify-artifact \
   /path/to/the/downloaded/<archive>
 ----
 
-In a successful verification case, `slsa-verifier` will print a success message and exit with `0`. Replace `<release version>` with the specific version tag of the release (e.g., `v0.16.0`) that corresponds to the archive.
+Replace `<release version>` with the specific version tag of the release (e.g., `v0.16.0`) that corresponds to the archive.
+
+On success, `slsa-verifier` prints a success message and exits with `0`.
 
 == Software Bill of Material (SBOM)
 
@@ -245,7 +289,7 @@ cosign verify-attestation dadrus/heimdall:<tag> \
   --type=cyclonedx
 ----
 
-NOTE: If you pull heimdall images from ghcr.io, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-sbom` becomes `ghcr.io/dadrus/heimdall-sbom` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
+NOTE: If you pull heimdall images from GHCR, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-sbom` becomes `ghcr.io/dadrus/heimdall-sbom` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
 
 In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
 
