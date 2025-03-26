@@ -1,0 +1,428 @@
+name: release
+
+on:
+  push:
+    tags: [ "v*" ]
+
+env:
+  GO_VERSION: "1.24.1"
+  COSIGN_VERSION: "v2.4.1"
+  CYCLONEDX_GOMOD_VERSION: "v1.9.0"
+  HELM_VERSION: "3.16.4"
+  NODE_VERSION: "22.13"
+  RUBY_VERSION: "3.4"
+  HUGO_VERSION: "0.140.1"
+  DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
+
+permissions:
+  contents: read
+
+jobs:
+  release-binaries:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+    outputs:
+      hashes: ${{ steps.hash.outputs.result }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Set up Go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
+        with:
+          cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Install CycloneDX gomod
+        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.4.1
+      - name: Generate SBOM
+        uses: CycloneDX/gh-gomod-generate-sbom@efc74245d6802c8cefd925620515442756c70d8f # v2.0.0
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
+      - name: Run GoReleaser
+        id: goreleaser
+        uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # v6.2.1
+        with:
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate provenance subject
+        id: hash
+        env:
+          ARTIFACTS: "${{ steps.goreleaser.outputs.artifacts }}"
+        run: |
+          set -euo pipefail
+          hashes=$(echo $ARTIFACTS | jq --raw-output '.[] | {name, "digest": (.extra.Digest // .extra.Checksum)} | select(.digest) | {digest} + {name} | join("  ") | sub("^sha256:";"")' | base64 -w0)
+          echo "result=$hashes" >> $GITHUB_OUTPUT
+
+
+  create-binaries-provenance:
+    needs:
+      - release-binaries
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.release-binaries.outputs.hashes }}"
+      upload-assets: true
+      provenance-name: "${{ github.event.repository.name }}_${{ github.ref_name }}.intoto.jsonl"
+
+
+  release-container-image:
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+      id-token: write
+    outputs:
+      ghcr_image_digest: ${{ steps.ghcr-image.outputs.digest }}
+      dockerhub_image_digest: ${{ steps.dockerhub-image.outputs.digest }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Prepare image version
+        id: image-version
+        run: |
+          set -euo pipefail
+          export version=$(echo ${{ github.ref_name }} | sed 's/v//g')
+          echo "result=$version" >> $GITHUB_OUTPUT
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
+        with:
+          cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Set up Go # required as the sbom generator is compiled using go < 1.21
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+      - name: Generate SBOM
+        uses: CycloneDX/gh-gomod-generate-sbom@efc74245d6802c8cefd925620515442756c70d8f # v2.0.0
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - name: Login to DockerHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Collect meta-info for DockerHub
+        id: dockerhub-meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ${{ github.repository }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.image-version.outputs.result }}
+            org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
+      - name: Build and push images to DockerHub
+        id: dockerhub-image
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/arm
+          push: true
+          build-args: VERSION=${{ github.ref_name }}
+          labels: ${{ steps.dockerhub-meta.outputs.labels }}
+          tags: |
+            ${{ github.repository }}:latest
+            ${{ github.repository }}:${{ steps.image-version.outputs.result }}
+      - name: Update DockerHub repository description & readme
+        if: steps.dockerhub-image.conclusion == 'success'
+        uses: peter-evans/dockerhub-description@e98e4d1628a5f3be2be7c231e50981aee98723ae # v4.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          short-description: ${{ github.event.repository.description }}
+          readme-filepath: ./DockerHub-README.md
+      - name: Collect meta-info for GHCR
+        id: ghcr-meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.image-version.outputs.result }}
+            org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
+      - name: Build and push images to GHCR
+        id: ghcr-image
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/arm
+          push: true
+          build-args: VERSION=${{ github.ref_name }}
+          labels: ${{ steps.ghcr-meta.outputs.labels }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.image-version.outputs.result }}
+      - name: Sign the image published in DockerHub
+        if: steps.dockerhub-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ${{ github.repository }}-signatures
+        run: cosign sign --yes ${{ github.repository }}@${{ steps.dockerhub-image.outputs.digest }}
+      - name: Attest and attach SBOM to the image published in DockerHub
+        if: steps.dockerhub-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ${{ github.repository }}-sbom
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.dockerhub-image.outputs.digest }}
+      - name: Sign the image published in GitHub
+        if: steps.ghcr-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-signatures
+        run: cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.ghcr-image.outputs.digest }}
+      - name: Attest and attach SBOM to the image published in GitHub
+        if: steps.ghcr-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-sbom
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ghcr.io/${{ github.repository }}@${{ steps.ghcr-image.outputs.digest }}
+
+
+  create-dockerhub-image-provenance:
+    needs:
+      - release-container-image
+    permissions:
+      actions: read
+      id-token: write
+      packages: write
+    # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      image: ${{ github.repository }}
+      digest: ${{ needs.release-container-image.outputs.dockerhub_image_digest }}
+    secrets:
+      registry-username: ${{ secrets.DOCKERHUB_USER }}
+      registry-password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  create-ghcr-image-provenance:
+    needs:
+      - release-container-image
+    permissions:
+      actions: read
+      id-token: write
+      packages: write
+    # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      image: ghcr.io/${{ github.repository }}
+      digest: ${{ needs.release-container-image.outputs.ghcr_image_digest }}
+    secrets:
+      registry-username: ${{ github.actor }}
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+
+  release-helm-chart:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Prepare versions and chart name
+        id: prepare
+        run: |
+          set -euo pipefail
+          APP_VERSION=$(echo ${{ github.ref_name }} | sed 's/v//g')
+          CHART_NAME=$(yq '.name' charts/*/Chart.yaml)
+          CHART_VERSION=$(yq '.version' charts/*/Chart.yaml)
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "chart_name=$CHART_NAME" >> $GITHUB_OUTPUT
+          echo "chart_version=$CHART_VERSION" >> $GITHUB_OUTPUT
+      - name: Publish Helm Chart to GH Pages
+        uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # v1.7.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target_dir: charts
+          linting: off
+          chart_version: ${{ steps.prepare.outputs.chart_version }}
+          app_version: ${{ steps.prepare.outputs.app_version }}
+
+  verify-provenance:
+    needs:
+      - release-container-image
+      - release-helm-chart
+      - create-binaries-provenance
+      - create-dockerhub-image-provenance
+      - create-ghcr-image-provenance
+    runs-on: ubuntu-24.04
+    permissions: read-all
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+      - name: Install SLSA verifier
+        uses: slsa-framework/slsa-verifier/actions/installer@6657aada084353c65e5dde35394b1a010289fab0 # v2.7.0
+      - name: Download released binaries
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh -R "${{ github.repository }}" release download "${{ github.ref_name }}" \
+             -p "${{ needs.create-binaries-provenance.outputs.provenance-name }}" -p "*.tar.gz" -p "*.zip"
+      - name: Verify released binaries
+        run: |
+          slsa-verifier verify-artifact \
+            --provenance-path "${{ needs.create-binaries-provenance.outputs.provenance-name }}" \
+            --source-uri "github.com/${{ github.repository }}" \
+            --source-tag "${{ github.ref_name }}" \
+            *.tar.gz *.zip
+      - name: Login to DockerHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare version
+        id: version
+        run: |
+          export version=$(echo ${{ github.ref_name }} |  sed 's/v//g')
+          echo "result=$version" >> $GITHUB_OUTPUT
+      - name: Verify image released to DockerHub
+        run: |
+          IMAGE=${{ github.repository }}:${{ steps.version.outputs.result }}@${{ needs.release-container-image.outputs.dockerhub_image_digest }}
+          slsa-verifier verify-image "${IMAGE}" --source-uri github.com/${{ github.repository }} --source-tag ${{ github.ref_name }}
+      - name: Verify image released to GitHub
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}:${{ steps.version.outputs.result }}@${{ needs.release-container-image.outputs.ghcr_image_digest }}
+          slsa-verifier verify-image "${IMAGE}" --source-uri github.com/${{ github.repository }} --source-tag ${{ github.ref_name }}
+
+  release-documentation:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          submodules: true  # Fetch Hugo themes (true OR recursive)
+          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3.0.0
+        with:
+          hugo-version: ${{ env.HUGO_VERSION }}
+          extended: true
+      - name: Setup Node
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Setup ruby
+        uses: ruby/setup-ruby@7886c6653556e1164c58a7603d88286b5f708293 # v1.228.0
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+      - name: Install asciidoctor
+        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
+      - name: Install dependencies
+        working-directory: ./docs
+        run: npm install
+      - name: Update version string to new released version
+        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
+        with:
+          find: "x-current-version"
+          replace: "${{ github.ref_name }}"
+          regex: false
+          include: docs/**
+      - name: Update uri for redirecting to new version
+        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
+        with:
+          find: "x-released-version"
+          replace: "${{ github.ref_name }}"
+          regex: false
+          include: docs/**
+      - name: Prepare image version
+        id: image-version
+        run: |
+          export version=$(echo {{ github.ref_name }} |  sed 's/v//g')
+          echo "result=$version" >> $GITHUB_OUTPUT
+      - name: Update used image tags to the released version
+        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
+        with:
+          find: "heimdall:dev"
+          replace: "heimdall:${{ steps.image-version.outputs.result }}"
+          regex: false
+          include: docs/**
+      - name: Build documentation
+        working-directory: ./docs
+        run: hugo --minify -d ./public
+      - name: Update versions JSON document
+        id: update-version-json
+        run: |
+          cat ./docs/versions/data.json | jq '. + [{ "version": "${{ github.ref_name }}", "path": "/heimdall/${{ github.ref_name }}" }]' | tee ./docs/versions/data.json
+      - name: Deploy documentation
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/public
+          destination_dir: ${{ github.ref_name }}
+      - name: Deploy redirect to new released version
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/redirect
+          keep_files: true
+      - name: Deploy versions JSON document
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/versions
+          keep_files: true
+      - name: Get branch of the tag
+        id: base-branch
+        run: |
+          branch_name=$(git for-each-ref | grep ^${{ github.sha }} | grep origin | grep -v HEAD | head -n1 | sed "s/.*\///")
+          echo "result=$branch_name" >> $GITHUB_OUTPUT
+      - name: Create a PR for the updated versions JSON document
+        if: steps.update-version-json.outcome == 'success'
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
+          commit-message: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
+          base: ${{ steps.base-branch.outputs.result }}
+          sign-commits: true
+          body: >
+            data.json updated by the release-documentation job to include the entry 
+            referencing the released ${{ github.ref_name }} documentation version
+          add-paths: |
+            docs/versions/*.json
