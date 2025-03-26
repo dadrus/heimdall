@@ -104,7 +104,7 @@ NOTE: As of today secret reloading is only supported for link:{{< relref "/docs/
 
 == Verifying Heimdall Binaries and Container Images
 
-Heimdall binaries and container images are signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] and the https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature]. Additionally, SLSA provenance is generated for both binaries and container images, providing a higher level of assurance about the build process in accordance with https://slsa.dev/spec/v1.0/levels#build-l3-hardened-builds[SLSA Level 3] requirements.
+Heimdall binaries and container images are signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] and the https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature]. Additionally, SLSA provenance is generated for released binaries and container images, providing a higher level of assurance about the build process in accordance with https://slsa.dev/spec/v1.0/levels#build-l3-hardened-builds[SLSA Level 3] requirements.
 
 === Prerequisites
 
@@ -115,7 +115,7 @@ Heimdall binaries and container images are signed using https://docs.sigstore.de
 
 ==== Signature Verification with Cosign
 
-The signatures are stored in a repository named `dadrus/heimdall-signatures`. To verify the container image using Cosign, execute the following command:
+The signatures are stored in a repository named `dadrus/heimdall-signatures`. To verify the released container image using Cosign, execute the following command:
 
 [source, bash]
 ----
@@ -170,7 +170,7 @@ In successful verification case, cosign will print similar output to the one sho
 ]
 ----
 
-For released images, the `Subject` value ends with `@refs/tags/<release version>` as also shown in the snippet above.
+For released images, the `Subject` value ends with `@refs/tags/<release version>`, as indicated in the snippet above. The `dev` tagged images can be verified similarly, but the `--certificate-identity-regexp` flag needs to be set to `https://github.com/dadrus/heimdall/.github/workflows/ci.yaml*`, since these images are built and signed by a different workflow.
 
 ==== Provenance Verification with slsa-verifier
 
