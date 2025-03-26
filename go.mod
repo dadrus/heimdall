@@ -225,4 +225,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace golang.org/x/oauth2 v0.26.0 => golang.org/x/oauth2 v0.28.0
+replace (
+	github.com/golang-jwt/jwt/v5 v5.2.1 => github.com/golang-jwt/jwt/v5 v5.2.2
+	golang.org/x/oauth2 v0.26.0 => golang.org/x/oauth2 v0.28.0
+)
