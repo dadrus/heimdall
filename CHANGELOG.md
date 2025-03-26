@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.15.10](https://github.com/dadrus/heimdall/compare/v0.15.9...v0.15.10) (2025-03-26)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 9f6875a ([#2297](https://github.com/dadrus/heimdall/issues/2297)) ([02dfd44](https://github.com/dadrus/heimdall/commit/02dfd44b2c62a49cbf38ced618d8e2bd50c979fb))
+* update google.golang.org/genproto/googleapis/rpc digest to b45e905 ([#2319](https://github.com/dadrus/heimdall/issues/2319)) ([feca831](https://github.com/dadrus/heimdall/commit/feca831fc735485c82da270bff1eed9b75fc8637))
+* update kubernetes packages to v0.32.3 ([#2287](https://github.com/dadrus/heimdall/issues/2287)) ([99777ba](https://github.com/dadrus/heimdall/commit/99777ba03bcb7af1caca734510a725bae73c5f0e))
+* update module github.com/go-co-op/gocron/v2 to v2.16.1 ([#2294](https://github.com/dadrus/heimdall/issues/2294)) ([ece112b](https://github.com/dadrus/heimdall/commit/ece112b935b0b7267361a446b7511bac2da5c821))
+* update module github.com/redis/rueidis to v1.0.56 ([#2301](https://github.com/dadrus/heimdall/issues/2301)) ([9c3dfb5](https://github.com/dadrus/heimdall/commit/9c3dfb5e2ab61b20eba08e25d332e7fa5f7551dd))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.56 ([#2301](https://github.com/dadrus/heimdall/issues/2301)) ([9c3dfb5](https://github.com/dadrus/heimdall/commit/9c3dfb5e2ab61b20eba08e25d332e7fa5f7551dd))
+* update module github.com/rs/zerolog to v1.34.0 ([#2316](https://github.com/dadrus/heimdall/issues/2316)) ([b38a032](https://github.com/dadrus/heimdall/commit/b38a032f50a160dcce6255c397827cb53ed588df))
+* update module google.golang.org/protobuf to v1.36.6 ([#2318](https://github.com/dadrus/heimdall/issues/2318)) ([c1304d6](https://github.com/dadrus/heimdall/commit/c1304d6544a6990f091f604cc752278d702482b8))
+* update opentelemetry-go-contrib monorepo to v0.60.0 ([#2280](https://github.com/dadrus/heimdall/issues/2280)) ([8017315](https://github.com/dadrus/heimdall/commit/801731589145825e89c2e8292ef333279e9eb9bd))
+
 
 ## [0.15.9](https://github.com/dadrus/heimdall/compare/v0.15.8...v0.15.9) (2025-03-06)
 
