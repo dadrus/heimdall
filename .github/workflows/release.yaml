@@ -242,6 +242,13 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      packages: write
+      id-token: write
+    needs:
+      - release-container-image
+    outputs:
+      digest: ${{ steps.publish-ghcr.outputs.digest }}
+      image_name: ${{ steps.publish-ghcr.outputs.image_name }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
@@ -267,6 +274,50 @@ jobs:
           linting: off
           chart_version: ${{ steps.prepare.outputs.chart_version }}
           app_version: ${{ steps.prepare.outputs.app_version }}
+      - name: Publish Chart to GHCR
+        id: publish-ghcr
+        uses: ./.github/actions/helm-chart-oci-publisher
+        with:
+          name: ${{ github.event.repository.name }}
+          repository: ${{ github.repository }}/chart
+          chart_version: ${{ steps.prepare.outputs.chart_version }}
+          app_version: ${{ steps.prepare.outputs.app_version }}
+          registry: ghcr.io
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
+        with:
+          cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Login to GitHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign the Helm chart in GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes ${{ steps.publish-ghcr.outputs.image_name }}@${{ steps.publish-ghcr.outputs.digest }}
+
+  create-ghcr-helm-provenance:
+    needs:
+      - release-helm-chart
+    permissions:
+      actions: read
+      id-token: write
+      packages: write
+    # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      image: ${{ needs.release-helm-chart.outputs.image_name }}
+      digest: ${{ needs.release-helm-chart.outputs.digest }}
+    secrets:
+      registry-username: ${{ github.actor }}
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
+
 
   verify-provenance:
     needs:
@@ -275,6 +326,7 @@ jobs:
       - create-binaries-provenance
       - create-dockerhub-image-provenance
       - create-ghcr-image-provenance
+      - create-ghcr-helm-provenance
     runs-on: ubuntu-24.04
     permissions: read-all
     steps:
@@ -321,6 +373,10 @@ jobs:
       - name: Verify image released to GitHub
         run: |
           IMAGE=ghcr.io/${{ github.repository }}:${{ steps.version.outputs.result }}@${{ needs.release-container-image.outputs.ghcr_image_digest }}
+          slsa-verifier verify-image "${IMAGE}" --source-uri github.com/${{ github.repository }} --source-tag ${{ github.ref_name }}
+      - name: Verify helm chart released to GitHub
+        run: |
+          IMAGE=${{ needs.release-helm-chart.outputs.image_name }}@${{ needs.release-helm-chart.outputs.digest }}
           slsa-verifier verify-image "${IMAGE}" --source-uri github.com/${{ github.repository }} --source-tag ${{ github.ref_name }}
 
   release-documentation:
