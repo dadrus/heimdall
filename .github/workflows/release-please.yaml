@@ -6,6 +6,9 @@ on:
       - main
       - release
 
+permissions:
+  contents: read
+
 jobs:
   prepare-release:
     runs-on: ubuntu-24.04
