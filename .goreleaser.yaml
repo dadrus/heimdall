@@ -36,11 +36,11 @@ changelog:
   disable: true
 
 archives:
-  - format: tar.gz
+  - formats: [ "tar.gz" ]
     name_template: '{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [ "zip" ]
     files:
       - LICENSE
       - CHANGELOG.md
