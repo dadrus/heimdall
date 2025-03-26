@@ -102,7 +102,7 @@ Usage of external files can even allow you to rotate the configured secrets with
 
 NOTE: As of today secret reloading is only supported for link:{{< relref "/docs/configuration/types.adoc#_key_store" >}}[key stores] and link:{{< relref "/docs/operations/cache.adoc#_common_settings" >}}[Redis cache backend credentials].
 
-== Verifying Heimdall Binaries and Container Images
+== Verification of Heimdall Artifacts
 
 Heimdall binaries and container images are signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] and the https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature]. Additionally, SLSA provenance is generated for released binaries and container images, providing a higher level of assurance about the build process in accordance with https://slsa.dev/spec/v1.0/levels#build-l3-hardened-builds[SLSA Level 3] requirements.
 
