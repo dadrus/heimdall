@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
+	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -55,16 +58,15 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
-		buildURL       func(t *testing.T, baseURL string) string
-		args           map[string]any
-		checkRequest   func(t *testing.T, req *http.Request)
-		createResponse func(t *testing.T, rw http.ResponseWriter)
-		assert         func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata)
+	for uc, tc := range map[string]struct {
+		buildURL           func(t *testing.T, baseURL string) string
+		args               map[string]any
+		resolvedEPSettings map[string]ResolvedEndpointSettings
+		checkRequest       func(t *testing.T, req *http.Request)
+		createResponse     func(t *testing.T, rw http.ResponseWriter)
+		assert             func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata)
 	}{
-		{
-			uc: "invalid template in path",
+		"invalid template in path": {
 			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
@@ -79,8 +81,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "create template")
 			},
 		},
-		{
-			uc: "failed rendering template in path",
+		"failed rendering template in path": {
 			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
@@ -95,8 +96,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "creating oauth2 server metadata request")
 			},
 		},
-		{
-			uc: "failed communicating with server",
+		"failed communicating with server": {
 			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
@@ -110,8 +110,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
 			},
 		},
-		{
-			uc: "server responses with an error",
+		"server responses with an error": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -131,8 +130,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "unexpected response code")
 			},
 		},
-		{
-			uc: "server does not respond with a JSON document",
+		"server does not respond with a JSON document": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -152,8 +150,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "failed to unmarshal")
 			},
 		},
-		{
-			uc: "server's response contains jwks_uri with template",
+		"server's response contains jwks_uri with template": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -188,8 +185,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "jwks_uri contains a template")
 			},
 		},
-		{
-			uc: "server's response contains introspection_endpoint with template",
+		"server's response contains introspection_endpoint with template": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -224,8 +220,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "introspection_endpoint contains a template")
 			},
 		},
-		{
-			uc:   "valid server response for templated URL",
+		"valid server response for templated URL": {
 			args: map[string]any{"Foo": "bar"},
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
@@ -278,8 +273,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				assert.Equal(t, exp, *sm.IntrospectionEndpoint)
 			},
 		},
-		{
-			uc:   "valid server response with invalid issuer for metadata URL",
+		"valid server response with invalid issuer for metadata URL": {
 			args: map[string]any{"Foo": "bar"},
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
@@ -314,8 +308,90 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 			},
 		},
+		"configured settings for resolved endpoints are applied": {
+			resolvedEPSettings: map[string]ResolvedEndpointSettings{
+				"jwks_uri": {
+					Retry:        &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
+					HTTPCache:    &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
+					AuthStrategy: &authstrategy.APIKey{In: "header", Name: "X-API-Key", Value: "foo"},
+				},
+				"introspection_endpoint": {
+					Retry:     &endpoint.Retry{GiveUpAfter: 2 * time.Minute, MaxDelay: 10 * time.Second},
+					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 20 * time.Second},
+					AuthStrategy: &authstrategy.OAuth2ClientCredentials{
+						Config: clientcredentials.Config{
+							TokenURL:     "https://foo.bar/token",
+							ClientID:     "foo",
+							ClientSecret: "bar",
+						},
+					},
+				},
+			},
+			buildURL: func(t *testing.T, baseURL string) string {
+				t.Helper()
+
+				return baseURL + "/.well-known/oauth-authorization-server/issuer1"
+			},
+			checkRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "/.well-known/oauth-authorization-server/issuer1", req.URL.Path)
+				assert.Equal(t, http.MethodGet, req.Method)
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
+			},
+			createResponse: func(t *testing.T, rw http.ResponseWriter) {
+				t.Helper()
+
+				rw.Header().Set("Content-Type", "application/json")
+
+				err := json.NewEncoder(rw).Encode(metadata{
+					Issuer:                             srv.URL + "/issuer1",
+					JWKSEndpointURL:                    "https://foo.bar/jwks",
+					IntrospectionEndpointURL:           "https://foo.bar/introspection",
+					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
+				})
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+				t.Helper()
+
+				require.True(t, endpointCalled)
+				require.NoError(t, err)
+
+				assert.Equal(t, srv.URL+"/issuer1", sm.Issuer)
+
+				exp := endpoint.Endpoint{
+					URL:          "https://foo.bar/jwks",
+					Method:       http.MethodGet,
+					Headers:      map[string]string{"Accept": "application/json"},
+					Retry:        &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
+					HTTPCache:    &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
+					AuthStrategy: &authstrategy.APIKey{In: "header", Name: "X-API-Key", Value: "foo"},
+				}
+				assert.Equal(t, exp, *sm.JWKSEndpoint)
+
+				exp = endpoint.Endpoint{
+					URL:    "https://foo.bar/introspection",
+					Method: http.MethodPost,
+					Headers: map[string]string{
+						"Content-Type": "application/x-www-form-urlencoded",
+						"Accept":       "application/json",
+					},
+					Retry:     &endpoint.Retry{GiveUpAfter: 2 * time.Minute, MaxDelay: 10 * time.Second},
+					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 20 * time.Second},
+					AuthStrategy: &authstrategy.OAuth2ClientCredentials{
+						Config: clientcredentials.Config{
+							TokenURL:     "https://foo.bar/token",
+							ClientID:     "foo",
+							ClientSecret: "bar",
+						},
+					},
+				}
+				assert.Equal(t, exp, *sm.IntrospectionEndpoint)
+			},
+		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			endpointCalled = false
 
@@ -327,7 +403,14 @@ func TestMetadataEndpointGet(t *testing.T) {
 				tc.createResponse != nil, tc.createResponse, func(t *testing.T, _ http.ResponseWriter) { t.Helper() })
 			buildResponse = func(rw http.ResponseWriter) { createResponse(t, rw) }
 
-			ep := &MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: tc.buildURL(t, srv.URL)}}
+			ep := &MetadataEndpoint{
+				Endpoint: endpoint.Endpoint{URL: tc.buildURL(t, srv.URL)},
+				ResolvedEndpoints: x.IfThenElseExec(
+					tc.resolvedEPSettings == nil,
+					func() map[string]ResolvedEndpointSettings { return make(map[string]ResolvedEndpointSettings) },
+					func() map[string]ResolvedEndpointSettings { return tc.resolvedEPSettings },
+				),
+			}
 
 			// WHEN
 			sm, err := ep.Get(t.Context(), tc.args)
