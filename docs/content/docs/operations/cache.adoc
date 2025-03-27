@@ -33,9 +33,7 @@ cache:
 
 == In-Memory Backend
 
-This backend manages the cached items in memory of heimdall's process.
-
-To configure it, you have to specify `in-memory` as type. No further configuration is supported. Here an example:
+This is the default caching backend used by heimdall. It manages the cached items in memory of heimdall's process. To explicitly configure it, specify `in-memory` as the type.
 
 [source, yaml]
 ----
@@ -43,7 +41,26 @@ cache:
   type: in-memory
 ----
 
-NOTE: By default, heimdall makes use of this backend.
+Additional optional configuration options via `config` allow control over the cache's memory usage (defaulting to 128MB if not specified) and the number of entries it can hold. The following properties are supported:
+
+* *`memory_limit`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum amount of memory the cache is allowed to use. This limit helps prevent excessive memory consumption and may affect the number of entries stored. Defaults to 128MB.
+
+* *`entry_limit`*: _integer_ (optional)
++
+The maximum number of entries the cache can store. This limit ensures the cache doesn’t grow indefinitely and can be used in conjunction with `memory_limit` to manage cache size. If not specified, there is no limit on the number of entries.
+
+Here is an example configuration that sets the memory limit to 256MB and the entry limit to 10000:
+
+[source, yaml]
+----
+cache:
+  type: in-memory
+  config:
+    memory_limit: 256MB
+    entry_limit: 10000
+----
 
 
 == Redis Backends

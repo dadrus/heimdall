@@ -57,13 +57,18 @@ deployment:
 
   # Remove the curly braces after 'resources:' if you want to specify resources
   resources: { }
-    # E.g.:
+    # Example configuration:
     # limits:
     #   cpu: 100m
-    #   memory: 128Mi
+    #   memory: 256Mi
     # requests:
     #   cpu: 100m
-  #   memory: 128Mi
+    #   memory: 256Mi
+    # Notes:
+    # - Memory settings depend on your cache backend configuration in heimdall.
+    # - By default, heimdall uses an in-memory cache limited to 128Mi.
+    # - If using Redis without client-side caching configured, the cache is also limited to 128Mi by default.
+    # - The heimdall process itself requires approximately 64Mi of memory.
 
   # Only used if autoscaling is disabled (see below)
   replicaCount: 2
