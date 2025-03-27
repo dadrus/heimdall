@@ -89,6 +89,27 @@
       "properties": {
         "type": {
           "const": "in-memory"
+        },
+        "config": {
+          "description": "In-Memory cache configuration",
+          "type": "object",
+          "properties": {
+            "memory_limit": {
+              "description": "The maximum amount of memory the cache is allowed to use. This limit helps prevent excessive memory consumption and may affect the number of entries stored.",
+              "type": "string",
+              "default": "128MB",
+              "pattern": "^[0-9]+(B|KB|MB|GB)$",
+              "examples": [
+                "1GB",
+                "256MB",
+                "128KB"
+              ]
+            },
+            "entry_limit": {
+              "description": "The maximum number of entries the cache can store. This limit ensures the cache doesn’t grow indefinitely and can be used in conjunction with `memoryLimit` to manage cache size.",
+              "type": "integer"
+            }
+          }
         }
       }
     },
