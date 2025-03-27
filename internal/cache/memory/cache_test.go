@@ -46,15 +46,15 @@ func TestNewCache(t *testing.T) {
 			err:    heimdall.ErrConfiguration,
 		},
 		"max memory is configured": {
-			config: []byte(`max_memory: 10MB`),
+			config: []byte(`memory_limit: 10MB`),
 		},
 		"max entries is configured": {
-			config: []byte(`max_entries: 10`),
+			config: []byte(`entry_limit: 10`),
 		},
 		"both, max entries and max memory are configured": {
 			config: []byte(`
-max_entries: 10
-max_memory: 100MB
+entry_limit: 10
+memory_limit: 100MB
 `),
 		},
 	} {
@@ -178,10 +178,10 @@ func TestMemoryCacheExpiration(t *testing.T) {
 	assert.LessOrEqual(t, hits, 4)
 }
 
-func TestMaxMemoryUsage(t *testing.T) {
+func TestMemoryLimit(t *testing.T) {
 	t.Parallel()
 
-	cch, err := NewCache(nil, map[string]any{"max_memory": "2MB"})
+	cch, err := NewCache(nil, map[string]any{"memory_limit": "2MB"})
 	require.NoError(t, err)
 
 	err = cch.Start(t.Context())
@@ -201,10 +201,10 @@ func TestMaxMemoryUsage(t *testing.T) {
 	assert.LessOrEqual(t, finalSize, int(2*bytesize.MB))
 }
 
-func TestMaxEntriesUsage(t *testing.T) {
+func TestEntryLimit(t *testing.T) {
 	t.Parallel()
 
-	cch, err := NewCache(nil, map[string]any{"max_entries": 10})
+	cch, err := NewCache(nil, map[string]any{"entry_limit": 10})
 	require.NoError(t, err)
 
 	err = cch.Start(t.Context())

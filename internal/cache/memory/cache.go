@@ -29,7 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-const defaultCacheMemorySize = 128 * bytesize.MB
+const defaultMemoryLimit = 128 * bytesize.MB
 
 var ErrNoCacheEntry = errors.New("no cache entry")
 
@@ -40,8 +40,8 @@ func init() { // nolint: gochecknoinits
 
 func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
 	type Config struct {
-		MaxEntries uint64             `mapstructure:"max_entries"`
-		MaxMemory  *bytesize.ByteSize `mapstructure:"max_memory"`
+		EntryLimit  uint64             `mapstructure:"entry_limit"`
+		MemoryLimit *bytesize.ByteSize `mapstructure:"memory_limit"`
 	}
 
 	var cfg Config
@@ -53,16 +53,16 @@ func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
 		}
 	}
 
-	maxMemory := x.IfThenElseExec(cfg.MaxMemory == nil,
-		func() uint64 { return uint64(defaultCacheMemorySize) },
-		func() uint64 { return uint64(*cfg.MaxMemory) },
+	memoryLimit := x.IfThenElseExec(cfg.MemoryLimit == nil,
+		func() uint64 { return uint64(defaultMemoryLimit) },
+		func() uint64 { return uint64(*cfg.MemoryLimit) },
 	)
 
 	return &Cache{
 		c: ttlcache.New[string, []byte](
 			ttlcache.WithDisableTouchOnHit[string, []byte](),
-			ttlcache.WithCapacity[string, []byte](cfg.MaxEntries),
-			ttlcache.WithMaxCost[string, []byte](maxMemory,
+			ttlcache.WithCapacity[string, []byte](cfg.EntryLimit),
+			ttlcache.WithMaxCost[string, []byte](memoryLimit,
 				func(item *ttlcache.Item[string, []byte]) uint64 {
 					// An empty cache takes up 374 bytes.
 					// Each entry incurs overhead: 16 bytes for the string (key) metadata and 24 bytes
