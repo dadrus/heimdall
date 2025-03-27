@@ -936,6 +936,19 @@
               "type": "boolean",
               "description": "Whether issuer identifier verification according to RFC8414 should be skipped. Used only if metadata_endpoint is configured",
               "default": false
+            },
+            "resolved_endpoints": {
+              "description": "Configuration options for the resolved endpoints",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "jwks_uri": {
+                  "$ref": "#/definitions/metadataResolvedEndpointProperties"
+                },
+                "introspection_endpoint": {
+                  "$ref": "#/definitions/metadataResolvedEndpointProperties"
+                }
+              }
             }
           }
         },
@@ -948,6 +961,69 @@
           ]
         }
       ]
+    },
+    "metadataResolvedEndpointProperties": {
+      "description": "Settings which can be configured for the resolved endpoints",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retry": {
+          "description": "How the implementation should behave when trying to access the configured endpoint",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "give_up_after": {
+              "description": "When the implementation should finally give up, if the endpoint is not answering.",
+              "type": "string",
+              "default": "1s",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+            },
+            "max_delay": {
+              "description": "How long the implementation should wait between the attempts",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "100ms"
+            }
+          }
+        },
+        "auth": {
+          "description": "How to authenticate against the endpoint",
+          "type": "object",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/endpointAuthApiKeyProperties"
+            },
+            {
+              "$ref": "#/definitions/endpointAuthBasicAuthProperties"
+            },
+            {
+              "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
+            }
+          ]
+        },
+        "http_cache": {
+          "description": "Configures cache usage according to RFC 7234",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Enables or disables http cache usage",
+              "type": "boolean",
+              "default": false
+            },
+            "default_ttl": {
+              "description": "How long a response from server should be cached if no cache related headers are present",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "0ms",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
+            }
+          }
+        }
+      }
     },
     "endpointAuthBasicAuthProperties": {
       "properties": {
