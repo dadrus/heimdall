@@ -60,10 +60,10 @@ deployment:
     # E.g.:
     # limits:
     #   cpu: 100m
-    #   memory: 128Mi
+    #   memory: 256Mi
     # requests:
     #   cpu: 100m
-  #   memory: 128Mi
+  #   memory: 256Mi
 
   # Only used if autoscaling is disabled (see below)
   replicaCount: 2
