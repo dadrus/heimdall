@@ -29,7 +29,16 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-const defaultMemoryLimit = 128 * bytesize.MB
+const (
+	defaultMemoryLimit = 128 * bytesize.MB
+
+	// An empty cache takes up 374 bytes.
+	// Each entry incurs overhead: 16 bytes for the string (key) metadata and 24 bytes
+	// for the []byte (value) metadata. The cache also maintains internal structures,
+	// averaging about 144 bytes per entry. Combined, this results in an overhead of
+	// approximately 184 bytes, excluding the empty cache size.
+	ttlCacheOverheadPerEntry = 184
+)
 
 var ErrNoCacheEntry = errors.New("no cache entry")
 
@@ -64,13 +73,6 @@ func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
 			ttlcache.WithCapacity[string, []byte](cfg.EntryLimit),
 			ttlcache.WithMaxCost[string, []byte](memoryLimit,
 				func(item *ttlcache.Item[string, []byte]) uint64 {
-					// An empty cache takes up 374 bytes.
-					// Each entry incurs overhead: 16 bytes for the string (key) metadata and 24 bytes
-					// for the []byte (value) metadata. The cache also maintains internal structures,
-					// averaging about 144 bytes per entry. Combined, this results in an overhead of
-					// approximately 184 bytes, excluding the empty cache size.
-					const ttlCacheOverheadPerEntry = 184
-
 					return uint64(len(item.Key()) + len(item.Value()) + ttlCacheOverheadPerEntry) //nolint:gosec
 				},
 			),
