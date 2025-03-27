@@ -89,6 +89,27 @@
       "properties": {
         "type": {
           "const": "in-memory"
+        },
+        "config": {
+          "description": "In-Memory cache configuration",
+          "type": "object",
+          "properties": {
+            "max_memory": {
+              "description": "The maximum memory size a cache is allowed to use",
+              "type": "string",
+              "default": "128MB",
+              "pattern": "^[0-9]+(B|KB|MB|GB)$",
+              "examples": [
+                "1GB",
+                "256MB",
+                "128KB"
+              ]
+            },
+            "max_entries": {
+              "description": "The maximum number of entries a cache is permitted to store",
+              "type": "integer"
+            }
+          }
         }
       }
     },
