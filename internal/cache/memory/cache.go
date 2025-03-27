@@ -19,7 +19,6 @@ package memory
 import (
 	"context"
 	"errors"
-	"github.com/dadrus/heimdall/internal/x"
 	"time"
 
 	"github.com/inhies/go-bytesize"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 const defaultCacheMemorySize = 128 * bytesize.MB
