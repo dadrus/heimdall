@@ -32,12 +32,10 @@ import (
 func TestHandlerServeHTTP(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc    string
+	for uc, tc := range map[string]struct {
 		setup func(*testing.T, *mocks.ExecutorMock, *mocks3.ContextMock, *mocks2.ErrorHandlerMock)
 	}{
-		{
-			uc: "no error",
+		"no error": {
 			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, _ *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
@@ -47,8 +45,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 				ctx.EXPECT().Finalize(upstream).Return(nil)
 			},
 		},
-		{
-			uc: "with error from executor",
+		"with error from executor": {
 			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
@@ -58,8 +55,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 				eh.EXPECT().HandleError(mock.Anything, mock.Anything, err)
 			},
 		},
-		{
-			uc: "with error from finalizer",
+		"with error from finalizer": {
 			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
@@ -72,7 +68,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			rcf := mocks3.NewContextFactoryMock(t)
 			re := mocks.NewExecutorMock(t)

@@ -51,13 +51,11 @@ func attributeValue(set attribute.Set, key attribute.Key) attribute.Value {
 }
 
 func TestHandlerObserveKnownRequests(t *testing.T) {
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		configureMock func(t *testing.T, srv *mocks2.MockHandler)
 		assert        func(t *testing.T, rm *metricdata.ResourceMetrics)
 	}{
-		{
-			uc: "metrics for successful request",
+		"metrics for successful request": {
 			configureMock: func(t *testing.T, handler *mocks2.MockHandler) {
 				t.Helper()
 
@@ -105,8 +103,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetworkPeerPortKey))
 			},
 		},
-		{
-			uc: "metrics for request which failed with 403",
+		"metrics for request which failed with 403": {
 			configureMock: func(t *testing.T, handler *mocks2.MockHandler) {
 				t.Helper()
 
@@ -156,8 +153,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetworkPeerPortKey))
 			},
 		},
-		{
-			uc: "metrics for request with server raising an error",
+		"metrics for request with server raising an error": {
 			configureMock: func(t *testing.T, handler *mocks2.MockHandler) {
 				t.Helper()
 
@@ -202,7 +198,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			exp := metric.NewManualReader()
 

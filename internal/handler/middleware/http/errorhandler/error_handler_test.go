@@ -30,164 +30,140 @@ import (
 func TestHandlerHandle(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc      string
+	for uc, tc := range map[string]struct {
 		handler ErrorHandler
 		err     error
 		expCode int
 		accept  string
 		expBody string
 	}{
-		{
-			uc:      "authentication error default",
+		"authentication error default": {
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrAuthentication),
 			expCode: http.StatusUnauthorized,
 		},
-		{
-			uc:      "authentication error overridden",
+		"authentication error overridden": {
 			handler: New(WithAuthenticationErrorCode(http.StatusContinue)),
 			err:     errorchain.New(heimdall.ErrAuthentication),
 			expCode: http.StatusContinue,
 		},
-		{
-			uc:      "authentication error verbose without mime type set",
+		"authentication error verbose without mime type set": {
 			handler: New(WithVerboseErrors(true)),
 			err:     errorchain.New(heimdall.ErrAuthentication),
 			expCode: http.StatusUnauthorized,
 			expBody: "<p>authentication error</p>",
 		},
-		{
-			uc:      "authorization error default",
+		"authorization error default": {
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrAuthorization),
 			expCode: http.StatusForbidden,
 		},
-		{
-			uc:      "authorization error overridden",
+		"authorization error overridden": {
 			handler: New(WithAuthorizationErrorCode(http.StatusContinue)),
 			err:     errorchain.New(heimdall.ErrAuthorization),
 			expCode: http.StatusContinue,
 		},
-		{
-			uc:      "authorization error verbose expecting text/plain",
+		"authorization error verbose expecting text/plain": {
 			handler: New(WithVerboseErrors(true)),
 			err:     errorchain.New(heimdall.ErrAuthorization),
 			expCode: http.StatusForbidden,
 			accept:  "text/plain",
 			expBody: "authorization error",
 		},
-		{
-			uc:      "communication timeout error default",
+		"communication timeout error default": {
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrCommunicationTimeout),
 			expCode: http.StatusBadGateway,
 		},
-		{
-			uc:      "communication timeout error overridden",
+		"communication timeout error overridden": {
 			handler: New(WithCommunicationErrorCode(http.StatusContinue)),
 			err:     errorchain.New(heimdall.ErrCommunicationTimeout),
 			expCode: http.StatusContinue,
 		},
-		{
-			uc:      "communication timeout error verbose expecting application/xml",
+		"communication timeout error verbose expecting application/xml": {
 			handler: New(WithVerboseErrors(true)),
 			err:     errorchain.New(heimdall.ErrCommunicationTimeout),
 			expCode: http.StatusBadGateway,
 			accept:  "application/xml",
 			expBody: "<error><code>communicationTimeoutError</code></error>",
 		},
-		{
-			uc:      "communication error default",
+		"communication error default": {
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrCommunication),
 			expCode: http.StatusBadGateway,
 		},
-		{
-			uc:      "communication error overridden",
+		"communication error overridden": {
 			handler: New(WithCommunicationErrorCode(http.StatusContinue)),
 			err:     errorchain.New(heimdall.ErrCommunication),
 			expCode: http.StatusContinue,
 		},
-		{
-			uc:      "communication error verbose expecting application/json",
+		"communication error verbose expecting application/json": {
 			handler: New(WithVerboseErrors(true)),
 			err:     errorchain.New(heimdall.ErrCommunication),
 			expCode: http.StatusBadGateway,
 			accept:  "application/json",
 			expBody: "{\"code\":\"communicationError\"}",
 		},
-		{
-			uc:      "precondition error default",
+		"precondition error default": {
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrArgument),
 			expCode: http.StatusBadRequest,
 		},
-		{
-			uc:      "precondition error overridden",
+		"precondition error overridden": {
 			handler: New(WithPreconditionErrorCode(http.StatusContinue)),
 			err:     errorchain.New(heimdall.ErrArgument),
 			expCode: http.StatusContinue,
 		},
-		{
-			uc:      "precondition error verbose expecting text/html",
+		"precondition error verbose expecting text/html": {
 			handler: New(WithVerboseErrors(true)),
 			err:     errorchain.New(heimdall.ErrArgument),
 			expCode: http.StatusBadRequest,
 			expBody: "<p>argument error</p>",
 		},
-		{
-			uc:      "no rule error default",
+		"no rule error default": {
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrNoRuleFound),
 			expCode: http.StatusNotFound,
 		},
-		{
-			uc:      "no rule error overridden",
+		"no rule error overridden": {
 			handler: New(WithNoRuleErrorCode(http.StatusContinue)),
 			err:     errorchain.New(heimdall.ErrNoRuleFound),
 			expCode: http.StatusContinue,
 		},
-		{
-			uc:      "no rule error verbose without mime type",
+		"no rule error verbose without mime type": {
 			handler: New(WithVerboseErrors(true)),
 			err:     errorchain.New(heimdall.ErrNoRuleFound),
 			expCode: http.StatusNotFound,
 			expBody: "<p>no rule found</p>",
 		},
-		{
-			uc:      "redirect error",
+		"redirect error": {
 			handler: New(),
 			err:     &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode: http.StatusFound,
 		},
-		{
-			uc:      "redirect error verbose without mime type",
+		"redirect error verbose without mime type": {
 			handler: New(WithVerboseErrors(true)),
 			err:     &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode: http.StatusFound,
 		},
-		{
-			uc:      "internal error default",
+		"internal error default": {
 			handler: New(),
 			err:     errorchain.New(heimdall.ErrInternal),
 			expCode: http.StatusInternalServerError,
 		},
-		{
-			uc:      "internal error overridden",
+		"internal error overridden": {
 			handler: New(WithInternalServerErrorCode(http.StatusContinue)),
 			err:     errorchain.New(heimdall.ErrInternal),
 			expCode: http.StatusContinue,
 		},
-		{
-			uc:      "internal error verbose without mime type",
+		"internal error verbose without mime type": {
 			handler: New(WithVerboseErrors(true)),
 			err:     errorchain.New(heimdall.ErrInternal),
 			expCode: http.StatusInternalServerError,
 			expBody: "<p>internal error</p>",
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			recorder := httptest.NewRecorder()
 

@@ -59,26 +59,24 @@ func TestRequests(t *testing.T) {
 		ClientIPAddresses: []string{"127.0.0.1"},
 	}
 
-	for _, tc := range []struct {
-		expr string
-	}{
-		{expr: `Request.Method == "HEAD"`},
-		{expr: `Request.URL.String() == "` + rawURI + `"`},
-		{expr: `Request.URL.Captures.foo == "bar"`},
-		{expr: `Request.URL.Query().bar == ["foo"]`},
-		{expr: `Request.URL.Host == "localhost:8080"`},
-		{expr: `Request.URL.Hostname() == "localhost"`},
-		{expr: `Request.URL.Port() == "8080"`},
-		{expr: `Request.Cookie("foo") == "bar"`},
-		{expr: `Request.Header("bar") == "baz"`},
-		{expr: `Request.Header("zab").contains("bar")`},
-		{expr: `Request.Header("accept").matches("(text/html|application/xml)")`},
-		{expr: `["text/html", "application/xml", "application/json"].exists(v, Request.Header("accept").contains(v))`},
-		{expr: `Request.ClientIPAddresses in networks("127.0.0.0/24")`},
-		{expr: `Request.Body().foo[0] == "bar"`},
+	for _, tc := range []string{
+		`Request.Method == "HEAD"`,
+		`Request.URL.String() == "` + rawURI + `"`,
+		`Request.URL.Captures.foo == "bar"`,
+		`Request.URL.Query().bar == ["foo"]`,
+		`Request.URL.Host == "localhost:8080"`,
+		`Request.URL.Hostname() == "localhost"`,
+		`Request.URL.Port() == "8080"`,
+		`Request.Cookie("foo") == "bar"`,
+		`Request.Header("bar") == "baz"`,
+		`Request.Header("zab").contains("bar")`,
+		`Request.Header("accept").matches("(text/html|application/xml)")`,
+		`["text/html", "application/xml", "application/json"].exists(v, Request.Header("accept").contains(v))`,
+		`Request.ClientIPAddresses in networks("127.0.0.0/24")`,
+		`Request.Body().foo[0] == "bar"`,
 	} {
-		t.Run(tc.expr, func(t *testing.T) {
-			ast, iss := env.Compile(tc.expr)
+		t.Run(tc, func(t *testing.T) {
+			ast, iss := env.Compile(tc)
 			if iss != nil {
 				require.NoError(t, iss.Err())
 			}

@@ -35,13 +35,11 @@ func TestDecodeEndpointHookFunc(t *testing.T) {
 
 	// GIVEN
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, ep Endpoint)
 	}{
-		{
-			uc:     "can decode from just url as string",
+		"can decode from just url as string": {
 			config: []byte(`endpoint: http://foo.bar`),
 			assert: func(t *testing.T, err error, ep Endpoint) {
 				t.Helper()
@@ -50,8 +48,7 @@ func TestDecodeEndpointHookFunc(t *testing.T) {
 				assert.Equal(t, "http://foo.bar", ep.URL)
 			},
 		},
-		{
-			uc: "can still decode from structured definition",
+		"can still decode from structured definition": {
 			config: []byte(`
 endpoint:
   url: http://foo.bar
@@ -66,7 +63,7 @@ endpoint:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)

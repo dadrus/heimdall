@@ -46,13 +46,11 @@ import (
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   []byte
 		assert func(t *testing.T, err error, prov *Provider)
 	}{
-		{
-			uc:   "with unknown field",
+		"with unknown field": {
 			conf: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -62,8 +60,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
-		{
-			uc:   "without buckets",
+		"without buckets": {
 			conf: []byte(`watch_interval: 5s`),
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -73,8 +70,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "no buckets configured")
 			},
 		},
-		{
-			uc: "without url in one of the configured bucket",
+		"without url in one of the configured bucket": {
 			conf: []byte(`
 buckets:
   - url: s3://foobar
@@ -88,8 +84,7 @@ buckets:
 				assert.Contains(t, err.Error(), "missing url for #1")
 			},
 		},
-		{
-			uc: "with watch interval and unsupported property in one of the buckets configured",
+		"with watch interval and unsupported property in one of the buckets configured": {
 			conf: []byte(`
 watch_interval: 5s
 buckets:
@@ -104,8 +99,7 @@ buckets:
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
-		{
-			uc: "with watch interval and two buckets configured",
+		"with watch interval and two buckets configured": {
 			conf: []byte(`
 watch_interval: 5s
 buckets:
@@ -135,7 +129,7 @@ buckets:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)

@@ -27,14 +27,12 @@ import (
 func TestExpectationAssertAlgorithm(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		exp    Expectation
 		alg    string
 		assert func(t *testing.T, err error)
 	}{
-		{
-			uc:  "assertion fails",
+		"assertion fails": {
 			exp: Expectation{AllowedAlgorithms: []string{"bar"}},
 			alg: "foo",
 			assert: func(t *testing.T, err error) {
@@ -43,8 +41,7 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:  "assertion succeeds",
+		"assertion succeeds": {
 			exp: Expectation{AllowedAlgorithms: []string{"foo"}},
 			alg: "foo",
 			assert: func(t *testing.T, err error) {
@@ -54,7 +51,7 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := tc.exp.AssertAlgorithm(tc.alg)
 
@@ -67,14 +64,12 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 func TestExpectationAssertIssuer(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		exp    Expectation
 		issuer string
 		assert func(t *testing.T, err error)
 	}{
-		{
-			uc:     "assertion fails on no match",
+		"assertion fails on no match": {
 			exp:    Expectation{TrustedIssuers: []string{"bar"}},
 			issuer: "foo",
 			assert: func(t *testing.T, err error) {
@@ -83,8 +78,7 @@ func TestExpectationAssertIssuer(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:     "assertion succeeds on match",
+		"assertion succeeds on match": {
 			exp:    Expectation{TrustedIssuers: []string{"foo"}},
 			issuer: "foo",
 			assert: func(t *testing.T, err error) {
@@ -93,8 +87,7 @@ func TestExpectationAssertIssuer(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:     "assertion succeeds if no trusted issuer is specified",
+		"assertion succeeds if no trusted issuer is specified": {
 			exp:    Expectation{},
 			issuer: "foo",
 			assert: func(t *testing.T, err error) {
@@ -104,7 +97,7 @@ func TestExpectationAssertIssuer(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := tc.exp.AssertIssuer(tc.issuer)
 
@@ -117,14 +110,12 @@ func TestExpectationAssertIssuer(t *testing.T) {
 func TestExpectationAssertAudience(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		exp      Expectation
 		audience []string
 		assert   func(t *testing.T, err error)
 	}{
-		{
-			uc:       "assertion fails",
+		"assertion fails": {
 			exp:      Expectation{Audiences: []string{"bar"}},
 			audience: []string{"foo", "baz"},
 			assert: func(t *testing.T, err error) {
@@ -133,8 +124,7 @@ func TestExpectationAssertAudience(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:       "assertion succeeds (full intersection)",
+		"assertion succeeds (full intersection)": {
 			exp:      Expectation{Audiences: []string{"foo", "bar"}},
 			audience: []string{"foo", "bar"},
 			assert: func(t *testing.T, err error) {
@@ -143,8 +133,7 @@ func TestExpectationAssertAudience(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:       "assertion succeeds (partial intersection 1)",
+		"assertion succeeds (partial intersection 1)": {
 			exp:      Expectation{Audiences: []string{"bar"}},
 			audience: []string{"foo", "bar"},
 			assert: func(t *testing.T, err error) {
@@ -153,8 +142,7 @@ func TestExpectationAssertAudience(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:       "assertion succeeds (partial intersection 2)",
+		"assertion succeeds (partial intersection 2)": {
 			exp:      Expectation{Audiences: []string{"foo", "bar"}},
 			audience: []string{"foo"},
 			assert: func(t *testing.T, err error) {
@@ -164,7 +152,7 @@ func TestExpectationAssertAudience(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := tc.exp.AssertAudience(tc.audience)
 
@@ -177,14 +165,12 @@ func TestExpectationAssertAudience(t *testing.T) {
 func TestExpectationAssertValidity(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		exp    Expectation
 		times  []time.Time
 		assert func(t *testing.T, err error)
 	}{
-		{
-			uc:    "notBefore in the past and notAfter in the future with default leeway",
+		"notBefore in the past and notAfter in the future with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{time.Now().Add(-1 * time.Minute), time.Now().Add(1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -193,8 +179,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the past and notAfter in the future with disabled leeway",
+		"notBefore in the past and notAfter in the future with disabled leeway": {
 			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{time.Now().Add(-1 * time.Minute), time.Now().Add(1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -203,8 +188,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the past and notAfter in the future with leeway making the assertion fail",
+		"notBefore in the past and notAfter in the future with leeway making the assertion fail": {
 			exp:   Expectation{ValidityLeeway: -2 * time.Minute},
 			times: []time.Time{time.Now().Add(-1 * time.Minute), time.Now().Add(1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -213,8 +197,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the future and notAfter in the past",
+		"notBefore in the future and notAfter in the past": {
 			exp:   Expectation{},
 			times: []time.Time{time.Now().Add(1 * time.Minute), time.Now().Add(-1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -223,8 +206,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:    "notBefore not set and notAfter in the past with default leeway",
+		"notBefore not set and notAfter in the past with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{{}, time.Now().Add(-1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -233,8 +215,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:    "notBefore not set and notAfter in the past with disabled leeway",
+		"notBefore not set and notAfter in the past with disabled leeway": {
 			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{{}, time.Now().Add(-1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -243,8 +224,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:    "notBefore not set and notAfter now with default leeway",
+		"notBefore not set and notAfter now with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{{}, time.Now()},
 			assert: func(t *testing.T, err error) {
@@ -253,8 +233,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore not set and notAfter now with disabled leeway",
+		"notBefore not set and notAfter now with disabled leeway": {
 			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{{}, time.Now()},
 			assert: func(t *testing.T, err error) {
@@ -263,8 +242,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore not set and notAfter in the future with default leeway",
+		"notBefore not set and notAfter in the future with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{{}, time.Now().Add(1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -273,8 +251,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore not set and notAfter in the future with disabled leeway",
+		"notBefore not set and notAfter in the future with disabled leeway": {
 			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{{}, time.Now().Add(1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
@@ -283,8 +260,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "both notBefore and notAfter not set",
+		"both notBefore and notAfter not set": {
 			exp:   Expectation{},
 			times: []time.Time{{}, {}},
 			assert: func(t *testing.T, err error) {
@@ -293,8 +269,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the past and notAfter not set with default leeway",
+		"notBefore in the past and notAfter not set with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{time.Now().Add(-1 * time.Minute), {}},
 			assert: func(t *testing.T, err error) {
@@ -303,8 +278,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the past and notAfter not set with disabled leeway",
+		"notBefore in the past and notAfter not set with disabled leeway": {
 			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{time.Now().Add(-1 * time.Minute), {}},
 			assert: func(t *testing.T, err error) {
@@ -313,8 +287,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore now and notAfter not set with default leeway",
+		"notBefore now and notAfter not set with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{time.Now(), {}},
 			assert: func(t *testing.T, err error) {
@@ -323,8 +296,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore now and notAfter not set with disabled leeway",
+		"notBefore now and notAfter not set with disabled leeway": {
 			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{time.Now(), {}},
 			assert: func(t *testing.T, err error) {
@@ -333,8 +305,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the future and notAfter not set with leeway making assertion success",
+		"notBefore in the future and notAfter not set with leeway making assertion success": {
 			exp:   Expectation{ValidityLeeway: 3 * time.Minute},
 			times: []time.Time{time.Now().Add(1 * time.Minute), {}},
 			assert: func(t *testing.T, err error) {
@@ -343,8 +314,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the future and notAfter not set with default leeway",
+		"notBefore in the future and notAfter not set with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{time.Now().Add(1 * time.Minute), {}},
 			assert: func(t *testing.T, err error) {
@@ -353,8 +323,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:    "notBefore in the future and notAfter not set with disabled leeway",
+		"notBefore in the future and notAfter not set with disabled leeway": {
 			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{time.Now().Add(1 * time.Minute), {}},
 			assert: func(t *testing.T, err error) {
@@ -364,7 +333,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := tc.exp.AssertValidity(tc.times[0], tc.times[1])
 
@@ -377,14 +346,12 @@ func TestExpectationAssertValidity(t *testing.T) {
 func TestExpectationAssertIssuanceTime(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		exp    Expectation
 		time   time.Time
 		assert func(t *testing.T, err error)
 	}{
-		{
-			uc:   "issued in the past with default leeway",
+		"issued in the past with default leeway": {
 			exp:  Expectation{},
 			time: time.Now().Add(-1 * time.Minute),
 			assert: func(t *testing.T, err error) {
@@ -393,8 +360,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:   "issued in the past with disabled leeway",
+		"issued in the past with disabled leeway": {
 			exp:  Expectation{ValidityLeeway: 0},
 			time: time.Now().Add(-1 * time.Minute),
 			assert: func(t *testing.T, err error) {
@@ -403,8 +369,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:   "issued in the past with leeway making it invalid",
+		"issued in the past with leeway making it invalid": {
 			exp:  Expectation{ValidityLeeway: -2 * time.Minute},
 			time: time.Now().Add(-1 * time.Minute),
 			assert: func(t *testing.T, err error) {
@@ -413,8 +378,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:   "issued now with default leeway",
+		"issued now with default leeway": {
 			exp:  Expectation{},
 			time: time.Now(),
 			assert: func(t *testing.T, err error) {
@@ -423,8 +387,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:   "issued now with disabled leeway",
+		"issued now with disabled leeway": {
 			exp:  Expectation{ValidityLeeway: 0},
 			time: time.Now(),
 			assert: func(t *testing.T, err error) {
@@ -433,8 +396,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:   "issued now with leeway making it invalid",
+		"issued now with leeway making it invalid": {
 			exp:  Expectation{ValidityLeeway: -1 * time.Minute},
 			time: time.Now(),
 			assert: func(t *testing.T, err error) {
@@ -443,8 +405,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:   "issued in the future with default leeway",
+		"issued in the future with default leeway": {
 			exp:  Expectation{},
 			time: time.Now().Add(1 * time.Minute),
 			assert: func(t *testing.T, err error) {
@@ -453,8 +414,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:   "issued in the future with disabled leeway",
+		"issued in the future with disabled leeway": {
 			exp:  Expectation{ValidityLeeway: 0},
 			time: time.Now().Add(1 * time.Minute),
 			assert: func(t *testing.T, err error) {
@@ -463,8 +423,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:   "issued now with leeway making it valid",
+		"issued now with leeway making it valid": {
 			exp:  Expectation{ValidityLeeway: 2 * time.Minute},
 			time: time.Now().Add(1 * time.Minute),
 			assert: func(t *testing.T, err error) {
@@ -473,8 +432,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:   "without provided time",
+		"without provided time": {
 			exp:  Expectation{},
 			time: time.Time{},
 			assert: func(t *testing.T, err error) {
@@ -484,7 +442,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := tc.exp.AssertIssuanceTime(tc.time)
 
@@ -497,14 +455,12 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 func TestExpectationAssertScopes(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		exp    Expectation
 		scopes []string
 		assert func(t *testing.T, err error)
 	}{
-		{
-			uc:     "scopes match",
+		"scopes match": {
 			exp:    Expectation{ScopesMatcher: ExactScopeStrategyMatcher{"foo", "bar"}},
 			scopes: []string{"foo", "bar"},
 			assert: func(t *testing.T, err error) {
@@ -513,8 +469,7 @@ func TestExpectationAssertScopes(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:     "scopes don't match",
+		"scopes don't match": {
 			exp:    Expectation{ScopesMatcher: ExactScopeStrategyMatcher{"foo", "bar"}},
 			scopes: []string{"foo"},
 			assert: func(t *testing.T, err error) {
@@ -524,7 +479,7 @@ func TestExpectationAssertScopes(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := tc.exp.AssertScopes(tc.scopes)
 
@@ -537,14 +492,12 @@ func TestExpectationAssertScopes(t *testing.T) {
 func TestExpectationMerge(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		target Expectation
 		source Expectation
 		assert func(t *testing.T, merged Expectation, source Expectation, target Expectation)
 	}{
-		{
-			uc: "with empty target",
+		"with empty target": {
 			source: Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
@@ -559,8 +512,7 @@ func TestExpectationMerge(t *testing.T) {
 				require.Equal(t, source, merged)
 			},
 		},
-		{
-			uc: "with target having only scopes configured",
+		"with target having only scopes configured": {
 			source: Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
@@ -581,8 +533,7 @@ func TestExpectationMerge(t *testing.T) {
 				assert.Equal(t, source.ValidityLeeway, merged.ValidityLeeway)
 			},
 		},
-		{
-			uc: "with target having scopes and audience configured",
+		"with target having scopes and audience configured": {
 			source: Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
@@ -607,8 +558,7 @@ func TestExpectationMerge(t *testing.T) {
 				assert.Equal(t, source.ValidityLeeway, merged.ValidityLeeway)
 			},
 		},
-		{
-			uc: "with target having scopes, audience and trusted issuers configured",
+		"with target having scopes, audience and trusted issuers configured": {
 			source: Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
@@ -635,8 +585,7 @@ func TestExpectationMerge(t *testing.T) {
 				assert.Equal(t, source.ValidityLeeway, merged.ValidityLeeway)
 			},
 		},
-		{
-			uc: "with target having scopes, audience, trusted issuers and allowed algorithms configured",
+		"with target having scopes, audience, trusted issuers and allowed algorithms configured": {
 			source: Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
@@ -665,8 +614,7 @@ func TestExpectationMerge(t *testing.T) {
 				assert.Equal(t, source.ValidityLeeway, merged.ValidityLeeway)
 			},
 		},
-		{
-			uc: "with target having everything reconfigured",
+		"with target having everything reconfigured": {
 			source: Expectation{
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
@@ -698,7 +646,7 @@ func TestExpectationMerge(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			exp := tc.target.Merge(tc.source)
 

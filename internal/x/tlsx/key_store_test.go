@@ -40,13 +40,11 @@ import (
 func TestKeyStoreCertificate(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		config   func(t *testing.T, ccm *compatibilityCheckerMock)
 		expError bool
 	}{
-		{
-			uc:       "fails",
+		"fails": {
 			expError: true,
 			config: func(t *testing.T, ccm *compatibilityCheckerMock) {
 				t.Helper()
@@ -54,8 +52,7 @@ func TestKeyStoreCertificate(t *testing.T) {
 				ccm.EXPECT().SupportsCertificate(mock.Anything).Return(errors.New("test error"))
 			},
 		},
-		{
-			uc: "succeed",
+		"succeed": {
 			config: func(t *testing.T, ccm *compatibilityCheckerMock) {
 				t.Helper()
 
@@ -63,7 +60,7 @@ func TestKeyStoreCertificate(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			ks := &keyStore{}
 

@@ -44,13 +44,11 @@ func TestNewProvider(t *testing.T) {
 	tmpFile, err := os.CreateTemp(t.TempDir(), "test-dir-")
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   map[string]any
 		assert func(t *testing.T, err error, prov *Provider)
 	}{
-		{
-			uc: "not configured provider",
+		"not configured provider": {
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
@@ -59,8 +57,7 @@ func TestNewProvider(t *testing.T) {
 				assert.False(t, prov.configured)
 			},
 		},
-		{
-			uc:   "bad configuration",
+		"bad configuration": {
 			conf: map[string]any{"foo": "bar"},
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -70,8 +67,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
-		{
-			uc:   "no src configured",
+		"no src configured": {
 			conf: map[string]any{"watch": true},
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -81,8 +77,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "no src")
 			},
 		},
-		{
-			uc:   "configured src does not exist",
+		"configured src does not exist": {
 			conf: map[string]any{"src": "foo.bar"},
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -92,8 +87,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to get info")
 			},
 		},
-		{
-			uc:   "successfully created provider without watcher",
+		"successfully created provider without watcher": {
 			conf: map[string]any{"src": tmpFile.Name()},
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
@@ -106,8 +100,7 @@ func TestNewProvider(t *testing.T) {
 				assert.False(t, prov.envVarsEnabled)
 			},
 		},
-		{
-			uc:   "successfully created provider with watcher",
+		"successfully created provider with watcher": {
 			conf: map[string]any{"src": tmpFile.Name(), "watch": true},
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
@@ -120,8 +113,7 @@ func TestNewProvider(t *testing.T) {
 				assert.False(t, prov.envVarsEnabled)
 			},
 		},
-		{
-			uc:   "successfully created provider with env var support enabled",
+		"successfully created provider with env var support enabled": {
 			conf: map[string]any{"src": tmpFile.Name(), "env_vars_enabled": true},
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
@@ -135,7 +127,7 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			validator, err := validation.NewValidator(
 				validation.WithTagValidator(config.EnforcementSettings{}),
@@ -155,16 +147,14 @@ func TestNewProvider(t *testing.T) {
 }
 
 func TestProviderLifecycle(t *testing.T) {
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		watch          bool
 		setupContents  func(t *testing.T, file *os.File, dir string) string
 		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
 		writeContents  func(t *testing.T, file *os.File, dir string)
 		assert         func(t *testing.T, err error, provider *Provider, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc: "start provider using not existing file",
+		"start provider using not existing file": {
 			setupContents: func(t *testing.T, _ *os.File, _ string) string {
 				t.Helper()
 
@@ -177,8 +167,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Contains(t, err.Error(), "no such file")
 			},
 		},
-		{
-			uc: "start provider using file without read permissions",
+		"start provider using file without read permissions": {
 			setupContents: func(t *testing.T, file *os.File, _ string) string {
 				t.Helper()
 
@@ -193,16 +182,14 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Contains(t, err.Error(), "permission denied")
 			},
 		},
-		{
-			uc: "successfully start provider without watcher using empty file",
+		"successfully start provider without watcher using empty file": {
 			assert: func(t *testing.T, err error, _ *Provider, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "successfully start provider without watcher using not empty file",
+		"successfully start provider without watcher using not empty file": {
 			setupContents: func(t *testing.T, file *os.File, _ string) string {
 				t.Helper()
 
@@ -255,8 +242,7 @@ rules:
 				assert.NotEmpty(t, ruleSet.Hash)
 			},
 		},
-		{
-			uc: "successfully start provider without watcher using empty dir",
+		"successfully start provider without watcher using empty dir": {
 			setupContents: func(t *testing.T, _ *os.File, dir string) string {
 				t.Helper()
 
@@ -268,8 +254,7 @@ rules:
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "successfully start provider without watcher using dir with not empty file",
+		"successfully start provider without watcher using dir with not empty file": {
 			setupContents: func(t *testing.T, _ *os.File, dir string) string {
 				t.Helper()
 
@@ -309,8 +294,7 @@ rules:
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "successfully start provider without watcher using dir with other directory with rule file",
+		"successfully start provider without watcher using dir with other directory with rule file": {
 			setupContents: func(t *testing.T, _ *os.File, dir string) string {
 				t.Helper()
 
@@ -340,9 +324,8 @@ rules:
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "successfully start provider with watcher using initially empty dir and adding rule " +
-				"file and deleting it then",
+		"successfully start provider with watcher using initially empty dir and adding rule " +
+			"file and deleting it then": {
 			watch: true,
 			setupContents: func(t *testing.T, _ *os.File, dir string) string {
 				t.Helper()
@@ -402,9 +385,8 @@ rules:
 				assert.Contains(t, ruleSet.Source, "file_system:")
 			},
 		},
-		{
-			uc: "successfully start provider with watcher using initially empty file, " +
-				"updating it with same content, then with different content and deleting it then",
+		"successfully start provider with watcher using initially empty file, " +
+			"updating it with same content, then with different content and deleting it then": {
 			watch: true,
 			writeContents: func(t *testing.T, file *os.File, _ string) {
 				t.Helper()
@@ -499,7 +481,7 @@ rules:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			ctx := t.Context()
 			tmpFile, err := os.CreateTemp(t.TempDir(), "test-file-")
 			require.NoError(t, err)

@@ -34,15 +34,13 @@ func TestRuleExecutorExecute(t *testing.T) {
 	matchingURL, err := url.Parse("https://foo.bar/test")
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		expErr         error
 		createRequest  func(t *testing.T) *http.Request
 		configureMocks func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
-		{
-			uc:     "no matching rules",
+		"no matching rules": {
 			expErr: heimdall.ErrNoRuleFound,
 			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
@@ -54,8 +52,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 				repo.EXPECT().FindRule(ctx).Return(nil, heimdall.ErrNoRuleFound)
 			},
 		},
-		{
-			uc:     "rule execution fails with authentication error",
+		"rule execution fails with authentication error": {
 			expErr: heimdall.ErrAuthentication,
 			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
@@ -68,8 +65,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
 			},
 		},
-		{
-			uc: "rule execution succeeds",
+		"rule execution succeeds": {
 			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
@@ -83,7 +79,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			repo := mocks4.NewRepositoryMock(t)
 			rule := mocks4.NewRuleMock(t)

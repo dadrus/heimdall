@@ -55,16 +55,14 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		buildURL       func(t *testing.T, baseURL string) string
 		args           map[string]any
 		checkRequest   func(t *testing.T, req *http.Request)
 		createResponse func(t *testing.T, rw http.ResponseWriter)
 		assert         func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata)
 	}{
-		{
-			uc: "invalid template in path",
+		"invalid template in path": {
 			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
@@ -79,8 +77,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "create template")
 			},
 		},
-		{
-			uc: "failed rendering template in path",
+		"failed rendering template in path": {
 			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
@@ -95,8 +92,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "creating oauth2 server metadata request")
 			},
 		},
-		{
-			uc: "failed communicating with server",
+		"failed communicating with server": {
 			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
@@ -110,8 +106,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
 			},
 		},
-		{
-			uc: "server responses with an error",
+		"server responses with an error": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -131,8 +126,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "unexpected response code")
 			},
 		},
-		{
-			uc: "server does not respond with a JSON document",
+		"server does not respond with a JSON document": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -152,8 +146,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "failed to unmarshal")
 			},
 		},
-		{
-			uc: "server's response contains jwks_uri with template",
+		"server's response contains jwks_uri with template": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -188,8 +181,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "jwks_uri contains a template")
 			},
 		},
-		{
-			uc: "server's response contains introspection_endpoint with template",
+		"server's response contains introspection_endpoint with template": {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
@@ -224,8 +216,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.ErrorContains(t, err, "introspection_endpoint contains a template")
 			},
 		},
-		{
-			uc:   "valid server response for templated URL",
+		"valid server response for templated URL": {
 			args: map[string]any{"Foo": "bar"},
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
@@ -278,8 +269,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				assert.Equal(t, exp, *sm.IntrospectionEndpoint)
 			},
 		},
-		{
-			uc:   "valid server response with invalid issuer for metadata URL",
+		"valid server response with invalid issuer for metadata URL": {
 			args: map[string]any{"Foo": "bar"},
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
@@ -315,7 +305,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			endpointCalled = false
 

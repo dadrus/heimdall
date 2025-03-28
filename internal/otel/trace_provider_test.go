@@ -39,14 +39,12 @@ type mockLifecycle struct{ mock.Mock }
 func (m *mockLifecycle) Append(hook fx.Hook) { m.Called(hook) }
 
 func TestInitTraceProvider(t *testing.T) {
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		conf       config.TracingConfig
 		setupMocks func(t *testing.T, lcMock *mockLifecycle)
 		assert     func(t *testing.T, err error, propagator propagation.TextMapPropagator, logged string)
 	}{
-		{
-			uc:   "disabled tracing",
+		"disabled tracing": {
 			conf: config.TracingConfig{Enabled: false},
 			assert: func(t *testing.T, err error, _ propagation.TextMapPropagator, logged string) {
 				t.Helper()
@@ -55,8 +53,7 @@ func TestInitTraceProvider(t *testing.T) {
 				assert.Contains(t, logged, "tracing disabled")
 			},
 		},
-		{
-			uc:   "failing exporter creation",
+		"failing exporter creation": {
 			conf: config.TracingConfig{Enabled: true},
 			setupMocks: func(t *testing.T, _ *mockLifecycle) {
 				t.Helper()
@@ -71,8 +68,7 @@ func TestInitTraceProvider(t *testing.T) {
 				require.ErrorIs(t, err, exporters.ErrFailedCreatingTracesExporter)
 			},
 		},
-		{
-			uc:   "successful initialization",
+		"successful initialization": {
 			conf: config.TracingConfig{Enabled: true},
 			setupMocks: func(t *testing.T, lcMock *mockLifecycle) {
 				t.Helper()
@@ -96,7 +92,7 @@ func TestInitTraceProvider(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			setupMocks := x.IfThenElse(
 				tc.setupMocks != nil,
