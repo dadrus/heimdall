@@ -39,10 +39,12 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -261,7 +263,7 @@ metadata_endpoint:
 				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
 			},
 		},
-		"with minimal metadata endpoint based config": {
+		"with metadata endpoint based config": {
 			config: []byte(`
 metadata_endpoint:
   url: http://foobar.local
@@ -303,7 +305,85 @@ metadata_endpoint:
 
 				assert.False(t, auth.allowFallbackOnError)
 
-				assert.Equal(t, "with minimal metadata endpoint based config", auth.ID())
+				assert.Equal(t, "with metadata endpoint based config", auth.ID())
+			},
+		},
+		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
+			enforceTLS: true,
+			config: []byte(`
+metadata_endpoint:
+  url: https://test.com
+  resolved_endpoints:
+    jwks_uri:
+      auth:
+        type: oauth2_client_credentials
+        config:
+          token_url: https://example.com/token
+          client_id: foo
+          client_secret: bar
+      retry:
+        give_up_after: 1m
+        max_delay: 5s
+      http_cache:
+        enabled: true
+        default_ttl: 10m`),
+			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// endpoint settings
+				mdep, ok := auth.r.(*oauth2.MetadataEndpoint)
+				require.True(t, ok)
+
+				assert.Equal(t, "https://test.com", mdep.URL)
+				require.Len(t, mdep.ResolvedEndpoints, 1)
+				reps, ok := mdep.ResolvedEndpoints["jwks_uri"]
+				require.True(t, ok)
+				assert.Equal(t, &endpoint.HTTPCache{
+					Enabled:    true,
+					DefaultTTL: 10 * time.Minute,
+				}, reps.HTTPCache)
+				assert.Equal(t, &endpoint.Retry{
+					GiveUpAfter: 1 * time.Minute,
+					MaxDelay:    5 * time.Second,
+				}, reps.Retry)
+				assert.Equal(t, &authstrategy.OAuth2ClientCredentials{
+					Config: clientcredentials.Config{
+						TokenURL:     "https://example.com/token",
+						ClientID:     "foo",
+						ClientSecret: "bar",
+					},
+				}, reps.AuthStrategy)
+
+				// assert assertions
+				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
+				assert.Empty(t, auth.a.TrustedIssuers, 1)
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+				assert.Empty(t, auth.a.Audiences)
+
+				// assert ttl
+				assert.Nil(t, auth.ttl)
+
+				// assert token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+
+				// assert subject factory
+				assert.NotNil(t, auth.sf)
+				assert.IsType(t, &SubjectInfo{}, auth.sf)
+				sess, ok := auth.sf.(*SubjectInfo)
+				assert.True(t, ok)
+				assert.Equal(t, "sub", sess.IDFrom)
+
+				assert.False(t, auth.allowFallbackOnError)
+
+				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
 			},
 		},
 	} {
@@ -1719,6 +1799,96 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes["nbf"])
 				assert.NotEmpty(t, sub.Attributes["iat"])
 				assert.NotEmpty(t, sub.Attributes["exp"])
+			},
+		},
+		"with introspection endpoint requiring authentication": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				r: &oauth2.MetadataEndpoint{
+					Endpoint: endpoint.Endpoint{URL: oidcSrv.URL},
+					ResolvedEndpoints: map[string]oauth2.ResolvedEndpointSettings{
+						"introspection_endpoint": {
+							AuthStrategy: &authstrategy.APIKey{
+								In:    "header",
+								Name:  "X-Api-Key",
+								Value: "very-secret",
+							},
+						},
+					},
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf: &SubjectInfo{IDFrom: "sub"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkIntrospectionRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "very-secret", req.Header.Get("X-Api-Key"))
+					assert.Equal(t, http.MethodPost, req.Method)
+
+					require.NoError(t, req.ParseForm())
+					assert.Len(t, req.Form, 2)
+					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
+					assert.Equal(t, "test_access_token", req.Form.Get("token"))
+				}
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "Bearer",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+				})
+				require.NoError(t, err)
+
+				introspectionResponseContentType = "application/json"
+				introspectionResponseContent = rawIntrospectResponse
+				introspectionResponseCode = http.StatusOK
+
+				checkMetadataRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodGet, req.Method)
+				}
+
+				metadataResponseContentType = "application/json"
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"introspection_endpoint": srv.URL,
+					"issuer":                 oidcSrv.URL,
+				})
+				require.NoError(t, err)
+				metadataResponseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, introspectionEndpointCalled)
+
+				require.NoError(t, err)
+				require.NotNil(t, sub)
 			},
 		},
 		"with default cache, with cache hit and successful execution": {

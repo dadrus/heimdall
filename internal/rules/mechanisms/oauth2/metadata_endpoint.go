@@ -32,10 +32,17 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type ResolvedEndpointSettings struct {
+	Retry        *endpoint.Retry                 `mapstructure:"retry"`
+	AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
+	HTTPCache    *endpoint.HTTPCache             `mapstructure:"http_cache"`
+}
+
 type MetadataEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
 
-	DisableIssuerIdentifierVerification bool `mapstructure:"disable_issuer_identifier_verification"`
+	DisableIssuerIdentifierVerification bool                                `mapstructure:"disable_issuer_identifier_verification"` //nolint: lll
+	ResolvedEndpoints                   map[string]ResolvedEndpointSettings `mapstructure:"resolved_endpoints"`
 }
 
 func (e *MetadataEndpoint) init() {
@@ -137,14 +144,19 @@ func (e *MetadataEndpoint) decodeResponse(resp *http.Response) (ServerMetadata, 
 	)
 
 	if len(spec.JWKSEndpointURL) != 0 {
+		epSettings := e.ResolvedEndpoints["jwks_uri"]
 		jwksEP = &endpoint.Endpoint{
-			URL:     spec.JWKSEndpointURL,
-			Method:  http.MethodGet,
-			Headers: map[string]string{"Accept": "application/json"},
+			URL:          spec.JWKSEndpointURL,
+			Method:       http.MethodGet,
+			Headers:      map[string]string{"Accept": "application/json"},
+			AuthStrategy: epSettings.AuthStrategy,
+			Retry:        epSettings.Retry,
+			HTTPCache:    epSettings.HTTPCache,
 		}
 	}
 
 	if len(spec.IntrospectionEndpointURL) != 0 {
+		epSettings := e.ResolvedEndpoints["introspection_endpoint"]
 		introspectionEP = &endpoint.Endpoint{
 			URL:    spec.IntrospectionEndpointURL,
 			Method: http.MethodPost,
@@ -152,6 +164,9 @@ func (e *MetadataEndpoint) decodeResponse(resp *http.Response) (ServerMetadata, 
 				"Content-Type": "application/x-www-form-urlencoded",
 				"Accept":       "application/json",
 			},
+			AuthStrategy: epSettings.AuthStrategy,
+			Retry:        epSettings.Retry,
+			HTTPCache:    epSettings.HTTPCache,
 		}
 	}
 

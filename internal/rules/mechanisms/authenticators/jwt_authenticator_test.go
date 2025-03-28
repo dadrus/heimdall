@@ -48,10 +48,12 @@ import (
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -405,7 +407,7 @@ metadata_endpoint:
 				require.ErrorContains(t, err, "'metadata_endpoint'.'url' scheme must be https")
 			},
 		},
-		"minimal metadata endpoint based configuration with cache and enabled TLS enforcement": {
+		"metadata endpoint based configuration with cache and enabled TLS enforcement": {
 			enforceTLS: true,
 			config: []byte(`
 metadata_endpoint:
@@ -420,6 +422,94 @@ cache_ttl: 5s`),
 				// endpoint settings
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.False(t, ok)
+
+				// token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+
+				// assertions settings
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.Empty(t, auth.a.Audiences)
+				assert.Empty(t, auth.a.TrustedIssuers)
+				assert.Len(t, auth.a.AllowedAlgorithms, 6)
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
+					string(jose.ES256), string(jose.ES384), string(jose.ES512),
+					string(jose.PS256), string(jose.PS384), string(jose.PS512),
+				})
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+
+				// subject settings
+				sess, ok := auth.sf.(*SubjectInfo)
+				require.True(t, ok)
+				assert.Equal(t, "sub", sess.IDFrom)
+				assert.Empty(t, sess.AttributesFrom)
+
+				// cache settings
+				assert.NotNil(t, auth.ttl)
+				assert.Equal(t, 5*time.Second, *auth.ttl)
+
+				// fallback settings
+				assert.False(t, auth.allowFallbackOnError)
+
+				// jwk validation settings
+				assert.True(t, auth.validateJWKCert)
+				assert.Empty(t, auth.trustStore)
+
+				// handler id
+				assert.Equal(t, "auth1", auth.ID())
+			},
+		},
+		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
+			enforceTLS: true,
+			config: []byte(`
+metadata_endpoint:
+  url: https://test.com
+  resolved_endpoints:
+    jwks_uri:
+      auth:
+        type: oauth2_client_credentials
+        config:
+          token_url: https://example.com/token
+          client_id: foo
+          client_secret: bar
+      retry:
+        give_up_after: 1m
+        max_delay: 5s
+      http_cache:
+        enabled: true
+        default_ttl: 10m
+cache_ttl: 5s`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// endpoint settings
+				mdep, ok := auth.r.(*oauth2.MetadataEndpoint)
+				require.True(t, ok)
+
+				assert.Equal(t, "https://test.com", mdep.URL)
+				require.Len(t, mdep.ResolvedEndpoints, 1)
+				reps, ok := mdep.ResolvedEndpoints["jwks_uri"]
+				require.True(t, ok)
+				assert.Equal(t, &endpoint.HTTPCache{
+					Enabled:    true,
+					DefaultTTL: 10 * time.Minute,
+				}, reps.HTTPCache)
+				assert.Equal(t, &endpoint.Retry{
+					GiveUpAfter: 1 * time.Minute,
+					MaxDelay:    5 * time.Second,
+				}, reps.Retry)
+				assert.Equal(t, &authstrategy.OAuth2ClientCredentials{
+					Config: clientcredentials.Config{
+						TokenURL:     "https://example.com/token",
+						ClientID:     "foo",
+						ClientSecret: "bar",
+					},
+				}, reps.AuthStrategy)
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -2232,7 +2322,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				// http cache
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cahce entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
 				)).Return(nil)
@@ -2269,6 +2359,77 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.ErrorContains(t, err, "issuer foobar is not trusted")
+			},
+		},
+		"resolved jwks endpoint expects authentication": {
+			authenticator: &jwtAuthenticator{
+				r: &oauth2.MetadataEndpoint{
+					Endpoint: endpoint.Endpoint{URL: oidcSrv.URL},
+					ResolvedEndpoints: map[string]oauth2.ResolvedEndpointSettings{
+						"jwks_uri": {
+							AuthStrategy: &authstrategy.APIKey{
+								In:    "header",
+								Name:  "X-Api-Key",
+								Value: "very-secret",
+							},
+						},
+					},
+					DisableIssuerIdentifierVerification: true,
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					AllowedAlgorithms: []string{"ES384"},
+				},
+				sf:  &SubjectInfo{IDFrom: "sub"},
+				ttl: &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				// http cache
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
+				)).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "very-secret", req.Header.Get("X-Api-Key"))
+				}
+				checkMetadataRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "/", req.URL.Path)
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
+
+				metadataResponseCode = http.StatusOK
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"jwks_uri": jwksSrv.URL,
+					"issuer":   issuer,
+				})
+				require.NoError(t, err)
+				metadataResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, jwksEndpointCalled)
+
+				require.NoError(t, err)
+				require.NotNil(t, sub)
 			},
 		},
 	} {
