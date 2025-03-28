@@ -25,13 +25,11 @@ import (
 )
 
 func TestAvailablePropagators(t *testing.T) {
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		setup  func(t *testing.T)
 		assert func(t *testing.T, propagator propagation.TextMapPropagator)
 	}{
-		{
-			uc: "datadog propagator can be used",
+		"datadog propagator can be used": {
 			setup: func(t *testing.T) {
 				t.Helper()
 
@@ -43,8 +41,7 @@ func TestAvailablePropagators(t *testing.T) {
 				assert.IsType(t, datadog.Propagator{}, propagator)
 			},
 		},
-		{
-			uc: "all available propagators can be used",
+		"all available propagators can be used": {
 			setup: func(t *testing.T) {
 				t.Helper()
 
@@ -58,7 +55,7 @@ func TestAvailablePropagators(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			tc.setup(t)
 

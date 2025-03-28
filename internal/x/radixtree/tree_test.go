@@ -248,28 +248,27 @@ func TestTreeAddPathDuplicates(t *testing.T) {
 func TestTreeAddPath(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		paths      []string
 		shouldFail bool
 	}{
-		{"slash after catch-all", []string{"/abc/*path/"}, true},
-		{"path segment after catch-all", []string{"/abc/*path/def"}, true},
-		{"conflicting catch-alls", []string{"/abc/*path", "/abc/*paths"}, true},
-		{"ambiguous wildcards", []string{"/abc/:foo/:bar", "/abc/:oof/:rab"}, true},
-		{"multiple path segments without wildcard", []string{"/", "/i", "/images", "/images/abc.jpg"}, false},
-		{"multiple path segments with wildcard", []string{"/i", "/i/:aaa", "/images/:imgname", "/:images/*path", "/ima", "/ima/:par", "/images1"}, false},
-		{"multiple wildcards", []string{"/date/:year/:month", "/date/:year/month", "/date/:year/:month/:post"}, false},
-		{"escaped : at the beginning of path segment", []string{"/abc/\\:cd"}, false},
-		{"escaped * at the beginning of path segment", []string{"/abc/\\*cd"}, false},
-		{": in middle of path segment", []string{"/abc/ab:cd"}, false},
-		{": in middle of path segment with existing path", []string{"/abc/ab", "/abc/ab:cd"}, false},
-		{"* in middle of path segment", []string{"/abc/ab*cd"}, false},
-		{"* in middle of path segment with existing path", []string{"/abc/ab", "/abc/ab*cd"}, false},
-		{"katakana /マ", []string{"/マ"}, false},
-		{"katakana /カ", []string{"/カ"}, false},
+		"slash after catch-all":                          {[]string{"/abc/*path/"}, true},
+		"path segment after catch-all":                   {[]string{"/abc/*path/def"}, true},
+		"conflicting catch-alls":                         {[]string{"/abc/*path", "/abc/*paths"}, true},
+		"ambiguous wildcards":                            {[]string{"/abc/:foo/:bar", "/abc/:oof/:rab"}, true},
+		"multiple path segments without wildcard":        {[]string{"/", "/i", "/images", "/images/abc.jpg"}, false},
+		"multiple path segments with wildcard":           {[]string{"/i", "/i/:aaa", "/images/:imgname", "/:images/*path", "/ima", "/ima/:par", "/images1"}, false},
+		"multiple wildcards":                             {[]string{"/date/:year/:month", "/date/:year/month", "/date/:year/:month/:post"}, false},
+		"escaped : at the beginning of path segment":     {[]string{"/abc/\\:cd"}, false},
+		"escaped * at the beginning of path segment":     {[]string{"/abc/\\*cd"}, false},
+		": in middle of path segment":                    {[]string{"/abc/ab:cd"}, false},
+		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
+		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
+		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
+		"katakana /マ":                                    {[]string{"/マ"}, false},
+		"katakana /カ":                                    {[]string{"/カ"}, false},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
 
 			var err error

@@ -86,16 +86,14 @@ func TestClientCredentialsToken(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		cfg            *Config
 		configureMocks func(t *testing.T, cch *mocks.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo)
 	}{
-		{
-			uc:  "reusing response from cache",
+		"reusing response from cache": {
 			cfg: &Config{},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
@@ -117,8 +115,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, time.Time{}, token.Expiry)
 			},
 		},
-		{
-			uc: "ttl not configured, no cache entry and token has expires_in claim",
+		"ttl not configured, no cache entry and token has expires_in claim": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -168,8 +165,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, 5*time.Minute, time.Until(token.Expiry).Round(time.Second))
 			},
 		},
-		{
-			uc:  "error while unmarshalling successful response",
+		"error while unmarshalling successful response": {
 			cfg: &Config{TokenURL: srv.URL, ClientID: "bar", ClientSecret: "foo"},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
@@ -190,8 +186,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrInternal)
 			},
 		},
-		{
-			uc:  "error while unmarshalling error response",
+		"error while unmarshalling error response": {
 			cfg: &Config{TokenURL: srv.URL, ClientID: "bar", ClientSecret: "foo"},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
@@ -212,8 +207,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
 			},
 		},
-		{
-			uc:  "error while sending request",
+		"error while sending request": {
 			cfg: &Config{TokenURL: "http://127.0.0.1:11111", ClientID: "bar", ClientSecret: "foo"},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
@@ -228,8 +222,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
 			},
 		},
-		{
-			uc: "full configuration, no cache hit with scopes and expires_in",
+		"full configuration, no cache hit with scopes and expires_in": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -299,8 +292,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Contains(t, token.Scopes, "zab")
 			},
 		},
-		{
-			uc: "disabled cache",
+		"disabled cache": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -348,8 +340,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foobar", token.AccessToken)
 			},
 		},
-		{
-			uc: "custom cache ttl and no expires_in in token",
+		"custom cache ttl and no expires_in in token": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -402,8 +393,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foobar", token.AccessToken)
 			},
 		},
-		{
-			uc: "using request_body authentication strategy",
+		"using request_body authentication strategy": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar foo",
@@ -452,8 +442,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foobar", token.AccessToken)
 			},
 		},
-		{
-			uc: "misbehaving server on error",
+		"misbehaving server on error": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -501,8 +490,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Contains(t, err.Error(), "invalid_request")
 			},
 		},
-		{
-			uc: "misbehaving server on error, response code unexpected",
+		"misbehaving server on error, response code unexpected": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -529,8 +517,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Contains(t, err.Error(), "unexpected response code: 403")
 			},
 		},
-		{
-			uc: "compliant server on error ",
+		"compliant server on error ": {
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -578,7 +565,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			endpointCalled = false
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,

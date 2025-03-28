@@ -39,15 +39,13 @@ import (
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		serviceConf    config.ServeConfig
 		createRequest  func(t *testing.T, host string) *http.Request
 		configureMocks func(t *testing.T, exec *mocks4.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
-		{
-			uc: "no rules configured",
+		"no rules configured": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -77,8 +75,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "rule doesn't match method",
+		"rule doesn't match method": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -108,8 +105,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "rule execution fails with authentication error",
+		"rule execution fails with authentication error": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -139,8 +135,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "rule execution fails with authorization error",
+		"rule execution fails with authorization error": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -170,9 +165,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "successful rule execution - request method, path and hostname " +
-				"are taken from the real request (trusted proxy not configured)",
+		"successful rule execution - request method, path and hostname " +
+			"are taken from the real request (trusted proxy not configured)": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -225,9 +219,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, "zab", cookies[0].Value)
 			},
 		},
-		{
-			uc: "successful rule execution - request method, path and hostname " +
-				"are not taken from the headers (trusted proxy not configured)",
+		"successful rule execution - request method, path and hostname " +
+			"are not taken from the headers (trusted proxy not configured)": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -285,9 +278,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, "zab", cookies[0].Value)
 			},
 		},
-		{
-			uc: "successful rule execution - request method, path and hostname " +
-				"all are not taken from the headers (trusted proxy configured and does not match host)",
+		"successful rule execution - request method, path and hostname " +
+			"all are not taken from the headers (trusted proxy configured and does not match host)": {
 			serviceConf: config.ServeConfig{TrustedProxies: []string{"111.111.111.111"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -343,9 +335,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, "zab", cookies[0].Value)
 			},
 		},
-		{
-			uc: "successful rule execution - only request method is sent via header" +
-				"(trusted proxy configured and matches host)",
+		"successful rule execution - only request method is sent via header" +
+			"(trusted proxy configured and matches host)": {
 			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -382,9 +373,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - only host is sent via header" +
-				"(trusted proxy configured and matches host)",
+		"successful rule execution - only host is sent via header" +
+			"(trusted proxy configured and matches host)": {
 			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -422,9 +412,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - only path is sent via header" +
-				"(trusted proxy configured and matches host)",
+		"successful rule execution - only path is sent via header" +
+			"(trusted proxy configured and matches host)": {
 			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -461,9 +450,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - only scheme is sent via header" +
-				"(trusted proxy configured and matches host)",
+		"successful rule execution - only scheme is sent via header" +
+			"(trusted proxy configured and matches host)": {
 			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -500,9 +488,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - scheme, host, path and method sent via header" +
-				"(trusted proxy configured and matches host)",
+		"successful rule execution - scheme, host, path and method sent via header" +
+			"(trusted proxy configured and matches host)": {
 			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -544,7 +531,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)

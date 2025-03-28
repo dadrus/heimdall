@@ -63,14 +63,12 @@ func TestFetchRuleSets(t *testing.T) {
 		}
 	}
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		endpoint ruleSetEndpoint
 		setup    func(t *testing.T)
 		assert   func(t *testing.T, err error, ruleSets []*config.RuleSet)
 	}{
-		{
-			uc: "failed to open bucket",
+		"failed to open bucket": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -86,8 +84,7 @@ func TestFetchRuleSets(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to open bucket")
 			},
 		},
-		{
-			uc: "iterate not existing bucket",
+		"iterate not existing bucket": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -103,8 +100,7 @@ func TestFetchRuleSets(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed iterate blobs")
 			},
 		},
-		{
-			uc: "invalid rule set",
+		"invalid rule set": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -130,8 +126,7 @@ func TestFetchRuleSets(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
-		{
-			uc: "empty bucket",
+		"empty bucket": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -146,8 +141,7 @@ func TestFetchRuleSets(t *testing.T) {
 				require.Empty(t, ruleSets)
 			},
 		},
-		{
-			uc: "bucket with an empty blob",
+		"bucket with an empty blob": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -170,8 +164,7 @@ func TestFetchRuleSets(t *testing.T) {
 				require.Empty(t, ruleSets)
 			},
 		},
-		{
-			uc: "multiple valid rule sets in yaml and json formats",
+		"multiple valid rule sets in yaml and json formats": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -248,8 +241,7 @@ rules:
 				assert.Equal(t, "barfoo", ruleSets[1].Rules[0].ID)
 			},
 		},
-		{
-			uc: "only one rule set adhering to the required prefix",
+		"only one rule set adhering to the required prefix": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -320,8 +312,7 @@ rules:
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
 			},
 		},
-		{
-			uc: "not existing rule set specified in the path",
+		"not existing rule set specified in the path": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -339,8 +330,7 @@ rules:
 				assert.Contains(t, err.Error(), "attributes")
 			},
 		},
-		{
-			uc: "empty blob specified in the path",
+		"empty blob specified in the path": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -365,8 +355,7 @@ rules:
 				assert.Empty(t, ruleSets)
 			},
 		},
-		{
-			uc: "existing rule set specified in the path",
+		"existing rule set specified in the path": {
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
 					Scheme:   "s3",
@@ -416,7 +405,7 @@ rules:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			clearBucket(t)
 

@@ -52,13 +52,11 @@ func TestLoggerInterceptor(t *testing.T) {
 		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
 	})
 
-	for _, tc := range []struct {
-		uc              string
+	for uc, tc := range map[string]struct {
 		outgoingContext func(t *testing.T) context.Context
 		assert          func(t *testing.T, logstring string)
 	}{
-		{
-			uc: "without tracing",
+		"without tracing": {
 			outgoingContext: func(t *testing.T) context.Context {
 				t.Helper()
 
@@ -78,8 +76,7 @@ func TestLoggerInterceptor(t *testing.T) {
 				assert.NotEqual(t, parentCtx.SpanID().String(), logData["_parent_id"])
 			},
 		},
-		{
-			uc: "with tracing",
+		"with tracing": {
 			outgoingContext: func(t *testing.T) context.Context {
 				t.Helper()
 
@@ -106,7 +103,7 @@ func TestLoggerInterceptor(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			lis := bufconn.Listen(1024 * 1024)
 			tb := &testsupport.TestingLog{TB: t}

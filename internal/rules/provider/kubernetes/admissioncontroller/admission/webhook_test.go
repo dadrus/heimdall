@@ -99,14 +99,12 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 }
 `
 
-	for _, tc := range []struct {
-		uc           string
+	for uc, tc := range map[string]struct {
 		request      func(t *testing.T, URL string) *http.Request
 		setupHandler func(t *testing.T, handler *HandlerMock)
 		assert       func(t *testing.T, resp *http.Response)
 	}{
-		{
-			uc: "invalid content type",
+		"invalid content type": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -138,8 +136,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				require.Nil(t, status.Details)
 			},
 		},
-		{
-			uc: "failed decoding request",
+		"failed decoding request": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -174,8 +171,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				assert.Contains(t, status.Details.Causes[0].Message, "invalid character")
 			},
 		},
-		{
-			uc: "valid request without timeout",
+		"valid request without timeout": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -217,8 +213,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				assert.Equal(t, "All fine", status.Message)
 			},
 		},
-		{
-			uc: "valid request with valid timeout",
+		"valid request with valid timeout": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -264,8 +259,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				assert.Equal(t, "All fine", status.Message)
 			},
 		},
-		{
-			uc: "valid request with invalid timeout",
+		"valid request with invalid timeout": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -312,7 +306,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			setupMock := x.IfThenElse(
 				tc.setupHandler != nil,

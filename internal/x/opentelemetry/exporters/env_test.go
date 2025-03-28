@@ -23,15 +23,13 @@ import (
 )
 
 func TestEnvOr(t *testing.T) {
-	for _, tc := range []struct {
-		uc           string
+	for uc, tc := range map[string]struct {
 		key          string
 		defaultValue string
 		setup        func(t *testing.T)
 		assert       func(t *testing.T, value string)
 	}{
-		{
-			uc:           "no env with default",
+		"no env with default": {
 			key:          "does-not-exist",
 			defaultValue: "foobar",
 			setup:        func(t *testing.T) { t.Helper() },
@@ -41,8 +39,7 @@ func TestEnvOr(t *testing.T) {
 				assert.Equal(t, "foobar", value)
 			},
 		},
-		{
-			uc:           "set env",
+		"set env": {
 			key:          "TestEnvOr-ExistingKey",
 			defaultValue: "foobar",
 			setup: func(t *testing.T) {
@@ -56,7 +53,7 @@ func TestEnvOr(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			tc.setup(t)
 

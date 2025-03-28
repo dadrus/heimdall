@@ -30,13 +30,11 @@ import (
 )
 
 func TestNewLifecycleManager(t *testing.T) {
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		setup  func(t *testing.T) *config.Configuration
 		assert func(t *testing.T, lm lifecycleManager)
 	}{
-		{
-			uc: "metrics disabled by configuration",
+		"metrics disabled by configuration": {
 			setup: func(t *testing.T) *config.Configuration {
 				t.Helper()
 
@@ -50,8 +48,7 @@ func TestNewLifecycleManager(t *testing.T) {
 				require.NoError(t, lm.Stop(t.Context()))
 			},
 		},
-		{
-			uc: "OTEL_METRICS_EXPORTER env var contains prometheus and none",
+		"OTEL_METRICS_EXPORTER env var contains prometheus and none": {
 			setup: func(t *testing.T) *config.Configuration {
 				t.Helper()
 				t.Setenv("OTEL_METRICS_EXPORTER", "prometheus,none")
@@ -66,8 +63,7 @@ func TestNewLifecycleManager(t *testing.T) {
 				require.NoError(t, lm.Stop(t.Context()))
 			},
 		},
-		{
-			uc: "OTEL_METRICS_EXPORTER env var does not contain prometheus",
+		"OTEL_METRICS_EXPORTER env var does not contain prometheus": {
 			setup: func(t *testing.T) *config.Configuration {
 				t.Helper()
 				t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
@@ -82,8 +78,7 @@ func TestNewLifecycleManager(t *testing.T) {
 				require.NoError(t, lm.Stop(t.Context()))
 			},
 		},
-		{
-			uc: "metrics enabled and OTEL_METRICS_EXPORTER env var contains prometheus",
+		"metrics enabled and OTEL_METRICS_EXPORTER env var contains prometheus": {
 			setup: func(t *testing.T) *config.Configuration {
 				t.Helper()
 				t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
@@ -108,7 +103,7 @@ func TestNewLifecycleManager(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf := tc.setup(t)
 			appCtx := app.NewContextMock(t)

@@ -30,14 +30,12 @@ import (
 func TestKoanfFromYaml(t *testing.T) {
 	t.Setenv("FOO", "BAR")
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		chmod  func(t *testing.T, file *os.File)
 		assert func(t *testing.T, err error, kanf *koanf.Koanf)
 	}{
-		{
-			uc: "valid content without env substitution",
+		"valid content without env substitution": {
 			config: []byte(`
 some_string: foo
 someint: 3
@@ -60,8 +58,7 @@ nested_2:
 				assert.Contains(t, konf.Get("nested_2"), map[string]any{"some_string": "baz", "somebool": false})
 			},
 		},
-		{
-			uc: "valid content with env substitution and templates",
+		"valid content with env substitution and templates": {
 			config: []byte(`
 some_string: ${FOO}
 someint: 3
@@ -88,8 +85,7 @@ nested_2:
 					})
 			},
 		},
-		{
-			uc:     "invalid yaml content",
+		"invalid yaml content": {
 			config: []byte("foobar"),
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
@@ -98,8 +94,7 @@ nested_2:
 				assert.Contains(t, err.Error(), "failed to load")
 			},
 		},
-		{
-			uc:     "invalid yaml env substitution",
+		"invalid yaml env substitution": {
 			config: []byte("${:}"),
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
@@ -108,8 +103,7 @@ nested_2:
 				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
-		{
-			uc:     "can't read file",
+		"can't read file": {
 			config: []byte(`foo: bar`),
 			chmod: func(t *testing.T, file *os.File) {
 				t.Helper()
@@ -125,7 +119,7 @@ nested_2:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			chmod := x.IfThenElse(tc.chmod != nil, tc.chmod, func(t *testing.T, _ *os.File) { t.Helper() })
 

@@ -29,14 +29,12 @@ func TestStrings(t *testing.T) {
 	env, err := cel.NewEnv(Strings())
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		expr string
-	}{
-		{expr: `"abcd1234".regexFind("[a-zA-Z][1-9]") == "d1"`},
-		{expr: `"123456789".regexFindAll("[2,4,6,8]") == ["2","4","6","8"]`},
+	for _, tc := range []string{
+		`"abcd1234".regexFind("[a-zA-Z][1-9]") == "d1"`,
+		`"123456789".regexFindAll("[2,4,6,8]") == ["2","4","6","8"]`,
 	} {
-		t.Run(tc.expr, func(t *testing.T) {
-			ast, iss := env.Compile(tc.expr)
+		t.Run(tc, func(t *testing.T) {
+			ast, iss := env.Compile(tc)
 			if iss != nil {
 				require.NoError(t, iss.Err())
 			}

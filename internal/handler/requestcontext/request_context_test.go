@@ -30,13 +30,11 @@ import (
 func TestRequestContextRequestClientIPs(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc               string
+	for uc, tc := range map[string]struct {
 		configureRequest func(t *testing.T, req *http.Request)
 		assert           func(t *testing.T, ips []string)
 	}{
-		{
-			"neither Forwarded, not X-Forwarded-For headers are present",
+		"neither Forwarded, not X-Forwarded-For headers are present": {
 			func(t *testing.T, _ *http.Request) { t.Helper() },
 			func(t *testing.T, ips []string) {
 				t.Helper()
@@ -45,8 +43,7 @@ func TestRequestContextRequestClientIPs(t *testing.T) {
 				assert.Contains(t, ips, "192.0.2.1")
 			},
 		},
-		{
-			"only Forwarded header is present",
+		"only Forwarded header is present": {
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -62,8 +59,7 @@ func TestRequestContextRequestClientIPs(t *testing.T) {
 				assert.Equal(t, "192.0.2.1", ips[2])
 			},
 		},
-		{
-			"only X-Forwarded-For header is present",
+		"only X-Forwarded-For header is present": {
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -79,8 +75,7 @@ func TestRequestContextRequestClientIPs(t *testing.T) {
 				assert.Equal(t, "192.0.2.1", ips[2])
 			},
 		},
-		{
-			"Forwarded and X-Forwarded-For headers are present",
+		"Forwarded and X-Forwarded-For headers are present": {
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -98,7 +93,7 @@ func TestRequestContextRequestClientIPs(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 			tc.configureRequest(t, req)
@@ -176,56 +171,48 @@ func TestRequestContextCookie(t *testing.T) {
 func TestRequestContextBody(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		ct     string
 		body   io.Reader
 		expect any
 	}{
-		{
-			uc:     "No body",
+		"No body": {
 			ct:     "empty",
 			body:   nil,
 			expect: "",
 		},
-		{
-			uc:     "No body",
+		"Empty body": {
 			ct:     "empty",
 			body:   bytes.NewBufferString(""),
 			expect: "",
 		},
-		{
-			uc:     "Wrong content type",
+		"Wrong content type": {
 			ct:     "application/json",
 			body:   bytes.NewBufferString("foo: bar"),
 			expect: "foo: bar",
 		},
-		{
-			uc:     "x-www-form-urlencoded encoded",
+		"x-www-form-urlencoded encoded": {
 			ct:     "application/x-www-form-urlencoded; charset=utf-8",
 			body:   bytes.NewBufferString("content=heimdall"),
 			expect: map[string]any{"content": []string{"heimdall"}},
 		},
-		{
-			uc:     "json encoded",
+		"json encoded": {
 			ct:     "application/json; charset=utf-8",
 			body:   bytes.NewBufferString(`{ "content": "heimdall" }`),
 			expect: map[string]any{"content": "heimdall"},
 		},
-		{
-			uc:     "yaml encoded",
+		"yaml encoded": {
 			ct:     "application/yaml; charset=utf-8",
 			body:   bytes.NewBufferString("content: heimdall"),
 			expect: map[string]any{"content": "heimdall"},
 		},
-		{
-			uc:     "plain text",
+		"plain text": {
 			ct:     "text/plain",
 			body:   bytes.NewBufferString("content=heimdall"),
 			expect: "content=heimdall",
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", tc.body)
 			req.Header.Set("Content-Type", tc.ct)

@@ -33,14 +33,12 @@ import (
 func TestRuleSetProcessorOnCreated(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		ruleset   *config.RuleSet
 		configure func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock)
 		assert    func(t *testing.T, err error)
 	}{
-		{
-			uc:        "unsupported version",
+		"unsupported version": {
 			ruleset:   &config.RuleSet{Version: "foo"},
 			configure: func(t *testing.T, _ *mocks.FactoryMock, _ *mocks.RepositoryMock) { t.Helper() },
 			assert: func(t *testing.T, err error) {
@@ -50,8 +48,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				require.ErrorIs(t, err, ErrUnsupportedRuleSetVersion)
 			},
 		},
-		{
-			uc:      "error while loading rule set",
+		"error while loading rule set": {
 			ruleset: &config.RuleSet{Version: config.CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
@@ -65,8 +62,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				assert.Contains(t, err.Error(), "loading rule ID='foo' failed")
 			},
 		},
-		{
-			uc:      "error while adding rule set",
+		"error while adding rule set": {
 			ruleset: &config.RuleSet{Version: config.CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
@@ -81,8 +77,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				assert.Contains(t, err.Error(), "test error")
 			},
 		},
-		{
-			uc: "successful",
+		"successful": {
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},
 				Version:  config.CurrentRuleSetVersion,
@@ -106,7 +101,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			factory := mocks.NewFactoryMock(t)
 			repo := mocks.NewRepositoryMock(t)
@@ -127,14 +122,12 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 func TestRuleSetProcessorOnUpdated(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		ruleset   *config.RuleSet
 		configure func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock)
 		assert    func(t *testing.T, err error)
 	}{
-		{
-			uc:      "unsupported version",
+		"unsupported version": {
 			ruleset: &config.RuleSet{Version: "foo"},
 			configure: func(t *testing.T, _ *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
@@ -146,8 +139,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				require.ErrorIs(t, err, ErrUnsupportedRuleSetVersion)
 			},
 		},
-		{
-			uc:      "error while loading rule set",
+		"error while loading rule set": {
 			ruleset: &config.RuleSet{Version: config.CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
@@ -161,8 +153,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				assert.Contains(t, err.Error(), "loading rule ID='foo' failed")
 			},
 		},
-		{
-			uc:      "error while updating rule set",
+		"error while updating rule set": {
 			ruleset: &config.RuleSet{Version: config.CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
@@ -177,8 +168,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				assert.Contains(t, err.Error(), "test error")
 			},
 		},
-		{
-			uc: "successful",
+		"successful": {
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},
 				Version:  config.CurrentRuleSetVersion,
@@ -202,7 +192,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEM
 			factory := mocks.NewFactoryMock(t)
 			repo := mocks.NewRepositoryMock(t)
@@ -223,14 +213,12 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 func TestRuleSetProcessorOnDeleted(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		ruleset   *config.RuleSet
 		configure func(t *testing.T, repo *mocks.RepositoryMock)
 		assert    func(t *testing.T, err error)
 	}{
-		{
-			uc: "failed removing rule set",
+		"failed removing rule set": {
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},
 				Version:  config.CurrentRuleSetVersion,
@@ -248,8 +236,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 				require.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "successful",
+		"successful": {
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},
 				Version:  config.CurrentRuleSetVersion,
@@ -267,7 +254,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEM
 			repo := mocks.NewRepositoryMock(t)
 			tc.configure(t, repo)

@@ -35,13 +35,11 @@ import (
 func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler)
 	}{
-		{
-			uc: "with configuration containing unsupported fields",
+		"with configuration containing unsupported fields": {
 			config: []byte(`
 realm: FooBar
 if: type(Error) == authentication_error
@@ -54,8 +52,7 @@ if: type(Error) == authentication_error
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
-		{
-			uc: "without configuration (minimal configuration)",
+		"without configuration (minimal configuration)": {
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
@@ -65,8 +62,7 @@ if: type(Error) == authentication_error
 				assert.Equal(t, "Please authenticate", errorHandler.realm)
 			},
 		},
-		{
-			uc:     "with all possible attributes",
+		"with all possible attributes": {
 			config: []byte(`realm: "What is your password"`),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
@@ -78,7 +74,7 @@ if: type(Error) == authentication_error
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
@@ -91,7 +87,7 @@ if: type(Error) == authentication_error
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, conf)
+			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -102,15 +98,13 @@ if: type(Error) == authentication_error
 func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 			configured *wwwAuthenticateErrorHandler)
 	}{
-		{
-			uc:              "no new configuration provided",
+		"no new configuration provided": {
 			prototypeConfig: []byte(`realm: "foo"`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
@@ -121,8 +115,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		{
-			uc:              "empty configuration provided",
+		"empty configuration provided": {
 			prototypeConfig: []byte(`realm: "foo"`),
 			config:          []byte(``),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -134,8 +127,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		{
-			uc:     "unsupported fields provided",
+		"unsupported fields provided": {
 			config: []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler,
 				_ *wwwAuthenticateErrorHandler,
@@ -147,8 +139,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
-		{
-			uc:              "with 'realm' reconfigured",
+		"with 'realm' reconfigured": {
 			prototypeConfig: []byte(`realm: "Foobar"`),
 			config:          []byte(`realm: "You password please"`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -165,7 +156,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
@@ -180,7 +171,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newWWWAuthenticateErrorHandler(appCtx, tc.uc, pc)
+			prototype, err := newWWWAuthenticateErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -205,15 +196,13 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc               string
+	for uc, tc := range map[string]struct {
 		config           []byte
 		error            error
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
-		{
-			uc:    "with default realm",
+		"with default realm": {
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
@@ -234,8 +223,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:     "with custom realm",
+		"with custom realm": {
 			config: []byte(`realm: "Your password please"`),
 			error:  heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
@@ -258,7 +246,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)

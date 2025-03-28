@@ -2442,14 +2442,12 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384))
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		authenticator *jwtAuthenticator
 		jwk           *jose.JSONWebKey
 		assert        func(t *testing.T, ttl time.Duration)
 	}{
-		{
-			uc:            "jwk does not contain certificate and no ttl configured",
+		"jwk does not contain certificate and no ttl configured": {
 			authenticator: &jwtAuthenticator{},
 			jwk: &jose.JSONWebKey{
 				KeyID: "1",
@@ -2461,8 +2459,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, defaultJWTAuthenticatorTTL, ttl)
 			},
 		},
-		{
-			uc:            "jwk does not contain certificate and ttl configured",
+		"jwk does not contain certificate and ttl configured": {
 			authenticator: &jwtAuthenticator{ttl: &shortTTL},
 			jwk: &jose.JSONWebKey{
 				KeyID: "1",
@@ -2474,8 +2471,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, shortTTL, ttl)
 			},
 		},
-		{
-			uc:            "jwk does not contain certificate and ttl disabled",
+		"jwk does not contain certificate and ttl disabled": {
 			authenticator: &jwtAuthenticator{ttl: &disabledTTL},
 			jwk: &jose.JSONWebKey{
 				KeyID: "1",
@@ -2487,8 +2483,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, 0*time.Second, ttl)
 			},
 		},
-		{
-			uc:            "jwk contains certificate and no ttl configured",
+		"jwk contains certificate and no ttl configured": {
 			authenticator: &jwtAuthenticator{},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
@@ -2501,8 +2496,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, defaultJWTAuthenticatorTTL, ttl)
 			},
 		},
-		{
-			uc:            "jwk contains certificate and ttl configured to a time point exceeding the ttl of certificate",
+		"jwk contains certificate and ttl configured to a time point exceeding the ttl of certificate": {
 			authenticator: &jwtAuthenticator{ttl: &veryLongTTL},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
@@ -2517,8 +2511,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, expTTL, ttl)
 			},
 		},
-		{
-			uc:            "jwk contains certificate and ttl configured to a time point before the certificate expires",
+		"jwk contains certificate and ttl configured to a time point before the certificate expires": {
 			authenticator: &jwtAuthenticator{ttl: &shortTTL},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
@@ -2531,8 +2524,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, shortTTL, ttl)
 			},
 		},
-		{
-			uc:            "jwk contains certificate and ttl disabled",
+		"jwk contains certificate and ttl disabled": {
 			authenticator: &jwtAuthenticator{ttl: &disabledTTL},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
@@ -2546,7 +2538,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			ttl := tc.authenticator.getCacheTTL(tc.jwk)
 
