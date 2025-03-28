@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.11](https://github.com/dadrus/heimdall/compare/v0.15.10...v0.15.11) (2025-03-28)
+
+
+### Dependencies
+
+* update module github.com/go-playground/validator/v10 to v10.26.0 ([#2334](https://github.com/dadrus/heimdall/issues/2334)) ([01bb1bd](https://github.com/dadrus/heimdall/commit/01bb1bd39cdd1041f6306b05d4de9f6a291e86d6))
+
 ## [0.15.10](https://github.com/dadrus/heimdall/compare/v0.15.9...v0.15.10) (2025-03-26)
 
 
