@@ -27,13 +27,11 @@ import (
 func TestExtractMethod(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		expect string
 		modify func(t *testing.T, header http.Header)
 	}{
-		{
-			"from header",
+		"from header": {
 			http.MethodPatch,
 			func(t *testing.T, header http.Header) {
 				t.Helper()
@@ -41,13 +39,12 @@ func TestExtractMethod(t *testing.T) {
 				header.Set("X-Forwarded-Method", http.MethodPatch)
 			},
 		},
-		{
-			"from request",
+		"from request": {
 			http.MethodDelete,
 			func(t *testing.T, _ http.Header) { t.Helper() },
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			req := httptest.NewRequest(http.MethodDelete, "/foo", nil)
 			tc.modify(t, req.Header)

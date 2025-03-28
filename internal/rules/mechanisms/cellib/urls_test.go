@@ -39,20 +39,18 @@ func TestUrls(t *testing.T) {
 	uri, err := url.Parse(rawURI)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		expr string
-	}{
-		{expr: `uri.String() == "` + rawURI + `"`},
-		{expr: `uri.Query() == {"foo":["bar", "baz"], "bar": ["foo"]}`},
-		{expr: `uri.Query().bar == ["foo"]`},
-		{expr: `uri.Host == "localhost:8080"`},
-		{expr: `uri.Hostname() == "localhost"`},
-		{expr: `uri.Port() == "8080"`},
-		{expr: `uri.Captures.zab == "baz"`},
-		{expr: `uri.Path == "/foo/bar"`},
+	for _, tc := range []string{
+		`uri.String() == "` + rawURI + `"`,
+		`uri.Query() == {"foo":["bar", "baz"], "bar": ["foo"]}`,
+		`uri.Query().bar == ["foo"]`,
+		`uri.Host == "localhost:8080"`,
+		`uri.Hostname() == "localhost"`,
+		`uri.Port() == "8080"`,
+		`uri.Captures.zab == "baz"`,
+		`uri.Path == "/foo/bar"`,
 	} {
-		t.Run(tc.expr, func(t *testing.T) {
-			ast, iss := env.Compile(tc.expr)
+		t.Run(tc, func(t *testing.T) {
+			ast, iss := env.Compile(tc)
 			if iss != nil {
 				require.NoError(t, iss.Err())
 			}

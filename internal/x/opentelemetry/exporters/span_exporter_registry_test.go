@@ -30,14 +30,12 @@ import (
 )
 
 func TestCreateSpanExporters(t *testing.T) {
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		names  []string
 		setup  func(t *testing.T)
 		assert func(t *testing.T, err error, expts []trace.SpanExporter)
 	}{
-		{
-			uc:    "none exporter is at the beginning of the list",
+		"none exporter is at the beginning of the list": {
 			names: []string{"none", "foobar"},
 			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
 				t.Helper()
@@ -47,8 +45,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				assert.IsType(t, noopSpanExporter{}, expts[0])
 			},
 		},
-		{
-			uc:    "none exporter is not at the beginning of the list",
+		"none exporter is not at the beginning of the list": {
 			names: []string{"zipkin", "none", "jaeger"},
 			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
 				t.Helper()
@@ -58,8 +55,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				assert.IsType(t, noopSpanExporter{}, expts[0])
 			},
 		},
-		{
-			uc:    "list contains unsupported exporter type",
+		"list contains unsupported exporter type": {
 			names: []string{"zipkin", "foobar"},
 			assert: func(t *testing.T, err error, _ []trace.SpanExporter) {
 				t.Helper()
@@ -69,8 +65,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				assert.Contains(t, err.Error(), "foobar")
 			},
 		},
-		{
-			uc:    "fails creating exporter type",
+		"fails creating exporter type": {
 			names: []string{"instana"},
 			assert: func(t *testing.T, err error, _ []trace.SpanExporter) {
 				t.Helper()
@@ -85,8 +80,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				assert.Contains(t, err.Error(), "environment variable")
 			},
 		},
-		{
-			uc: "default exporter type with error",
+		"default exporter type with error": {
 			setup: func(t *testing.T) {
 				t.Helper()
 				t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "foobar")
@@ -99,8 +93,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				assert.Contains(t, err.Error(), "foobar")
 			},
 		},
-		{
-			uc: "default exporter type",
+		"default exporter type": {
 			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
 				t.Helper()
 
@@ -109,8 +102,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				assert.IsType(t, &otlptrace.Exporter{}, expts[0])
 			},
 		},
-		{
-			uc:    "all supported exporter types",
+		"all supported exporter types": {
 			names: []string{"otlp", "zipkin", "instana"},
 			setup: func(t *testing.T) {
 				t.Helper()
@@ -129,7 +121,7 @@ func TestCreateSpanExporters(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			setup := x.IfThenElse(tc.setup == nil, func(t *testing.T) { t.Helper() }, tc.setup)
 			setup(t)

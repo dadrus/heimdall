@@ -24,23 +24,20 @@ import (
 )
 
 func TestKeyUsageString(t *testing.T) {
-	for _, tc := range []struct {
-		usage x509.KeyUsage
-		name  string
-	}{
-		{usage: x509.KeyUsageDigitalSignature, name: "DigitalSignature"},
-		{usage: x509.KeyUsageContentCommitment, name: "ContentCommitment"},
-		{usage: x509.KeyUsageKeyEncipherment, name: "KeyEncipherment"},
-		{usage: x509.KeyUsageDataEncipherment, name: "DataEncipherment"},
-		{usage: x509.KeyUsageKeyAgreement, name: "KeyAgreement"},
-		{usage: x509.KeyUsageCertSign, name: "CertSign"},
-		{usage: x509.KeyUsageCRLSign, name: "CRLSign"},
-		{usage: x509.KeyUsageEncipherOnly, name: "EncipherOnly"},
-		{usage: x509.KeyUsageDecipherOnly, name: "DecipherOnly"},
-		{usage: 1000, name: "Unknown"},
+	for usage, name := range map[x509.KeyUsage]string{
+		x509.KeyUsageDigitalSignature:  "DigitalSignature",
+		x509.KeyUsageContentCommitment: "ContentCommitment",
+		x509.KeyUsageKeyEncipherment:   "KeyEncipherment",
+		x509.KeyUsageDataEncipherment:  "DataEncipherment",
+		x509.KeyUsageKeyAgreement:      "KeyAgreement",
+		x509.KeyUsageCertSign:          "CertSign",
+		x509.KeyUsageCRLSign:           "CRLSign",
+		x509.KeyUsageEncipherOnly:      "EncipherOnly",
+		x509.KeyUsageDecipherOnly:      "DecipherOnly",
+		1000:                           "Unknown",
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.name, KeyUsage(tc.usage).String())
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, name, KeyUsage(usage).String())
 		})
 	}
 }

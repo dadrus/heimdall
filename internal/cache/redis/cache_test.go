@@ -52,17 +52,18 @@ func TestCacheUsage(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	cch.Start(t.Context())
+	err = cch.Start(t.Context())
+	require.NoError(t, err)
+
 	defer cch.Stop(t.Context())
 
-	for _, tc := range []struct {
+	for uc, tc := range map[string]struct {
 		uc             string
 		key            string
 		configureCache func(*testing.T, cache.Cache)
 		assert         func(t *testing.T, err error, data []byte)
 	}{
-		{
-			uc:  "can retrieve not expired value",
+		"can retrieve not expired value": {
 			key: "foo",
 			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
@@ -77,8 +78,7 @@ func TestCacheUsage(t *testing.T) {
 				assert.Equal(t, []byte("bar"), data)
 			},
 		},
-		{
-			uc:  "cannot retrieve expired value",
+		"cannot retrieve expired value": {
 			key: "bar",
 			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
@@ -95,8 +95,7 @@ func TestCacheUsage(t *testing.T) {
 				assert.Nil(t, data)
 			},
 		},
-		{
-			uc:  "cannot retrieve not existing value",
+		"cannot retrieve not existing value": {
 			key: "baz",
 			configureCache: func(t *testing.T, _ cache.Cache) {
 				t.Helper()
@@ -109,7 +108,7 @@ func TestCacheUsage(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			tc.configureCache(t, cch)
 

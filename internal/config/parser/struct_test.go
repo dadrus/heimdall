@@ -45,13 +45,11 @@ func TestKoanfFromStruct(t *testing.T) {
 		Nested2    []TestNestedConfig `koanf:"nested_2"`
 	}
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   any
 		assert func(t *testing.T, err error, konf *koanf.Koanf)
 	}{
-		{
-			uc: "missing koanf tag",
+		"missing koanf tag": {
 			conf: TestConfigWithUppercase{
 				ThisIsMissingAKoanfTag: "don't care",
 			},
@@ -64,8 +62,7 @@ func TestKoanfFromStruct(t *testing.T) {
 					"field ThisIsMissingAKoanfTag does not have lowercase key")
 			},
 		},
-		{
-			uc: "successful",
+		"successful": {
 			conf: TestConfig{
 				SomeString: "foo",
 				SomeInt:    42,
@@ -86,7 +83,7 @@ func TestKoanfFromStruct(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			konf, err := koanfFromStruct(tc.conf)
 

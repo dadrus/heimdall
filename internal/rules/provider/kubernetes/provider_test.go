@@ -54,13 +54,11 @@ func TestNewProvider(t *testing.T) {
 	// the corresponding k8s api is not threat safe.
 	// So, to avoid concurrent map writes, this test is not configured
 	// to run parallel
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   []byte
 		assert func(t *testing.T, err error, prov *Provider)
 	}{
-		{
-			uc:   "with unknown field",
+		"with unknown field": {
 			conf: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
@@ -70,8 +68,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
-		{
-			uc:   "with empty configuration",
+		"with empty configuration": {
 			conf: []byte(`{}`),
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
@@ -83,8 +80,7 @@ func TestNewProvider(t *testing.T) {
 				assert.NotNil(t, prov.cl)
 			},
 		},
-		{
-			uc:   "with auth_class configured",
+		"with auth_class configured": {
 			conf: []byte(`auth_class: foo`),
 			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
@@ -97,7 +93,7 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
@@ -334,16 +330,14 @@ func (h *RuleSetResourceHandler) writeSingleRuleResponse(t *testing.T, w http.Re
 func TestProviderLifecycle(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		conf           []byte
 		watchEvent     func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error)
 		updateStatus   func(rs v1alpha4.RuleSet, callIdx int) (*metav1.Status, error)
 		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
 		assert         func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc:   "rule set added",
+		"rule set added": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -396,8 +390,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "adding rule set fails",
+		"adding rule set fails": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, _ int) (watch.Event, error) {
 				return watch.Event{Type: watch.Bookmark, Object: &rs}, nil
@@ -421,8 +414,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActivationFailed, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added and then removed",
+		"a ruleset is added and then removed": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -504,8 +496,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added with failing status update",
+		"a ruleset is added with failing status update": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -560,8 +551,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Empty(t, *statusList)
 			},
 		},
-		{
-			uc:   "a ruleset is added with conflicting status update",
+		"a ruleset is added with status resulting in a conflict": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -637,8 +627,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "removing rule set fails",
+		"removing rule set fails": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -676,8 +665,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetUnloadingFailed, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added and then updated",
+		"a ruleset is added and then updated": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -797,8 +785,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added and then updated with a mismatching authClassName",
+		"a ruleset is added and then updated with a mismatching authClassName": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -888,8 +875,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "failed updating rule set",
+		"failed updating rule set": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -961,7 +947,7 @@ func TestProviderLifecycle(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)

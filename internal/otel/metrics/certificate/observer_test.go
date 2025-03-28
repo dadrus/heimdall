@@ -153,21 +153,18 @@ func TestCertificateExpirationCollector(t *testing.T) {
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		suppliers []Supplier
 		assert    func(t *testing.T, rm *metricdata.ResourceMetrics, call int)
 	}{
-		{
-			uc: "without suppliers",
+		"without suppliers": {
 			assert: func(t *testing.T, rm *metricdata.ResourceMetrics, _ int) {
 				t.Helper()
 
 				assert.Empty(t, rm.ScopeMetrics)
 			},
 		},
-		{
-			uc: "with single supplier providing only static ee certificate",
+		"with single supplier providing only static ee certificate": {
 			suppliers: []Supplier{
 				&staticCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert}},
 			},
@@ -191,8 +188,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				checkMetric(t, data.DataPoints, "test", ee1cert)
 			},
 		},
-		{
-			uc: "with single supplier providing the entire chain statically",
+		"with single supplier providing the entire chain statically": {
 			suppliers: []Supplier{
 				&staticCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate}},
 			},
@@ -218,8 +214,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				checkMetric(t, data.DataPoints, "test", ee1cert)
 			},
 		},
-		{
-			uc: "with multiple suppliers providing the entire chain statically",
+		"with multiple suppliers providing the entire chain statically": {
 			suppliers: []Supplier{
 				&staticCertificateSupplier{name: "test-1", certs: []*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate}},
 				&staticCertificateSupplier{name: "test-2", certs: []*x509.Certificate{ee2cert, intCA1Cert, rootCA1.Certificate}},
@@ -250,8 +245,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				checkMetric(t, data.DataPoints, "test-2", ee2cert)
 			},
 		},
-		{
-			uc: "with supplier providing a certificate dynamically",
+		"with supplier providing a certificate dynamically": {
 			suppliers: []Supplier{
 				&dynamicCertificateSupplier{name: "test", certs: []*x509.Certificate{ee1cert, ee2cert}},
 			},
@@ -280,7 +274,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			exp := metric.NewManualReader()
 

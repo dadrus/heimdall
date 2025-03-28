@@ -34,13 +34,11 @@ import (
 func TestNewCache(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   *config.Configuration
 		assert func(t *testing.T, err error, cch cache.Cache)
 	}{
-		{
-			uc:   "empty cache type",
+		"empty cache type": {
 			conf: &config.Configuration{},
 			assert: func(t *testing.T, err error, _ cache.Cache) {
 				t.Helper()
@@ -49,8 +47,7 @@ func TestNewCache(t *testing.T) {
 				require.ErrorIs(t, err, cache.ErrUnsupportedCacheType)
 			},
 		},
-		{
-			uc: "in memory cache",
+		"in memory cache": {
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
 					Type: "in-memory",
@@ -63,8 +60,7 @@ func TestNewCache(t *testing.T) {
 				assert.IsType(t, &memory.Cache{}, cch)
 			},
 		},
-		{
-			uc: "Redis standalone cache without config",
+		"Redis standalone cache without config": {
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
 					Type:   "redis",
@@ -78,8 +74,7 @@ func TestNewCache(t *testing.T) {
 				require.ErrorContains(t, err, "'address' is a required field")
 			},
 		},
-		{
-			uc: "Redis cluster cache without config",
+		"Redis cluster cache without config": {
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
 					Type:   "redis-cluster",
@@ -93,8 +88,7 @@ func TestNewCache(t *testing.T) {
 				require.ErrorContains(t, err, "'nodes' must contain more than 0 items")
 			},
 		},
-		{
-			uc: "Redis sentinel cache without config",
+		"Redis sentinel cache without config": {
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
 					Type:   "redis-sentinel",
@@ -108,8 +102,7 @@ func TestNewCache(t *testing.T) {
 				require.ErrorContains(t, err, "'nodes' must contain more than 0 items")
 			},
 		},
-		{
-			uc: "disabled cache type",
+		"disabled cache type": {
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
 					Type: "noop",
@@ -122,8 +115,7 @@ func TestNewCache(t *testing.T) {
 				assert.IsType(t, &noop.Cache{}, cch)
 			},
 		},
-		{
-			uc: "unknown cache type",
+		"unknown cache type": {
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
 					Type: "foo",
@@ -138,7 +130,7 @@ func TestNewCache(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			validator, err := validation.NewValidator(
 				validation.WithTagValidator(config.EnforcementSettings{}),

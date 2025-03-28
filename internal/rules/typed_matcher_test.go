@@ -26,14 +26,12 @@ import (
 func TestRegexPatternMatcher(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		expression string
 		matches    string
 		assert     func(t *testing.T, err error, matched bool)
 	}{
-		{
-			uc: "with empty expression",
+		"with empty expression": {
 			assert: func(t *testing.T, err error, _ bool) {
 				t.Helper()
 
@@ -41,8 +39,7 @@ func TestRegexPatternMatcher(t *testing.T) {
 				require.ErrorIs(t, err, ErrNoRegexPatternDefined)
 			},
 		},
-		{
-			uc:         "with bad regex expression",
+		"with bad regex expression": {
 			expression: "?>?<*??",
 			assert: func(t *testing.T, err error, _ bool) {
 				t.Helper()
@@ -51,8 +48,7 @@ func TestRegexPatternMatcher(t *testing.T) {
 				assert.Contains(t, err.Error(), "error parsing regexp")
 			},
 		},
-		{
-			uc:         "doesn't match",
+		"doesn't match": {
 			expression: "^/foo/(bar|baz)/zab",
 			matches:    "/foo/zab/zab",
 			assert: func(t *testing.T, err error, matched bool) {
@@ -62,8 +58,7 @@ func TestRegexPatternMatcher(t *testing.T) {
 				assert.False(t, matched)
 			},
 		},
-		{
-			uc:         "successful",
+		"successful": {
 			expression: "^/foo/(bar|baz)/zab",
 			matches:    "/foo/bar/zab",
 			assert: func(t *testing.T, err error, matched bool) {
@@ -74,7 +69,7 @@ func TestRegexPatternMatcher(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			var matched bool
 
 			matcher, err := newRegexMatcher(tc.expression)
@@ -90,14 +85,12 @@ func TestRegexPatternMatcher(t *testing.T) {
 func TestGlobPatternMatcher(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		expression string
 		matches    string
 		assert     func(t *testing.T, err error, matched bool)
 	}{
-		{
-			uc: "with empty expression",
+		"with empty expression": {
 			assert: func(t *testing.T, err error, _ bool) {
 				t.Helper()
 
@@ -105,8 +98,7 @@ func TestGlobPatternMatcher(t *testing.T) {
 				require.ErrorIs(t, err, ErrNoGlobPatternDefined)
 			},
 		},
-		{
-			uc:         "with bad glob expression",
+		"with bad glob expression": {
 			expression: "!*][)(*",
 			assert: func(t *testing.T, err error, _ bool) {
 				t.Helper()
@@ -115,8 +107,7 @@ func TestGlobPatternMatcher(t *testing.T) {
 				assert.Contains(t, err.Error(), "unexpected end of input")
 			},
 		},
-		{
-			uc:         "doesn't match",
+		"doesn't match": {
 			expression: "{/**.foo,/**.bar}",
 			matches:    "/foo.baz",
 			assert: func(t *testing.T, err error, matched bool) {
@@ -126,8 +117,7 @@ func TestGlobPatternMatcher(t *testing.T) {
 				assert.False(t, matched)
 			},
 		},
-		{
-			uc:         "successful",
+		"successful": {
 			expression: "{/**.foo,/**.bar}",
 			matches:    "/foo.bar",
 			assert: func(t *testing.T, err error, matched bool) {
@@ -138,7 +128,7 @@ func TestGlobPatternMatcher(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			var matched bool
 
 			matcher, err := newGlobMatcher(tc.expression, '/')
@@ -154,16 +144,15 @@ func TestGlobPatternMatcher(t *testing.T) {
 func TestExactMatcher(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		expression string
 		toMatch    string
 		matches    bool
 	}{
-		{uc: "matches", expression: "foo", toMatch: "foo", matches: true},
-		{uc: "doesn't match", expression: "foo", toMatch: "bar"},
+		"matches":       {"foo", "foo", true},
+		"doesn't match": {"foo", "bar", false},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			matcher := newExactMatcher(tc.expression)
 
 			matches := matcher.match(tc.toMatch)

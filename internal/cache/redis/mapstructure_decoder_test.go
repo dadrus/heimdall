@@ -72,13 +72,11 @@ func TestDecodeCredentialsHookFunc(t *testing.T) {
 	require.NoError(t, err)
 
 	// du to a bug in the linter
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, creds credentials)
 	}{
-		{
-			uc: "static structured credentials with all fields",
+		"static structured credentials with all fields": {
 			config: []byte(`
 credentials:
   username: foo
@@ -95,8 +93,7 @@ credentials:
 				assert.Equal(t, "bar", sc.Password)
 			},
 		},
-		{
-			uc: "static structured credentials with username only",
+		"static structured credentials with username only": {
 			config: []byte(`
 credentials:
   username: foo
@@ -112,8 +109,7 @@ credentials:
 				assert.Empty(t, sc.Password)
 			},
 		},
-		{
-			uc: "static structured credentials with password only",
+		"static structured credentials with password only": {
 			config: []byte(`
 credentials:
   password: bar
@@ -129,8 +125,7 @@ credentials:
 				assert.Equal(t, "bar", sc.Password)
 			},
 		},
-		{
-			uc:     "existing externally managed credentials with all fields",
+		"existing externally managed credentials with all fields": {
 			config: []byte(`credentials: { path: ` + cf1.Name() + `}`),
 			assert: func(t *testing.T, err error, creds credentials) {
 				t.Helper()
@@ -144,8 +139,7 @@ credentials:
 				assert.Equal(t, "rab", sc.creds.Password)
 			},
 		},
-		{
-			uc:     "existing externally managed credentials with username only",
+		"existing externally managed credentials with username only": {
 			config: []byte(`credentials: { path: ` + cf2.Name() + `}`),
 			assert: func(t *testing.T, err error, creds credentials) {
 				t.Helper()
@@ -159,8 +153,7 @@ credentials:
 				assert.Empty(t, sc.creds.Password)
 			},
 		},
-		{
-			uc:     "existing externally managed credentials with password only",
+		"existing externally managed credentials with password only": {
 			config: []byte(`credentials: { path: ` + cf3.Name() + `}`),
 			assert: func(t *testing.T, err error, creds credentials) {
 				t.Helper()
@@ -174,8 +167,7 @@ credentials:
 				assert.Equal(t, "rab", sc.creds.Password)
 			},
 		},
-		{
-			uc:     "not existing externally managed credentials",
+		"not existing externally managed credentials": {
 			config: []byte(`credentials: { path: ` + testDir + "/foo.bar }"),
 			assert: func(t *testing.T, err error, _ credentials) {
 				t.Helper()
@@ -184,8 +176,7 @@ credentials:
 				require.ErrorContains(t, err, "no such file")
 			},
 		},
-		{
-			uc:     "existing externally managed credentials file with bad content",
+		"existing externally managed credentials file with bad content": {
 			config: []byte(`credentials: { path: ` + cf4.Name() + `}`),
 			assert: func(t *testing.T, err error, _ credentials) {
 				t.Helper()
@@ -195,7 +186,7 @@ credentials:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 

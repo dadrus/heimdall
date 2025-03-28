@@ -33,13 +33,11 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 	// there are seven authenticators implemented, which should have been registered
 	require.Len(t, authenticatorTypeFactories, 6)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		typ    string
 		assert func(t *testing.T, err error, auth Authenticator)
 	}{
-		{
-			uc:  "using known type",
+		"using known type": {
 			typ: AuthenticatorAnonymous,
 			assert: func(t *testing.T, err error, auth Authenticator) {
 				t.Helper()
@@ -48,8 +46,7 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 				assert.IsType(t, &anonymousAuthenticator{}, auth)
 			},
 		},
-		{
-			uc:  "using unknown type",
+		"using unknown type": {
 			typ: "foo",
 			assert: func(t *testing.T, err error, _ Authenticator) {
 				t.Helper()
@@ -59,7 +56,7 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)

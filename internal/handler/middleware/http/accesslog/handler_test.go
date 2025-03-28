@@ -48,15 +48,13 @@ func TestHandlerExecution(t *testing.T) {
 		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
 	})
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		method        string
 		setHeader     func(t *testing.T, req *http.Request)
 		handleRequest func(t *testing.T, rw http.ResponseWriter, req *http.Request)
 		assert        func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any)
 	}{
-		{
-			uc:        "without tracing, x-* header and errors",
+		"without tracing, x-* header and errors": {
 			method:    http.MethodGet,
 			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
@@ -104,8 +102,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
-		{
-			uc:     "with tracing, x-* header and error",
+		"with tracing, x-* header and error": {
 			method: http.MethodPost,
 			setHeader: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -174,8 +171,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, "for=127.0.0.1", logEvent1["_http_forwarded"])
 			},
 		},
-		{
-			uc:        "without tracing and x-* header, but with subject and error set on context",
+		"without tracing and x-* header, but with subject and error set on context": {
 			method:    http.MethodPatch,
 			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
@@ -225,8 +221,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
-		{
-			uc:        "without tracing and x-* header, but with subject and redirect handling",
+		"without tracing and x-* header, but with subject and redirect handling": {
 			method:    http.MethodPatch,
 			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
@@ -275,7 +270,7 @@ func TestHandlerExecution(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})

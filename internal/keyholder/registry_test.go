@@ -30,21 +30,18 @@ func (t testKeyHolder) Keys() []jose.JSONWebKey { return t }
 func TestRegistryKeys(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		keyHolder []KeyHolder
 		assert    func(t *testing.T, keys []jose.JSONWebKey)
 	}{
-		{
-			uc: "no key holders",
+		"no key holders": {
 			assert: func(t *testing.T, keys []jose.JSONWebKey) {
 				t.Helper()
 
 				assert.Empty(t, keys)
 			},
 		},
-		{
-			uc:        "key holder without keys",
+		"key holder without keys": {
 			keyHolder: []KeyHolder{testKeyHolder{}},
 			assert: func(t *testing.T, keys []jose.JSONWebKey) {
 				t.Helper()
@@ -52,8 +49,7 @@ func TestRegistryKeys(t *testing.T) {
 				assert.Empty(t, keys)
 			},
 		},
-		{
-			uc:        "key holder with one key",
+		"key holder with one key": {
 			keyHolder: []KeyHolder{testKeyHolder{{KeyID: "test-1"}}},
 			assert: func(t *testing.T, keys []jose.JSONWebKey) {
 				t.Helper()
@@ -61,8 +57,7 @@ func TestRegistryKeys(t *testing.T) {
 				assert.Equal(t, []jose.JSONWebKey{{KeyID: "test-1"}}, keys)
 			},
 		},
-		{
-			uc:        "key holder with multiple keys",
+		"key holder with multiple keys": {
 			keyHolder: []KeyHolder{testKeyHolder{{KeyID: "test-1"}, {KeyID: "test-2"}}},
 			assert: func(t *testing.T, keys []jose.JSONWebKey) {
 				t.Helper()
@@ -70,8 +65,7 @@ func TestRegistryKeys(t *testing.T) {
 				assert.Equal(t, []jose.JSONWebKey{{KeyID: "test-1"}, {KeyID: "test-2"}}, keys)
 			},
 		},
-		{
-			uc: "multiple key holders, one with single key, one with multiple keys and one without keys",
+		"multiple key holders, one with single key, one with multiple keys and one without keys": {
 			keyHolder: []KeyHolder{
 				testKeyHolder{{KeyID: "test-1"}, {KeyID: "test-2"}},
 				testKeyHolder{},
@@ -84,7 +78,7 @@ func TestRegistryKeys(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			reg := newRegistry()
 

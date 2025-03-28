@@ -79,15 +79,13 @@ func TestToTLSConfig(t *testing.T) {
 	_, err = pemFile.Write(pemBytes)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		conf       func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS
 		serverAuth bool
 		clientAuth bool
 		assert     func(t *testing.T, err error, conf *tls.Config)
 	}{
-		{
-			uc: "empty config",
+		"empty config": {
 			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
 				t.Helper()
 
@@ -106,8 +104,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, conf.NextProtos, "http/1.1")
 			},
 		},
-		{
-			uc:         "empty config, but requires server auth",
+		"empty config, but requires server auth": {
 			serverAuth: true,
 			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -122,8 +119,7 @@ func TestToTLSConfig(t *testing.T) {
 				require.ErrorContains(t, err, "no path to tls key")
 			},
 		},
-		{
-			uc:         "fails due to not existent key store for TLS usage",
+		"fails due to not existent key store for TLS usage": {
 			serverAuth: true,
 			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -138,8 +134,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed loading")
 			},
 		},
-		{
-			uc:         "fails due to not existent key for the given key id for TLS usage",
+		"fails due to not existent key for the given key id for TLS usage": {
 			serverAuth: true,
 			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -158,8 +153,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, err.Error(), "no such key")
 			},
 		},
-		{
-			uc:         "fails due to not present certificates for the given key id",
+		"fails due to not present certificates for the given key id": {
 			serverAuth: true,
 			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -178,8 +172,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, err.Error(), "no certificate present")
 			},
 		},
-		{
-			uc:         "fails due to failing watcher registration",
+		"fails due to failing watcher registration": {
 			serverAuth: true,
 			conf: func(t *testing.T, wm *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -198,8 +191,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, err.Error(), "test error")
 			},
 		},
-		{
-			uc:         "successful with default key for TLS server auth",
+		"successful with default key for TLS server auth": {
 			serverAuth: true,
 			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -233,8 +225,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, conf.NextProtos, "http/1.1")
 			},
 		},
-		{
-			uc:         "successful with default key for TLS client auth",
+		"successful with default key for TLS client auth": {
 			clientAuth: true,
 			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -268,8 +259,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, conf.NextProtos, "http/1.1")
 			},
 		},
-		{
-			uc:         "successful with specified key id for TLS server auth",
+		"successful with specified key id for TLS server auth": {
 			serverAuth: true,
 			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -304,8 +294,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Contains(t, conf.NextProtos, "http/1.1")
 			},
 		},
-		{
-			uc:         "successful with specified key id for TLS client auth",
+		"successful with specified key id for TLS client auth": {
 			clientAuth: true,
 			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
 				t.Helper()
@@ -341,7 +330,7 @@ func TestToTLSConfig(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			wm := mocks.NewWatcherMock(t)
 			om := mocks2.NewObserverMock(t)

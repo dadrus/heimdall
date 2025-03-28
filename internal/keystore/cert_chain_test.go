@@ -225,14 +225,12 @@ func TestCertChainTestSuite(t *testing.T) {
 }
 
 func (suite *CertChainTestSuite) TestFindChain() {
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		eeCert   *x509.Certificate
 		certPool []*x509.Certificate
 		assert   func(t *testing.T, chain []*x509.Certificate)
 	}{
-		{
-			uc:     "can find chain",
+		"can find chain": {
 			eeCert: suite.ee1.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA2.Certificate, suite.rootCA1.Certificate, suite.intCA1.Certificate,
@@ -247,8 +245,7 @@ func (suite *CertChainTestSuite) TestFindChain() {
 				assert.Equal(t, suite.rootCA1.Certificate, chain[2])
 			},
 		},
-		{
-			uc:     "can find chain, but is incomplete due to missing intermediate CA",
+		"can find chain, but is incomplete due to missing intermediate CA": {
 			eeCert: suite.ee1.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA2.Certificate, suite.rootCA1.Certificate,
@@ -261,8 +258,7 @@ func (suite *CertChainTestSuite) TestFindChain() {
 				assert.Equal(t, suite.ee1.Certificate, chain[0])
 			},
 		},
-		{
-			uc:     "can not find chain due to missing ee cert",
+		"can not find chain due to missing ee cert": {
 			eeCert: suite.ee1.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA2.Certificate, suite.rootCA1.Certificate,
@@ -274,8 +270,7 @@ func (suite *CertChainTestSuite) TestFindChain() {
 				require.Empty(t, chain)
 			},
 		},
-		{
-			uc:     "can find chain, chain includes cross cert",
+		"can find chain, chain includes cross cert": {
 			eeCert: suite.ee5.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA4.Certificate, suite.rootCA1.Certificate, suite.intCA1.Certificate,
@@ -293,7 +288,7 @@ func (suite *CertChainTestSuite) TestFindChain() {
 			},
 		},
 	} {
-		suite.Run("case="+tc.uc, func() {
+		suite.Run(uc, func() {
 			// GIVEN
 			// WHEN
 			chain := keystore.FindChain(tc.eeCert.PublicKey, tc.certPool)
@@ -305,14 +300,12 @@ func (suite *CertChainTestSuite) TestFindChain() {
 }
 
 func (suite *CertChainTestSuite) TestValidateChain() {
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		eeCert   *x509.Certificate
 		certPool []*x509.Certificate
 		assert   func(t *testing.T, err error)
 	}{
-		{
-			uc:     "chain is invalid due timely invalid ee certificate",
+		"chain is invalid due timely invalid ee certificate": {
 			eeCert: suite.ee2.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA2.Certificate, suite.rootCA1.Certificate, suite.intCA1.Certificate,
@@ -326,8 +319,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 				assert.Contains(t, err.Error(), "certificate has expired or is not yet valid")
 			},
 		},
-		{
-			uc:     "chain is valid",
+		"chain is valid": {
 			eeCert: suite.ee3.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA2.Certificate, suite.rootCA1.Certificate, suite.intCA1.Certificate,
@@ -339,8 +331,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:     "chain is invalid due to malformed CA",
+		"chain is invalid due to malformed CA": {
 			eeCert: suite.ee4.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA2.Certificate, suite.rootCA1.Certificate, suite.intCA3.Certificate,
@@ -354,8 +345,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 				assert.Contains(t, err.Error(), "parent certificate cannot sign")
 			},
 		},
-		{
-			uc:     "chain with cross cert is valid",
+		"chain with cross cert is valid": {
 			eeCert: suite.ee5.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA4.Certificate, suite.rootCA1.Certificate, suite.intCA1.Certificate,
@@ -368,7 +358,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 			},
 		},
 	} {
-		suite.Run("case="+tc.uc, func() {
+		suite.Run(uc, func() {
 			// GIVEN
 			chain := keystore.FindChain(tc.eeCert.PublicKey, tc.certPool)
 

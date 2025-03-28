@@ -27,14 +27,12 @@ import (
 func TestSessionLifespanConfigCreateSession(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		data      []byte
 		configure func(t *testing.T, conf *SessionLifespanConfig)
 		assert    func(t *testing.T, session *SessionLifespan, err error)
 	}{
-		{
-			uc:   "empty session config",
+		"empty session config": {
 			data: []byte(`{"foo":"bar"}`),
 			configure: func(t *testing.T, _ *SessionLifespanConfig) {
 				t.Helper()
@@ -51,8 +49,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "only active field is defined in session config",
+		"only active field is defined in session config": {
 			data: []byte(`{"foo":"false"}`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -71,8 +68,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "only issued at field is defined in session config",
+		"only issued at field is defined in session config": {
 			data: []byte(`{"data": { "val": 1661408890 } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -91,8 +87,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "issued at and time format fields are defined in session config",
+		"issued at and time format fields are defined in session config": {
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -115,8 +110,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "issued at and time format fields are defined in session config, with bad time format",
+		"issued at and time format fields are defined in session config, with bad time format": {
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -133,8 +127,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Contains(t, err.Error(), "issued_at")
 			},
 		},
-		{
-			uc:   "only not before field is defined in session config",
+		"only not before field is defined in session config": {
 			data: []byte(`{"data": { "val": 1661408890 } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -153,8 +146,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "not before and time format fields are defined in session config",
+		"not before and time format fields are defined in session config": {
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -177,8 +169,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "not before and time format fields are defined in session config, with bad time format",
+		"not before and time format fields are defined in session config, with bad time format": {
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -195,8 +186,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Contains(t, err.Error(), "not_before")
 			},
 		},
-		{
-			uc:   "only not after field is defined in session config",
+		"only not after field is defined in session config": {
 			data: []byte(`{"data": { "val": 1661408890 } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -215,8 +205,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "not after and time format fields are defined in session config",
+		"not after and time format fields are defined in session config": {
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -239,8 +228,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
 		},
-		{
-			uc:   "not after and time format fields are defined in session config, with bad time format",
+		"not after and time format fields are defined in session config, with bad time format": {
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
 			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
@@ -258,7 +246,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			s := SessionLifespanConfig{}
 			tc.configure(t, &s)

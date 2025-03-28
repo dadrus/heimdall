@@ -35,14 +35,11 @@ import (
 func TestCreateCookieFinalizer(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		id     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, finalizer *cookieFinalizer)
 	}{
-		{
-			uc: "without configuration",
+		"without configuration": {
 			assert: func(t *testing.T, err error, _ *cookieFinalizer) {
 				t.Helper()
 
@@ -51,8 +48,7 @@ func TestCreateCookieFinalizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "'cookies' is a required field")
 			},
 		},
-		{
-			uc:     "with empty cookies configuration",
+		"with empty cookies configuration": {
 			config: []byte(`cookies: {}`),
 			assert: func(t *testing.T, err error, _ *cookieFinalizer) {
 				t.Helper()
@@ -62,8 +58,7 @@ func TestCreateCookieFinalizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "'cookies' must contain more than 0 items")
 			},
 		},
-		{
-			uc: "with unsupported attributes",
+		"with unsupported attributes": {
 			config: []byte(`
 cookies:
   foo: bar
@@ -77,8 +72,7 @@ foo: bar
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with bad template",
+		"with bad template": {
 			config: []byte(`
 cookies:
   bar: "{{ .Subject.ID | foobar }}"
@@ -92,9 +86,7 @@ cookies:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with valid config",
-			id: "cun",
+		"with valid config": {
 			config: []byte(`
 cookies:
   foo: bar
@@ -104,7 +96,7 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Len(t, finalizer.cookies, 2)
-				assert.Equal(t, "cun", finalizer.ID())
+				assert.Equal(t, "with valid config", finalizer.ID())
 
 				val, err := finalizer.cookies["foo"].Render(nil)
 				require.NoError(t, err)
@@ -120,7 +112,7 @@ cookies:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
@@ -133,7 +125,7 @@ cookies:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			finalizer, err := newCookieFinalizer(appCtx, tc.id, conf)
+			finalizer, err := newCookieFinalizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -144,16 +136,12 @@ cookies:
 func TestCreateCookieFinalizerFromPrototype(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
-		id              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer)
 	}{
-		{
-			uc: "no new configuration provided",
-			id: "cun1",
+		"no new configuration provided": {
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
@@ -163,12 +151,10 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "cun1", configured.ID())
+				assert.Equal(t, "no new configuration provided", configured.ID())
 			},
 		},
-		{
-			uc: "configuration without cookies provided",
-			id: "cun2",
+		"configuration without cookies provided": {
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
@@ -179,12 +165,10 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "cun2", configured.ID())
+				assert.Equal(t, "configuration without cookies provided", configured.ID())
 			},
 		},
-		{
-			uc: "new cookies provided",
-			id: "cun3",
+		"new cookies provided": {
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
@@ -200,7 +184,7 @@ cookies:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.cookies)
-				assert.Equal(t, "cun3", configured.ID())
+				assert.Equal(t, "new cookies provided", configured.ID())
 				assert.Equal(t, prototype.ID(), configured.ID())
 
 				val, err := configured.cookies["bar"].Render(nil)
@@ -212,7 +196,7 @@ cookies:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
@@ -227,7 +211,7 @@ cookies:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newCookieFinalizer(appCtx, tc.id, pc)
+			prototype, err := newCookieFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -245,17 +229,13 @@ cookies:
 func TestCookieFinalizerExecute(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc               string
-		id               string
+	for uc, tc := range map[string]struct {
 		config           []byte
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		createSubject    func(t *testing.T) *subject.Subject
 		assert           func(t *testing.T, err error)
 	}{
-		{
-			uc: "with nil subject",
-			id: "cun1",
+		"with nil subject": {
 			config: []byte(`
 cookies:
   foo: bar
@@ -270,11 +250,10 @@ cookies:
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "cun1", identifier.ID())
+				assert.Equal(t, "with nil subject", identifier.ID())
 			},
 		},
-		{
-			uc: "with all preconditions satisfied",
+		"with all preconditions satisfied": {
 			config: []byte(`
 cookies:
   foo: "{{ .Subject.Attributes.bar }}"
@@ -309,7 +288,7 @@ cookies:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			createSubject := x.IfThenElse(tc.createSubject != nil,
 				tc.createSubject,
@@ -340,7 +319,7 @@ cookies:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			finalizer, err := newCookieFinalizer(appCtx, tc.id, conf)
+			finalizer, err := newCookieFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
 			// WHEN

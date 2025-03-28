@@ -158,13 +158,11 @@ func TestNewJWTSigner(t *testing.T) {
 	_, err = keyFile.Write(pemBytes)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig
 		assert func(t *testing.T, err error, signer *jwtSigner)
 	}{
-		{
-			uc: "without configuration",
+		"without configuration": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -177,8 +175,7 @@ func TestNewJWTSigner(t *testing.T) {
 				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
-		{
-			uc: "no key id configured",
+		"no key id configured": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -198,8 +195,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with key id configured",
+		"with key id configured": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -219,8 +215,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with error while retrieving key from key store",
+		"with error while retrieving key from key store": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -233,8 +228,7 @@ func TestNewJWTSigner(t *testing.T) {
 				require.ErrorIs(t, err, keystore.ErrNoSuchKey)
 			},
 		},
-		{
-			uc: "with rsa 2048 key",
+		"with rsa 2048 key": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -254,8 +248,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with rsa 3072 key",
+		"with rsa 3072 key": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -275,8 +268,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with rsa 4096 key",
+		"with rsa 4096 key": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -296,8 +288,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with P256 ecdsa key",
+		"with P256 ecdsa key": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -317,8 +308,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with P384 ecdsa key",
+		"with P384 ecdsa key": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -338,8 +328,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with P512 ecdsa key",
+		"with P512 ecdsa key": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -359,8 +348,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Empty(t, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with not existing key store",
+		"with not existing key store": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -374,8 +362,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to get information about")
 			},
 		},
-		{
-			uc: "with certificate, which cannot be used for signature due to missing key usage",
+		"with certificate, which cannot be used for signature due to missing key usage": {
 			config: func(t *testing.T, _ *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -393,8 +380,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Contains(t, err.Error(), "missing key usage: DigitalSignature")
 			},
 		},
-		{
-			uc: "with self-signed certificate usable for JWT signing",
+		"with self-signed certificate usable for JWT signing": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -418,8 +404,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, []*x509.Certificate{cert5}, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "with usable certificate including a full cert chain",
+		"with usable certificate including a full cert chain": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -443,8 +428,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, []*x509.Certificate{cert6, intCACert, rootCA.Certificate}, signer.activeCertificateChain())
 			},
 		},
-		{
-			uc: "fails due to error while registering with file watcher",
+		"fails due to error while registering with file watcher": {
 			config: func(t *testing.T, wm *mocks.WatcherMock) *SignerConfig {
 				t.Helper()
 
@@ -464,7 +448,7 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			wm := mocks.NewWatcherMock(t)
 			signer, err := newJWTSigner(tc.config(t, wm), wm)
@@ -487,14 +471,12 @@ func TestJWTSignerSign(t *testing.T) {
 	subjectID := "foobar"
 	ttl := 10 * time.Minute
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		signer *jwtSigner
 		claims map[string]any
 		assert func(t *testing.T, err error, rawJWT string, signer *jwtSigner, claims map[string]any)
 	}{
-		{
-			uc: "sign with rsa",
+		"sign with rsa": {
 			signer: &jwtSigner{
 				iss: "foo",
 				key: rsaPrivKey1,
@@ -508,8 +490,7 @@ func TestJWTSignerSign(t *testing.T) {
 				validateTestJWT(t, rawJWT, signer, subjectID, ttl, claims)
 			},
 		},
-		{
-			uc: "sign with ecds",
+		"sign with ecdsa": {
 			signer: &jwtSigner{
 				iss: "foo",
 				key: ecdsaPrivKey1,
@@ -523,8 +504,7 @@ func TestJWTSignerSign(t *testing.T) {
 				validateTestJWT(t, rawJWT, signer, subjectID, ttl, claims)
 			},
 		},
-		{
-			uc: "sign claims, which contain JWT specific claims",
+		"sign claims, which contain JWT specific claims": {
 			signer: &jwtSigner{
 				iss: "foo",
 				key: ecdsaPrivKey1,
@@ -539,8 +519,7 @@ func TestJWTSignerSign(t *testing.T) {
 				validateTestJWT(t, rawJWT, signer, subjectID, ttl, claims)
 			},
 		},
-		{
-			uc: "sign with unsupported algorithm",
+		"sign with unsupported algorithm": {
 			signer: &jwtSigner{
 				iss: "foo",
 				key: rsaPrivKey1,
@@ -556,7 +535,7 @@ func TestJWTSignerSign(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			jwt, err := tc.signer.Sign(subjectID, ttl, tc.claims)
 

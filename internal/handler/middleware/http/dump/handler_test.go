@@ -34,13 +34,11 @@ import (
 func TestDumpHandlerExecution(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		logLevel zerolog.Level
 		assert   func(t *testing.T, logstring string)
 	}{
-		{
-			uc:       "debug log level",
+		"debug log level": {
 			logLevel: zerolog.DebugLevel,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
@@ -48,8 +46,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 				assert.Empty(t, logs)
 			},
 		},
-		{
-			uc:       "trace log level",
+		"trace log level": {
 			logLevel: zerolog.TraceLevel,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
@@ -75,7 +72,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb}).Level(tc.logLevel)

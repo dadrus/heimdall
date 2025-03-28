@@ -278,15 +278,13 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 func TestRepositoryFindRule(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc               string
+	for uc, tc := range map[string]struct {
 		requestURL       *url.URL
 		addRules         func(t *testing.T, repo *repository)
 		configureFactory func(t *testing.T, factory *mocks.FactoryMock)
 		assert           func(t *testing.T, err error, rul rule.Rule)
 	}{
-		{
-			uc:         "no matching rule",
+		"no matching rule": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -300,8 +298,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrNoRuleFound)
 			},
 		},
-		{
-			uc:         "matches default rule",
+		"matches default rule": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -316,8 +313,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.Equal(t, &ruleImpl{id: "test", isDefault: true}, rul)
 			},
 		},
-		{
-			uc:         "matches upstream rule",
+		"matches upstream rule": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -346,7 +342,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			addRules := x.IfThenElse(tc.addRules != nil,
 				tc.addRules,

@@ -93,14 +93,12 @@ func TestNewListener(t *testing.T) {
 	_, err = pemFile.Write(pemBytes)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc          string
+	for uc, tc := range map[string]struct {
 		network     string
 		serviceConf config.ServeConfig
 		assert      func(t *testing.T, err error, ln net.Listener, port string)
 	}{
-		{
-			uc:          "creation fails",
+		"creation fails": {
 			network:     "foo",
 			serviceConf: config.ServeConfig{},
 			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
@@ -110,8 +108,7 @@ func TestNewListener(t *testing.T) {
 				assert.Contains(t, err.Error(), "foo")
 			},
 		},
-		{
-			uc:          "without TLS",
+		"without TLS": {
 			network:     "tcp",
 			serviceConf: config.ServeConfig{Host: "127.0.0.1"},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
@@ -124,8 +121,7 @@ func TestNewListener(t *testing.T) {
 				assert.Equal(t, "127.0.0.1:"+port, ln.Addr().String())
 			},
 		},
-		{
-			uc:      "fails due to not existent key store for TLS usage",
+		"fails due to not existent key store for TLS usage": {
 			network: "tcp",
 			serviceConf: config.ServeConfig{
 				TLS: &config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
@@ -138,8 +134,7 @@ func TestNewListener(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed loading")
 			},
 		},
-		{
-			uc:          "fails due to not specified key store",
+		"fails due to not specified key store": {
 			network:     "tcp",
 			serviceConf: config.ServeConfig{TLS: &config.TLS{}},
 			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
@@ -150,8 +145,7 @@ func TestNewListener(t *testing.T) {
 				assert.Contains(t, err.Error(), "no path to tls key store")
 			},
 		},
-		{
-			uc:      "successful with specified key id",
+		"successful with specified key id": {
 			network: "tcp",
 			serviceConf: config.ServeConfig{
 				TLS: &config.TLS{
@@ -170,7 +164,7 @@ func TestNewListener(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			port, err := freePort()
 			require.NoError(t, err)

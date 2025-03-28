@@ -27,63 +27,51 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 
 	trueValue := true
 
-	for _, tc := range []struct {
-		uc string
-		in *Matcher
-	}{
-		{
-			uc: "single route defining only a path",
-			in: &Matcher{
-				Routes: []Route{{Path: "/foo/bar"}},
-			},
+	for uc, tc := range map[string]*Matcher{
+		"single route defining only a path": {
+			Routes: []Route{{Path: "/foo/bar"}},
 		},
-		{
-			uc: "single route defining path and some path parameters",
-			in: &Matcher{
-				Routes: []Route{
-					{
-						Path: "/:foo/:bar",
-						PathParams: []ParameterMatcher{
-							{Name: "foo", Value: "bar", Type: "glob"},
-							{Name: "bar", Value: "baz", Type: "regex"},
-						},
+		"single route defining path and some path parameters": {
+			Routes: []Route{
+				{
+					Path: "/:foo/:bar",
+					PathParams: []ParameterMatcher{
+						{Name: "foo", Value: "bar", Type: "glob"},
+						{Name: "bar", Value: "baz", Type: "regex"},
 					},
 				},
 			},
 		},
-		{
-			uc: "multiple routes and additional constraints",
-			in: &Matcher{
-				Routes: []Route{
-					{
-						Path: "/:foo/:bar",
-						PathParams: []ParameterMatcher{
-							{Name: "foo", Value: "bar", Type: "glob"},
-							{Name: "bar", Value: "baz", Type: "regex"},
-						},
-					},
-					{
-						Path: "/some/static/path",
+		"multiple routes and additional constraints": {
+			Routes: []Route{
+				{
+					Path: "/:foo/:bar",
+					PathParams: []ParameterMatcher{
+						{Name: "foo", Value: "bar", Type: "glob"},
+						{Name: "bar", Value: "baz", Type: "regex"},
 					},
 				},
-				BacktrackingEnabled: &trueValue,
-				Scheme:              "https",
-				Hosts: []HostMatcher{
-					{
-						Value: "*example.com",
-						Type:  "glob",
-					},
+				{
+					Path: "/some/static/path",
 				},
-				Methods: []string{"GET", "POST"},
 			},
+			BacktrackingEnabled: &trueValue,
+			Scheme:              "https",
+			Hosts: []HostMatcher{
+				{
+					Value: "*example.com",
+					Type:  "glob",
+				},
+			},
+			Methods: []string{"GET", "POST"},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			out := new(Matcher)
 
-			tc.in.DeepCopyInto(out)
+			tc.DeepCopyInto(out)
 
-			assert.Equal(t, tc.in, out)
+			assert.Equal(t, tc, out)
 		})
 	}
 }

@@ -32,15 +32,13 @@ import (
 func TestHandler(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		requestMethod string
 		filterMethod  string
 		setupNext     func(t *testing.T, next *mocks.HandlerMock)
 		assert        func(t *testing.T, rec *httptest.ResponseRecorder)
 	}{
-		{
-			uc:            "method accepted",
+		"method accepted": {
 			requestMethod: http.MethodDelete,
 			filterMethod:  http.MethodDelete,
 			setupNext: func(t *testing.T, next *mocks.HandlerMock) {
@@ -52,8 +50,7 @@ func TestHandler(t *testing.T) {
 				t.Helper()
 			},
 		},
-		{
-			uc:            "method not allowed",
+		"method not allowed": {
 			requestMethod: http.MethodDelete,
 			filterMethod:  http.MethodGet,
 			setupNext: func(t *testing.T, _ *mocks.HandlerMock) {
@@ -66,7 +63,7 @@ func TestHandler(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			next := mocks.NewHandlerMock(t)
 			tc.setupNext(t, next)

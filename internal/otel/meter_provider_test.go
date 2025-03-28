@@ -33,14 +33,12 @@ import (
 )
 
 func TestInitMeterProvider(t *testing.T) {
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		conf       config.MetricsConfig
 		setupMocks func(t *testing.T, lcMock *mockLifecycle)
 		assert     func(t *testing.T, err error, logged string)
 	}{
-		{
-			uc:   "disabled tracing",
+		"disabled tracing": {
 			conf: config.MetricsConfig{Enabled: false},
 			assert: func(t *testing.T, err error, logged string) {
 				t.Helper()
@@ -49,8 +47,7 @@ func TestInitMeterProvider(t *testing.T) {
 				assert.Contains(t, logged, "metrics disabled")
 			},
 		},
-		{
-			uc:   "failing exporter creation",
+		"failing exporter creation": {
 			conf: config.MetricsConfig{Enabled: true},
 			setupMocks: func(t *testing.T, _ *mockLifecycle) {
 				t.Helper()
@@ -64,8 +61,7 @@ func TestInitMeterProvider(t *testing.T) {
 				require.ErrorIs(t, err, exporters.ErrUnsupportedMetricExporterType)
 			},
 		},
-		{
-			uc:   "successful initialization",
+		"successful initialization": {
 			conf: config.MetricsConfig{Enabled: true},
 			setupMocks: func(t *testing.T, lcMock *mockLifecycle) {
 				t.Helper()
@@ -85,7 +81,7 @@ func TestInitMeterProvider(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			setupMocks := x.IfThenElse(
 				tc.setupMocks != nil,
