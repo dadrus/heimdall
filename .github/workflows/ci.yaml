@@ -574,7 +574,7 @@ jobs:
           COSIGN_REPOSITORY: ${{ github.repository }}-sbom
         run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
       - name: Update DockerHub repository description & readme
-        uses: peter-evans/dockerhub-description@e98e4d1628a5f3be2be7c231e50981aee98723ae # v4.0.0
+        uses: peter-evans/dockerhub-description@0505d8b04853a30189aee66f5bb7fd1511bbac71 # v4.0.1
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
