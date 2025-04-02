@@ -1,21 +1,11 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 02 Apr 2025 13:15:44 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 02 Apr 2025 13:34:55 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_what_is_heimdall">What is heimdall?&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>Heimdall is a cloud native identity aware proxy and access control decision service inspired by the Zero Trust idea. It brings together authentication and authorization systems and can be thought as an orchestrator for these in front of your services, allowing however completely retaining control even without the need for any type of maintenance in your own code.&lt;/p>
+&lt;p>Heimdall is a cloud native identity aware proxy and access control decision service inspired by the Zero Trust idea. It brings together authentication and authorization systems and can be thought of as an orchestrator for these in front of your services, allowing you to completely retain control without the need for any type of maintenance in your own code.&lt;/p>
 &lt;/div>
 &lt;div class="paragraph">
-&lt;p>You can use it&lt;/p>
-&lt;/div>
-&lt;div class="ulist">
-&lt;ul>
-&lt;li>
-&lt;p>integrated into available proxies and API gateways, allowing implementation of Edge-level Authorization Architectures, or&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>stand alone as an authentication &amp;amp; authorization proxy&lt;/p>
-&lt;/li>
-&lt;/ul>
+&lt;p>You can use it, in one of the following modes:&lt;/p>
 &lt;/div></description></item><item><title>Install heimdall</title><link>https://dadrus.github.io/docs/getting_started/installation/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/installation/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_source_code">Source Code&lt;/h2>
 &lt;div class="sectionbody">
@@ -337,13 +327,13 @@ To allow heimdall communicating with services running in the mesh, add the certi
 &lt;p>By the end of this guide, you’ll have a functional setup where heimdall uses &lt;a href="https://www.keycloak.org/">Keycloak&lt;/a> to authenticate users and route requests based on their authentication status and roles for role-based access control.&lt;/p>
 &lt;/div>
 &lt;div class="paragraph">
-&lt;p>Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with &lt;a href="https://zitadel.com">Zitadel&lt;/a>, &lt;a href="https://github.com/malach-it/boruta-server">Boruta&lt;/a>, or any other OpenID Connect-compatible IDP.&lt;/p>
+&lt;p>Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with &lt;a href="https://zitadel.com">Zitadel&lt;/a>, &lt;a href="https://github.com/malach-it/boruta-server">Boruta&lt;/a>, or any other OpenID Connect compatible IDP.&lt;/p>
 &lt;/div>
 &lt;div class="sect1">
 &lt;h2 id="_overview">Overview&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>In this guide, we’ll set up a Docker Compose environment where heimdall secures services and controls access to specific endpoints:&lt;/p>
+&lt;p>In this guide, we’ll set up a Docker Compose environment where heimdall secures services and controls access for specific endpoints:&lt;/p>
 &lt;/div></description></item><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph">
 &lt;p>Configuration in heimdall can refer to two different things:&lt;/p>
 &lt;/div>
