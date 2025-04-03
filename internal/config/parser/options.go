@@ -17,12 +17,13 @@
 package parser
 
 import (
+	"io"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 )
 
-type ConfigSyntaxValidator func(configPath string) error
+type ConfigSyntaxValidator func(cfgSrc io.Reader) error
 
 type ConfigSemanticsValidator func(cfg any) error
 

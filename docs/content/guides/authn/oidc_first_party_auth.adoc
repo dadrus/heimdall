@@ -13,11 +13,11 @@ description: This guide will walk you through the process of integrating heimdal
 
 By the end of this guide, you'll have a functional setup where heimdall uses https://www.keycloak.org/[Keycloak] to authenticate users and route requests based on their authentication status and roles for role-based access control.
 
-Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with https://zitadel.com[Zitadel], https://github.com/malach-it/boruta-server[Boruta], or any other OpenID Connect-compatible IDP.
+Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with https://zitadel.com[Zitadel], https://github.com/malach-it/boruta-server[Boruta], or any other OpenID Connect compatible IDP.
 
 == Overview
 
-In this guide, we'll set up a Docker Compose environment where heimdall secures  services and controls access to specific endpoints:
+In this guide, we'll set up a Docker Compose environment where heimdall secures services and controls access for specific endpoints:
 
 * `/` - This endpoint is open to everyone.
 * `/user` - Accessible only to authenticated users.
@@ -27,22 +27,21 @@ There are also some further endpoints, which you'll learn about during the setup
 
 Technically, the setup includes:
 
-* https://hub.docker.com/r/traefik/whoami/[traefik/whoami] - A service that echoes back everything it receives, simulating our main service with endpoints mentioned above.
+* https://hub.docker.com/r/traefik/whoami/[traefik/whoami] - A service that echoes back everything it receives, simulating our main service, which exposes the endpoints defined above.
 * https://www.keycloak.org/[Keycloak] - Our identity provider.
-* https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] - Handles the Authorization Code Grant flow for the actual user login.
-* heimdall - Manages everything to enforce the requirements outlined above.
+* https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] - Handles the https://tools.ietf.org/html/rfc6749#section-4.1[Authorization Code Grant flow] for the actual user login.
+* heimdall - Enforces all the requirements outlined above.
 
 == Prerequisites
 
 To be able to follow this guide you need the following tools installed locally:
 
 * https://docs.docker.com/install/[Docker],
-* https://docs.docker.com/compose/install/[docker-compose], and
-* a text editor of your choice.
+* https://docs.docker.com/compose/install/[docker-compose]
 
 == Configure the Base Setup
 
-. Create a directory for the configuration files we’ll be using (referred to as the root directory in this guide). Inside this root directory, create two additional directories named `rules` and `initdb`. The former will be used for heimdall rules and the latter for DB initialization scripts.
+. Create a directory for the configuration files (referred to as the root directory in this guide). Inside this root directory, create two additional directories named `rules` and `initdb`. The former will be used for heimdall rules and the latter for DB initialization scripts.
 
 . Create a config file for heimdall named `heimdall-config.yaml` with the following contents in the root directory:
 +
@@ -142,7 +141,7 @@ XVwR/5tokqFVrFxt/5c1x7VdccF4nNM=
 -----END EC PRIVATE KEY-----
 ----
 +
-WARNING: Do not use it for purposes beyond this tutorial!
+WARNING: Do not use it for any purposes beyond this tutorial!
 
 . Next, we’ll create rules for our main service - the one exposing `/`, `/user` and the `/admin` endpoints. To do this, create a file named `upstream-rules.yaml` in the `rules` directory with the following content:
 +
@@ -323,7 +322,7 @@ With the above configuration in place, follow these steps to start Keycloak and 
 
 . In the root directory, run `docker compose up postgresql keycloak`. Wait until the database is initialized and Keycloak has started.
 . Open your browser and go to `\http://127.0.0.1:8080`. Log in using the admin credentials (both the username and password are set to `admin` in our setup).
-. Create a Realm named `test`. For detailed instructions, refer to the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-a-realm_server_administration_guide[ creating a realm].
+. Create a Realm named `test`. For detailed instructions, refer to the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-a-realm_server_administration_guide[creating a realm].
 . Within the `test` realm, create an OpenID Client. Follow the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide[creating an OIDC client]. Enable "Client authentication" and "Standard Flow", set `\http://127.0.0.1:9090/oauth2/callback` as the "Valid Redirect URI" and `\http://127.0.0.1:9090/` as the "Home URL" and "Valid post logout redirect URIs" and note the "Client ID" and "Client Secret" (later can be found under the "Credentials" tab after completing the client creation wizard); we will use these to complete the OAuth2-Proxy configuration in our Docker Compose file.
 . Stop the docker compose setup with `CTRL-C`.
 
@@ -331,7 +330,7 @@ With the above configuration in place, follow these steps to start Keycloak and 
 
 We can now finalize the configuration and use the proper client id and secret for OAuth2-Proxy
 
-. Update the `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` in the configuration of the OAuth2-Proxy in the docker compose file with the "Client ID" and "Client Secret" values from Keycloak
+. Update the `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` in the configuration of OAuth2-Proxy in your docker compose file with the "Client ID" and "Client Secret" values from Keycloak
 
 == Use the Setup
 
@@ -403,5 +402,5 @@ NOTE: To "logout" the user, just delete the cookies for `\http://127.0.0.1:9090`
 
 == Cleanup
 
-Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with `docker-compose down`.
+Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with `docker compose down`.
 

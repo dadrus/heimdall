@@ -417,7 +417,7 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, nil, errorchain.
 			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
 			WithErrorContext(a)
