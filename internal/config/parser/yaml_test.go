@@ -50,7 +50,7 @@ nested_2:
   - somebool: false
     some_string: baz
 `),
-			validator: func(cfgSrc io.Reader) error { return nil },
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -65,7 +65,7 @@ nested_2:
 		},
 		"failed validation": {
 			config:    []byte(`some_string: foo`),
-			validator: func(cfgSrc io.Reader) error { return errors.New("test error") },
+			validator: func(_ io.Reader) error { return errors.New("test error") },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -84,7 +84,7 @@ nested_2:
   - somebool: false
     some_string: '{ "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }} }'
 `),
-			validator: func(cfgSrc io.Reader) error { return nil },
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -103,7 +103,7 @@ nested_2:
 		},
 		"valid content with complex env substitution": {
 			config:    []byte(`complex: ${COMPLEX}`),
-			validator: func(cfgSrc io.Reader) error { return nil },
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -124,7 +124,7 @@ nested_2:
 		},
 		"invalid yaml env substitution": {
 			config:    []byte("${:}"),
-			validator: func(cfgSrc io.Reader) error { return nil },
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
@@ -134,7 +134,7 @@ nested_2:
 		},
 		"can't read content": {
 			config:    []byte(`foo: bar`),
-			validator: func(cfgSrc io.Reader) error { return nil },
+			validator: func(_ io.Reader) error { return nil },
 			chmod: func(t *testing.T, file *os.File) {
 				t.Helper()
 
