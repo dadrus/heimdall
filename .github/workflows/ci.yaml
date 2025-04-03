@@ -13,14 +13,15 @@ on:
 env:
   GO_VERSION: "1.24.1"
   GOLANGCI_LINT_VERSION: "v2.0.2"
-  HELM_VERSION: "3.16.4"
+  HELM_VERSION: "3.17.2"
+  HELM_UNITTEST_VERSION: "v0.8.0"
   KUBECONFORM_VERSION: "0.6.7"
-  KUBERNETES_API_VERSION: "1.30.0"
-  NODE_VERSION: "22.13"
+  KUBERNETES_API_VERSION: "1.31.0"
+  NODE_VERSION: "23.11"
   RUBY_VERSION: "3.4"
-  COSIGN_VERSION: "v2.4.1"
+  COSIGN_VERSION: "v2.4.3"
   CYCLONEDX_GOMOD_VERSION: "v1.9.0"
-  HUGO_VERSION: "0.140.1"
+  HUGO_VERSION: "0.145.0"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 permissions: read-all
@@ -236,7 +237,7 @@ jobs:
           helm: '${{ env.HELM_VERSION }}'
           kubeconform: '${{ env.KUBECONFORM_VERSION }}'
       - name: Install Helm Unittest
-        run: helm plugin install --version v0.6.0 https://github.com/helm-unittest/helm-unittest.git
+        run: helm plugin install --version ${{ env.HELM_UNITTEST_VERSION }} https://github.com/helm-unittest/helm-unittest.git
       - name: Run tests
         run: |
           helm unittest ./charts/heimdall
