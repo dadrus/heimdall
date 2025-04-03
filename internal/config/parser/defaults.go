@@ -16,8 +16,10 @@
 
 package parser
 
+import "io"
+
 // nolint: gochecknoglobals
 var defaultOptions = opts{
-	validateSyntax:    func(_ string) error { return nil },
+	validateSyntax:    func(_ io.Reader) error { return nil },
 	validateSemantics: func(_ any) error { return nil },
 }

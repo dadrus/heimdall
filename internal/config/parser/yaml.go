@@ -17,6 +17,7 @@
 package parser
 
 import (
+	"bytes"
 	"os"
 
 	"github.com/drone/envsubst/v2"
@@ -29,7 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-func koanfFromYaml(configFile string) (*koanf.Koanf, error) {
+func koanfFromYaml(configFile string, validateSyntax ConfigSyntaxValidator) (*koanf.Koanf, error) {
 	parser := koanf.New(".")
 
 	raw, err := os.ReadFile(configFile)
@@ -44,7 +45,12 @@ func koanfFromYaml(configFile string) (*koanf.Koanf, error) {
 			"failed to parse yaml config from %s", configFile).CausedBy(err)
 	}
 
-	if err = parser.Load(rawbytes.Provider(stringx.ToBytes(content)), yaml.Parser()); err != nil {
+	rawContent := stringx.ToBytes(content)
+	if err = validateSyntax(bytes.NewBuffer(rawContent)); err != nil {
+		return nil, err
+	}
+
+	if err = parser.Load(rawbytes.Provider(rawContent), yaml.Parser()); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed to load yaml config from %s", configFile).CausedBy(err)
 	}
