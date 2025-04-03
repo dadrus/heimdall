@@ -110,12 +110,12 @@ func atIndex(pos int, list interface{}) (interface{}, error) {
 		}
 
 		if pos >= 0 && pos >= length {
-			// nolint: goerr113
+			// nolint: err113
 			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 		}
 
 		if pos < 0 && (-pos-1) >= length {
-			// nolint: goerr113
+			// nolint: err113
 			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 		}
 
@@ -126,7 +126,7 @@ func atIndex(pos int, list interface{}) (interface{}, error) {
 		return l2.Index(length + pos).Interface(), nil
 
 	default:
-		// nolint: goerr113
+		// nolint: err113
 		return nil, fmt.Errorf("cannot find at on type %s", tp)
 	}
 }

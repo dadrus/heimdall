@@ -143,7 +143,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.
 	userIDOK := userID == a.userID
 	passwordOK := password == a.password
 
-	if !(userIDOK && passwordOK) {
+	if !userIDOK || !passwordOK {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "invalid user credentials").
 			WithErrorContext(a)

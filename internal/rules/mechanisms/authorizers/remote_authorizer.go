@@ -306,7 +306,7 @@ func (a *remoteAuthorizer) doAuthorize(
 func (a *remoteAuthorizer) readResponse(ctx heimdall.RequestContext, resp *http.Response) (any, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthorization,
 			"authorization failed based on received response code: %v", resp.StatusCode).
 			WithErrorContext(a)

@@ -53,7 +53,7 @@ func TestSubtract(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			result := Subtract(tc.slice1, tc.slice2)
 
-			assert.EqualValues(t, tc.expected, result)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
