@@ -329,7 +329,7 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authDa
 }
 
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).WithErrorContext(a)
 	}

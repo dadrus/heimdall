@@ -53,7 +53,7 @@ func NewClient(conf *rest.Config) (Client, error) {
 	}
 
 	config := *conf
-	config.ContentConfig.GroupVersion = &gv
+	config.GroupVersion = &gv
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()

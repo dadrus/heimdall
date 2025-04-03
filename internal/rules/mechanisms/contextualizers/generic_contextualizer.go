@@ -323,7 +323,7 @@ func (c *genericContextualizer) createRequest(
 func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *http.Response) (any, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).
 			WithErrorContext(c)
