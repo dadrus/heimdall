@@ -17,6 +17,8 @@
 package parser
 
 import (
+	"errors"
+	"io"
 	"os"
 	"testing"
 
@@ -29,11 +31,13 @@ import (
 
 func TestKoanfFromYaml(t *testing.T) {
 	t.Setenv("FOO", "BAR")
+	t.Setenv("COMPLEX", "{ first: foo, second: bar }")
 
 	for uc, tc := range map[string]struct {
-		config []byte
-		chmod  func(t *testing.T, file *os.File)
-		assert func(t *testing.T, err error, kanf *koanf.Koanf)
+		config    []byte
+		validator ConfigSyntaxValidator
+		chmod     func(t *testing.T, file *os.File)
+		assert    func(t *testing.T, err error, kanf *koanf.Koanf)
 	}{
 		"valid content without env substitution": {
 			config: []byte(`
@@ -46,6 +50,7 @@ nested_2:
   - somebool: false
     some_string: baz
 `),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -56,6 +61,16 @@ nested_2:
 				assert.Equal(t, true, konf.Get("nested1.somebool")) //nolint:testifylint
 				assert.Len(t, konf.Get("nested_2"), 1)
 				assert.Contains(t, konf.Get("nested_2"), map[string]any{"some_string": "baz", "somebool": false})
+			},
+		},
+		"failed validation": {
+			config:    []byte(`some_string: foo`),
+			validator: func(_ io.Reader) error { return errors.New("test error") },
+			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "test error")
 			},
 		},
 		"valid content with env substitution and templates": {
@@ -69,6 +84,7 @@ nested_2:
   - somebool: false
     some_string: '{ "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }} }'
 `),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -85,8 +101,20 @@ nested_2:
 					})
 			},
 		},
+		"valid content with complex env substitution": {
+			config:    []byte(`complex: ${COMPLEX}`),
+			validator: func(_ io.Reader) error { return nil },
+			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "foo", konf.Get("complex.first"))
+				assert.Equal(t, "bar", konf.Get("complex.second"))
+			},
+		},
 		"invalid yaml content": {
-			config: []byte("foobar"),
+			config:    []byte("foobar"),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
@@ -95,7 +123,8 @@ nested_2:
 			},
 		},
 		"invalid yaml env substitution": {
-			config: []byte("${:}"),
+			config:    []byte("${:}"),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
@@ -103,8 +132,9 @@ nested_2:
 				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
-		"can't read file": {
-			config: []byte(`foo: bar`),
+		"can't read content": {
+			config:    []byte(`foo: bar`),
+			validator: func(_ io.Reader) error { return nil },
 			chmod: func(t *testing.T, file *os.File) {
 				t.Helper()
 
@@ -136,7 +166,7 @@ nested_2:
 			chmod(t, tempFile)
 
 			// WHEN
-			konf, err := koanfFromYaml(fileName)
+			konf, err := koanfFromYaml(fileName, tc.validator)
 
 			// THEN
 			tc.assert(t, err, konf)

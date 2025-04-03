@@ -52,12 +52,6 @@ func (c *configLoader) Load(config any) error {
 		return err
 	}
 
-	if len(configFile) != 0 && c.o.validateSyntax != nil {
-		if err = c.o.validateSyntax(configFile); err != nil {
-			return err
-		}
-	}
-
 	parser, err := koanfFromStruct(config)
 	if err != nil {
 		return err
@@ -65,7 +59,7 @@ func (c *configLoader) Load(config any) error {
 
 	if len(configFile) != 0 {
 		if err = c.loadAndMergeConfig(parser, func() (*koanf.Koanf, error) {
-			return koanfFromYaml(configFile)
+			return koanfFromYaml(configFile, c.o.validateSyntax)
 		}); err != nil {
 			return err
 		}
