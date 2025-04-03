@@ -1,83 +1,102 @@
-# Options for analysis running.
+version: "2"
+
 run:
-  timeout: 5m
   modules-download-mode: readonly
 
 linters:
-  enable-all: true
+  default: all
   disable:
-    - dupl
-    - wrapcheck
-    - ireturn
-    - exhaustruct
-    - testpackage
-    - paralleltest
-    - nolintlint
-    - tparallel
     - depguard
+    - dupl
+    - exhaustruct
+    - ireturn
+    - nolintlint
+    - paralleltest
+    - testpackage
+    - tparallel
+    - wrapcheck
     - zerologlint
-    # depricated
-    - tenv
+    - goconst
+  settings:
+    cyclop:
+      max-complexity: 11
+    exhaustive:
+      default-signifies-exhaustive: true
+      ignore-enum-members: POT.+
+    funlen:
+      lines: 80
+    gomoddirectives:
+      replace-allow-list:
+        - golang.org/x/oauth2
+        - github.com/golang-jwt/jwt/v5
+    mnd:
+      ignored-functions:
+        - ^make
+        - ^math\.
+        - ^time\.*
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+    varnamelen:
+      min-name-length: 2
+      ignore-names:
+        - err
+      ignore-type-assert-ok: true
+      ignore-map-index-ok: true
+      ignore-chan-recv-ok: true
+      ignore-decls:
+        - t testing.T
+        - i int
+        - T any
+        - m map[string]int
+        - w http.ResponseWriter
+        - r *http.Request
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - canonicalheader
+          - cyclop
+          - err113
+          - errcheck
+          - forcetypeassert
+          - funlen
+          - gocognit
+          - iface
+          - lll
+          - maintidx
+          - mnd
+        path: (.+)_test\.go
+      - linters:
+          - goconst
+        path: (.+)_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 
-issues:
-  exclude-rules:
-    - path: '(.+)_test\.go'
-      linters:
-        - funlen
-        - maintidx
-        - cyclop
-        - gocognit
-        - err113
-        - lll
-        - errcheck
-        - canonicalheader
-        - mnd
-        - forcetypeassert
-        - iface
-
-linters-settings:
-  exhaustive:
-    ignore-enum-members: "POT.+"
-    default-signifies-exhaustive: true
-  tagliatelle:
-    # Check the struck tag name case.
-    case:
-      rules:
-        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
-        json: snake
-        yaml: snake
-  gci:
-    sections:
-      - standard # Captures all standard packages if they do not match another section.
-      - default # Contains all imports that could not be matched to another section type.
-      - prefix(github.com/dadrus/heimdall) # Groups all imports with the specified Prefix.
-  varnamelen:
-    min-name-length: 2
-    ignore-type-assert-ok: true
-    ignore-map-index-ok: true
-    ignore-chan-recv-ok: true
-    ignore-names:
-      - err
-    ignore-decls:
-      - t testing.T
-      - i int
-      - T any
-      - m map[string]int
-      - w http.ResponseWriter
-      - r *http.Request
-  goconst:
-    ignore-tests: true
-  cyclop:
-    max-complexity: 11
-  funlen:
-    lines: 80
-  gomoddirectives:
-    replace-allow-list:
-      # to avoid having a CVE in the used version
-      - golang.org/x/oauth2
-      - github.com/golang-jwt/jwt/v5
-  mnd:
-    ignored-functions:
-      - '^make'
-      - '^math\.'
-      - '^time\.*'
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/dadrus/heimdall)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
