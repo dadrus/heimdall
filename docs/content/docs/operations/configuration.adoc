@@ -95,9 +95,7 @@ mechanisms:
         url: https://hydra:4445/oauth2/introspect
         auth:
           type: basic_auth
-          config:
-            user: ${INTROSPECT_EP_USER}
-            password: ${INTROSPECT_EP_PASSWORD}
+          config: ${INTROSPECTION_EP_CREDENTIALS}
   finalizers:
   - id: create_jwt
     type: jwt
@@ -106,6 +104,9 @@ mechanisms:
         key_store:
           path: ${SIGNER_KEY_STORE_FILE}
 ----
+
+This example demonstrates the use of both simple and complex values in environment variables. For instance, `SIGNER_KEY_STORE_FILE` is a straightforward string specifying the path to a PEM file, whereas `INTROSPECTION_EP_CREDENTIALS` is more intricate, representing a structure required by the `basic_auth` authentication type: `{ "user": "someUser", "password": "VerySecure" }`.
+
 ====
 
 == Environment Variables
