@@ -114,7 +114,7 @@ nested_2:
 		},
 		"invalid yaml content": {
 			config:    []byte("foobar"),
-			validator: func(cfgSrc io.Reader) error { return nil },
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
