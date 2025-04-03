@@ -6,12 +6,12 @@ on:
 
 env:
   GO_VERSION: "1.24.1"
-  COSIGN_VERSION: "v2.4.1"
+  COSIGN_VERSION: "v2.4.3"
   CYCLONEDX_GOMOD_VERSION: "v1.9.0"
-  HELM_VERSION: "3.16.4"
-  NODE_VERSION: "22.13"
+  HELM_VERSION: "3.17.2"
+  NODE_VERSION: "23.11"
   RUBY_VERSION: "3.4"
-  HUGO_VERSION: "0.140.1"
+  HUGO_VERSION: "0.145.0"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 permissions:
