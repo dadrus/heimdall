@@ -66,7 +66,7 @@ nested_2:
 		"failed validation": {
 			config:    []byte(`some_string: foo`),
 			validator: func(_ io.Reader) error { return errors.New("test error") },
-			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
+			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
 				require.Error(t, err)
