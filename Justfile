@@ -44,11 +44,11 @@ build: dependencies
 build-image:
   #!/usr/bin/env bash
   git_ref=$(git rev-parse --short HEAD)
-  docker buildx build --build-arg VERSION=${git_ref} -t heimdall:local -f docker/Dockerfile .
+  docker build --build-arg VERSION=${git_ref} -t heimdall:local -f docker/Dockerfile .
 
 build-docs-debug-image:
   #!/usr/bin/env bash
-  docker buildx build -t heimdall-docs:local -f docker/docs.Dockerfile .
+  docker build -t heimdall-docs:local -f docker/docs.Dockerfile .
 
 run-docs: build-docs-debug-image
   #!/usr/bin/env bash
