@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.11](https://github.com/dadrus/heimdall/compare/v0.15.10...v0.15.11) (2025-04-05)
+
+
+### Dependencies
+
+* update golang to v1.24.2 ([#2343](https://github.com/dadrus/heimdall/issues/2343)) ([150990e](https://github.com/dadrus/heimdall/commit/150990ebc6a7c21c17354960102c6176b9e8b303))
+* update google.golang.org/genproto/googleapis/rpc digest to ee84b53 ([#2355](https://github.com/dadrus/heimdall/issues/2355)) ([2a673b1](https://github.com/dadrus/heimdall/commit/2a673b1325a21c8e4aac2d88b21951e652757498))
+* update module github.com/fsnotify/fsnotify to v1.9.0 ([#2356](https://github.com/dadrus/heimdall/issues/2356)) ([b2ea681](https://github.com/dadrus/heimdall/commit/b2ea6814c544d31d21b7d1c525c71214247c2893))
+* update module github.com/go-playground/validator/v10 to v10.26.0 ([#2334](https://github.com/dadrus/heimdall/issues/2334)) ([01bb1bd](https://github.com/dadrus/heimdall/commit/01bb1bd39cdd1041f6306b05d4de9f6a291e86d6))
+* update module github.com/knadh/koanf/maps to v0.1.2 ([#2341](https://github.com/dadrus/heimdall/issues/2341)) ([5f8898a](https://github.com/dadrus/heimdall/commit/5f8898a8296dca8f0e715cd25054a8fdb308e7b5))
+* update module gocloud.dev to v0.41.0 ([#2339](https://github.com/dadrus/heimdall/issues/2339)) ([1e56f28](https://github.com/dadrus/heimdall/commit/1e56f28ba90480a5292a40f6b7e96ae53bbf649c))
+* update module google.golang.org/grpc to v1.71.1 ([#2342](https://github.com/dadrus/heimdall/issues/2342)) ([d1e48eb](https://github.com/dadrus/heimdall/commit/d1e48eb7e44a9f99a911ede4c03cc5b612b98c81))
+
 ## [0.15.10](https://github.com/dadrus/heimdall/compare/v0.15.9...v0.15.10) (2025-03-26)
 
 
