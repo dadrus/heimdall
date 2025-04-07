@@ -67,7 +67,7 @@ mechanisms:
           not_after: expires_at
           time_format: "2006-01-02T15:04:05.999999Z07"
           validity_leeway: 10s
-    - id: hydra_authenticator
+    - id: introspection_authenticator1
       type: oauth2_introspection
       config:
         introspection_endpoint:
@@ -94,14 +94,68 @@ mechanisms:
         subject:
           attributes: "@this"
           id: sub
+    - id: introspection_authenticator2
+      type: oauth2_introspection
+      config:
+        metadata_endpoint:
+          url: https://auth:9090/.well-known/openid-connect
+          retry:
+            max_delay: 300ms
+            give_up_after: 2s
+          auth:
+            type: basic_auth
+            config:
+              user: foo
+              password: bar
+          resolved_endpoints:
+            introspection_endpoint:
+              auth:
+                type: oauth2_client_credentials
+                config:
+                  token_url: https://example.com/token
+                  client_id: foo
+                  client_secret: bar
+              http_cache:
+                enabled: false
+              retry:
+                give_up_after: 1m
+                max_delay: 5s
+        token_source:
+          - header: Authorization
+            scheme: Bearer
+        assertions:
+          issuers:
+            - https://127.0.0.1:4444/
+          scopes:
+            - foo
+            - bar
+          audience:
+            - bla
+        subject:
+          attributes: "@this"
+          id: sub
     - id: jwt_authenticator1
       type: jwt
       config:
-        jwks_endpoint:
+        metadata_endpoint:
           url: https://foo/token
           method: GET
           http_cache:
             enabled: true
+          resolved_endpoints:
+            jwks_uri:
+              auth:
+                type: api_key
+                config:
+                  in: header
+                  name: X-API-Key
+                  value: very-secret
+              http_cache:
+                enabled: true
+                default_ttl: 10m
+              retry:
+                give_up_after: 1m
+                max_delay: 5s
         jwt_source:
           - header: Authorization
             scheme: Bearer

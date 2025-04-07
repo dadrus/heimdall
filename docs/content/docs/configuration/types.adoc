@@ -571,17 +571,9 @@ HTTP headers to be sent to the endpoint.
 +
 CAUTION: These headers are not analyzed by heimdall and are just forwarded to the endpoint. E.g. if you configure the `Content-Encoding` to something like `gzip`, the service behind the used endpoint might fail to answer, as it would expect the body to be compressed.
 
-* *`http_cache`* _object_ (optional)
+* *`http_cache`* _link:{{< relref "#_http_cache" >}}[HTTP Cache]_ (optional)
 +
-Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. To support this, that object defines the following properties:
-
-** *`enabled`* _boolean_ (optional)
-+
-Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the `endpoint` property. If set to `true` heimdall will strictly follow the requirements from RFC 7234 and cache the responses if possible and reuse these if still valid.
-
-** *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
-+
-Specifies how long heimdall should cache the response if the endpoint referenced by the URL does not provide any explicit expiration time (no heuristic freshness lifetime is calculated). Without configuring this property, heimdall treats such responses as not cacheable. Defaults to `0s` if not otherwise stated in the description of the configuration type making use of the `endpoint` property.
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used.
 
 .Endpoint configuration as string
 ====
@@ -629,6 +621,18 @@ Following types are available:
 * `internal_error` - used if heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc. Results by default in `500 Internal Server Error` response to the caller.
 * `no_rule_error` - this error is used to signal, there is no matching rule to handle the given request. Error of this type results by default in `404 Not Found` HTTP code.
 * `precondition_error` (*) - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured. Error of this type results by default in `400 Bad Request` HTTP code if handled by the default error handler.
+
+== HTTP Cache
+
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. Following properties are defined:
+
+* *`enabled`* _boolean_ (optional)
++
+Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the HTTP Cache settings. When set to `true`, heimdall will strictly comply with the HTTP caching rules defined in RFC 7234, caching responses only when allowed and reusing them only if they remain valid per the standard.
+
+* *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Specifies how long heimdall should cache the response if it does not contain any explicit expiration time (no heuristic freshness lifetime is calculated). If this property is not set, heimdall considers such responses uncacheable. Unless specified otherwise in the configuration type description utilizing the HTTP Cache settings, the default value is `0s`.
 
 == Key Store
 
