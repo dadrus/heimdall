@@ -199,6 +199,20 @@ mechanisms:
         http_cache:
           enabled: true
           cache_ttl: 1h
+        resolved_endpoints:
+          jwks_uri:
+            auth:
+              type: oauth2_client_credentials
+              config:
+                token_url: https://auth-server/token
+                client_id: foo
+                client_secret: bar
+            retry:
+              give_up_after: 1m
+              max_delay: 5s
+            http_cache:
+              enabled: true
+              default_ttl: 10m
       jwt_source:
         - header: Authorization
           scheme: Bearer

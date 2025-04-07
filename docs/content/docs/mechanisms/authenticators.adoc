@@ -263,6 +263,22 @@ In addition to the properties specified by the link:{{< relref "/docs/configurat
 +
 Upon retrieval of the server metadata, both, the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] RFC, and the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specification, require the verification of the issuer identifier for security reasons, e.g. to prevent https://datatracker.ietf.org/doc/html/rfc8414#section-6.2[Spoofing Attacks]. There are however setups, where strictly following that recommendation would result in extended bandwidth usage (instead of communicating directly with the auth server within the cluster one would need to use the same domain, the client application uses, which introduces additional network hops). It might also not work at all as the actual identifier of the issuer would change depending on where the request come from. By making use of this property and setting it to `true`, one can disable the corresponding verification. Defaults to `false`.
 
+** *`resolved_endpoints`*: _map of ResolvedEndpoint_ (optional, not overridable)
++
+A map where each key represents the name of an endpoint as specified in the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] or the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specifications. The value associated with each key is a set of configuration options that are applied before sending a request to that specific endpoint. Following configuration options are possible:
+
+*** *`retry`* _link:{{< relref "/docs/configuration/types.adoc#_retry" >}}[Retry]_ (optional)
++
+What to do if the communication fails. If not configured, no retry attempts are done.
+
+*** *`auth`* _link:{{< relref "/docs/configuration/types.adoc#_authentication_strategy" >}}[Authentication Strategy]_ (optional)
++
+Authentication strategy to apply if the endpoint requires authentication.
+
+*** *`http_cache`* _link:{{< relref "/docs/configuration/types.adoc#_http_cache" >}}[HTTP Cache]_ (optional)
++
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used.
+
 * *`token_source`*: _link:{{< relref "/docs/configuration/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
 Where to get the access token from. Defaults to retrieve it from the `Authorization` header, the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type).
@@ -295,7 +311,7 @@ config:
 ----
 ====
 
-.Configuration for Keycloak utilizing metadata discovery
+.Configuration for Keycloak utilizing metadata discovery and authentication configuration for the resolved `introspection_endpoint`.
 ====
 [source, yaml]
 ----
@@ -304,6 +320,14 @@ type: metadata_endpoint
 config:
   metadata_endpoint:
     url: https://keycloak:8080/realms/{{ trimPrefix "https://my-auth-server/realms/" .TokenIssuer }}/.well-known/openid-configuration
+    resolved_endpoints:
+      introspection_endpoint:
+        auth:
+          type: api_key
+          config:
+            in: header
+            name: Authorization
+            value: Bearer 23410913-abewfq.123483
 ----
 
 This example does also show how to make use of templating if the format of the access token is JWT.
@@ -340,6 +364,22 @@ In addition to the properties specified by the link:{{< relref "/docs/configurat
 ** *`disable_issuer_identifier_verification`*: _boolean_ (optional, not overridable)
 +
 Upon retrieval of the server metadata, both, the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] RFC, and the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specification, require the verification of the issuer identifier for security reasons, e.g. to prevent https://datatracker.ietf.org/doc/html/rfc8414#section-6.2[Spoofing Attacks]. There are however setups, where strictly following that recommendation would result in extended bandwidth usage (instead of communicating directly with the auth server within the cluster one would need to use the same domain, the client application uses, which introduces additional network hops). It might also not work at all as the actual identifier of the issuer would change depending on where the request come from. By making use of this property and setting it to `true`, one can disable the corresponding verification. Defaults to `false`.
+
+** *`resolved_endpoints`*: _map of ResolvedEndpoint_ (optional, not overridable)
++
+A map where each key represents the name of an endpoint as specified in the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] or the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specifications. The value associated with each key is a set of configuration options that are applied before sending a request to that specific endpoint. Following configuration options are possible:
+
+*** *`retry`* _link:{{< relref "/docs/configuration/types.adoc#_retry" >}}[Retry]_ (optional)
++
+What to do if the communication fails. If not configured, no retry attempts are done.
+
+*** *`auth`* _link:{{< relref "/docs/configuration/types.adoc#_authentication_strategy" >}}[Authentication Strategy]_ (optional)
++
+Authentication strategy to apply if the endpoint requires authentication.
+
+*** *`http_cache`* _link:{{< relref "/docs/configuration/types.adoc#_http_cache" >}}[HTTP Cache]_ (optional)
++
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used.
 
 * *`jwt_source`*: _link:{{< relref "/docs/configuration/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
@@ -386,7 +426,7 @@ config:
 ----
 ====
 
-.Configuration for Keycloak utilizing metadata discovery
+.Configuration for Keycloak utilizing metadata discovery and HTTP cache enabled for the resolved `jwks_uri`.
 ====
 [source, yaml]
 ----
@@ -395,6 +435,10 @@ type: jwt
 config:
   metadata_endpoint:
     url: https://keycloak:8080/realms/my-app/.well-known/openid-configuration
+    resolved_endpoints:
+      jwks_uri:
+        http_cache:
+          enabled: true
   # Note that no assertions are configured here, since it'll be resolved via the metadata endpoint
 ----
 ====
