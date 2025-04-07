@@ -64,7 +64,7 @@ Imagine following request hits heimdall (sent to it by an API gateway)
 [source, bash]
 ----
 GET /my-service/api HTTP/1.1
-Host: heimdall:4455
+Host: heimdall:4456
 X-Forwarded-Host: my-backend-service
 
 Some payload
@@ -138,7 +138,7 @@ Imagine following request hits heimdall
 [source, bash]
 ----
 GET /my-service/api HTTP/1.1
-Host: heimdall:4455
+Host: heimdall:4456
 
 Some payload
 ----

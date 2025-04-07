@@ -104,7 +104,7 @@ service:
   # Main service
   main:
     # Service port
-    port: 4455
+    port: 4456
     # Service port name
     name: main
   # Management service
@@ -159,7 +159,7 @@ extraArgs: []
 # heimdall config defaults
 # DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
 serve:
-  port: 4455
+  port: 4456
 management:
   port: 4457
 profiling:

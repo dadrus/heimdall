@@ -124,7 +124,7 @@ tests:
               protocol: TCP
               targetPort: http-management
             - name: main
-              port: 4455
+              port: 4456
               protocol: TCP
               targetPort: http-main
 
@@ -140,7 +140,7 @@ tests:
               protocol: TCP
               targetPort: http-management
             - name: main
-              port: 4455
+              port: 4456
               protocol: TCP
               targetPort: http-main
 
@@ -157,7 +157,7 @@ tests:
               protocol: TCP
               targetPort: http-management
             - name: main
-              port: 4455
+              port: 4456
               protocol: TCP
               targetPort: http-main
 
@@ -173,7 +173,7 @@ tests:
               protocol: TCP
               targetPort: http-management
             - name: main
-              port: 4455
+              port: 4456
               protocol: TCP
               targetPort: http-main
 
@@ -192,7 +192,7 @@ tests:
               protocol: TCP
               targetPort: http-management
             - name: main
-              port: 4455
+              port: 4456
               protocol: TCP
               targetPort: http-main
             - name: admission-controller

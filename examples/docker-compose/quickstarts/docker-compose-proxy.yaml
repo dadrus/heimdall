@@ -1,5 +1,5 @@
 services:
   heimdall:
     ports:
-    - "9090:4455"
+    - "9090:4456"
     command: serve proxy -c /etc/heimdall/config.yaml --insecure

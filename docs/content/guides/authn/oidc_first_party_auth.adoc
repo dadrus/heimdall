@@ -230,7 +230,7 @@ services:
   heimdall: # <1>
     image: dadrus/heimdall:dev
     ports:
-      - "9090:4455"
+      - "9090:4456"
     command: serve proxy --c /etc/heimdall/config.yaml --insecure
     volumes:
       - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro

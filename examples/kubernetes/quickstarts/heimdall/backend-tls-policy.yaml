@@ -9,7 +9,7 @@ spec:
     kind: Service
     namespace: heimdall
     name: heimdall
-    sectionName: "4455"
+    sectionName: "4456"
   tls:
     caCertRefs:
       - name: cacerts

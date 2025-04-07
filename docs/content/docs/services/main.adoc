@@ -12,7 +12,7 @@ description: This is heimdall's main service responsible for driving the actual 
 
 :toc:
 
-To make use of this service you have to start heimdall with either `heimdall serve proxy` or `heimdall serve decision`. By default, heimdall listens on `0.0.0.0:4455` endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.
+To make use of this service you have to start heimdall with either `heimdall serve proxy` or `heimdall serve decision`. By default, heimdall listens on `0.0.0.0:4456` endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.
 
 == Configuration
 
@@ -24,7 +24,7 @@ By making use of this property, you can specify the TCP/IP address on which heim
 
 * *`port`*: _integer_ (optional)
 +
-By making use of this property, you can specify the TCP port that heimdall should listen on. Defaults to `4455`.
+By making use of this property, you can specify the TCP port that heimdall should listen on. Defaults to `4456`.
 
 * *`timeout`*: _Timeout_ (optional)
 +

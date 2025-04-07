@@ -36,7 +36,7 @@ NOTE: Proper configuration of `trusted_proxies` is mandatory when using this opt
 :9090 {
     reverse_proxy upstream:8081
 
-    forward_auth https://heimdall:4455 { <1>
+    forward_auth https://heimdall:4456 { <1>
         uri          / <2>
         copy_headers Authorization <3>
     }
@@ -57,7 +57,7 @@ With this method, `X-Forwarded-*` headers are not used, relying solely on the st
 :9090 {
     reverse_proxy upstream:8081
 
-    forward_auth https://heimdall:4455 { <1>
+    forward_auth https://heimdall:4456 { <1>
         uri          {http.request.uri} <2>
         method       {http.request.method} <3>
         header_down  Host {http.request.hostport} <4>

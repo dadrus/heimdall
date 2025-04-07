@@ -83,7 +83,7 @@ spec:
   protocol: h2
   services:
     - name: heimdall
-      port: 4455
+      port: 4456
 ----
 +
 The `ExtensionService` resource definition tells Contour to program Envoy with an upstream cluster directing traffic to heimdall. That way, as also described in the link:{{< relref "envoy.adoc" >}}[Envoy Integration Guide], Envoy will delegate authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.

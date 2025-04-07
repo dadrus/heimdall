@@ -7,4 +7,4 @@ spec:
   protocol: h2
   services:
     - name: heimdall
-      port: 4455
+      port: 4456

@@ -54,7 +54,7 @@ spec:
     grpc:
       backendRef: # <4>
         name: heimdall
-        port: 4455
+        port: 4456
         namespace: heimdall
 ----
 <1> The name of the `SecurityPolicy`. You can change it to any other value if you like.
@@ -82,7 +82,7 @@ spec:
     grpc:
       backendRef: # <4>
         name: heimdall
-        port: 4455
+        port: 4456
         namespace: heimdall
 ----
 <1> The name of the `SecurityPolicy`. You can change it to any other value if you like.
@@ -107,7 +107,7 @@ spec:
     kind: Service
     namespace: heimdall
     name: heimdall
-    sectionName: "4455"
+    sectionName: "4456"
   tls: # <3>
     caCertRefs:
       - name: demo-ca # <4>

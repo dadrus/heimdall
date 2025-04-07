@@ -75,7 +75,7 @@ heimdall container image is shipped without any certificates by intention to ens
 E.g.
 [source, bash]
 ----
-docker run -t -p 4455:4455 \
+docker run -t -p 4456:4456 \
   -v $PWD:/heimdall/conf \
   -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro \
    dadrus/heimdall:dev serve decision \

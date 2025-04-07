@@ -12,7 +12,7 @@ spec:
       match:
         context: GATEWAY
         cluster:
-          name: outbound|4455||heimdall.heimdall.svc.cluster.local
+          name: outbound|4456||heimdall.heimdall.svc.cluster.local
       patch:
         operation: MERGE
         value:
