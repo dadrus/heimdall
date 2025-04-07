@@ -37,23 +37,23 @@ default_rule:
 Start heimdall:
 
 ```bash
-docker run -t -p 4455:4455 -v $PWD:/heimdall/conf \
+docker run -t -p 4456:4456 -v $PWD:/heimdall/conf \
   dadrus/heimdall:latest serve decision -c /heimdall/conf/heimdall.yaml
 ```
 
 Call the decision service endpoint to emulate behavior of an API-Gateway:
 
 ```bash
-curl -v 127.0.0.1:4455/foobar
+curl -v 127.0.0.1:4456/foobar
 ```
 
 You should now see similar output to the following snippet:
 
 ```bash
-*   Trying 127.0.0.1:4455...
-* Connected to 127.0.0.1 (127.0.0.1) port 4455 (#0)
+*   Trying 127.0.0.1:4456...
+* Connected to 127.0.0.1 (127.0.0.1) port 4456 (#0)
 > GET /foobar HTTP/1.1
-> Host: 127.0.0.1:4455
+> Host: 127.0.0.1:4456
 > User-Agent: curl/7.74.0
 > Accept: */*
 >
@@ -142,7 +142,7 @@ services:
       # Mount your rule file:
       - ./rule.yaml:/heimdall/conf/rule.yaml:ro
     ports:
-      - 4455:4455
+      - 4456:4456
     command: -c /heimdall/conf/config.yaml serve proxy
   
   upstream:
@@ -158,16 +158,16 @@ docker compose up
 Call the proxy service endpoint to emulate behavior of a client application:
 
 ```bash
-curl -v 127.0.0.1:4455/foobar
+curl -v 127.0.0.1:4456/foobar
 ```
 
 You should now see similar output to the following snippet:
 
 ```bash
-*   Trying 127.0.0.1:4455...
-* Connected to 127.0.0.1 (127.0.0.1) port 4455 (#0)
+*   Trying 127.0.0.1:4456...
+* Connected to 127.0.0.1 (127.0.0.1) port 4456 (#0)
 > GET /foobar HTTP/1.1
-> Host: 127.0.0.1:4455
+> Host: 127.0.0.1:4456
 > User-Agent: curl/7.74.0
 > Accept: */*
 >

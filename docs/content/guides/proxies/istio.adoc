@@ -57,7 +57,7 @@ data:
     - name: heimdall-ext-auth # <1>
       envoyExtAuthzGrpc: # <2>
         service: heimdall.heimdall.svc.cluster.local # <3>
-        port: "4455"
+        port: "4456"
 ----
 <1> `heimdall-ext-auth` is the name of our extension provider, which will be referenced later in the https://istio.io/latest/docs/reference/config/security/authorization-policy/[`AuthorizationPolicy`] configuration.
 <2> We're using a gRPC based implementation here. However, since Istio does not automatically configure Envoy to use HTTP/2 for gRPC calls, it requires an additional https://istio.io/latest/docs/reference/config/networking/envoy-filter/[`EnvoyFilter`] resource. This appears to be a bug in Istio's implementation.
@@ -77,7 +77,7 @@ data:
     - name: heimdall-ext-auth
       envoyExtAuthzHttp:
         service: heimdall.heimdall.svc.cluster.local
-        port: "4455"
+        port: "4456"
         includeRequestHeadersInCheck: [ "authorization", "cookie", "accept", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host" ] # <1>
         headersToUpstreamOnAllow: [ "authorization" ] # <2>
 ----
@@ -102,7 +102,7 @@ spec:
       match: # <3>
         context: GATEWAY
         cluster:
-          name: outbound|4455||heimdall.heimdall.svc.cluster.local
+          name: outbound|4456||heimdall.heimdall.svc.cluster.local
       patch:
         operation: MERGE
         value:

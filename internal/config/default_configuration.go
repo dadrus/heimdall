@@ -31,7 +31,7 @@ const (
 	defaultMaxIdleConnections        = 100
 	defaultMaxIdleConnectionsPerHost = 100
 
-	defaultServePort             = 4455
+	defaultServePort             = 4456
 	defaultManagementServicePort = 4457
 	defaultProfilingServicePort  = 10251
 

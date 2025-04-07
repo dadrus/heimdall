@@ -14,7 +14,7 @@ services:
     - traefik.enable=true
     - traefik.http.routers.traefik_http.service=api@internal
     - traefik.http.routers.traefik_http.entrypoints=http
-    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4455
+    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization
 
   heimdall:

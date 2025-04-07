@@ -58,7 +58,7 @@ tests:
           value:
             |-
             serve:
-              port: 4455
+              port: 4456
             management:
               port: 4457
             profiling:
@@ -174,7 +174,7 @@ tests:
                 read: 4KB
                 write: 10KB
               host: 127.0.0.1
-              port: 4455
+              port: 4456
               respond:
                 verbose: true
                 with:

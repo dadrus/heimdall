@@ -241,7 +241,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457
@@ -256,7 +256,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457
@@ -272,7 +272,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457
@@ -292,7 +292,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457
@@ -310,7 +310,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457
@@ -329,7 +329,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457
@@ -350,7 +350,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457
@@ -374,7 +374,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
+            - containerPort: 4456
               name: http-main
               protocol: TCP
             - containerPort: 4457

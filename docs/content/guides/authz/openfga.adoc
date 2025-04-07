@@ -45,7 +45,7 @@ services:
     image: dadrus/heimdall:dev
     container_name: heimdall
     ports:
-    - "9090:4455"
+    - "9090:4456"
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./rules:/etc/heimdall/rules:ro

@@ -1,6 +1,6 @@
 controller:
   config:
-    global-auth-url: https://heimdall.heimdall.svc.cluster.local:4455
+    global-auth-url: https://heimdall.heimdall.svc.cluster.local:4456
     global-auth-response-headers: "Authorization"
     global-auth-snippet: |
       proxy_set_header         X-Forwarded-Method     $request_method;
