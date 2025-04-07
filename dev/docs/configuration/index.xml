@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 03 Apr 2025 11:10:43 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 07 Apr 2025 22:17:07 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_assertions">Assertions&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -205,6 +205,20 @@
  &lt;span class="na">http_cache&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
  &lt;span class="na">cache_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">1h&lt;/span>
+ &lt;span class="na">resolved_endpoints&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">jwks_uri&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_client_credentials&lt;/span>
+ &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">token_url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://auth-server/token&lt;/span>
+ &lt;span class="na">client_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
+ &lt;span class="na">client_secret&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
+ &lt;span class="na">retry&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">give_up_after&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">1m&lt;/span>
+ &lt;span class="na">max_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>
+ &lt;span class="na">http_cache&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
+ &lt;span class="na">default_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">10m&lt;/span>
  &lt;span class="na">jwt_source&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Authorization&lt;/span>
  &lt;span class="na">scheme&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Bearer&lt;/span>
