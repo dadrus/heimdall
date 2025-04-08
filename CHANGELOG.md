@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.15.11](https://github.com/dadrus/heimdall/compare/v0.15.10...v0.15.11) (2025-04-08)
+
+
+### Dependencies
+
+* update golang to v1.24.2 ([#2343](https://github.com/dadrus/heimdall/issues/2343)) ([150990e](https://github.com/dadrus/heimdall/commit/150990ebc6a7c21c17354960102c6176b9e8b303))
+* update golang.org/x/exp digest to 7e4ce0a ([#2369](https://github.com/dadrus/heimdall/issues/2369)) ([0ae9d3f](https://github.com/dadrus/heimdall/commit/0ae9d3fc242809e042b5ee7c78ca2c403f1280c3))
+* update google.golang.org/genproto/googleapis/rpc digest to ac9807e ([#2362](https://github.com/dadrus/heimdall/issues/2362)) ([7563ecb](https://github.com/dadrus/heimdall/commit/7563ecb9838df0395e33b0888d64f27c1653a923))
+* update module github.com/fsnotify/fsnotify to v1.9.0 ([#2356](https://github.com/dadrus/heimdall/issues/2356)) ([b2ea681](https://github.com/dadrus/heimdall/commit/b2ea6814c544d31d21b7d1c525c71214247c2893))
+* update module github.com/go-jose/go-jose/v4 to v4.1.0 ([#2363](https://github.com/dadrus/heimdall/issues/2363)) ([2edcfe7](https://github.com/dadrus/heimdall/commit/2edcfe73432fcc205f0fca0fb051e6563bac614a))
+* update module github.com/go-playground/validator/v10 to v10.26.0 ([#2334](https://github.com/dadrus/heimdall/issues/2334)) ([01bb1bd](https://github.com/dadrus/heimdall/commit/01bb1bd39cdd1041f6306b05d4de9f6a291e86d6))
+* update module github.com/knadh/koanf/maps to v0.1.2 ([#2341](https://github.com/dadrus/heimdall/issues/2341)) ([5f8898a](https://github.com/dadrus/heimdall/commit/5f8898a8296dca8f0e715cd25054a8fdb308e7b5))
+* update module github.com/prometheus/client_golang to v1.22.0 ([#2368](https://github.com/dadrus/heimdall/issues/2368)) ([7bb1ea6](https://github.com/dadrus/heimdall/commit/7bb1ea678f3126b2838866775214da0bd4c87f29))
+* update module github.com/redis/rueidis to v1.0.57 ([#2360](https://github.com/dadrus/heimdall/issues/2360)) ([9ecbcb1](https://github.com/dadrus/heimdall/commit/9ecbcb1471e8746fceee59f84beb57b431ff3765))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.57 ([#2360](https://github.com/dadrus/heimdall/issues/2360)) ([9ecbcb1](https://github.com/dadrus/heimdall/commit/9ecbcb1471e8746fceee59f84beb57b431ff3765))
+* update module gocloud.dev to v0.41.0 ([#2339](https://github.com/dadrus/heimdall/issues/2339)) ([1e56f28](https://github.com/dadrus/heimdall/commit/1e56f28ba90480a5292a40f6b7e96ae53bbf649c))
+* update module google.golang.org/grpc to v1.71.1 ([#2342](https://github.com/dadrus/heimdall/issues/2342)) ([d1e48eb](https://github.com/dadrus/heimdall/commit/d1e48eb7e44a9f99a911ede4c03cc5b612b98c81))
+
 ## [0.15.10](https://github.com/dadrus/heimdall/compare/v0.15.9...v0.15.10) (2025-03-26)
 
 
