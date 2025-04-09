@@ -12,5 +12,6 @@
   ],
   "packages": {
     ".": {}
-  }
+  },
+  "last-release-sha": "517815f8a76c8b84859b1683c18fd3c426bacc51"
 }
