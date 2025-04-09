@@ -44,8 +44,8 @@ type ruleImpl struct {
 	eh                 compositeErrorHandler
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
 	if r.isDefault {
 		logger.Info().Msg("Executing default rule")
@@ -88,15 +88,21 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		return nil, r.eh.Execute(ctx, err)
 	}
 
+	return r.createBackend(request), nil
+}
+
+func (r *ruleImpl) createBackend(request *heimdall.Request) rule.Backend {
 	var upstream rule.Backend
 
 	if r.backend != nil {
-		upstream = &backend{
+		upstream = backend{
 			targetURL: r.backend.CreateURL(&request.URL.URL),
+			forwardHostHeader: r.backend.ForwardHostHeader == nil ||
+				(r.backend.ForwardHostHeader != nil && *r.backend.ForwardHostHeader),
 		}
 	}
 
-	return upstream, nil
+	return upstream
 }
 
 func (r *ruleImpl) ID() string { return r.id }
@@ -123,8 +129,8 @@ type routeImpl struct {
 	matcher RouteMatcher
 }
 
-func (r *routeImpl) Matches(ctx heimdall.Context, keys, values []string) bool {
-	logger := zerolog.Ctx(ctx.AppContext()).With().
+func (r *routeImpl) Matches(ctx heimdall.RequestContext, keys, values []string) bool {
+	logger := zerolog.Ctx(ctx.Context()).With().
 		Str("_source", r.rule.srcID).
 		Str("_id", r.rule.id).
 		Str("route", r.path).
@@ -148,10 +154,13 @@ func (r *routeImpl) Path() string { return r.path }
 func (r *routeImpl) Rule() rule.Rule { return r.rule }
 
 type backend struct {
-	targetURL *url.URL
+	targetURL         *url.URL
+	forwardHostHeader bool
 }
 
-func (b *backend) URL() *url.URL { return b.targetURL }
+func (b backend) URL() *url.URL { return b.targetURL }
+
+func (b backend) ForwardHostHeader() bool { return b.forwardHostHeader }
 
 func unescape(value string, handling config.EncodedSlashesHandling) string {
 	if handling == config.EncodedSlashesOn {

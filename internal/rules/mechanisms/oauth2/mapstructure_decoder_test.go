@@ -33,13 +33,11 @@ func TestDecodeScopesMatcherHookFunc(t *testing.T) {
 		Matcher ScopesMatcher `mapstructure:"scopes"`
 	}
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, matcher ScopesMatcher)
 	}{
-		{
-			uc: "structure with scopes under value and wildcard strategy",
+		"structure with scopes under value and wildcard strategy": {
 			config: []byte(`
 scopes:
   values:
@@ -56,8 +54,7 @@ scopes:
 				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
-		{
-			uc: "structure with scopes under value and exact strategy",
+		"structure with scopes under value and exact strategy": {
 			config: []byte(`
 scopes:
   values:
@@ -74,8 +71,7 @@ scopes:
 				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
-		{
-			uc: "structure with scopes under value and hierarchic strategy",
+		"structure with scopes under value and hierarchic strategy": {
 			config: []byte(`
 scopes:
   values:
@@ -92,8 +88,7 @@ scopes:
 				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
-		{
-			uc: "only scopes provided under values property",
+		"only scopes provided under values property": {
 			config: []byte(`
 scopes:
   values:
@@ -109,8 +104,7 @@ scopes:
 				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
-		{
-			uc: "only scopes provided on top level",
+		"only scopes provided on top level": {
 			config: []byte(`
 scopes:
   - foo
@@ -125,8 +119,7 @@ scopes:
 				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
-		{
-			uc: "no scopes provided, but matching strategy",
+		"no scopes provided, but matching strategy": {
 			config: []byte(`
 scopes:
   matching_strategy: exact
@@ -137,8 +130,7 @@ scopes:
 				require.Error(t, err)
 			},
 		},
-		{
-			uc: "malformed configuration",
+		"malformed configuration": {
 			config: []byte(`
 scopes:
   foo: bar
@@ -150,7 +142,7 @@ scopes:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 

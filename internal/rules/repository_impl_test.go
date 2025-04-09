@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -47,7 +46,7 @@ func TestRepositoryAddRuleSetWithoutViolation(t *testing.T) {
 	rules := []rule.Rule{rule1}
 
 	// WHEN
-	err := repo.AddRuleSet("1", rules)
+	err := repo.AddRuleSet(t.Context(), "1", rules)
 
 	// THEN
 	require.NoError(t, err)
@@ -79,10 +78,10 @@ func TestRepositoryAddRuleSetWithViolation(t *testing.T) {
 	rules1 := []rule.Rule{rule1}
 	rules2 := []rule.Rule{rule2}
 
-	require.NoError(t, repo.AddRuleSet("1", rules1))
+	require.NoError(t, repo.AddRuleSet(t.Context(), "1", rules1))
 
 	// WHEN
-	err := repo.AddRuleSet("2", rules2)
+	err := repo.AddRuleSet(t.Context(), "2", rules2)
 
 	// THEN
 	require.Error(t, err)
@@ -117,12 +116,12 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 
 	rules := []rule.Rule{rule1, rule2, rule3, rule4}
 
-	require.NoError(t, repo.AddRuleSet("1", rules))
+	require.NoError(t, repo.AddRuleSet(t.Context(), "1", rules))
 	assert.Len(t, repo.knownRules, 4)
 	assert.False(t, repo.index.Empty())
 
 	// WHEN
-	err := repo.DeleteRuleSet("1")
+	err := repo.DeleteRuleSet(t.Context(), "1")
 
 	// THEN
 	require.NoError(t, err)
@@ -156,16 +155,16 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	rules3 := []rule.Rule{rule5}
 
 	// WHEN
-	require.NoError(t, repo.AddRuleSet("bar", rules1))
-	require.NoError(t, repo.AddRuleSet("baz", rules2))
-	require.NoError(t, repo.AddRuleSet("foo", rules3))
+	require.NoError(t, repo.AddRuleSet(t.Context(), "bar", rules1))
+	require.NoError(t, repo.AddRuleSet(t.Context(), "baz", rules2))
+	require.NoError(t, repo.AddRuleSet(t.Context(), "foo", rules3))
 
 	// THEN
 	assert.Len(t, repo.knownRules, 5)
 	assert.False(t, repo.index.Empty())
 
 	// WHEN
-	err := repo.DeleteRuleSet("bar")
+	err := repo.DeleteRuleSet(t.Context(), "bar")
 
 	// THEN
 	require.NoError(t, err)
@@ -188,7 +187,7 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	err = repo.DeleteRuleSet("foo")
+	err = repo.DeleteRuleSet(t.Context(), "foo")
 
 	// THEN
 	require.NoError(t, err)
@@ -202,7 +201,7 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	err = repo.DeleteRuleSet("baz")
+	err = repo.DeleteRuleSet(t.Context(), "baz")
 
 	// THEN
 	require.NoError(t, err)
@@ -231,7 +230,7 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 
 	initialRules := []rule.Rule{rule1, rule2, rule3, rule4}
 
-	require.NoError(t, repo.AddRuleSet("1", initialRules))
+	require.NoError(t, repo.AddRuleSet(t.Context(), "1", initialRules))
 
 	// rule 1 changed: /bar/1a gone, /bar/1b added
 	rule1 = &ruleImpl{id: "1", srcID: "1", hash: []byte{2}}
@@ -247,7 +246,7 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 	updatedRules := []rule.Rule{rule1, rule3, rule4}
 
 	// WHEN
-	err := repo.UpdateRuleSet("1", updatedRules)
+	err := repo.UpdateRuleSet(t.Context(), "1", updatedRules)
 
 	// THEN
 	require.NoError(t, err)
@@ -279,15 +278,13 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 func TestRepositoryFindRule(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc               string
+	for uc, tc := range map[string]struct {
 		requestURL       *url.URL
 		addRules         func(t *testing.T, repo *repository)
 		configureFactory func(t *testing.T, factory *mocks.FactoryMock)
 		assert           func(t *testing.T, err error, rul rule.Rule)
 	}{
-		{
-			uc:         "no matching rule",
+		"no matching rule": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -301,8 +298,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrNoRuleFound)
 			},
 		},
-		{
-			uc:         "matches default rule",
+		"matches default rule": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -317,8 +313,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.Equal(t, &ruleImpl{id: "test", isDefault: true}, rul)
 			},
 		},
-		{
-			uc:         "matches upstream rule",
+		"matches upstream rule": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -331,7 +326,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				rule1 := &ruleImpl{id: "test2", srcID: "baz", hash: []byte{1}}
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/baz/bar", matcher: andMatcher{}})
 
-				err := repo.AddRuleSet("baz", []rule.Rule{rule1})
+				err := repo.AddRuleSet(t.Context(), "baz", []rule.Rule{rule1})
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
@@ -347,7 +342,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			addRules := x.IfThenElse(tc.addRules != nil,
 				tc.addRules,
@@ -361,8 +356,8 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules(t, repo)
 
 			req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *tc.requestURL}}
-			ctx := mocks2.NewContextMock(t)
-			ctx.EXPECT().AppContext().Maybe().Return(context.TODO())
+			ctx := mocks2.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Maybe().Return(t.Context())
 			ctx.EXPECT().Request().Return(req)
 
 			// WHEN

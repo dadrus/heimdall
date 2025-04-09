@@ -1,0 +1,29 @@
+cache:
+  type: redis
+  config:
+    address: redis:6379
+    credentials:
+      password: very-secure-one
+    tls:
+      disabled: true
+
+serve:
+  port: 4468
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+mechanisms:
+  authenticators:
+    - id: some_authenticator
+      type: anonymous
+
+  finalizers:
+    - id: some_finalizer
+      type: noop
+

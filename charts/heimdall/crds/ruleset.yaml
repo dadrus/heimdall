@@ -184,6 +184,10 @@ spec:
                             description: Host and port of the upstream service to forward the request to
                             type: string
                             maxLength: 512
+                          forward_host_header:
+                            description: Allows to specify whether the client Host header should be forwarded to the upstream service
+                            type: boolean
+                            default: true
                           rewrite:
                             description: Configures middlewares to rewrite parts of the URL
                             type: object

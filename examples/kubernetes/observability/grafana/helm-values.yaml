@@ -1,0 +1,17 @@
+grafana:
+  labels:
+    dashboards: grafana
+  service:
+    type: NodePort
+  config:
+    users:
+      auto_assign_org_role: Admin
+    log:
+      level: debug
+    security:
+      admin_user: admin
+      admin_password: monitoring
+operator:
+  prometheus:
+    serviceMonitor:
+      enabled: true

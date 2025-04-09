@@ -25,7 +25,7 @@ import (
 type Rule interface {
 	ID() string
 	SrcID() string
-	Execute(ctx heimdall.Context) (Backend, error)
+	Execute(ctx heimdall.RequestContext) (Backend, error)
 	Routes() []Route
 	SameAs(other Rule) bool
 	EqualTo(other Rule) bool

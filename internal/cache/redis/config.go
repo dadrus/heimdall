@@ -24,14 +24,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
 	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
@@ -127,7 +128,7 @@ func (c *fileCredentials) get() rueidis.AuthCredentials {
 type tlsConfig struct {
 	config.TLS `mapstructure:",squash"`
 
-	Disabled bool `mapstructure:"disabled"`
+	Disabled bool `mapstructure:"disabled" validate:"enforced=false"`
 }
 
 type baseConfig struct {
@@ -139,11 +140,7 @@ type baseConfig struct {
 	TLS           tlsConfig          `mapstructure:"tls"`
 }
 
-func (c baseConfig) clientOptions(
-	name string,
-	cw watcher.Watcher,
-	co certificate.Observer,
-) (rueidis.ClientOption, error) {
+func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientOption, error) {
 	var (
 		tlsCfg *tls.Config
 		err    error
@@ -152,8 +149,8 @@ func (c baseConfig) clientOptions(
 	if !c.TLS.Disabled {
 		tlsCfg, err = tlsx.ToTLSConfig(&c.TLS.TLS,
 			tlsx.WithClientAuthentication(len(c.TLS.KeyStore.Path) != 0),
-			tlsx.WithSecretsWatcher(cw),
-			tlsx.WithCertificateObserver(name, co),
+			tlsx.WithSecretsWatcher(app.Watcher()),
+			tlsx.WithCertificateObserver(name, app.CertificateObserver()),
 		)
 		if err != nil {
 			return rueidis.ClientOption{}, err
@@ -163,7 +160,7 @@ func (c baseConfig) clientOptions(
 	}
 
 	if c.Credentials != nil {
-		if err = c.Credentials.register(cw); err != nil {
+		if err = c.Credentials.register(app.Watcher()); err != nil {
 			return rueidis.ClientOption{}, err
 		}
 	}
@@ -171,9 +168,9 @@ func (c baseConfig) clientOptions(
 	return rueidis.ClientOption{
 		ClientName:          "heimdall",
 		DisableCache:        c.ClientCache.Disabled,
-		CacheSizeEachConn:   int(c.ClientCache.SizePerConnection),
-		WriteBufferEachConn: int(c.BufferLimit.Write),
-		ReadBufferEachConn:  int(c.BufferLimit.Read),
+		CacheSizeEachConn:   safecast.MustConvert[int](uint64(c.ClientCache.SizePerConnection)),
+		WriteBufferEachConn: safecast.MustConvert[int](uint64(c.BufferLimit.Write)),
+		ReadBufferEachConn:  safecast.MustConvert[int](uint64(c.BufferLimit.Read)),
 		ConnWriteTimeout:    c.Timeout.Write,
 		MaxFlushDelay:       c.MaxFlushDelay,
 

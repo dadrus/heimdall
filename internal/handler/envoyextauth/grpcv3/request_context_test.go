@@ -17,7 +17,6 @@
 package grpcv3
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -64,7 +63,7 @@ func TestNewRequestContext(t *testing.T) {
 
 	ctx := NewRequestContext(
 		metadata.NewIncomingContext(
-			context.Background(),
+			t.Context(),
 			md,
 		),
 		checkReq,
@@ -84,7 +83,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.Equal(t, "foo", ctx.Request().Cookie("bar"))
 	require.Equal(t, "baz", ctx.Request().Cookie("foo"))
 	require.Empty(t, ctx.Request().Cookie("baz"))
-	require.NotNil(t, ctx.AppContext())
+	require.NotNil(t, ctx.Context())
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
 }
 
@@ -102,11 +101,11 @@ func TestFinalizeRequestContext(t *testing.T) {
 	}
 
 	for uc, tc := range map[string]struct {
-		updateContext func(t *testing.T, ctx heimdall.Context)
+		updateContext func(t *testing.T, ctx heimdall.RequestContext)
 		assert        func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		"successful with some different header": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
@@ -135,7 +134,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"successful with multiple header with same name but different values": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
@@ -161,7 +160,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"successful with some cookies": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.AddCookieForUpstream("some-cookie", "value-1")
@@ -187,7 +186,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"successful with multiple header and cookie": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream", "some-value")
@@ -214,7 +213,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"erroneous with header and cookie": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
 				t.Helper()
 
 				ctx.SetPipelineError(errors.New("test error"))
@@ -255,7 +254,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 					},
 				},
 			}
-			ctx := NewRequestContext(context.Background(), checkReq)
+			ctx := NewRequestContext(t.Context(), checkReq)
 
 			tc.updateContext(t, ctx)
 
@@ -315,7 +314,7 @@ func TestRequestContextBody(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			ctx := NewRequestContext(
-				context.Background(),
+				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
 						Request: &envoy_auth.AttributeContext_Request{

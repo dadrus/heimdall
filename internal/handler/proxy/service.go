@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -87,7 +88,7 @@ func newService(
 	exec rule.Executor,
 ) *http.Server {
 	der := &deadlineResetter{}
-	cfg := conf.Serve.Proxy
+	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
 		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
@@ -101,10 +102,7 @@ func newService(
 	hc := alice.New(
 		trustedproxy.New(
 			log,
-			x.IfThenElseExec(cfg.TrustedProxies != nil,
-				func() []string { return *cfg.TrustedProxies },
-				func() []string { return []string{} },
-			)...,
+			cfg.TrustedProxies...,
 		),
 		recovery.New(eh),
 		otelhttp.NewMiddleware("",
@@ -145,7 +143,7 @@ func newService(
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: int(cfg.BufferLimit.Read),
+		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 		ConnContext:    der.contexter,
 	}

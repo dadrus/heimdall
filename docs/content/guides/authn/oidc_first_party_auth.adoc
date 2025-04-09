@@ -13,11 +13,11 @@ description: This guide will walk you through the process of integrating heimdal
 
 By the end of this guide, you'll have a functional setup where heimdall uses https://www.keycloak.org/[Keycloak] to authenticate users and route requests based on their authentication status and roles for role-based access control.
 
-Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with https://zitadel.com[Zitadel], https://github.com/malach-it/boruta-server[Boruta], or any other OpenID Connect-compatible IDP.
+Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with https://zitadel.com[Zitadel], https://github.com/malach-it/boruta-server[Boruta], or any other OpenID Connect compatible IDP.
 
 == Overview
 
-In this guide, we'll set up a Docker Compose environment where heimdall secures  services and controls access to specific endpoints:
+In this guide, we'll set up a Docker Compose environment where heimdall secures services and controls access for specific endpoints:
 
 * `/` - This endpoint is open to everyone.
 * `/user` - Accessible only to authenticated users.
@@ -27,22 +27,21 @@ There are also some further endpoints, which you'll learn about during the setup
 
 Technically, the setup includes:
 
-* https://hub.docker.com/r/containous/whoami/[containous/whoami] - A service that echoes back everything it receives, simulating our main service with endpoints mentioned above.
+* https://hub.docker.com/r/traefik/whoami/[traefik/whoami] - A service that echoes back everything it receives, simulating our main service, which exposes the endpoints defined above.
 * https://www.keycloak.org/[Keycloak] - Our identity provider.
-* https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] - Handles the Authorization Code Grant flow for the actual user login.
-* heimdall - Manages everything to enforce the requirements outlined above.
+* https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] - Handles the https://tools.ietf.org/html/rfc6749#section-4.1[Authorization Code Grant flow] for the actual user login.
+* heimdall - Enforces all the requirements outlined above.
 
 == Prerequisites
 
 To be able to follow this guide you need the following tools installed locally:
 
 * https://docs.docker.com/install/[Docker],
-* https://docs.docker.com/compose/install/[docker-compose], and
-* a text editor of your choice.
+* https://docs.docker.com/compose/install/[docker-compose]
 
 == Configure the Base Setup
 
-. Create a directory for the configuration files we’ll be using (referred to as the root directory in this guide). Inside this root directory, create two additional directories named `rules` and `initdb`. The former will be used for heimdall rules and the latter for DB initialization scripts.
+. Create a directory for the configuration files (referred to as the root directory in this guide). Inside this root directory, create two additional directories named `rules` and `initdb`. The former will be used for heimdall rules and the latter for DB initialization scripts.
 
 . Create a config file for heimdall named `heimdall-config.yaml` with the following contents in the root directory:
 +
@@ -142,7 +141,7 @@ XVwR/5tokqFVrFxt/5c1x7VdccF4nNM=
 -----END EC PRIVATE KEY-----
 ----
 +
-WARNING: Do not use it for purposes beyond this tutorial!
+WARNING: Do not use it for any purposes beyond this tutorial!
 
 . Next, we’ll create rules for our main service - the one exposing `/`, `/user` and the `/admin` endpoints. To do this, create a file named `upstream-rules.yaml` in the `rules` directory with the following content:
 +
@@ -227,21 +226,19 @@ EOSQL
 +
 [source, yaml]
 ----
-version: '3.7'
-
 services:
   heimdall: # <1>
     image: dadrus/heimdall:dev
     ports:
-      - "9090:4455"
-    command: -c /etc/heimdall/config.yaml serve proxy
+      - "9090:4456"
+    command: serve proxy --c /etc/heimdall/config.yaml --insecure
     volumes:
       - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
       - ./rules:/etc/heimdall/rules:ro
       - ./signer.pem:/etc/heimdall/signer.pem:ro
 
   upstream: # <2>
-    image: containous/whoami:latest
+    image: traefik/whoami:latest
     command: --port=8081
 
   oauth2-proxy: # <3>
@@ -306,6 +303,8 @@ volumes:
   postgres-db:
 ----
 <1> Here, we configure heimdall to use the previously defined configuration.
++
+NOTE: We're using the `--insecure` flag here to simplify our setup, which disables enforcement of some security settings you can learn about more link:{{< relref "/docs/operations/security.adoc#_defaults" >}}[here].
 <2> This section sets up the main service that we’ll be protecting.
 <3> This section defines the OAuth2-Proxy configuration, which heimdall will use to handle the Authorization Code Grant flow and manage the authentication session with a `SESSION` cookie.
 <4> The client ID and client secret values are placeholders. We will configure these in Keycloak.
@@ -321,9 +320,9 @@ volumes:
 
 With the above configuration in place, follow these steps to start Keycloak and the database, initialize both, and create the OAuth2-Proxy client:
 
-. In the root directory, run `docker-compose up postgresql keycloak`. Wait until the database is initialized and Keycloak has started.
+. In the root directory, run `docker compose up postgresql keycloak`. Wait until the database is initialized and Keycloak has started.
 . Open your browser and go to `\http://127.0.0.1:8080`. Log in using the admin credentials (both the username and password are set to `admin` in our setup).
-. Create a Realm named `test`. For detailed instructions, refer to the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-a-realm_server_administration_guide[ creating a realm].
+. Create a Realm named `test`. For detailed instructions, refer to the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-a-realm_server_administration_guide[creating a realm].
 . Within the `test` realm, create an OpenID Client. Follow the Keycloak documentation on https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide[creating an OIDC client]. Enable "Client authentication" and "Standard Flow", set `\http://127.0.0.1:9090/oauth2/callback` as the "Valid Redirect URI" and `\http://127.0.0.1:9090/` as the "Home URL" and "Valid post logout redirect URIs" and note the "Client ID" and "Client Secret" (later can be found under the "Credentials" tab after completing the client creation wizard); we will use these to complete the OAuth2-Proxy configuration in our Docker Compose file.
 . Stop the docker compose setup with `CTRL-C`.
 
@@ -331,13 +330,13 @@ With the above configuration in place, follow these steps to start Keycloak and 
 
 We can now finalize the configuration and use the proper client id and secret for OAuth2-Proxy
 
-. Update the `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` in the configuration of the OAuth2-Proxy in the docker compose file with the "Client ID" and "Client Secret" values from Keycloak
+. Update the `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` in the configuration of OAuth2-Proxy in your docker compose file with the "Client ID" and "Client Secret" values from Keycloak
 
 == Use the Setup
 
 We now have almost everything set up. The final step is to create a few users, including at least one with the `admin` role assigned.
 
-. In the root directory, run `docker-compose up`. Wait until all services are up and running.
+. In the root directory, run `docker compose up`. Wait until all services are up and running.
 . Open your browser and navigate to `\http://127.0.0.1:8080`. Log in using the admin credentials (both username and password are set to `admin`).
 . Select the `test` realm and create an `admin` group with a role named `admin` assigned to it. For guidance, refer to the Keycloak documentation on creating https://www.keycloak.org/docs/latest/server_admin/index.html#proc-managing-groups_server_administration_guide[Groups] and https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-realm-roles_server_administration_guide[Roles].
 . Create several users following the Keycloak documentation on  https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-user_server_administration_guide[managing users], and assign some of them to the `admin` group. Disable email verification during user creation to avoid sending verification emails to potentially non-existent addresses.
@@ -403,5 +402,5 @@ NOTE: To "logout" the user, just delete the cookies for `\http://127.0.0.1:9090`
 
 == Cleanup
 
-Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with `docker-compose down`.
+Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with `docker compose down`.
 

@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -31,13 +30,11 @@ import (
 func TestApplyApiKeyStrategy(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		strategy endpoint.AuthenticationStrategy
 		assert   func(t *testing.T, err error, req *http.Request)
 	}{
-		{
-			uc:       "header strategy",
+		"header strategy": {
 			strategy: &APIKey{In: "header", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -46,8 +43,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 				assert.Equal(t, "Bar", req.Header.Get("Foo"))
 			},
 		},
-		{
-			uc:       "cookie strategy",
+		"cookie strategy": {
 			strategy: &APIKey{In: "cookie", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -59,8 +55,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 				assert.Equal(t, "Bar", cookie.Value)
 			},
 		},
-		{
-			uc:       "query strategy",
+		"query strategy": {
 			strategy: &APIKey{In: "query", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -73,8 +68,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 				assert.Equal(t, "foo", query.Get("bar"))
 			},
 		},
-		{
-			uc:       "invalid strategy",
+		"invalid strategy": {
 			strategy: &APIKey{In: "foo", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
@@ -84,7 +78,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			req := &http.Request{
 				Header: http.Header{},
@@ -97,7 +91,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 			}
 
 			// WHEN
-			err := tc.strategy.Apply(context.Background(), req)
+			err := tc.strategy.Apply(t.Context(), req)
 
 			// THEN
 			tc.assert(t, err, req)

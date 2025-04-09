@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-gw
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system

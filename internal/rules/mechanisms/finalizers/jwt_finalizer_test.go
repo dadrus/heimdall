@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -28,10 +27,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -39,6 +40,7 @@ import (
 	mocks3 "github.com/dadrus/heimdall/internal/keyholder/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	mocks2 "github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -64,17 +66,13 @@ func TestCreateJWTFinalizer(t *testing.T) {
 
 	const expectedTTL = 5 * time.Second
 
-	for _, tc := range []struct {
-		uc               string
-		id               string
-		config           []byte
-		configureContext func(t *testing.T, ctx *CreationContextMock)
-		assert           func(t *testing.T, err error, finalizer *jwtFinalizer)
+	for uc, tc := range map[string]struct {
+		config              []byte
+		configureAppContext func(t *testing.T, ctx *app.ContextMock)
+		assert              func(t *testing.T, err error, finalizer *jwtFinalizer)
 	}{
-		{
-			uc:               "without config",
-			id:               "fin",
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+		"without config": {
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -82,11 +80,9 @@ func TestCreateJWTFinalizer(t *testing.T) {
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
 		},
-		{
-			uc:               "with empty config",
-			id:               "fin",
-			config:           []byte(``),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+		"with empty config": {
+			config:              []byte(``),
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -94,16 +90,14 @@ func TestCreateJWTFinalizer(t *testing.T) {
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
 		},
-		{
-			uc: "with not existing key store for signer",
-			id: "fin",
+		"with not existing key store for signer": {
 			config: []byte(`
 signer:
   key_store:
     path: /does/not/exist.pem
   key_id: key
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Watcher().Return(mocks2.NewWatcherMock(t))
@@ -115,16 +109,14 @@ signer:
 				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
-		{
-			uc: "with signer only",
-			id: "fin",
+		"with signer only": {
 			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
   key_id: key
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -148,7 +140,8 @@ signer:
 				require.NotNil(t, finalizer)
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with signer only", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -156,11 +149,10 @@ signer:
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, "key", finalizer.signer.keyID)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
-		{
-			uc: "with ttl and signer",
-			id: "fin",
+		"with ttl and signer": {
 			config: []byte(`
 ttl: 5s
 signer:
@@ -168,7 +160,7 @@ signer:
   key_store: 
     path: ` + pemFile + `
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -192,24 +184,25 @@ signer:
 				require.NotNil(t, finalizer)
 				assert.Equal(t, expectedTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with ttl and signer", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "foo", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
-		{
-			uc: "with too short ttl",
+		"with too short ttl": {
 			config: []byte(`
 ttl: 5ms
 signer:
   key_store: 
     path: ` + pemFile + `
 `),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -218,9 +211,7 @@ signer:
 				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
-		{
-			uc: "with claims and key store",
-			id: "fin",
+		"with claims and key store": {
 			config: []byte(`
 signer:
   name: foo
@@ -229,7 +220,7 @@ signer:
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -257,8 +248,9 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "with claims and key store", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				assert.False(t, finalizer.ContinueOnError())
@@ -266,20 +258,18 @@ claims:
 				assert.Equal(t, "foo", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
-		{
-			uc: "with claims, signer and ttl",
-			id: "fin",
+		"with claims, signer and ttl": {
 			config: []byte(`
 ttl: 5s
 signer:
   key_store: 
     path: ` + pemFile + `
-claims: 
-  '{ "sub": {{ quote .Subject.ID }} }'
+claims: '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -307,8 +297,9 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "with claims, signer and ttl", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				assert.False(t, finalizer.ContinueOnError())
@@ -316,15 +307,15 @@ claims:
 				assert.Equal(t, "heimdall", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
-		{
-			uc: "with unknown entries in configuration",
+		"with unknown entries in configuration": {
 			config: []byte(`
 ttl: 5s
 foo: bar"
 `),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -333,8 +324,7 @@ foo: bar"
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with bad header config",
+		"with bad header config": {
 			config: []byte(`
 signer:
   key_store: 
@@ -342,7 +332,7 @@ signer:
 header:
   scheme: Foo
 `),
-			configureContext: func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+			configureAppContext: func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
@@ -351,9 +341,7 @@ header:
 				assert.Contains(t, err.Error(), "'header'.'name' is a required field")
 			},
 		},
-		{
-			uc: "with valid header config without scheme",
-			id: "fin",
+		"with valid header config without scheme": {
 			config: []byte(`
 signer:
   key_store: 
@@ -361,7 +349,7 @@ signer:
 header:
   name: Foo
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -384,27 +372,31 @@ header:
 				require.NotNil(t, finalizer)
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with valid header config without scheme", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Empty(t, finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "heimdall", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
-		{
-			uc: "with valid header config with scheme",
-			id: "fin",
+		"with all possible entries": {
 			config: []byte(`
+ttl: 1m
 signer:
   key_store: 
     path: ` + pemFile + `
 header:
   name: Foo
   scheme: Bar
+claims: '{{ .Values.foo }}'
+values:
+  foo: '{{ .Subject.ID }}'
 `),
-			configureContext: func(t *testing.T, ctx *CreationContextMock) {
+			configureAppContext: func(t *testing.T, ctx *app.ContextMock) {
 				t.Helper()
 
 				wm := mocks2.NewWatcherMock(t)
@@ -425,27 +417,36 @@ header:
 
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
-				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
-				assert.Nil(t, finalizer.claims)
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, time.Minute, finalizer.ttl)
+				assert.NotNil(t, finalizer.claims)
+				assert.Equal(t, "with all possible entries", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Equal(t, "Bar", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "heimdall", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
 				assert.Equal(t, privKey, finalizer.signer.key)
+				assert.Len(t, finalizer.v, 1)
+				assert.Empty(t, finalizer.Certificates())
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			ctx := NewCreationContextMock(t)
-			tc.configureContext(t, ctx)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			tc.configureAppContext(t, appCtx)
 
 			// WHEN
-			finalizer, err := newJWTFinalizer(ctx, tc.id, conf)
+			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -472,16 +473,12 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 
 	const expectedTTL = 5 * time.Second
 
-	for _, tc := range []struct {
-		uc              string
-		id              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer)
 	}{
-		{
-			uc: "no new configuration provided",
-			id: "fin1",
+		"no new configuration provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -492,13 +489,11 @@ signer:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "fin1", configured.ID())
+				assert.Equal(t, "no new configuration provided", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		{
-			uc: "empty configuration provided",
-			id: "fin2",
+		"empty configuration provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -510,13 +505,11 @@ signer:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "fin2", configured.ID())
+				assert.Equal(t, "empty configuration provided", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		{
-			uc: "configuration with ttl only provided",
-			id: "fin3",
+		"configuration with ttl only provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -533,14 +526,13 @@ signer:
 				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
-				assert.Equal(t, "fin3", configured.ID())
+				assert.Equal(t, "configuration with ttl only provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
-		{
-			uc: "configuration with too short ttl",
+		"configuration with too short ttl": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -555,9 +547,7 @@ signer:
 				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
-		{
-			uc: "configuration with claims only provided",
-			id: "fin4",
+		"configuration with claims only provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -581,16 +571,44 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin4", configured.ID())
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "configuration with claims only provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
-		{
-			uc: "configuration with both ttl and claims provided",
-			id: "fin5",
+		"configuration with claims and values": {
+			prototypeConfig: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+`),
+			config: []byte(`
+claims: '{ "sub": {{ quote .Value.foo }} }'
+values:
+  foo: '{{ quote .Subject.ID }}'
+`),
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, defaultJWTTTL, configured.ttl)
+				assert.Nil(t, prototype.claims)
+				assert.NotEqual(t, prototype.claims, configured.claims)
+				require.NotNil(t, configured.claims)
+				assert.Equal(t, "configuration with claims and values", configured.ID())
+				assert.NotEmpty(t, configured.v)
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
+				assert.Equal(t, prototype.signer, configured.signer)
+			},
+		},
+		"configuration with both ttl and claims provided": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -616,15 +634,45 @@ claims:
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
-				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "fin5", configured.ID())
+				assert.JSONEq(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "configuration with both ttl and claims provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
-		{
-			uc: "with unknown entries in configuration",
+		"configuration with values": {
+			prototypeConfig: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+claims: '{ "foo": {{ quote .Values.foo }} }'
+values:
+  foo: bar
+`),
+			config: []byte(`
+values:
+  foo: '{{ quote .Subject.ID }}'
+`),
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, defaultJWTTTL, configured.ttl)
+				assert.Equal(t, prototype.claims, configured.claims)
+				require.NotNil(t, configured.claims)
+				assert.Equal(t, "configuration with values", configured.ID())
+				assert.NotEmpty(t, configured.v)
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
+				assert.Equal(t, prototype.signer, configured.signer)
+			},
+		},
+		"with unknown entries in configuration": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -643,7 +691,7 @@ foo: bar
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			protoConf, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
@@ -659,12 +707,17 @@ foo: bar
 			co := mocks4.NewObserverMock(t)
 			co.EXPECT().Add(mock.Anything)
 
-			ctx := NewCreationContextMock(t)
-			ctx.EXPECT().Watcher().Return(wm)
-			ctx.EXPECT().KeyHolderRegistry().Return(khr)
-			ctx.EXPECT().CertificateObserver().Return(co)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
 
-			prototype, err := newJWTFinalizer(ctx, tc.id, protoConf)
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Watcher().Return(wm)
+			appCtx.EXPECT().KeyHolderRegistry().Return(khr)
+			appCtx.EXPECT().CertificateObserver().Return(co)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newJWTFinalizer(appCtx, uc, protoConf)
 			require.NoError(t, err)
 
 			// WHEN
@@ -705,21 +758,17 @@ func TestJWTFinalizerExecute(t *testing.T) {
 	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc             string
-		id             string
+	for uc, tc := range map[string]struct {
 		config         []byte
 		subject        *subject.Subject
 		configureMocks func(t *testing.T,
 			fin *jwtFinalizer,
-			ctx *heimdallmocks.ContextMock,
+			ctx *heimdallmocks.RequestContextMock,
 			cch *mocks.CacheMock,
 			sub *subject.Subject)
 		assert func(t *testing.T, err error)
 	}{
-		{
-			uc: "with 'nil' subject",
-			id: "fin1",
+		"with 'nil' subject": {
 			config: []byte(`
 signer:
   key_store:
@@ -734,18 +783,17 @@ signer:
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "fin1", identifier.ID())
+				assert.Equal(t, "with 'nil' subject", identifier.ID())
 			},
 		},
-		{
-			uc: "with used prefilled cache",
+		"with used prefilled cache": {
 			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -762,8 +810,7 @@ signer:
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "with no cache hit and without custom claims",
+		"with no cache hit and without custom claims": {
 			config: []byte(`
 signer:
   key_store:
@@ -771,7 +818,7 @@ signer:
 ttl: 1m
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -789,8 +836,7 @@ ttl: 1m
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "with no cache hit, with custom claims and custom header",
+		"with no cache hit, with custom claims and custom header": {
 			config: []byte(`
 signer:
   key_store:
@@ -805,7 +851,7 @@ claims: '{
   "foo": {{ .Outputs.foo | quote }}
 }'`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -823,9 +869,36 @@ claims: '{
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "with custom claims template, which does not result in a JSON object",
-			id: "jun2",
+		"with no cache hit, with custom claims and values": {
+			config: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+claims: '{{- dict "foo" .Values.foo "bar" .Values.bar | toJson -}}'
+values:
+  foo: '{{ .Subject.ID | quote }}'
+  bar: '{{ .Outputs.bar | quote }}'
+`),
+			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock, _ *subject.Subject,
+			) {
+				t.Helper()
+
+				ctx.EXPECT().AddHeaderForUpstream("Authorization",
+					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
+				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"with custom claims template, which does not result in a JSON object": {
 			config: []byte(`
 signer:
   key_store:
@@ -833,7 +906,7 @@ signer:
 claims: "foo: bar"
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -851,12 +924,10 @@ claims: "foo: bar"
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "jun2", identifier.ID())
+				assert.Equal(t, "with custom claims template, which does not result in a JSON object", identifier.ID())
 			},
 		},
-		{
-			uc: "with custom claims template, which fails during rendering",
-			id: "jun3",
+		"with custom claims template, which fails during rendering": {
 			config: []byte(`
 signer:
   key_store:
@@ -864,7 +935,7 @@ signer:
 claims: "{{ len .foobar }}"
 `),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
@@ -878,19 +949,50 @@ claims: "{{ len .foobar }}"
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render")
+				assert.Contains(t, err.Error(), "failed to render claims")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "jun3", identifier.ID())
+				assert.Equal(t, "with custom claims template, which fails during rendering", identifier.ID())
+			},
+		},
+		"with values template, which fails during rendering": {
+			config: []byte(`
+signer:
+  key_store:
+    path: ` + pemFile + `
+claims: "{{ quote .Values.foo }}"
+values:
+  foo: '{{ len .fooo }}'
+`),
+			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock, _ *subject.Subject,
+			) {
+				t.Helper()
+
+				ctx.EXPECT().Outputs().Return(map[string]any{})
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render values")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "with values template, which fails during rendering", identifier.ID())
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock, _ *mocks.CacheMock, _ *subject.Subject) {
+				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.RequestContextMock, _ *mocks.CacheMock, _ *subject.Subject) {
 					t.Helper()
 				})
 
@@ -898,7 +1000,7 @@ claims: "{{ len .foobar }}"
 			require.NoError(t, err)
 
 			cch := mocks.NewCacheMock(t)
-			mctx := heimdallmocks.NewContextMock(t)
+			mctx := heimdallmocks.NewRequestContextMock(t)
 
 			wm := mocks2.NewWatcherMock(t)
 			wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
@@ -909,14 +1011,19 @@ claims: "{{ len .foobar }}"
 			co := mocks4.NewObserverMock(t)
 			co.EXPECT().Add(mock.Anything)
 
-			cctx := NewCreationContextMock(t)
-			cctx.EXPECT().Watcher().Return(wm)
-			cctx.EXPECT().KeyHolderRegistry().Return(khr)
-			cctx.EXPECT().CertificateObserver().Return(co)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
 
-			mctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Watcher().Return(wm)
+			appCtx.EXPECT().KeyHolderRegistry().Return(khr)
+			appCtx.EXPECT().CertificateObserver().Return(co)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			finalizer, err := newJWTFinalizer(cctx, tc.id, conf)
+			mctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
+
+			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
 			configureMocks(t, finalizer, mctx, cch, tc.subject)

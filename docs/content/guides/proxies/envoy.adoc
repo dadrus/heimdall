@@ -2,7 +2,7 @@
 title: "Envoy Integration"
 date: 2022-12-18T00:13:59+02:00
 draft: false
-weight: 13
+weight: 14
 menu:
   guides:
     parent: "API Gateways & Proxies"

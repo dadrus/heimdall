@@ -25,8 +25,8 @@ import (
 
 type compositeSubjectHandler []subjectHandler
 
-func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (cm compositeSubjectHandler) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 
 	for _, handler := range cm {
 		err := handler.Execute(ctx, sub)

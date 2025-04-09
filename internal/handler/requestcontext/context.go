@@ -24,7 +24,7 @@ import (
 //go:generate mockery --name Context --structname ContextMock
 
 type Context interface {
-	heimdall.Context
+	heimdall.RequestContext
 
 	Finalize(backend rule.Backend) error
 }

@@ -17,7 +17,6 @@
 package v1alpha4
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -177,7 +176,7 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 func (s *ClientTestSuite) TestRuleSetsList() {
 	// WHEN
-	rls, err := s.cl.RuleSetRepository("foo").List(context.Background(), metav1.ListOptions{})
+	rls, err := s.cl.RuleSetRepository("foo").List(s.T().Context(), metav1.ListOptions{})
 
 	// THEN
 	s.Require().NoError(err)
@@ -186,7 +185,7 @@ func (s *ClientTestSuite) TestRuleSetsList() {
 
 func (s *ClientTestSuite) TestRuleSetsWatch() {
 	// WHEN
-	watcher, err := s.cl.RuleSetRepository("foo").Watch(context.Background(), metav1.ListOptions{})
+	watcher, err := s.cl.RuleSetRepository("foo").Watch(s.T().Context(), metav1.ListOptions{})
 
 	// THEN
 	s.Require().NoError(err)

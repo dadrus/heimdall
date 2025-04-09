@@ -49,7 +49,7 @@ func (r *requestContext) Finalize(_ rule.Backend) error {
 		return err
 	}
 
-	zerolog.Ctx(r.AppContext()).Debug().Msg("Creating response")
+	zerolog.Ctx(r.Context()).Debug().Msg("Creating response")
 
 	uh := r.UpstreamHeaders()
 	for name, values := range uh {

@@ -89,6 +89,27 @@
       "properties": {
         "type": {
           "const": "in-memory"
+        },
+        "config": {
+          "description": "In-Memory cache configuration",
+          "type": "object",
+          "properties": {
+            "memory_limit": {
+              "description": "The maximum amount of memory the cache is allowed to use. This limit helps prevent excessive memory consumption and may affect the number of entries stored.",
+              "type": "string",
+              "default": "128MB",
+              "pattern": "^[0-9]+(B|KB|MB|GB)$",
+              "examples": [
+                "1GB",
+                "256MB",
+                "128KB"
+              ]
+            },
+            "entry_limit": {
+              "description": "The maximum number of entries the cache can store. This limit ensures the cache doesn’t grow indefinitely and can be used in conjunction with `memoryLimit` to manage cache size.",
+              "type": "integer"
+            }
+          }
         }
       }
     },
@@ -915,6 +936,19 @@
               "type": "boolean",
               "description": "Whether issuer identifier verification according to RFC8414 should be skipped. Used only if metadata_endpoint is configured",
               "default": false
+            },
+            "resolved_endpoints": {
+              "description": "Configuration options for the resolved endpoints",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "jwks_uri": {
+                  "$ref": "#/definitions/metadataResolvedEndpointProperties"
+                },
+                "introspection_endpoint": {
+                  "$ref": "#/definitions/metadataResolvedEndpointProperties"
+                }
+              }
             }
           }
         },
@@ -927,6 +961,69 @@
           ]
         }
       ]
+    },
+    "metadataResolvedEndpointProperties": {
+      "description": "Settings which can be configured for the resolved endpoints",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retry": {
+          "description": "How the implementation should behave when trying to access the configured endpoint",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "give_up_after": {
+              "description": "When the implementation should finally give up, if the endpoint is not answering.",
+              "type": "string",
+              "default": "1s",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+            },
+            "max_delay": {
+              "description": "How long the implementation should wait between the attempts",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "100ms"
+            }
+          }
+        },
+        "auth": {
+          "description": "How to authenticate against the endpoint",
+          "type": "object",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/endpointAuthApiKeyProperties"
+            },
+            {
+              "$ref": "#/definitions/endpointAuthBasicAuthProperties"
+            },
+            {
+              "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
+            }
+          ]
+        },
+        "http_cache": {
+          "description": "Configures cache usage according to RFC 7234",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Enables or disables http cache usage",
+              "type": "boolean",
+              "default": false
+            },
+            "default_ttl": {
+              "description": "How long a response from server should be cached if no cache related headers are present",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "0ms",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
+            }
+          }
+        }
+      }
     },
     "endpointAuthBasicAuthProperties": {
       "properties": {
@@ -1252,7 +1349,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             },
             "session_lifespan": {
               "$ref": "#/definitions/sessionLifespanConfiguration"
@@ -1319,7 +1417,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             }
           }
         }
@@ -1383,7 +1482,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             },
             "validate_jwk": {
               "type": "boolean",
@@ -1431,7 +1531,8 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
-              "default": false
+              "default": false,
+              "deprecationMessage": "This property is deprecated. Fallback is now determined solely by the order of authenticators in the pipeline."
             }
           }
         }
@@ -1655,7 +1756,9 @@
               "description": "Configures signer options for issued JWTs.",
               "type": "object",
               "additionalProperties": false,
-              "required": [ "key_store" ],
+              "required": [
+                "key_store"
+              ],
               "properties": {
                 "name": {
                   "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
@@ -2158,132 +2261,79 @@
       "pattern": "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
     },
     "serve": {
-      "description": "HTTP(s) configuration of exposed services",
+      "description": "HTTP(s) configuration of the main service",
       "additionalProperties": false,
       "type": "object",
       "properties": {
-        "decision": {
-          "description": "Decision service Configuration",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "port": {
-              "description": "The port to listen on.",
-              "type": "integer"
-            },
-            "host": {
-              "description": "The network interface to listen on.",
-              "type": "string",
-              "default": "",
-              "examples": [
-                "localhost",
-                "127.0.0.1"
-              ]
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "tls": {
-              "$ref": "#/definitions/tlsConfig"
-            },
-            "trusted_proxies": {
-              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "respond": {
-              "$ref": "#/definitions/respondWithConfig"
-            }
+        "port": {
+          "description": "The port to listen on.",
+          "type": "integer"
+        },
+        "host": {
+          "description": "The network interface to listen on.",
+          "type": "string",
+          "default": "",
+          "examples": [
+            "localhost",
+            "127.0.0.1"
+          ]
+        },
+        "timeout": {
+          "$ref": "#/definitions/timeoutConfig"
+        },
+        "buffer_limit": {
+          "$ref": "#/definitions/bufferLimitConfig"
+        },
+        "connections_limit": {
+          "$ref": "#/definitions/connectionsLimitConfig"
+        },
+        "cors": {
+          "$ref": "#/definitions/corsConfig"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsConfig"
+        },
+        "trusted_proxies": {
+          "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         },
-        "proxy": {
-          "description": "Proxy service configuration",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "port": {
-              "description": "The port to listen on.",
-              "type": "integer"
-            },
-            "host": {
-              "description": "The network interface to listen on.",
-              "type": "string",
-              "default": "",
-              "examples": [
-                "localhost",
-                "127.0.0.1"
-              ]
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "connections_limit": {
-              "$ref": "#/definitions/connectionsLimitConfig"
-            },
-            "cors": {
-              "$ref": "#/definitions/corsConfig"
-            },
-            "tls": {
-              "$ref": "#/definitions/tlsConfig"
-            },
-            "trusted_proxies": {
-              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "respond": {
-              "$ref": "#/definitions/respondWithConfig"
-            }
-          }
+        "respond": {
+          "$ref": "#/definitions/respondWithConfig"
+        }
+      }
+    },
+    "management": {
+      "description": "Management service configuration",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "port": {
+          "description": "The port to listen on.",
+          "type": "integer"
         },
-        "management": {
-          "description": "Management service configuration",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "port": {
-              "description": "The port to listen on.",
-              "type": "integer"
-            },
-            "host": {
-              "description": "The network interface to listen on.",
-              "type": "string",
-              "default": "",
-              "examples": [
-                "localhost",
-                "127.0.0.1"
-              ]
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "cors": {
-              "$ref": "#/definitions/corsConfig"
-            },
-            "tls": {
-              "$ref": "#/definitions/tlsConfig"
-            },
-            "trusted_proxies": {
-              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
+        "host": {
+          "description": "The network interface to listen on.",
+          "type": "string",
+          "default": "",
+          "examples": [
+            "localhost",
+            "127.0.0.1"
+          ]
+        },
+        "timeout": {
+          "$ref": "#/definitions/timeoutConfig"
+        },
+        "buffer_limit": {
+          "$ref": "#/definitions/bufferLimitConfig"
+        },
+        "cors": {
+          "$ref": "#/definitions/corsConfig"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsConfig"
         }
       }
     },

@@ -1,0 +1,22 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: istio-gw
+  namespace: istio-gw
+  labels:
+    istio: ingressgateway
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http
+      hostname: echo-app.local
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: istio-gw-tls
+            kind: Secret

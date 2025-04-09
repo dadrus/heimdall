@@ -40,10 +40,12 @@ func HostPort(hp string) (string, int) {
 		return "", -1
 	}
 
-	p, err := strconv.ParseUint(pStr, 10, 16)
+	port, err := strconv.ParseUint(pStr, 10, 16)
 	if err != nil {
 		return host, -1
 	}
 
-	return host, int(p)
+	//nolint:gosec
+	// no integer overflow during conversion possible
+	return host, int(port)
 }

@@ -21,17 +21,24 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(EnforcementSettings{}),
+	)
+	require.NoError(t, err)
+
 	rawExp, err := yaml.Marshal(defaultConfig()) //nolint:musttag
 	require.NoError(t, err)
 
 	// WHEN
-	config, err := NewConfiguration("HEIMDALLCFG_", "")
+	config, err := NewConfiguration("HEIMDALLCFG_", "", validator)
 
 	// THEN
 	require.NoError(t, err)
@@ -46,11 +53,16 @@ func TestNewConfigurationWithConfigFile(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(EnforcementSettings{}),
+	)
+	require.NoError(t, err)
+
 	rawExp, err := yaml.Marshal(defaultConfig()) //nolint:musttag
 	require.NoError(t, err)
 
 	// WHEN
-	config, err := NewConfiguration("HEIMDALLCFG_", "./test_data/test_config.yaml")
+	config, err := NewConfiguration("HEIMDALLCFG_", "./test_data/test_config.yaml", validator)
 
 	// THEN
 	require.NoError(t, err)

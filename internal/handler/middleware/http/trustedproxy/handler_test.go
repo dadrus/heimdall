@@ -17,7 +17,6 @@
 package trustedproxy
 
 import (
-	"context"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -31,18 +30,17 @@ import (
 func TestHandlerExecution(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		ips        []string
 		shouldDrop bool
 	}{
-		{"bad IP range", []string{"/128"}, true},
-		{"single IP trusted", []string{"127.0.0.1"}, false},
-		{"trusted IP range", []string{"127.0.0.0/24"}, false},
-		{"source not in IP range", []string{"172.0.0.0/24"}, true},
-		{"empty list", []string{}, true},
+		"bad IP range":           {[]string{"/128"}, true},
+		"single IP trusted":      {[]string{"127.0.0.1"}, false},
+		"trusted IP range":       {[]string{"127.0.0.0/24"}, false},
+		"source not in IP range": {[]string{"172.0.0.0/24"}, true},
+		"empty list":             {[]string{}, true},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			send := http.Header{
 				"X-Forwarded-Proto": []string{"https"},
@@ -67,7 +65,7 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(), http.MethodGet, srv.URL+"/test", nil)
+				t.Context(), http.MethodGet, srv.URL+"/test", nil)
 			require.NoError(t, err)
 
 			req.Header = send

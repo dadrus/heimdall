@@ -1,0 +1,12 @@
+serve:
+  port: 4469
+  tls:
+    key_store:
+      path: /path/to/file.pem
+  trusted_proxies:
+    - 0.0.0.0/0
+
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem

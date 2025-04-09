@@ -55,13 +55,11 @@ func TestEntryToJWK(t *testing.T) {
 	ecdsaPrivKey3, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		entry  *Entry
 		assert func(t *testing.T, entry *Entry, jwk jose.JSONWebKey)
 	}{
-		{
-			uc:    "rsa 2048 key",
+		"rsa 2048 key": {
 			entry: &Entry{KeyID: "foo", Alg: AlgRSA, PrivateKey: rsaPrivKey1, KeySize: rsa2048},
 			assert: func(t *testing.T, entry *Entry, jwk jose.JSONWebKey) {
 				t.Helper()
@@ -76,8 +74,7 @@ func TestEntryToJWK(t *testing.T) {
 				assert.Empty(t, jwk.CertificateThumbprintSHA256)
 			},
 		},
-		{
-			uc:    "rsa 3072 key",
+		"rsa 3072 key": {
 			entry: &Entry{KeyID: "bar", Alg: AlgRSA, PrivateKey: rsaPrivKey2, KeySize: rsa3072},
 			assert: func(t *testing.T, entry *Entry, jwk jose.JSONWebKey) {
 				t.Helper()
@@ -92,8 +89,7 @@ func TestEntryToJWK(t *testing.T) {
 				assert.Empty(t, jwk.CertificateThumbprintSHA256)
 			},
 		},
-		{
-			uc:    "rsa 4096 key",
+		"rsa 4096 key": {
 			entry: &Entry{KeyID: "baz", Alg: AlgRSA, PrivateKey: rsaPrivKey3, KeySize: rsa4096},
 			assert: func(t *testing.T, entry *Entry, jwk jose.JSONWebKey) {
 				t.Helper()
@@ -108,8 +104,7 @@ func TestEntryToJWK(t *testing.T) {
 				assert.Empty(t, jwk.CertificateThumbprintSHA256)
 			},
 		},
-		{
-			uc:    "ec P256 key",
+		"ec P256 key": {
 			entry: &Entry{KeyID: "foo", Alg: AlgECDSA, PrivateKey: ecdsaPrivKey1, KeySize: ecdsa256},
 			assert: func(t *testing.T, entry *Entry, jwk jose.JSONWebKey) {
 				t.Helper()
@@ -124,8 +119,7 @@ func TestEntryToJWK(t *testing.T) {
 				assert.Empty(t, jwk.CertificateThumbprintSHA256)
 			},
 		},
-		{
-			uc:    "ec P384 key",
+		"ec P384 key": {
 			entry: &Entry{KeyID: "bar", Alg: AlgECDSA, PrivateKey: ecdsaPrivKey2, KeySize: ecdsa384},
 			assert: func(t *testing.T, entry *Entry, jwk jose.JSONWebKey) {
 				t.Helper()
@@ -140,8 +134,7 @@ func TestEntryToJWK(t *testing.T) {
 				assert.Empty(t, jwk.CertificateThumbprintSHA256)
 			},
 		},
-		{
-			uc:    "ec P512 key",
+		"ec P512 key": {
 			entry: &Entry{KeyID: "zab", Alg: AlgECDSA, PrivateKey: ecdsaPrivKey3, KeySize: ecdsa512},
 			assert: func(t *testing.T, entry *Entry, jwk jose.JSONWebKey) {
 				t.Helper()
@@ -157,7 +150,7 @@ func TestEntryToJWK(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			// WHEN
 			jwk := tc.entry.JWK()
@@ -207,13 +200,11 @@ func TestEntryToTLSCertificate(t *testing.T) {
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		entry  *Entry
 		assert func(t *testing.T, err error, entry *Entry, tlsCer tls.Certificate)
 	}{
-		{
-			uc:    "just the key is present",
+		"just the key is present": {
 			entry: &Entry{PrivateKey: ee1PrivKey},
 			assert: func(t *testing.T, err error, _ *Entry, _ tls.Certificate) {
 				t.Helper()
@@ -222,8 +213,7 @@ func TestEntryToTLSCertificate(t *testing.T) {
 				require.ErrorIs(t, err, ErrNoCertificatePresent)
 			},
 		},
-		{
-			uc:    "only the ee key and cert are present",
+		"only the ee key and cert are present": {
 			entry: &Entry{PrivateKey: ee1PrivKey, CertChain: []*x509.Certificate{ee1Cert}},
 			assert: func(t *testing.T, err error, entry *Entry, tlsCer tls.Certificate) {
 				t.Helper()
@@ -237,8 +227,7 @@ func TestEntryToTLSCertificate(t *testing.T) {
 				assert.Equal(t, entry.CertChain[0].Raw, tlsCer.Certificate[0])
 			},
 		},
-		{
-			uc: "ee key and cert, as well as all ca certs are present",
+		"ee key and cert, as well as all ca certs are present": {
 			entry: &Entry{
 				PrivateKey: ee1PrivKey,
 				CertChain:  []*x509.Certificate{ee1Cert, intCA1Cert, rootCA1.Certificate},
@@ -259,7 +248,7 @@ func TestEntryToTLSCertificate(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			cert, err := tc.entry.TLSCertificate()
 

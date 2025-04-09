@@ -50,7 +50,7 @@ func TestDecodeLogLevel(t *testing.T) {
 		{config: `level: disabled`, expect: zerolog.Disabled},
 		{config: `level: trace`, expect: zerolog.TraceLevel},
 	} {
-		t.Run("case="+tc.config, func(t *testing.T) {
+		t.Run(tc.config, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
@@ -88,7 +88,7 @@ func TestDecodeLogFormat(t *testing.T) {
 		{config: `format: text`, expect: LogTextFormat},
 		{config: `format: foo`, expect: LogTextFormat},
 	} {
-		t.Run("case="+tc.config, func(t *testing.T) {
+		t.Run(tc.config, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
@@ -118,13 +118,11 @@ func TestDecodeTLSCipherSuite(t *testing.T) {
 		CipherSuites TLSCipherSuites `mapstructure:"cipher_suites"`
 	}
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, suites TLSCipherSuites)
 	}{
-		{
-			uc: "unsupported cipher suite",
+		"unsupported cipher suite": {
 			config: []byte(`
 cipher_suites:
 - foo
@@ -136,8 +134,7 @@ cipher_suites:
 				assert.Contains(t, err.Error(), "unsupported")
 			},
 		},
-		{
-			uc: "all supported cipher suites",
+		"all supported cipher suites": {
 			config: []byte(`
 cipher_suites:
 - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
@@ -168,7 +165,7 @@ cipher_suites:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
@@ -197,13 +194,11 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 		MinVersion TLSMinVersion `mapstructure:"min_version"`
 	}
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, minVersion TLSMinVersion)
 	}{
-		{
-			uc:     "unsupported version",
+		"unsupported version": {
 			config: []byte(`min_version: foo`),
 			assert: func(t *testing.T, err error, _ TLSMinVersion) {
 				t.Helper()
@@ -212,8 +207,7 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 				assert.Contains(t, err.Error(), "unsupported")
 			},
 		},
-		{
-			uc:     "TLS v1.2 version",
+		"TLS v1.2 version": {
 			config: []byte(`min_version: TLS1.2`),
 			assert: func(t *testing.T, err error, minVersion TLSMinVersion) {
 				t.Helper()
@@ -222,8 +216,7 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 				assert.Equal(t, TLSMinVersion(tls.VersionTLS12), minVersion)
 			},
 		},
-		{
-			uc:     "TLS v1.3 version",
+		"TLS v1.3 version": {
 			config: []byte(`min_version: TLS1.3`),
 			assert: func(t *testing.T, err error, minVersion TLSMinVersion) {
 				t.Helper()
@@ -233,7 +226,7 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
@@ -270,7 +263,7 @@ func TestStringToByteSizeHookFunc(t *testing.T) {
 		{config: "size: 3KB", expect: 3 * bytesize.KB},
 		{config: "size: 5MB", expect: 5 * bytesize.MB},
 	} {
-		t.Run("case="+tc.config, func(t *testing.T) {
+		t.Run(tc.config, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 

@@ -95,7 +95,7 @@ mechanisms:
     type: generic
     config:
       endpoint:
-        url: http://group-manager.local/groups
+        url: https://group-manager.local/groups
         method: GET
       forward_headers:
         - Authorization
@@ -125,5 +125,5 @@ mechanisms:
   - id: authenticate_with_kratos
     type: redirect
     config:
-      to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+      to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 ----

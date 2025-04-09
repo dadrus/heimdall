@@ -19,22 +19,20 @@ package authenticators
 import (
 	"github.com/go-viper/mapstructure/v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/truststore"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(ctx CreationContext, authenticatorType string, input, output any) error {
+func decodeConfig(app app.Context, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				authstrategy.DecodeAuthenticationStrategyHookFunc(ctx),
+				authstrategy.DecodeAuthenticationStrategyHookFunc(app),
 				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 				extractors.DecodeCompositeExtractStrategyHookFunc(),
@@ -46,18 +44,15 @@ func decodeConfig(ctx CreationContext, authenticatorType string, input, output a
 			ErrorUnused: true,
 		})
 	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding '%s' authenticator config", authenticatorType).CausedBy(err)
+		return err
 	}
 
 	if err = dec.Decode(input); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding '%s' authenticator config", authenticatorType).CausedBy(err)
+		return err
 	}
 
-	if err = validation.ValidateStruct(output); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed validating `%s` authenticator config", authenticatorType).CausedBy(err)
+	if err = app.Validator().ValidateStruct(output); err != nil {
+		return err
 	}
 
 	return nil

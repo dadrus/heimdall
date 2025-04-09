@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"slices"
 	"sync"
 
@@ -52,7 +53,7 @@ func newRepository(ruleFactory rule.Factory) rule.Repository {
 	}
 }
 
-func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
+func (r *repository) FindRule(ctx heimdall.RequestContext) (rule.Rule, error) {
 	request := ctx.Request()
 
 	r.rulesTreeMutex.RLock()
@@ -78,7 +79,7 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	return entry.Value.Rule(), nil
 }
 
-func (r *repository) AddRuleSet(_ string, rules []rule.Rule) error {
+func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) error {
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
@@ -97,7 +98,7 @@ func (r *repository) AddRuleSet(_ string, rules []rule.Rule) error {
 	return nil
 }
 
-func (r *repository) UpdateRuleSet(srcID string, rules []rule.Rule) error {
+func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule.Rule) error {
 	// create rules
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
@@ -155,7 +156,7 @@ func (r *repository) UpdateRuleSet(srcID string, rules []rule.Rule) error {
 	return nil
 }
 
-func (r *repository) DeleteRuleSet(srcID string) error {
+func (r *repository) DeleteRuleSet(_ context.Context, srcID string) error {
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 

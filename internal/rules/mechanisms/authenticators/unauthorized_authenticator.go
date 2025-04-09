@@ -19,6 +19,7 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -29,12 +30,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorUnauthorized {
 				return false, nil, nil
 			}
 
-			return true, newUnauthorizedAuthenticator(id), nil
+			return true, newUnauthorizedAuthenticator(app, id), nil
 		})
 }
 
@@ -42,12 +43,15 @@ type unauthorizedAuthenticator struct {
 	id string
 }
 
-func newUnauthorizedAuthenticator(id string) *unauthorizedAuthenticator {
+func newUnauthorizedAuthenticator(app app.Context, id string) *unauthorizedAuthenticator {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating unauthorized authenticator")
+
 	return &unauthorizedAuthenticator{id: id}
 }
 
-func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using unauthorized authenticator")
 
 	return nil, errorchain.
@@ -60,11 +64,8 @@ func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator,
 	return a, nil
 }
 
-func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
-	// not allowed, as this authenticator fails always
-	return false
-}
-
 func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *unauthorizedAuthenticator) IsInsecure() bool { return false }

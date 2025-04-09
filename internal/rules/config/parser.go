@@ -24,6 +24,7 @@ import (
 	"github.com/drone/envsubst/v2"
 	"gopkg.in/yaml.v3"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -31,12 +32,17 @@ import (
 
 var ErrEmptyRuleSet = errors.New("empty rule set")
 
-func ParseRules(contentType string, reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
+func ParseRules(
+	app app.Context,
+	contentType string,
+	reader io.Reader,
+	envUsageEnabled bool,
+) (*RuleSet, error) {
 	switch contentType {
 	case "application/json":
 		fallthrough
 	case "application/yaml":
-		return parseYAML(reader, envUsageEnabled)
+		return parseYAML(app, reader, envUsageEnabled)
 	default:
 		// check if the contents are empty. in that case nothing needs to be decoded anyway
 		b := make([]byte, 1)
@@ -50,7 +56,7 @@ func ParseRules(contentType string, reader io.Reader, envUsageEnabled bool) (*Ru
 	}
 }
 
-func parseYAML(reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
+func parseYAML(app app.Context, reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
 	var (
 		rawConfig map[string]any
 		ruleSet   RuleSet
@@ -81,7 +87,7 @@ func parseYAML(reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
 		return nil, err
 	}
 
-	if err := DecodeConfig(rawConfig, &ruleSet); err != nil {
+	if err := DecodeConfig(app, rawConfig, &ruleSet); err != nil {
 		return nil, err
 	}
 

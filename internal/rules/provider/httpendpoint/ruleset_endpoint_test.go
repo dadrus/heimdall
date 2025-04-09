@@ -17,7 +17,6 @@
 package httpendpoint
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,11 +27,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
@@ -75,14 +76,12 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		ep            *ruleSetEndpoint
 		writeResponse ResponseWriter
 		assert        func(t *testing.T, err error, ruleSet *config.RuleSet)
 	}{
-		{
-			uc: "rule set loading error due to DNS error",
+		"rule set loading error due to DNS error": {
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    "https://foo.bar.local/rules.yaml",
@@ -97,8 +96,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				assert.Contains(t, err.Error(), "endpoint failed")
 			},
 		},
-		{
-			uc: "rule set loading error due to server error response",
+		"rule set loading error due to server error response": {
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -118,8 +116,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				assert.Contains(t, err.Error(), "response code: 400")
 			},
 		},
-		{
-			uc: "rule set loading error due to not set Content-Type for a not empty body",
+		"rule set loading error due to not set Content-Type for a not empty body": {
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -148,8 +145,7 @@ rules:
 				assert.Contains(t, err.Error(), "content type")
 			},
 		},
-		{
-			uc: "empty rule set is returned on response with empty body",
+		"empty rule set is returned on response with empty body": {
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -168,8 +164,7 @@ rules:
 				require.ErrorIs(t, err, config.ErrEmptyRuleSet)
 			},
 		},
-		{
-			uc: "valid rule set without path prefix from yaml",
+		"valid rule set without path prefix from yaml": {
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -218,8 +213,7 @@ rules:
 				assert.NotEmpty(t, ruleSet.Hash)
 			},
 		},
-		{
-			uc: "valid rule set without path prefix from json",
+		"valid rule set without path prefix from json": {
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -256,8 +250,7 @@ rules:
 				require.NotEmpty(t, ruleSet.Hash)
 			},
 		},
-		{
-			uc: "valid rule set with full url glob",
+		"valid rule set with full url glob": {
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -299,13 +292,19 @@ rules:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			cch := mocks.NewCacheMock(t)
 			ctx := log.Logger.With().
 				Str("_provider_type", "http_endpoint").
 				Logger().
-				WithContext(cache.WithContext(context.Background(), cch))
+				WithContext(cache.WithContext(t.Context(), cch))
 
 			writeResponse = x.IfThenElse(tc.writeResponse != nil,
 				tc.writeResponse,
@@ -316,7 +315,7 @@ rules:
 				})
 
 			// WHEN
-			ruleSet, err := tc.ep.FetchRuleSet(ctx)
+			ruleSet, err := tc.ep.FetchRuleSet(ctx, appCtx)
 
 			// THEN
 			tc.assert(t, err, ruleSet)

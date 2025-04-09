@@ -16,103 +16,75 @@ Below you can find possible contents (not exhaustive) for Heimdall's `config.yam
 [source, yaml]
 ----
 serve:
-  decision:
-    host: 127.0.0.1
-    port: 4468
-    respond:
-      verbose: true
-      with:
-        accepted:
-          code: 201
-        authorization_error:
-          code: 404
-        authentication_error:
-          code: 404
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    buffer_limit:
-      read: 10KB
-      write: 10KB
-    tls:
-      key_store:
-        path: /path/to/key/store.pem
-        password: VerySecure!
-    trusted_proxies:
-      - 192.168.1.0/24
+  host: 127.0.0.1
+  port: 4469
+  respond:
+    verbose: true
+    with:
+      authorization_error:
+        code: 404
+      authentication_error:
+        code: 404
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
+  connections_limit:
+    max_per_host: 10
+    max_idle: 100
+    max_idle_per_host: 50
+  buffer_limit:
+    read: 10KB
+    write: 10KB
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - GET
+      - POST
+    allowed_headers:
+      - Authorization
+    exposed_headers:
+      - X-My-Header
+    allow_credentials: true
+    max_age: 1m
+  tls:
+    key_store:
+      path: /path/to/key/store.pem
+      password: VerySecure!
+    key_id: first_entry
+    min_version: TLS1.2
+    cipher_suites:
+      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+  trusted_proxies:
+    - 192.168.1.0/24
 
-  proxy:
-    host: 127.0.0.1
-    port: 4469
-    respond:
-      verbose: true
-      with:
-        authorization_error:
-          code: 404
-        authentication_error:
-          code: 404
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    connections_limit:
-      max_per_host: 10
-      max_idle: 100
-      max_idle_per_host: 50
-    buffer_limit:
-      read: 10KB
-      write: 10KB
-    cors:
-      allowed_origins:
-        - example.org
-      allowed_methods:
-        - GET
-        - POST
-      allowed_headers:
-        - Authorization
-      exposed_headers:
-        - X-My-Header
-      allow_credentials: true
-      max_age: 1m
-    tls:
-      key_store:
-        path: /path/to/key/store.pem
-        password: VerySecure!
-      key_id: first_entry
-      min_version: TLS1.2
-      cipher_suites:
-        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
-    trusted_proxies:
-      - 192.168.1.0/24
-
-  management:
-    host: 127.0.0.1
-    port: 4457
-    verbose_errors: false
-    timeout:
-      read: 2s
-      write: 5s
-      idle: 2m
-    cors:
-      allowed_origins:
-        - example.org
-      allowed_methods:
-        - GET
-        - POST
-      allowed_headers:
-        - Authorization
-      exposed_headers:
-        - X-My-Header
-      allow_credentials: true
-      max_age: 1m
-    tls:
-      key_store:
-        path: /path/to/key/store.pem
-      min_version: TLS1.2
+management:
+  host: 127.0.0.1
+  port: 4457
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - GET
+      - POST
+    allowed_headers:
+      - Authorization
+    exposed_headers:
+      - X-My-Header
+    allow_credentials: true
+    max_age: 1m
+  tls:
+    key_store:
+      path: /path/to/key/store.pem
+    min_version: TLS1.2
 
 cache:
   type: redis-sentinel
@@ -167,12 +139,11 @@ mechanisms:
     config:
       user_id: bar
       password: baz
-      allow_fallback_on_error: true
   - id: kratos_session_authenticator
     type: generic
     config:
       identity_info_endpoint:
-        url: http://127.0.0.1:4433/sessions/whoami
+        url: https://127.0.0.1:4433/sessions/whoami
         auth:
           auth:
             type: basic_auth
@@ -189,12 +160,11 @@ mechanisms:
       subject:
         attributes: "@this"
         id: "identity.id"
-      allow_fallback_on_error: true
   - id: hydra_authenticator
     type: oauth2_introspection
     config:
       introspection_endpoint:
-        url: http://hydra:4445/oauth2/introspect
+        url: https://hydra:4445/oauth2/introspect
         retry:
           max_delay: 300ms
           give_up_after: 2s
@@ -211,7 +181,7 @@ mechanisms:
         - body_parameter: access_token
       assertions:
         issuers:
-          - http://127.0.0.1:4444/
+          - https://127.0.0.1:4444/
         scopes:
           - foo
           - bar
@@ -220,16 +190,29 @@ mechanisms:
       subject:
         attributes: "@this"
         id: "sub"
-      allow_fallback_on_error: true
   - id: jwt_authenticator
     type: jwt
     config:
       metadata_endpoint:
-        url: http://auth-server/.well-known/oauth-authorization-server
+        url: https://auth-server/.well-known/oauth-authorization-server
         disable_issuer_identifier_verification: true
         http_cache:
           enabled: true
           cache_ttl: 1h
+        resolved_endpoints:
+          jwks_uri:
+            auth:
+              type: oauth2_client_credentials
+              config:
+                token_url: https://auth-server/token
+                client_id: foo
+                client_secret: bar
+            retry:
+              give_up_after: 1m
+              max_delay: 5s
+            http_cache:
+              enabled: true
+              default_ttl: 10m
       jwt_source:
         - header: Authorization
           scheme: Bearer
@@ -246,7 +229,6 @@ mechanisms:
         attributes: "@this"
         id: "identity.id"
       cache_ttl: 5m
-      allow_fallback_on_error: true
 
   authorizers:
   - id: allow_all_authorizer
@@ -257,7 +239,7 @@ mechanisms:
     type: remote
     config:
       endpoint:
-        url: http://my-authz-system/{{ .Values.some-key }}
+        url: https://my-authz-system/{{ .Values.some-key }}
         method: POST
         headers:
           foo-bar: "{{ .Subject.ID }}"
@@ -286,7 +268,7 @@ mechanisms:
     type: generic
     config:
       endpoint:
-        url: http://foo.bar
+        url: https://foo.bar
         method: GET
         headers:
           bla: bla
@@ -294,19 +276,19 @@ mechanisms:
           type: oauth2_client_credentials
           config:
             auth_method: request_body
-            token_url: http://bar.foo
+            token_url: https://bar.foo
             client_id: foo
             client_secret: bar
             cache_ttl: 20s
             header:
               name: X-Foo
               scheme: Bar
-      payload: http://foo
+      payload: foo
   - id: profile_data_contextualizer
     type: generic
     config:
       endpoint:
-        url: http://profile
+        url: https://profile
         headers:
           foo: bar
       continue_pipeline_on_error: true
@@ -356,7 +338,7 @@ mechanisms:
   - id: authenticate_with_kratos
     type: redirect
     config:
-      to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+      to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
 default_rule:
   backtracking_enabled: false
@@ -378,10 +360,10 @@ providers:
   http_endpoint:
     watch_interval: 5m
     endpoints:
-      - url: http://foo.bar/ruleset1
+      - url: https://foo.bar/ruleset1
         http_cache:
           enabled: false
-      - url: http://foo.bar/ruleset2
+      - url: https://foo.bar/ruleset2
         retry:
           give_up_after: 5s
           max_delay: 250ms

@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -32,13 +31,11 @@ import (
 func TestConditionalErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		configureMocks func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock)
 		assert         func(t *testing.T, err error)
 	}{
-		{
-			uc: "executes if can",
+		"executes if can": {
 			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock) {
 				t.Helper()
 
@@ -52,8 +49,7 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc: "does not execute if can not",
+		"does not execute if can not": {
 			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock) {
 				t.Helper()
 
@@ -67,8 +63,7 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 				require.ErrorIs(t, err, errErrorHandlerNotApplicable)
 			},
 		},
-		{
-			uc: "does not execute if can check fails",
+		"does not execute if can check fails": {
 			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock) {
 				t.Helper()
 
@@ -84,14 +79,14 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			condition := rulemocks.NewExecutionConditionMock(t)
 			handler := rulemocks.NewErrorHandlerMock(t)
 			decorator := conditionalErrorHandler{c: condition, h: handler}
 
-			ctx := mocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.Background())
+			ctx := mocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(t.Context())
 
 			tc.configureMocks(t, condition, handler)
 

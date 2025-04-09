@@ -40,22 +40,20 @@ To be able to follow this guide, you'll need the following tools installed local
 +
 [source, yaml]
 ----
-version: '3.7'
-
 services:
   heimdall: # <1>
     image: dadrus/heimdall:dev
     container_name: heimdall
     ports:
-    - "9090:4455"
+    - "9090:4456"
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./rules:/etc/heimdall/rules:ro
     - ./signer.pem:/etc/heimdall/signer.pem:ro
-    command: -c /etc/heimdall/config.yaml serve proxy
+    command: serve proxy -c /etc/heimdall/config.yaml --insecure
 
   upstream: # <2>
-    image: containous/whoami:latest
+    image: traefik/whoami:latest
     container_name: upstream
     command:
     - --port=8081
@@ -74,6 +72,8 @@ services:
     - ./jwks.json:/var/www/nginx/jwks.json:ro
 ----
 <1> These lines configure heimdall to use a config file, we're going to configure next and a rule directory, we'll add our rules to.
++
+NOTE: We're using the `--insecure` flag here to simplify our setup, which disables enforcement of some security settings you can learn about more link:{{< relref "/docs/operations/security.adoc#_defaults" >}}[here].
 <2> Here, we define the "upstream" service, which just echoes back everything it receives.
 <3> And these lines configure our OpenFGA instance. It is the simplest setup, described in https://openfga.dev/docs/getting-started/setup-openfga/docker[Setup OpenFGA with Docker]
 <4> This is an NGINX service, which mimics an IDP system and exposes an JWKS endpoint with key material, heimdall is going to use to validate the JWT you're going to use.
@@ -211,7 +211,7 @@ In addition, create a file named `jwks.json` with the public key required to ver
 
 The static configuration of our services is in place. Let us now create the actual authorization model and based on it the required heimdall rules.
 
-. Start our setup with `docker-compose up` and wait until all services are up and running.
+. Start our setup with `docker compose up` and wait until all services are up and running.
 
 . Create the OpenFGA store as also described in https://openfga.dev/docs/getting-started/create-store[Create Store] with
 +
@@ -434,5 +434,5 @@ Just stop the environment with `CTRL-C` and delete the created files. If you sta
 
 [source, bash]
 ----
-$ docker-compose down
+$ docker compose down
 ----

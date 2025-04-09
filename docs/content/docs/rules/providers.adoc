@@ -119,7 +119,7 @@ Here the provider is configured to load a rule set from one endpoint without pol
 ----
 http_endpoint:
   endpoints:
-    - url: http://foo.bar/ruleset1
+    - url: https://foo.bar/ruleset1
 ----
 ====
 
@@ -135,10 +135,10 @@ The configuration for both endpoints instructs heimdall to disable HTTP caching.
 http_endpoint:
   watch_interval: 5m
   endpoints:
-    - url: http://foo.bar/ruleset1
+    - url: https://foo.bar/ruleset1
       http_cache:
         enabled: false
-    - url: http://foo.bar/ruleset2
+    - url: https://foo.bar/ruleset2
       http_cache:
         enabled: false
       retry:

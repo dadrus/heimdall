@@ -59,7 +59,7 @@ Enables or disables backtracking when a request matches the path expressions but
 
 ** *`hosts`*: _HostMatcher array_ (optional)
 +
-Defines a set of hosts to match against the HTTP Host header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. Each entry has the following properties:
+Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. Each entry has the following properties:
 
 *** *`type`*: _string_ (mandatory)
 +
@@ -110,21 +110,28 @@ CAUTION: Handling URL-encoded slashes may differ across the proxies in front of 
 
 * *`forward_to`*: _RequestForwarder_ (mandatory in Proxy operation mode)
 +
-Specifies where to forward proxied requests when heimdall is operating in proxy mode. The following properties are supported:
+Defines the destination for proxied requests when heimdall operates in proxy mode. The following properties are supported:
 
 ** *`host`*: _string_ (mandatory)
 +
-Host (and port) for forwarding the request. If no `rewrite` property (see below) is defined, the original URL's scheme, path, and other components are preserved. E.g. if the original request is `\https://mydomain.com/api/v1/something?foo=bar&bar=baz` and the value of this property is set to `my-backend:8080`, the url used to forward the request to the upstream will be `\https://my-backend:8080/api/v1/something?foo=bar&bar=baz`
+Specifies the host (and port) to which the request should be forwarded. If no `rewrite` property (see below) is defined, the original URL's scheme, path, and other components remain unchanged. For example, if the original request is `https://mydomain.com/api/v1/something?foo=bar&bar=baz` and this property is set to `my-backend:8080`, the forwarded request will be sent to `https://my-backend:8080/api/v1/something?foo=bar&bar=baz`.
+
+** *`forward_host_header`*: _boolean_ (optional)
 +
-NOTE: The `Host` header is not preserved when forwarding the request. To preserve it, use of the link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] in your `execute` pipeline and set it accordingly. The example below demonstrates that.
+Controls whether the `Host` header is forwarded to the upstream. Defaults to `true`.
++
+**Note:** If a link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] sets the `Host` header in the `execute` pipeline, its value takes precedence over this setting.
 
 ** *`rewrite`*: _OriginalURLRewriter_ (optional)
 +
-Can be used to rewrite further parts of the original URL before forwarding the request. If specified, at least one of the following supported (middleware) properties must be specified:
+Allows modifying additional parts of the original URL before forwarding the request. If set, at least one of the following supported (middleware) properties must be defined:
 
 *** *`scheme`*: _string_ (optional)
 +
-Specifies the URL scheme to use for forwarding the request.
+Specifies the URL scheme to use when forwarding the request. Defaults to the scheme of the original request.
++
+NOTE: Unless heimdall is started with the `--insecure-skip-upstream-tls-enforcement` flag, only `https` is allowed as the scheme.
+
 
 *** *`strip_path_prefix`*: _string_ (optional)
 +
@@ -158,7 +165,7 @@ match:
         - name: identifier
           type: glob
           value: "[a-z]"
-  scheme: http
+  scheme: https
   hosts:
     - type: exact
       value: my-service.local
@@ -168,7 +175,7 @@ match:
 forward_to:
   host: backend-a:8080
   rewrite:
-    scheme: http
+    scheme: https
     strip_path_prefix: /api/v1
 execute:
   # the following just demonstrates how to make use of specific
@@ -177,15 +184,6 @@ execute:
   - authorizer: bar
   - contextualizer: foo
   - finalizer: zab
-  # the following one demonstrates how to preserve the
-  # Host header from the original request, while forwarding
-  # it to the upstream service
-  - finalizer: preserve-host
-    # the config property can be omitted, if already configured
-    # in the header finalizer mechanism
-    config:
-      headers:
-        Host: '{{ .Request.Header "Host" | quote }}'
 on_error:
   - error_handler: foobar
 ----
@@ -305,9 +303,13 @@ However, even though the request to `/files/team4/document.pdf` matches the path
 
 As described in the link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, this pipeline consists of mechanisms, previously configured in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanisms catalogue], organized in stages as described below, with authentication stage (consisting of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticators]) being mandatory.
 
-* **Authentication Stage:** List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references using `authenticator` as key, followed by the required authenticator `id`. Authenticators following the first defined in the list are used by heimdall as fallback. That is, if first authenticator fails due to missing authentication data, second is executed, etc. By default, fallback is not used if an authenticator fails due to validation errors of the given authentication data. E.g. if an authenticator fails to validate the signature of a JWT token, the next authenticator in the list will not be executed. Instead, the entire pipeline will fail and lead to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is mandatory if no link:{{< relref "default_rule.adoc" >}}[default rule] is configured.
+* **Authentication Stage:** List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references, each using authenticator as the key, followed by the required authenticator id. Regardless of their order in the pipeline, each authenticator serves as a fallback for the preceding one if it fails.
 +
-NOTE: Some authenticators use the same sources to get subject authentication object from. E.g. the `jwt` and the `oauth2_introspection` authenticators can retrieve tokens from the same places in the request. If such authenticators are used in the same pipeline, you should configure the more specific ones before the more general ones to have working default fallbacks. To stay with the above example, the `jwt` authenticator is more specific compared to `oauth2_introspection`, as it will be only executed, if the token is in a JWT format. In contrast to this, the `oauth2_introspection` authenticator is more general and does not care about the token format, thus will feel responsible for the request as soon as it finds a bearer token. You can however also make use of the `allow_fallback_on_error` configuration property and set it to `true`. This will allow a fallback even if the verification of the credentials fail.
+[NOTE]
+====
+Some authenticators rely on the same sources to obtain the subject authentication object. For example, both the `jwt` and `oauth2_introspection` authenticators retrieve tokens from the `Authorization` header by default. When using such authenticators within the same pipeline, it's best to configure the more specific ones before the more general ones to optimize performance. In this case, the `jwt` authenticator is more specific since it only processes tokens in JWT format. In contrast, the `oauth2_introspection` authenticator is more general - it doesn’t depend on the token format and will attempt to handle any request containing a bearer token.
+====
+
 * **Authorization Stage:** List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanisms in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional.
 * **Finalization Stage:** List of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalizer] references using `finalizers` as key, followed by the required finalizer `id`. All finalizers in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional. If a link:{{< relref "default_rule.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
 

@@ -32,6 +32,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -49,12 +50,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorOAuth2Introspection {
 				return false, nil, nil
 			}
 
-			auth, err := newOAuth2IntrospectionAuthenticator(ctx, id, conf)
+			auth, err := newOAuth2IntrospectionAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
@@ -62,6 +63,7 @@ func init() {
 
 type oauth2IntrospectionAuthenticator struct {
 	id                   string
+	app                  app.Context
 	r                    oauth2.ServerMetadataResolver
 	a                    oauth2.Expectation
 	sf                   SubjectFactory
@@ -70,12 +72,15 @@ type oauth2IntrospectionAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-// nolint: funlen
+// nolint: funlen, cyclop
 func newOAuth2IntrospectionAuthenticator(
-	ctx CreationContext,
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*oauth2IntrospectionAuthenticator, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating oauth2_introspection authenticator")
+
 	type Config struct {
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
@@ -87,8 +92,23 @@ func newOAuth2IntrospectionAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_introspection authenticator '%s'", id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
+	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the introspection endpoint used in oauth2_introspection authenticator")
+	}
+
+	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the metadata endpoint used in oauth2_introspection authenticator")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -145,6 +165,7 @@ func newOAuth2IntrospectionAuthenticator(
 
 	return &oauth2IntrospectionAuthenticator{
 		id:                   id,
+		app:                  app,
 		ads:                  ads,
 		r:                    resolver,
 		a:                    conf.Assertions,
@@ -154,8 +175,8 @@ func newOAuth2IntrospectionAuthenticator(
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using OAuth2 introspect authenticator")
 
 	accessToken, err := a.ads.GetAuthData(ctx)
@@ -196,12 +217,19 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_introspection authenticator '%s'", a.id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	return &oauth2IntrospectionAuthenticator{
 		id:  a.id,
+		app: a.app,
 		r:   a.r,
 		a:   conf.Assertions.Merge(a.a),
 		sf:  a.sf,
@@ -213,16 +241,14 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
-}
-
 func (a *oauth2IntrospectionAuthenticator) ID() string {
 	return a.id
 }
 
+func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
+
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
-	ctx heimdall.Context, claims map[string]any,
+	ctx heimdall.RequestContext, claims map[string]any,
 ) (oauth2.ServerMetadata, error) {
 	args := map[string]any{}
 
@@ -230,7 +256,7 @@ func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 		args["TokenIssuer"] = claims["iss"]
 	}
 
-	metadata, err := a.r.Get(ctx.AppContext(), args)
+	metadata, err := a.r.Get(ctx.Context(), args)
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
@@ -257,9 +283,12 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
-func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {
-	cch := cache.Ctx(ctx.AppContext())
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
+	ctx heimdall.RequestContext,
+	token string,
+) ([]byte, error) {
+	cch := cache.Ctx(ctx.Context())
+	logger := zerolog.Ctx(ctx.Context())
 
 	var cacheKey string
 
@@ -273,14 +302,14 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		return nil, err
 	}
 
-	req, err := a.createRequest(ctx.AppContext(), metadata.IntrospectionEndpoint, token, claims)
+	req, err := a.createRequest(ctx.Context(), metadata.IntrospectionEndpoint, token, claims)
 	if err != nil {
 		return nil, err
 	}
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), token)
-		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing introspection response from cache")
 
 			return entry, nil
@@ -312,7 +341,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	}
 
 	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
-		if err = cch.Set(ctx.AppContext(), cacheKey, rawResp, cacheTTL); err != nil {
+		if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
 			logger.Warn().Err(err).Msg("Failed to cache introspection response")
 		}
 	}
@@ -357,9 +386,9 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 }
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx heimdall.Context, client *http.Client, req *http.Request,
+	ctx heimdall.RequestContext, client *http.Client, req *http.Request,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Debug().Msg("Retrieving information about the access token from the introspection endpoint")
 
@@ -388,7 +417,7 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, nil, errorchain.
 			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
 			WithErrorContext(a)

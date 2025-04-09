@@ -1,0 +1,21 @@
+{
+	auto_https off
+}
+
+:9090 {
+	reverse_proxy upstream:8081
+
+    # this configuration requires a secure trusted_proxies configuration in heimdall
+	forward_auth http://heimdall:4456 {
+    	uri          /
+    	copy_headers Authorization
+    }
+
+    # alternative configuration without the need to configure trusted_proxies
+    #forward_auth http://heimdall:4456 {
+    #    uri          /
+    #    method       {method}
+    #    header_down  Host {http.request.hostport}
+    #    copy_headers Authorization
+    #}
+}

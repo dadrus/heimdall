@@ -33,13 +33,11 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 		Scopes Scopes `json:"scope,omitempty"`
 	}
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		json   []byte
 		assert func(t *testing.T, err error, scopes Scopes)
 	}{
-		{
-			uc:   "scope encoded as string",
+		"scope encoded as string": {
 			json: []byte(`{ "scope": "foo bar baz" }`),
 			assert: func(t *testing.T, err error, scopes Scopes) {
 				t.Helper()
@@ -52,8 +50,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 				assert.Contains(t, scopes, "baz")
 			},
 		},
-		{
-			uc:   "scope encoded as json array",
+		"scope encoded as json array": {
 			json: []byte(`{ "scope": ["foo", "bar", "baz"] }`),
 			assert: func(t *testing.T, err error, scopes Scopes) {
 				t.Helper()
@@ -66,8 +63,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 				assert.Contains(t, scopes, "baz")
 			},
 		},
-		{
-			uc:   "bad scope encoding (not a json object)",
+		"bad scope encoding (not a json object)": {
 			json: []byte(`"scope": ["foo", "bar", "baz"]`),
 			assert: func(t *testing.T, err error, _ Scopes) {
 				t.Helper()
@@ -75,8 +71,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:   "bad scope encoding (not expected content)",
+		"bad scope encoding (not expected content)": {
 			json: []byte(`{ "scope": true }`),
 			assert: func(t *testing.T, err error, _ Scopes) {
 				t.Helper()
@@ -86,8 +81,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 				assert.Contains(t, err.Error(), "unexpected content")
 			},
 		},
-		{
-			uc:   "bad scope encoding (not expected json array content)",
+		"bad scope encoding (not expected json array content)": {
 			json: []byte(`{ "scope": [true] }`),
 			assert: func(t *testing.T, err error, _ Scopes) {
 				t.Helper()
@@ -98,7 +92,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			var typ Typ
 

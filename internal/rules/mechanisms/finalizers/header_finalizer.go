@@ -17,8 +17,11 @@
 package finalizers
 
 import (
+	"strings"
+
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -30,12 +33,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerHeader {
 				return false, nil, nil
 			}
 
-			finalizer, err := newHeaderFinalizer(id, conf)
+			finalizer, err := newHeaderFinalizer(app, id, conf)
 
 			return true, finalizer, err
 		})
@@ -43,27 +46,33 @@ func init() {
 
 type headerFinalizer struct {
 	id      string
+	app     app.Context
 	headers map[string]template.Template
 }
 
-func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, error) {
+func newHeaderFinalizer(app app.Context, id string, rawConfig map[string]any) (*headerFinalizer, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating header finalizer")
+
 	type Config struct {
 		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerHeader, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for header finalizer '%s'", id).CausedBy(err)
 	}
 
 	return &headerFinalizer{
 		id:      id,
+		app:     app,
 		headers: conf.Headers,
 	}, nil
 }
 
-func (f *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *headerFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", f.id).Msg("Finalizing using header finalizer")
 
 	if sub == nil {
@@ -87,18 +96,38 @@ func (f *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 
 		logger.Debug().Str("_value", value).Msg("Rendered template")
 
-		ctx.AddHeaderForUpstream(name, value)
+		// Split the rendered value into multiple values if newline-separated
+		values := strings.Split(value, "\n")
+		for _, v := range values {
+			if len(v) != 0 {
+				ctx.AddHeaderForUpstream(name, v)
+			}
+		}
 	}
 
 	return nil
 }
 
-func (f *headerFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
-	if len(config) == 0 {
+func (f *headerFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
+	if len(rawConfig) == 0 {
 		return f, nil
 	}
 
-	return newHeaderFinalizer(f.id, config)
+	type Config struct {
+		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`
+	}
+
+	var conf Config
+	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for header finalizer '%s'", f.id).CausedBy(err)
+	}
+
+	return &headerFinalizer{
+		id:      f.id,
+		app:     f.app,
+		headers: conf.Headers,
+	}, nil
 }
 
 func (f *headerFinalizer) ID() string { return f.id }

@@ -114,7 +114,7 @@ tests:
             app.kubernetes.io/instance: test-release
             app.kubernetes.io/name: foo
 
-  - it: should expose management and decision ports by default
+  - it: should expose management and main ports by default
     asserts:
       - equal:
           path: spec.ports
@@ -123,12 +123,12 @@ tests:
               port: 4457
               protocol: TCP
               targetPort: http-management
-            - name: decision
+            - name: main
               port: 4456
               protocol: TCP
-              targetPort: http-decision
+              targetPort: http-main
 
-  - it: should expose management and proxy ports if operated in proxy mode
+  - it: should expose management and main ports if operated in proxy mode
     set:
       operationMode: proxy
     asserts:
@@ -139,10 +139,10 @@ tests:
               port: 4457
               protocol: TCP
               targetPort: http-management
-            - name: proxy
-              port: 4455
+            - name: main
+              port: 4456
               protocol: TCP
-              targetPort: http-proxy
+              targetPort: http-main
 
   - it: should not expose metrics port in addition to the standard ports although it is configured
     set:
@@ -156,10 +156,10 @@ tests:
               port: 4457
               protocol: TCP
               targetPort: http-management
-            - name: decision
+            - name: main
               port: 4456
               protocol: TCP
-              targetPort: http-decision
+              targetPort: http-main
 
   - it: should not expose profiling port in addition to the standard ports although it is configured
     set:
@@ -172,10 +172,10 @@ tests:
               port: 4457
               protocol: TCP
               targetPort: http-management
-            - name: decision
+            - name: main
               port: 4456
               protocol: TCP
-              targetPort: http-decision
+              targetPort: http-main
 
   - it: should expose admission controller web hook port if configured
     set:
@@ -191,10 +191,10 @@ tests:
               port: 4457
               protocol: TCP
               targetPort: http-management
-            - name: decision
+            - name: main
               port: 4456
               protocol: TCP
-              targetPort: http-decision
+              targetPort: http-main
             - name: admission-controller
               port: 4458
               protocol: TCP
@@ -209,7 +209,7 @@ tests:
       service.management:
         port: 1111
         name: man
-      service.decision:
+      service.main:
         port: 2222
         name: dec
       service.admissionController:
@@ -226,7 +226,7 @@ tests:
             - name: dec
               port: 2222
               protocol: TCP
-              targetPort: http-decision
+              targetPort: http-main
             - name: adm
               port: 3333
               protocol: TCP
@@ -242,7 +242,7 @@ tests:
       service.management:
         port: 1111
         name: man
-      service.proxy:
+      service.main:
         port: 2222
         name: prox
       service.admissionController:
@@ -259,7 +259,7 @@ tests:
             - name: prox
               port: 2222
               protocol: TCP
-              targetPort: http-proxy
+              targetPort: http-main
             - name: adm
               port: 3333
               protocol: TCP

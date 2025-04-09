@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
@@ -53,15 +54,13 @@ func TestNewProvider(t *testing.T) {
 	// the corresponding k8s api is not threat safe.
 	// So, to avoid concurrent map writes, this test is not configured
 	// to run parallel
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   []byte
-		assert func(t *testing.T, err error, prov *provider)
+		assert func(t *testing.T, err error, prov *Provider)
 	}{
-		{
-			uc:   "with unknown field",
+		"with unknown field": {
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -69,10 +68,9 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
-		{
-			uc:   "with empty configuration",
+		"with empty configuration": {
 			conf: []byte(`{}`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -82,10 +80,9 @@ func TestNewProvider(t *testing.T) {
 				assert.NotNil(t, prov.cl)
 			},
 		},
-		{
-			uc:   "with auth_class configured",
+		"with auth_class configured": {
 			conf: []byte(`auth_class: foo`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -96,7 +93,7 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
@@ -106,8 +103,12 @@ func TestNewProvider(t *testing.T) {
 			}
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			prov, err := newProvider(log.Logger, conf, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
+			prov, err := NewProvider(appCtx, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -329,16 +330,14 @@ func (h *RuleSetResourceHandler) writeSingleRuleResponse(t *testing.T, w http.Re
 func TestProviderLifecycle(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		conf           []byte
 		watchEvent     func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error)
 		updateStatus   func(rs v1alpha4.RuleSet, callIdx int) (*metav1.Status, error)
 		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
 		assert         func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc:   "rule set added",
+		"rule set added": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -351,8 +350,8 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -360,7 +359,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -391,8 +390,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "adding rule set fails",
+		"adding rule set fails": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, _ int) (watch.Event, error) {
 				return watch.Event{Type: watch.Bookmark, Object: &rs}, nil
@@ -400,7 +398,7 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -416,8 +414,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActivationFailed, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added and then removed",
+		"a ruleset is added and then removed": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -450,12 +447,12 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
-				processor.EXPECT().OnDeleted(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -463,7 +460,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -485,7 +482,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -499,8 +496,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added with failing status update",
+		"a ruleset is added with failing status update": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -521,8 +517,8 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -530,7 +526,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -555,8 +551,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Empty(t, *statusList)
 			},
 		},
-		{
-			uc:   "a ruleset is added with conflicting status update",
+		"a ruleset is added with status resulting in a conflict": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -592,8 +587,8 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -601,7 +596,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -632,8 +627,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "removing rule set fails",
+		"removing rule set fails": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -649,8 +643,8 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -671,8 +665,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetUnloadingFailed, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added and then updated",
+		"a ruleset is added and then updated": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -721,12 +714,12 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
-				processor.EXPECT().OnUpdated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -734,7 +727,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -756,7 +749,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -792,8 +785,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "a ruleset is added and then updated with a mismatching authClassName",
+		"a ruleset is added and then updated with a mismatching authClassName": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -818,12 +810,12 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
-				processor.EXPECT().OnDeleted(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -831,7 +823,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -853,7 +845,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha4", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -883,8 +875,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActive, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
-		{
-			uc:   "failed updating rule set",
+		"failed updating rule set": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
@@ -933,8 +924,8 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -956,7 +947,7 @@ func TestProviderLifecycle(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
@@ -987,10 +978,14 @@ func TestProviderLifecycle(t *testing.T) {
 			processor := mocks.NewRuleSetProcessorMock(t)
 			setupProcessor(t, processor)
 
-			prov, err := newProvider(log.Logger, conf, k8sCF, processor, mocks.NewFactoryMock(t))
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			// WHEN
 			err = prov.Start(ctx)

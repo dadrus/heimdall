@@ -19,8 +19,11 @@ package finalizers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/app"
 )
 
 func TestCreateFinalizerPrototype(t *testing.T) {
@@ -29,13 +32,11 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 	// there are 4 finalizers implemented, which should have been registered
 	require.Len(t, typeFactories, 5)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		typ    string
 		assert func(t *testing.T, err error, finalizer Finalizer)
 	}{
-		{
-			uc:  "using known type",
+		"using known type": {
 			typ: FinalizerNoop,
 			assert: func(t *testing.T, err error, finalizer Finalizer) {
 				t.Helper()
@@ -44,8 +45,7 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 				assert.IsType(t, &noopFinalizer{}, finalizer)
 			},
 		},
-		{
-			uc:  "using unknown type",
+		"using unknown type": {
 			typ: "foo",
 			assert: func(t *testing.T, err error, _ Finalizer) {
 				t.Helper()
@@ -55,9 +55,12 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
-			finalizer, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
+			finalizer, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, finalizer)

@@ -197,21 +197,17 @@ func findKeyType(entries []*keystore.Entry, alg string) *keystore.Entry {
 func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc                 string
-		password           string
-		keyStoreFile       func(t *testing.T) string
-		removeKeyStoreFile func(t *testing.T, file string)
-		assert             func(t *testing.T, ks keystore.KeyStore, err error)
+	for uc, tc := range map[string]struct {
+		password     string
+		keyStoreFile func(t *testing.T) string
+		assert       func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
-		{
-			uc: "file does not exist",
+		"file does not exist": {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
 				return "foobar.pem"
 			},
-			removeKeyStoreFile: func(t *testing.T, _ string) { t.Helper() },
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
@@ -219,20 +215,11 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				assert.Contains(t, err.Error(), "no such file")
 			},
 		},
-		{
-			uc: "path is a directory",
+		"path is a directory": {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				dir, err := os.MkdirTemp("", "test_dir.*")
-				require.NoError(t, err)
-
-				return dir
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
+				return t.TempDir()
 			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
@@ -241,23 +228,17 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				assert.Contains(t, err.Error(), "not a file")
 			},
 		},
-		{
-			uc: "file not readable",
+		"file not readable": {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				err = file.Chmod(0o200)
 				require.NoError(t, err)
 
 				return file.Name()
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
 			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
@@ -266,13 +247,12 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to read")
 			},
 		},
-		{
-			uc:       "file contains three keys",
+		"file contains three keys": {
 			password: "password",
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				buf := bytes.NewBuffer(pemPKCS8ECEncryptedPrivateKey)
@@ -283,11 +263,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				require.NoError(t, err)
 
 				return file.Name()
-			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
 			},
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
@@ -315,13 +290,12 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
 			},
 		},
-		{
-			uc:       "file contains same EC key but in different formats",
+		"file contains same EC key but in different formats": {
 			password: "password",
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := os.CreateTemp("", "test_ks.*")
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
 				require.NoError(t, err)
 
 				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
@@ -335,11 +309,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				return file.Name()
 			},
-			removeKeyStoreFile: func(t *testing.T, file string) {
-				t.Helper()
-
-				os.Remove(file)
-			},
 			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
@@ -349,11 +318,9 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			file := tc.keyStoreFile(t)
-
-			defer tc.removeKeyStoreFile(t, file)
 
 			// WHEN
 			ks, err := keystore.NewKeyStoreFromPEMFile(file, tc.password)
@@ -367,14 +334,12 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc          string
+	for uc, tc := range map[string]struct {
 		password    string
 		pemContents func(t *testing.T) []byte
 		assert      func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
-		{
-			uc:       "pem contains same RSA keys but just formatted differently",
+		"pem contains same RSA keys but just formatted differently": {
 			password: "password",
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
@@ -395,8 +360,7 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 				assert.Contains(t, err.Error(), "duplicate entry")
 			},
 		},
-		{
-			uc: "pem contains unsupported entries",
+		"pem contains unsupported entries": {
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -416,8 +380,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.Contains(t, err.Error(), "unsupported entry")
 			},
 		},
-		{
-			uc: "key decoding error",
+		"key decoding error": {
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -437,8 +400,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
-		{
-			uc: "pem contains a key with X-Key-ID specified",
+		"pem contains a key with X-Key-ID specified": {
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -468,8 +430,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.Equal(t, "bar", entry1.KeyID)
 			},
 		},
-		{
-			uc: "pem contains key with cert without SubjectKeyID and without X-Key-ID specified",
+		"pem contains key with cert without SubjectKeyID and without X-Key-ID specified": {
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -516,8 +477,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.Equal(t, hex.EncodeToString(kid), entry.KeyID)
 			},
 		},
-		{
-			uc: "pem contains keys with cert with SubjectKeyID and without X-Key-ID specified",
+		"pem contains keys with cert with SubjectKeyID and without X-Key-ID specified": {
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -563,8 +523,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.Equal(t, hex.EncodeToString(entry.CertChain[0].SubjectKeyId), entry.KeyID)
 			},
 		},
-		{
-			uc: "pem contains keys with cert with SubjectKeyID and with X-Key-ID specified",
+		"pem contains keys with cert with SubjectKeyID and with X-Key-ID specified": {
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -610,8 +569,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.Equal(t, "foo", entry.KeyID)
 			},
 		},
-		{
-			uc: "duplicate key id entry",
+		"duplicate key id entry": {
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
@@ -638,7 +596,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			file := tc.pemContents(t)
 
@@ -659,13 +617,11 @@ func (s testSigner) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, error) {
 func TestCreateKeyStoreFromKey(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		signer func(t *testing.T) crypto.Signer
 		assert func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
-		{
-			uc: "from unsupported key type",
+		"from unsupported key type": {
 			signer: func(t *testing.T) crypto.Signer {
 				t.Helper()
 
@@ -678,8 +634,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 				assert.Contains(t, err.Error(), "unsupported key type")
 			},
 		},
-		{
-			uc: "from rsa private key",
+		"from rsa private key": {
 			signer: func(t *testing.T) crypto.Signer {
 				t.Helper()
 
@@ -705,7 +660,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			key := tc.signer(t)
 
@@ -728,13 +683,11 @@ func TestKeyStoreGetKey(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		keyID  func(t *testing.T, ks keystore.KeyStore) string
 		assert func(t *testing.T, entry *keystore.Entry, err error)
 	}{
-		{
-			uc: "not existing key entry",
+		"not existing key entry": {
 			keyID: func(t *testing.T, _ keystore.KeyStore) string {
 				t.Helper()
 
@@ -747,8 +700,7 @@ func TestKeyStoreGetKey(t *testing.T) {
 				require.ErrorIs(t, err, keystore.ErrNoSuchKey)
 			},
 		},
-		{
-			uc: "existing key entry",
+		"existing key entry": {
 			keyID: func(t *testing.T, ks keystore.KeyStore) string {
 				t.Helper()
 
@@ -764,7 +716,7 @@ func TestKeyStoreGetKey(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			keyID := tc.keyID(t, ks)
 

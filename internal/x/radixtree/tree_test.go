@@ -1,12 +1,28 @@
+// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package radixtree
 
 import (
+	"maps"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/maps"
 )
 
 func lookupMatcher[V any](matches bool) LookupMatcherFunc[V] {
@@ -232,28 +248,27 @@ func TestTreeAddPathDuplicates(t *testing.T) {
 func TestTreeAddPath(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		paths      []string
 		shouldFail bool
 	}{
-		{"slash after catch-all", []string{"/abc/*path/"}, true},
-		{"path segment after catch-all", []string{"/abc/*path/def"}, true},
-		{"conflicting catch-alls", []string{"/abc/*path", "/abc/*paths"}, true},
-		{"ambiguous wildcards", []string{"/abc/:foo/:bar", "/abc/:oof/:rab"}, true},
-		{"multiple path segments without wildcard", []string{"/", "/i", "/images", "/images/abc.jpg"}, false},
-		{"multiple path segments with wildcard", []string{"/i", "/i/:aaa", "/images/:imgname", "/:images/*path", "/ima", "/ima/:par", "/images1"}, false},
-		{"multiple wildcards", []string{"/date/:year/:month", "/date/:year/month", "/date/:year/:month/:post"}, false},
-		{"escaped : at the beginning of path segment", []string{"/abc/\\:cd"}, false},
-		{"escaped * at the beginning of path segment", []string{"/abc/\\*cd"}, false},
-		{": in middle of path segment", []string{"/abc/ab:cd"}, false},
-		{": in middle of path segment with existing path", []string{"/abc/ab", "/abc/ab:cd"}, false},
-		{"* in middle of path segment", []string{"/abc/ab*cd"}, false},
-		{"* in middle of path segment with existing path", []string{"/abc/ab", "/abc/ab*cd"}, false},
-		{"katakana /マ", []string{"/マ"}, false},
-		{"katakana /カ", []string{"/カ"}, false},
+		"slash after catch-all":                          {[]string{"/abc/*path/"}, true},
+		"path segment after catch-all":                   {[]string{"/abc/*path/def"}, true},
+		"conflicting catch-alls":                         {[]string{"/abc/*path", "/abc/*paths"}, true},
+		"ambiguous wildcards":                            {[]string{"/abc/:foo/:bar", "/abc/:oof/:rab"}, true},
+		"multiple path segments without wildcard":        {[]string{"/", "/i", "/images", "/images/abc.jpg"}, false},
+		"multiple path segments with wildcard":           {[]string{"/i", "/i/:aaa", "/images/:imgname", "/:images/*path", "/ima", "/ima/:par", "/images1"}, false},
+		"multiple wildcards":                             {[]string{"/date/:year/:month", "/date/:year/month", "/date/:year/:month/:post"}, false},
+		"escaped : at the beginning of path segment":     {[]string{"/abc/\\:cd"}, false},
+		"escaped * at the beginning of path segment":     {[]string{"/abc/\\*cd"}, false},
+		": in middle of path segment":                    {[]string{"/abc/ab:cd"}, false},
+		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
+		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
+		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
+		"katakana /マ":                                    {[]string{"/マ"}, false},
+		"katakana /カ":                                    {[]string{"/カ"}, false},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
 
 			var err error
@@ -416,7 +431,7 @@ func TestTreeClone(t *testing.T) {
 
 	clone := tree.Clone()
 
-	for _, path := range maps.Values(paths) {
+	for _, path := range slices.Collect(maps.Values(paths)) {
 		entry, err := clone.Find(path,
 			LookupMatcherFunc[string](func(_ string, _, _ []string) bool { return true }))
 

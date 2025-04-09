@@ -19,6 +19,7 @@ package finalizers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -30,12 +31,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerCookie {
 				return false, nil, nil
 			}
 
-			finalizer, err := newCookieFinalizer(id, conf)
+			finalizer, err := newCookieFinalizer(app, id, conf)
 
 			return true, finalizer, err
 		})
@@ -43,27 +44,33 @@ func init() {
 
 type cookieFinalizer struct {
 	id      string
+	app     app.Context
 	cookies map[string]template.Template
 }
 
-func newCookieFinalizer(id string, rawConfig map[string]any) (*cookieFinalizer, error) {
+func newCookieFinalizer(app app.Context, id string, rawConfig map[string]any) (*cookieFinalizer, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating cookie finalizer")
+
 	type Config struct {
 		Cookies map[string]template.Template `mapstructure:"cookies" validate:"required,gt=0"`
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerCookie, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for cookie finalizer '%s'", id).CausedBy(err)
 	}
 
 	return &cookieFinalizer{
 		id:      id,
+		app:     app,
 		cookies: conf.Cookies,
 	}, nil
 }
 
-func (f *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *cookieFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", f.id).Msg("Finalizing using cookie finalizer")
 
 	if sub == nil {
@@ -98,7 +105,7 @@ func (f *cookieFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
 		return f, nil
 	}
 
-	return newCookieFinalizer(f.id, config)
+	return newCookieFinalizer(f.app, f.id, config)
 }
 
 func (f *cookieFinalizer) ID() string { return f.id }

@@ -17,7 +17,6 @@
 package fxlcm
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,13 +33,11 @@ import (
 )
 
 func TestLifecycleManagerStart(t *testing.T) {
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		setup  func(t *testing.T, srv *mocks.ServerMock)
 		assert func(t *testing.T, exit *testsupport.PatchedOSExit, logs string)
 	}{
-		{
-			uc: "successful start",
+		"successful start": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -54,8 +51,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 				assert.NotContains(t, logs, "error")
 			},
 		},
-		{
-			uc: "failed to start",
+		"failed to start": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -69,8 +65,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 				assert.Contains(t, logs, "test error")
 			},
 		},
-		{
-			uc: "started and resumed successfully",
+		"started and resumed successfully": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -85,7 +80,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			exit, err := testsupport.PatchOSExit(t, func(int) {})
 			require.NoError(t, err)
@@ -107,7 +102,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 			}
 
 			// WHEN
-			err = lcm.Start(context.TODO())
+			err = lcm.Start(t.Context())
 
 			time.Sleep(50 * time.Millisecond)
 
@@ -121,13 +116,11 @@ func TestLifecycleManagerStart(t *testing.T) {
 func TestLifecycleManagerStop(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		setup  func(t *testing.T, srv *mocks.ServerMock)
 		assert func(t *testing.T, err error, logs string)
 	}{
-		{
-			uc: "stopped without error",
+		"stopped without error": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -141,8 +134,7 @@ func TestLifecycleManagerStop(t *testing.T) {
 				assert.NotContains(t, logs, "error")
 			},
 		},
-		{
-			uc: "stopped with error",
+		"stopped with error": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -157,7 +149,7 @@ func TestLifecycleManagerStop(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			srv := mocks.NewServerMock(t)
 			tc.setup(t, srv)
 
@@ -171,7 +163,7 @@ func TestLifecycleManagerStop(t *testing.T) {
 			}
 
 			// WHEN
-			err := lcm.Stop(context.TODO())
+			err := lcm.Stop(t.Context())
 
 			// THEN
 			tc.assert(t, err, tb.CollectedLog())

@@ -99,6 +99,6 @@ func TestRegistryExistentLoad(t *testing.T) {
 	assert.True(t, ok, "registry should hold expected factory")
 	assert.NotNil(t, value)
 
-	_, err := value(context.Background())
+	_, err := value(t.Context())
 	assert.Contains(t, err.Error(), "for test purpose")
 }

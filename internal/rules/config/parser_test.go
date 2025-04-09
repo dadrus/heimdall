@@ -23,20 +23,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestParseRules(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc          string
+	for uc, tc := range map[string]struct {
 		contentType string
 		content     []byte
 		assert      func(t *testing.T, err error, ruleSet *RuleSet)
 	}{
-		{
-			uc:          "unsupported content type and not empty contents",
+		"unsupported content type and not empty contents": {
 			contentType: "foobar",
 			content:     []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *RuleSet) {
@@ -47,8 +48,7 @@ func TestParseRules(t *testing.T) {
 				assert.Contains(t, err.Error(), "unsupported 'foobar'")
 			},
 		},
-		{
-			uc:          "unsupported content type and empty contents",
+		"unsupported content type and empty contents": {
 			contentType: "foobar",
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -58,8 +58,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "Empty JSON content",
+		"empty json content": {
 			contentType: "application/json",
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -68,8 +67,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "JSON rule set without rules",
+		"json rule set without rules": {
 			contentType: "application/json",
 			content: []byte(`{
 "version": "1",
@@ -85,8 +83,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "JSON rule set with a rule without required elements",
+		"json rule set with a rule without required elements": {
 			contentType: "application/json",
 			content: []byte(`{
 "version": "1",
@@ -104,8 +101,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "JSON rule set with a rule which match definition does not contain required fields",
+		"json rule set with a rule which match definition does not contain required fields": {
 			contentType: "application/json",
 			content: []byte(`{
 "version": "1",
@@ -127,8 +123,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "JSON rule set with a rule which match definition contains unsupported scheme",
+		"json rule set with a rule which match definition contains unsupported scheme": {
 			contentType: "application/json",
 			content: []byte(`{
 "version": "1",
@@ -153,8 +148,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "JSON rule set with a rule with forward_to without host",
+		"json rule set with a rule with forward_to without host": {
 			contentType: "application/json",
 			content: []byte(`{
 "version": "1",
@@ -178,8 +172,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "JSON rule set with invalid allow_encoded_slashes settings",
+		"json rule set with invalid allow_encoded_slashes settings": {
 			contentType: "application/json",
 			content: []byte(`{
 "version": "1",
@@ -202,8 +195,7 @@ func TestParseRules(t *testing.T) {
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "Valid JSON rule set",
+		"valid json rule set": {
 			contentType: "application/json",
 			content: []byte(`{
 "version": "1",
@@ -241,8 +233,7 @@ func TestParseRules(t *testing.T) {
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
 			},
 		},
-		{
-			uc:          "Valid YAML rule set",
+		"valid yaml rule set": {
 			contentType: "application/yaml",
 			content: []byte(`
 version: "1"
@@ -285,8 +276,7 @@ rules:
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
 			},
 		},
-		{
-			uc:          "YAML content type and validation error due to missing properties",
+		"yaml content type and validation error due to missing properties": {
 			contentType: "application/yaml",
 			content: []byte(`
 version: "1"
@@ -312,8 +302,7 @@ rules:
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "YAML content type and validation error due bad path params name",
+		"yaml content type and validation error due bad path params name": {
 			contentType: "application/yaml",
 			content: []byte(`
 version: "1"
@@ -333,8 +322,7 @@ rules:
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:          "YAML content and empty contents",
+		"yaml content and empty contents": {
 			contentType: "application/yaml",
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -344,9 +332,18 @@ rules:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			rules, err := ParseRules(tc.contentType, bytes.NewBuffer(tc.content), false)
+			rules, err := ParseRules(appCtx, tc.contentType, bytes.NewBuffer(tc.content), false)
 
 			// THEN
 			tc.assert(t, err, rules)
@@ -357,22 +354,20 @@ rules:
 func TestParseYAML(t *testing.T) {
 	t.Setenv("FOO", "bar")
 
-	for _, tc := range []struct {
-		uc           string
-		conf         []byte
-		envSupported bool
-		assert       func(t *testing.T, err error, ruleSet *RuleSet)
+	for uc, tc := range map[string]struct {
+		conf               []byte
+		envSupported       bool
+		enforceUpstreamTLS bool
+		assert             func(t *testing.T, err error, ruleSet *RuleSet)
 	}{
-		{
-			uc: "empty rule set spec",
+		"empty rule set spec": {
 			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrEmptyRuleSet)
 			},
 		},
-		{
-			uc:   "invalid rule set spec",
+		"invalid rule set spec": {
 			conf: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
@@ -380,8 +375,7 @@ func TestParseYAML(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc: "valid rule set spec without env usage",
+		"valid rule set spec without env usage": {
 			conf: []byte(`
 version: "1"
 name: foo
@@ -409,8 +403,7 @@ rules:
 				assert.Equal(t, "foo", rul.Matcher.Routes[0].Path)
 			},
 		},
-		{
-			uc:           "valid rule set spec with invalid env spec",
+		"valid rule set spec with invalid env spec": {
 			envSupported: true,
 			conf: []byte(`
 version: "1"
@@ -427,8 +420,7 @@ rules:
 				require.Nil(t, ruleSet)
 			},
 		},
-		{
-			uc:           "valid rule set spec with valid env usage",
+		"valid rule set spec with valid env usage": {
 			envSupported: true,
 			conf: []byte(`
 version: "1"
@@ -468,8 +460,7 @@ rules:
 				assert.Equal(t, "GET", rul.Matcher.Methods[0])
 			},
 		},
-		{
-			uc: "valid rule set spec with valid env usage, which is however not enabled",
+		"valid rule set spec with valid env usage, which is however not enabled": {
 			conf: []byte(`
 version: "1"
 name: ${FOO}
@@ -497,10 +488,87 @@ rules:
 				assert.Equal(t, "foo", rul.Matcher.Routes[0].Path)
 			},
 		},
+		"enforced but disabled TLS for upstream communication": {
+			enforceUpstreamTLS: true,
+			conf: []byte(`
+version: "1"
+name: foo
+rules:
+- id: bar
+  match:
+    routes:
+      - path: foo
+  forward_to:
+    host: foo.bar
+    rewrite:
+      scheme: http
+  execute:
+    - authenticator: test
+`),
+			assert: func(t *testing.T, err error, _ *RuleSet) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'rules'[0].'forward_to'.'rewrite'.'scheme' must be https")
+			},
+		},
+		"valid ruleset with disabled and not enforced TLS for upstream communication": {
+			conf: []byte(`
+version: "1"
+name: foo
+rules:
+- id: bar
+  match:
+    routes:
+      - path: foo
+  forward_to:
+    host: foo.bar
+    rewrite:
+      scheme: http
+  execute:
+    - authenticator: test
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "foo", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+
+				rul := ruleSet.Rules[0]
+				require.NotNil(t, rul)
+				assert.Equal(t, "bar", rul.ID)
+				assert.Len(t, rul.Matcher.Routes, 1)
+				assert.Equal(t, "foo", rul.Matcher.Routes[0].Path)
+
+				be := rul.Backend
+				require.NotNil(t, be)
+				assert.Equal(t, "foo.bar", be.Host)
+
+				urlRewriter := be.URLRewriter
+				require.NotNil(t, urlRewriter)
+				assert.Equal(t, "http", urlRewriter.Scheme)
+			},
+		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			es := config.EnforcementSettings{EnforceUpstreamTLS: tc.enforceUpstreamTLS}
+
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			ruleSet, err := parseYAML(bytes.NewBuffer(tc.conf), tc.envSupported)
+			ruleSet, err := parseYAML(appCtx, bytes.NewBuffer(tc.conf), tc.envSupported)
 
 			// THEN
 			tc.assert(t, err, ruleSet)

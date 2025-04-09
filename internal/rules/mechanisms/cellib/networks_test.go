@@ -31,18 +31,16 @@ func TestNetworks(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		expr string
-	}{
-		{expr: `"192.168.1.10" in networks("192.168.1.0/24")`},
-		{expr: `["192.168.1.10"].all(ip, ip in networks("192.168.1.0/24"))`},
-		{expr: `!["10.0.1.1"].exists(ip, ip in networks("192.168.1.0/24"))`},
-		{expr: `["192.168.1.10", "192.168.1.12"] in networks(["192.168.1.0/24"])`},
-		{expr: `["192.168.1.10", "10.0.1.1"].all(ip, ip in networks(["192.168.1.0/24", "10.0.0.0/16"]))`},
-		{expr: `["192.168.1.10", "10.0.1.1"].exists(ip, ip in networks(["10.0.0.0/16"]))`},
+	for _, tc := range []string{
+		`"192.168.1.10" in networks("192.168.1.0/24")`,
+		`["192.168.1.10"].all(ip, ip in networks("192.168.1.0/24"))`,
+		`!["10.0.1.1"].exists(ip, ip in networks("192.168.1.0/24"))`,
+		`["192.168.1.10", "192.168.1.12"] in networks(["192.168.1.0/24"])`,
+		`["192.168.1.10", "10.0.1.1"].all(ip, ip in networks(["192.168.1.0/24", "10.0.0.0/16"]))`,
+		`["192.168.1.10", "10.0.1.1"].exists(ip, ip in networks(["10.0.0.0/16"]))`,
 	} {
-		t.Run(tc.expr, func(t *testing.T) {
-			ast, iss := env.Compile(tc.expr)
+		t.Run(tc, func(t *testing.T) {
+			ast, iss := env.Compile(tc)
 			if iss != nil {
 				require.NoError(t, iss.Err())
 			}

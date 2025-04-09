@@ -17,7 +17,6 @@
 package otelmetrics
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -43,14 +42,12 @@ func attributeValue(set attribute.Set, key attribute.Key) attribute.Value {
 func TestHandlerExecution(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		path   string
 		method string
 		assert func(t *testing.T, rm *metricdata.ResourceMetrics)
 	}{
-		{
-			uc:     "metrics for filtered request",
+		"metrics for filtered request": {
 			path:   "/filtered",
 			method: http.MethodGet,
 			assert: func(t *testing.T, rm *metricdata.ResourceMetrics) {
@@ -59,8 +56,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Empty(t, rm.ScopeMetrics)
 			},
 		},
-		{
-			uc:     "metrics for successful request",
+		"metrics for successful request": {
 			path:   "/test",
 			method: http.MethodGet,
 			assert: func(t *testing.T, rm *metricdata.ResourceMetrics) {
@@ -101,7 +97,7 @@ func TestHandlerExecution(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			exp := metric.NewManualReader()
 
@@ -133,7 +129,7 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(),
+				t.Context(),
 				tc.method,
 				fmt.Sprintf("%s%s", srv.URL, tc.path),
 				nil,
@@ -148,7 +144,7 @@ func TestHandlerExecution(t *testing.T) {
 
 			var rm metricdata.ResourceMetrics
 
-			err = exp.Collect(context.TODO(), &rm)
+			err = exp.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
 			// THEN

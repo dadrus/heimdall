@@ -109,7 +109,7 @@ func TestErrorChainNewWithCause(t *testing.T) {
 	errs := err.Errors()
 	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
 
-	require.False(t, errors.As(err, &fooer))
+	require.NotErrorAs(t, err, &fooer)
 }
 
 func TestErrorChainNewWithCauseAndContextDetachedFromError(t *testing.T) {

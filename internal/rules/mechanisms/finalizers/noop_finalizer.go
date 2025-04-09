@@ -19,6 +19,7 @@ package finalizers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
@@ -28,23 +29,28 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerNoop {
 				return false, nil, nil
 			}
 
-			return true, newNoopFinalizer(id), nil
+			return true, newNoopFinalizer(app, id), nil
 		})
 }
 
-func newNoopFinalizer(id string) *noopFinalizer { return &noopFinalizer{id: id} }
+func newNoopFinalizer(app app.Context, id string) *noopFinalizer {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating noop finalizer")
+
+	return &noopFinalizer{id: id}
+}
 
 type noopFinalizer struct {
 	id string
 }
 
-func (f *noopFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", f.id).Msg("Finalizing using noop finalizer")
 
 	return nil

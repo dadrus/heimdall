@@ -17,7 +17,6 @@
 package logger
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -47,13 +46,11 @@ func TestHandlerExecution(t *testing.T) {
 		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
 	})
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		setHeader func(t *testing.T, req *http.Request)
 		assert    func(t *testing.T, logstring string)
 	}{
-		{
-			uc:        "without tracing",
+		"without tracing": {
 			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			assert: func(t *testing.T, logstring string) {
 				t.Helper()
@@ -69,8 +66,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.NotEqual(t, parentCtx.SpanID().String(), logData["_parent_id"])
 			},
 		},
-		{
-			uc: "with tracing",
+		"with tracing": {
 			setHeader: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -93,7 +89,7 @@ func TestHandlerExecution(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
@@ -123,7 +119,7 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(),
+				t.Context(),
 				http.MethodGet,
 				srv.URL+"/test",
 				nil,

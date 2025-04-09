@@ -62,6 +62,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -97,6 +98,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -126,6 +128,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -161,6 +164,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -205,6 +209,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -230,7 +235,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "someid", req.Header.Get("X-User-Id"))
 			},
 		},
-		"Host header is set for upstream": {
+		"Host header is manually set for upstream": {
 			upstreamCalled: true,
 			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
@@ -239,6 +244,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -257,7 +263,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
-		"only X-Forwarded-Proto header is present": {
+		"only X-Forwarded-Proto header is present, host not set": {
 			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-Proto": []string{"http"},
@@ -267,6 +273,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -285,7 +292,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
 			},
 		},
-		"only X-Forwarded-Host header is present": {
+		"only X-Forwarded-Host header is present, host forwarded": {
 			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-Host": []string{"bar.foo"},
@@ -295,13 +302,14 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				assert.Contains(t, req.Host, "127.0.0.1")
+				assert.Contains(t, req.Host, "foo.bar")
 				assert.Equal(t, http.MethodGet, req.Method)
 
 				require.Len(t, req.Header, 6)
@@ -313,7 +321,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
 			},
 		},
-		"only X-Forwarded-For header is present": {
+		"only X-Forwarded-For header is present, host not forwarded": {
 			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-For": []string{"172.2.34.1"},
@@ -323,6 +331,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				return backend
 			},
@@ -369,7 +378,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				Write: 100 * time.Millisecond,
 				Idle:  1 * time.Second,
 			}
-			ctx := newContextFactory(config.ServiceConfig{Timeout: timeouts}, nil).Create(rw, req)
+			ctx := newContextFactory(config.ServeConfig{Timeout: timeouts}, nil).Create(rw, req)
 
 			backend := tc.setup(t, ctx, targetURL)
 

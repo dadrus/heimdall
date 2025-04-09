@@ -30,13 +30,11 @@ import (
 func TestOptionsWithMeterProvider(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		opt    Option
 		assert func(t *testing.T, opt *config)
 	}{
-		{
-			uc:  "nil provider",
+		"nil provider": {
 			opt: WithSubsystem("foo"),
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
@@ -44,8 +42,7 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 				assert.Equal(t, otel.GetMeterProvider(), opt.provider)
 			},
 		},
-		{
-			uc:  "not nil registerer",
+		"not nil registerer": {
 			opt: WithMeterProvider(sdk.NewMeterProvider()),
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
@@ -55,7 +52,7 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			cfg := newConfig(tc.opt)
 
@@ -68,14 +65,12 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 func TestOptionsWithAttributes(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		opt        config
 		attributes []attribute.KeyValue
 		assert     func(t *testing.T, opt *config)
 	}{
-		{
-			uc:  "without attributes",
+		"without attributes": {
 			opt: config{},
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
@@ -83,8 +78,7 @@ func TestOptionsWithAttributes(t *testing.T) {
 				assert.Empty(t, opt.attributes)
 			},
 		},
-		{
-			uc:  "with multiple attibutes",
+		"with multiple attibutes": {
 			opt: config{},
 			attributes: []attribute.KeyValue{
 				attribute.String("foo", "bar"),
@@ -101,7 +95,7 @@ func TestOptionsWithAttributes(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithAttributes(tc.attributes...)
 			opt := &tc.opt //nolint:gosec
@@ -118,14 +112,12 @@ func TestOptionsWithAttributes(t *testing.T) {
 func TestOptionsWithOperationFilter(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		opt    config
 		value  OperationFilter
 		assert func(t *testing.T, opt *config)
 	}{
-		{
-			uc:  "without operations filter set",
+		"without operations filter set": {
 			opt: config{},
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
@@ -133,8 +125,7 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 				assert.Nil(t, opt.shouldProcess)
 			},
 		},
-		{
-			uc:    "with filter",
+		"with filter": {
 			opt:   config{},
 			value: func(_ *http.Request) bool { return false },
 			assert: func(t *testing.T, opt *config) {
@@ -145,7 +136,7 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithOperationFilter(tc.value)
 			opt := &tc.opt //nolint:gosec
@@ -162,14 +153,12 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 func TestOptionsWithServerName(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		opt    config
 		name   string
 		assert func(t *testing.T, opt *config)
 	}{
-		{
-			uc:  "without server name",
+		"without server name": {
 			opt: config{},
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
@@ -177,8 +166,7 @@ func TestOptionsWithServerName(t *testing.T) {
 				assert.Empty(t, opt.server)
 			},
 		},
-		{
-			uc:   "with server name",
+		"with server name": {
 			opt:  config{},
 			name: "foobar.local",
 			assert: func(t *testing.T, opt *config) {
@@ -188,7 +176,7 @@ func TestOptionsWithServerName(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithServerName(tc.name)
 			opt := &tc.opt //nolint:gosec
@@ -205,14 +193,12 @@ func TestOptionsWithServerName(t *testing.T) {
 func TestOptionsWithSubsystem(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		opt    config
 		name   string
 		assert func(t *testing.T, opt *config)
 	}{
-		{
-			uc:  "without subsystem name",
+		"without subsystem name": {
 			opt: config{},
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
@@ -220,8 +206,7 @@ func TestOptionsWithSubsystem(t *testing.T) {
 				assert.False(t, opt.subsystem.Valid())
 			},
 		},
-		{
-			uc:   "with subsystem name",
+		"with subsystem name": {
 			opt:  config{},
 			name: "foobar",
 			assert: func(t *testing.T, opt *config) {
@@ -232,7 +217,7 @@ func TestOptionsWithSubsystem(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithSubsystem(tc.name)
 			opt := &tc.opt //nolint:gosec

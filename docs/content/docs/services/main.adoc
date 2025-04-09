@@ -1,0 +1,141 @@
+---
+title: "Main Service"
+date: 2022-06-09T18:55:45+02:00
+draft: false
+weight: 41
+menu:
+  docs:
+    weight: 2
+    parent: "Services"
+description: This is heimdall's main service responsible for driving the actual access control decision process.
+---
+
+:toc:
+
+To make use of this service you have to start heimdall with either `heimdall serve proxy` or `heimdall serve decision`. By default, heimdall listens on `0.0.0.0:4456` endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.
+
+== Configuration
+
+The configuration of this service can be adjusted in the `serve` property, which lives on the top level of heimdall's configuration and supports the following properties.
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
+
+* *`port`*: _integer_ (optional)
++
+By making use of this property, you can specify the TCP port that heimdall should listen on. Defaults to `4456`.
+
+* *`timeout`*: _Timeout_ (optional)
++
+By using this property, you can override the default timeouts used by heimdall. Following properties are supported:
+
+** *`idle`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The maximum amount of time to wait for the next request when keep-alive is enabled. If set to 0, the value of the `read` timeout is used. Defaults to 2 minutes. If heimdall is operated in proxy mode, this value is also used for the maximum amount of time an idle (keep-alive) connection to the upstream will remain idle before closing itself.
+
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The absolute amount of time allowed to read the entire request, including body. Defaults to 5 seconds. If heimdall is operated in proxy mode, the `read` timeout is also used while waiting for the responses from the upstream service. Here it specifies the amount of time to wait for a server's response headers after fully writing the request (including its body, if any). Upon successful upgrade responses from the upstream service, this timeout is disabled, allowing e.g. for WebSockets proxying. Setting this property to 0s will disable the timeout.
++
+CAUTION: Setting this timeout to 0 will make heimdall vulnerable to https://en.wikipedia.org/wiki/Slowloris_(computer_security[Slowloris attacks]).
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+The maximum duration before timing out writes of the response. Defaults to 10 seconds. Setting this property to 0s will disable the timeout. Compared to the `read` timeout, the `write` timeout is not absolute and resets each time data is written to the output stream if heimdall is operated in proxy mode. This allows Server-Sent-Events and other unidirectional communication without the need to extend the timeout. As with the `read` timeout, this timeout is disabled upon successful upgrade responses from the upstream service, allowing e.g. for WebSockets proxying.
+
+* *`buffer_limit`*: _BufferLimit_ (optional)
++
+Buffer limits for inbound requests and outbound responses.
+
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the read buffer allowed to read the full request including body. Defaults to 4KB.
+
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the write buffer of the response. Defaults to 4KB.
+
+* *`connections_limit`*: _ConnectionsLimit_ (optional)
++
+If heimdall is operated in proxy mode, this property configures allowed connections limit per upstream service (ignored in decision mode). Following limits can be configured:
+
+** *`max_per_host`*: _integer_ (optional)
++
+Limits the total number of connections per host, including connections in the dialing, active, and idle states. On limit violation, dials will block. Defaults to 0, which means there is no limit.
+
+** *`max_idle`*: _integer_ (optional)
++
+Controls the maximum number of idle (keep-alive) connections across all hosts. 0 means no limit. Defaults to 100.
+
+** *`max_idle_per_host`*: _integer_ (optional)
++
+Controls the maximum number of idle (keep-alive) connections per host. Defaults to 100. Cannot exceed the value of `max_idle`.
+
+* *`cors`*: _link:{{< relref "/docs/configuration/types.adoc#_cors" >}}[CORS]_ (optional)
++
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests neither to its pipeline, nor to the upstream service. Instead, the response will be generated and sent back to the client directly.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+TLS-related configuration to ensure secure communication.
++
+NOTE: Although this property is optional, heimdall enforces its usage by default. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-ingress-tls-enforcement` flag.
+
+[#_trusted_proxies]
+* *`trusted_proxies`*: _string array_ (optional)
++
+heimdall can process `X-Forwarded-*` headers, such as `X-Forwarded-For`, `X-Forwarded-Method`, etc., as well as the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[`Forwarded`] header sent by its clients. Additionally, heimdall can forward some of these headers (`X-Forwarded-For` and `Forwarded`) to the configured upstream services. However, since these headers can easily be spoofed, they are only used when the request originates from a trusted source. This is typically the case when heimdall operates behind another proxy. For example, while the `Host` HTTP header is usually used to determine the client’s requested host, when heimdall is behind a proxy, the actual host of the ultimate client may be stored in an `X-Forwarded-Host` header, which, however, can also be spoofed.
++
+Depending on your setup, you may need to rely on these headers. In such cases, you must configure the `trusted_proxies` option and specify the IP addresses or IP ranges (in CIDR notation) of the proxies in front of heimdall. If this option is not configured, heimdall will reject these headers from all clients to prevent spoofing, as improper use could lead to privilege escalation.
++
+CAUTION: Be sure to review the link:{{< relref "/docs/operations/security.adoc#_http_header_security_considerations" >}}[security implications] before enabling this property.
++
+NOTE: heimdall does not allow configuring this property to accept these headers from any sources. Specifically, the networks `0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0` are disallowed by default. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag if necessary.
+
+* *`respond`*: _link:{{< relref "/docs/configuration/types.adoc#_respond" >}}[Respond]_ (optional)
++
+By making use of this property, you can instruct heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use.
++
+NOTE: This mapping is only applicable if the HTTP status code is set by heimdall and not by the upstream service in the response to the proxied request. For that reason, you cannot configure the mapping for the `accepted` response (it will be ignored).
+
+.Complex proxy service configuration.
+====
+[source, yaml]
+----
+serve:
+  host: 172.17.0.2
+  tls:
+    key_store:
+      path: /path/to/keystore.pem
+      password: VerySecure!
+  timeout:
+    read: 1s
+    write: 2s
+    idle: 30s
+  connections_limit:
+    max_per_host: 20
+    max_idle: 100
+    max_idle_per_host: 10
+  buffer_limit:
+    read: 4KB
+    write: 10KB
+  trusted_proxies:
+    - 192.168.1.0/24
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - HEAD
+      - PATCH
+    allow_credentials: true
+    max_age: 10s
+  respond:
+    verbose: true
+    with:
+      authentication_error:
+        code: 404
+      authorization_error:
+        code: 404
+----
+====

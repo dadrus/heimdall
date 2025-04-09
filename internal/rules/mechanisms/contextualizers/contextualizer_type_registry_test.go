@@ -19,9 +19,12 @@ package contextualizers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestCreateContextualzerPrototype(t *testing.T) {
@@ -30,13 +33,11 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 	// there are 3 error handlers implemented, which should have been registered
 	require.Len(t, typeFactories, 1)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		typ    string
 		assert func(t *testing.T, err error, contextualizer Contextualizer)
 	}{
-		{
-			uc:  "using known type",
+		"using known type": {
 			typ: ContextualizerGeneric,
 			assert: func(t *testing.T, err error, _ Contextualizer) {
 				t.Helper()
@@ -45,8 +46,7 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 			},
 		},
-		{
-			uc:  "using unknown type",
+		"using unknown type": {
 			typ: "foo",
 			assert: func(t *testing.T, err error, _ Contextualizer) {
 				t.Helper()
@@ -56,9 +56,17 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
 			// WHEN
-			errorHandler, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			errorHandler, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, errorHandler)

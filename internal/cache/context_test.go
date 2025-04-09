@@ -17,7 +17,6 @@
 package cache
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,7 +30,7 @@ func TestContextNoCacheConfigured(t *testing.T) {
 	t.Parallel()
 
 	// WHEN
-	cch := Ctx(context.Background())
+	cch := Ctx(t.Context())
 
 	// THEN
 	require.NotNil(t, cch)
@@ -43,7 +42,7 @@ func TestContextCacheConfigured(t *testing.T) {
 
 	// GIVEN
 	cache := mocks.NewCacheMock(t)
-	ctx := WithContext(context.Background(), cache)
+	ctx := WithContext(t.Context(), cache)
 
 	// WHEN
 	cch := Ctx(ctx)
@@ -60,7 +59,7 @@ func TestContextCacheIsNotConfiguredTwice(t *testing.T) {
 	cch1 := mocks.NewCacheMock(t)
 	cch2 := mocks.NewCacheMock(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// WHEN
 	ctx1 := WithContext(ctx, cch1)

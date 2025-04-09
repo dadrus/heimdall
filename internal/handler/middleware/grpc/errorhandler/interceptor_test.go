@@ -40,182 +40,157 @@ import (
 func TestErrorInterceptor(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc          string
+	for uc, tc := range map[string]struct {
 		interceptor grpc.UnaryServerInterceptor
 		err         error
 		expGRPCCode codes.Code
 		expHTTPCode envoy_type.StatusCode
 		expBody     string
 	}{
-		{
-			uc:          "no error",
+		"no error": {
 			interceptor: New(),
 			expGRPCCode: codes.OK,
 			expHTTPCode: http.StatusOK,
 		},
-		{
-			uc:          "authentication error default",
+		"authentication error default": {
 			interceptor: New(),
 			err:         heimdall.ErrAuthentication,
 			expGRPCCode: codes.Unauthenticated,
 			expHTTPCode: http.StatusUnauthorized,
 		},
-		{
-			uc:          "authentication error overridden",
+		"authentication error overridden": {
 			interceptor: New(WithAuthenticationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrAuthentication,
 			expGRPCCode: codes.Unauthenticated,
 			expHTTPCode: http.StatusContinue,
 		},
-		{
-			uc:          "authentication error verbose",
+		"authentication error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrAuthentication,
 			expGRPCCode: codes.Unauthenticated,
 			expHTTPCode: http.StatusUnauthorized,
 			expBody:     "<p>authentication error</p>",
 		},
-		{
-			uc:          "authorization error default",
+		"authorization error default": {
 			interceptor: New(),
 			err:         heimdall.ErrAuthorization,
 			expGRPCCode: codes.PermissionDenied,
 			expHTTPCode: http.StatusForbidden,
 		},
-		{
-			uc:          "authorization error overridden",
+		"authorization error overridden": {
 			interceptor: New(WithAuthorizationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrAuthorization,
 			expGRPCCode: codes.PermissionDenied,
 			expHTTPCode: http.StatusContinue,
 		},
-		{
-			uc:          "authorization error verbose",
+		"authorization error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrAuthorization,
 			expGRPCCode: codes.PermissionDenied,
 			expHTTPCode: http.StatusForbidden,
 			expBody:     "<p>authorization error</p>",
 		},
-		{
-			uc:          "communication timeout error default",
+		"communication timeout error default": {
 			interceptor: New(),
 			err:         heimdall.ErrCommunicationTimeout,
 			expGRPCCode: codes.DeadlineExceeded,
 			expHTTPCode: http.StatusBadGateway,
 		},
-		{
-			uc:          "communication timeout error overridden",
+		"communication timeout error overridden": {
 			interceptor: New(WithCommunicationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrCommunicationTimeout,
 			expGRPCCode: codes.DeadlineExceeded,
 			expHTTPCode: http.StatusContinue,
 		},
-		{
-			uc:          "communication timeout error verbose",
+		"communication timeout error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrCommunicationTimeout,
 			expGRPCCode: codes.DeadlineExceeded,
 			expHTTPCode: http.StatusBadGateway,
 			expBody:     "<p>communication timeout error</p>",
 		},
-		{
-			uc:          "communication error default",
+		"communication error default": {
 			interceptor: New(),
 			err:         heimdall.ErrCommunication,
 			expGRPCCode: codes.DeadlineExceeded,
 			expHTTPCode: http.StatusBadGateway,
 		},
-		{
-			uc:          "communication error overridden",
+		"communication error overridden": {
 			interceptor: New(WithCommunicationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrCommunication,
 			expGRPCCode: codes.DeadlineExceeded,
 			expHTTPCode: http.StatusContinue,
 		},
-		{
-			uc:          "communication error verbose",
+		"communication error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrCommunication,
 			expGRPCCode: codes.DeadlineExceeded,
 			expHTTPCode: http.StatusBadGateway,
 			expBody:     "<p>communication error</p>",
 		},
-		{
-			uc:          "precondition error default",
+		"precondition error default": {
 			interceptor: New(),
 			err:         heimdall.ErrArgument,
 			expGRPCCode: codes.InvalidArgument,
 			expHTTPCode: http.StatusBadRequest,
 		},
-		{
-			uc:          "precondition error overridden",
+		"precondition error overridden": {
 			interceptor: New(WithPreconditionErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrArgument,
 			expGRPCCode: codes.InvalidArgument,
 			expHTTPCode: http.StatusContinue,
 		},
-		{
-			uc:          "precondition error verbose",
+		"precondition error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrArgument,
 			expGRPCCode: codes.InvalidArgument,
 			expHTTPCode: http.StatusBadRequest,
 			expBody:     "<p>argument error</p>",
 		},
-		{
-			uc:          "no rule error default",
+		"no rule error default": {
 			interceptor: New(),
 			err:         heimdall.ErrNoRuleFound,
 			expGRPCCode: codes.NotFound,
 			expHTTPCode: http.StatusNotFound,
 		},
-		{
-			uc:          "no rule error overridden",
+		"no rule error overridden": {
 			interceptor: New(WithNoRuleErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrNoRuleFound,
 			expGRPCCode: codes.NotFound,
 			expHTTPCode: http.StatusContinue,
 		},
-		{
-			uc:          "no rule error verbose",
+		"no rule error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrNoRuleFound,
 			expGRPCCode: codes.NotFound,
 			expHTTPCode: http.StatusNotFound,
 			expBody:     "<p>no rule found</p>",
 		},
-		{
-			uc:          "redirect error",
+		"redirect error": {
 			interceptor: New(),
 			err:         &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusFound,
 		},
-		{
-			uc:          "redirect error verbose",
+		"redirect error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusFound,
 		},
-		{
-			uc:          "internal error default",
+		"internal error default": {
 			interceptor: New(),
 			err:         heimdall.ErrInternal,
 			expGRPCCode: codes.Internal,
 			expHTTPCode: http.StatusInternalServerError,
 		},
-		{
-			uc:          "internal error overridden",
+		"internal error overridden": {
 			interceptor: New(WithInternalServerErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrInternal,
 			expGRPCCode: codes.Internal,
 			expHTTPCode: http.StatusContinue,
 		},
-		{
-			uc:          "internal error verbose",
+		"internal error verbose": {
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrInternal,
 			expGRPCCode: codes.Internal,
@@ -223,7 +198,7 @@ func TestErrorInterceptor(t *testing.T) {
 			expBody:     "<p>internal error</p>",
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			lis := bufconn.Listen(1024 * 1024)
 			handler := &mocks.MockHandler{}
@@ -239,6 +214,8 @@ func TestErrorInterceptor(t *testing.T) {
 				handler.On("Check", mock.Anything, mock.Anything).Return(nil, tc.err)
 			} else {
 				handler.On("Check", mock.Anything, mock.Anything).Return(&envoy_auth.CheckResponse{
+					//nolint:gosec
+					// no integer overflow during conversion possible
 					Status: &status.Status{Code: int32(tc.expGRPCCode)},
 					HttpResponse: &envoy_auth.CheckResponse_OkResponse{
 						OkResponse: &envoy_auth.OkHttpResponse{},
@@ -256,7 +233,7 @@ func TestErrorInterceptor(t *testing.T) {
 			client := envoy_auth.NewAuthorizationClient(conn)
 
 			// WHEN
-			resp, err := client.Check(context.Background(), &envoy_auth.CheckRequest{
+			resp, err := client.Check(t.Context(), &envoy_auth.CheckRequest{
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{
 						Http: &envoy_auth.AttributeContext_HttpRequest{
@@ -272,6 +249,8 @@ func TestErrorInterceptor(t *testing.T) {
 			srv.Stop()
 			require.NoError(t, err)
 
+			//nolint:gosec
+			// no integer overflow during conversion possible
 			assert.Equal(t, int32(tc.expGRPCCode), resp.GetStatus().GetCode())
 
 			if tc.err != nil {

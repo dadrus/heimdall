@@ -17,6 +17,8 @@
 package parser
 
 import (
+	"errors"
+	"io"
 	"os"
 	"testing"
 
@@ -29,15 +31,15 @@ import (
 
 func TestKoanfFromYaml(t *testing.T) {
 	t.Setenv("FOO", "BAR")
+	t.Setenv("COMPLEX", "{ first: foo, second: bar }")
 
-	for _, tc := range []struct {
-		uc     string
-		config []byte
-		chmod  func(t *testing.T, file *os.File)
-		assert func(t *testing.T, err error, kanf *koanf.Koanf)
+	for uc, tc := range map[string]struct {
+		config    []byte
+		validator ConfigSyntaxValidator
+		chmod     func(t *testing.T, file *os.File)
+		assert    func(t *testing.T, err error, kanf *koanf.Koanf)
 	}{
-		{
-			uc: "valid content without env substitution",
+		"valid content without env substitution": {
 			config: []byte(`
 some_string: foo
 someint: 3
@@ -48,6 +50,7 @@ nested_2:
   - somebool: false
     some_string: baz
 `),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -60,8 +63,17 @@ nested_2:
 				assert.Contains(t, konf.Get("nested_2"), map[string]any{"some_string": "baz", "somebool": false})
 			},
 		},
-		{
-			uc: "valid content with env substitution and templates",
+		"failed validation": {
+			config:    []byte(`some_string: foo`),
+			validator: func(_ io.Reader) error { return errors.New("test error") },
+			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "test error")
+			},
+		},
+		"valid content with env substitution and templates": {
 			config: []byte(`
 some_string: ${FOO}
 someint: 3
@@ -72,6 +84,7 @@ nested_2:
   - somebool: false
     some_string: '{ "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }} }'
 `),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
@@ -88,9 +101,20 @@ nested_2:
 					})
 			},
 		},
-		{
-			uc:     "invalid yaml content",
-			config: []byte("foobar"),
+		"valid content with complex env substitution": {
+			config:    []byte(`complex: ${COMPLEX}`),
+			validator: func(_ io.Reader) error { return nil },
+			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "foo", konf.Get("complex.first"))
+				assert.Equal(t, "bar", konf.Get("complex.second"))
+			},
+		},
+		"invalid yaml content": {
+			config:    []byte("foobar"),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
@@ -98,9 +122,9 @@ nested_2:
 				assert.Contains(t, err.Error(), "failed to load")
 			},
 		},
-		{
-			uc:     "invalid yaml env substitution",
-			config: []byte("${:}"),
+		"invalid yaml env substitution": {
+			config:    []byte("${:}"),
+			validator: func(_ io.Reader) error { return nil },
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
@@ -108,9 +132,9 @@ nested_2:
 				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
-		{
-			uc:     "can't read file",
-			config: []byte(`foo: bar`),
+		"can't read content": {
+			config:    []byte(`foo: bar`),
+			validator: func(_ io.Reader) error { return nil },
 			chmod: func(t *testing.T, file *os.File) {
 				t.Helper()
 
@@ -125,17 +149,16 @@ nested_2:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			chmod := x.IfThenElse(tc.chmod != nil, tc.chmod, func(t *testing.T, _ *os.File) { t.Helper() })
 
-			tempFile, err := os.CreateTemp("", "config-test-*")
+			tempFile, err := os.CreateTemp(t.TempDir(), "config-test-*")
 			require.NoError(t, err)
 
 			defer tempFile.Close()
 
 			fileName := tempFile.Name()
-			defer os.Remove(fileName)
 
 			_, err = tempFile.Write(tc.config)
 			require.NoError(t, err)
@@ -143,7 +166,7 @@ nested_2:
 			chmod(t, tempFile)
 
 			// WHEN
-			konf, err := koanfFromYaml(fileName)
+			konf, err := koanfFromYaml(fileName, tc.validator)
 
 			// THEN
 			tc.assert(t, err, konf)

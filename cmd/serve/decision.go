@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,62 +17,46 @@
 package serve
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/decision"
 	envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
+	"github.com/dadrus/heimdall/internal/x"
 )
+
+const serveDecisionFlagEnvoyGRPC = "envoy-grpc"
 
 // NewDecisionCommand represents the "serve decision" command.
 func NewDecisionCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "decision",
-		Short:   "Starts heimdall in Decision operation mode",
-		Example: "heimdall serve decision",
-		Run: func(cmd *cobra.Command, _ []string) {
-			app, err := createDecisionApp(cmd)
-			if err != nil {
-				cmd.PrintErrf("Failed to initialize decision service: %v", err)
+		Use:          "decision",
+		Short:        "Starts heimdall in Decision operation mode",
+		Example:      "heimdall serve decision",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			useEnvoyExtAuth, _ := cmd.Flags().GetBool(serveDecisionFlagEnvoyGRPC)
 
-				os.Exit(1)
+			app, err := createApp(
+				cmd,
+				fx.Options(
+					x.IfThenElse(useEnvoyExtAuth, envoy_extauth.Module, decision.Module),
+					fx.Supply(config.DecisionMode),
+				),
+			)
+			if err != nil {
+				return err
 			}
 
 			app.Run()
+
+			return nil
 		},
 	}
 
-	cmd.PersistentFlags().Bool("envoy-grpc", false,
+	cmd.PersistentFlags().Bool(serveDecisionFlagEnvoyGRPC, false,
 		"If specified, decision mode is started for integration with envoy extauth gRPC service")
 
 	return cmd
-}
-
-func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
-	configPath, _ := cmd.Flags().GetString("config")
-	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
-	useEnvoyExtAuth, _ := cmd.Flags().GetBool("envoy-grpc")
-
-	opts := []fx.Option{
-		fx.NopLogger,
-		fx.Supply(
-			config.ConfigurationPath(configPath),
-			config.EnvVarPrefix(envPrefix),
-			config.DecisionMode),
-		internal.Module,
-	}
-
-	if useEnvoyExtAuth {
-		opts = append(opts, envoy_extauth.Module)
-	} else {
-		opts = append(opts, decision.Module)
-	}
-
-	app := fx.New(opts...)
-
-	return app, app.Err()
 }
