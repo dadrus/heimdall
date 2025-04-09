@@ -26,31 +26,30 @@ import (
 	"github.com/go-co-op/gocron/v2"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type provider struct {
+type Provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          gocron.Scheduler
+	app        app.Context
 	cancel     context.CancelFunc
 	states     sync.Map
 	configured bool
 }
 
-func newProvider(
-	conf *config.Configuration, cch cache.Cache, processor rule.SetProcessor, logger zerolog.Logger,
-) (*provider, error) {
-	rawConf := conf.Providers.HTTPEndpoint
+func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Provider, error) {
+	rawConf := app.Config().Providers.HTTPEndpoint
+	logger := app.Logger()
 
 	if rawConf == nil {
-		return &provider{}, nil
+		return &Provider{}, nil
 	}
 
 	type Config struct {
@@ -59,14 +58,8 @@ func newProvider(
 	}
 
 	var providerConf Config
-	if err := decodeConfig(rawConf, &providerConf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed decoding http_endpoint rule provider config").CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&providerConf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating http_endpoint rule provider config").CausedBy(err)
+	if err := decodeConfig(app, rawConf, &providerConf); err != nil {
+		return nil, err
 	}
 
 	for _, ep := range providerConf.Endpoints {
@@ -74,8 +67,11 @@ func newProvider(
 	}
 
 	logger = logger.With().Str("_provider_type", "http_endpoint").Logger()
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.WithContext(cache.WithContext(ctx, cch))
+	ctx, cancel := context.WithCancel(
+		logger.WithContext(
+			cache.WithContext(context.Background(), cch),
+		),
+	)
 
 	scheduler, err := gocron.NewScheduler(
 		gocron.WithLocation(time.UTC),
@@ -91,10 +87,11 @@ func newProvider(
 			"failed creating scheduler for http_endpoint rule provider").CausedBy(err)
 	}
 
-	prov := &provider{
-		p:          processor,
+	prov := &Provider{
+		p:          rsp,
 		l:          logger,
 		s:          scheduler,
+		app:        app,
 		cancel:     cancel,
 		configured: true,
 	}
@@ -105,6 +102,8 @@ func newProvider(
 		if providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0 {
 			definition = gocron.DurationJob(*providerConf.WatchInterval)
 		} else {
+			logger.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect")
+
 			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
 		}
 
@@ -118,24 +117,24 @@ func newProvider(
 		}
 	}
 
-	logger.Info().Msg("Rule provider configured.")
+	logger.Info().Msg("Rule provider configured")
 
 	return prov, nil
 }
 
-func (p *provider) Start(_ context.Context) error {
+func (p *Provider) Start(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
 
-	p.l.Info().Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule provider")
 
 	p.s.Start()
 
 	return nil
 }
 
-func (p *provider) Stop(_ context.Context) error {
+func (p *Provider) Stop(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -147,20 +146,21 @@ func (p *provider) Stop(_ context.Context) error {
 	return p.s.Shutdown()
 }
 
-func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
-	p.l.Debug().
+func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().
 		Str("_endpoint", rsf.ID()).
 		Msg("Retrieving rule set")
 
-	ruleSet, err := rsf.FetchRuleSet(ctx)
+	ruleSet, err := rsf.FetchRuleSet(ctx, p.app)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			p.l.Debug().Msg("Watcher closed")
+			logger.Debug().Msg("Watcher closed")
 
 			return nil
 		}
 
-		p.l.Warn().Err(err).
+		logger.Warn().Err(err).
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
@@ -177,8 +177,8 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		}
 	}
 
-	if err = p.ruleSetsUpdated(ruleSet, rsf.ID()); err != nil {
-		p.l.Warn().Err(err).
+	if err = p.ruleSetsUpdated(ctx, ruleSet, rsf.ID()); err != nil {
+		logger.Warn().Err(err).
 			Str("_src", rsf.ID()).
 			Msg("Failed to apply rule set changes")
 	}
@@ -186,7 +186,9 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) error {
+func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *config2.RuleSet, stateID string) error {
+	logger := zerolog.Ctx(ctx)
+
 	var hash []byte
 
 	if value, ok := p.states.Load(stateID); ok { //nolint:nestif
@@ -195,7 +197,7 @@ func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) err
 		// rule set was known
 		if len(ruleSet.Rules) == 0 {
 			// rule set removed
-			if err := p.p.OnDeleted(ruleSet); err != nil {
+			if err := p.p.OnDeleted(ctx, ruleSet); err != nil {
 				return err
 			}
 
@@ -204,7 +206,7 @@ func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) err
 			return nil
 		} else if !bytes.Equal(hash, ruleSet.Hash) {
 			// rule set updated
-			if err := p.p.OnUpdated(ruleSet); err != nil {
+			if err := p.p.OnUpdated(ctx, ruleSet); err != nil {
 				return err
 			}
 
@@ -214,7 +216,7 @@ func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) err
 		}
 	} else if len(ruleSet.Rules) != 0 {
 		// previously unknown rule set
-		if err := p.p.OnCreated(ruleSet); err != nil {
+		if err := p.p.OnCreated(ctx, ruleSet); err != nil {
 			return err
 		}
 
@@ -223,7 +225,7 @@ func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) err
 		return nil
 	}
 
-	p.l.Debug().
+	logger.Debug().
 		Str("_endpoint", stateID).
 		Msg("No updates received")
 

@@ -1,0 +1,30 @@
+serve:
+  port: 4468
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+mechanisms:
+  authenticators:
+    - id: some_authenticator
+      type: oauth2_introspection
+      config:
+        introspection_endpoint:
+          url: http://example.com/oauth2/introspect
+        assertions:
+          issuers:
+            - bla
+
+  finalizers:
+    - id: some_finalizer
+      type: noop
+
+providers:
+  file_system:
+    src: test_rules.yaml
+    watch: true

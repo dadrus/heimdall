@@ -390,6 +390,8 @@ This strategy implements the https://datatracker.ietf.org/doc/html/rfc6749#secti
 * *`token_url`*: _string_ (mandatory)
 +
 The token endpoint of the authorization server.
++
+NOTE: Usage of TLS is enforced as long as heimdall is not started with `--insecure-skip-egress-tls-enforcement` flag, which allows insecure communication to any of the configured services.
 
 * *`client_id`*: _string_ (mandatory)
 +
@@ -415,7 +417,7 @@ The scopes required for the access token.
 
 * *`cache_ttl`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
-How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration inforation is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the values of `token_url`, `client_id`, `client_secret` and the `scopes` properties.
+How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration information is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the values of `token_url`, `client_id`, `client_secret` and the `scopes` properties.
 
 * *`header`*: _object_ (optional, overridable)
 +
@@ -537,15 +539,19 @@ So with `10s` you can define the duration of 10 seconds and with `2h` you can sa
 
 == Endpoint
 
-The Endpoint type defines properties required for the communication with an endpoint.
+The `Endpoint` type defines the properties required for communication with an endpoint.
 
-If only the URL is required to be set, you can specify it by using just a string. If more than the URL is required to be specified, following properties are available:
+If only the URL needs to be set, you can specify it as a string. If additional properties are required, the following options are available:
 
 * *`url`* _string_ (mandatory)
 +
-The actual url of the endpoint. Depending on the mechanism, a URL can be templated
+The URL of the endpoint. Depending on the mechanism, the URL can be templated.
 +
-NOTE: If templating is used, user info, scheme and host parts of the URL cannot be templated. Attempts to do so will result in runtime errors.
+[NOTE]
+====
+* If templating is used, the user info, scheme, and host parts of the URL cannot be templated. Attempts to do so will result in runtime errors.
+* TLS is enforced unless heimdall is started with the `--insecure-skip-egress-tls-enforcement` flag, which allows insecure communication with any configured service.
+====
 
 * *`method`* _string_ (optional)
 +
@@ -565,23 +571,15 @@ HTTP headers to be sent to the endpoint.
 +
 CAUTION: These headers are not analyzed by heimdall and are just forwarded to the endpoint. E.g. if you configure the `Content-Encoding` to something like `gzip`, the service behind the used endpoint might fail to answer, as it would expect the body to be compressed.
 
-* *`http_cache`* _object_ (optional)
+* *`http_cache`* _link:{{< relref "#_http_cache" >}}[HTTP Cache]_ (optional)
 +
-Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. To support this, that object defines the following properties:
-
-** *`enabled`* _boolean_ (optional)
-+
-Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the `endpoint` property. If set to `true` heimdall will strictly follow the requirements from RFC 7234 and cache the responses if possible and reuse these if still valid.
-
-** *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
-+
-Specifies how long heimdall should cache the response if the endpoint referenced by the URL does not provide any explicit expiration time (no heuristic freshness lifetime is calculated). Without configuring this property, heimdall treats such responses as not cacheable. Defaults to `0s` if not otherwise stated in the description of the configuration type making use of the `endpoint` property.
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used.
 
 .Endpoint configuration as string
 ====
 [source, text]
 ----
-http://foo.bar
+https://foo.bar
 ----
 ====
 
@@ -590,7 +588,7 @@ http://foo.bar
 
 [source, yaml]
 ----
-url: http://foo.bar
+url: https://foo.bar
 method: GET
 retry:
   give_up_after: 5s
@@ -623,6 +621,18 @@ Following types are available:
 * `internal_error` - used if heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc. Results by default in `500 Internal Server Error` response to the caller.
 * `no_rule_error` - this error is used to signal, there is no matching rule to handle the given request. Error of this type results by default in `404 Not Found` HTTP code.
 * `precondition_error` (*) - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured. Error of this type results by default in `400 Bad Request` HTTP code if handled by the default error handler.
+
+== HTTP Cache
+
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. Following properties are defined:
+
+* *`enabled`* _boolean_ (optional)
++
+Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the HTTP Cache settings. When set to `true`, heimdall will strictly comply with the HTTP caching rules defined in RFC 7234, caching responses only when allowed and reusing them only if they remain valid per the standard.
+
+* *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Specifies how long heimdall should cache the response if it does not contain any explicit expiration time (no heuristic freshness lifetime is calculated). If this property is not set, heimdall considers such responses uncacheable. Unless specified otherwise in the configuration type description utilizing the HTTP Cache settings, the default value is `0s`.
 
 == Key Store
 

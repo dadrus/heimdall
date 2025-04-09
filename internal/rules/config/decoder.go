@@ -19,12 +19,12 @@ package config
 import (
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func DecodeConfig(input any, output any) error {
+func DecodeConfig(app app.Context, input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -43,7 +43,7 @@ func DecodeConfig(input any, output any) error {
 			"failed decoding ruleset config").CausedBy(err)
 	}
 
-	if err = validation.ValidateStruct(output); err != nil {
+	if err = app.Validator().ValidateStruct(output); err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed validating ruleset config").CausedBy(err)
 	}

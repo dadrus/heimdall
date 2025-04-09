@@ -18,14 +18,17 @@ package finalizers
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -33,12 +36,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerOAuth2ClientCredentials {
 				return false, nil, nil
 			}
 
-			finalizer, err := newOAuth2ClientCredentialsFinalizer(id, conf)
+			finalizer, err := newOAuth2ClientCredentialsFinalizer(app, id, conf)
 
 			return true, finalizer, err
 		})
@@ -46,15 +49,20 @@ func init() {
 
 type oauth2ClientCredentialsFinalizer struct {
 	id           string
+	app          app.Context
 	cfg          clientcredentials.Config
 	headerName   string
 	headerScheme string
 }
 
 func newOAuth2ClientCredentialsFinalizer(
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*oauth2ClientCredentialsFinalizer, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating oauth2_client_credentials finalizer")
+
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
 		Scheme string `mapstructure:"scheme"`
@@ -66,8 +74,14 @@ func newOAuth2ClientCredentialsFinalizer(
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_client_credentials finalizer '%s'", id).CausedBy(err)
+	}
+
+	if strings.HasPrefix(conf.TokenURL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the token_url used in oauth2_client_credentials finalizer")
 	}
 
 	conf.AuthMethod = x.IfThenElse(
@@ -78,6 +92,7 @@ func newOAuth2ClientCredentialsFinalizer(
 
 	return &oauth2ClientCredentialsFinalizer{
 		id:  id,
+		app: app,
 		cfg: conf.Config,
 		headerName: x.IfThenElseExec(conf.Header != nil,
 			func() string { return conf.Header.Name },
@@ -104,8 +119,9 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for oauth2_client_credentials finalizer '%s'", f.id).CausedBy(err)
 	}
 
 	cfg := f.cfg
@@ -114,6 +130,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 
 	return &oauth2ClientCredentialsFinalizer{
 		id:  f.id,
+		app: f.app,
 		cfg: cfg,
 		headerName: x.IfThenElseExec(conf.Header != nil,
 			func() string { return conf.Header.Name },
@@ -124,11 +141,11 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Finalizing using oauth2_client_credentials finalizer")
 
-	token, err := f.cfg.Token(ctx.AppContext())
+	token, err := f.cfg.Token(ctx.Context())
 	if err != nil {
 		return err
 	}

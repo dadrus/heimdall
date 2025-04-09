@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - virtual-service.yaml
+patches:
+  # enable injection of side-cars
+  - patch:  |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: quickstarts
+        labels:
+          istio-injection: enabled

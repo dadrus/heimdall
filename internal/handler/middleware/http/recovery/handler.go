@@ -41,9 +41,8 @@ func New(eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
 						err = errorchain.NewWithMessage(heimdall.ErrInternal, "runtime error occurred").
 							CausedBy(err)
 					} else {
-						// nolint: goerr113
 						err = errorchain.NewWithMessage(heimdall.ErrInternal, "runtime error occurred").
-							CausedBy(fmt.Errorf("%v", rec))
+							CausedBy(fmt.Errorf("%v", rec)) //nolint: err113
 					}
 
 					eh.HandleError(rw, req, err)

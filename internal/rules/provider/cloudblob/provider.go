@@ -20,15 +20,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"sync"
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/maps"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	rule_config "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -38,22 +38,23 @@ import (
 
 type BucketState map[string][]byte
 
-type provider struct {
+type Provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          gocron.Scheduler
+	app        app.Context
 	cancel     context.CancelFunc
 	states     sync.Map
 	configured bool
 }
 
-func newProvider(
-	conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger,
-) (*provider, error) {
+func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
+	conf := app.Config()
+	logger := app.Logger()
 	rawConf := conf.Providers.CloudBlob
 
 	if rawConf == nil {
-		return &provider{}, nil
+		return &Provider{}, nil
 	}
 
 	type Config struct {
@@ -73,9 +74,7 @@ func newProvider(
 	}
 
 	logger = logger.With().Str("_provider_type", "cloud_blob").Logger()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.With().Logger().WithContext(ctx)
+	ctx, cancel := context.WithCancel(logger.WithContext(context.Background()))
 
 	scheduler, err := gocron.NewScheduler(
 		gocron.WithLocation(time.UTC),
@@ -91,10 +90,11 @@ func newProvider(
 			"failed creating scheduler for cloud_blob rule provider").CausedBy(err)
 	}
 
-	prov := &provider{
-		p:          processor,
+	prov := &Provider{
+		p:          rsp,
 		l:          logger,
 		s:          scheduler,
+		app:        app,
 		cancel:     cancel,
 		configured: true,
 	}
@@ -110,6 +110,8 @@ func newProvider(
 		if providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0 {
 			definition = gocron.DurationJob(*providerConf.WatchInterval)
 		} else {
+			logger.Info().Msg("Watching of rules is not configured. Updates to rules will have no effect.")
+
 			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
 		}
 
@@ -123,24 +125,24 @@ func newProvider(
 		}
 	}
 
-	logger.Info().Msg("Rule provider configured.")
+	logger.Info().Msg("Rule provider configured")
 
 	return prov, nil
 }
 
-func (p *provider) Start(_ context.Context) error {
+func (p *Provider) Start(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
 
-	p.l.Info().Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule provider")
 
 	go p.s.Start()
 
 	return nil
 }
 
-func (p *provider) Stop(_ context.Context) error {
+func (p *Provider) Stop(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -152,10 +154,11 @@ func (p *provider) Stop(_ context.Context) error {
 	return p.s.Shutdown()
 }
 
-func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
-	p.l.Debug().Msg("Retrieving rule set")
+func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().Msg("Retrieving rule set")
 
-	ruleSets, err := rsf.FetchRuleSets(ctx)
+	ruleSets, err := rsf.FetchRuleSets(ctx, p.app)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			p.l.Debug().Msg("Watcher closed")
@@ -163,7 +166,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			return nil
 		}
 
-		p.l.Warn().
+		logger.Warn().
 			Err(err).
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
@@ -177,23 +180,30 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 	// if no rule sets are available and no rule sets were known from the past
 	if len(ruleSets) == 0 && len(state) == 0 {
-		p.l.Debug().Str("_endpoint", rsf.ID()).Msg("No updates received")
+		logger.Debug().Str("_endpoint", rsf.ID()).Msg("No updates received")
 
 		return nil
 	}
 
-	if err = p.ruleSetsUpdated(ruleSets, state, rsf.ID()); err != nil {
-		p.l.Warn().Err(err).Str("_endpoint", rsf.ID()).Msg("Failed to apply rule set changes")
+	if err = p.ruleSetsUpdated(ctx, ruleSets, state, rsf.ID()); err != nil {
+		logger.Warn().Err(err).Str("_endpoint", rsf.ID()).Msg("Failed to apply rule set changes")
 	}
 
 	return nil
 }
 
-func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state BucketState, buketID string) error {
+func (p *Provider) ruleSetsUpdated(
+	ctx context.Context,
+	ruleSets []*rule_config.RuleSet,
+	state BucketState,
+	buketID string,
+) error {
+	logger := zerolog.Ctx(ctx)
+
 	// check which were present in the past and are not present now
 	// and which are new
 	currentIDs := toRuleSetIDs(ruleSets)
-	oldIDs := maps.Keys(state)
+	oldIDs := slices.Collect(maps.Keys(state))
 
 	removedIDs := slicex.Subtract(oldIDs, currentIDs)
 	newIDs := slicex.Subtract(currentIDs, oldIDs)
@@ -206,7 +216,7 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 			},
 		}
 
-		if err := p.p.OnDeleted(conf); err != nil {
+		if err := p.p.OnDeleted(ctx, conf); err != nil {
 			return err
 		}
 
@@ -219,7 +229,7 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Source], ruleSet.Hash)
 
 		if !isNew && !hasChanged {
-			p.l.Debug().
+			logger.Debug().
 				Str("_bucket", buketID).
 				Str("_rule_set", ruleSet.Source).
 				Msg("No updates received")
@@ -230,9 +240,9 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 		var err error
 
 		if isNew {
-			err = p.p.OnCreated(ruleSet)
+			err = p.p.OnCreated(ctx, ruleSet)
 		} else if hasChanged {
-			err = p.p.OnUpdated(ruleSet)
+			err = p.p.OnUpdated(ctx, ruleSet)
 		}
 
 		if err != nil {
@@ -245,7 +255,7 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 	return nil
 }
 
-func (p *provider) getBucketState(key string) BucketState {
+func (p *Provider) getBucketState(key string) BucketState {
 	value, _ := p.states.LoadOrStore(key, make(BucketState))
 
 	return value.(BucketState) // nolint: forcetypeassert

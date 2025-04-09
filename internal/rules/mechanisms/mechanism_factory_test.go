@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
@@ -44,15 +45,13 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 
 	ID := "foo"
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		id            string
 		conf          map[string]any
 		configureMock func(t *testing.T, mAuth *mocks.AuthenticatorMock)
 		assert        func(t *testing.T, err error, auth authenticators.Authenticator)
 	}{
-		{
-			uc: "no authenticator for given id",
+		"no authenticator for given id": {
 			id: "bar",
 			assert: func(t *testing.T, err error, _ authenticators.Authenticator) {
 				t.Helper()
@@ -62,8 +61,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 				assert.Contains(t, err.Error(), "no authenticator prototype")
 			},
 		},
-		{
-			uc:   "with failing creation from prototype",
+		"with failing creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
@@ -78,8 +76,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
-		{
-			uc:   "successful creation from prototype",
+		"successful creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
@@ -93,8 +90,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 				assert.NotNil(t, auth)
 			},
 		},
-		{
-			uc: "successful creation with empty config",
+		"successful creation with empty config": {
 			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
 
@@ -103,7 +99,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
@@ -136,15 +132,13 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 
 	ID := "foo"
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		id            string
 		conf          map[string]any
 		configureMock func(t *testing.T, mAuth *mocks3.AuthorizerMock)
 		assert        func(t *testing.T, err error, auth authorizers.Authorizer)
 	}{
-		{
-			uc: "no authenticator for given id",
+		"no authenticator for given id": {
 			id: "bar",
 			assert: func(t *testing.T, err error, _ authorizers.Authorizer) {
 				t.Helper()
@@ -154,8 +148,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "no authorizer prototype")
 			},
 		},
-		{
-			uc:   "with failing creation from prototype",
+		"with failing creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mocks3.AuthorizerMock) {
 				t.Helper()
@@ -170,8 +163,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
-		{
-			uc:   "successful creation from prototype",
+		"successful creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mocks3.AuthorizerMock) {
 				t.Helper()
@@ -185,8 +177,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 				assert.NotNil(t, auth)
 			},
 		},
-		{
-			uc: "successful creation with empty config",
+		"successful creation with empty config": {
 			assert: func(t *testing.T, err error, auth authorizers.Authorizer) {
 				t.Helper()
 
@@ -195,7 +186,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
@@ -228,15 +219,13 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 
 	ID := "foo"
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		id            string
 		conf          map[string]any
 		configureMock func(t *testing.T, mContextualizer *mocks4.ContextualizerMock)
 		assert        func(t *testing.T, err error, contextualizer contextualizers.Contextualizer)
 	}{
-		{
-			uc: "no contextualizer for given id",
+		"no contextualizer for given id": {
 			id: "bar",
 			assert: func(t *testing.T, err error, _ contextualizers.Contextualizer) {
 				t.Helper()
@@ -246,8 +235,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "no contextualizer prototype")
 			},
 		},
-		{
-			uc:   "with failing creation from prototype",
+		"with failing creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
@@ -263,8 +251,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
-		{
-			uc:   "successful creation from prototype",
+		"successful creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
@@ -278,8 +265,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 				assert.NotNil(t, contextualizer)
 			},
 		},
-		{
-			uc: "successful creation with empty config",
+		"successful creation with empty config": {
 			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
 
@@ -288,7 +274,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
@@ -321,15 +307,13 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 
 	ID := "foo"
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		id            string
 		conf          map[string]any
 		configureMock func(t *testing.T, mFin *mocks6.FinalizerMock)
 		assert        func(t *testing.T, err error, finalizer finalizers.Finalizer)
 	}{
-		{
-			uc: "no finalizer for given id",
+		"no finalizer for given id": {
 			id: "bar",
 			assert: func(t *testing.T, err error, _ finalizers.Finalizer) {
 				t.Helper()
@@ -339,8 +323,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "no finalizer prototype")
 			},
 		},
-		{
-			uc:   "with failing creation from prototype",
+		"with failing creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, finalizer *mocks6.FinalizerMock) {
 				t.Helper()
@@ -355,8 +338,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
-		{
-			uc:   "successful creation from prototype",
+		"successful creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, finalizer *mocks6.FinalizerMock) {
 				t.Helper()
@@ -370,8 +352,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 				assert.NotNil(t, finalizer)
 			},
 		},
-		{
-			uc: "successful creation with empty config",
+		"successful creation with empty config": {
 			assert: func(t *testing.T, err error, finalizer finalizers.Finalizer) {
 				t.Helper()
 
@@ -380,7 +361,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
@@ -413,15 +394,13 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 
 	ID := "foo"
 
-	for _, tc := range []struct {
-		uc            string
+	for uc, tc := range map[string]struct {
 		id            string
 		conf          map[string]any
 		configureMock func(t *testing.T, mEH *mocks5.ErrorHandlerMock)
 		assert        func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler)
 	}{
-		{
-			uc: "no error handler for given id",
+		"no error handler for given id": {
 			id: "bar",
 			assert: func(t *testing.T, err error, _ errorhandlers.ErrorHandler) {
 				t.Helper()
@@ -431,8 +410,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 				assert.Contains(t, err.Error(), "no error handler prototype")
 			},
 		},
-		{
-			uc:   "with failing creation from prototype",
+		"with failing creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
@@ -447,8 +425,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
-		{
-			uc:   "successful creation from prototype",
+		"successful creation from prototype": {
 			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
@@ -462,8 +439,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 				assert.NotNil(t, errorHandler)
 			},
 		},
-		{
-			uc: "successful creation with empty config",
+		"successful creation with empty config": {
 			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
 
@@ -472,7 +448,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
@@ -503,13 +479,11 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 func TestCreateHandlerFactory(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   *config.Configuration
 		assert func(t *testing.T, err error, factory *mechanismsFactory)
 	}{
-		{
-			uc:   "successful",
+		"successful": {
 			conf: &config.Configuration{Prototypes: &config.MechanismPrototypes{}},
 			assert: func(t *testing.T, err error, factory *mechanismsFactory) {
 				t.Helper()
@@ -524,8 +498,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 				assert.Empty(t, factory.r.authorizers)
 			},
 		},
-		{
-			uc: "fails",
+		"fails": {
 			conf: &config.Configuration{
 				Prototypes: &config.MechanismPrototypes{
 					Authenticators: []config.Mechanism{
@@ -544,14 +517,18 @@ func TestCreateHandlerFactory(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			var (
 				impl *mechanismsFactory
 				ok   bool
 			)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Config().Return(tc.conf)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			factory, err := NewMechanismFactory(tc.conf, log.Logger, nil, nil, nil)
+			factory, err := NewMechanismFactory(appCtx)
 
 			// THEN
 			if err == nil {

@@ -33,16 +33,15 @@ import (
 func TestNewCelExecutionCondition(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		expression string
 		err        string
 	}{
-		{uc: "malformed expression", expression: "foobar", err: "failed compiling"},
-		{uc: "is not a bool expression", expression: "1", err: "result type error"},
-		{uc: "valid expression", expression: "true"},
+		"malformed expression":     {expression: "foobar", err: "failed compiling"},
+		"is not a bool expression": {expression: "1", err: "result type error"},
+		"valid expression":         {expression: "true"},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			condition, err := newCelExecutionCondition(tc.expression)
 
@@ -71,37 +70,32 @@ func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 		},
 	}
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		expression string
 		expected   bool
 	}{
-		{
-			uc: "complex expression evaluating to true",
+		"complex expression evaluating to true": {
 			expression: `Subject.Attributes.exists(c, c.startsWith('group'))
 							&& Subject.Attributes.filter(c, c.startsWith('group'))
 								.all(c, Subject.Attributes[c].all(g, g.endsWith('@acme.co')))`,
 			expected: true,
 		},
-		{
-			uc:         "simple expression evaluating to false",
+		"simple expression evaluating to false": {
 			expression: `Subject.ID == "anonymous" && Request.Method == "GET"`,
 			expected:   false,
 		},
-		{
-			uc:         "simple expression evaluating to true",
+		"simple expression evaluating to true": {
 			expression: `Subject.ID == "foobar" && Request.Method == "GET"`,
 			expected:   true,
 		},
-		{
-			uc:         "expression acting on client ip addresses",
+		"expression acting on client ip addresses": {
 			expression: `Request.ClientIPAddresses[1] in networks("10.10.10.0/24")`,
 			expected:   true,
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewContextMock(t)
+			ctx := mocks.NewRequestContextMock(t)
 
 			ctx.EXPECT().Request().Return(&heimdall.Request{
 				Method: http.MethodGet,
@@ -134,32 +128,28 @@ func (tid testIdentifier) ID() string { return string(tid) }
 func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc         string
+	for uc, tc := range map[string]struct {
 		expression string
 		expected   bool
 	}{
-		{
-			uc: "complex expression evaluating to true",
+		"complex expression evaluating to true": {
 			expression: `type(Error) in [communication_error, authorization_error] && 
                            Error.Source == "foobar" &&
                            "bar" in Request.URL.Query().foo`,
 			expected: true,
 		},
-		{
-			uc:         "simple expression evaluating to false",
+		"simple expression evaluating to false": {
 			expression: `type(Error) == internal_error && Request.Method == "GET"`,
 			expected:   false,
 		},
-		{
-			uc:         "simple expression evaluating to true",
+		"simple expression evaluating to true": {
 			expression: `type(Error) == authorization_error && Request.Method == "GET"`,
 			expected:   true,
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewContextMock(t)
+			ctx := mocks.NewRequestContextMock(t)
 
 			ctx.EXPECT().Request().Return(&heimdall.Request{
 				Method: http.MethodGet,

@@ -27,7 +27,7 @@ type CookieValueExtractStrategy struct {
 	Name string
 }
 
-func (es CookieValueExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
+func (es CookieValueExtractStrategy) GetAuthData(s heimdall.RequestContext) (string, error) {
 	if val := s.Request().Cookie(es.Name); len(val) != 0 {
 		return strings.TrimSpace(val), nil
 	}

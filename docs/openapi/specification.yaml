@@ -10,7 +10,7 @@ info:
     url: https://github.com/dadrus/heimdall/blob/main/LICENSE
 
 servers:
-  - url: http://heimdall.management.local
+  - url: https://heimdall.management.local
     description: Management Server
 
 tags:
@@ -20,25 +20,10 @@ tags:
       category, like health endpoints, etc. 
       
       This functionality is only available on heimdall's **management port**.
-  - name: Decision Service
+
+  - name: Main
     description: |
-      Decision Service is an operation mode of heimdall, in which heimdall can be integrated with most probably all modern
-      API gateways and reverse proxies as a so-called "authentication middleware". Here the reverse proxy, respectively
-      API gateway, will forward requests to heimdall by making use of its decisions service endpoint for authentication
-      and authorization purposes. Upon reception, heimdall will check if these requests satisfy the conditions defined
-      in pipeline definition rules. If not, heimdall returns an error (here to API gateway/reverse proxy). Otherwise,
-      the response to the API gateway/reverse proxy may contain additional headers, set by the used pipeline, which
-      should then be forwarded to the upstream service.
-      
-      This functionality is only available on heimdall's **decision port**.
-  - name: Proxy
-    description: |
-      Proxy is an operation mode of heimdall, in which heimdall forwards requests to the upstream service, if these
-      satisfy the conditions defined in pipeline definition rules. Otherwise, heimdall returns an error to the client.
-      If the pipeline execution was successful, it also forwards additional headers, specified in the used pipeline 
-      to the upstream service.
-      
-      This functionality is only available on heimdall's **proxy port**.
+      This is the main service exposed by heimdall and available on the **main port**.
 
   - name: Profiling
     description: |
@@ -69,12 +54,9 @@ x-tagGroups:
   - name: Management
     tags:
       - Well-Known
-  - name: Decision
+  - name: Main
     tags:
-      - Decision Service
-  - name: Proxy
-    tags:
-      - Proxy
+      - Main Service
   - name: Profiling
     tags:
       - Profiling
@@ -199,7 +181,7 @@ security: []
 paths:
   /metrics:
     servers:
-      - url: http://metrics.heimdall.local
+      - url: https://metrics.heimdall.local
         description: Metrics Service
     get:
       summary: Get available Prometheus style metrics
@@ -219,7 +201,7 @@ paths:
 
   /debug/pprof:
     servers:
-      - url: http://profiling.heimdall.local
+      - url: https://profiling.heimdall.local
         description: Profiling Service
     get:
       summary: Get available profiles
@@ -237,7 +219,7 @@ paths:
 
   /debug/pprof/{profile_name}:
     servers:
-      - url: http://profiling.heimdall.local
+      - url: https://profiling.heimdall.local
         description: Profiling Service
     get:
       summary: Get profiling samples for a specific profile.
@@ -320,7 +302,7 @@ paths:
 
   /.well-known/health:
     servers:
-      - url: http://heimdall.management.local
+      - url: https://heimdall.management.local
         description: Management Server
     get:
       description: |
@@ -343,7 +325,7 @@ paths:
 
   /.well-known/jwks:
     servers:
-      - url: http://heimdall.management.local
+      - url: https://heimdall.management.local
         description: Management Server
     get:
       description: |
@@ -405,7 +387,7 @@ paths:
 
   /validate-ruleset:
     servers:
-      - url: http://heimdall.decision.kuberetes.svc
+      - url: https://heimdall.decision.kuberetes.svc
         description: RuleSet Validation Admission Controller
     post:
       summary: Validate RuleSet
@@ -595,100 +577,18 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /{decision_path_and_query_params}:
+  /{path_and_query_params}:
     servers:
-      - url: http://heimdall.decision.local
-        description: Decision Service
+      - url: https://heimdall.proxy.local
+        description: Main Service
     get:
-      summary: Decision endpoint
+      summary: Main endpoint
       description: This endpoint accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
       tags:
-        - Decision Service
-      operationId: get_decision_service
-      parameters:
-        - name: decision_path_and_query_params
-          in: path
-          description: The path and query parameter to match a rule and to work on.
-          schema:
-            type: string
-        - name: X-Forwarded-Method
-          in: header
-          description: The HTTP method to use to for the url to verify access to. If not present defaults to the method used for sending the request to heimdall.
-          schema:
-            type: string
-        - name: X-Forwarded-Proto
-          in: header
-          description: HTTP scheme to use to build the url to verify access to. If not present defaults to the scheme used to operate heimdall.
-          schema:
-            type: string
-        - name: X-Forwarded-Host
-          in: header
-          description: Host to use to build the url to verify access to.
-          schema:
-            type: string
-        - name: X-Forwarded-Uri
-          in: header
-          description: The Uri to use to build the url to verify access to.
-          schema:
-            type: string
-        - name: X-Forwarded-For
-          in: header
-          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
-          schema:
-            type: string
-        - name: Forwarded
-          in: header
-          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
-          schema:
-            type: string
-        - name: <Application Specific>
-          in: header
-          description: Placeholder for other headers, the defined rules make use of.
-          schema:
-            type: string
-        - name: <Application Specific>
-          in: cookie
-          description: Placeholder for cookies, the defined rules make use of.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Request has been accepted and is allowed to be forwarded to the upstream service.
-          headers:
-            <Application Specific>:
-              description: |
-                Placeholder for the headers, created as a result of successful execution of application specific rules.
-                E.g. a rule can create an `Authorization` header with a bearer token in a JWT format to be forwarded to
-                the upstream service by an API-Gateway.
-              schema:
-                type: string
-        '401':
-          description: Unauthorized. Returned if a matching rule could not verify the authentication status of the subject related to the request.
-        '403':
-          description: Forbidden. Returned if a matching rule could not verify the authorization status of the subject related to the request.
-        '404':
-          description: Not Found. Returned if there was no rule found, which could be used to verify the request.
-        '405':
-          description: Method not allowed. Returned if the patched rule doesn't allow the usage of a particular HTTP method.
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '502':
-          description: |
-            Bad Gateway. Returned if the communication with any of the systems, the handlers in a matching rule are 
-            using, failed due to DNS, timeout etc. errors.
-
-  /{proxy_path_and_query_params}:
-    servers:
-      - url: http://heimdall.proxy.local
-        description: Decision Service
-    get:
-      summary: Proxy endpoint
-      description: This endpoint accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
-      tags:
-        - Proxy
+        - Main Service
       operationId: get_proxy
       parameters:
-        - name: proxy_path_and_query_params
+        - name: path_and_query_params
           in: path
           description: The path and query parameter to match a rule and to work on.
           schema:
@@ -736,8 +636,8 @@ paths:
       responses:
         '200':
           description: |
-            If the request has been accepted, it will be forwarded to the upstream service. In that case the
-            response comes from the upstream service.
+            If the request has been accepted. If heimdall is operated in proxy mode, it will be forwarded to the upstream service. In that case the
+            response comes from the upstream service. Otherwise, if operated in decision mode, the response comes from heimdall.
         '401':
           description: Unauthorized. Returned if a matching rule could not verify the authentication status of the subject related to the request.
         '403':
@@ -750,5 +650,4 @@ paths:
           $ref: '#/components/responses/InternalServerError'
         '502':
           description: |
-            Bad Gateway. Returned if the communication with any of the systems, the handlers in a matching rule are 
-            using, failed due to DNS, timeout etc. errors.
+            Bad Gateway. Returned if the communication with any of the systems failed due to DNS, timeout etc. errors.

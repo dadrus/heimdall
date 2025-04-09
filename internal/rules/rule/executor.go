@@ -23,5 +23,5 @@ import (
 //go:generate mockery --name Executor --structname ExecutorMock
 
 type Executor interface {
-	Execute(ctx heimdall.Context) (Backend, error)
+	Execute(ctx heimdall.RequestContext) (Backend, error)
 }

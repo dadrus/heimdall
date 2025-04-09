@@ -54,7 +54,7 @@ Subject = {
     "exp": "1670600805",
     "jti": "7b91ed8a-0251-4e02-8d51-9792785851e8",
     "iat": "1670600305",
-    "iss": "http://testauthserver.local",
+    "iss": "https://testauthserver.local",
     "nbf": "1670600305",
     "extra": {
         "foo": ["bar", "baz"]
@@ -115,7 +115,7 @@ This method returns the URL as valid URL string of a form `scheme:host/path?quer
 
 * *`ClientIPAddresses`*: _string array_
 +
-The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
+The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see also link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
 * *`Header(name)`*: _method_,
 +
@@ -249,11 +249,11 @@ Values = {
 
 Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
-To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
+To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
 * `urlenc` - Encodes a given string using url encoding. Is handy if you need to generate request body or query parameters e.g. for communication with further systems.
 
-* `atIndex` - Implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of the build-in index function to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
+* `atIndex` - Implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of the built-in index function to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
 +
 Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` (behaves the same way as the `index` function) and `{{ atIndex -2 [1,2,3,4,5] }}` evaluates to `4`.
 
@@ -264,7 +264,7 @@ Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` 
 
 .Rendering a JSON object
 ====
-Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
+Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
 
 [source, gotemplate]
 ----
@@ -288,7 +288,7 @@ This will result in the following JSON object:
 {
     "subject_id": "foo",
     "email": "foo@bar.baz",
-    "request_url": "http://foobar.baz/zab?foo=bar",
+    "request_url": "https://foobar.baz/zab?foo=bar",
     "foo_value": "bar",
     "request_method": "POST",
     "x_foo_value": "bar",
@@ -299,7 +299,7 @@ This will result in the following JSON object:
 
 .Access to captured path segments
 ====
-Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
+Imagine, we have a `POST` request to the URL `\https://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
 
 [source, yaml]
 ----
@@ -337,7 +337,7 @@ You can find further examples as part of mechanism descriptions, supporting temp
 
 Expressions can be used to execute conditional logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
 
-In addition to the build-in, respectively extension methods and functions, as well as the methods available on the evaluation objects, following functions are available as well:
+In addition to the built-in extension methods and functions, as well as the methods available on the evaluation objects, the following functions are available as well:
 
 * `split` - this function works on strings and expects a separator as a single argument. The result is a string array.
 +

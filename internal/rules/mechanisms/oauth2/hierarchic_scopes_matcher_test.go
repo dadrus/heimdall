@@ -25,14 +25,12 @@ import (
 func TestHierarchicScopeStrategy(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		requiredScopes HierarchicScopeStrategyMatcher
 		providedScopes []string
 		assert         func(t *testing.T, err error)
 	}{
-		{
-			uc:             "empty required scopes match single provided scope",
+		"empty required scopes match single provided scope": {
 			requiredScopes: HierarchicScopeStrategyMatcher{},
 			providedScopes: []string{"foo.bar"},
 			assert: func(t *testing.T, err error) {
@@ -41,8 +39,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:             "empty required scopes match multiple provided scopes",
+		"empty required scopes match multiple provided scopes": {
 			requiredScopes: HierarchicScopeStrategyMatcher{},
 			providedScopes: []string{"foo.bar", "bar.foo"},
 			assert: func(t *testing.T, err error) {
@@ -51,8 +48,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:             "empty required scopes do match empty provided scopes",
+		"empty required scopes do match empty provided scopes": {
 			requiredScopes: HierarchicScopeStrategyMatcher{},
 			providedScopes: []string{"foo.bar", "bar.foo"},
 			assert: func(t *testing.T, err error) {
@@ -61,8 +57,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:             "required scopes with single element match provided scopes with exact same single scope",
+		"required scopes with single element match provided scopes with exact same single scope": {
 			requiredScopes: HierarchicScopeStrategyMatcher{"foo.bar"},
 			providedScopes: []string{"foo.bar"},
 			assert: func(t *testing.T, err error) {
@@ -71,8 +66,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:             "required scopes with single element matches provided scopes with a single scope on root level",
+		"required scopes with single element matches provided scopes with a single scope on root level": {
 			requiredScopes: HierarchicScopeStrategyMatcher{"foo.bar"},
 			providedScopes: []string{"foo"}, // foo includes foo.bar, foo.baz, foo.*, etc
 			assert: func(t *testing.T, err error) {
@@ -81,8 +75,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		{
-			uc:             "required scopes with single element doesn't match provided scopes with a single scope having required scope as prefix",
+		"required scopes with single element doesn't match provided scopes with a single scope having required scope as prefix": {
 			requiredScopes: HierarchicScopeStrategyMatcher{"foo.bar"},
 			providedScopes: []string{"foo.bar.baz"},
 			assert: func(t *testing.T, err error) {
@@ -91,8 +84,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:             "required scopes with single element doesn't match empty provided scopes",
+		"required scopes with single element doesn't match empty provided scopes": {
 			requiredScopes: HierarchicScopeStrategyMatcher{"foo.bar"},
 			providedScopes: []string{},
 			assert: func(t *testing.T, err error) {
@@ -101,8 +93,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
-		{
-			uc:             "required scopes with multiple elements match provided scopes in hierarchy, which also include further scopes",
+		"required scopes with multiple elements match provided scopes in hierarchy, which also include further scopes": {
 			requiredScopes: HierarchicScopeStrategyMatcher{"foo.bar", "bar.foo"},
 			providedScopes: []string{"foo", "bar.foo", "baz"},
 			assert: func(t *testing.T, err error) {
@@ -112,7 +103,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := tc.requiredScopes.Match(tc.providedScopes)
 

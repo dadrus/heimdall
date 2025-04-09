@@ -23,15 +23,15 @@ func (_m *ExecutorMock) EXPECT() *ExecutorMock_Expecter {
 }
 
 // Execute provides a mock function with given fields: ctx
-func (_m *ExecutorMock) Execute(ctx heimdall.Context) (rule.Backend, error) {
+func (_m *ExecutorMock) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 	ret := _m.Called(ctx)
 
 	var r0 rule.Backend
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (rule.Backend, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) (rule.Backend, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) rule.Backend); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) rule.Backend); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
@@ -39,7 +39,7 @@ func (_m *ExecutorMock) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if rf, ok := ret.Get(1).(func(heimdall.RequestContext) error); ok {
 		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -54,14 +54,14 @@ type ExecutorMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx heimdall.RequestContext
 func (_e *ExecutorMock_Expecter) Execute(ctx interface{}) *ExecutorMock_Execute_Call {
 	return &ExecutorMock_Execute_Call{Call: _e.mock.On("Execute", ctx)}
 }
 
-func (_c *ExecutorMock_Execute_Call) Run(run func(ctx heimdall.Context)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) Run(run func(ctx heimdall.RequestContext)) *ExecutorMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context))
+		run(args[0].(heimdall.RequestContext))
 	})
 	return _c
 }
@@ -71,7 +71,7 @@ func (_c *ExecutorMock_Execute_Call) Return(_a0 rule.Backend, _a1 error) *Execut
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (rule.Backend, error)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(heimdall.RequestContext) (rule.Backend, error)) *ExecutorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

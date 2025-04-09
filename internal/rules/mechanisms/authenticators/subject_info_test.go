@@ -60,13 +60,11 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 	raw, err := json.Marshal(id)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc        string
+	for uc, tc := range map[string]struct {
 		configure func(t *testing.T, s *SubjectInfo)
 		assert    func(t *testing.T, err error, sub *subject.Subject)
 	}{
-		{
-			uc: "subject is extracted and attributes are the whole object",
+		"subject is extracted and attributes are the whole object": {
 			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
@@ -83,8 +81,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				assert.Equal(t, attrs, sub.Attributes)
 			},
 		},
-		{
-			uc: "subject is extracted and attributes are the nested object",
+		"subject is extracted and attributes are the nested object": {
 			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
@@ -105,8 +102,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				assert.Equal(t, attrs, sub.Attributes)
 			},
 		},
-		{
-			uc: "attributes could no be extracted",
+		"attributes could no be extracted": {
 			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
@@ -119,8 +115,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				require.ErrorContains(t, err, "could not extract attributes")
 			},
 		},
-		{
-			uc: "subject could not be extracted",
+		"subject could not be extracted": {
 			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
@@ -133,7 +128,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			s := SubjectInfo{}
 			tc.configure(t, &s)

@@ -17,7 +17,7 @@
 package config
 
 import (
-	"os"
+	"io"
 	"strings"
 
 	"github.com/knadh/koanf/maps"
@@ -30,23 +30,13 @@ import (
 	"github.com/dadrus/heimdall/schema"
 )
 
-func ValidateConfig(configPath string) error {
-	contents, err := os.ReadFile(configPath)
-	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"could not read config file").CausedBy(err)
-	}
-
-	if len(contents) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "empty config file")
-	}
-
+func ValidateConfigSchema(src io.Reader) error {
 	var conf map[string]any
 
-	err = yaml.Unmarshal(contents, &conf)
+	err := yaml.NewDecoder(src).Decode(&conf)
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to parse config file").CausedBy(err)
+			"failed to parse config").CausedBy(err)
 	}
 
 	compiledSchema, err := compileSchema("config.schema.json", stringx.ToString(schema.ConfigSchema))

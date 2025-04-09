@@ -12,7 +12,7 @@ spec:
     sectionName: "4456"
   tls:
     caCertRefs:
-      - name: demo-ca
+      - name: cacerts
         group: ''
         kind: ConfigMap
     hostname: heimdall

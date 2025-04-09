@@ -82,12 +82,12 @@ func at(listVal traits.Lister, pos types.Int) (ref.Val, error) {
 	listLength := listVal.Size().(types.Int) // nolint: forcetypeassert
 
 	if pos >= 0 && pos >= listLength {
-		// nolint: goerr113
+		// nolint: err113
 		return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 	}
 
 	if pos < 0 && (-pos-1) >= listLength {
-		// nolint: goerr113
+		// nolint: err113
 		return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 	}
 

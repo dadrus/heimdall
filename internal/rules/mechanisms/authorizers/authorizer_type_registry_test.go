@@ -19,8 +19,12 @@ package authorizers
 import (
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
@@ -29,13 +33,11 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 	// there are 5 authorizers implemented, which should have been registered
 	require.Len(t, authorizerTypeFactories, 4)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		typ    string
 		assert func(t *testing.T, err error, auth Authorizer)
 	}{
-		{
-			uc:  "using known type",
+		"using known type": {
 			typ: AuthorizerAllow,
 			assert: func(t *testing.T, err error, auth Authorizer) {
 				t.Helper()
@@ -44,8 +46,7 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 				assert.IsType(t, &allowAuthorizer{}, auth)
 			},
 		},
-		{
-			uc:  "using unknown type",
+		"using unknown type": {
 			typ: "foo",
 			assert: func(t *testing.T, err error, _ Authorizer) {
 				t.Helper()
@@ -55,9 +56,17 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
 			// WHEN
-			auth, err := CreatePrototype(NewCreationContextMock(t), "foo", tc.typ, nil)
+			auth, err := CreatePrototype(appCtx, "foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, auth)

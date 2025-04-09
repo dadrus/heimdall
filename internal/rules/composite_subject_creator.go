@@ -17,8 +17,6 @@
 package rules
 
 import (
-	"errors"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
@@ -28,8 +26,8 @@ import (
 
 type compositeSubjectCreator []subjectCreator
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
 	var (
 		sub *subject.Subject
@@ -41,7 +39,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
 
-			if (errors.Is(err, heimdall.ErrArgument) || a.IsFallbackOnErrorAllowed()) && idx < len(ca) {
+			if idx < len(ca)-1 {
 				logger.Info().Msg("Falling back to next configured one.")
 
 				continue
@@ -50,7 +48,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 			break
 		}
 
-		accesscontext.SetSubject(ctx.AppContext(), sub.ID)
+		accesscontext.SetSubject(ctx.Context(), sub.ID)
 
 		return sub, nil
 	}

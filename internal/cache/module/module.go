@@ -19,15 +19,12 @@ package module
 import (
 	"context"
 
-	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	_ "github.com/dadrus/heimdall/internal/cache/memory" // to register the memory cache
 	_ "github.com/dadrus/heimdall/internal/cache/redis"  // to register the redis cache
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 //nolint:gochecknoglobals
@@ -39,13 +36,11 @@ var Module = fx.Provide(
 	),
 )
 
-func newCache(
-	conf *config.Configuration,
-	logger zerolog.Logger,
-	cw watcher.Watcher,
-	co certificate.Observer,
-) (cache.Cache, error) {
-	cch, err := cache.Create(conf.Cache.Type, conf.Cache.Config, cw, co)
+func newCache(app app.Context) (cache.Cache, error) {
+	logger := app.Logger()
+	conf := app.Config()
+
+	cch, err := cache.Create(app, conf.Cache.Type, conf.Cache.Config)
 	if err != nil {
 		logger.Error().Err(err).Str("_type", conf.Cache.Type).Msg("Failed creating cache instance")
 

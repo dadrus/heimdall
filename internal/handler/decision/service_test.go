@@ -17,7 +17,6 @@
 package decision
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,20 +39,18 @@ import (
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
-		serviceConf    config.ServiceConfig
+	for uc, tc := range map[string]struct {
+		serviceConf    config.ServeConfig
 		createRequest  func(t *testing.T, host string) *http.Request
 		configureMocks func(t *testing.T, exec *mocks4.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
-		{
-			uc: "no rules configured",
+		"no rules configured": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodGet,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -78,13 +75,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "rule doesn't match method",
+		"rule doesn't match method": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -109,13 +105,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "rule execution fails with authentication error",
+		"rule execution fails with authentication error": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -140,13 +135,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "rule execution fails with authorization error",
+		"rule execution fails with authorization error": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/", host),
 					nil,
@@ -171,14 +165,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		{
-			uc: "successful rule execution - request method, path and hostname " +
-				"are taken from the real request (trusted proxy not configured)",
+		"successful rule execution - request method, path and hostname " +
+			"are taken from the real request (trusted proxy not configured)": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -196,7 +189,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -226,14 +219,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, "zab", cookies[0].Value)
 			},
 		},
-		{
-			uc: "successful rule execution - request method, path and hostname " +
-				"are not taken from the headers (trusted proxy not configured)",
+		"successful rule execution - request method, path and hostname " +
+			"are not taken from the headers (trusted proxy not configured)": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -251,7 +243,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -286,15 +278,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, "zab", cookies[0].Value)
 			},
 		},
-		{
-			uc: "successful rule execution - request method, path and hostname " +
-				"all are not taken from the headers (trusted proxy configured and does not match host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"111.111.111.111"}},
+		"successful rule execution - request method, path and hostname " +
+			"all are not taken from the headers (trusted proxy configured and does not match host)": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"111.111.111.111"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -312,7 +303,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -344,15 +335,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, "zab", cookies[0].Value)
 			},
 		},
-		{
-			uc: "successful rule execution - only request method is sent via header" +
-				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
+		"successful rule execution - only request method is sent via header" +
+			"(trusted proxy configured and matches host)": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -367,7 +357,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -383,15 +373,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - only host is sent via header" +
-				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
+		"successful rule execution - only host is sent via header" +
+			"(trusted proxy configured and matches host)": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -406,7 +395,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -423,15 +412,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - only path is sent via header" +
-				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
+		"successful rule execution - only path is sent via header" +
+			"(trusted proxy configured and matches host)": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -446,7 +434,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -462,15 +450,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - only scheme is sent via header" +
-				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
+		"successful rule execution - only scheme is sent via header" +
+			"(trusted proxy configured and matches host)": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -485,7 +472,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&
@@ -501,15 +488,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
-		{
-			uc: "successful rule execution - scheme, host, path and method sent via header" +
-				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
+		"successful rule execution - scheme, host, path and method sent via header" +
+			"(trusted proxy configured and matches host)": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
 				req, err := http.NewRequestWithContext(
-					context.TODO(),
+					t.Context(),
 					http.MethodPost,
 					fmt.Sprintf("http://%s/foobar", host),
 					nil,
@@ -527,7 +513,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&
@@ -545,7 +531,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)
@@ -557,7 +543,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			listener, err := listener.New("tcp", "test", srvConf.Address(), srvConf.TLS, nil, nil)
 			require.NoError(t, err)
 
-			conf := &config.Configuration{Serve: config.ServeConfig{Decision: srvConf}}
+			conf := &config.Configuration{Serve: srvConf}
 			cch := mocks.NewCacheMock(t)
 			exec := mocks4.NewExecutorMock(t)
 
@@ -566,7 +552,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			client := &http.Client{Transport: &http.Transport{}}
 
 			decision := newService(conf, cch, log.Logger, exec)
-			defer decision.Shutdown(context.Background())
+			defer decision.Shutdown(t.Context())
 
 			go func() {
 				decision.Serve(listener)

@@ -66,11 +66,11 @@ func (_c *FinalizerMock_ContinueOnError_Call) RunAndReturn(run func() bool) *Fin
 }
 
 // Execute provides a mock function with given fields: ctx, sub
-func (_m *FinalizerMock) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (_m *FinalizerMock) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	ret := _m.Called(ctx, sub)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context, *subject.Subject) error); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext, *subject.Subject) error); ok {
 		r0 = rf(ctx, sub)
 	} else {
 		r0 = ret.Error(0)
@@ -85,15 +85,15 @@ type FinalizerMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx heimdall.RequestContext
 //   - sub *subject.Subject
 func (_e *FinalizerMock_Expecter) Execute(ctx interface{}, sub interface{}) *FinalizerMock_Execute_Call {
 	return &FinalizerMock_Execute_Call{Call: _e.mock.On("Execute", ctx, sub)}
 }
 
-func (_c *FinalizerMock_Execute_Call) Run(run func(ctx heimdall.Context, sub *subject.Subject)) *FinalizerMock_Execute_Call {
+func (_c *FinalizerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, sub *subject.Subject)) *FinalizerMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context), args[1].(*subject.Subject))
+		run(args[0].(heimdall.RequestContext), args[1].(*subject.Subject))
 	})
 	return _c
 }
@@ -103,7 +103,7 @@ func (_c *FinalizerMock_Execute_Call) Return(_a0 error) *FinalizerMock_Execute_C
 	return _c
 }
 
-func (_c *FinalizerMock_Execute_Call) RunAndReturn(run func(heimdall.Context, *subject.Subject) error) *FinalizerMock_Execute_Call {
+func (_c *FinalizerMock_Execute_Call) RunAndReturn(run func(heimdall.RequestContext, *subject.Subject) error) *FinalizerMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

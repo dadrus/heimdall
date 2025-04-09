@@ -17,7 +17,6 @@
 package decision
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -147,7 +146,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			// GIVEN
 			rw := httptest.NewRecorder()
 
-			req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, "http://heimdall.local/foo", nil)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://heimdall.local/foo", nil)
 			require.NoError(t, err)
 
 			reqCtx := newContextFactory(tc.code).Create(rw, req)

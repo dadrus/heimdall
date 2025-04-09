@@ -26,7 +26,7 @@ spec:
     - 172.18.255.200
   secretName: eg-tls
   issuerRef:
-    name: demo-ca-issuer
+    name: root-ca
     kind: ClusterIssuer
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -35,7 +35,7 @@ metadata:
   name: eg
   namespace: heimdall
 #  annotations:
-#    cert-manager.io/cluster-issuer: demo-ca-issuer
+#    cert-manager.io/cluster-issuer: root-ca
 spec:
   gatewayClassName: eg
   listeners:

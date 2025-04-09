@@ -19,6 +19,7 @@ package authorizers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -29,12 +30,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, Authorizer, error) {
+		func(app app.Context, id string, typ string, _ map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerDeny {
 				return false, nil, nil
 			}
 
-			return true, newDenyAuthorizer(id), nil
+			return true, newDenyAuthorizer(app, id), nil
 		})
 }
 
@@ -42,12 +43,15 @@ type denyAuthorizer struct {
 	id string
 }
 
-func newDenyAuthorizer(id string) *denyAuthorizer {
+func newDenyAuthorizer(app app.Context, id string) *denyAuthorizer {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating deny authorizer")
+
 	return &denyAuthorizer{id: id}
 }
 
-func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using deny authorizer")
 
 	return errorchain.

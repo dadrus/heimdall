@@ -28,6 +28,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -44,12 +45,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorGeneric {
 				return false, nil, nil
 			}
 
-			auth, err := newGenericAuthenticator(ctx, id, conf)
+			auth, err := newGenericAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
@@ -57,6 +58,7 @@ func init() {
 
 type genericAuthenticator struct {
 	id                   string
+	app                  app.Context
 	e                    endpoint.Endpoint
 	ads                  extractors.AuthDataExtractStrategy
 	payload              template.Template
@@ -68,7 +70,10 @@ type genericAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-func newGenericAuthenticator(ctx CreationContext, id string, rawConfig map[string]any) (*genericAuthenticator, error) {
+func newGenericAuthenticator(app app.Context, id string, rawConfig map[string]any) (*genericAuthenticator, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating generic authenticator")
+
 	type Config struct {
 		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"required"` //nolint:lll
 		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                    validate:"required"` //nolint:lll
@@ -82,12 +87,23 @@ func newGenericAuthenticator(ctx CreationContext, id string, rawConfig map[strin
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthenticatorGeneric, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic authenticator '%s'", id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+	}
+
+	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the endpoint used in generic authenticator")
 	}
 
 	return &genericAuthenticator{
 		id:         id,
+		app:        app,
 		e:          conf.Endpoint,
 		ads:        conf.AuthDataSource,
 		payload:    conf.Payload,
@@ -102,8 +118,8 @@ func newGenericAuthenticator(ctx CreationContext, id string, rawConfig map[strin
 	}, nil
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using generic authenticator")
 
 	authData, err := a.ads.GetAuthData(ctx)
@@ -142,12 +158,19 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthenticatorGeneric, config, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, config, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic authenticator '%s'", a.id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	return &genericAuthenticator{
 		id:         a.id,
+		app:        a.app,
 		e:          a.e,
 		sf:         a.sf,
 		ads:        a.ads,
@@ -164,17 +187,15 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}, nil
 }
 
-func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
-}
-
 func (a *genericAuthenticator) ID() string {
 	return a.id
 }
 
-func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authData string) ([]byte, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
-	cch := cache.Ctx(ctx.AppContext())
+func (a *genericAuthenticator) IsInsecure() bool { return false }
+
+func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+	logger := zerolog.Ctx(ctx.Context())
+	cch := cache.Ctx(ctx.Context())
 
 	var (
 		cacheKey string
@@ -183,7 +204,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(authData)
-		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing subject information from cache")
 
 			return entry, nil
@@ -209,7 +230,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 	}
 
 	if cacheTTL := a.getCacheTTL(session); cacheTTL > 0 {
-		if err = cch.Set(ctx.AppContext(), cacheKey, payload, cacheTTL); err != nil {
+		if err = cch.Set(ctx.Context(), cacheKey, payload, cacheTTL); err != nil {
 			logger.Warn().Err(err).Msg("Failed to cache subject information")
 		}
 	}
@@ -217,7 +238,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context, authData string) ([]byte, error) {
+func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
 	req, err := a.createRequest(ctx, authData)
 	if err != nil {
 		return nil, err
@@ -246,8 +267,8 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context, aut
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData string) (*http.Request, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authData string) (*http.Request, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
 	var body io.Reader
 
@@ -266,7 +287,7 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 		body = strings.NewReader(value)
 	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), body,
+	req, err := a.e.CreateRequest(ctx.Context(), body,
 		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
@@ -308,7 +329,7 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 }
 
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).WithErrorContext(a)
 	}

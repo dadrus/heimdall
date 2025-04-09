@@ -24,5 +24,5 @@ import (
 
 type errorHandler interface {
 	ID() string
-	Execute(ctx heimdall.Context, causeErr error) error
+	Execute(ctx heimdall.RequestContext, causeErr error) error
 }

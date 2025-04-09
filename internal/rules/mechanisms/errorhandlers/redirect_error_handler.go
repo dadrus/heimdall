@@ -18,9 +18,11 @@ package errorhandlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -32,12 +34,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
 			}
 
-			eh, err := newRedirectErrorHandler(id, conf)
+			eh, err := newRedirectErrorHandler(app, id, conf)
 
 			return true, eh, err
 		})
@@ -49,15 +51,23 @@ type redirectErrorHandler struct {
 	code int
 }
 
-func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
+func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating redirect error handler")
+
 	type Config struct {
-		To   template.Template `mapstructure:"to"   validate:"required"`
+		To   template.Template `mapstructure:"to"   validate:"required,enforced=istls"`
 		Code int               `mapstructure:"code"`
 	}
 
 	var conf Config
-	if err := decodeConfig(ErrorHandlerRedirect, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app.Validator(), ErrorHandlerRedirect, rawConfig, &conf); err != nil {
 		return nil, err
+	}
+
+	if strings.HasPrefix(conf.To.String(), "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the redirect endpoint used in redirect error handler")
 	}
 
 	return &redirectErrorHandler{
@@ -69,8 +79,8 @@ func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErro
 
 func (eh *redirectErrorHandler) ID() string { return eh.id }
 
-func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ error) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using redirect error handler")
 
 	toURL, err := eh.to.Render(map[string]any{

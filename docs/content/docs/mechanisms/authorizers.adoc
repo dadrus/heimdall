@@ -12,7 +12,7 @@ description: Authorizers ensure that only those subjects, which are eligible can
 
 :toc:
 
-Some of the authorizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+Some of the authorizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overridable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 == Allow
 

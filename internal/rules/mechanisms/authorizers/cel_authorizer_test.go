@@ -17,31 +17,30 @@
 package authorizers
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestCreateCELAuthorizer(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		id     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, auth *celAuthorizer)
 	}{
-		{
-			uc: "without configuration",
+		"without configuration": {
 			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
 
@@ -50,8 +49,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "'expressions' is a required field")
 			},
 		},
-		{
-			uc:     "without rules",
+		"without rules": {
 			config: []byte(`expressions: []`),
 			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
@@ -61,8 +59,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 				assert.Contains(t, err.Error(), "'expressions' must contain more than 0 items")
 			},
 		},
-		{
-			uc: "with malformed expressions",
+		"with malformed expressions": {
 			config: []byte(`
 expressions: 
   - expression: "foo()"
@@ -75,8 +72,7 @@ expressions:
 				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
-		{
-			uc: "with expression, which doesn't return bool value",
+		"with expression, which doesn't return bool value": {
 			config: []byte(`
 expressions: 
   - expression: "size(Subject.ID)"
@@ -89,8 +85,7 @@ expressions:
 				assert.Contains(t, err.Error(), "wanted bool")
 			},
 		},
-		{
-			uc: "with unsupported attributes",
+		"with unsupported attributes": {
 			config: []byte(`
 expressions:
   - expression: "has(Subject.ID)"
@@ -105,8 +100,7 @@ foo: bar
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with expression list without expression value",
+		"with expression list without expression value": {
 			config: []byte(`
 expressions:
   - message: bar
@@ -119,9 +113,7 @@ expressions:
 				assert.Contains(t, err.Error(), "'expressions'[0].'expression' is a required field")
 			},
 		},
-		{
-			uc: "with valid expression",
-			id: "authz",
+		"with valid expression": {
 			config: []byte(`
 expressions:
   - expression: "has(Subject.ID)"
@@ -131,18 +123,26 @@ expressions:
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "authz", auth.ID())
+				assert.Equal(t, "with valid expression", auth.ID())
 				assert.NotEmpty(t, auth.expressions)
 				assert.False(t, auth.ContinueOnError())
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			a, err := newCELAuthorizer(nil, tc.id, conf)
+			a, err := newCELAuthorizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -153,15 +153,12 @@ expressions:
 func TestCreateCELAuthorizerFromPrototype(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc              string
-		id              string
+	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer)
 	}{
-		{
-			uc: "no new configuration provided",
+		"no new configuration provided": {
 			prototypeConfig: []byte(`
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
@@ -173,8 +170,7 @@ expressions:
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		{
-			uc: "configuration without expressions provided",
+		"configuration without expressions provided": {
 			prototypeConfig: []byte(`
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
@@ -187,9 +183,7 @@ expressions:
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		{
-			uc: "new expressions provided",
-			id: "authz",
+		"new expressions provided": {
 			prototypeConfig: []byte(`
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
@@ -205,20 +199,28 @@ expressions:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEqual(t, prototype.expressions, configured.expressions)
-				assert.Equal(t, "authz", configured.ID())
+				assert.Equal(t, "new expressions provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newCELAuthorizer(nil, tc.id, pc)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newCELAuthorizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -236,21 +238,17 @@ expressions:
 func TestCELAuthorizerExecute(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc                         string
-		id                         string
+	for uc, tc := range map[string]struct {
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
-		{
-			uc: "denied by expression without access to subject and request",
-			id: "authz1",
+		"denied by expression without access to subject and request": {
 			config: []byte(`
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ *subject.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -266,12 +264,10 @@ expressions:
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "authz1", identifier.ID())
+				assert.Equal(t, "denied by expression without access to subject and request", identifier.ID())
 			},
 		},
-		{
-			uc: "expressions can use subject, request and outputs properties",
-			id: "authz2",
+		"expressions can use subject, request and outputs properties": {
 			config: []byte(`
 expressions:
   - expression: |
@@ -294,7 +290,7 @@ expressions:
   - expression: Request.URL.Captures.foo == "bar"
   - expression: Outputs.foo == "bar"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject) {
 				t.Helper()
 
 				sub.ID = "foobar"
@@ -332,19 +328,26 @@ expressions:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			ctx := mocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(context.Background())
+			ctx := mocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(t.Context())
 
 			sub := &subject.Subject{}
 
 			tc.configureContextAndSubject(t, ctx, sub)
 
-			auth, err := newCELAuthorizer(nil, tc.id, conf)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			auth, err := newCELAuthorizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
 			// WHEN

@@ -2,7 +2,7 @@
 title: "HAProxy Integration"
 date: 2023-08-08T07:32:14+02:00
 draft: false
-weight: 14
+weight: 16
 menu:
   guides:
     parent: "API Gateways & Proxies"
@@ -36,14 +36,14 @@ To have the integration configured globally and used for all workloads, you have
 apiVersion: v1
 kind: ConfigMap
 data:
-  auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>" # <1>
+  auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<port>" # <1>
   auth-headers-succeed: "authorization" # <2>
   headers: | # <3>
     X-Forwarded-Uri: %[pathq]
     X-Forwarded-Method: %[method]
     X-Forwarded-Host: %[req.hdr(host)]
 ----
-<1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
+<1> Configures the controller to use heimdall's main service endpoint with `<heimdall service name>`, `<namespace>` and `<port>` depending on your configuration.
 <2> Let HAProxy forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
 your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration.
 +
@@ -60,7 +60,7 @@ The code snipped below shows the required annotations on the ingress rule. It us
 [source, yaml]
 ----
 annotations:
-  haproxy-ingress.github.io/auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>"
+  haproxy-ingress.github.io/auth-url: "https://<heimdall service name>.<namespace>.svc.cluster.local:<port>"
   haproxy-ingress.github.io/auth-headers-succeed: "authorization"
   haproxy-ingress.github.io/headers: |
     X-Forwarded-Uri: %[pathq]

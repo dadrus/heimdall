@@ -31,8 +31,8 @@ type conditionalErrorHandler struct {
 	c executionCondition
 }
 
-func (h *conditionalErrorHandler) Execute(ctx heimdall.Context, causeErr error) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (h *conditionalErrorHandler) Execute(ctx heimdall.RequestContext, causeErr error) error {
+	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Debug().Str("_id", h.h.ID()).Msg("Checking error handler execution condition")
 

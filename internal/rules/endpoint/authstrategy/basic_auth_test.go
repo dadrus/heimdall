@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"encoding/base64"
 	"net/http"
 	"testing"
@@ -37,7 +36,7 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 	s := BasicAuth{User: user, Password: password}
 
 	// WHEN
-	err := s.Apply(context.Background(), req)
+	err := s.Apply(t.Context(), req)
 
 	// THEN
 	require.NoError(t, err)

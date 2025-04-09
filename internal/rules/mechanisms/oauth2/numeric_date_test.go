@@ -33,13 +33,11 @@ func TestNumericDateUnmarshalJSON(t *testing.T) {
 		Date NumericDate `json:"date,omitempty"`
 	}
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		json   []byte
 		assert func(t *testing.T, err error, date NumericDate)
 	}{
-		{
-			uc:   "valid config",
+		"valid config": {
 			json: []byte(`{ "date": 100 }`),
 			assert: func(t *testing.T, err error, date NumericDate) {
 				t.Helper()
@@ -49,8 +47,7 @@ func TestNumericDateUnmarshalJSON(t *testing.T) {
 				assert.Equal(t, int64(100), date.Time().Unix())
 			},
 		},
-		{
-			uc:   "invalid config",
+		"invalid config": {
 			json: []byte(`{ "date": "foo" }`),
 			assert: func(t *testing.T, err error, _ NumericDate) {
 				t.Helper()
@@ -61,14 +58,16 @@ func TestNumericDateUnmarshalJSON(t *testing.T) {
 			},
 		},
 	} {
-		// GIVEN
-		var typ Typ
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			var typ Typ
 
-		// WHEN
-		err := json.Unmarshal(tc.json, &typ)
+			// WHEN
+			err := json.Unmarshal(tc.json, &typ)
 
-		// THEN
-		tc.assert(t, err, typ.Date)
+			// THEN
+			tc.assert(t, err, typ.Date)
+		})
 	}
 }
 

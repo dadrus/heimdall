@@ -21,7 +21,7 @@ func (_m *ErrorHandlerMock) EXPECT() *ErrorHandlerMock_Expecter {
 }
 
 // Execute provides a mock function with given fields: ctx, causeErr
-func (_m *ErrorHandlerMock) Execute(ctx heimdall.Context, causeErr error) error {
+func (_m *ErrorHandlerMock) Execute(ctx heimdall.RequestContext, causeErr error) error {
 	ret := _m.Called(ctx, causeErr)
 
 	if len(ret) == 0 {
@@ -29,7 +29,7 @@ func (_m *ErrorHandlerMock) Execute(ctx heimdall.Context, causeErr error) error 
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context, error) error); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext, error) error); ok {
 		r0 = rf(ctx, causeErr)
 	} else {
 		r0 = ret.Error(0)
@@ -44,15 +44,15 @@ type ErrorHandlerMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx heimdall.RequestContext
 //   - causeErr error
 func (_e *ErrorHandlerMock_Expecter) Execute(ctx interface{}, causeErr interface{}) *ErrorHandlerMock_Execute_Call {
 	return &ErrorHandlerMock_Execute_Call{Call: _e.mock.On("Execute", ctx, causeErr)}
 }
 
-func (_c *ErrorHandlerMock_Execute_Call) Run(run func(ctx heimdall.Context, causeErr error)) *ErrorHandlerMock_Execute_Call {
+func (_c *ErrorHandlerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, causeErr error)) *ErrorHandlerMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context), args[1].(error))
+		run(args[0].(heimdall.RequestContext), args[1].(error))
 	})
 	return _c
 }
@@ -62,7 +62,7 @@ func (_c *ErrorHandlerMock_Execute_Call) Return(_a0 error) *ErrorHandlerMock_Exe
 	return _c
 }
 
-func (_c *ErrorHandlerMock_Execute_Call) RunAndReturn(run func(heimdall.Context, error) error) *ErrorHandlerMock_Execute_Call {
+func (_c *ErrorHandlerMock_Execute_Call) RunAndReturn(run func(heimdall.RequestContext, error) error) *ErrorHandlerMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -17,19 +17,23 @@
 package parser
 
 import (
+	"io"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 )
 
-type ConfigValidator func(configPath string) error
+type ConfigSyntaxValidator func(cfgSrc io.Reader) error
+
+type ConfigSemanticsValidator func(cfg any) error
 
 type opts struct {
 	configFile            string
 	defaultConfigFileName string
 	configLookupDirs      []string
 	decodeHooks           []mapstructure.DecodeHookFunc
-	validate              ConfigValidator
+	validateSyntax        ConfigSyntaxValidator
+	validateSemantics     ConfigSemanticsValidator
 	envPrefix             string
 }
 
@@ -70,10 +74,18 @@ func WithConfigLookupDir(file string) Option {
 	}
 }
 
-func WithConfigValidator(validator ConfigValidator) Option {
+func WithConfigSyntaxValidator(validator ConfigSyntaxValidator) Option {
 	return func(o *opts) {
 		if validator != nil {
-			o.validate = validator
+			o.validateSyntax = validator
+		}
+	}
+}
+
+func WithConfigSemanticsValidator(validator ConfigSemanticsValidator) Option {
+	return func(o *opts) {
+		if validator != nil {
+			o.validateSemantics = validator
 		}
 	}
 }

@@ -3,29 +3,42 @@ deployment:
   autoscaling:
     enabled: false
   volumes:
-  - name: tls-cert-volume
-    secret:
-      secretName: heimdall-tls
-  - name: jwt-cert-volume
-    secret:
-      secretName: heimdall-jwt
+    - name: tls-cert-volume
+      secret:
+        secretName: heimdall-tls
+    - name: jwt-cert-volume
+      secret:
+        secretName: heimdall-jwt
   volumeMounts:
-  - name: tls-cert-volume
-    readOnly: true
-    mountPath: "/etc/heimdall/certs/ssl"
-  - name: jwt-cert-volume
-    readOnly: true
-    mountPath: "/etc/heimdall/certs/jwt"
+    - name: tls-cert-volume
+      readOnly: true
+      mountPath: "/etc/heimdall/certs/ssl"
+    - name: jwt-cert-volume
+      readOnly: true
+      mountPath: "/etc/heimdall/certs/jwt"
+
+  pod:
+    annotations:
+      profiles.grafana.com/memory.scrape: "true"
+      profiles.grafana.com/memory.port_name: "http-profiling"
+      profiles.grafana.com/cpu.scrape: "true"
+      profiles.grafana.com/cpu.port_name: "http-profiling"
+      profiles.grafana.com/goroutine.scrape: "true"
+      profiles.grafana.com/goroutine.port_name: "http-profiling"
 
 admissionController:
   annotations:
     cert-manager.io/inject-ca-from: heimdall/heimdall-tls
 
+profiling:
+  enabled: true
+
 env:
   OTEL_METRICS_EXPORTER: "prometheus"
   OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
-  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo.monitoring:4317"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: "grpc"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy.monitoring:4317"
 
 image:
-  tag: 0.15.10
+  tag: 0.16.0

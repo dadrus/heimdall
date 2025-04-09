@@ -51,12 +51,12 @@ checksum:
 
 signs:
   - cmd: cosign
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
     args:
       - "sign-blob"
-      - "--output-signature=${artifact}-keyless.sig"
-      - "--output-certificate=${artifact}-keyless.pem"
+      - "--output-signature=${artifact}.sig"
+      - "--output-certificate=${artifact}.pem"
       - "${artifact}"
       - "--yes"
     artifacts: all

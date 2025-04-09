@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -46,41 +45,20 @@ import (
 func TestToHTTPSigKey(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		kse    *keystore.Entry
-		expAlg httpsig.SignatureAlgorithm
-	}{
-		{
-			expAlg: httpsig.RsaPssSha256,
-			kse:    &keystore.Entry{KeyID: "foo", Alg: keystore.AlgRSA, KeySize: 2048, PrivateKey: &rsa.PrivateKey{}},
-		},
-		{
-			expAlg: httpsig.RsaPssSha384,
-			kse:    &keystore.Entry{KeyID: "foo", Alg: keystore.AlgRSA, KeySize: 3072, PrivateKey: &rsa.PrivateKey{}},
-		},
-		{
-			expAlg: httpsig.RsaPssSha512,
-			kse:    &keystore.Entry{KeyID: "foo", Alg: keystore.AlgRSA, KeySize: 4096, PrivateKey: &rsa.PrivateKey{}},
-		},
-		{
-			expAlg: httpsig.EcdsaP256Sha256,
-			kse:    &keystore.Entry{KeyID: "foo", Alg: keystore.AlgECDSA, KeySize: 256, PrivateKey: &ecdsa.PrivateKey{}},
-		},
-		{
-			expAlg: httpsig.EcdsaP384Sha384,
-			kse:    &keystore.Entry{KeyID: "foo", Alg: keystore.AlgECDSA, KeySize: 384, PrivateKey: &ecdsa.PrivateKey{}},
-		},
-		{
-			expAlg: httpsig.EcdsaP521Sha512,
-			kse:    &keystore.Entry{KeyID: "foo", Alg: keystore.AlgECDSA, KeySize: 512, PrivateKey: &ecdsa.PrivateKey{}},
-		},
+	for alg, kse := range map[httpsig.SignatureAlgorithm]*keystore.Entry{
+		httpsig.RsaPssSha256:    {KeyID: "foo", Alg: keystore.AlgRSA, KeySize: 2048, PrivateKey: &rsa.PrivateKey{}},
+		httpsig.RsaPssSha384:    {KeyID: "foo", Alg: keystore.AlgRSA, KeySize: 3072, PrivateKey: &rsa.PrivateKey{}},
+		httpsig.RsaPssSha512:    {KeyID: "foo", Alg: keystore.AlgRSA, KeySize: 4096, PrivateKey: &rsa.PrivateKey{}},
+		httpsig.EcdsaP256Sha256: {KeyID: "foo", Alg: keystore.AlgECDSA, KeySize: 256, PrivateKey: &ecdsa.PrivateKey{}},
+		httpsig.EcdsaP384Sha384: {KeyID: "foo", Alg: keystore.AlgECDSA, KeySize: 384, PrivateKey: &ecdsa.PrivateKey{}},
+		httpsig.EcdsaP521Sha512: {KeyID: "foo", Alg: keystore.AlgECDSA, KeySize: 512, PrivateKey: &ecdsa.PrivateKey{}},
 	} {
-		t.Run(string(tc.expAlg), func(t *testing.T) {
-			key := toHTTPSigKey(tc.kse)
+		t.Run(string(alg), func(t *testing.T) {
+			key := toHTTPSigKey(kse)
 
-			assert.Equal(t, tc.expAlg, key.Algorithm)
-			assert.Equal(t, tc.kse.KeyID, key.KeyID)
-			assert.Equal(t, tc.kse.PrivateKey, key.Key)
+			assert.Equal(t, alg, key.Algorithm)
+			assert.Equal(t, kse.KeyID, key.KeyID)
+			assert.Equal(t, kse.PrivateKey, key.Key)
 		})
 	}
 }
@@ -150,13 +128,11 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 	err = os.WriteFile(trustStorePath, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   *HTTPMessageSignatures
 		assert func(t *testing.T, err error, conf *HTTPMessageSignatures)
 	}{
-		{
-			uc:   "failed loading keystore",
+		"failed loading keystore": {
 			conf: &HTTPMessageSignatures{},
 			assert: func(t *testing.T, err error, _ *HTTPMessageSignatures) {
 				t.Helper()
@@ -166,8 +142,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
-		{
-			uc: "no key for given key id",
+		"no key for given key id": {
 			conf: &HTTPMessageSignatures{
 				Signer: SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "foo"},
 			},
@@ -179,8 +154,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				require.ErrorContains(t, err, "failed retrieving key from key store")
 			},
 		},
-		{
-			uc: "certificate cannot be used for signing",
+		"certificate cannot be used for signing": {
 			conf: &HTTPMessageSignatures{
 				Signer: SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "key2"},
 			},
@@ -192,8 +166,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				require.ErrorContains(t, err, "cannot be used for signing purposes")
 			},
 		},
-		{
-			uc: "bad signer configuration",
+		"bad signer configuration": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}},
 				Components: []string{"@foo"},
@@ -206,8 +179,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				require.ErrorContains(t, err, "failed to configure")
 			},
 		},
-		{
-			uc: "successful configuration with default ttl",
+		"successful configuration with default ttl": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "key1"},
 				Components: []string{"@method"},
@@ -223,8 +195,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				assert.Equal(t, "http message signer", conf.Name())
 			},
 		},
-		{
-			uc: "successful configuration with custom ttl",
+		"successful configuration with custom ttl": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "key1"},
 				Components: []string{"@method"},
@@ -246,7 +217,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			err := tc.conf.init()
 
 			tc.assert(t, err, tc.conf)
@@ -315,13 +286,11 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 	err = os.WriteFile(trustStorePath, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		conf   *HTTPMessageSignatures
 		assert func(t *testing.T, err error, req *http.Request)
 	}{
-		{
-			uc: "fails",
+		"fails": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}},
 				Components: []string{"x-some-header"},
@@ -335,8 +304,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 				assert.Empty(t, req.Header.Get("Signature-Input"))
 			},
 		},
-		{
-			uc: "successful",
+		"successful": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}},
 				Components: []string{"@method", "content-digest"},
@@ -360,19 +328,19 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			err := tc.conf.init()
 			require.NoError(t, err)
 
 			req, err := http.NewRequestWithContext(
-				context.Background(),
+				t.Context(),
 				http.MethodGet,
 				"http//example.com/test",
 				strings.NewReader(`{"hello": "world"}`),
 			)
 			require.NoError(t, err)
 
-			err = tc.conf.Apply(context.Background(), req)
+			err = tc.conf.Apply(t.Context(), req)
 
 			tc.assert(t, err, req)
 		})

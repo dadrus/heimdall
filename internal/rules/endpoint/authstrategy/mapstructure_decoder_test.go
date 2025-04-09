@@ -30,13 +30,17 @@ import (
 	"time"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks3 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -51,13 +55,11 @@ func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) 
 	}
 
 	// du to a bug in the linter
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
-		{
-			uc: "all required properties configured",
+		"all required properties configured": {
 			config: []byte(`
 auth:
   type: basic_auth
@@ -74,8 +76,7 @@ auth:
 				assert.Equal(t, "bar", bas.Password)
 			},
 		},
-		{
-			uc: "with unsupported properties",
+		"with unsupported properties": {
 			config: []byte(`
 auth:
   type: basic_auth
@@ -92,8 +93,7 @@ auth:
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
-		{
-			uc: "without user property",
+		"without user property": {
 			config: []byte(`
 auth:
   type: basic_auth
@@ -107,8 +107,7 @@ auth:
 				require.ErrorContains(t, err, "'user' is a required field")
 			},
 		},
-		{
-			uc: "without password property",
+		"without password property": {
 			config: []byte(`
 auth:
   type: basic_auth
@@ -122,8 +121,7 @@ auth:
 				require.ErrorContains(t, err, "'password' is a required field")
 			},
 		},
-		{
-			uc: "without config property",
+		"without config property": {
 			config: []byte(`
 auth:
   type: basic_auth
@@ -136,13 +134,20 @@ auth:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(nil),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})
@@ -168,13 +173,11 @@ func TestDecodeAuthenticationStrategyHookFuncForAPIKeyStrategy(t *testing.T) {
 	}
 
 	// du to a bug in the linter
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config []byte
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
-		{
-			uc: "all required properties, with in=header",
+		"all required properties, with in=header": {
 			config: []byte(`
 auth:
   type: api_key
@@ -194,8 +197,7 @@ auth:
 				assert.Equal(t, "header", aks.In)
 			},
 		},
-		{
-			uc: "with unsupported properties",
+		"with unsupported properties": {
 			config: []byte(`
 auth:
   type: api_key
@@ -213,8 +215,7 @@ auth:
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
-		{
-			uc: "all required properties, with in=cookie",
+		"all required properties, with in=cookie": {
 			config: []byte(`
 auth:
   type: api_key
@@ -234,8 +235,7 @@ auth:
 				assert.Equal(t, "cookie", aks.In)
 			},
 		},
-		{
-			uc: "all required properties, with in=query",
+		"all required properties, with in=query": {
 			config: []byte(`
 auth:
   type: api_key
@@ -255,8 +255,7 @@ auth:
 				assert.Equal(t, "query", aks.In)
 			},
 		},
-		{
-			uc: "all required properties, with in=foobar",
+		"all required properties, with in=foobar": {
 			config: []byte(`
 auth:
   type: api_key
@@ -272,8 +271,7 @@ auth:
 				require.ErrorContains(t, err, "'in' must be one of [cookie header query]")
 			},
 		},
-		{
-			uc: "without in property",
+		"without in property": {
 			config: []byte(`
 auth:
   type: api_key
@@ -288,8 +286,7 @@ auth:
 				require.ErrorContains(t, err, "'in' is a required field")
 			},
 		},
-		{
-			uc: "without name property",
+		"without name property": {
 			config: []byte(`
 auth:
   type: api_key
@@ -304,8 +301,7 @@ auth:
 				require.ErrorContains(t, err, "'name' is a required field")
 			},
 		},
-		{
-			uc: "without value property",
+		"without value property": {
 			config: []byte(`
 auth:
   type: api_key
@@ -320,8 +316,7 @@ auth:
 				require.ErrorContains(t, err, "'value' is a required field")
 			},
 		},
-		{
-			uc: "without config property",
+		"without config property": {
 			config: []byte(`
 auth:
   type: api_key
@@ -334,13 +329,20 @@ auth:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(nil),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})
@@ -365,13 +367,12 @@ func TestDecodeAuthenticationStrategyHookFuncForClientCredentialsStrategy(t *tes
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	for _, tc := range []struct {
-		uc     string
-		config []byte
-		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
+	for uc, tc := range map[string]struct {
+		enforceTLS bool
+		config     []byte
+		assert     func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
-		{
-			uc: "all required properties",
+		"all required properties": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -391,8 +392,7 @@ auth:
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
 			},
 		},
-		{
-			uc: "with unsupported properties",
+		"with unsupported properties": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -410,8 +410,7 @@ auth:
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
-		{
-			uc: "all possible properties",
+		"all possible properties": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -435,8 +434,7 @@ auth:
 				assert.ElementsMatch(t, ccs.Scopes, []string{"foo", "bar"})
 			},
 		},
-		{
-			uc: "without client_id property",
+		"without client_id property": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -451,8 +449,7 @@ auth:
 				require.ErrorContains(t, err, "'client_id' is a required field")
 			},
 		},
-		{
-			uc: "without client_secret property",
+		"without client_secret property": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -467,8 +464,7 @@ auth:
 				require.ErrorContains(t, err, "'client_secret' is a required field")
 			},
 		},
-		{
-			uc: "without token_url property",
+		"without token_url property": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -483,8 +479,7 @@ auth:
 				require.ErrorContains(t, err, "'token_url' is a required field")
 			},
 		},
-		{
-			uc: "without config property",
+		"without config property": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
@@ -496,14 +491,42 @@ auth:
 				require.ErrorContains(t, err, "'config' property to be set")
 			},
 		},
+		"with enforced but disabled https scheme in token_url": {
+			enforceTLS: true,
+			config: []byte(`
+auth:
+  type: oauth2_client_credentials
+  config:
+    client_id: foo
+    client_secret: bar
+    token_url: http://foobar.foo
+`),
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'token_url' scheme must be https")
+			},
+		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(nil),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})
@@ -559,14 +582,12 @@ func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	for _, tc := range []struct {
-		uc               string
+	for uc, tc := range map[string]struct {
 		config           []byte
-		configureContext func(t *testing.T, ccm *CreationContextMock)
+		configureContext func(t *testing.T, ccm *app.ContextMock)
 		assert           func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
-		{
-			uc: "without signer",
+		"without signer": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -580,8 +601,7 @@ auth:
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
 		},
-		{
-			uc: "without key store",
+		"without key store": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -597,8 +617,7 @@ auth:
 				require.ErrorContains(t, err, "'signer'.'key_store' is a required field")
 			},
 		},
-		{
-			uc: "without key store path",
+		"without key store path": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -615,8 +634,7 @@ auth:
 				require.ErrorContains(t, err, "'signer'.'key_store'.'path' is a required field")
 			},
 		},
-		{
-			uc: "without component identifiers",
+		"without component identifiers": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -632,8 +650,7 @@ auth:
 				require.ErrorContains(t, err, "'components' must contain more than 0 items")
 			},
 		},
-		{
-			uc: "error while initializing strategy",
+		"error while initializing strategy": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -651,8 +668,7 @@ auth:
 				require.ErrorContains(t, err, "/some/path.pem")
 			},
 		},
-		{
-			uc: "with unsupported properties",
+		"with unsupported properties": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -671,8 +687,7 @@ auth:
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
-		{
-			uc: "error while registering signer for updates watching",
+		"error while registering signer for updates watching": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -682,7 +697,7 @@ auth:
       key_store:
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+			configureContext: func(t *testing.T, ccm *app.ContextMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
@@ -698,8 +713,7 @@ auth:
 				require.ErrorContains(t, err, "failed registering")
 			},
 		},
-		{
-			uc: "minimal possible configuration",
+		"minimal possible configuration": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -709,7 +723,7 @@ auth:
       key_store:
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+			configureContext: func(t *testing.T, ccm *app.ContextMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
@@ -735,8 +749,7 @@ auth:
 				assert.Equal(t, "http message signer", httpSig.Name())
 			},
 		},
-		{
-			uc: "full possible configuration",
+		"full possible configuration": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -751,7 +764,7 @@ auth:
         password: secret
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *CreationContextMock) {
+			configureContext: func(t *testing.T, ccm *app.ContextMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
@@ -778,20 +791,28 @@ auth:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ccm := NewCreationContextMock(t)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *CreationContextMock) { t.Helper() },
+				func(t *testing.T, _ *app.ContextMock) { t.Helper() },
 			)
-			configureContext(t, ccm)
+			configureContext(t, appCtx)
 
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
-					DecodeAuthenticationStrategyHookFunc(ccm),
+					DecodeAuthenticationStrategyHookFunc(appCtx),
 				),
 				Result: &typ,
 			})

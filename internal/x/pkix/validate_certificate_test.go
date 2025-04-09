@@ -68,66 +68,57 @@ func TestValidateCertificate(t *testing.T) {
 	_, err = keyFile.Write(pemBytes)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		option []ValidationOption
 		err    bool
 	}{
-		{
-			uc: "DNS name validation error",
+		"DNS name validation error": {
 			option: []ValidationOption{
 				WithDNSName("foo.bar"),
 				WithRootCACertificates([]*x509.Certificate{ca.Certificate}),
 			},
 			err: true,
 		},
-		{
-			uc: "no chain for intermediate to default trust store",
+		"no chain for intermediate to default trust store": {
 			option: []ValidationOption{
 				WithIntermediateCACertificates([]*x509.Certificate{ca.Certificate}),
 			},
 			err: true,
 		},
-		{
-			uc: "no chain to system trust store",
+		"no chain to system trust store": {
 			option: []ValidationOption{
 				WithSystemTrustStore(),
 			},
 			err: true,
 		},
-		{
-			uc: "validates with custom Root CA",
+		"validates with custom Root CA": {
 			option: []ValidationOption{
 				WithRootCACertificates([]*x509.Certificate{ca.Certificate}),
 			},
 			err: false,
 		},
-		{
-			uc: "validates for now (time)",
+		"validates for now (time)": {
 			option: []ValidationOption{
 				WithCurrentTime(time.Now()),
 				WithRootCACertificates([]*x509.Certificate{ca.Certificate}),
 			},
 			err: false,
 		},
-		{
-			uc: "missing key usage",
+		"missing key usage": {
 			option: []ValidationOption{
 				WithKeyUsage(x509.KeyUsageKeyAgreement),
 				WithRootCACertificates([]*x509.Certificate{ca.Certificate}),
 			},
 			err: true,
 		},
-		{
-			uc: "valid key usage",
+		"valid key usage": {
 			option: []ValidationOption{
 				WithKeyUsage(x509.KeyUsageDigitalSignature),
 				WithRootCACertificates([]*x509.Certificate{ca.Certificate}),
 			},
 			err: false,
 		},
-		{
-			uc: "missing extended key usage",
+		"missing extended key usage": {
 			option: []ValidationOption{
 				WithExtendedKeyUsage(x509.ExtKeyUsageEmailProtection),
 				WithRootCACertificates([]*x509.Certificate{ca.Certificate}),
@@ -135,7 +126,7 @@ func TestValidateCertificate(t *testing.T) {
 			err: true,
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			err := ValidateCertificate(cert, tc.option...)
 

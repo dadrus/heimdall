@@ -21,21 +21,21 @@ func (_m *AuthDataExtractStrategyMock) EXPECT() *AuthDataExtractStrategyMock_Exp
 }
 
 // GetAuthData provides a mock function with given fields: ctx
-func (_m *AuthDataExtractStrategyMock) GetAuthData(ctx heimdall.Context) (string, error) {
+func (_m *AuthDataExtractStrategyMock) GetAuthData(ctx heimdall.RequestContext) (string, error) {
 	ret := _m.Called(ctx)
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) (string, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) string); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.RequestContext) string); ok {
 		r0 = rf(ctx)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if rf, ok := ret.Get(1).(func(heimdall.RequestContext) error); ok {
 		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -50,14 +50,14 @@ type AuthDataExtractStrategyMock_GetAuthData_Call struct {
 }
 
 // GetAuthData is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx heimdall.RequestContext
 func (_e *AuthDataExtractStrategyMock_Expecter) GetAuthData(ctx interface{}) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	return &AuthDataExtractStrategyMock_GetAuthData_Call{Call: _e.mock.On("GetAuthData", ctx)}
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Run(run func(ctx heimdall.Context)) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Run(run func(ctx heimdall.RequestContext)) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context))
+		run(args[0].(heimdall.RequestContext))
 	})
 	return _c
 }
@@ -67,7 +67,7 @@ func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Return(_a0 string, _a1 e
 	return _c
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(heimdall.Context) (string, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(heimdall.RequestContext) (string, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	_c.Call.Return(run)
 	return _c
 }

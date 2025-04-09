@@ -19,6 +19,7 @@ package errorhandlers
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -28,7 +29,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ CreationContext, id string, typ string, _ map[string]any) (bool, ErrorHandler, error) {
+		func(_ app.Context, id string, typ string, _ map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerDefault {
 				return false, nil, nil
 			}
@@ -45,9 +46,9 @@ func newDefaultErrorHandler(id string) *defaultErrorHandler {
 	return &defaultErrorHandler{id: id}
 }
 
-func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, causeErr error) error {
-	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", eh.id).Msg("Handling error using default error handler")
+func (eh *defaultErrorHandler) Execute(ctx heimdall.RequestContext, causeErr error) error {
+	logger := zerolog.Ctx(ctx.Context())
+	logger.Info().Str("_id", eh.id).Msg("Handling error using default error handler")
 
 	ctx.SetPipelineError(causeErr)
 

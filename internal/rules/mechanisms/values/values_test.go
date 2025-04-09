@@ -28,22 +28,19 @@ import (
 func TestValuesMerge(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		orig   Values
 		tbm    Values
 		assert func(t *testing.T, merged Values, orig Values)
 	}{
-		{
-			uc: "original is nil, new is nil",
+		"original is nil, new is nil": {
 			assert: func(t *testing.T, merged Values, _ Values) {
 				t.Helper()
 
 				assert.Nil(t, merged)
 			},
 		},
-		{
-			uc: "original is nil, new is not",
+		"original is nil, new is not": {
 			tbm: func() Values {
 				bar, _ := template.New("bar")
 				zab, _ := template.New("zab")
@@ -67,8 +64,7 @@ func TestValuesMerge(t *testing.T) {
 				assert.Equal(t, "zab", val)
 			},
 		},
-		{
-			uc: "original is not nil, new is nil",
+		"original is not nil, new is nil": {
 			orig: func() Values {
 				bar, _ := template.New("bar")
 				zab, _ := template.New("zab")
@@ -82,8 +78,7 @@ func TestValuesMerge(t *testing.T) {
 				assert.Equal(t, orig, merged)
 			},
 		},
-		{
-			uc: "original is not nil, new is not nil",
+		"original is not nil, new is not nil": {
 			orig: func() Values {
 				bar, _ := template.New("bar")
 
@@ -113,7 +108,7 @@ func TestValuesMerge(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			res := tc.orig.Merge(tc.tbm)
 
@@ -130,25 +125,22 @@ func TestValuesRender(t *testing.T) {
 	fooTpl, _ := template.New("{{ .Foo }}")
 	barTpl, _ := template.New("{{ .Bar }}")
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		values Values
 		expErr bool
 		expRes map[string]string
 	}{
-		{
-			uc:     "render fails",
+		"render fails": {
 			values: Values{"foo": badTpl},
 			expErr: true,
 		},
-		{
-			uc:     "render succeeds",
+		"render succeeds": {
 			values: Values{"foo": fooTpl, "bar": barTpl},
 			expErr: false,
 			expRes: map[string]string{"foo": "foo", "bar": "bar"},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			res, err := tc.values.Render(map[string]any{"Foo": "foo", "Bar": "bar"})
 
 			if tc.expErr {

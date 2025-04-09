@@ -92,12 +92,12 @@ func (_c *ContextMock_AddHeaderForUpstream_Call) RunAndReturn(run func(string, s
 	return _c
 }
 
-// AppContext provides a mock function with given fields:
-func (_m *ContextMock) AppContext() context.Context {
+// Context provides a mock function with given fields:
+func (_m *ContextMock) Context() context.Context {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for AppContext")
+		panic("no return value specified for Context")
 	}
 
 	var r0 context.Context
@@ -112,29 +112,29 @@ func (_m *ContextMock) AppContext() context.Context {
 	return r0
 }
 
-// ContextMock_AppContext_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AppContext'
-type ContextMock_AppContext_Call struct {
+// ContextMock_Context_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Context'
+type ContextMock_Context_Call struct {
 	*mock.Call
 }
 
-// AppContext is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) AppContext() *ContextMock_AppContext_Call {
-	return &ContextMock_AppContext_Call{Call: _e.mock.On("AppContext")}
+// Context is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) Context() *ContextMock_Context_Call {
+	return &ContextMock_Context_Call{Call: _e.mock.On("Context")}
 }
 
-func (_c *ContextMock_AppContext_Call) Run(run func()) *ContextMock_AppContext_Call {
+func (_c *ContextMock_Context_Call) Run(run func()) *ContextMock_Context_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *ContextMock_AppContext_Call) Return(_a0 context.Context) *ContextMock_AppContext_Call {
+func (_c *ContextMock_Context_Call) Return(_a0 context.Context) *ContextMock_Context_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *ContextMock_AppContext_Call) RunAndReturn(run func() context.Context) *ContextMock_AppContext_Call {
+func (_c *ContextMock_Context_Call) RunAndReturn(run func() context.Context) *ContextMock_Context_Call {
 	_c.Call.Return(run)
 	return _c
 }

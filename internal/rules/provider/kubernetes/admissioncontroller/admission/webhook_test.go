@@ -99,18 +99,16 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 }
 `
 
-	for _, tc := range []struct {
-		uc           string
+	for uc, tc := range map[string]struct {
 		request      func(t *testing.T, URL string) *http.Request
 		setupHandler func(t *testing.T, handler *HandlerMock)
 		assert       func(t *testing.T, resp *http.Response)
 	}{
-		{
-			uc: "invalid content type",
+		"invalid content type": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, nil)
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, nil)
 				require.NoError(t, err)
 
 				return req
@@ -138,12 +136,11 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				require.Nil(t, status.Details)
 			},
 		},
-		{
-			uc: "failed decoding request",
+		"failed decoding request": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, strings.NewReader("foo"))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, strings.NewReader("foo"))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -174,12 +171,11 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				assert.Contains(t, status.Details.Causes[0].Message, "invalid character")
 			},
 		},
-		{
-			uc: "valid request without timeout",
+		"valid request without timeout": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, strings.NewReader(testRequestPayload))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, strings.NewReader(testRequestPayload))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -217,15 +213,14 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				assert.Equal(t, "All fine", status.Message)
 			},
 		},
-		{
-			uc: "valid request with valid timeout",
+		"valid request with valid timeout": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
 				query := url.Values{
 					"timeout": []string{"5s"},
 				}
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL+"?"+query.Encode(),
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL+"?"+query.Encode(),
 					strings.NewReader(testRequestPayload))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
@@ -264,15 +259,14 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 				assert.Equal(t, "All fine", status.Message)
 			},
 		},
-		{
-			uc: "valid request with invalid timeout",
+		"valid request with invalid timeout": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
 				query := url.Values{
 					"timeout": []string{"5g"},
 				}
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL+"?"+query.Encode(),
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL+"?"+query.Encode(),
 					strings.NewReader(testRequestPayload))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
@@ -312,7 +306,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			setupMock := x.IfThenElse(
 				tc.setupHandler != nil,
@@ -337,7 +331,6 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			defer resp.Body.Close()
 
 			tc.assert(t, resp)
-			handler.AssertExpectations(t)
 		})
 	}
 }

@@ -9,14 +9,12 @@ This chart helps you to deploy heimdall in your Kubernetes cluster using Helm.
 == Prerequisites
 
 * A Kubernetes version >= 1.27
-* https://helm.sh/docs/intro/install/[Helm] 3.0+
+* https://helm.sh/docs/intro/install/[Helm] 3.10+
 * https://git-scm.com/downloads[Git] (optional)
 
 == Getting the Chart Sources
 
 This step is required if you want installing the chart using its sources. Additionally, the step may also be required for managing the custom resource definitions (CRDs), which heimdall requires, or for upgrading/deleting the CRDs.
-
-To install the chart with the release name `my-release` (`my-release` is the name that you choose):
 
 1. Clone the heimdall repo:
 +
@@ -30,16 +28,6 @@ git clone https://github.com/dadrus/heimdall
 [source,bash]
 ----
 cd heimdall
-----
-
-== Adding the Helm Repository
-
-This step is required if you're installing the chart via the helm repository.
-
-[source,bash]
-----
-$ helm repo add dadrus https://dadrus.github.io/heimdall/charts
-$ helm repo update
 ----
 
 == Installing the Chart
@@ -56,6 +44,14 @@ By default, heimdall requires a custom resource definition (CRD) installed in th
 
 === Installing via Helm Repository
 
+Add the Helm repository hosted on GitHub Pages.
+
+[source,bash]
+----
+$ helm repo add dadrus https://dadrus.github.io/heimdall/charts
+$ helm repo update
+----
+
 To install the chart with the release name "my-release" ("my-release" is the name that you choose) and configure heimdall to operate in decision mode:
 
 [source,bash]
@@ -70,7 +66,16 @@ If you need proxy mode, install it with:
 $ helm install my-release -f heimdall.yaml --set operationMode=proxy dadrus/heimdall
 ----
 
-In both cases you have to integrate it with your ingress controller. For decision mode that means setting corresponding annotations on Ingress resources to let the traffic first be verified by heimdall before it is forwarded to the upstream services by the Ingress Controller.
+=== Installing via OCI Image
+
+The chart is also published as an OCI image to GHCR, offering an alternative with enhanced security. The OCI image is signed and includes SLSA provenance, which can be verified for authenticity and integrity as described in https://dadrus.github.io/heimdall/dev/docs/operations/security/#_verification_of_heimdall_artifacts[Verification of Heimdall Artifacts].
+
+To install with the release name "my-release" ("my-release" is the name that you choose) and configure heimdall to operate in decision mode:
+
+[source,bash]
+----
+helm install my-release -f heimdall.yaml oci://ghcr.io/dadrus/heimdall/chart
+----
 
 === Installing Using Chart Sources
 
@@ -90,9 +95,9 @@ $ helm install my-release -f heimdall.yaml --set operationMode=proxy ./charts/he
 
 === Post-Install Steps
 
-==== Integration with Ingress
+==== Integration with Ingress/Gateway API
 
-After having installed heimdall, you have to integrate it with your ingress controller. For decision mode that means setting corresponding annotations on Ingress resources to let the traffic first be verified by heimdall before it is forwarded to the upstream services by the Ingress Controller.
+No matter which installation approach you choose, if Heimdall is running in decision mode, you need to connect it to your ingress controller or Gateway API implementation afterward. This ensures traffic is validated by Heimdall prior to being routed to upstream services. Check the existing https://dadrus.github.io/heimdall/dev/guides/[Guides] for more information.
 
 ==== Metrics Collection
 
@@ -156,6 +161,13 @@ To upgrade the release "my-release" using Helm Repository:
 [source,bash]
 ----
 $ helm upgrade my-release dadrus/heimdall
+----
+
+To upgrade the release "my-release" using the OCI image:
+
+[source,bash]
+----
+$ helm upgrade my-release oci://ghcr.io/dadrus/heimdall/chart
 ----
 
 == Uninstalling the Chart
@@ -333,30 +345,20 @@ a| `service.annotations`
 Enables you to set additional annotations for the created services
 a| `{}` (empty map)
 
-a| `service.decision.port`
+a| `service.main.port`
 
-The port exposed by the k8s Service created for heimdall's decision endpoint. Only used if the `operationMode` is set to `decision`.
+The main port exposed by the k8s Service created for heimdall.
 a| `4456`
 
-a| `service.decision.name`
+a| `service.main.name`
 
-The name of the port exposed by the k8s Service created for heimdall's decision endpoint. Only used if the `operationMode` is set to `decision`.
-a| `decision`
-
-a| `service.proxy.port`
-
-The port exposed by the k8s Service created for heimdall's proxy endpoint. Only used if the `operationMode` is set to `proxy`.
-a| `4456`
-
-a| `service.proxy.name`
-
-The name of the port exposed by the k8s Service created for heimdall's proxy endpoint. Only used if the `operationMode` is set to `proxy`.
-a| `proxy`
+The name of the port exposed by the k8s Service created for heimdall.
+a| `main`
 
 a| `service.management.port`
 
-The port exposed by the k8s Service created for heimdall's proxy endpoint. Only used if the `operationMode` is set to `proxy`.
-a| `4456`
+The port exposed by the k8s Service created for heimdall's management endpoint.
+a| `4457`
 
 a| `service.management.name`
 

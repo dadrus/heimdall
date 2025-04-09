@@ -18,7 +18,6 @@ package httpx
 
 import (
 	"bufio"
-	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -38,14 +37,12 @@ import (
 func TestTraceRoundTripperRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		logLevel zerolog.Level
 		err      error
 		assert   func(t *testing.T, logs string)
 	}{
-		{
-			uc:       "debug log level without error",
+		"debug log level without error": {
 			logLevel: zerolog.DebugLevel,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
@@ -53,8 +50,7 @@ func TestTraceRoundTripperRoundTrip(t *testing.T) {
 				assert.Empty(t, logs)
 			},
 		},
-		{
-			uc:       "debug log level with error",
+		"debug log level with error": {
 			logLevel: zerolog.DebugLevel,
 			err:      errors.New("test error"),
 			assert: func(t *testing.T, logs string) {
@@ -63,8 +59,7 @@ func TestTraceRoundTripperRoundTrip(t *testing.T) {
 				assert.Empty(t, logs)
 			},
 		},
-		{
-			uc:       "trace log level without error",
+		"trace log level without error": {
 			logLevel: zerolog.TraceLevel,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
@@ -89,8 +84,7 @@ func TestTraceRoundTripperRoundTrip(t *testing.T) {
 				assert.Contains(t, line2["message"], "{ \"bar\": \"foo\" }")
 			},
 		},
-		{
-			uc:       "trace log level with error",
+		"trace log level with error": {
 			logLevel: zerolog.TraceLevel,
 			err:      errors.New("test error"),
 			assert: func(t *testing.T, logs string) {
@@ -117,12 +111,12 @@ func TestTraceRoundTripperRoundTrip(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb}).Level(tc.logLevel)
 
-			ctx := logger.WithContext(context.Background())
+			ctx := logger.WithContext(t.Context())
 
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://foo.bar?baz=foo", strings.NewReader("Foobar"))
 			require.NoError(t, err)

@@ -24,41 +24,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUpstreamURLFactoryCreateURL(t *testing.T) {
+func TestBackendCreateURL(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc       string
-		factory  *Backend
+	for uc, tc := range map[string]struct {
+		backend  *Backend
 		original string
 		expected string
 	}{
-		{
-			uc:       "set host and rewrite scheme",
-			factory:  &Backend{Host: "bar.foo", URLRewriter: &URLRewriter{Scheme: "https"}},
+		"set host and rewrite scheme": {
+			backend:  &Backend{Host: "bar.foo", URLRewriter: &URLRewriter{Scheme: "https"}},
 			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			expected: "https://bar.foo/foo/bar?baz=bar&bar=foo&foo=baz",
 		},
-		{
-			uc:       "set host only",
-			factory:  &Backend{Host: "bar.foo"},
+		"set host only": {
+			backend:  &Backend{Host: "bar.foo"},
 			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			expected: "http://bar.foo/foo/bar?baz=bar&bar=foo&foo=baz",
 		},
-		{
-			uc:       "set host only for url with urlencoded path fragment",
-			factory:  &Backend{Host: "bar.foo"},
+		"set host only for url with urlencoded path fragment": {
+			backend:  &Backend{Host: "bar.foo"},
 			original: "http://foo.bar/foo/%5Bid%5D?baz=bar&bar=foo&foo=baz",
 			expected: "http://bar.foo/foo/%5Bid%5D?baz=bar&bar=foo&foo=baz",
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			requestURL, err := url.Parse(tc.original)
 			require.NoError(t, err)
 
 			// WHEN
-			result := tc.factory.CreateURL(requestURL)
+			result := tc.backend.CreateURL(requestURL)
 
 			// THEN
 			assert.Equal(t, tc.expected, result.String())
@@ -66,14 +62,17 @@ func TestUpstreamURLFactoryCreateURL(t *testing.T) {
 	}
 }
 
-func TestUpstreamURLFactoryDeepCopyInto(t *testing.T) {
+func TestBackendDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	var out Backend
 
+	trueVal := true
+
 	in := Backend{
-		Host: "bar.foo",
+		Host:              "bar.foo",
+		ForwardHostHeader: &trueVal,
 		URLRewriter: &URLRewriter{
 			Scheme:              "https",
 			PathPrefixToCut:     "/foo",
@@ -87,4 +86,29 @@ func TestUpstreamURLFactoryDeepCopyInto(t *testing.T) {
 
 	// THEN
 	require.Equal(t, in, out)
+}
+
+func TestBackendIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		backend    *Backend
+		isInsecure bool
+	}{
+		"secure if nil": {},
+		"secure if no url rewriter configured": {
+			backend: &Backend{},
+		},
+		"insecure if url rewriter configured with http scheme": {
+			backend:    &Backend{URLRewriter: &URLRewriter{Scheme: "http"}},
+			isInsecure: true,
+		},
+		"secure if url rewriter configured with https scheme": {
+			backend: &Backend{URLRewriter: &URLRewriter{Scheme: "https"}},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			assert.Equal(t, tc.isInsecure, tc.backend.IsInsecure())
+		})
+	}
 }

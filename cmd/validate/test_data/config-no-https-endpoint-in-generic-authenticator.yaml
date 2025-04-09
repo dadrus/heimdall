@@ -1,0 +1,31 @@
+serve:
+  port: 4468
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+management:
+  tls:
+    key_store:
+      path: /path/to/file.pem
+
+mechanisms:
+  authenticators:
+    - id: some_authenticator
+      type: generic
+      config:
+        identity_info_endpoint:
+          url: http://example.com/whoami
+        authentication_data_source:
+          - cookie: SESSION-ID
+        subject:
+          id: id
+
+  finalizers:
+    - id: some_finalizer
+      type: noop
+
+providers:
+  file_system:
+    src: test_rules.yaml
+    watch: true

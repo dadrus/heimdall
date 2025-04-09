@@ -1,0 +1,19 @@
+alloy:
+  configMap:
+    create: false
+    name: alloy-config
+    key: config.alloy
+  enableReporting: false
+  mounts:
+    # -- Mount /var/log from the host into the container for log collection.
+    varlog: true
+  extraPorts:
+    # we configured grps & http otel receivers, so expose the corresponding ports
+    - name: "otelgrpc"
+      port: 4317
+      targetPort: 4317
+      protocol: "TCP"
+    - name: "otelhttp"
+      port: 4318
+      targetPort: 4318
+      protocol: "TCP"

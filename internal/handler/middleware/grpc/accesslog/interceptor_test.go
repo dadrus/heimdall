@@ -57,18 +57,16 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
 	})
 
-	for _, tc := range []struct {
-		uc              string
+	for uc, tc := range map[string]struct {
 		outgoingContext func(t *testing.T) context.Context
 		configureMock   func(t *testing.T, m *mocks2.MockHandler)
 		assert          func(t *testing.T, logEvent1, logEvent2 map[string]any)
 	}{
-		{
-			uc: "without tracing, x-* header and errors",
+		"without tracing, x-* header and errors": {
 			outgoingContext: func(t *testing.T) context.Context {
 				t.Helper()
 
-				return context.Background()
+				return t.Context()
 			},
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
@@ -117,8 +115,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
-		{
-			uc: "with tracing, x-* header and error",
+		"with tracing, x-* header and error": {
 			outgoingContext: func(t *testing.T) context.Context {
 				t.Helper()
 
@@ -128,10 +125,10 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				}
 
 				otel.GetTextMapPropagator().Inject(
-					trace.ContextWithRemoteSpanContext(context.Background(), parentCtx),
+					trace.ContextWithRemoteSpanContext(t.Context(), parentCtx),
 					propagation.MapCarrier(md))
 
-				return metadata.NewOutgoingContext(context.Background(), metadata.New(md))
+				return metadata.NewOutgoingContext(t.Context(), metadata.New(md))
 			},
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
@@ -171,12 +168,11 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
-		{
-			uc: "without tracing and x-* header, but with subject and error set on context",
+		"without tracing and x-* header, but with subject and error set on context": {
 			outgoingContext: func(t *testing.T) context.Context {
 				t.Helper()
 
-				return context.Background()
+				return t.Context()
 			},
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
@@ -228,7 +224,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			var (
 				logLine1 map[string]any
 				logLine2 map[string]any
@@ -326,7 +322,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	client := mocks2.NewTestClient(conn)
 
 	// WHEN
-	_, err = client.Test(context.Background(), &mocks2.TestRequest{})
+	_, err = client.Test(t.Context(), &mocks2.TestRequest{})
 
 	// THEN
 	require.Error(t, err)

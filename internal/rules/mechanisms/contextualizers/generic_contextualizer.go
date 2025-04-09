@@ -30,6 +30,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -53,12 +54,12 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
 			if typ != ContextualizerGeneric {
 				return false, nil, nil
 			}
 
-			eh, err := newGenericContextualizer(ctx, id, conf)
+			eh, err := newGenericContextualizer(app, id, conf)
 
 			return true, eh, err
 		})
@@ -70,6 +71,7 @@ type contextualizerData struct {
 
 type genericContextualizer struct {
 	id              string
+	app             app.Context
 	e               endpoint.Endpoint
 	ttl             time.Duration
 	payload         template.Template
@@ -80,10 +82,13 @@ type genericContextualizer struct {
 }
 
 func newGenericContextualizer(
-	ctx CreationContext,
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*genericContextualizer, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating generic contextualizer")
+
 	type Config struct {
 		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
@@ -95,8 +100,14 @@ func newGenericContextualizer(
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, ContextualizerGeneric, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic contextualizer '%s'", id).CausedBy(err)
+	}
+
+	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+		logger.Warn().Str("_id", id).
+			Msg("No TLS configured for the endpoint used in generic contextualizer")
 	}
 
 	ttl := defaultTTL
@@ -106,6 +117,7 @@ func newGenericContextualizer(
 
 	return &genericContextualizer{
 		id:              id,
+		app:             app,
 		e:               conf.Endpoint,
 		payload:         conf.Payload,
 		fwdHeaders:      conf.ForwardHeaders,
@@ -117,31 +129,31 @@ func newGenericContextualizer(
 }
 
 //nolint:cyclop
-func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", h.id).Msg("Updating using generic contextualizer")
+func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
+	logger.Debug().Str("_id", c.id).Msg("Updating using generic contextualizer")
 
 	if sub == nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to execute generic contextualizer due to 'nil' subject").
-			WithErrorContext(h)
+			WithErrorContext(c)
 	}
 
-	cch := cache.Ctx(ctx.AppContext())
+	cch := cache.Ctx(ctx.Context())
 
 	var (
 		cacheKey string
 		response *contextualizerData
 	)
 
-	vals, payload, err := h.renderTemplates(ctx, sub)
+	vals, payload, err := c.renderTemplates(ctx, sub)
 	if err != nil {
 		return err
 	}
 
-	if h.ttl > 0 {
-		cacheKey = h.calculateCacheKey(sub, vals, payload)
-		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+	if c.ttl > 0 {
+		cacheKey = c.calculateCacheKey(sub, vals, payload)
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var cd contextualizerData
 
 			if err = json.Unmarshal(entry, &cd); err == nil {
@@ -153,30 +165,30 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	}
 
 	if response == nil {
-		response, err = h.callEndpoint(ctx, sub, vals, payload)
+		response, err = c.callEndpoint(ctx, sub, vals, payload)
 		if err != nil {
 			return err
 		}
 
-		if h.ttl > 0 && len(cacheKey) != 0 {
+		if c.ttl > 0 && len(cacheKey) != 0 {
 			data, _ := json.Marshal(response)
 
-			if err = cch.Set(ctx.AppContext(), cacheKey, data, h.ttl); err != nil {
+			if err = cch.Set(ctx.Context(), cacheKey, data, c.ttl); err != nil {
 				logger.Warn().Err(err).Msg("Failed to cache contextualizer response")
 			}
 		}
 	}
 
 	if response.Payload != nil {
-		ctx.Outputs()[h.id] = response.Payload
+		ctx.Outputs()[c.id] = response.Payload
 	}
 
 	return nil
 }
 
-func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer, error) {
+func (c *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer, error) {
 	if len(rawConfig) == 0 {
-		return h, nil
+		return c, nil
 	}
 
 	type Config struct {
@@ -189,63 +201,65 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, ContextualizerGeneric, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(c.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for generic contextualizer '%s'", c.id).CausedBy(err)
 	}
 
 	return &genericContextualizer{
-		id:         h.id,
-		e:          h.e,
-		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, h.payload),
-		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, h.fwdHeaders),
-		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, h.fwdCookies),
+		id:         c.id,
+		app:        c.app,
+		e:          c.e,
+		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, c.payload),
+		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, c.fwdHeaders),
+		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, c.fwdCookies),
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
-			func() time.Duration { return h.ttl }),
+			func() time.Duration { return c.ttl }),
 		continueOnError: x.IfThenElseExec(conf.ContinueOnError != nil,
 			func() bool { return *conf.ContinueOnError },
-			func() bool { return h.continueOnError }),
-		v: h.v.Merge(conf.Values),
+			func() bool { return c.continueOnError }),
+		v: c.v.Merge(conf.Values),
 	}, nil
 }
 
-func (h *genericContextualizer) ID() string { return h.id }
+func (c *genericContextualizer) ID() string { return c.id }
 
-func (h *genericContextualizer) ContinueOnError() bool { return h.continueOnError }
+func (c *genericContextualizer) ContinueOnError() bool { return c.continueOnError }
 
-func (h *genericContextualizer) callEndpoint(
-	ctx heimdall.Context,
+func (c *genericContextualizer) callEndpoint(
+	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*contextualizerData, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling contextualizer endpoint")
 
-	req, err := h.createRequest(ctx, sub, values, payload)
+	req, err := c.createRequest(ctx, sub, values, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := h.e.CreateClient(req.URL.Hostname()).Do(req)
+	resp, err := c.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
 				"request to the contextualizer endpoint timed out").
-				WithErrorContext(h).
+				WithErrorContext(c).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
 			"request to the contextualizer endpoint failed").
-			WithErrorContext(h).
+			WithErrorContext(c).
 			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
 
-	data, err := h.readResponse(ctx, resp)
+	data, err := c.readResponse(ctx, resp)
 	if err != nil && !errors.Is(err, errNoContent) {
 		return nil, err
 	}
@@ -253,19 +267,19 @@ func (h *genericContextualizer) callEndpoint(
 	return &contextualizerData{Payload: data}, nil
 }
 
-func (h *genericContextualizer) createRequest(
-	ctx heimdall.Context,
+func (c *genericContextualizer) createRequest(
+	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*http.Request, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.Context())
 
 	endpointRenderer := endpoint.RenderFunc(func(value string) (string, error) {
 		tpl, err := template.New(value)
 		if err != nil {
 			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
-				WithErrorContext(h).
+				WithErrorContext(c).
 				CausedBy(err)
 		}
 
@@ -276,14 +290,14 @@ func (h *genericContextualizer) createRequest(
 		})
 	})
 
-	req, err := h.e.CreateRequest(ctx.AppContext(), strings.NewReader(payload), endpointRenderer)
+	req, err := c.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
-			WithErrorContext(h).
+			WithErrorContext(c).
 			CausedBy(err)
 	}
 
-	for _, headerName := range h.fwdHeaders {
+	for _, headerName := range c.fwdHeaders {
 		headerValue := ctx.Request().Header(headerName)
 		if len(headerValue) == 0 {
 			logger.Warn().Str("_header", headerName).
@@ -293,7 +307,7 @@ func (h *genericContextualizer) createRequest(
 		}
 	}
 
-	for _, cookieName := range h.fwdCookies {
+	for _, cookieName := range c.fwdCookies {
 		cookieValue := ctx.Request().Cookie(cookieName)
 		if len(cookieValue) == 0 {
 			logger.Warn().Str("_cookie", cookieName).
@@ -306,13 +320,13 @@ func (h *genericContextualizer) createRequest(
 	return req, nil
 }
 
-func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *http.Response) (any, error) {
+	logger := zerolog.Ctx(ctx.Context())
 
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).
-			WithErrorContext(h)
+			WithErrorContext(c)
 	}
 
 	if resp.ContentLength == 0 {
@@ -324,7 +338,7 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			WithErrorContext(h).
+			WithErrorContext(c).
 			CausedBy(err)
 	}
 
@@ -343,14 +357,14 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 	result, err := decoder.Decode(rawData)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
-			WithErrorContext(h).
+			WithErrorContext(c).
 			CausedBy(err)
 	}
 
 	return result, nil
 }
 
-func (h *genericContextualizer) calculateCacheKey(
+func (c *genericContextualizer) calculateCacheKey(
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
@@ -358,13 +372,15 @@ func (h *genericContextualizer) calculateCacheKey(
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
-	binary.LittleEndian.PutUint64(ttlBytes, uint64(h.ttl))
+	//nolint:gosec
+	// no integer overflow during conversion possible
+	binary.LittleEndian.PutUint64(ttlBytes, uint64(c.ttl))
 
 	hash := sha256.New()
-	hash.Write(h.e.Hash())
-	hash.Write(stringx.ToBytes(h.id))
-	hash.Write(stringx.ToBytes(strings.Join(h.fwdHeaders, ",")))
-	hash.Write(stringx.ToBytes(strings.Join(h.fwdCookies, ",")))
+	hash.Write(c.e.Hash())
+	hash.Write(stringx.ToBytes(c.id))
+	hash.Write(stringx.ToBytes(strings.Join(c.fwdHeaders, ",")))
+	hash.Write(stringx.ToBytes(strings.Join(c.fwdCookies, ",")))
 	hash.Write(stringx.ToBytes(payload))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
@@ -377,8 +393,8 @@ func (h *genericContextualizer) calculateCacheKey(
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (h *genericContextualizer) renderTemplates(
-	ctx heimdall.Context,
+func (c *genericContextualizer) renderTemplates(
+	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 ) (map[string]string, string, error) {
 	var (
@@ -387,19 +403,19 @@ func (h *genericContextualizer) renderTemplates(
 		err     error
 	)
 
-	if values, err = h.v.Render(map[string]any{
+	if values, err = c.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
 	}); err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the contextualization endpoint").
-			WithErrorContext(h).
+			WithErrorContext(c).
 			CausedBy(err)
 	}
 
-	if h.payload != nil {
-		if payload, err = h.payload.Render(map[string]any{
+	if c.payload != nil {
+		if payload, err = c.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Values":  values,
@@ -407,7 +423,7 @@ func (h *genericContextualizer) renderTemplates(
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the contextualization endpoint").
-				WithErrorContext(h).
+				WithErrorContext(c).
 				CausedBy(err)
 		}
 	}

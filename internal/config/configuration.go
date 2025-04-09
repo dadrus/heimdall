@@ -22,10 +22,12 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/config/parser"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 type Configuration struct { //nolint:musttag
 	Serve                ServeConfig          `koanf:"serve"`
+	Management           ManagementConfig     `koanf:"management"`
 	Log                  LoggingConfig        `koanf:"log"`
 	Tracing              TracingConfig        `koanf:"tracing"`
 	Metrics              MetricsConfig        `koanf:"metrics"`
@@ -37,7 +39,11 @@ type Configuration struct { //nolint:musttag
 	SecretsReloadEnabled bool                 `koanf:"secrets_reload_enabled"`
 }
 
-func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {
+func NewConfiguration(
+	envPrefix EnvVarPrefix,
+	configFile ConfigurationPath,
+	validator validation.Validator,
+) (*Configuration, error) {
 	// copy defaults
 	result := defaultConfig()
 
@@ -52,7 +58,8 @@ func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Co
 		parser.WithEnvPrefix(string(envPrefix)),
 		parser.WithDefaultConfigFilename("heimdall.yaml"),
 		parser.WithConfigFile(string(configFile)),
-		parser.WithConfigValidator(ValidateConfig),
+		parser.WithConfigSyntaxValidator(ValidateConfigSchema),
+		parser.WithConfigSemanticsValidator(validator.ValidateStruct),
 	}
 
 	// if no config file provided, the lookup order for the heimdall.yaml file is:

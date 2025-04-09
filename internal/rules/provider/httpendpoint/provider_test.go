@@ -18,6 +18,7 @@ package httpendpoint
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -32,11 +33,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
@@ -45,15 +48,14 @@ import (
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		conf   []byte
-		assert func(t *testing.T, err error, prov *provider)
+	for uc, tc := range map[string]struct {
+		enforceTLS bool
+		conf       []byte
+		assert     func(t *testing.T, err error, prov *Provider)
 	}{
-		{
-			uc:   "with unknown field",
+		"with unknown field": {
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -61,10 +63,9 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc:   "without endpoints",
+		"without endpoints": {
 			conf: []byte(`watch_interval: 5s`),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -72,14 +73,13 @@ func TestNewProvider(t *testing.T) {
 				assert.Contains(t, err.Error(), "'endpoints' is a required field")
 			},
 		},
-		{
-			uc: "with watch interval and unsupported endpoint property configured",
+		"with watch interval and unsupported endpoint property configured": {
 			conf: []byte(`
 watch_interval: 5s
 endpoints:
 - foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -87,13 +87,12 @@ endpoints:
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
-		{
-			uc: "with one endpoint without url",
+		"with one endpoint without url": {
 			conf: []byte(`
 endpoints:
 - method: POST
 `),
-			assert: func(t *testing.T, err error, _ *provider) {
+			assert: func(t *testing.T, err error, _ *Provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -101,13 +100,13 @@ endpoints:
 				assert.Contains(t, err.Error(), "'endpoints'[0].'url' is a required field")
 			},
 		},
-		{
-			uc: "with only one endpoint and its url configured",
+		"with enforced TLS, only one endpoint and its url configured to use TLS": {
+			enforceTLS: true,
 			conf: []byte(`
 endpoints:
 - url: https://foo.bar
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -126,15 +125,29 @@ endpoints:
 				assert.True(t, lr.IsZero())
 			},
 		},
-		{
-			uc: "with two endpoints and watch interval configured",
+		"with enforced TLS and one of the configured endpoints not using TLS": {
+			enforceTLS: true,
+			conf: []byte(`
+endpoints:
+- url: https://foo.bar
+- url: http://foo.bar
+`),
+			assert: func(t *testing.T, err error, _ *Provider) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'endpoints'[1].'url' scheme must be https")
+			},
+		},
+		"with two endpoints and watch interval configured": {
 			conf: []byte(`
 watch_interval: 5m
 endpoints:
-- url: https://foo.bar
-- url: https://bar.foo
+- url: http://foo.bar
+- url: http://bar.foo
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, prov *Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -157,20 +170,32 @@ endpoints:
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
+			require.NoError(t, err)
+
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
+			)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
 				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
-			cch, err := memory.NewCache(nil, nil, nil)
+			cch, err := memory.NewCache(nil, nil)
 			require.NoError(t, err)
 
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+
 			// WHEN
-			prov, err := newProvider(conf, cch, mocks.NewRuleSetProcessorMock(t), log.Logger)
+			prov, err := NewProvider(appCtx, mocks.NewRuleSetProcessorMock(t), cch)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -199,15 +224,13 @@ func TestProviderLifecycle(t *testing.T) {
 
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		conf           []byte
 		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
 		writeResponse  ResponseWriter
 		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc: "with rule set loading error due server error response",
+		"with rule set loading error due server error response": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -227,8 +250,7 @@ endpoints:
 				assert.Contains(t, messages, "No updates received")
 			},
 		},
-		{
-			uc: "with empty server response",
+		"with empty server response": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -247,8 +269,7 @@ endpoints:
 				assert.Contains(t, logs.String(), "No updates received")
 			},
 		},
-		{
-			uc: "with not empty server response and without watch interval",
+		"with not empty server response and without watch interval": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -274,8 +295,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -286,7 +307,7 @@ rules:
 				assert.Equal(t, 1, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -294,8 +315,7 @@ rules:
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "with not empty server response and with watch interval",
+		"with not empty server response and with watch interval": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -322,8 +342,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -334,7 +354,7 @@ rules:
 				assert.Equal(t, 3, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -342,8 +362,7 @@ rules:
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "first request successful, second request with 500, successive requests successful without changes",
+		"first request successful, second request with 500, successive requests successful without changes": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -396,12 +415,12 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Twice()
 
-				processor.EXPECT().OnDeleted(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -412,7 +431,7 @@ rules:
 				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Values()
+				_, ruleSets := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Values()
 				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Equal(t, "test", ruleSets[0].Name)
@@ -425,13 +444,12 @@ rules:
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "bar", ruleSets[1].Rules[0].ID)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Empty(t, ruleSet.Rules)
 			},
 		},
-		{
-			uc: "successive changes to the rule set in each retrieval",
+		"successive changes to the rule set in each retrieval": {
 			conf: []byte(`
 watch_interval: 200ms
 endpoints:
@@ -508,12 +526,12 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
-				processor.EXPECT().OnUpdated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Times(3)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -524,14 +542,14 @@ rules:
 				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 
-				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Values()
+				_, ruleSets := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Values()
 				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Equal(t, "test", ruleSets[0].Name)
@@ -551,8 +569,7 @@ rules:
 				assert.Equal(t, "foz", ruleSets[2].Rules[0].ID)
 			},
 		},
-		{
-			uc: "response is cached",
+		"response is cached": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -579,8 +596,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -591,7 +608,7 @@ rules:
 				assert.Equal(t, 1, requestCount)
 				assert.GreaterOrEqual(t, strings.Count(logs.String(), "No updates received"), 3)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -599,8 +616,7 @@ rules:
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "response is not cached, as caching is disabled",
+		"response is not cached, as caching is disabled": {
 			conf: []byte(`
 watch_interval: 250ms
 endpoints:
@@ -629,8 +645,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -643,7 +659,7 @@ rules:
 				noUpdatesCount := strings.Count(logs.String(), "No updates received")
 				assert.GreaterOrEqual(t, noUpdatesCount, 3)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
@@ -651,8 +667,7 @@ rules:
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
-		{
-			uc: "previously unknown rule set with error on creation",
+		"previously unknown rule set with error on creation": {
 			conf: []byte(`
 endpoints:
 - url: ` + srv.URL + `
@@ -677,7 +692,7 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -688,8 +703,7 @@ rules:
 				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
 			},
 		},
-		{
-			uc: "updated rule set with error on update",
+		"updated rule set with error on update": {
 			conf: []byte(`
 watch_interval: 200ms
 endpoints:
@@ -737,8 +751,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose)
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -749,8 +763,7 @@ rules:
 				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
 			},
 		},
-		{
-			uc: "deleted rule set with error on delete",
+		"deleted rule set with error on delete": {
 			conf: []byte(`
 watch_interval: 200ms
 endpoints:
@@ -786,8 +799,8 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				call := processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).NotBefore(call)
+				call := processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error")).NotBefore(call)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -799,7 +812,7 @@ rules:
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			requestCount = 0
 
@@ -819,13 +832,23 @@ rules:
 
 			logs := &strings.Builder{}
 
-			cch, err := memory.NewCache(nil, nil, nil)
+			cch, err := memory.NewCache(nil, nil)
 			require.NoError(t, err)
 
-			prov, err := newProvider(conf, cch, processor, zerolog.New(logs))
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
 			require.NoError(t, err)
 
-			ctx := context.Background()
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
+			appCtx.EXPECT().Config().Return(conf)
+			appCtx.EXPECT().Validator().Return(validator)
+
+			prov, err := NewProvider(appCtx, processor, cch)
+			require.NoError(t, err)
+
+			ctx := t.Context()
 
 			writeResponse = x.IfThenElse(tc.writeResponse != nil,
 				tc.writeResponse,

@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"net/http"
@@ -94,16 +93,14 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		strategy       *OAuth2ClientCredentials
 		configureMocks func(t *testing.T, cch *mocks.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool, req *http.Request)
 	}{
-		{
-			uc:       "reusing response from cache, no custom header",
+		"reusing response from cache, no custom header": {
 			strategy: &OAuth2ClientCredentials{},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
@@ -123,8 +120,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				assert.Equal(t, "Bearer foobar", req.Header.Get("Authorization"))
 			},
 		},
-		{
-			uc: "error while unmarshalling successful response",
+		"error while unmarshalling successful response": {
 			strategy: &OAuth2ClientCredentials{
 				Config: clientcredentials.Config{
 					TokenURL: srv.URL, ClientID: "bar", ClientSecret: "foo",
@@ -149,8 +145,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				assert.Empty(t, req.Header)
 			},
 		},
-		{
-			uc: "full configuration, no cache hit and token has expires_in claim",
+		"full configuration, no cache hit and token has expires_in claim": {
 			strategy: &OAuth2ClientCredentials{
 				Config: clientcredentials.Config{
 					TokenURL:     srv.URL,
@@ -206,7 +201,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			endpointCalled = false
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
@@ -219,7 +214,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			buildResponse = tc.buildResponse
 
 			cch := mocks.NewCacheMock(t)
-			ctx := cache.WithContext(context.Background(), cch)
+			ctx := cache.WithContext(t.Context(), cch)
 
 			configureMocks(t, cch)
 

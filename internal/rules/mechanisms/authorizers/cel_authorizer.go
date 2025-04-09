@@ -20,6 +20,7 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -31,12 +32,12 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerCEL {
 				return false, nil, nil
 			}
 
-			auth, err := newCELAuthorizer(ctx, id, conf)
+			auth, err := newCELAuthorizer(app, id, conf)
 
 			return true, auth, err
 		})
@@ -44,17 +45,22 @@ func init() {
 
 type celAuthorizer struct {
 	id          string
+	app         app.Context
 	expressions compiledExpressions
 }
 
-func newCELAuthorizer(ctx CreationContext, id string, rawConfig map[string]any) (*celAuthorizer, error) {
+func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*celAuthorizer, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating cel authorizer")
+
 	type Config struct {
 		Expressions []Expression `mapstructure:"expressions" validate:"required,gt=0,dive"`
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthorizerCEL, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for cel authorizer '%s'", id).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
@@ -68,11 +74,11 @@ func newCELAuthorizer(ctx CreationContext, id string, rawConfig map[string]any) 
 		return nil, err
 	}
 
-	return &celAuthorizer{id: id, expressions: expressions}, nil
+	return &celAuthorizer{id: id, app: app, expressions: expressions}, nil
 }
 
-func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using CEL authorizer")
 
 	return a.expressions.eval(map[string]any{"Subject": sub, "Request": ctx.Request(), "Outputs": ctx.Outputs()}, a)
@@ -83,7 +89,7 @@ func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error)
 		return a, nil
 	}
 
-	return newCELAuthorizer(nil, a.id, rawConfig)
+	return newCELAuthorizer(a.app, a.id, rawConfig)
 }
 
 func (a *celAuthorizer) ID() string { return a.id }

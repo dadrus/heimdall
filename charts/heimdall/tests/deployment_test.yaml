@@ -436,7 +436,7 @@ tests:
   - it: should configure HTTPS scheme for probes if management service has TLS configured
     template: deployment.yaml
     set:
-      serve.management.tls:
+      management.tls:
         min_version: TLS1.2
         key_store:
           path: /path/file.pem

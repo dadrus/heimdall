@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,12 +17,9 @@
 package serve
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/proxy"
 )
@@ -30,35 +27,25 @@ import (
 // NewProxyCommand represents the proxy command.
 func NewProxyCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:     "proxy",
-		Short:   "Starts heimdall in Reverse Proxy operation mode",
-		Example: "heimdall serve proxy",
-		Run: func(cmd *cobra.Command, _ []string) {
-			app, err := createProxyApp(cmd)
+		Use:          "proxy",
+		Short:        "Starts heimdall in Reverse Proxy operation mode",
+		Example:      "heimdall serve proxy",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			app, err := createApp(
+				cmd,
+				fx.Options(
+					proxy.Module,
+					fx.Supply(config.ProxyMode),
+				),
+			)
 			if err != nil {
-				cmd.PrintErrf("Failed to initialize proxy service: %v", err)
-
-				os.Exit(1)
+				return err
 			}
 
 			app.Run()
+
+			return nil
 		},
 	}
-}
-
-func createProxyApp(cmd *cobra.Command) (*fx.App, error) {
-	configPath, _ := cmd.Flags().GetString("config")
-	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
-
-	app := fx.New(
-		fx.NopLogger,
-		fx.Supply(
-			config.ConfigurationPath(configPath),
-			config.EnvVarPrefix(envPrefix),
-			config.ProxyMode),
-		internal.Module,
-		proxy.Module,
-	)
-
-	return app, app.Err()
 }

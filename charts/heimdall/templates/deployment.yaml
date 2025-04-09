@@ -78,18 +78,12 @@ spec:
               {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
-            {{- if eq .Values.operationMode "decision" }}
-            - name: http-decision
-              containerPort: {{ .Values.serve.decision.port }}
+            - name: http-main
+              containerPort: {{ .Values.serve.port }}
               protocol: TCP
-            {{- else }}
-            - name: http-proxy
-              containerPort: {{ .Values.serve.proxy.port }}
-              protocol: TCP
-            {{- end }}
             - name: http-management
               protocol: TCP
-              containerPort: {{ .Values.serve.management.port }}
+              containerPort: {{ .Values.management.port }}
             {{- if contains "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default "") }}
             - name: http-metrics
               protocol: TCP
@@ -134,14 +128,14 @@ spec:
             httpGet:
               path: /.well-known/health
               port: http-management
-              {{ if .Values.serve.management.tls }}
+              {{ if .Values.management.tls }}
               scheme: HTTPS
               {{ end }}
           readinessProbe:
             httpGet:
               path: /.well-known/health
               port: http-management
-              {{ if .Values.serve.management.tls }}
+              {{ if .Values.management.tls }}
               scheme: HTTPS
               {{ end }}
           resources:

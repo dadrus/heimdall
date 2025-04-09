@@ -18,13 +18,12 @@ package config
 
 import (
 	"net/url"
-
-	"github.com/goccy/go-json"
 )
 
 type Backend struct {
-	Host        string       `json:"host"    yaml:"host"    validate:"required"` //nolint:tagalign
-	URLRewriter *URLRewriter `json:"rewrite" yaml:"rewrite" validate:"omitnil"`  //nolint:tagalign
+	Host              string       `json:"host"                yaml:"host"             validate:"required"` //nolint:tagalign,lll
+	ForwardHostHeader *bool        `json:"forward_host_header" yaml:"forward_host_header"`
+	URLRewriter       *URLRewriter `json:"rewrite"             yaml:"rewrite"          validate:"omitnil"` //nolint:tagalign,lll
 }
 
 func (b *Backend) CreateURL(value *url.URL) *url.URL {
@@ -44,10 +43,19 @@ func (b *Backend) CreateURL(value *url.URL) *url.URL {
 }
 
 func (b *Backend) DeepCopyInto(out *Backend) {
-	jsonStr, _ := json.Marshal(b)
+	*out = *b
 
-	// we cannot do anything with an error here as
-	// the interface implemented here doesn't support
-	// error responses
-	json.Unmarshal(jsonStr, out) //nolint:errcheck
+	if b.ForwardHostHeader != nil {
+		in, out := &b.ForwardHostHeader, &out.ForwardHostHeader
+		*out = new(bool)
+		**out = **in
+	}
+
+	if b.URLRewriter != nil {
+		b.URLRewriter.DeepCopyInto(out.URLRewriter)
+	}
+}
+
+func (b *Backend) IsInsecure() bool {
+	return b != nil && b.URLRewriter != nil && b.URLRewriter.Scheme == "http"
 }

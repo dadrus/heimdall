@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -45,7 +46,7 @@ func newService(
 	log zerolog.Logger,
 	khr keyholder.Registry,
 ) *http.Server {
-	cfg := conf.Serve.Management
+	cfg := conf.Management
 	eh := errorhandler2.New()
 	opFilter := func(req *http.Request) bool { return req.URL.Path != EndpointHealth }
 
@@ -89,7 +90,7 @@ func newService(
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: int(cfg.BufferLimit.Read),
+		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
 }

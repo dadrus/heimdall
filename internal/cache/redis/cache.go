@@ -29,22 +29,24 @@ import (
 )
 
 type redisCache struct {
-	c   rueidis.Client
-	ttl time.Duration
+	opts rueidis.ClientOption
+	c    rueidis.Client
+	ttl  time.Duration
 }
 
-func newRedisCache(opts rueidis.ClientOption, ttl time.Duration) (*redisCache, error) {
-	client, err := rueidisotel.NewClient(opts)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed creating redis client").CausedBy(err)
-	}
-
-	return &redisCache{c: client, ttl: ttl}, nil
+func newRedisCache(opts rueidis.ClientOption, ttl time.Duration) *redisCache {
+	return &redisCache{opts: opts, ttl: ttl}
 }
 
 func (c *redisCache) Start(_ context.Context) error {
-	// not used for Redis.
+	client, err := rueidisotel.NewClient(c.opts)
+	if err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed creating redis client").CausedBy(err)
+	}
+
+	c.c = client
+
 	return nil
 }
 

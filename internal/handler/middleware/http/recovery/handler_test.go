@@ -17,7 +17,6 @@
 package recovery
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -35,16 +34,15 @@ import (
 func TestHandlerExecution(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc          string
+	for uc, tc := range map[string]struct {
 		shouldPanic bool
 		err         any
 	}{
-		{"panics with string as error", true, "string error"},
-		{"panics with real error type", true, errors.New("err error")},
-		{"does not panic", false, ""},
+		"panics with string as error": {true, "string error"},
+		"panics with real error type": {true, errors.New("err error")},
+		"does not panic":              {false, ""},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			eh := mocks.NewErrorHandlerMock(t)
 			srv := httptest.NewServer(
@@ -65,7 +63,7 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(), http.MethodGet, srv.URL+"/test", nil)
+				t.Context(), http.MethodGet, srv.URL+"/test", nil)
 			require.NoError(t, err)
 
 			// WHEN

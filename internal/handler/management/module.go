@@ -19,13 +19,10 @@ package management
 import (
 	"context"
 
-	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 var Module = fx.Invoke( // nolint: gochecknoglobals
@@ -36,20 +33,17 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(
-	conf *config.Configuration,
-	logger zerolog.Logger,
-	khr keyholder.Registry,
-	cw watcher.Watcher,
-) *fxlcm.LifecycleManager {
-	cfg := conf.Serve.Management
+func newLifecycleManager(app app.Context) *fxlcm.LifecycleManager {
+	conf := app.Config()
+	logger := app.Logger()
+	cfg := conf.Management
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Management",
 		ServiceAddress: cfg.Address(),
-		Server:         newService(conf, logger, khr),
+		Server:         newService(conf, logger, app.KeyHolderRegistry()),
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
-		FileWatcher:    cw,
+		FileWatcher:    app.Watcher(),
 	}
 }

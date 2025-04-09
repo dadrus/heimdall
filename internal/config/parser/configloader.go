@@ -23,6 +23,9 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ConfigLoader interface {
@@ -49,50 +52,26 @@ func (c *configLoader) Load(config any) error {
 		return err
 	}
 
-	if len(configFile) != 0 && c.o.validate != nil {
-		if err := c.o.validate(configFile); err != nil {
-			return err
-		}
-	}
-
 	parser, err := koanfFromStruct(config)
 	if err != nil {
 		return err
 	}
 
-	loadAndMergeConfig := func(loadConfig func() (*koanf.Koanf, error)) error {
-		konf, err := loadConfig()
-		if err != nil {
-			return err
-		}
-
-		return parser.Load(
-			confmap.Provider(konf.Raw(), ""),
-			nil,
-			koanf.WithMergeFunc(func(src, dest map[string]any) error {
-				for key, val := range src {
-					dest[key] = merge(dest[key], val)
-				}
-
-				return nil
-			}))
-	}
-
 	if len(configFile) != 0 {
-		if err := loadAndMergeConfig(func() (*koanf.Koanf, error) {
-			return koanfFromYaml(configFile)
+		if err = c.loadAndMergeConfig(parser, func() (*koanf.Koanf, error) {
+			return koanfFromYaml(configFile, c.o.validateSyntax)
 		}); err != nil {
 			return err
 		}
 	}
 
-	if err := loadAndMergeConfig(func() (*koanf.Koanf, error) {
+	if err = c.loadAndMergeConfig(parser, func() (*koanf.Koanf, error) {
 		return koanfFromEnv(c.o.envPrefix)
 	}); err != nil {
 		return err
 	}
 
-	return parser.UnmarshalWithConf("", config, koanf.UnmarshalConf{
+	if err = parser.UnmarshalWithConf("", config, koanf.UnmarshalConf{
 		Tag: "koanf",
 		DecoderConfig: &mapstructure.DecoderConfig{
 			DecodeHook:       mapstructure.ComposeDecodeHookFunc(c.o.decodeHooks...),
@@ -100,14 +79,18 @@ func (c *configLoader) Load(config any) error {
 			Result:           config,
 			WeaklyTypedInput: true,
 		},
-	})
+	}); err != nil {
+		return err
+	}
+
+	return c.validateSemantics(config)
 }
 
 func (c *configLoader) configFile() (string, error) {
 	if len(c.o.configFile) != 0 {
 		_, err := os.Stat(c.o.configFile)
 		if err != nil {
-			return "", err
+			return "", errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
 		}
 
 		return c.o.configFile, nil
@@ -121,4 +104,35 @@ func (c *configLoader) configFile() (string, error) {
 	}
 
 	return "", nil
+}
+
+func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func() (*koanf.Koanf, error)) error {
+	konf, err := loadConfig()
+	if err != nil {
+		return err
+	}
+
+	err = parser.Load(
+		confmap.Provider(konf.Raw(), ""),
+		nil,
+		koanf.WithMergeFunc(func(src, dest map[string]any) error {
+			for key, val := range src {
+				dest[key] = merge(dest[key], val)
+			}
+
+			return nil
+		}))
+	if err != nil {
+		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
+	}
+
+	return nil
+}
+
+func (c *configLoader) validateSemantics(config any) error {
+	if err := c.o.validateSemantics(config); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "configuration is invalid").CausedBy(err)
+	}
+
+	return nil
 }

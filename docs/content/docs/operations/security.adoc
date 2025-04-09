@@ -12,9 +12,31 @@ description: To operate heimdall in a secure way, you should configure heimdall 
 
 :toc:
 
+== Defaults
+
+The following configurations and behaviors are enforced by default:
+
+* All inbound communication must use TLS. TLS configuration is required for all services and endpoints exposed by heimdall. This enforcement can be disabled (not recommended) by starting Heimdall with the `--insecure-skip-ingress-tls-enforcement` flag.
+
+* All outbound communication must use TLS. TLS configuration is required for all services and endpoints heimdall communicates with. This enforcement can be disabled (not recommended) by starting Heimdall with the `--insecure-skip-egress-tls-enforcement` flag.
+
+* If Heimdall is used in link:{{< relref "/docs/concepts/operating_modes.adoc#_proxy_mode" >}}[proxy mode], communication with upstream services while proxying requests must use TLS. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-upstream-tls-enforcement` flag.
+
+* Configuring the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`] property to allow insecure networks (`0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0`) is prohibited. See also link:{{< relref "security.adoc#_http_header_security_considerations" >}}[HTTP Header Security Considerations]. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag.
+
+* The authentication stage of the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-default-rule-enforcement` flag.
+
+[NOTE]
+====
+For development purposes, all of the above settings can be disabled at once by starting heimdall with the `--insecure` flag.
+
+If any of the above enforcement settings are disabled and an insecure configuration is used, warnings will be logged.
+====
+
+
 == HTTP Header Security Considerations
 
-If `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[Decision] and link:{{< relref "/docs/services/proxy.adoc#_trusted_proxies" >}}[Proxy] service configuration options) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:
+If `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configuration options]) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:
 
 * The value for the used HTTP scheme is taken from the `X-Forwarded-Proto` header.
 * The value for the used HTTP host and port is taken from the `X-Forwarded-Host` header.
@@ -80,29 +102,39 @@ Usage of external files can even allow you to rotate the configured secrets with
 
 NOTE: As of today secret reloading is only supported for link:{{< relref "/docs/configuration/types.adoc#_key_store" >}}[key stores] and link:{{< relref "/docs/operations/cache.adoc#_common_settings" >}}[Redis cache backend credentials].
 
-== Verifying Heimdall Binaries and Container Images
+== Verification of Heimdall Artifacts
 
-Heimdall binaries and container images are signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] and the https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature].
+Heimdall releases include three types of artifacts: archived binaries, container images, and Helm Charts (as OCI images). Each is signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] with its https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature]. Additionally, SLSA provenance is generated for all released artifacts, providing a higher level of assurance about the build process in accordance with https://slsa.dev/spec/v1.0/levels#build-l3-hardened-builds[SLSA Level 3] requirements. This chapter explains how to verify the signatures and provenance for each artifact type.
+
+NOTE: The Helm Chart is also released to gh-pages, but this version is neither signed nor accompanied by provenance.
 
 === Prerequisites
 
-* Install https://docs.sigstore.dev/docs/system_config/installation/[Cosign]
+To verify the artifacts, install the following tools:
 
-=== Container Image Signature Verification
+* https://docs.sigstore.dev/docs/system_config/installation/[Cosign]
+* https://github.com/slsa-framework/slsa-verifier#installation[slsa-verifier]
+* https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md[crane] (for Helm chart OCI image verification)
 
-The signatures are stored in a repository named `dadrus/heimdall-signatures`. To verify the container image using Cosign, execute the following command:
+These tools are required for verifying signatures and provenance across all artifact types.
+
+=== Container Image Verification
+
+==== Signature Verification with Cosign
+
+Signatures for container images are stored in `dadrus/heimdall-signatures`. To verify a released container image, run:
 
 [source, bash]
 ----
 COSIGN_REPOSITORY=dadrus/heimdall-signatures \
 cosign verify dadrus/heimdall:<tag> \
-  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/release.yaml* \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
 ----
 
-NOTE: If you pull heimdall images from ghcr.io, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-signatures` becomes `ghcr.io/dadrus/heimdall-signatures` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
+NOTE: For images from GHCR, use `ghcr.io/dadrus/heimdall-signatures` and `ghcr.io/dadrus/heimdall:<tag>`. For `dev` tagged images, adjust `--certificate-identity-regexp` to `https://github.com/dadrus/heimdall/.github/workflows/ci.yaml*`.
 
-In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
+On success, Cosign outputs JSON (similar to the example below) and exits with `0`.
 
 [source, json]
 ----
@@ -121,22 +153,22 @@ In successful verification case, cosign will print similar output to the one sho
       "1.3.6.1.4.1.57264.1.1": "https://token.actions.githubusercontent.com",
       "1.3.6.1.4.1.57264.1.2": "push",
       "1.3.6.1.4.1.57264.1.3": "04379639dc5f3fbfc260e883ee4938a35076d63e",
-      "1.3.6.1.4.1.57264.1.4": "CI",
+      "1.3.6.1.4.1.57264.1.4": "release",
       "1.3.6.1.4.1.57264.1.5": "dadrus/heimdall",
-      "1.3.6.1.4.1.57264.1.6": "refs/heads/main",
+      "1.3.6.1.4.1.57264.1.6": "refs/tags/v0.16.0",
       "Bundle": {
-        "SignedEntryTimestamp": "MEUCIFIvxs30zysroG6ItUNL+hfE3Cxn4GuiQe8d1u5N27OEAiEAqmzLrw80846U53nL/jtQ3U/2yx8Jqu8H75g6sihIcpg=",
+        "SignedEntryTimestamp": "MEUCIFIvxs30zysroG6...tQ3U/2yx8Jqu8H75g6sihIcpg=",
         "Payload": {
           "body": "eyJhcGlWZXJzaW9uIjoi...xTMHRMUW89In19fX0=",
           "integratedTime": 1692727396,
           "logIndex": 32332529,
-          "logID": "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"
+          "logID": "c0d23d6ad406973f9559...d8ffc5b8445c224f98b9591801d"
         }
       },
       "Issuer": "https://token.actions.githubusercontent.com",
-      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/ci.yaml@refs/heads/main",
-      "githubWorkflowName": "CI",
-      "githubWorkflowRef": "refs/heads/main",
+      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/release.yaml@refs/tags/v0.16.0",
+      "githubWorkflowName": "release",
+      "githubWorkflowRef": "refs/tags/v0.16.0",
       "githubWorkflowRepository": "dadrus/heimdall",
       "githubWorkflowSha": "04379639dc5f3fbfc260e883ee4938a35076d63e",
       "githubWorkflowTrigger": "push"
@@ -145,29 +177,100 @@ In successful verification case, cosign will print similar output to the one sho
 ]
 ----
 
-For released images, the `Subject` value ends with `@refs/tags/<release version>`.
+For released images, the `Subject` value ends with `@refs/tags/<release version>`, as indicated in the snippet above.
 
-=== Release Binary Signature Verification
+==== Provenance Verification with slsa-verifier
 
-The detached signatures, as well as certificates for all released archives are published together with the corresponding platform specific archive. The names of the signature files adhere to the `<archive>-keyless.sig` name pattern and the names of the certificate files adhere to the `<archive>-keyless.pem` name pattern, with `<archive>` being the archive for a platform specific build.
+To verify the SLSA provenance of a container image, first obtain its digest:
 
-To verify the signature of the archive, hence its contents including the platform specific heimdall binary with Cosign execute the following command:
+[source, bash]
+----
+IMAGE=$(docker inspect dadrus/heimdall:<tag> | jq -r '.[0].RepoDigests[0]')
+# instead of docker, you can also use podman, crane, or similar tools
+----
+
+Then verify:
+
+[source, bash]
+----
+slsa-verifier verify-image "${IMAGE}" \
+  --source-uri github.com/dadrus/heimdall \
+  --source-tag v<tag>
+----
+
+NOTE: Use `ghcr.io/dadrus/heimdall:<tag>` for GHCR images.
+
+On success, `slsa-verifier` prints a success message and exits with `0`.
+
+=== Helm Chart Verification
+
+==== Signature Verification with Cosign
+
+To verify the Helm Chart OCI image signature, run:
+
+[source, bash]
+----
+cosign verify ghcr.io/dadrus/heimdall/chart/heimdall:<tag> \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/release.yaml* \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
+----
+
+Replace `<tag>` with the chart version (e.g., `0.15.0`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
+
+==== Provenance Verification with slsa-verifier
+
+To verify the Helm Chart’s provenance, obtain its digest:
+
+[source, bash]
+----
+IMAGE=ghcr.io/dadrus/heimdall/chart/heimdall:<tag>
+DIGEST=$(crane digest "${IMAGE}")
+----
+
+Then verify:
+
+[source, bash]
+----
+slsa-verifier verify-image "${IMAGE}@${DIGEST}" \
+  --source-uri github.com/dadrus/heimdall \
+  --source-tag <heimdall release version>
+----
+
+Replace `<tag>` with the chart version (e.g., `0.15.0`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
+
+=== Release Binary Verification
+
+==== Signature Verification with Cosign
+
+Detached signatures and certificates for all released archives are published alongside each platform-specific archive (e.g., `<archive>.sig` and `<archive>.pem`). To verify the signature of an archive, including its platform-specific heimdall binary, run:
 
 [source, bash]
 ----
 cosign verify-blob /path/to/the/downloaded/<archive> \
-  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/release.yaml* \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  --signature /path/to/the/downloaded/<archive>-keyless.sig \
-  --certificate /path/to/the/downloaded/<archive>--keyless.pem
+  --signature /path/to/the/downloaded/<archive>.sig \
+  --certificate /path/to/the/downloaded/<archive>.pem
 ----
 
-In successful verification case, cosign will print the following output and exit with `0`.
+On successful verification, Cosign outputs `Verified OK` and exits with `0`.
+
+==== Provenance Verification with slsa-verifier
+
+SLSA provenance is published as `heimdall_<release version>.intoto.jsonl` for all released archives. To verify the provenance for a particular archive, run:
 
 [source, bash]
 ----
-Verified OK
+slsa-verifier verify-artifact \
+  --provenance-path /path/to/the/downloaded/heimdall_<release version>.intoto.jsonl \
+  --source-uri github.com/dadrus/heimdall \
+  --source-tag <release version> \
+  /path/to/the/downloaded/<archive>
 ----
+
+Replace `<release version>` with the specific version tag of the release (e.g., `v0.16.0`) that corresponds to the archive.
+
+On success, `slsa-verifier` prints a success message and exits with `0`.
 
 == Software Bill of Material (SBOM)
 
@@ -181,12 +284,12 @@ If you use a container image, the same SBOM is attached to the image as attestat
 ----
 COSIGN_REPOSITORY=dadrus/heimdall-sbom \
 cosign verify-attestation dadrus/heimdall:<tag> \
-  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/release.yaml* \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
   --type=cyclonedx
 ----
 
-NOTE: If you pull heimdall images from ghcr.io, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-sbom` becomes `ghcr.io/dadrus/heimdall-sbom` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
+NOTE: If you pull heimdall images from GHCR, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-sbom` becomes `ghcr.io/dadrus/heimdall-sbom` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
 
 In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
 
@@ -212,7 +315,7 @@ As one-liner, you can verify the signature and extract the SBOM as follows:
 ----
 COSIGN_REPOSITORY=dadrus/heimdall-sbom \
 cosign verify-attestation dadrus/heimdall:<tag> \
-  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/release.yaml* \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
   --type=cyclonedx | jq -r ".payload" | base64 -d | jq -r ".predicate" > heimdall.sbom.json
 ----

@@ -113,17 +113,15 @@ func (suite *ServiceTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 
 	conf := &config.Configuration{
-		Serve: config.ServeConfig{
-			Management: config.ServiceConfig{
-				Host: "127.0.0.1",
-				Port: port,
-				CORS: &config.CORS{},
-			},
+		Management: config.ManagementConfig{
+			Host: "127.0.0.1",
+			Port: port,
+			CORS: &config.CORS{},
 		},
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
 
-	listener, err := listener.New("tcp", "test", conf.Serve.Management.Address(), conf.Serve.Management.TLS, nil, nil)
+	listener, err := listener.New("tcp", "test", conf.Management.Address(), conf.Management.TLS, nil, nil)
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()
 
@@ -156,7 +154,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 
 	// WHEN
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	req, err := http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
 	suite.Require().NoError(err)
 
 	resp, err := client.Do(req)
@@ -219,7 +217,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	suite.khr.EXPECT().Keys().Return(keys)
 
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	req, err := http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
 	suite.Require().NoError(err)
 
 	resp1, err := client.Do(req)
@@ -232,7 +230,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	etagValue := resp1.Header.Get("ETag")
 	suite.Require().NotEmpty(etagValue)
 
-	req, err = http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	req, err = http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
 	suite.Require().NoError(err)
 	req.Header.Set("If-None-Match", etagValue)
 
@@ -251,7 +249,7 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 func (suite *ServiceTestSuite) TestHealthRequest() {
 	// GIVEN
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/health", nil)
+	req, err := http.NewRequestWithContext(suite.T().Context(), http.MethodGet, suite.addr+"/.well-known/health", nil)
 	suite.Require().NoError(err)
 
 	// WHEN

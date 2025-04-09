@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -37,7 +38,7 @@ type ruleSetEndpoint struct {
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*config.RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
 		return nil, errorchain.
@@ -70,7 +71,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, er
 
 	md := sha256.New()
 
-	ruleSet, err := config.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md), false)
+	ruleSet, err := config.ParseRules(app, resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md), false)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)

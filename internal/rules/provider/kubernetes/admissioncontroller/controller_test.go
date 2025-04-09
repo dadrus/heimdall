@@ -18,7 +18,6 @@ package admissioncontroller
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -121,19 +120,17 @@ func TestControllerLifecycle(t *testing.T) {
 		},
 	}
 
-	for _, tc := range []struct {
-		uc               string
+	for uc, tc := range map[string]struct {
 		tls              *config.TLS
 		request          func(t *testing.T, URL string) *http.Request
 		setupRuleFactory func(t *testing.T, factory *mocks.FactoryMock)
 		assert           func(t *testing.T, err error, resp *http.Response)
 	}{
-		{
-			uc: "admission controller not started",
+		"admission controller not started": {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, nil)
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, nil)
 				require.NoError(t, err)
 
 				return req
@@ -145,8 +142,7 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Contains(t, err.Error(), "connection refused")
 			},
 		},
-		{
-			uc:  "unsupported review request kind",
+		"unsupported review request kind": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
@@ -156,7 +152,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err := json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -189,8 +185,7 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Contains(t, status.Details.Causes[0].Message, "only rule sets")
 			},
 		},
-		{
-			uc:  "RuleSet filtered",
+		"RuleSet filtered": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
@@ -218,7 +213,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err = json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -247,8 +242,7 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Contains(t, status.Message, "RuleSet ignored")
 			},
 		},
-		{
-			uc:  "RuleSet validation fails",
+		"RuleSet validation fails": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
@@ -301,7 +295,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err = json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -340,8 +334,7 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Contains(t, status.Details.Causes[0].Message, "Test error")
 			},
 		},
-		{
-			uc:  "successful RuleSet validation",
+		"successful RuleSet validation": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
@@ -394,7 +387,7 @@ func TestControllerLifecycle(t *testing.T) {
 				data, err = json.Marshal(&reviewReq)
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -430,7 +423,7 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			reviewReq.Request.Kind.Kind = "RuleSet"
 			reviewReq.Request.Object.Raw = nil
@@ -456,12 +449,12 @@ func TestControllerLifecycle(t *testing.T) {
 			)
 			client := x.IfThenElse(tc.tls != nil, tlsClient, notTLSClient)
 
-			err = controller.Start(context.TODO())
+			err = controller.Start(t.Context())
 			require.NoError(t, err)
 
 			time.Sleep(20 * time.Millisecond)
 
-			defer controller.Stop(context.TODO())
+			defer controller.Stop(t.Context())
 
 			// WHEN
 			resp, err := client.Do(tc.request(t, serviceAddress))
@@ -472,7 +465,6 @@ func TestControllerLifecycle(t *testing.T) {
 			}
 
 			tc.assert(t, err, resp)
-			rf.AssertExpectations(t)
 		})
 	}
 }

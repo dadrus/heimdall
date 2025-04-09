@@ -1,0 +1,76 @@
+---
+title: "Caddy Integration"
+date: 2025-02-17T10:43:16+02:00
+draft: false
+weight: 11
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: This guide explains how to integrate heimdall with Caddy, an open-source web server and reverse proxy known for its automatic HTTPS and simple configuration.
+---
+
+:toc:
+
+https://caddyserver.com[Caddy] is a modern web server and reverse proxy known for its automatic HTTPS and simplicity. Heimdall can be integrated with Caddy using the https://caddyserver.com/docs/caddyfile/directives/forward_auth[forward_auth] directive. If heimdall responds with a 2XX status code, Caddy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.
+
+== Prerequisites
+
+* Integration with Caddy requires heimdall being operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+
+== Configuration Options
+
+Since Caddy offers extensive configuration options and heimdall supports multiple integration methods, you can choose any of the examples below. Each setup ensures heimdall can construct the URL of the protected backend server for rule matching purposes.
+
+In most cases, you need to configure heimdall to trust your Caddy instances by setting link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies]. Exceptions are detailed in the sections below.
+
+=== Forward all information in `X-Forwarded-*` headers
+
+This is the simplest integration method, leveraging the `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Uri` headers that Caddy automatically sets.
+
+NOTE: Proper configuration of `trusted_proxies` is mandatory when using this option to prevent spoofing of the `X-Forwarded-*` headers.
+
+[source]
+----
+# Caddyfile
+
+:9090 {
+    reverse_proxy upstream:8081
+
+    forward_auth https://heimdall:4456 { <1>
+        uri          / <2>
+        copy_headers Authorization <3>
+    }
+}
+----
+<1> Configures Caddy to authenticate requests with heimdall before proxying them to the upstream service. Directives before this line are unrelated to heimdall integration and are included for configuration completeness.
+<2> Specifies heimdall's verification endpoint. Here, `/` is used since all relevant request details are passed via `X-Forwarded-*` headers.
+<3> Ensures Caddy forwards the `Authorization` header set by heimdall to the upstream service. This value depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration)
+
+=== Forward only the path and query information
+
+With this method, `X-Forwarded-*` headers are not used, relying solely on the standard request data. This means the original request's HTTP scheme and client IP are not available, but there is no need to configure the `trusted_proxies` property.
+
+[source]
+----
+# Caddyfile
+
+:9090 {
+    reverse_proxy upstream:8081
+
+    forward_auth https://heimdall:4456 { <1>
+        uri          {http.request.uri} <2>
+        method       {http.request.method} <3>
+        header_down  Host {http.request.hostport} <4>
+        copy_headers Authorization <5>
+    }
+}
+----
+<1> As in the previous approach, Caddy is configured to authenticate requests with heimdall before proxying them to the upstream service. Directives before this line are unrelated to heimdall integration and are included for configuration completeness.
+<2> Specifies heimdall’s verification endpoint. Unlike the previous integration method, the `uri` is set to the original request URI.
+<3> Ensures Caddy forwards the request using the same HTTP method as the original request.
+<4> Sets the `Host` header to match the original request, making it accessible to Heimdall.
+<5> Ensures Caddy forwards the `Authorization` header set by heimdall to the upstream service. This value depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration.
+
+== Additional Resources
+
+Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.

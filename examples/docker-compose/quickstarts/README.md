@@ -12,7 +12,7 @@ In that setup heimdall is not integrated with any other reverse proxy.
 1. Start the environment with
 
    ```bash
-   docker-compose -f docker-compose.yaml -f docker-compose-proxy.yaml up
+   docker compose -f docker-compose.yaml -f docker-compose-proxy.yaml up
    ```
 
 2. Play with it
@@ -31,10 +31,12 @@ In that setup heimdall is not integrated with any other reverse proxy.
 
 In that setup heimdall is integrated with Traefik. All requests are sent to traefik, which then contacts heimdall as external authorization middleware and depending on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
 
+*NOTE:* This setup uses Traefik's Docker provider and mounts the `docker.sock` file into the Traefik container. Your docker installation may differ requiring a modification of the configured volume mount in the `docker-compose-traefik.yaml` file.
+
 1. Start the environment with
 
    ```bash
-   docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml up
+   docker compose -f docker-compose.yaml -f docker-compose-traefik.yaml up
    ```
 
 2. Play with it
@@ -57,16 +59,16 @@ In that setup heimdall is integrated with Envoy Proxy. All requests are sent to 
    ether
 
    ```bash
-   docker-compose -f docker-compose.yaml -f docker-compose-envoy-http.yaml up
+   docker compose -f docker-compose.yaml -f docker-compose-envoy-http.yaml up
    ```
    
-   to see integration using the HTTP decision service in action, or
+   to see integration over HTTP in action, or
 
    ```bash
-   docker-compose -f docker-compose.yaml -f docker-compose-envoy-grpc.yaml up
+   docker compose -f docker-compose.yaml -f docker-compose-envoy-grpc.yaml up
    ```
 
-   to see integration using the envoy GRPC extauthz decision service in action (not available before v0.7.0-alpha).
+   to see the envoy GRPC extauthz integration in action (not available before v0.7.0-alpha).
 
 2. Play with it
 

@@ -27,19 +27,25 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -48,8 +54,9 @@ func TestOAuth2IntrospectionAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		config []byte
-		assert func(t *testing.T, err error, a *oauth2IntrospectionAuthenticator)
+		enforceTLS bool
+		config     []byte
+		assert     func(t *testing.T, err error, a *oauth2IntrospectionAuthenticator)
 	}{
 		"with unsupported fields": {
 			config: []byte(`
@@ -97,10 +104,11 @@ introspection_endpoint:
 				require.ErrorContains(t, err, "'introspection_endpoint'.'url' must be a valid URL")
 			},
 		},
-		"with minimal introspection endpoint based config": {
+		"with minimal introspection endpoint based config with used enforced TLS": {
+			enforceTLS: true,
 			config: []byte(`
 introspection_endpoint:
-  url: http://foobar.local
+  url: https://foobar.local
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -110,9 +118,9 @@ introspection_endpoint:
 				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
-				assert.Equal(t, "http://foobar.local", md.IntrospectionEndpoint.URL)
+				assert.Equal(t, "https://foobar.local", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPost, md.IntrospectionEndpoint.Method)
 				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
 				assert.Contains(t, md.IntrospectionEndpoint.Headers, "Content-Type")
@@ -147,9 +155,22 @@ introspection_endpoint:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
+				assert.Equal(t, "with minimal introspection endpoint based config with used enforced TLS", auth.ID())
+			},
+		},
+		"with minimal introspection endpoint based config with enforced but disabled TLS": {
+			enforceTLS: true,
+			config: []byte(`
+introspection_endpoint:
+  url: http://foobar.local
+`),
+			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
+				t.Helper()
 
-				assert.Equal(t, "with minimal introspection endpoint based config", auth.ID())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.Contains(t, err.Error(), "'introspection_endpoint'.'url' scheme must be https")
 			},
 		},
 		"with valid introspection endpoint based config with overwrites": {
@@ -186,7 +207,7 @@ allow_fallback_on_error: true
 				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPatch, md.IntrospectionEndpoint.Method)
@@ -224,7 +245,7 @@ allow_fallback_on_error: true
 				assert.True(t, ok)
 				assert.Equal(t, "some_claim", sess.IDFrom)
 
-				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.True(t, auth.allowFallbackOnError)
 
 				assert.Equal(t, "with valid introspection endpoint based config with overwrites", auth.ID())
 			},
@@ -242,7 +263,7 @@ metadata_endpoint:
 				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
 			},
 		},
-		"with minimal metadata endpoint based config": {
+		"with metadata endpoint based config": {
 			config: []byte(`
 metadata_endpoint:
   url: http://foobar.local
@@ -282,9 +303,87 @@ metadata_endpoint:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.False(t, auth.allowFallbackOnError)
 
-				assert.Equal(t, "with minimal metadata endpoint based config", auth.ID())
+				assert.Equal(t, "with metadata endpoint based config", auth.ID())
+			},
+		},
+		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
+			enforceTLS: true,
+			config: []byte(`
+metadata_endpoint:
+  url: https://test.com
+  resolved_endpoints:
+    jwks_uri:
+      auth:
+        type: oauth2_client_credentials
+        config:
+          token_url: https://example.com/token
+          client_id: foo
+          client_secret: bar
+      retry:
+        give_up_after: 1m
+        max_delay: 5s
+      http_cache:
+        enabled: true
+        default_ttl: 10m`),
+			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// endpoint settings
+				mdep, ok := auth.r.(*oauth2.MetadataEndpoint)
+				require.True(t, ok)
+
+				assert.Equal(t, "https://test.com", mdep.URL)
+				require.Len(t, mdep.ResolvedEndpoints, 1)
+				reps, ok := mdep.ResolvedEndpoints["jwks_uri"]
+				require.True(t, ok)
+				assert.Equal(t, &endpoint.HTTPCache{
+					Enabled:    true,
+					DefaultTTL: 10 * time.Minute,
+				}, reps.HTTPCache)
+				assert.Equal(t, &endpoint.Retry{
+					GiveUpAfter: 1 * time.Minute,
+					MaxDelay:    5 * time.Second,
+				}, reps.Retry)
+				assert.Equal(t, &authstrategy.OAuth2ClientCredentials{
+					Config: clientcredentials.Config{
+						TokenURL:     "https://example.com/token",
+						ClientID:     "foo",
+						ClientSecret: "bar",
+					},
+				}, reps.AuthStrategy)
+
+				// assert assertions
+				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
+				assert.Empty(t, auth.a.TrustedIssuers, 1)
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+				assert.Empty(t, auth.a.Audiences)
+
+				// assert ttl
+				assert.Nil(t, auth.ttl)
+
+				// assert token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+
+				// assert subject factory
+				assert.NotNil(t, auth.sf)
+				assert.IsType(t, &SubjectInfo{}, auth.sf)
+				sess, ok := auth.sf.(*SubjectInfo)
+				assert.True(t, ok)
+				assert.Equal(t, "sub", sess.IDFrom)
+
+				assert.False(t, auth.allowFallbackOnError)
+
+				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
 			},
 		},
 	} {
@@ -293,8 +392,19 @@ metadata_endpoint:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
+			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(es),
+				validation.WithErrorTranslator(es),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
 			// WHEN
-			a, err := newOAuth2IntrospectionAuthenticator(nil, uc, conf)
+			a, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -388,7 +498,7 @@ assertions:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "with overwrites without cache", configured.ID())
 			},
 		},
@@ -416,7 +526,7 @@ subject:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config without cache, target config with cache overwrite", configured.ID())
 			},
 		},
@@ -456,7 +566,7 @@ cache_ttl: 5s`),
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 
 				assert.Equal(t, "metadata endpoint based prototype config without cache, config with overwrites incl cache", configured.ID())
 			},
@@ -492,7 +602,7 @@ cache_ttl: 15s
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config with cache, target config with overwrites including cache", configured.ID())
 			},
 		},
@@ -519,20 +629,30 @@ subject:
 				assert.Equal(t, prototype.a, configured.a)
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.True(t, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config with defaults, target config with fallback on error enabled", configured.ID())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newOAuth2IntrospectionAuthenticator(nil, uc, pc)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -613,7 +733,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		authenticator  *oauth2IntrospectionAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *heimdallmocks.RequestContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *oauth2IntrospectionAuthenticator)
@@ -622,7 +742,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		"with failing auth data source": {
 			authenticator: &oauth2IntrospectionAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -654,7 +774,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -686,7 +806,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -721,7 +841,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -768,7 +888,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -830,7 +950,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -895,7 +1015,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -966,7 +1086,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1054,7 +1174,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1147,7 +1267,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1242,7 +1362,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1330,7 +1450,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1395,7 +1515,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1436,7 +1556,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1509,7 +1629,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1615,7 +1735,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1681,6 +1801,96 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes["exp"])
 			},
 		},
+		"with introspection endpoint requiring authentication": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				r: &oauth2.MetadataEndpoint{
+					Endpoint: endpoint.Endpoint{URL: oidcSrv.URL},
+					ResolvedEndpoints: map[string]oauth2.ResolvedEndpointSettings{
+						"introspection_endpoint": {
+							AuthStrategy: &authstrategy.APIKey{
+								In:    "header",
+								Name:  "X-Api-Key",
+								Value: "very-secret",
+							},
+						},
+					},
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf: &SubjectInfo{IDFrom: "sub"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkIntrospectionRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "very-secret", req.Header.Get("X-Api-Key"))
+					assert.Equal(t, http.MethodPost, req.Method)
+
+					require.NoError(t, req.ParseForm())
+					assert.Len(t, req.Form, 2)
+					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
+					assert.Equal(t, "test_access_token", req.Form.Get("token"))
+				}
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "Bearer",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+				})
+				require.NoError(t, err)
+
+				introspectionResponseContentType = "application/json"
+				introspectionResponseContent = rawIntrospectResponse
+				introspectionResponseCode = http.StatusOK
+
+				checkMetadataRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodGet, req.Method)
+				}
+
+				metadataResponseContentType = "application/json"
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"introspection_endpoint": srv.URL,
+					"issuer":                 oidcSrv.URL,
+				})
+				require.NoError(t, err)
+				metadataResponseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, introspectionEndpointCalled)
+
+				require.NoError(t, err)
+				require.NotNil(t, sub)
+			},
+		},
 		"with default cache, with cache hit and successful execution": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -1702,7 +1912,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1769,7 +1979,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.ContextMock,
+					_ *heimdallmocks.RequestContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *oauth2IntrospectionAuthenticator,
@@ -1782,8 +1992,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewContextMock(t)
-			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
+			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
@@ -1975,4 +2185,14 @@ func TestCacheTTLCalculation(t *testing.T) {
 			tc.assert(t, ttl)
 		})
 	}
+}
+
+func TestOauth2IntrospectionAuthenticatorIsInsecure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := oauth2IntrospectionAuthenticator{}
+
+	// WHEN & THEN
+	require.False(t, auth.IsInsecure())
 }

@@ -139,7 +139,7 @@ func (r *RequestContext) Body() any {
 	return r.savedBody
 }
 
-func (r *RequestContext) AppContext() context.Context             { return r.ctx }
+func (r *RequestContext) Context() context.Context                { return r.ctx }
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }

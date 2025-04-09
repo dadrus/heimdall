@@ -18,7 +18,6 @@ package endpoint
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -44,13 +43,11 @@ func TestEndpointCreateClient(t *testing.T) {
 
 	peerName := "foobar"
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		endpoint Endpoint
 		assert   func(t *testing.T, client *http.Client)
 	}{
-		{
-			uc:       "for endpoint without configured retry policy and without http cache",
+		"for endpoint without configured retry policy and without http cache": {
 			endpoint: Endpoint{URL: "http://foo.bar"},
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
@@ -59,8 +56,7 @@ func TestEndpointCreateClient(t *testing.T) {
 				require.True(t, ok)
 			},
 		},
-		{
-			uc:       "for endpoint without configured retry policy, but with http cache",
+		"for endpoint without configured retry policy, but with http cache": {
 			endpoint: Endpoint{URL: "http://foo.bar", HTTPCache: &HTTPCache{Enabled: true}},
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
@@ -73,8 +69,7 @@ func TestEndpointCreateClient(t *testing.T) {
 				require.True(t, ok)
 			},
 		},
-		{
-			uc: "for endpoint with configured retry policy and without http cache",
+		"for endpoint with configured retry policy and without http cache": {
 			endpoint: Endpoint{
 				URL:   "http://foo.bar",
 				Retry: &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
@@ -92,8 +87,7 @@ func TestEndpointCreateClient(t *testing.T) {
 				require.True(t, ok)
 			},
 		},
-		{
-			uc: "for endpoint with configured retry policy and with http cache with default cache ttl",
+		"for endpoint with configured retry policy and with http cache with default cache ttl": {
 			endpoint: Endpoint{
 				URL:       "http://foo.bar",
 				Retry:     &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
@@ -117,7 +111,7 @@ func TestEndpointCreateClient(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// THEN
 			tc.assert(t, tc.endpoint.CreateClient(peerName))
 		})
@@ -145,15 +139,13 @@ func TestEndpointCreateRequest(t *testing.T) {
 		}
 	}
 
-	for _, tc := range []struct {
-		uc       string
+	for uc, tc := range map[string]struct {
 		endpoint Endpoint
 		renderer Renderer
 		body     []byte
 		assert   func(t *testing.T, request *http.Request, err error)
 	}{
-		{
-			uc:       "with only URL set",
+		"with only URL set": {
 			endpoint: Endpoint{URL: "http://foo.bar"},
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
@@ -166,8 +158,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Empty(t, request.Header)
 			},
 		},
-		{
-			uc:       "with only URL and valid method set",
+		"with only URL and valid method set": {
 			endpoint: Endpoint{URL: "http://test.org", Method: "GET"},
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
@@ -180,8 +171,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Empty(t, request.Header)
 			},
 		},
-		{
-			uc:       "with invalid URL",
+		"with invalid URL": {
 			endpoint: Endpoint{URL: "://test.org"},
 			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
@@ -191,8 +181,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to create a request")
 			},
 		},
-		{
-			uc:       "with only URL, method and body set",
+		"with only URL, method and body set": {
 			endpoint: Endpoint{URL: "http://test.org", Method: "GET"},
 			body:     []byte(`foobar`),
 			assert: func(t *testing.T, request *http.Request, err error) {
@@ -206,8 +195,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Empty(t, request.Header)
 			},
 		},
-		{
-			uc: "with auth strategy, applied successfully",
+		"with auth strategy, applied successfully": {
 			endpoint: Endpoint{
 				URL: "http://test.org",
 				AuthStrategy: func() AuthenticationStrategy {
@@ -235,8 +223,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "test", request.Header.Get("X-Test"))
 			},
 		},
-		{
-			uc: "with failing auth strategy",
+		"with failing auth strategy": {
 			endpoint: Endpoint{
 				URL: "http://test.org",
 				AuthStrategy: func() AuthenticationStrategy {
@@ -254,8 +241,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to authenticate request")
 			},
 		},
-		{
-			uc: "with auth strategy and additional header",
+		"with auth strategy and additional header": {
 			endpoint: Endpoint{
 				URL:    "http://test.org",
 				Method: "PATCH",
@@ -284,8 +270,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "baz", request.Header.Get("Foo-Bar"))
 			},
 		},
-		{
-			uc: "with templated url",
+		"with templated url": {
 			endpoint: Endpoint{
 				URL: "http://test.org/{{ .Values.key }}",
 			},
@@ -297,8 +282,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "http://test.org/foo", request.URL.String())
 			},
 		},
-		{
-			uc: "with error while rendering templated url",
+		"with error while rendering templated url": {
 			endpoint: Endpoint{
 				URL: "http://test.org/{{ .Values.foo }",
 			},
@@ -311,8 +295,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to render URL")
 			},
 		},
-		{
-			uc: "with templated header",
+		"with templated header": {
 			endpoint: Endpoint{
 				URL: "http://test.org",
 				Headers: map[string]string{
@@ -331,8 +314,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "bar", request.Header.Get("X-My-Header-2"))
 			},
 		},
-		{
-			uc: "with error while rendering templated header",
+		"with error while rendering templated header": {
 			endpoint: Endpoint{
 				URL:     "http://test.org",
 				Headers: map[string]string{"X-My-Header-1": "{{ .Values.key }"},
@@ -347,14 +329,14 @@ func TestEndpointCreateRequest(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			var body io.Reader
 			if tc.body != nil {
 				body = bytes.NewReader(tc.body)
 			}
 
 			// WHEN
-			req, err := tc.endpoint.CreateRequest(context.Background(), body, tc.renderer)
+			req, err := tc.endpoint.CreateRequest(t.Context(), body, tc.renderer)
 
 			// THEN
 			tc.assert(t, req, err)
@@ -383,15 +365,13 @@ func TestEndpointSendRequest(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		endpoint       Endpoint
 		body           []byte
 		instructServer func(t *testing.T)
 		assert         func(t *testing.T, response []byte, err error)
 	}{
-		{
-			uc:       "with failing request creation",
+		"with failing request creation": {
 			endpoint: Endpoint{URL: "://test.org"},
 			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
@@ -401,8 +381,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				assert.Contains(t, err.Error(), "failed to create a request")
 			},
 		},
-		{
-			uc:       "with dns error",
+		"with dns error": {
 			endpoint: Endpoint{URL: "http://heimdall.test.local"},
 			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
@@ -412,8 +391,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				assert.Contains(t, err.Error(), "lookup heimdall")
 			},
 		},
-		{
-			uc:       "with unexpected response from server",
+		"with unexpected response from server": {
 			endpoint: Endpoint{URL: srv.URL},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -428,8 +406,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				assert.Contains(t, err.Error(), "unexpected response code")
 			},
 		},
-		{
-			uc: "successful",
+		"successful": {
 			endpoint: Endpoint{
 				URL:    srv.URL,
 				Method: "PATCH",
@@ -462,7 +439,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 					rawData, err := io.ReadAll(request.Body)
 					require.NoError(t, err)
-					assert.Equal(t, []byte(`{"hello":"world"}`), rawData)
+					assert.JSONEq(t, `{"hello":"world"}`, string(rawData))
 				}
 			},
 			assert: func(t *testing.T, response []byte, err error) {
@@ -474,7 +451,7 @@ func TestEndpointSendRequest(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			//  GIVEN
 			statusCode = http.StatusOK
 			checkRequest = func(*http.Request) { t.Helper() }
@@ -490,7 +467,7 @@ func TestEndpointSendRequest(t *testing.T) {
 			}
 
 			// WHEN
-			response, err := tc.endpoint.SendRequest(context.Background(), body, nil)
+			response, err := tc.endpoint.SendRequest(t.Context(), body, nil)
 
 			// THEN
 			tc.assert(t, response, err)

@@ -21,11 +21,23 @@ import (
 	"errors"
 	"time"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/jellydator/ttlcache/v3"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
-	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/x"
+)
+
+const (
+	defaultMemoryLimit = 128 * bytesize.MB
+
+	// An empty cache takes up 374 bytes.
+	// Each entry incurs overhead: 16 bytes for the string (key) metadata and 24 bytes
+	// for the []byte (value) metadata. The cache also maintains internal structures,
+	// averaging about 144 bytes per entry. Combined, this results in an overhead of
+	// approximately 184 bytes, excluding the empty cache size.
+	ttlCacheOverheadPerEntry = 184
 )
 
 var ErrNoCacheEntry = errors.New("no cache entry")
@@ -35,8 +47,37 @@ func init() { // nolint: gochecknoinits
 	cache.Register("in-memory", cache.FactoryFunc(NewCache))
 }
 
-func NewCache(_ map[string]any, _ watcher.Watcher, _ certificate.Observer) (cache.Cache, error) {
-	return &Cache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}, nil
+func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
+	type Config struct {
+		EntryLimit  uint64             `mapstructure:"entry_limit"`
+		MemoryLimit *bytesize.ByteSize `mapstructure:"memory_limit"`
+	}
+
+	var cfg Config
+
+	if len(conf) != 0 {
+		err := decodeConfig(conf, &cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	memoryLimit := x.IfThenElseExec(cfg.MemoryLimit == nil,
+		func() uint64 { return uint64(defaultMemoryLimit) },
+		func() uint64 { return uint64(*cfg.MemoryLimit) },
+	)
+
+	return &Cache{
+		c: ttlcache.New[string, []byte](
+			ttlcache.WithDisableTouchOnHit[string, []byte](),
+			ttlcache.WithCapacity[string, []byte](cfg.EntryLimit),
+			ttlcache.WithMaxCost[string, []byte](memoryLimit,
+				func(item *ttlcache.Item[string, []byte]) uint64 {
+					return uint64(len(item.Key()) + len(item.Value()) + ttlCacheOverheadPerEntry) //nolint:gosec
+				},
+			),
+		),
+	}, nil
 }
 
 type Cache struct {

@@ -26,7 +26,7 @@ With `text` and `gelf` being the available formats. `text` is the default format
 +
 WARNING: Usage of `text` (default) format is not recommended for production deployments as it requires more computational resources and is hence slow.
 +
-.Configuring logging to emit logs using GELD format.
+.Configuring logging to emit logs using GELF format.
 ====
 [source, yaml]
 ----
@@ -147,7 +147,7 @@ If the event has been emitted for a GRPC request, following fields are set:
 
 * `_grpc_method` - The full GRPC method used.
 
-If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
+If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration]), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
@@ -217,7 +217,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described below and can be used to tune the behaviour.
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described below and can be used to tune the behavior.
 
 === Configuration
 
@@ -271,7 +271,7 @@ Since not every service in a multi-service system may set or understand the abov
 
 All of these are supported by heimdall. In addition, following propagators can be configured as well:
 
-* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.footnote:[Datadog supports the OTLP protokoll. For that reason, there is no exporter available.]
+* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.footnote:[Datadog supports the OTLP protocol. For that reason, there is no exporter available.]
 
 Configured propagators are used for inbound, as well as for outbound traffic.
 
@@ -289,14 +289,14 @@ All of these are supported by heimdall. In addition, following exporters can be 
 
 === Example Configuration
 
-The environment variables set below configure heimdall to use Jaeger propagator and to export the spans via OTLP over grpc to the collector available under `\http://collector:4317`.
+The environment variables set below configure heimdall to use Jaeger propagator and to export the spans via OTLP over grpc to the collector available under `\https://collector:4317`.
 
 [source,text]
 ----
 OTEL_PROPAGATORS=jaeger
 OTEL_TRACES_EXPORTER=otlp
 OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
-OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://collector:4317
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://collector:4317
 ----
 
 If your environment supports OpenTelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
@@ -345,7 +345,7 @@ You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` envir
 All, but custom metrics adhere to the https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/[OpenTelementry semantic conventions]. For that reason, only the custom metrics are listed in the table below.
 
 ==== Metric: `certificate.expiry`
-Number of seconds until a certificate used by a particular service (decision, proxy, management), or mechanism (e.g. jwt finalizer) expires. The metric type is UpDownCounter und the unit is s.
+Number of seconds until a certificate used by a particular service (main, management), or mechanism (e.g. jwt finalizer) expires. The metric type is UpDownCounter und the unit is s.
 
 [cols="2,1,5"]
 |===

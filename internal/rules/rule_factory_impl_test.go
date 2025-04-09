@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"errors"
 	"net/url"
 	"testing"
 
@@ -36,20 +37,18 @@ import (
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestRuleFactoryNew(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc             string
-		config         *config.Configuration
-		configureMocks func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
-		assert         func(t *testing.T, err error, ruleFactory *ruleFactory)
+	for uc, tc := range map[string]struct {
+		config                   *config.Configuration
+		enforceSecureDefaultRule bool
+		configureMocks           func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
+		assert                   func(t *testing.T, err error, ruleFactory *ruleFactory)
 	}{
-		{
-			uc:     "new factory without default rule",
+		"new factory without default rule": {
 			config: &config.Configuration{},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -60,8 +59,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.Nil(t, ruleFactory.DefaultRule())
 			},
 		},
-		{
-			uc: "new factory with default rule with unsupported object in execute definition",
+		"new factory with default rule with unsupported object in execute definition": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -77,8 +75,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
-		{
-			uc: "new factory with default rule with unsupported object in error handler definition",
+		"new factory with default rule with unsupported object in error handler definition": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{
@@ -94,8 +91,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
-		{
-			uc: "new factory with malformed default rule, where authenticator loading happens after subject handlers",
+		"new factory with malformed default rule, where authenticator loading happens after subject handlers": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -118,8 +114,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "an authenticator")
 			},
 		},
-		{
-			uc: "new factory with malformed default rule, where authenticator loading happens after finalizers",
+		"new factory with malformed default rule, where authenticator loading happens after finalizers": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -141,8 +136,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "an authenticator")
 			},
 		},
-		{
-			uc: "new factory with default rule, where authenticator loading results in an error",
+		"new factory with default rule, where authenticator loading results in an error": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
@@ -151,17 +145,17 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "new factory with malformed default rule, where authorizer loading happens after finalizers",
+		"new factory with malformed default rule, where authorizer loading happens after finalizers": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -183,8 +177,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "before an authorizer")
 			},
 		},
-		{
-			uc: "new factory with default rule, where authorizer loading results in an error",
+		"new factory with default rule, where authorizer loading results in an error": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
@@ -193,17 +186,17 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthorizer(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateAuthorizer(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "new factory with malformed default rule, where contextualizer loading happens after finalizers",
+		"new factory with malformed default rule, where contextualizer loading happens after finalizers": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -225,8 +218,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "before a contextualizer")
 			},
 		},
-		{
-			uc: "new factory with default rule, where contextualizer loading results in an error",
+		"new factory with default rule, where contextualizer loading results in an error": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
@@ -236,17 +228,16 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "foo", mock.Anything).
-					Return(nil, testsupport.ErrTestPurpose)
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "new factory with default rule, where finalizer loading results in an error",
+		"new factory with default rule, where finalizer loading results in an error": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"finalizer": "foo"}},
@@ -255,17 +246,17 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateFinalizer(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateFinalizer(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "new factory with default rule, where error_handler loading results in an error",
+		"new factory with default rule, where error_handler loading results in an error": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
@@ -274,17 +265,17 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateErrorHandler(mock.Anything, "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateErrorHandler(mock.Anything, "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				require.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "new factory with empty default rule",
+		"new factory with empty default rule": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{},
@@ -298,8 +289,8 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "no authenticator")
 			},
 		},
-		{
-			uc: "new factory with default rule, configured with all required elements",
+		"new factory with insecure default rule, but enforced security settings": {
+			enforceSecureDefaultRule: true,
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -310,7 +301,33 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
+				am := mocks2.NewAuthenticatorMock(t)
+				am.EXPECT().IsInsecure().Return(true)
+
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(am, nil)
+			},
+			assert: func(t *testing.T, err error, _ *ruleFactory) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "insecure default rule")
+			},
+		},
+		"new factory with not security enforced default rule, configured with all required elements": {
+			config: &config.Configuration{
+				Default: &config.DefaultRule{
+					Execute: []config.MechanismConfig{
+						{"authenticator": "bar"},
+					},
+				},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+				t.Helper()
+
+				auth := mocks2.NewAuthenticatorMock(t)
+				auth.EXPECT().IsInsecure().Return(true)
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(auth, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -331,8 +348,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.Empty(t, defRule.eh)
 			},
 		},
-		{
-			uc: "new factory with default rule, configured with all possible elements",
+		"new factory with default rule, configured with all possible elements": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -350,7 +366,9 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
+				auth := mocks2.NewAuthenticatorMock(t)
+				auth.EXPECT().IsInsecure().Return(false)
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(auth, nil)
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateAuthorizer(mock.Anything, "zab", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "foo", mock.Anything).Return(nil, nil)
@@ -377,7 +395,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
@@ -387,7 +405,13 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks(t, handlerFactory)
 
 			// WHEN
-			factory, err := NewRuleFactory(handlerFactory, tc.config, config.DecisionMode, log.Logger)
+			factory, err := NewRuleFactory(
+				handlerFactory,
+				tc.config,
+				config.DecisionMode,
+				log.Logger,
+				config.SecureDefaultRule(tc.enforceSecureDefaultRule),
+			)
 
 			// THEN
 			var (
@@ -411,16 +435,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 	trueValue := true
 
-	for _, tc := range []struct {
-		uc             string
+	for uc, tc := range map[string]struct {
 		opMode         config.OperationMode
 		config         config2.Rule
 		defaultRule    *ruleImpl
 		configureMocks func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
-		{
-			uc:     "in proxy mode without forward_to definition",
+		"in proxy mode without forward_to definition": {
 			opMode: config.ProxyMode,
 			config: config2.Rule{
 				ID:      "foobar",
@@ -434,8 +456,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Contains(t, err.Error(), "requires forward_to")
 			},
 		},
-		{
-			uc: "with error while creating method matcher",
+		"with error while creating method matcher": {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
@@ -459,8 +480,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "methods list contains empty values")
 			},
 		},
-		{
-			uc: "with error while creating route path params matcher",
+		"with error while creating route path params matcher": {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
@@ -488,8 +508,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "failed creating route '/foo/:bar'")
 			},
 		},
-		{
-			uc: "with error while creating host matcher",
+		"with error while creating host matcher": {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
@@ -513,8 +532,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "failed to compile host matching expression")
 			},
 		},
-		{
-			uc: "with error while creating execute pipeline",
+		"with error while creating execute pipeline": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -523,17 +541,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				assert.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "with error while creating on_error pipeline",
+		"with error while creating on_error pipeline": {
 			config: config2.Rule{
 				ID:           "foobar",
 				Matcher:      config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -542,17 +560,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateErrorHandler("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+				mhf.EXPECT().CreateErrorHandler("test", "foo", mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				assert.ErrorContains(t, err, "test error")
 			},
 		},
-		{
-			uc: "without default rule and without any execute configuration",
+		"without default rule and without any execute configuration": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -565,8 +583,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Contains(t, err.Error(), "no authenticator defined")
 			},
 		},
-		{
-			uc: "without default rule and minimum required configuration in decision mode",
+		"without default rule and minimum required configuration in decision mode": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -598,8 +615,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Empty(t, rul.eh)
 			},
 		},
-		{
-			uc:     "without default rule and minimum required configuration in proxy mode",
+		"without default rule and minimum required configuration in proxy mode": {
 			opMode: config.ProxyMode,
 			config: config2.Rule{
 				ID:      "foobar",
@@ -634,8 +650,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.backend)
 			},
 		},
-		{
-			uc: "with default rule and regular rule with id and a single route only",
+		"with default rule and regular rule with id and a single route only": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -664,8 +679,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.eh, 1)
 			},
 		},
-		{
-			uc: "with default rule and with all attributes defined by the regular rule itself in decision mode",
+		"with default rule and with all attributes defined by the regular rule itself in decision mode": {
 			config: config2.Rule{
 				ID: "foobar",
 				Matcher: config2.Matcher{
@@ -744,8 +758,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.eh[0])
 			},
 		},
-		{
-			uc:     "with default rule and with all attributes defined by the rule itself in proxy mode",
+		"with default rule and with all attributes defined by the rule itself in proxy mode": {
 			opMode: config.ProxyMode,
 			config: config2.Rule{
 				ID: "foobar",
@@ -840,8 +853,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.backend)
 			},
 		},
-		{
-			uc: "with conditional execution configuration type error in the regular pipeline",
+		"with conditional execution configuration type error in the regular pipeline": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -863,8 +875,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "unexpected type")
 			},
 		},
-		{
-			uc: "with empty conditional execution configuration",
+		"with empty conditional execution configuration": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -886,8 +897,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "empty execution condition")
 			},
 		},
-		{
-			uc: "with conditional execution for some mechanisms",
+		"with conditional execution for some mechanisms": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -952,8 +962,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Empty(t, rul.eh)
 			},
 		},
-		{
-			uc: "with bad conditional expression in the error pipeline",
+		"with bad conditional expression in the error pipeline": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -988,8 +997,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "unexpected type")
 			},
 		},
-		{
-			uc: "with conditional execution for error handler",
+		"with conditional execution for error handler": {
 			config: config2.Rule{
 				ID:      "foobar",
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
@@ -1047,7 +1055,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
@@ -1087,21 +1095,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 func TestRuleFactoryConfigExtraction(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
+	for uc, tc := range map[string]struct {
 		config any
 		assert func(t *testing.T, conf map[string]any)
 	}{
-		{
-			uc: "nil config",
+		"nil config": {
 			assert: func(t *testing.T, conf map[string]any) {
 				t.Helper()
 
 				require.Nil(t, conf)
 			},
 		},
-		{
-			uc:     "map[string]any",
+		"map[string]any": {
 			config: map[string]any{"foo": "bar", "baz": []string{"zab"}},
 			assert: func(t *testing.T, conf map[string]any) {
 				t.Helper()
@@ -1112,7 +1117,7 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			conf := getConfig(tc.config)
 

@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,12 @@
 package rules
 
 import (
+	"context"
 	"errors"
 
+	"github.com/rs/zerolog"
+
+	config2 "github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -28,14 +32,16 @@ import (
 var ErrUnsupportedRuleSetVersion = errors.New("unsupported rule set version")
 
 type ruleSetProcessor struct {
-	r rule.Repository
-	f rule.Factory
+	r  rule.Repository
+	f  rule.Factory
+	op config2.OperationMode
 }
 
-func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory) rule.SetProcessor {
+func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory, op config2.OperationMode) rule.SetProcessor {
 	return &ruleSetProcessor{
-		r: repository,
-		f: factory,
+		r:  repository,
+		f:  factory,
+		op: op,
 	}
 }
 
@@ -59,7 +65,10 @@ func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, erro
 	return rules, nil
 }
 
-func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) error {
+func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSet) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("_rule_set", ruleSet.Name).Msg("New rule set received")
+
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
@@ -69,10 +78,24 @@ func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) error {
 		return err
 	}
 
-	return p.r.AddRuleSet(ruleSet.Source, rules)
+	if p.op == config2.ProxyMode {
+		for _, rul := range ruleSet.Rules {
+			if rul.Backend.IsInsecure() {
+				logger.Warn().
+					Str("_rule_set", ruleSet.Name).
+					Str("_rule", rul.ID).
+					Msg("Rule contains insecure forward_to configuration")
+			}
+		}
+	}
+
+	return p.r.AddRuleSet(ctx, ruleSet.Source, rules)
 }
 
-func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) error {
+func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Update of a rule set received")
+
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
@@ -82,9 +105,23 @@ func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) error {
 		return err
 	}
 
-	return p.r.UpdateRuleSet(ruleSet.Source, rules)
+	if p.op == config2.ProxyMode {
+		for _, rul := range ruleSet.Rules {
+			if rul.Backend.IsInsecure() {
+				logger.Warn().
+					Str("_rule_set", ruleSet.Name).
+					Str("_rule", rul.ID).
+					Msg("Rule contains insecure forward_to configuration")
+			}
+		}
+	}
+
+	return p.r.UpdateRuleSet(ctx, ruleSet.Source, rules)
 }
 
-func (p *ruleSetProcessor) OnDeleted(ruleSet *config.RuleSet) error {
-	return p.r.DeleteRuleSet(ruleSet.Source)
+func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *config.RuleSet) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Deletion of a rule set received")
+
+	return p.r.DeleteRuleSet(ctx, ruleSet.Source)
 }

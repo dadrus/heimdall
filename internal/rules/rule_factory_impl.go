@@ -36,10 +36,17 @@ func NewRuleFactory(
 	conf *config.Configuration,
 	mode config.OperationMode,
 	logger zerolog.Logger,
+	sdr config.SecureDefaultRule,
 ) (rule.Factory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
-	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger, mode: mode}
+	rf := &ruleFactory{
+		hf:                hf,
+		hasDefaultRule:    false,
+		secureDefaultRule: bool(sdr),
+		logger:            logger,
+		mode:              mode,
+	}
 
 	if err := rf.initWithDefaultRule(conf.Default, logger); err != nil {
 		logger.Error().Err(err).Msg("Loading default rule failed")
@@ -55,6 +62,7 @@ type ruleFactory struct {
 	logger              zerolog.Logger
 	defaultRule         *ruleImpl
 	hasDefaultRule      bool
+	secureDefaultRule   bool
 	mode                config.OperationMode
 	defaultBacktracking bool
 }
@@ -187,7 +195,11 @@ func (f *ruleFactory) createExecutePipeline(
 					"an authenticator is defined after some other non authenticator type")
 			}
 
-			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), getConfig(pipelineStep["config"]))
+			authenticator, err := f.hf.CreateAuthenticator( //nolint: forcetypeassert
+				version,
+				id.(string),
+				getConfig(pipelineStep["config"]),
+			)
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -250,7 +262,7 @@ func (f *ruleFactory) createOnErrorPipeline(
 				return nil, err
 			}
 
-			handler, err := f.hf.CreateErrorHandler(version, id.(string), conf)
+			handler, err := f.hf.CreateErrorHandler(version, id.(string), conf) //nolint: forcetypeassert
 			if err != nil {
 				return nil, err
 			}
@@ -274,7 +286,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return nil
 	}
 
-	logger.Debug().Msg("Loading default rule")
+	logger.Info().Msg("Loading default rule")
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(
 		config2.CurrentRuleSetVersion,
@@ -294,6 +306,14 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	if len(authenticators) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
+	}
+
+	if authenticators[0].IsInsecure() {
+		if f.secureDefaultRule {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration, "insecure default rule configured")
+		}
+
+		logger.Warn().Msg("Insecure default rule configured")
 	}
 
 	f.defaultRule = &ruleImpl{
@@ -338,7 +358,7 @@ func createHandler[T subjectHandler](
 		return nil, err
 	}
 
-	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"]))
+	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"])) //nolint: forcetypeassert
 	if err != nil {
 		return nil, err
 	}

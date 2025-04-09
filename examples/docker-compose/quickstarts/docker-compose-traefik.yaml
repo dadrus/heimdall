@@ -1,8 +1,6 @@
-version: '3.7'
-
 services:
   proxy:
-    image: traefik:3.0.0
+    image: traefik:3.2.3
     ports:
     - "9090:9090"
     command: >
@@ -20,7 +18,7 @@ services:
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization
 
   heimdall:
-    command: -c /etc/heimdall/config.yaml serve decision
+    command: serve decision -c /etc/heimdall/config.yaml --insecure
 
   upstream:
     labels:

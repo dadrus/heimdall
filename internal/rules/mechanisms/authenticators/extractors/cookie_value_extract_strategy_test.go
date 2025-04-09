@@ -37,7 +37,7 @@ func TestExtractExistingCookieValue(t *testing.T) {
 	fnt := mocks.NewRequestFunctionsMock(t)
 	fnt.EXPECT().Cookie(cookieName).Return(cookieValue)
 
-	ctx := mocks.NewContextMock(t)
+	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 
 	strategy := CookieValueExtractStrategy{Name: cookieName}
@@ -57,7 +57,7 @@ func TestExtractNotExistingCookieValue(t *testing.T) {
 	fnt := mocks.NewRequestFunctionsMock(t)
 	fnt.EXPECT().Cookie(mock.Anything).Return("")
 
-	ctx := mocks.NewContextMock(t)
+	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 
 	strategy := CookieValueExtractStrategy{Name: "Test-Cookie"}

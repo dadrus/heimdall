@@ -17,7 +17,6 @@
 package redis
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -25,36 +24,51 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestCacheUsage(t *testing.T) {
 	t.Parallel()
 
-	db := miniredis.RunT(t)
-	cch, err := NewStandaloneCache(map[string]any{
-		"address":      db.Addr(),
-		"client_cache": map[string]any{"disabled": true},
-		"tls":          map[string]any{"disabled": true},
-	}, nil, nil)
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(config.EnforcementSettings{}),
+	)
 	require.NoError(t, err)
 
-	cch.Start(context.TODO())
-	defer cch.Stop(context.TODO())
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Validator().Return(validator)
 
-	for _, tc := range []struct {
+	db := miniredis.RunT(t)
+	cch, err := NewStandaloneCache(
+		appCtx,
+		map[string]any{
+			"address":      db.Addr(),
+			"client_cache": map[string]any{"disabled": true},
+			"tls":          map[string]any{"disabled": true},
+		},
+	)
+	require.NoError(t, err)
+
+	err = cch.Start(t.Context())
+	require.NoError(t, err)
+
+	defer cch.Stop(t.Context())
+
+	for uc, tc := range map[string]struct {
 		uc             string
 		key            string
 		configureCache func(*testing.T, cache.Cache)
 		assert         func(t *testing.T, err error, data []byte)
 	}{
-		{
-			uc:  "can retrieve not expired value",
+		"can retrieve not expired value": {
 			key: "foo",
 			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				err := cch.Set(context.Background(), "foo", []byte("bar"), 10*time.Minute)
+				err := cch.Set(t.Context(), "foo", []byte("bar"), 10*time.Minute)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, data []byte) {
@@ -64,13 +78,12 @@ func TestCacheUsage(t *testing.T) {
 				assert.Equal(t, []byte("bar"), data)
 			},
 		},
-		{
-			uc:  "cannot retrieve expired value",
+		"cannot retrieve expired value": {
 			key: "bar",
 			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				err := cch.Set(context.Background(), "bar", []byte("baz"), 1*time.Millisecond)
+				err := cch.Set(t.Context(), "bar", []byte("baz"), 1*time.Millisecond)
 				require.NoError(t, err)
 
 				db.FastForward(200 * time.Millisecond)
@@ -82,8 +95,7 @@ func TestCacheUsage(t *testing.T) {
 				assert.Nil(t, data)
 			},
 		},
-		{
-			uc:  "cannot retrieve not existing value",
+		"cannot retrieve not existing value": {
 			key: "baz",
 			configureCache: func(t *testing.T, _ cache.Cache) {
 				t.Helper()
@@ -96,11 +108,11 @@ func TestCacheUsage(t *testing.T) {
 			},
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			tc.configureCache(t, cch)
 
-			data, err := cch.Get(context.Background(), tc.key)
+			data, err := cch.Get(t.Context(), tc.key)
 
 			// THEN
 			tc.assert(t, err, data)

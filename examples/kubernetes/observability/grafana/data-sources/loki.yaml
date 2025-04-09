@@ -1,0 +1,22 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: loki-datasource
+  namespace: monitoring
+spec:
+  datasource:
+    name: Loki
+    type: loki
+    url: http://loki-read:3100
+    isDefault: false
+    uid: LOKI
+    access: proxy
+    jsonData:
+      derivedFields:
+        - name: trace_id
+          matcherRegex: 'trace_id\":\"(\w+)\"'
+          url: '${__value.raw}'
+          datasourceUid: TEMPO
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana

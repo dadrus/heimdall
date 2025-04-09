@@ -32,8 +32,7 @@ import (
 func TestErrorResponse(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc           string
+	for uc, tc := range map[string]struct {
 		grpcCode     codes.Code
 		httpCode     int
 		err          error
@@ -41,8 +40,7 @@ func TestErrorResponse(t *testing.T) {
 		expectedType string
 		expBody      string
 	}{
-		{
-			uc:           "select text/plain from multiple offered",
+		"select text/plain from multiple offered": {
 			grpcCode:     codes.NotFound,
 			httpCode:     http.StatusForbidden,
 			err:          errorchain.NewWithMessage(heimdall.ErrAuthorization, "test"),
@@ -50,8 +48,7 @@ func TestErrorResponse(t *testing.T) {
 			expectedType: "text/plain",
 			expBody:      "authorization error: test",
 		},
-		{
-			uc:           "select text/html doe to unknown offered type",
+		"select text/html doe to unknown offered type": {
 			grpcCode:     codes.Internal,
 			httpCode:     http.StatusForbidden,
 			err:          errorchain.NewWithMessage(heimdall.ErrAuthorization, "test"),
@@ -59,8 +56,7 @@ func TestErrorResponse(t *testing.T) {
 			expectedType: "text/html",
 			expBody:      "<p>authorization error: test</p>",
 		},
-		{
-			uc:           "select text/html from multiple offered",
+		"select text/html from multiple offered": {
 			grpcCode:     codes.PermissionDenied,
 			httpCode:     http.StatusForbidden,
 			err:          errorchain.NewWithMessage(heimdall.ErrAuthorization, "test"),
@@ -68,8 +64,7 @@ func TestErrorResponse(t *testing.T) {
 			expectedType: "text/html",
 			expBody:      "<p>authorization error: test</p>",
 		},
-		{
-			uc:           "select appliction/xml from multiple offered",
+		"select appliction/xml from multiple offered": {
 			grpcCode:     codes.PermissionDenied,
 			httpCode:     http.StatusForbidden,
 			err:          errorchain.NewWithMessage(heimdall.ErrAuthorization, "test"),
@@ -77,8 +72,7 @@ func TestErrorResponse(t *testing.T) {
 			expectedType: "application/xml",
 			expBody:      "<error><code>authorizationError</code><message>test</message></error>",
 		},
-		{
-			uc:           "select appliction/json from multiple offered",
+		"select appliction/json from multiple offered": {
 			grpcCode:     codes.PermissionDenied,
 			httpCode:     http.StatusForbidden,
 			err:          errorchain.NewWithMessage(heimdall.ErrAuthorization, "test"),
@@ -87,17 +81,18 @@ func TestErrorResponse(t *testing.T) {
 			expBody:      "{\"code\":\"authorizationError\",\"message\":\"test\"}",
 		},
 	} {
-		t.Run(tc.uc, func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			resp := errorResponse(tc.grpcCode, tc.httpCode, tc.err, true, tc.offeredType)
 
 			// THEN
 			require.NotNil(t, resp)
 
-			assert.Equal(t, int32(tc.grpcCode), resp.GetStatus().GetCode())
+			assert.Equal(t, int32(tc.grpcCode), resp.GetStatus().GetCode()) //nolint:gosec
 
 			deniedResp := resp.GetDeniedResponse()
-			assert.Equal(t, envoy_type.StatusCode(tc.httpCode), deniedResp.GetStatus().GetCode())
+
+			assert.Equal(t, envoy_type.StatusCode(tc.httpCode), deniedResp.GetStatus().GetCode()) //nolint:gosec
 			assert.Equal(t, "Content-Type", deniedResp.GetHeaders()[0].GetHeader().GetKey())
 			assert.Equal(t, tc.expectedType, deniedResp.GetHeaders()[0].GetHeader().GetValue())
 			assert.Equal(t, tc.expBody, deniedResp.GetBody())

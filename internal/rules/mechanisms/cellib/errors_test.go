@@ -40,26 +40,24 @@ func TestErrors(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	for _, tc := range []struct {
-		expr string
-	}{
-		{expr: `type(Error) == authorization_error`},
-		{expr: `authorization_error == type(Error)`},
-		{expr: `authorization_error != Error`},
-		{expr: `Error != authorization_error`},
-		{expr: `type(Error) == authentication_error`},
-		{expr: `type(Error) == internal_error`},
-		{expr: `type(Error) in [internal_error, authorization_error, authentication_error]`},
-		{expr: `type(Error) != precondition_error`},
-		{expr: `precondition_error != type(Error)`},
-		{expr: `type(Error) != communication_error`},
-		{expr: `internal_error == internal_error`},
-		{expr: `Error.Source == "test"`},
-		{expr: `Error == Error`},
-		{expr: `type(communication_error) != type(Error)`},
+	for _, tc := range []string{
+		`type(Error) == authorization_error`,
+		`authorization_error == type(Error)`,
+		`authorization_error != Error`,
+		`Error != authorization_error`,
+		`type(Error) == authentication_error`,
+		`type(Error) == internal_error`,
+		`type(Error) in [internal_error, authorization_error, authentication_error]`,
+		`type(Error) != precondition_error`,
+		`precondition_error != type(Error)`,
+		`type(Error) != communication_error`,
+		`internal_error == internal_error`,
+		`Error.Source == "test"`,
+		`Error == Error`,
+		`type(communication_error) != type(Error)`,
 	} {
-		t.Run(tc.expr, func(t *testing.T) {
-			ast, iss := env.Compile(tc.expr)
+		t.Run(tc, func(t *testing.T) {
+			ast, iss := env.Compile(tc)
 			if iss != nil {
 				require.NoError(t, iss.Err())
 			}
@@ -88,15 +86,14 @@ func TestErrors(t *testing.T) {
 func TestWrapError(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc  string
+	for uc, tc := range map[string]struct {
 		err error
 		id  string
 	}{
-		{"no source", heimdall.ErrArgument, ""},
-		{"with source", errorchain.New(heimdall.ErrAuthorization).WithErrorContext(idProvider{id: "test"}), "test"},
+		"no source":   {heimdall.ErrArgument, ""},
+		"with source": {errorchain.New(heimdall.ErrAuthorization).WithErrorContext(idProvider{id: "test"}), "test"},
 	} {
-		t.Run("", func(t *testing.T) {
+		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			wrapped := WrapError(tc.err)
 

@@ -242,7 +242,7 @@ tests:
           path: spec.template.spec.containers[0].ports
           value:
             - containerPort: 4456
-              name: http-decision
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management
@@ -256,8 +256,8 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].ports
           value:
-            - containerPort: 4455
-              name: http-proxy
+            - containerPort: 4456
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management
@@ -273,7 +273,7 @@ tests:
           path: spec.template.spec.containers[0].ports
           value:
             - containerPort: 4456
-              name: http-decision
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management
@@ -293,7 +293,7 @@ tests:
           path: spec.template.spec.containers[0].ports
           value:
             - containerPort: 4456
-              name: http-decision
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management
@@ -311,7 +311,7 @@ tests:
           path: spec.template.spec.containers[0].ports
           value:
             - containerPort: 4456
-              name: http-decision
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management
@@ -330,7 +330,7 @@ tests:
           path: spec.template.spec.containers[0].ports
           value:
             - containerPort: 4456
-              name: http-decision
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management
@@ -351,7 +351,7 @@ tests:
           path: spec.template.spec.containers[0].ports
           value:
             - containerPort: 4456
-              name: http-decision
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management
@@ -375,7 +375,7 @@ tests:
           path: spec.template.spec.containers[0].ports
           value:
             - containerPort: 4456
-              name: http-decision
+              name: http-main
               protocol: TCP
             - containerPort: 4457
               name: http-management

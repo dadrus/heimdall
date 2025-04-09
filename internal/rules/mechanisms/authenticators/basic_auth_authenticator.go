@@ -24,6 +24,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -41,12 +42,12 @@ const (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(ctx CreationContext, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorBasicAuth {
 				return false, nil, nil
 			}
 
-			auth, err := newBasicAuthAuthenticator(ctx, id, conf)
+			auth, err := newBasicAuthAuthenticator(app, id, conf)
 
 			return true, auth, err
 		})
@@ -54,16 +55,20 @@ func init() {
 
 type basicAuthAuthenticator struct {
 	id                   string
+	app                  app.Context
 	userID               string
 	password             string
 	allowFallbackOnError bool
 }
 
 func newBasicAuthAuthenticator(
-	ctx CreationContext,
+	app app.Context,
 	id string,
 	rawConfig map[string]any,
 ) (*basicAuthAuthenticator, error) {
+	logger := app.Logger()
+	logger.Info().Str("_id", id).Msg("Creating basic auth authenticator")
+
 	type Config struct {
 		UserID               string `mapstructure:"user_id"                 validate:"required"`
 		Password             string `mapstructure:"password"                validate:"required"`
@@ -71,12 +76,18 @@ func newBasicAuthAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(ctx, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for basic auth authenticator '%s'", id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError {
+		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	auth := basicAuthAuthenticator{
 		id:                   id,
+		app:                  app,
 		allowFallbackOnError: conf.AllowFallbackOnError,
 	}
 
@@ -93,8 +104,8 @@ func newBasicAuthAuthenticator(
 	return &auth, nil
 }
 
-func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using basic_auth authenticator")
 
 	strategy := extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"}
@@ -132,7 +143,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	userIDOK := userID == a.userID
 	passwordOK := password == a.password
 
-	if !(userIDOK && passwordOK) {
+	if !userIDOK || !passwordOK {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "invalid user credentials").
 			WithErrorContext(a)
@@ -154,12 +165,20 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	var conf Config
-	if err := decodeConfig(nil, AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for basic auth authenticator '%s'", a.id).CausedBy(err)
+	}
+
+	if conf.AllowFallbackOnError != nil {
+		logger := a.app.Logger()
+		logger.Warn().Str("_id", a.id).
+			Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	return &basicAuthAuthenticator{
-		id: a.id,
+		id:  a.id,
+		app: a.app,
 		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()
@@ -184,10 +203,8 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}, nil
 }
 
-func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
-	return a.allowFallbackOnError
-}
-
 func (a *basicAuthAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *basicAuthAuthenticator) IsInsecure() bool { return false }

@@ -1,0 +1,100 @@
+name: Helm Chart OCI Publisher
+description: Publish Helm Charts to OCI-based registries
+author: dadrus
+inputs:
+  name:
+    required: true
+    description: The chart name
+  repository:
+    required: true
+    description: The chart repository name
+  chart_version:
+    required: true
+    description: the version of the chart
+  app_version:
+    required: false
+    description: Set the appVersion in the chart to this version
+  path:
+    required: false
+    description: Where to find the chart. Defaults to 'charts/{name}'
+  registry:
+    required: true
+    description: The OCI registry to use
+  registry_username:
+    required: true
+    description: the OCI registry username
+  registry_password:
+    required: true
+    description: The OCI registry password
+  helm_version:
+    required: false
+    description: The Helm CLI version
+    default: 3.16.3
+outputs:
+  image:
+    value: ${{ steps.result.outputs.image }}
+    description: The chart image of the form '{registry}/{repository}/{image}:{tag}'
+  image_name:
+    value: ${{ steps.result.outputs.image_name }}
+    description: The chart image name of the form '{registry}/{repository}/{image}'
+  digest:
+    value: ${{ steps.result.outputs.image_digest }}
+    description: The digest of the image
+runs:
+  using: composite
+  steps:
+    - name: Install Helm
+      shell: bash
+      run: |
+        set -euo pipefail
+        tmpDir=$(mktemp -d)
+        pushd $tmpDir >& /dev/null
+      
+        curl -sSL https://get.helm.sh/helm-v${{ inputs.helm_version }}-linux-amd64.tar.gz | tar xz
+        cp linux-amd64/helm /usr/local/bin/helm
+      
+        popd >& /dev/null
+        rm -rf $tmpDir
+    - name: Create Chart path
+      id: chart-path
+      shell: bash
+      run: |
+        set -euo pipefail
+        CHART_PATH=${{ inputs.path == null && format('{0}/{1}', 'charts', inputs.name) || inputs.path }}
+        echo "result=$CHART_PATH" >> $GITHUB_OUTPUT
+    - name: Set appVersion in Chart.yaml
+      if: inputs.app_version != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        yq eval '.appVersion = "${{ inputs.app_version }}"' -i ${{ steps.chart-path.outputs.result }}/Chart.yaml
+    - name: Login to helm registry
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo ${{ inputs.registry_password }} | helm registry login -u ${{ inputs.registry_username }} --password-stdin ${{ inputs.registry }}
+    - name: Package the chart
+      shell: bash
+      run: |
+        set -euo pipefail
+        helm package ${{ steps.chart-path.outputs.result }} --version ${{ inputs.chart_version }}
+    - name: Push the packaged chart to the registry
+      id: result
+      shell: bash
+      run: |
+        set -euo pipefail
+        OUTPUT=$(helm push ${{ inputs.name }}-${{ inputs.chart_version }}.tgz oci://${{ inputs.registry }}/${{ inputs.repository }} 2>&1) || {
+          echo "Helm push failed: $OUTPUT"
+          exit 1
+        }
+        IMAGE_NAME=${{ inputs.registry }}/${{ inputs.repository }}/${{ inputs.name }}
+        IMAGE=$(echo "$OUTPUT" | grep "Pushed:" | awk '{print $2}')
+        DIGEST=$(echo "$OUTPUT" | grep "Digest:" | awk '{print $2}')
+        echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        echo "image=$IMAGE" >> $GITHUB_OUTPUT
+        echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
+    - name: Logout from the registry
+      shell: bash
+      run: |
+        set -euo pipefail
+        helm registry logout ${{ inputs.registry }}
