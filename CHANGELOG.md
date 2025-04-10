@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.16.1) (2025-04-10)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to de1ac95 ([#2382](https://github.com/dadrus/heimdall/issues/2382)) ([9ee59b0](https://github.com/dadrus/heimdall/commit/9ee59b0f3ed5f3d3f3343139bef9171acb94d135))
+
 ## [0.16.0](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.16.0) (2025-04-08)
 
 
