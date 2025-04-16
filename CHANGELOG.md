@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.1](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.16.1) (2025-04-16)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to cf55f90 ([#2385](https://github.com/dadrus/heimdall/issues/2385)) ([2b2f0a0](https://github.com/dadrus/heimdall/commit/2b2f0a013df94f2ee521119d59bd69779d2ff8ff))
+* update google.golang.org/genproto/googleapis/rpc digest to 207652e ([#2391](https://github.com/dadrus/heimdall/issues/2391)) ([efa357e](https://github.com/dadrus/heimdall/commit/efa357eb1811085c8fdf24ce5701fdaf61e6a5a8))
+* update module github.com/knadh/koanf/parsers/yaml to v1 ([#2395](https://github.com/dadrus/heimdall/issues/2395)) ([ac31375](https://github.com/dadrus/heimdall/commit/ac313752c961b246f720a65f803237904b9ef219))
+* update module github.com/knadh/koanf/providers/confmap to v1 ([#2396](https://github.com/dadrus/heimdall/issues/2396)) ([fded14a](https://github.com/dadrus/heimdall/commit/fded14aaa6191df28b76816cb03f92beee78c9d2))
+* update module github.com/knadh/koanf/providers/env to v1.1.0 ([#2393](https://github.com/dadrus/heimdall/issues/2393)) ([70b2332](https://github.com/dadrus/heimdall/commit/70b233204b7ccb5089d865bb63ca1586a3360084))
+* update module github.com/knadh/koanf/providers/rawbytes to v1 ([#2397](https://github.com/dadrus/heimdall/issues/2397)) ([08daf52](https://github.com/dadrus/heimdall/commit/08daf52a58ddc3d35c9011e080e4983a74039877))
+* update module github.com/knadh/koanf/providers/structs to v1 ([#2398](https://github.com/dadrus/heimdall/issues/2398)) ([dc9c623](https://github.com/dadrus/heimdall/commit/dc9c62343f03c316549c943c030e7dd3e26736d0))
+* update module github.com/knadh/koanf/v2 to v2.2.0 ([#2394](https://github.com/dadrus/heimdall/issues/2394)) ([83349dd](https://github.com/dadrus/heimdall/commit/83349dd4b16c56694f13e905b9175bcfbfcc6618))
+
 ## [0.16.0](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.16.0) (2025-04-08)
 
 
