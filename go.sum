@@ -292,6 +292,8 @@ github.com/instana/go-otel-exporter v1.0.0 h1:s7PPvvB8xcSRNaXpgjYpBQWnFZRAqGGJZP
 github.com/instana/go-otel-exporter v1.0.0/go.mod h1:chO0kaNOIV+bhh+eYRBiSShhuOHMV6HHQYgVo/7xxAs=
 github.com/jellydator/ttlcache/v3 v3.3.1-0.20250207140243-aefc35918359 h1:uzTOUCYbGERlXB3wX2/u9AsMeXnZCd8yLl2DMAY1Wxs=
 github.com/jellydator/ttlcache/v3 v3.3.1-0.20250207140243-aefc35918359/go.mod h1:aqa3CYl8S7MwpMXtFH3uNIEEfOjcn1MUNO+bQIGbFAQ=
+github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04 h1:Nysgd3R0s9jWhlVW7sCf9EQOz83gtTgDUvrsBayjjoA=
+github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04/go.mod h1:aqa3CYl8S7MwpMXtFH3uNIEEfOjcn1MUNO+bQIGbFAQ=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=
