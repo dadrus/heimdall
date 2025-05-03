@@ -5,7 +5,6 @@
     ":semanticCommitScopeDisabled",
     ":semanticCommitTypeAll(chore)",
     "docker:pinDigests",
-    "helpers:pinGitHubActionDigests",
     ":pinDevDependencies"
   ],
   "packageRules": [
@@ -14,17 +13,16 @@
       "semanticCommitType": "deps"
     },
     {
-      "matchPackageNames": ["ghcr.io/dadrus/heimdall"],
-      "enabled": false
+      "matchManagers": ["github-actions"],
+      "excludePackageNames": ["slsa-framework/slsa-github-generator"],
+      "pinDigests": true
     },
     {
-      "matchPackageNames": ["slsa-framework/slsa-github-generator"],
-      "pinDigests": false
+      "matchPackageNames": ["ghcr.io/dadrus/heimdall"],
+      "pinDigests": false,
+      "enabled": false
     }
   ],
-  "helmv3": {
-    "ignorePaths": ["**/values.yaml"]
-  },
   "configMigration": true,
   "baseBranches": ["release"],
   "assigneesFromCodeOwners": true,
