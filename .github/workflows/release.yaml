@@ -72,7 +72,7 @@ jobs:
       id-token: write
       contents: write
     # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
     with:
       base64-subjects: "${{ needs.release-binaries.outputs.hashes }}"
       upload-assets: true
@@ -213,7 +213,7 @@ jobs:
       id-token: write
       packages: write
     # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
     with:
       image: ${{ github.repository }}
       digest: ${{ needs.release-container-image.outputs.dockerhub_image_digest }}
@@ -229,7 +229,7 @@ jobs:
       id-token: write
       packages: write
     # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
     with:
       image: ghcr.io/${{ github.repository }}
       digest: ${{ needs.release-container-image.outputs.ghcr_image_digest }}
@@ -310,7 +310,7 @@ jobs:
       id-token: write
       packages: write
     # Note: this _must_ be referenced by tag. See: https://github.com/slsa-framework/slsa-verifier/issues/12
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
     with:
       image: ${{ needs.release-helm-chart.outputs.image_name }}
       digest: ${{ needs.release-helm-chart.outputs.digest }}
