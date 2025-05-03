@@ -32,7 +32,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
 	github.com/instana/go-otel-exporter v1.0.0
-	github.com/jellydator/ttlcache/v3 v3.3.1-0.20250207140243-aefc35918359
+	github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04
 	github.com/johannesboyne/gofakes3 v0.0.0-20250402064820-d479899d8cbe
 	github.com/justinas/alice v1.2.0
 	github.com/knadh/koanf/maps v0.1.2
