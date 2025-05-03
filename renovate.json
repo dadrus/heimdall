@@ -12,6 +12,14 @@
     {
       "matchCategories": [ "golang" ],
       "semanticCommitType": "deps"
+    },
+    {
+      "matchPackageNames": ["ghcr.io/dadrus/heimdall"],
+      "enabled": false
+    },
+    {
+      "matchPackageNames": ["slsa-framework/slsa-github-generator"],
+      "pinDigests": false
     }
   ],
   "helmv3": {
