@@ -10,16 +10,20 @@
   ],
   "packageRules": [
     {
-      "matchCategories": [ "golang" ],
+      "matchCategories": ["golang"],
       "semanticCommitType": "deps"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchFileNames": [".github/workflows/release.yaml"],
+      "matchPackageNames": ["slsa-framework/slsa-github-generator"],
+      "pinDigests": false
     }
   ],
-  "helmv3": {
-    "ignorePaths": ["**/values.yaml"]
-  },
   "configMigration": true,
   "baseBranches": ["release"],
   "assigneesFromCodeOwners": true,
   "addLabels": ["dependency"],
-  "automerge": false
+  "automerge": false,
+  "ignorePaths": ["charts/heimdall/**"]
 }
