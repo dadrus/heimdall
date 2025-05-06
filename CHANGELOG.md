@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.16.1](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.16.1) (2025-05-06)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to a798791 ([#2418](https://github.com/dadrus/heimdall/issues/2418)) ([3d03143](https://github.com/dadrus/heimdall/commit/3d031432c1f696faa468458ba33f8828358c4bdf))
+* update github.com/jellydator/ttlcache/v3 digest to 27a3fdd ([#2414](https://github.com/dadrus/heimdall/issues/2414)) ([0d8f4a3](https://github.com/dadrus/heimdall/commit/0d8f4a3f7df3101d2c37302e9b2dd4e4116792fe))
+* update google.golang.org/genproto/googleapis/rpc digest to f936aa4 ([#2424](https://github.com/dadrus/heimdall/issues/2424)) ([e64f145](https://github.com/dadrus/heimdall/commit/e64f1450ed8f471768d43a4bf9ff9b45dc51b606))
+* update kubernetes packages to v0.33.0 ([#2407](https://github.com/dadrus/heimdall/issues/2407)) ([5233477](https://github.com/dadrus/heimdall/commit/5233477bf64b569e76ba995a76f9100766b006ac))
+* update module github.com/google/cel-go to v0.25.0 ([#2404](https://github.com/dadrus/heimdall/issues/2404)) ([347b9ed](https://github.com/dadrus/heimdall/commit/347b9edb2671939fd472e1b75a7233a5e79838ac))
+* update module github.com/grpc-ecosystem/go-grpc-middleware/v2 to v2.3.2 ([#2416](https://github.com/dadrus/heimdall/issues/2416)) ([6ec6836](https://github.com/dadrus/heimdall/commit/6ec6836d0994714400499ba6f576f12563b5a689))
+* update module github.com/knadh/koanf/parsers/yaml to v1 ([#2395](https://github.com/dadrus/heimdall/issues/2395)) ([ac31375](https://github.com/dadrus/heimdall/commit/ac313752c961b246f720a65f803237904b9ef219))
+* update module github.com/knadh/koanf/providers/confmap to v1 ([#2396](https://github.com/dadrus/heimdall/issues/2396)) ([fded14a](https://github.com/dadrus/heimdall/commit/fded14aaa6191df28b76816cb03f92beee78c9d2))
+* update module github.com/knadh/koanf/providers/env to v1.1.0 ([#2393](https://github.com/dadrus/heimdall/issues/2393)) ([70b2332](https://github.com/dadrus/heimdall/commit/70b233204b7ccb5089d865bb63ca1586a3360084))
+* update module github.com/knadh/koanf/providers/rawbytes to v1 ([#2397](https://github.com/dadrus/heimdall/issues/2397)) ([08daf52](https://github.com/dadrus/heimdall/commit/08daf52a58ddc3d35c9011e080e4983a74039877))
+* update module github.com/knadh/koanf/providers/structs to v1 ([#2398](https://github.com/dadrus/heimdall/issues/2398)) ([dc9c623](https://github.com/dadrus/heimdall/commit/dc9c62343f03c316549c943c030e7dd3e26736d0))
+* update module github.com/knadh/koanf/v2 to v2.2.0 ([#2394](https://github.com/dadrus/heimdall/issues/2394)) ([83349dd](https://github.com/dadrus/heimdall/commit/83349dd4b16c56694f13e905b9175bcfbfcc6618))
+* update module github.com/redis/rueidis to v1.0.59 ([#2412](https://github.com/dadrus/heimdall/issues/2412)) ([08544b3](https://github.com/dadrus/heimdall/commit/08544b349b3b26e8b5a7f876eda29c4544bc2b5c))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.59 ([#2412](https://github.com/dadrus/heimdall/issues/2412)) ([08544b3](https://github.com/dadrus/heimdall/commit/08544b349b3b26e8b5a7f876eda29c4544bc2b5c))
+* update module google.golang.org/grpc to v1.72.0 ([#2400](https://github.com/dadrus/heimdall/issues/2400)) ([3b69c88](https://github.com/dadrus/heimdall/commit/3b69c88ccbe59fbc77356968277af2d2602b7af7))
+
 ## [0.16.0](https://github.com/dadrus/heimdall/compare/v0.15.0...v0.16.0) (2025-04-08)
 
 
