@@ -14,12 +14,16 @@
     },
     {
       "matchManagers": ["github-actions"],
-      "excludePackageNames": ["slsa-framework/slsa-github-generator"],
       "pinDigests": true
     },
     {
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["slsa-framework/slsa-github-generator"],
+      "pinDigests": false
+    },
+    {
+      "matchManagers": ["helm-values"],
       "matchPackageNames": ["ghcr.io/dadrus/heimdall"],
-      "pinDigests": false,
       "enabled": false
     }
   ],
