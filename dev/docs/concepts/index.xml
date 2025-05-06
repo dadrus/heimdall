@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Concepts on Heimdall</title><link>https://dadrus.github.io/docs/concepts/</link><description>Recent content in Concepts on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 08 Apr 2025 23:26:00 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/concepts/index.xml" rel="self" type="application/rss+xml"/><item><title>Pipelines</title><link>https://dadrus.github.io/docs/concepts/pipelines/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/pipelines/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Concepts on Heimdall</title><link>https://dadrus.github.io/docs/concepts/</link><description>Recent content in Concepts on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 06 May 2025 20:08:44 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/concepts/index.xml" rel="self" type="application/rss+xml"/><item><title>Pipelines</title><link>https://dadrus.github.io/docs/concepts/pipelines/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/pipelines/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_overview">Overview&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -46,12 +46,39 @@
 &lt;div class="paragraph">
 &lt;p>In this mode you can integrate heimdall with existing reverse proxies, or API gateways (like &lt;a href="https://konghq.com/">Kong&lt;/a>, &lt;a href="https://nginx.org">NGNIX&lt;/a>, &lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a>, &lt;a href="https://traefik.io/">Traefik&lt;/a> and much more)&lt;/p>
 &lt;/div>
-&lt;div id="_fig_heimdall_decision_deployment" class="imageblock">
+&lt;div id="_fig_heimdall_decision_deployment" class="listingblock">
+&lt;div class="title">Decision Deployment&lt;/div>
 &lt;div class="content">
-&lt;img src="diag-ditaa-md5-6aa79a33899aaf938fd0bdc4e82460e2.svg" alt="Diagram" width="1020" height="490"/>
-&lt;/div>
-&lt;div class="title">Figure 1. Decision Deployment&lt;/div>
-&lt;/div>
-&lt;div class="paragraph">
-&lt;p>In this mode heimdall can be integrated with most probably all modern API gateways and reverse proxies as a so-called &amp;#34;authentication middleware&amp;#34;. Here the reverse proxy, respectively API gateway integrating with heimdall, will forward requests to heimdall by making use of its main service endpoint for authentication and authorization purposes. As in the &lt;a href="#_proxy_mode">Reverse Proxy&lt;/a> mode, heimdall will check if these requests match and satisfy the conditions defined in the available rules. If not, heimdall returns an error to its client (here API gateway/reverse proxy). If the rule execution was successful, it also responds to the API gateway/reverse proxy with &lt;code>200 OK&lt;/code> (can be overridden if required) and sets headers/cookies, specified in the matched rule, which are then forwarded to the upstream service.&lt;/p>
+&lt;pre>Failed to generate image: Could not load Ditaa. Either require &amp;#39;asciidoctor-diagram-ditaamini&amp;#39; or specify the location of the Ditaa JAR(s) using the &amp;#39;DIAGRAM_DITAA_CLASSPATH&amp;#39; environment variable.
+ -----------------+
+ ------------------+ |
++------------+ +---------------------+ +------------------+ | |
+| | | | | | | |
+| | | | | | | |
+| Client |----- request -----&amp;gt;| API Gateway |---- request ---&amp;gt;| Your Service | | |
+| | | | + header | | | +
+| | | | | | +
++------------+ +---------------------+ +------------------+
+ | ^ |
+ | | |
+ ok to forward | ok / not ok |
+ request? | + header |
+ | | |
+ v | |
+ +---------------------+ |
+ | | |
+ | Heimdall | |
+ | | |
+ +---------------------+ |
+ | |
+ uses : |
+ v |
+ -----------------+ |
+ -----------------+ | |
+ +----------------+ | | :
+ | | | |&amp;lt;----=-- defined by&amp;gt; ------+
+ | Rule Set | | |
+ | | | +
+ | | +
+ +----------------+&lt;/pre>
 &lt;/div></description></item></channel></rss>
