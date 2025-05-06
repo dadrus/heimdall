@@ -25,5 +25,5 @@
   "assigneesFromCodeOwners": true,
   "addLabels": ["dependency"],
   "automerge": false,
-  "ignorePaths": ["charts/heimdall/**"]
+  "ignorePaths": ["charts/heimdall/**", "examples/**"]
 }
