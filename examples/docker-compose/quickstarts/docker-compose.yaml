@@ -1,13 +1,13 @@
 services:
   heimdall-init:
-    image: finalgene/openssh
+    image: finalgene/openssh@sha256:3488c5dd43ec2bd7125b75bd2904775ae84ab3e6e24a1e99b802d6ac7abaa267
     command: /tmp/generate_keys.sh
     volumes:
       - ./generate_keys.sh:/tmp/generate_keys.sh:ro
       - heimdall-keys:/etc/heimdall/keys
 
   heimdall:
-    image: dadrus/heimdall:0.16.1
+    image: dadrus/heimdall:0.16.1@sha256:ffb862f02124c64cd7f4080e9c47c110f4ce4c6415c272c1108fa93787ee0202
     depends_on:
       heimdall-init:
         condition: service_started
@@ -17,17 +17,17 @@ services:
     - heimdall-keys:/etc/heimdall/keys:ro
 
   upstream:
-    image: containous/whoami:latest
+    image: containous/whoami:latest@sha256:7d6a3c8f91470a23ef380320609ee6e69ac68d20bc804f3a1c6065fb56cfa34e
     command: --port=8081
 
   idp:
-    image: nginx:1.25.4
+    image: nginx:1.25.4@sha256:9ff236ed47fe39cf1f0acf349d0e5137f8b8a6fd0b46e5117a401010e56222e1
     volumes:
     - ./idp.nginx:/etc/nginx/nginx.conf:ro
     - ./jwks.json:/var/www/nginx/jwks.json:ro
 
   opa:
-    image: openpolicyagent/opa:0.62.1
+    image: openpolicyagent/opa:0.62.1@sha256:5adc63cf8042d2ebdb02c8cf75a705780d5eadba0e56c47ac15e5399170490e2
     command: run --server /etc/opa/policies
     volumes:
     - ./policy.rego:/etc/opa/policies/policy.rego:ro

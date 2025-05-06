@@ -1,6 +1,6 @@
 services:
   edge-router:
-    image: envoyproxy/envoy:v1.29.1
+    image: envoyproxy/envoy:v1.29.1@sha256:ab79db2e0452b54c88a103a61cf1cef577f56a59d0cc89918b2e319635b82323
     volumes:
     - ./envoy-config-http.yaml:/envoy.yaml:ro
     ports:
