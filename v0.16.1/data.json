@@ -1,0 +1,58 @@
+[
+  {
+    "version": "dev",
+    "path": "/heimdall/dev"
+  },
+  {
+    "version": "v0.4.1-alpha",
+    "path": "/heimdall/v0.4.1-alpha"
+  },
+  {
+    "version": "v0.5.0-alpha",
+    "path": "/heimdall/v0.5.0-alpha"
+  },
+  {
+    "version": "v0.6.1-alpha",
+    "path": "/heimdall/v0.6.1-alpha"
+  },
+  {
+    "version": "v0.7.0-alpha",
+    "path": "/heimdall/v0.7.0-alpha"
+  },
+  {
+    "version": "v0.8.2-alpha",
+    "path": "/heimdall/v0.8.2-alpha"
+  },
+  {
+    "version": "v0.9.1-alpha",
+    "path": "/heimdall/v0.9.1-alpha"
+  },
+  {
+    "version": "v0.10.1-alpha",
+    "path": "/heimdall/v0.10.1-alpha"
+  },
+  {
+    "version": "v0.11.1-alpha",
+    "path": "/heimdall/v0.11.1-alpha"
+  },
+  {
+    "version": "v0.12.0-alpha",
+    "path": "/heimdall/v0.12.0-alpha"
+  },
+  {
+    "version": "v0.13.0-alpha",
+    "path": "/heimdall/v0.13.0-alpha"
+  },
+  {
+    "version": "v0.14.5-alpha",
+    "path": "/heimdall/v0.14.5-alpha"
+  },
+  {
+    "version": "v0.15.10",
+    "path": "/heimdall/v0.15.10"
+  },
+  {
+    "version": "v0.16.0",
+    "path": "/heimdall/v0.16.0"
+  }
+]

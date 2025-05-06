@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Mechanisms on Heimdall</title><link>https://dadrus.github.io/docs/mechanisms/</link><description>Recent content in Mechanisms on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 06 May 2025 19:44:52 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/mechanisms/index.xml" rel="self" type="application/rss+xml"/><item><title>Catalogue</title><link>https://dadrus.github.io/docs/mechanisms/catalogue/</link><pubDate>Thu, 11 Jan 2024 15:01:21 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/catalogue/</guid><description>&lt;div class="paragraph">
+&lt;p>As described in &lt;a href="../../docs/concepts/mechanisms/">Concepts&lt;/a> section, mechanisms must be defined and configured before these can be used in rules. That is happening in the so-called mechanisms catalogue. On start up heimdall instantiates all defined and configured mechanisms and makes these available for usage in rules.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_catalogue_configuration">Catalogue Configuration&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>The corresponding mechanisms catalogue resides under the &lt;code>mechanisms&lt;/code> property of heimdall static configuration and is organized based on mechanism categories as also shown in the snippet below.&lt;/p>
+&lt;/div></description></item><item><title>Objects, Templating &amp; Co</title><link>https://dadrus.github.io/docs/mechanisms/evaluation_objects/</link><pubDate>Wed, 10 Jan 2024 15:53:47 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/evaluation_objects/</guid><description>&lt;div class="paragraph">
+&lt;p>E.g. in one case, you want to have access to a particular request header. In another case you would like to add specific data to the resulting JWT created by heimdall. And in yet another case, you may want to check whether some expectations apply. These capabilities are described on this page.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_objects">Objects&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Objects represent state in the execution of a particular rule. These are the entities, either created or used by particular mechanisms and can represent things, like the actual request, the authenticated subject of the request and many more.&lt;/p>
+&lt;/div></description></item><item><title>Authenticators</title><link>https://dadrus.github.io/docs/mechanisms/authenticators/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/authenticators/</guid><description>&lt;div class="paragraph">
+&lt;p>Some of the supported authenticator types may support or require additional configuration. The corresponding properties are annotated with &lt;code>mandatory&lt;/code>, respectively &lt;code>optional&lt;/code> to denote configuration requirement, as well as with &lt;code>overridable&lt;/code>, &lt;code>not overriddable&lt;/code> and &lt;code>partially overridable&lt;/code> to indicate whether the property can be overridden in a rule pipeline.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_unauthorized">Unauthorized&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>This authenticator rejects all requests as unauthenticated (on HTTP response code level this is then mapped to &lt;code>401 Unauthorized&lt;/code>, hence the type name). It basically stops the successful execution of the pipeline resulting in the execution of the error handlers. This authenticator type doesn’t have any configuration options.&lt;/p>
+&lt;/div></description></item><item><title>Authorizers</title><link>https://dadrus.github.io/docs/mechanisms/authorizers/</link><pubDate>Thu, 09 Jun 2022 18:57:03 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/authorizers/</guid><description>&lt;div class="paragraph">
+&lt;p>Some of the authorizers may support or require additional configuration. The corresponding properties are annotated with &lt;code>mandatory&lt;/code>, respectively &lt;code>optional&lt;/code> to denote configuration requirement, as well as with &lt;code>overridable&lt;/code>, &lt;code>not overridable&lt;/code> and &lt;code>partially overridable&lt;/code> to indicate whether the property can be overridden in a rule pipeline.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_allow">Allow&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>As the name implies, this authorizer allows any request passing through. This authorizer type also doesn’t have any configuration options.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>To enable the usage of this authorizer, you have to set the &lt;code>type&lt;/code> property to &lt;code>allow&lt;/code>.&lt;/p>
+&lt;/div></description></item><item><title>Contextualizers</title><link>https://dadrus.github.io/docs/mechanisms/contextualizers/</link><pubDate>Thu, 09 Jun 2022 18:57:10 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/contextualizers/</guid><description>&lt;div class="paragraph">
+&lt;p>Some of the contextualizers may support or require additional configuration. The corresponding properties are annotated with &lt;code>mandatory&lt;/code>, respectively &lt;code>optional&lt;/code> to denote configuration requirement, as well as with &lt;code>overridable&lt;/code>, &lt;code>not overridable&lt;/code> and &lt;code>partially overridable&lt;/code> to indicate whether the property can be overridden in a rule pipeline.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_generic">Generic&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in &lt;a href="../../docs/mechanisms/evaluation_objects/#_subject">&lt;code>Subject’s&lt;/code>&lt;/a> &lt;code>Attributes&lt;/code> property. If the API responses with a 2xx HTTP response code, the payload is made available in the &lt;a href="../../docs/mechanisms/evaluation_objects/#_outputs">&lt;code>Outputs&lt;/code>&lt;/a> object, otherwise, if not overridden, an error is thrown and the execution of the authentication &amp;amp; authorization pipeline stops. To avoid overwriting of existing key value pairs, this object is however not available on the top level, but under a key named by the &lt;code>id&lt;/code> of the contextualizer (See also the example below). If the &lt;code>Content-Type&lt;/code> of the response is either ending with &lt;code>json&lt;/code> or is &lt;code>application/x-www-form-urlencoded&lt;/code>, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.&lt;/p>
+&lt;/div></description></item><item><title>Finalizers</title><link>https://dadrus.github.io/docs/mechanisms/finalizers/</link><pubDate>Thu, 09 Jun 2022 18:57:16 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/finalizers/</guid><description>&lt;div class="paragraph">
+&lt;p>Some finalizers may support or require additional configuration. The corresponding properties are annotated with &lt;code>mandatory&lt;/code>, respectively &lt;code>optional&lt;/code> to denote configuration requirement, as well as with &lt;code>overridable&lt;/code>, &lt;code>not overridable&lt;/code> and &lt;code>partially overridable&lt;/code> to indicate whether the property can be overridden in a rule pipeline.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_noop">Noop&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>As the name implies, this finalizer does nothing. This finalizer type also doesn’t have any configuration options.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>To enable the usage of this finalizer, you have to set the &lt;code>type&lt;/code> property to &lt;code>noop&lt;/code>.&lt;/p>
+&lt;/div></description></item><item><title>Error Handlers</title><link>https://dadrus.github.io/docs/mechanisms/error_handlers/</link><pubDate>Thu, 09 Jun 2022 18:57:29 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/error_handlers/</guid><description>&lt;div class="paragraph">
+&lt;p>Some of the error handlers may support or require additional configuration. The corresponding properties are annotated with &lt;code>mandatory&lt;/code>, respectively &lt;code>optional&lt;/code> to denote configuration requirement, as well as with &lt;code>overridable&lt;/code>, &lt;code>not overridable&lt;/code> and &lt;code>partially overridable&lt;/code> to indicate whether the property can be overridden in a rule pipeline.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_default">Default&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>This error handler is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the &lt;a href="../../docs/rules/default_rule/">default rule’s&lt;/a> error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn’t have any configuration options.&lt;/p>
+&lt;/div></description></item></channel></rss>
