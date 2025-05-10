@@ -153,10 +153,8 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Install Redocly CLI
-        run: npm i -g @redocly/cli@1.25.9
-      - name: Run Redocly Lint
-        run: redocly lint
+      - name: Run Redocly CLI
+        run: npx --yes @redocly/cli@1.34.3 lint
 
   lint-dockerfiles:
     runs-on: ubuntu-24.04
@@ -192,7 +190,6 @@ jobs:
         uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
           egress-policy: audit
-
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup k8s tools
@@ -469,10 +466,10 @@ jobs:
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
-        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
+        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s asciidoctor-diagram-ditaamini rouge
       - name: Install dependencies
         working-directory: ./docs
-        run: npm install
+        run: npm ci
       - name: Update version string to dev version
         uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
         with:
