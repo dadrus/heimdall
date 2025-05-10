@@ -144,7 +144,7 @@ Data flush delay. When greater than zero, pauses pipeline write loop for some ti
 
 * *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
-TLS settings. By default, the communication to Redis happens over TLS. This requires however a properly configured link:{{< relref "/docs/operations/security.adoc#_tls_trust_store" >}}[trust store], as otherwise heimdall won't trust the certificates used by the Redis services. In addition to the referenced configuration options, you can also make use of the following properties:
+TLS settings. By default, the communication to Redis happens over TLS. This requires however a properly configured link:{{< relref "/docs/operations/security.adoc#_trust_store" >}}[trust store], as otherwise heimdall won't trust the certificates used by the Redis services. In addition to the referenced configuration options, you can also make use of the following properties:
 
 ** *`disabled`*: _boolean_ (optional)
 +

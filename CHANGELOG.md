@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.2](https://github.com/dadrus/heimdall/compare/v0.16.1...v0.16.2) (2025-05-10)
+
+
+### Bug Fixes
+
+* Helm Chart updated to disable autoscaling by default and to check resource request configuration in HPA template ([#2448](https://github.com/dadrus/heimdall/issues/2448)) ([8046ef8](https://github.com/dadrus/heimdall/commit/8046ef8f26c33d0ceab285c20e058dc08d595c36))
+* Kubernetes provider's reconciliation loop decoupled from the startup timeout ([#2447](https://github.com/dadrus/heimdall/issues/2447)) ([02b778f](https://github.com/dadrus/heimdall/commit/02b778f426f6ba0909c3799b21bb14f6b576e1db))
+
+
+### Dependencies
+
+* update golang to v1.24.3 ([#2439](https://github.com/dadrus/heimdall/issues/2439)) ([8183ad6](https://github.com/dadrus/heimdall/commit/8183ad6f4f4d089464cdf1eccb0be28064d535f8))
+* update module github.com/wi2l/jsondiff to v0.7.0 ([#2443](https://github.com/dadrus/heimdall/issues/2443)) ([edbed46](https://github.com/dadrus/heimdall/commit/edbed466293a57b158039792e5115365b41a5cef))
+
 ## [0.16.1](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.16.1) (2025-05-06)
 
 

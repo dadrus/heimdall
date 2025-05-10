@@ -21,6 +21,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -34,7 +35,7 @@ type ruleSetRepositoryImpl struct {
 
 func (r *ruleSetRepositoryImpl) List(
 	ctx context.Context, opts metav1.ListOptions,
-) (*RuleSetList, error) {
+) (runtime.Object, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
