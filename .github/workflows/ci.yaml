@@ -154,7 +154,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
-        run: npm i -g @redocly/cli@1.25.9
+        run: npm install -g https://registry.npmjs.org/@redocly/cli/-/cli-1.25.9.tgz --integrity=sha512-dIQdZGFA1ZqXgE+az0P/5LrhD9evE+AfEen2uTR/EY2e/HdwC2m0aFMaLAMUSdwFYmOmHd8JishUh67TGlBesQ==
       - name: Run Redocly Lint
         run: redocly lint
 
@@ -472,7 +472,7 @@ jobs:
         run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s asciidoctor-diagram-ditaamini rouge
       - name: Install dependencies
         working-directory: ./docs
-        run: npm install
+        run: npm ci
       - name: Update version string to dev version
         uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
         with:
