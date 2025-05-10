@@ -469,7 +469,7 @@ jobs:
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
-        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
+        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s asciidoctor-diagram-ditaamini rouge
       - name: Install dependencies
         working-directory: ./docs
         run: npm install
