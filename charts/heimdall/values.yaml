@@ -71,11 +71,11 @@ deployment:
     # - The heimdall process itself requires approximately 64Mi of memory.
 
   # Only used if autoscaling is disabled (see below)
-  replicaCount: 2
+  replicaCount: 1
 
   # Configures HorizontalPodAutoscaler
   autoscaling:
-    enabled: true
+    enabled: false
     minReplicas: 2
     maxReplicas: 10
     targetCPUUtilizationPercentage: 80
