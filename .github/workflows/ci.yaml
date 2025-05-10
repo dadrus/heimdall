@@ -154,7 +154,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Run Redocly CLI
-        run: npx --yes @redocly/cli@1.34.3 lint openapi.yaml
+        run: npx --yes @redocly/cli@1.34.3 lint
 
   lint-dockerfiles:
     runs-on: ubuntu-24.04
