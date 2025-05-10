@@ -180,7 +180,7 @@ func (s *ClientTestSuite) TestRuleSetsList() {
 
 	// THEN
 	s.Require().NoError(err)
-	verifyRuleSetList(s.T(), rls)
+	verifyRuleSetList(s.T(), rls.(*RuleSetList))
 }
 
 func (s *ClientTestSuite) TestRuleSetsWatch() {
