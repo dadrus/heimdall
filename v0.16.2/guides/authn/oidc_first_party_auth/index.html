@@ -140,7 +140,7 @@ psql <span class=nt>-v</span> <span class=nv>ON_ERROR_STOP</span><span class=o>=
 </span><span class=no>EOSQL
 </span></code></pre></div></div></li><li><p>Now, let’s bring everything together using a Docker Compose file. Create a file named <code>docker-compose.yaml</code> in the root directory with the following content:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>services</span><span class=pi>:</span>
   <span class=na>heimdall</span><span class=pi>:</span> <i class=conum data-value=1></i><b>(1)</b>
-    <span class=na>image</span><span class=pi>:</span> <span class=s>dadrus/heimdall:{{ github.ref_name }}</span>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>dadrus/heimdall:0.16.2</span>
     <span class=na>ports</span><span class=pi>:</span>
       <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>9090:4456&#34;</span>
     <span class=na>command</span><span class=pi>:</span> <span class=s>serve proxy --c /etc/heimdall/config.yaml --insecure</span>

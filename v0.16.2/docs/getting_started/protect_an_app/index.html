@@ -138,7 +138,7 @@ http <span class=o>{</span>
   </span><span class=p>}]</span><span class=w>
 </span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>We will place it in the <code>/var/www/nginx</code> folder, as mentioned earlier, when we set up our environment.</p></div></li><li><p>Now, let’s configure the environment. To run <strong>heimdall as a proxy</strong>, create or modify a <code>docker-compose.yaml</code> file. Be sure to update it with the correct paths to your <code>heimdall-config.yaml</code>, <code>upstream-rules.yaml</code>, <code>policy.rego</code>, <code>idp.nginx</code>, and <code>jwks.json</code> files created earlier.</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>services</span><span class=pi>:</span>
   <span class=na>heimdall</span><span class=pi>:</span> <i class=conum data-value=1></i><b>(1)</b>
-    <span class=na>image</span><span class=pi>:</span> <span class=s>dadrus/heimdall:{{ github.ref_name }}</span>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>dadrus/heimdall:0.16.2</span>
     <span class=na>ports</span><span class=pi>:</span>
     <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>9090:4456&#34;</span>
     <span class=na>volumes</span><span class=pi>:</span>
@@ -182,7 +182,7 @@ http <span class=o>{</span>
     <span class=pi>-</span> <span class=s>traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization</span>
 
   <span class=na>heimdall</span><span class=pi>:</span>  <i class=conum data-value=3></i><b>(3)</b>
-    <span class=na>image</span><span class=pi>:</span> <span class=s>dadrus/heimdall:{{ github.ref_name }}</span>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>dadrus/heimdall:0.16.2</span>
     <span class=na>volumes</span><span class=pi>:</span>
     <span class=pi>-</span> <span class=s>./heimdall-config.yaml:/etc/heimdall/config.yaml:ro</span>
     <span class=pi>-</span> <span class=s>./upstream-rules.yaml:/etc/heimdall/rules.yaml:ro</span>
