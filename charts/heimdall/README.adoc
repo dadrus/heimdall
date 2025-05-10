@@ -277,18 +277,34 @@ capabilities:
 
 a|`deployment.resources`
 
-Enables you to specify the resources for the deployment, like limits, etc
+Specifies resource requests and limits for the deployment.
+
+**Note:** Memory usage depends on the cache backend and its configuration. By default, heimdall uses an in-memory cache limited to 128Mi. With Redis (with client-side caching), the limit is also 128Mi. The heimdall process itself requires ~64Mi.
+
+Example:
+```yaml
+deployment:
+  resources:
+    limits:
+      cpu: 125m
+      memory: 256Mi
+    requests:
+      cpu: 125m
+      memory: 256Mi
+```
 a| `{}` (empty map)
 
 a| `deployment.replicaCount`
 
-If HPA is disabled, allows specifying the amount of desired replicas
-a| `2`
+Allows specifying the amount of desired replicas (only used if HPA is disabled)
+a| `1`
 
 a| `deployment.autoscaling.enabled`
 
 Enables or disables HPA based on CPU and memory utilization
-a| `true`
+
+If enabled, `deployment.resources.requests` must be configured.
+a| `false`
 
 a| `deployment.autoscaling.minReplicas`
 
@@ -303,11 +319,15 @@ a| `10`
 a| `deployment.autoscaling.targetCPUUtilizationPercentage`
 
 Target CPU utilization in % to scale up
+
+Requires `deployment.resources.requests.cpu` to be configured
 a| `80`
 
 a| `deployment.autoscaling.targetMemoryUtilizationPercentage`
 
 Target Memory utilization in % to scale up
+
+Requires `deployment.resources.requests.memory` to be configured
 a| `80`
 
 a| `deployment.nodeSelector`
