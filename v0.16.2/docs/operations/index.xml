@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 10 May 2025 11:54:36 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph">
+&lt;p>In heimdall, configuration encompasses two distinct concepts:&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Static startup configuration, which is the focus of this document, and&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Configuration of rules and rule sets, detailed &lt;a href="../../docs/rules/rule_sets/">here&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>The static configuration establishes core services and components, such as the &lt;a href="../../docs/services/main/">main service&lt;/a> - the primary entry point heimdall listens to for access control decisions - along with observability features like &lt;a href="../../docs/operations/observability/#_logging">logging&lt;/a>, the &lt;a href="../../docs/concepts/mechanisms/">mechanism catalogue&lt;/a>, the &lt;a href="../../docs/rules/default_rule/">default rule&lt;/a>, and &lt;a href="../../docs/rules/providers/">rule providers&lt;/a>. These elements are designed to remain relatively stable over time.&lt;/p>
+&lt;/div></description></item><item><title>CLI</title><link>https://dadrus.github.io/docs/operations/cli/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/cli/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_usage_patterns">Usage Patterns&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="listingblock">
+&lt;div class="content">
+&lt;pre class="rouge highlight">&lt;code data-lang="bash">heimdall &lt;span class="o">[&lt;/span>&lt;span class="nb">command&lt;/span>&lt;span class="o">]&lt;/span> &lt;span class="o">[&lt;/span>flags] &lt;span class="o">[&lt;/span>arguments]&lt;/code>&lt;/pre>
+&lt;/div>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>Use &lt;code>heimdall help&lt;/code> to get overview about available commands, respectively &lt;code>heimdall [command] help&lt;/code> for help on any command.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>Flag’s usage:&lt;/p>
+&lt;/div>
+&lt;div class="listingblock">
+&lt;div class="content">
+&lt;pre class="rouge highlight">&lt;code data-lang="bash">&lt;span class="c"># set flag_argument to flag(s)&lt;/span>
+heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;span class="o">=&lt;/span>flag_argument] &lt;span class="o">[&lt;/span>&lt;span class="nt">-f&lt;/span> &lt;span class="o">[&lt;/span>flag_argument]]&lt;/code>&lt;/pre>
+&lt;/div>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>E.g.&lt;/p>
+&lt;/div>
+&lt;div class="listingblock">
+&lt;div class="content">
+&lt;pre class="rouge highlight">&lt;code data-lang="bash">heimdall validate config &lt;span class="nt">-c&lt;/span> config.yaml&lt;/code>&lt;/pre>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_commands">Commands&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>&lt;code>completion&lt;/code>&lt;/p>
+&lt;div class="paragraph">
+&lt;p>Generates the autocompletion script for the specified shell.&lt;/p>
+&lt;/div>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;code>health&lt;/code>&lt;/p>
+&lt;div class="paragraph">
+&lt;p>Calls heimdall’s healthcheck endpoint to verify the status of the deployment.&lt;/p>
+&lt;/div>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;code>help&lt;/code>&lt;/p>
+&lt;div class="paragraph">
+&lt;p>Provides an overview about the available commands and their descriptions.&lt;/p>
+&lt;/div></description></item><item><title>Observability</title><link>https://dadrus.github.io/docs/operations/observability/</link><pubDate>Wed, 03 Aug 2022 18:53:31 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/observability/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_logging">Logging&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Heimdall’s implementation uses &lt;a href="https://github.com/rs/zerolog">zerolog&lt;/a> - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.&lt;/p>
+&lt;/div>
+&lt;div class="sect2">
+&lt;h3 id="_configuration">Configuration&lt;/h3>
+&lt;div class="paragraph">
+&lt;p>Logging configuration can be adjusted in the &lt;code>log&lt;/code> property of heimdall’s configuration and supports following properties.&lt;/p>
+&lt;/div></description></item><item><title>Caching</title><link>https://dadrus.github.io/docs/operations/cache/</link><pubDate>Mon, 06 Nov 2023 13:16:34 +0100</pubDate><guid>https://dadrus.github.io/docs/operations/cache/</guid><description>&lt;div class="paragraph">
+&lt;p>Even some default caching is in place, and you can instruct heimdall to cache particular data for some amount of time, like e.g how long to cache the response from the JWKS endpoint when using the &lt;a href="../../docs/mechanisms/authenticators/#_jwt">JWT Authenticator&lt;/a>, all these options require a caching backend to be available. Otherwise, the corresponding configurations do not have any effect.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>Configuration of that backend happens by making use of the &lt;code>cache&lt;/code> property in heimdall’s configuration, which supports the following options:&lt;/p>
+&lt;/div></description></item><item><title>Security</title><link>https://dadrus.github.io/docs/operations/security/</link><pubDate>Mon, 15 Aug 2022 08:33:35 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/security/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_defaults">Defaults&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>The following configurations and behaviors are enforced by default:&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>All inbound communication must use TLS. TLS configuration is required for all services and endpoints exposed by heimdall. This enforcement can be disabled (not recommended) by starting Heimdall with the &lt;code>--insecure-skip-ingress-tls-enforcement&lt;/code> flag.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>All outbound communication must use TLS. TLS configuration is required for all services and endpoints heimdall communicates with. This enforcement can be disabled (not recommended) by starting Heimdall with the &lt;code>--insecure-skip-egress-tls-enforcement&lt;/code> flag.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>If Heimdall is used in &lt;a href="../../docs/concepts/operating_modes/#_proxy_mode">proxy mode&lt;/a>, communication with upstream services while proxying requests must use TLS. This enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-upstream-tls-enforcement&lt;/code> flag.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Configuring the &lt;a href="../../docs/services/main/#_trusted_proxies">&lt;code>trusted_proxies&lt;/code>&lt;/a> property to allow insecure networks (&lt;code>0.0.0.0/0&lt;/code>, &lt;code>0/0&lt;/code>, &lt;code>0000:0000:0000:0000:0000:0000:0000:0000/0&lt;/code>, and &lt;code>::/0&lt;/code>) is prohibited. See also &lt;a href="../../docs/operations/security/#_http_header_security_considerations">HTTP Header Security Considerations&lt;/a>. This enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-secure-trusted-proxies-enforcement&lt;/code> flag.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The authentication stage of the &lt;a href="../../docs/rules/default_rule/">default rule&lt;/a> cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). This enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-secure-default-rule-enforcement&lt;/code> flag.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item></channel></rss>
