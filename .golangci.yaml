@@ -27,8 +27,7 @@ linters:
       lines: 80
     gomoddirectives:
       replace-allow-list:
-        - golang.org/x/oauth2
-        - github.com/golang-jwt/jwt/v5
+        - github.com/ebitengine/purego
     mnd:
       ignored-functions:
         - ^make

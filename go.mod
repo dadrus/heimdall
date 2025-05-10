@@ -1,6 +1,6 @@
 module github.com/dadrus/heimdall
 
-go 1.24.2
+go 1.24.3
 
 require (
 	github.com/DmitriyVTitov/size v1.5.0
@@ -232,3 +232,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+// as recommended in https://github.com/golang/go/issues/73617 to resolve cross-compilation issues for darwin
+replace github.com/ebitengine/purego v0.8.2 => github.com/ebitengine/purego v0.8.3-0.20250507171810-1638563e3615
