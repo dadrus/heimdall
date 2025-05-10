@@ -8,7 +8,7 @@ This chart helps you to deploy heimdall in your Kubernetes cluster using Helm.
 
 == Prerequisites
 
-* A Kubernetes version >= 1.27
+* A Kubernetes version >= 1.29
 * https://helm.sh/docs/intro/install/[Helm] 3.10+
 * https://git-scm.com/downloads[Git] (optional)
 
