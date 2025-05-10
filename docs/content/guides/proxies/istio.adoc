@@ -19,7 +19,7 @@ https://istio.io/[Istio] is an open-source service mesh that extends Kubernetesâ
 * Deployed Istio (See https://istio.io/latest/docs/setup/install/[here] for installation options)
 * heimdall installed and operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
 +
-NOTE: To allow heimdall communicating with services running in the mesh, add the certificate of the CA used by Istio to heimdall's link:{{< relref "/docs/operations/security.adoc#_tls_trust_store" >}}[trust store].
+NOTE: To allow heimdall communicating with services running in the mesh, add the certificate of the CA used by Istio to heimdall's link:{{< relref "/docs/operations/security.adoc#_trust_store" >}}[trust store].
 
 == Integration Options
 

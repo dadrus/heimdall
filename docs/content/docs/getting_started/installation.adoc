@@ -105,11 +105,13 @@ heimdall version 0.15.10
 
 == Helm Chart
 
-Heimdall can be installed via a Helm chart with a few simple steps, depending on if you are deploying for the first time, or upgrading from an existing installation.
+Heimdall can be installed using a Helm chart in just a few steps - whether you're deploying it for the first time or upgrading an existing installation. The chart is available via a Helm chart repository hosted on GitHub or as an OCI image published to GHCR. For detailed instructions, refer to the https://github.com/dadrus/heimdall/tree/main/charts/heimdall[chart documentation].
+
+NOTE: Autoscaling (HPA) is disabled by default to avoid misconfigured setups. If you enable it, be sure to define resource requests and limits appropriate for your production environment.
 
 === Prerequisites
 
-* A Kubernetes version >= 1.27
+* A Kubernetes version >= 1.29
 * https://helm.sh/docs/intro/install/[Helm] 3.0+
 
 === Adding the Helm Repository

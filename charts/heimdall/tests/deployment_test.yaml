@@ -160,16 +160,14 @@ tests:
             foo: bar
             helm.sh/chart: heimdall-2.0.0
 
-  - it: should configure 2 replicas if autoscaling is disabled
+  - it: should configure 1 replica by default
     template: deployment.yaml
-    set:
-      deployment.autoscaling.enabled: false
     asserts:
       - equal:
           path: spec.replicas
-          value: 2
+          value: 1
 
-  - it: should not configure replicas if autoscaling is enabled (default)
+  - it: should not configure replicas if autoscaling is enabled
     template: deployment.yaml
     set:
       deployment.autoscaling.enabled: true
