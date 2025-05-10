@@ -2,21 +2,44 @@ suite: test suite for horizontal pod autoscaler
 templates:
   - hpa.yaml
 tests:
-  - it: should be configured by default
-    asserts:
-      - isKind:
-          of: HorizontalPodAutoscaler
-      - isAPIVersion:
-          of: autoscaling/v2
-
-  - it: can be disabled
-    set:
-      deployment.autoscaling.enabled: false
+  - it: should not be configured by default
     asserts:
       - hasDocuments:
           count: 0
 
+
+  - it: should error when enabled, but both, cpu and memory metrics are disabled
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.autoscaling.targetCPUUtilizationPercentage: 0
+      deployment.autoscaling.targetMemoryUtilizationPercentage: 0
+    asserts:
+      - failedTemplate:
+          errorMessage: autoscaling is enabled, but usage of both, the cpu and the memory metrics is disabled
+
+  - it: should error when cpu metrics are enabled, but no cpu resource requests are configured
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.autoscaling.targetCPUUtilizationPercentage: 50
+      deployment.autoscaling.targetMemoryUtilizationPercentage: 0
+    asserts:
+      - failedTemplate:
+          errorMessage: autoscaling is configured to use cpu metrics, but no cpu resource requests are configured
+
+  - it: should error when memory metrics are enabled, but no memory resource requests are configured
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.autoscaling.targetCPUUtilizationPercentage: 0
+      deployment.autoscaling.targetMemoryUtilizationPercentage: 50
+    asserts:
+      - failedTemplate:
+          errorMessage: autoscaling is configured to use memory metrics, but no memory resource requests are configured
+
   - it: name should be set with default name
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: metadata.name
@@ -27,6 +50,9 @@ tests:
       name: test-release
     set:
       nameOverride: foo
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: metadata.name
@@ -35,12 +61,20 @@ tests:
   - it: namespace should be set
     release:
       namespace: test-namespace
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: metadata.namespace
           value: test-namespace
 
   - it: should set default labels with default values
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - isSubset:
           path: metadata.labels
@@ -61,6 +95,9 @@ tests:
       name: test-release
     set:
       nameOverride: foo
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: metadata.labels
@@ -72,6 +109,10 @@ tests:
             helm.sh/chart: heimdall-2.0.0
 
   - it: should have no annotations
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - notExists:
           path: metadata.annotations
@@ -79,6 +120,10 @@ tests:
   - it: should reference expected deployment
     release:
       name: test-release
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: spec.scaleTargetRef
@@ -88,6 +133,10 @@ tests:
             name: test-release-heimdall
 
   - it: should set min and max replicas by default
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: spec.minReplicas
@@ -98,17 +147,24 @@ tests:
 
   - it: min and max replicas can be configured
     set:
-      deployment.autoscaling.minReplicas: 1
+      deployment.autoscaling.enabled: true
+      deployment.autoscaling.minReplicas: 2
       deployment.autoscaling.maxReplicas: 4
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: spec.minReplicas
-          value: 1
+          value: 2
       - equal:
           path: spec.maxReplicas
           value: 4
 
   - it: should configure cpu and memory metrics by default with default average utilization
+    set:
+      deployment.autoscaling.enabled: true
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: spec.metrics
@@ -128,10 +184,11 @@ tests:
 
   - it: should configure cpu and memory metrics with specified average utilization
     set:
-      deployment:
-        autoscaling:
-          targetCPUUtilizationPercentage: 40
-          targetMemoryUtilizationPercentage: 50
+      deployment.autoscaling.enabled: true
+      deployment.autoscaling.targetCPUUtilizationPercentage: 40
+      deployment.autoscaling.targetMemoryUtilizationPercentage: 50
+      deployment.resources.requests.cpu: 100m
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: spec.metrics
@@ -151,9 +208,9 @@ tests:
 
   - it: cpu metrics can be disabled
     set:
-      deployment:
-        autoscaling:
-          targetCPUUtilizationPercentage: 0
+      deployment.autoscaling.enabled: true
+      deployment.autoscaling.targetCPUUtilizationPercentage: 0
+      deployment.resources.requests.memory: 196Mi
     asserts:
       - equal:
           path: spec.metrics
@@ -167,9 +224,9 @@ tests:
 
   - it: memory metrics can be disabled
     set:
-      deployment:
-        autoscaling:
-          targetMemoryUtilizationPercentage: 0
+      deployment.autoscaling.enabled: true
+      deployment.autoscaling.targetMemoryUtilizationPercentage: 0
+      deployment.resources.requests.cpu: 100m
     asserts:
       - equal:
           path: spec.metrics
@@ -180,13 +237,3 @@ tests:
                   averageUtilization: 80
                   type: Utilization
               type: Resource
-
-  - it: should error when both, cpu and memory metrics are disabled
-    set:
-      deployment:
-        autoscaling:
-          targetCPUUtilizationPercentage: 0
-          targetMemoryUtilizationPercentage: 0
-    asserts:
-      - failedTemplate:
-          errorMessage: autoscaling is enabled, but usage of both, the cpu and the memory metrics is disabled
