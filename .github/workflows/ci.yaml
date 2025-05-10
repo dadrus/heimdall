@@ -154,7 +154,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
-        run: npm install -g https://registry.npmjs.org/@redocly/cli/-/cli-1.25.9.tgz --integrity=sha512-dIQdZGFA1ZqXgE+az0P/5LrhD9evE+AfEen2uTR/EY2e/HdwC2m0aFMaLAMUSdwFYmOmHd8JishUh67TGlBesQ==
+        run: npm install -g https://registry.npmjs.org/@redocly/cli/-/cli-1.34.3.tgz --integrity=sha512-GJNBTMfm5wTCtH6K+RtPQZuGbqflMclXqAZ5My12tfux6xFDMW1l0MNd5RMpnIS1aeFcDX++P1gnnROWlesj4w==
       - name: Run Redocly Lint
         run: redocly lint
 
