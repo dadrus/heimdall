@@ -33,9 +33,7 @@ import (
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -122,8 +120,8 @@ func (p *Provider) newController(ctx context.Context, namespace string) (cache.S
 
 	return cache.NewInformerWithOptions(cache.InformerOptions{
 		ListerWatcher: &cache.ListWatch{
-			ListFunc:  func(opts metav1.ListOptions) (runtime.Object, error) { return repository.List(ctx, opts) },
-			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) { return repository.Watch(ctx, opts) },
+			ListWithContextFunc:  repository.List,
+			WatchFuncWithContext: repository.Watch,
 		},
 		ObjectType: &v1alpha4.RuleSet{},
 		Handler: cache.FilteringResourceEventHandler{
@@ -145,19 +143,19 @@ func (p *Provider) Start(ctx context.Context) error {
 	klog.SetLogger(zerologr.New(&p.l))
 	p.l.Info().Msg("Starting rule provider")
 
-	ctx, p.cancel = context.WithCancel(p.l.WithContext(ctx))
+	ctx, p.cancel = context.WithCancel(p.l.WithContext(context.WithoutCancel(ctx)))
 	store, controller := p.newController(ctx, "")
 	p.store = store
 
 	p.wg.Add(1)
 
 	go func() {
-		p.l.Debug().Msg("Starting reconciliation loop")
+		p.l.Info().Msg("Starting reconciliation loop")
 
-		controller.Run(ctx.Done())
+		controller.RunWithContext(ctx)
 		p.wg.Done()
 
-		p.l.Debug().Msg("Reconciliation loop exited")
+		p.l.Info().Msg("Reconciliation loop exited")
 	}()
 
 	return p.adc.Start(ctx)

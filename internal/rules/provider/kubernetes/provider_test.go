@@ -30,6 +30,7 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/goccy/go-json"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1001,4 +1002,56 @@ func TestProviderLifecycle(t *testing.T) {
 			tc.assert(t, &handler.statusUpdates, processor)
 		})
 	}
+}
+
+func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tb := &testsupport.TestingLog{TB: t}
+	logger := zerolog.New(zerolog.TestWriter{T: tb})
+
+	handler := &RuleSetResourceHandler{
+		rsUpdatedEvt: make(chan v1alpha4.RuleSet, 2),
+		rsCurrentEvt: make(chan v1alpha4.RuleSet, 2),
+		watchEvent: func(rs v1alpha4.RuleSet, _ int) (watch.Event, error) {
+			return watch.Event{Type: watch.Bookmark, Object: &rs}, nil
+		},
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler.handle(t, r, w)
+	}))
+
+	defer srv.Close()
+
+	conf := &config.Configuration{Providers: config.RuleProviders{Kubernetes: map[string]any{}}}
+	k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: srv.URL}, nil }
+	processor := mocks.NewRuleSetProcessorMock(t)
+
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Config().Return(conf)
+	appCtx.EXPECT().Logger().Return(logger)
+
+	prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 150*time.Millisecond)
+	defer cancel()
+
+	// WHEN
+	err = prov.Start(ctx)
+
+	defer func() {
+		_ = prov.Stop(ctx) //nolint:errcheck
+
+		handler.close()
+	}()
+
+	// THEN
+	time.Sleep(200 * time.Millisecond)
+
+	assert.NotContains(t, tb.CollectedLog(), "Reconciliation loop exited")
+
+	require.NoError(t, err)
 }

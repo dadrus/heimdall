@@ -140,7 +140,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		return err
 	}
 
-	go p.watchFiles(ctx)
+	go p.watchFiles(context.WithoutCancel(ctx))
 
 	return nil
 }
