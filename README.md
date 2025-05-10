@@ -8,6 +8,7 @@
 [![codecov](https://codecov.io/gh/dadrus/heimdall/branch/main/graph/badge.svg)](https://codecov.io/gh/dadrus/heimdall)
 [![Docker](https://img.shields.io/badge/image-0.16.2-blue?logo=docker)](https://hub.docker.com/r/dadrus/heimdall)
 [![Helm Chart](https://img.shields.io/badge/dynamic/yaml.svg?label=chart&url=https://dadrus.github.io/heimdall/charts/index.yaml&query=$.entries.heimdall[0].version&logo=helm&logoColor=white)](https://github.com/dadrus/heimdall/tree/main/charts/heimdall)
+[![Discord](https://img.shields.io/discord/1100447190796742698?logo=discord&logoColor=white&label=community)](https://discord.gg/qQgg8xKuyb)
 
 ## Background
 
