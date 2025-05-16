@@ -17,7 +17,11 @@
 package memory
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -223,4 +227,239 @@ func TestEntryLimit(t *testing.T) {
 	// measuring the entries via memory size
 	finalSize := size.Of(cch)
 	assert.LessOrEqual(t, finalSize, int(1100*bytesize.KB))
+}
+
+// waitTimeout waits for the waitgroup for the specified max timeout.
+// Returns true if waiting timed out.
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
+}
+
+func TestConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
+	// Create cache
+	cch, err := NewCache(nil, map[string]any{})
+	require.NoError(t, err)
+
+	err = cch.Start(t.Context())
+	require.NoError(t, err)
+
+	defer cch.Stop(t.Context())
+
+	// Number of goroutines and operations per goroutine
+	const numGoroutines = 20
+	const numOperations = 200
+
+	// WaitGroup to synchronize the start of goroutines
+	var startWg sync.WaitGroup
+	startWg.Add(1) // Only one Add, which will be Done by the main goroutine
+
+	// WaitGroup to wait for all goroutines to complete
+	var doneWg sync.WaitGroup
+	doneWg.Add(numGoroutines)
+
+	// Track errors
+	errorsChan := make(chan error, numGoroutines*numOperations)
+
+	// Create a context with timeout for detecting deadlocks
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+
+	// Launch goroutines
+	for i := 0; i < numGoroutines; i++ {
+		go func(routineID int) {
+			defer doneWg.Done()
+
+			// Wait for the signal to start
+			startWg.Wait()
+
+			// Perform cache operations
+			for j := 0; j < numOperations; j++ {
+				// Check if we've timed out
+				select {
+				case <-ctx.Done():
+					errorsChan <- fmt.Errorf("goroutine %d timed out after timeout", routineID)
+					return
+				default:
+					// Continue with operation
+				}
+
+				key := fmt.Sprintf("key-%d-%d", routineID, j)
+				value := []byte(fmt.Sprintf("value-%d-%d", routineID, j))
+
+				// Set the value
+				err := cch.Set(ctx, key, value, 10*time.Second)
+				if err != nil {
+					errorsChan <- fmt.Errorf("error in Set: goroutine %d, operation %d: %v", routineID, j, err)
+					continue
+				}
+
+				// Get the value we just set to verify it
+				retrievedValue, err := cch.Get(ctx, key)
+				if err != nil {
+					errorsChan <- fmt.Errorf("error in Get: goroutine %d, operation %d: %v", routineID, j, err)
+					continue
+				}
+
+				// Verify the value matches what we set
+				if !bytes.Equal(value, retrievedValue) {
+					errorsChan <- fmt.Errorf("value mismatch: goroutine %d, operation %d", routineID, j)
+				}
+			}
+		}(i)
+	}
+
+	// Start timer
+	start := time.Now()
+
+	// Signal all goroutines to start
+	startWg.Done()
+
+	// Wait for all goroutines with timeout
+	if timedOut := waitTimeout(&doneWg, 2*time.Second); timedOut {
+		t.Fatalf("Test timed out after 2 seconds - likely deadlock detected")
+		return
+	}
+
+	// Check execution time
+	execTime := time.Since(start)
+	assert.LessOrEqual(t, execTime, 2*time.Second, "Concurrent operations took too long: %v", execTime)
+
+	// Check errors
+	close(errorsChan)
+	var errors []error
+	for err := range errorsChan {
+		errors = append(errors, err)
+	}
+	assert.Empty(t, errors, "Encountered errors during concurrent operations")
+}
+
+func TestConcurrentAccessSameItem(t *testing.T) {
+	t.Parallel()
+
+	// Create cache
+	cch, err := NewCache(nil, map[string]any{})
+	require.NoError(t, err)
+
+	err = cch.Start(t.Context())
+	require.NoError(t, err)
+
+	defer cch.Stop(t.Context())
+
+	// Set a shared counter to 0
+	sharedKey := "shared-counter"
+	err = cch.Set(t.Context(), sharedKey, []byte("0"), 10*time.Second)
+	require.NoError(t, err)
+
+	// Number of goroutines and operations per goroutine
+	const numGoroutines = 20
+	const numOperations = 200
+
+	// WaitGroup to synchronize the start of goroutines
+	var startWg sync.WaitGroup
+	startWg.Add(1) // Only one Add, which will be Done by the main goroutine
+
+	// WaitGroup to wait for all goroutines to complete
+	var doneWg sync.WaitGroup
+	doneWg.Add(numGoroutines)
+
+	// Track errors
+	errorsChan := make(chan error, numGoroutines*numOperations)
+
+	// Create a context with timeout for detecting deadlocks
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+
+	// Launch goroutines
+	for i := 0; i < numGoroutines; i++ {
+		go func(routineID int) {
+			defer doneWg.Done()
+
+			// Wait for the signal to start
+			startWg.Wait()
+
+			// Perform cache operations on the shared counter
+			for j := 0; j < numOperations; j++ {
+				// Check if we've timed out
+				select {
+				case <-ctx.Done():
+					errorsChan <- fmt.Errorf("goroutine %d timed out after timeout", routineID)
+					return
+				default:
+					// Continue with operation
+				}
+
+				// Get current counter value
+				value, err := cch.Get(ctx, sharedKey)
+				if err != nil {
+					errorsChan <- fmt.Errorf("error reading in goroutine %d, operation %d: %v", routineID, j, err)
+					continue
+				}
+
+				// Parse the value as integer
+				count, err := strconv.Atoi(string(value))
+				if err != nil {
+					errorsChan <- fmt.Errorf("error parsing value '%s' in goroutine %d, operation %d: %v", string(value), routineID, j, err)
+					continue
+				}
+
+				// Increment the counter
+				count++
+
+				// Set the new value
+				err = cch.Set(ctx, sharedKey, []byte(strconv.Itoa(count)), 10*time.Second)
+				if err != nil {
+					errorsChan <- fmt.Errorf("error writing in goroutine %d, operation %d: %v", routineID, j, err)
+					continue
+				}
+			}
+		}(i)
+	}
+
+	// Start timer
+	start := time.Now()
+
+	// Signal all goroutines to start
+	startWg.Done()
+
+	// Wait for all goroutines with timeout
+	if timedOut := waitTimeout(&doneWg, 2*time.Second); timedOut {
+		t.Fatalf("Test timed out after 2 seconds - likely deadlock detected")
+		return
+	}
+
+	// Check execution time
+	execTime := time.Since(start)
+	assert.LessOrEqual(t, execTime, 2*time.Second, "Concurrent operations took too long: %v", execTime)
+
+	// Check errors
+	close(errorsChan)
+	var errors []error
+	for err := range errorsChan {
+		errors = append(errors, err)
+	}
+	assert.Empty(t, errors, "Encountered errors during concurrent operations")
+
+	// Verify the final counter value
+	//finalValue, err := cch.Get(t.Context(), sharedKey)
+	//require.NoError(t, err)
+
+	//finalCount, err := strconv.Atoi(string(finalValue))
+	//require.NoError(t, err)
+
+	// Note: If there are race conditions, the final count will be less than expected
+	// Disabled.. get and set are not atomic, so this will not always be true
+	//expectedCount := numGoroutines * numOperations
+	//assert.Equal(t, expectedCount, finalCount, "Final counter value doesn't match expected operations count")
 }
