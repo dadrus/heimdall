@@ -19,6 +19,7 @@ package memory
 import (
 	"context"
 	"errors"
+	"github.com/DmitriyVTitov/size"
 	"time"
 
 	"github.com/inhies/go-bytesize"
@@ -73,7 +74,7 @@ func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
 			ttlcache.WithCapacity[string, []byte](cfg.EntryLimit),
 			ttlcache.WithMaxCost[string, []byte](memoryLimit,
 				func(item *ttlcache.Item[string, []byte]) uint64 {
-					return uint64(len(item.Key()) + len(item.Value()) + ttlCacheOverheadPerEntry) //nolint:gosec
+					return uint64(size.Of(item))
 				},
 			),
 		),
