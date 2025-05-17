@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.3](https://github.com/dadrus/heimdall/compare/v0.16.2...v0.16.3) (2025-05-17)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 5a2f75b ([#2458](https://github.com/dadrus/heimdall/issues/2458)) ([50de6f2](https://github.com/dadrus/heimdall/commit/50de6f2a7ad3530954823c77bf9c5b741b32927c))
+* update kubernetes packages to v0.33.1 ([#2465](https://github.com/dadrus/heimdall/issues/2465)) ([b530ac4](https://github.com/dadrus/heimdall/commit/b530ac4e38cedad88c70765b5d41de8d2d0ebee3))
+* update module github.com/go-co-op/gocron/v2 to v2.16.2 ([#2471](https://github.com/dadrus/heimdall/issues/2471)) ([1bfbce5](https://github.com/dadrus/heimdall/commit/1bfbce59055a95526f97c272b944f6c07b74c912))
+* update module go.uber.org/fx to v1.24.0 ([#2459](https://github.com/dadrus/heimdall/issues/2459)) ([5e51028](https://github.com/dadrus/heimdall/commit/5e51028f45f43a71c13ff91d31552478659a89f3))
+* update module google.golang.org/grpc to v1.72.1 ([#2460](https://github.com/dadrus/heimdall/issues/2460)) ([1595276](https://github.com/dadrus/heimdall/commit/15952761261a11527bc524d32436ecc107933f83))
+
 ## [0.16.2](https://github.com/dadrus/heimdall/compare/v0.16.1...v0.16.2) (2025-05-10)
 
 
