@@ -18,6 +18,8 @@ package memory
 
 import (
 	"fmt"
+	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -223,4 +225,311 @@ func TestEntryLimit(t *testing.T) {
 	// measuring the entries via memory size
 	finalSize := size.Of(cch)
 	assert.LessOrEqual(t, finalSize, int(1100*bytesize.KB))
+}
+
+func TestNoDeadlockOnSet(t *testing.T) {
+	t.Parallel()
+
+	key := "foo"
+	done := make(chan struct{})
+
+	cch, err := NewCache(nil, map[string]any{"entry_limit": 10})
+	require.NoError(t, err)
+
+	err = cch.Start(t.Context())
+	require.NoError(t, err)
+
+	defer cch.Stop(t.Context())
+
+	go func() {
+		_ = cch.Set(t.Context(), key, []byte("foo"), 1*time.Second)
+		_ = cch.Set(t.Context(), key, []byte("bar"), 1*time.Second)
+
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// test completed within time
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("test timed out - deadlock")
+	}
+}
+
+func prepareCache(b *testing.B, size int) *Cache {
+	c, err := NewCache(nil, nil)
+	require.NoError(b, err)
+
+	err = c.Start(b.Context())
+	require.NoError(b, err)
+
+	b.Cleanup(func() { _ = c.Stop(b.Context()) })
+
+	value := []byte("value")
+
+	for i := 0; i < size; i++ {
+		key := "key-" + strconv.Itoa(i)
+
+		err = c.Set(b.Context(), key, value, time.Minute)
+		require.NoError(b, err)
+	}
+
+	return c.(*Cache)
+}
+
+func BenchmarkCache_Get_Empty(b *testing.B) {
+	cch := prepareCache(b, 0)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = cch.Get(b.Context(), "missing-key")
+	}
+}
+
+func BenchmarkCache_Get_1000(b *testing.B) {
+	cacheCapacity := 1000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := 0; i < cacheCapacity; i++ {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = cch.Get(b.Context(), keys[i%cacheCapacity])
+	}
+}
+
+func BenchmarkCache_Get_Parallel_1000(b *testing.B) {
+	cacheCapacity := 1000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := range keys {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	var idx atomic.Uint64
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			i := int(idx.Add(1)) % cacheCapacity
+			_, _ = cch.Get(b.Context(), keys[i])
+		}
+	})
+}
+
+func BenchmarkCache_Get_10000(b *testing.B) {
+	cacheCapacity := 10000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := 0; i < cacheCapacity; i++ {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = cch.Get(b.Context(), keys[i%cacheCapacity])
+	}
+}
+
+func BenchmarkCache_Get_Parallel_10000(b *testing.B) {
+	cacheCapacity := 10000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := range keys {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	var idx atomic.Uint64
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			i := int(idx.Add(1)) % cacheCapacity
+			_, _ = cch.Get(b.Context(), keys[i])
+		}
+	})
+}
+
+func BenchmarkCache_Set_New_1000(b *testing.B) {
+	cacheCapacity := 1000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		keys[i] = "new-key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("new-value")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = cch.Set(b.Context(), keys[i], value, time.Minute)
+	}
+}
+
+func BenchmarkCache_Set_Parallel_New_1000(b *testing.B) {
+	cacheCapacity := 1000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		keys[i] = "new-key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("new-value")
+	var idx atomic.Uint64
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			i := int(idx.Add(1)) - 1
+			_ = cch.Set(b.Context(), keys[i], value, time.Minute)
+		}
+	})
+}
+
+func BenchmarkCache_Set_Existing_1000(b *testing.B) {
+	cacheCapacity := 1000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := 0; i < cacheCapacity; i++ {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("updated-value")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = cch.Set(b.Context(), keys[i%cacheCapacity], value, time.Minute)
+	}
+}
+
+func BenchmarkCache_Set_Parallel_Existing_1000(b *testing.B) {
+	cacheCapacity := 1000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := range keys {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("updated-value")
+	var idx atomic.Uint64
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			i := int(idx.Add(1)) % cacheCapacity
+			_ = cch.Set(b.Context(), keys[i], value, time.Minute)
+		}
+	})
+}
+
+func BenchmarkCache_Set_New_10000(b *testing.B) {
+	cacheCapacity := 10000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		keys[i] = "new-key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("new-value")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = cch.Set(b.Context(), keys[i], value, time.Minute)
+	}
+}
+
+func BenchmarkCache_Set_Parallel_New_10000(b *testing.B) {
+	cacheCapacity := 10000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		keys[i] = "new-key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("new-value")
+	var idx atomic.Uint64
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			i := int(idx.Add(1)) - 1
+			_ = cch.Set(b.Context(), keys[i], value, time.Minute)
+		}
+	})
+}
+
+func BenchmarkCache_Set_Existing_10000(b *testing.B) {
+	cacheCapacity := 10000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := 0; i < cacheCapacity; i++ {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("updated-value")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = cch.Set(b.Context(), keys[i%cacheCapacity], value, time.Minute)
+	}
+}
+
+func BenchmarkCache_Set_Parallel_Existing_10000(b *testing.B) {
+	cacheCapacity := 10000
+	cch := prepareCache(b, cacheCapacity)
+
+	keys := make([]string, cacheCapacity)
+	for i := range keys {
+		keys[i] = "key-" + strconv.Itoa(i)
+	}
+
+	value := []byte("updated-value")
+	var idx atomic.Uint64
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			i := int(idx.Add(1)) % cacheCapacity
+			_ = cch.Set(b.Context(), keys[i], value, time.Minute)
+		}
+	})
 }
