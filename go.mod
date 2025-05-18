@@ -234,4 +234,7 @@ require (
 )
 
 // as recommended in https://github.com/golang/go/issues/73617 to resolve cross-compilation issues for darwin
-replace github.com/ebitengine/purego v0.8.2 => github.com/ebitengine/purego v0.8.3-0.20250507171810-1638563e3615
+replace (
+	github.com/ebitengine/purego v0.8.2 => github.com/ebitengine/purego v0.8.3-0.20250507171810-1638563e3615
+	github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04 => github.com/dadrus/ttlcache/v3 v3.0.0-20250516173247-cd4dda2d2bab
+)

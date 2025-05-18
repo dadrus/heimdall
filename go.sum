@@ -126,6 +126,8 @@ github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSV
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/dadrus/httpsig v0.0.0-20250503064402-a798791d3231 h1:MArZkrJvIJW8EbgrylpM+XiWQUKLfAtDdjZQjKgGHYQ=
 github.com/dadrus/httpsig v0.0.0-20250503064402-a798791d3231/go.mod h1:vPpliODXAzOZxWUGkLlFOJtC2TaXBPk/4Jeyr/oig7U=
+github.com/dadrus/ttlcache/v3 v3.0.0-20250516173247-cd4dda2d2bab h1:Yy05lRzNAZw/itorux6OxL3BbcUO+g9a/N8v9OL4+ug=
+github.com/dadrus/ttlcache/v3 v3.0.0-20250516173247-cd4dda2d2bab/go.mod h1:aqa3CYl8S7MwpMXtFH3uNIEEfOjcn1MUNO+bQIGbFAQ=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
@@ -280,8 +282,6 @@ github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf h1:FtEj8sfIcaaB
 github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf/go.mod h1:yrqSXGoD/4EKfF26AOGzscPOgTTJcyAwM2rpixWT+t4=
 github.com/instana/go-otel-exporter v1.0.0 h1:s7PPvvB8xcSRNaXpgjYpBQWnFZRAqGGJZPkQ/j6RNjU=
 github.com/instana/go-otel-exporter v1.0.0/go.mod h1:chO0kaNOIV+bhh+eYRBiSShhuOHMV6HHQYgVo/7xxAs=
-github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04 h1:Nysgd3R0s9jWhlVW7sCf9EQOz83gtTgDUvrsBayjjoA=
-github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04/go.mod h1:aqa3CYl8S7MwpMXtFH3uNIEEfOjcn1MUNO+bQIGbFAQ=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=
