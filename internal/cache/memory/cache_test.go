@@ -224,3 +224,32 @@ func TestEntryLimit(t *testing.T) {
 	finalSize := size.Of(cch)
 	assert.LessOrEqual(t, finalSize, int(1100*bytesize.KB))
 }
+
+func TestNoDeadlockOnSet(t *testing.T) {
+	t.Parallel()
+
+	key := "foo"
+	done := make(chan struct{})
+
+	cch, err := NewCache(nil, map[string]any{"entry_limit": 10})
+	require.NoError(t, err)
+
+	err = cch.Start(t.Context())
+	require.NoError(t, err)
+
+	defer cch.Stop(t.Context())
+
+	go func() {
+		_ = cch.Set(t.Context(), key, []byte("foo"), 1*time.Second)
+		_ = cch.Set(t.Context(), key, []byte("bar"), 1*time.Second)
+
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// test completed within time
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("test timed out - deadlock")
+	}
+}
