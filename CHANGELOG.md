@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.16.3](https://github.com/dadrus/heimdall/compare/v0.16.2...v0.16.3) (2025-05-18)
+
+
+### Bug Fixes
+
+* In-Memory Cache deadlock resolved ([#2475](https://github.com/dadrus/heimdall/issues/2475)) ([2b99c54](https://github.com/dadrus/heimdall/commit/2b99c541ced3ec311251451c2eab03df27c7be92))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 5a2f75b ([#2458](https://github.com/dadrus/heimdall/issues/2458)) ([50de6f2](https://github.com/dadrus/heimdall/commit/50de6f2a7ad3530954823c77bf9c5b741b32927c))
+* update kubernetes packages to v0.33.1 ([#2465](https://github.com/dadrus/heimdall/issues/2465)) ([b530ac4](https://github.com/dadrus/heimdall/commit/b530ac4e38cedad88c70765b5d41de8d2d0ebee3))
+* update module github.com/go-co-op/gocron/v2 to v2.16.2 ([#2471](https://github.com/dadrus/heimdall/issues/2471)) ([1bfbce5](https://github.com/dadrus/heimdall/commit/1bfbce59055a95526f97c272b944f6c07b74c912))
+* update module github.com/redis/rueidis to v1.0.60 ([#2473](https://github.com/dadrus/heimdall/issues/2473)) ([286b4d3](https://github.com/dadrus/heimdall/commit/286b4d38e195050f2fc59418b067f23a59f50e67))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.60 ([#2473](https://github.com/dadrus/heimdall/issues/2473)) ([286b4d3](https://github.com/dadrus/heimdall/commit/286b4d38e195050f2fc59418b067f23a59f50e67))
+* update module go.uber.org/fx to v1.24.0 ([#2459](https://github.com/dadrus/heimdall/issues/2459)) ([5e51028](https://github.com/dadrus/heimdall/commit/5e51028f45f43a71c13ff91d31552478659a89f3))
+* update module google.golang.org/grpc to v1.72.1 ([#2460](https://github.com/dadrus/heimdall/issues/2460)) ([1595276](https://github.com/dadrus/heimdall/commit/15952761261a11527bc524d32436ecc107933f83))
+
 ## [0.16.2](https://github.com/dadrus/heimdall/compare/v0.16.1...v0.16.2) (2025-05-10)
 
 
