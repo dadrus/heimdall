@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Rules on Heimdall</title><link>https://dadrus.github.io/docs/rules/</link><description>Recent content in Rules on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 23 May 2025 10:07:25 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/rules/index.xml" rel="self" type="application/rss+xml"/><item><title>Regular Rule</title><link>https://dadrus.github.io/docs/rules/regular_rule/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/regular_rule/</guid><description>&lt;div class="paragraph">
+&lt;p>In the simplest case, a regular rule reuses mechanisms from the previously defined &lt;a href="../../docs/mechanisms/catalogue/">catalogue&lt;/a> in its pipelines. In more complex scenarios, a rule can reconfigure parts of the mechanisms being used. The specific parts that can be reconfigured or overridden depend on the mechanism itself and are described in the mechanism-specific documentation. Reconfiguration is always limited to the particular rule’s pipeline and does not affect other rules.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_configuration">Configuration&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>A single regular rule consists of the following properties:&lt;/p>
+&lt;/div></description></item><item><title>Default Rule</title><link>https://dadrus.github.io/docs/rules/default_rule/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/default_rule/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_configuration">Configuration&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>The default rule can be configured using the &lt;code>default_rule&lt;/code> property supporting the options shown below.&lt;/p>
+&lt;/div>
+&lt;div class="admonitionblock note">
+&lt;table>
+&lt;tbody>&lt;tr>
+&lt;td class="icon">
+&lt;i class="fa icon-note" title="Note">&lt;/i>
+&lt;/td>
+&lt;td class="content">
+&lt;div class="paragraph">
+&lt;p>The default rule does not support all properties available in a &lt;a href="../../docs/rules/regular_rule/">regular rule&lt;/a>.&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>It cannot be used to forward requests to an upstream service protected by heimdall. If heimdall is operating in reverse proxy mode, the default rule should be configured to reject requests. Otherwise, Heimdall will respond with an error.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The default rule also rejects requests containing encoded slashes in the URL path with a &lt;code>400 Bad Request&lt;/code> response. In a regular rule, this behavior can be configured.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The authentication stage cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). However, this enforcement can be disabled (not recommended) by starting heimdall with the &lt;code>--insecure-skip-secure-default-rule-enforcement&lt;/code> flag.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item><item><title>Rule Sets</title><link>https://dadrus.github.io/docs/rules/rule_sets/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/rule_sets/</guid><description>&lt;div class="paragraph">
+&lt;p>Depending on the configured provider, the rules can be then loaded from e.g. a plain old configuration file, residing in the local file system, or even from a Kubernetes environment as a custom resource. Thus, the structure and format of a rule set depends on the &lt;a href="../../docs/rules/providers/">provider&lt;/a> used to load it. As of today, there are two supported formats:&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>as a regular JSON/YAML file, the so-called &lt;a href="#_regular_rule_set">regular rule set&lt;/a>, and&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>as a kubernetes &lt;a href="#_kubernetes_rule_set">custom resource rule set&lt;/a>, which is actually a YAML/JSON file as well, but adheres to corresponding kubernetes requirements.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item><item><title>Rule Providers</title><link>https://dadrus.github.io/docs/rules/providers/</link><pubDate>Thu, 09 Jun 2022 22:13:54 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/providers/</guid><description>&lt;div class="paragraph">
+&lt;p>Providers allow definition of sources to load the &lt;a href="../../docs/rules/rule_sets/">rule sets&lt;/a> from. These make heimdall’s behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the &lt;code>providers&lt;/code> section of heimdall’s configuration.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>Below, you can find the description and configuration options for currently supported providers.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_filesystem">Filesystem&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>The filesystem provider allows loading of &lt;a href="../../docs/rules/rule_sets/#_regular_rule_set">regular rule sets&lt;/a> in JSON or YAML format from a file system.&lt;/p>
+&lt;/div>
+&lt;div class="sect2">
+&lt;h3 id="_configuration">Configuration&lt;/h3>
+&lt;div class="paragraph">
+&lt;p>The configuration of this provider goes into the &lt;code>file_system&lt;/code> property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.&lt;/p>
+&lt;/div></description></item></channel></rss>
