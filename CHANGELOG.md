@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.16.4](https://github.com/dadrus/heimdall/compare/v0.16.3...v0.16.4) (2025-05-23)
+
+
+### Bug Fixes
+
+* Include hostname in log output ([#2494](https://github.com/dadrus/heimdall/issues/2494)) ([365bb7b](https://github.com/dadrus/heimdall/commit/365bb7b54ac23c97b2f5b59d8eee9f14752eb86c))
+
+
+### Dependencies
+
+* update opentelemetry-go monorepo to v1.36.0 ([#2488](https://github.com/dadrus/heimdall/issues/2488)) ([f58e98d](https://github.com/dadrus/heimdall/commit/f58e98d64f5f0158c0dc23f0337284b0fab15862))
+* update opentelemetry-go-contrib monorepo to v0.61.0 ([#2492](https://github.com/dadrus/heimdall/issues/2492)) ([7444669](https://github.com/dadrus/heimdall/commit/7444669b4ed4db8a7ef437adb602189b30d9021c))
+
 ## [0.16.3](https://github.com/dadrus/heimdall/compare/v0.16.2...v0.16.3) (2025-05-18)
 
 
