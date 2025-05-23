@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.5](https://github.com/dadrus/heimdall/compare/v0.16.4...v0.16.5) (2025-05-23)
+
+
+### Dependencies
+
+* update module github.com/santhosh-tekuri/jsonschema/v6 to v6.0.2 ([#2501](https://github.com/dadrus/heimdall/issues/2501)) ([66111e1](https://github.com/dadrus/heimdall/commit/66111e1b7b504fc03974e30cbc5d09f4f1ecd16f))
+
 ## [0.16.4](https://github.com/dadrus/heimdall/compare/v0.16.3...v0.16.4) (2025-05-23)
 
 
