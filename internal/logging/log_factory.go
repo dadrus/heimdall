@@ -47,7 +47,7 @@ func NewLogger(conf config.LoggingConfig) zerolog.Logger {
 
 	return zerolog.New(os.Stdout).Level(conf.Level).With().
 		Str("version", "1.1").
-		Str("host", x.IfThenElse(err != nil, hostname, "unknown")).
+		Str("host", x.IfThenElse(err == nil, hostname, "unknown")).
 		Timestamp().
 		Logger().
 		Hook(zerolog.HookFunc(func(e *zerolog.Event, level zerolog.Level, _ string) {
