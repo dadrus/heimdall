@@ -222,7 +222,7 @@ func (n *Tree[V]) addNode(path string, wildcardKeys []string, inStaticToken bool
 }
 
 //nolint:cyclop,funlen
-func (n *Tree[V]) delNode(path string, matcher ValueMatcher[V]) bool {
+func (n *Tree[V]) deleteNode(path string, matcher ValueMatcher[V]) bool {
 	pathLen := len(path)
 	if pathLen == 0 {
 		if len(n.values) == 0 {
@@ -266,7 +266,7 @@ func (n *Tree[V]) delNode(path string, matcher ValueMatcher[V]) bool {
 	}
 
 	if child != nil {
-		if child.delNode(nextPath, matcher) {
+		if child.deleteNode(nextPath, matcher) {
 			if len(child.values) == 0 {
 				n.deleteChild(child, token)
 			}
@@ -291,7 +291,7 @@ func (n *Tree[V]) delNode(path string, matcher ValueMatcher[V]) bool {
 			childPathLen := len(child.path)
 
 			if pathLen >= childPathLen && child.path == path[:childPathLen] &&
-				child.delNode(path[childPathLen:], matcher) {
+				child.deleteNode(path[childPathLen:], matcher) {
 				if len(child.values) == 0 {
 					n.deleteChild(child, token)
 				}
@@ -329,12 +329,12 @@ func (n *Tree[V]) deleteChild(child *Tree[V], token uint8) {
 		case child.isCatchAll:
 			n.catchAllChild = nil
 		default:
-			n.delEdge(token)
+			n.deleteEdge(token)
 		}
 	}
 }
 
-func (n *Tree[V]) delEdge(token byte) {
+func (n *Tree[V]) deleteEdge(token byte) {
 	for i, index := range n.staticIndices {
 		if token == index {
 			n.staticChildren = append(n.staticChildren[:i], n.staticChildren[i+1:]...)
@@ -496,7 +496,7 @@ func (n *Tree[V]) Add(path string, value V, opts ...AddOption[V]) error {
 }
 
 func (n *Tree[V]) Delete(path string, matcher ValueMatcher[V]) error {
-	if !n.delNode(path, matcher) {
+	if !n.deleteNode(path, matcher) {
 		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
 	}
 
