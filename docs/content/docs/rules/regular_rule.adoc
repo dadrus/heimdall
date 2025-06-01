@@ -243,7 +243,9 @@ match:
 
 == Rule Matching Specificity & Backtracking
 
-The implementation ensures that rules with more specific path expressions are matched first, regardless of their placement within a rule set. In fact, more specific rules are prioritized even when they are defined across different rule sets.
+The implementation ensures that rules with more specific path expressions are matched first, regardless of their placement within a rule set. In fact, more specific rules are prioritized.
+
+NOTE: A more specific rule (e.g. for a route `/foo/bar`) can only be defined within the same rule set that defines a more generic rule (e.g. for a route `/foo/:something`). Attempting to define it in a different rule set will result in an error, and the affected rule set will be rejected.
 
 When a path expression matches a request, any additional conditions specified in the rule's matching criteria are evaluated. Only if these conditions are met will the rule's pipeline be executed.
 
