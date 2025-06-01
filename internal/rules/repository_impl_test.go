@@ -32,68 +32,284 @@ import (
 	"github.com/dadrus/heimdall/internal/x/radixtree"
 )
 
-func TestRepositoryAddRuleSetWithoutViolation(t *testing.T) {
+func TestRepositoryAddRuleSet(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
+	for uc, tc := range map[string]struct {
+		initRules []rule.Rule
+		tbaRules  []rule.Rule
+		assert    func(t *testing.T, err error, repo *repository)
+	}{
+		"rule with multiple routes": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/foo/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/foo/2"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/foo/3"})
 
-	rule1 := &ruleImpl{id: "1", srcID: "1"}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/1"})
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/2"})
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/3"})
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, repo *repository) {
+				t.Helper()
 
-	rules := []rule.Rule{rule1}
+				require.NoError(t, err)
+				assert.Len(t, repo.knownRules, 1)
+				assert.False(t, repo.index.Empty())
 
-	// WHEN
-	err := repo.AddRuleSet(t.Context(), "1", rules)
+				_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				_, err = repo.index.Find("/foo/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				_, err = repo.index.Find("/foo/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+			},
+		},
+		"static path override by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
 
-	// THEN
-	require.NoError(t, err)
-	assert.Len(t, repo.knownRules, 1)
-	assert.False(t, repo.index.Empty())
-	assert.ElementsMatch(t, repo.knownRules, rules)
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
 
-	_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-	_, err = repo.index.Find("/foo/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-	_, err = repo.index.Find("/foo/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-}
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
 
-func TestRepositoryAddRuleSetWithViolation(t *testing.T) {
-	t.Parallel()
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"static path override with wildcard at the path start by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
 
-	// GIVEN
-	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
 
-	rule1 := &ruleImpl{id: "1", srcID: "1"}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/1"})
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/2"})
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
 
-	rule2 := &ruleImpl{id: "2", srcID: "2"}
-	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/foo/1"})
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"static path override with wildcard at the path end by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
 
-	rules1 := []rule.Rule{rule1}
-	rules2 := []rule.Rule{rule2}
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/:some"})
 
-	require.NoError(t, repo.AddRuleSet(t.Context(), "1", rules1))
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
 
-	// WHEN
-	err := repo.AddRuleSet(t.Context(), "2", rules2)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"static path override with free wildcard at path end by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
 
-	// THEN
-	require.Error(t, err)
-	require.ErrorIs(t, err, radixtree.ErrConstraintsViolation)
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/**"})
 
-	assert.Len(t, repo.knownRules, 1)
-	assert.False(t, repo.index.Empty())
-	assert.ElementsMatch(t, repo.knownRules, rules1)
-	_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-	_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"static path override with free wildcard at path start by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"wildcard at path pattern end override by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/:some"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"wildcard at path pattern start override by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"wildcard override with free wildcard at path end by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"wildcard override with free wildcard at path start by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"override of multiple wildcards b another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:a/:b/:c/:d"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:a/1/:c/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+		"free wildcard override by another rule": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflict with rule 1")
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			repo := newRepository(&ruleFactory{}).(*repository)
+
+			err := repo.AddRuleSet(t.Context(), tc.initRules[0].SrcID(), tc.initRules)
+
+			if len(tc.tbaRules) != 0 {
+				require.NoError(t, err)
+
+				err = repo.AddRuleSet(t.Context(), tc.tbaRules[0].SrcID(), tc.tbaRules)
+			}
+
+			tc.assert(t, err, repo)
+		})
+	}
 }
 
 func TestRepositoryRemoveRuleSet(t *testing.T) {
