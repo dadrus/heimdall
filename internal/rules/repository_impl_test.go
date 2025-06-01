@@ -40,12 +40,15 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		tbaRules  []rule.Rule
 		assert    func(t *testing.T, err error, repo *repository)
 	}{
-		"rule with multiple routes": {
+		"rule with multiple routes from the same rule set can be added": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/foo/1"})
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/foo/2"})
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/foo/3"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/:some"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/2"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/**"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/:some"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/4"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/5/6"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -56,15 +59,23 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				assert.Len(t, repo.knownRules, 1)
 				assert.False(t, repo.index.Empty())
 
-				_, err = repo.index.Find("/foo/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/foo/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/foo/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("/1/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				_, err = repo.index.Find("/1/3/6/7", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				_, err = repo.index.Find("/1/3/5", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				_, err = repo.index.Find("/1/3/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				_, err = repo.index.Find("/1/3/5/6", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 			},
 		},
-		"static path override by another rule": {
+		"static path override by a rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -85,7 +96,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "conflict with rule 1")
 			},
 		},
-		"static path override with wildcard at the path start by another rule": {
+		"adding a route with wildcard at the path start from another ruleset is still possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -98,15 +109,23 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
+			assert: func(t *testing.T, err error, repo *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.NoError(t, err)
+				assert.Len(t, repo.knownRules, 2)
+				assert.False(t, repo.index.Empty())
+
+				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/2/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
 			},
 		},
-		"static path override with wildcard at the path end by another rule": {
+		"adding a route with wildcard at the path end from another ruleset is still possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -119,15 +138,23 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
+			assert: func(t *testing.T, err error, repo *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.NoError(t, err)
+				assert.Len(t, repo.knownRules, 2)
+				assert.False(t, repo.index.Empty())
+
+				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
 			},
 		},
-		"static path override with free wildcard at path end by another rule": {
+		"adding a route with free wildcard at the path end from another ruleset is still possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -140,15 +167,31 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
+			assert: func(t *testing.T, err error, repo *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.NoError(t, err)
+				assert.Len(t, repo.knownRules, 2)
+				assert.False(t, repo.index.Empty())
+
+				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
 			},
 		},
-		"static path override with free wildcard at path start by another rule": {
+		"adding a route with free wildcard at the path start from another ruleset is still possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -161,15 +204,31 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
+			assert: func(t *testing.T, err error, repo *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.NoError(t, err)
+				assert.Len(t, repo.knownRules, 2)
+				assert.False(t, repo.index.Empty())
+
+				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
 			},
 		},
-		"wildcard at path pattern end override by another rule": {
+		"overriding existing rule with wildcard at path end by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/:some"})
@@ -190,7 +249,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "conflict with rule 1")
 			},
 		},
-		"wildcard at path pattern start override by another rule": {
+		"overriding existing rule with wildcard at path start by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
@@ -211,7 +270,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "conflict with rule 1")
 			},
 		},
-		"wildcard override with free wildcard at path end by another rule": {
+		"adding a route with free wildcard at the path end from another ruleset for a rule starting with a wildcard is still possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
@@ -224,15 +283,31 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
+			assert: func(t *testing.T, err error, repo *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.NoError(t, err)
+				assert.Len(t, repo.knownRules, 2)
+				assert.False(t, repo.index.Empty())
+
+				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/2/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
 			},
 		},
-		"wildcard override with free wildcard at path start by another rule": {
+		"adding a route with free wildcard at the path start from another ruleset for a rule starting with a wildcard is still possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
@@ -245,15 +320,35 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
+			assert: func(t *testing.T, err error, repo *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.NoError(t, err)
+				assert.Len(t, repo.knownRules, 2)
+				assert.False(t, repo.index.Empty())
+
+				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/2/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "1", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+
+				entry, err = repo.index.Find("/1/1/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Equal(t, "2", entry.Value.Rule().SrcID())
 			},
 		},
-		"override of multiple wildcards b another rule": {
+		"overriding a rule with multiple wildcards by a more specific rule for some of the path segments defined in a different rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:a/:b/:c/:d"})
@@ -274,7 +369,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "conflict with rule 1")
 			},
 		},
-		"free wildcard override by another rule": {
+		"overriding of a rule defining a free wildcard at the end of the path by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/**"})
