@@ -83,7 +83,27 @@ func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) 
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
-	tmp := r.index.Clone()
+	// Check if the rules from the new rule set define more generic routes for
+	// already existing ones. If so, reject them
+
+	// create a tree containing only the new rules
+	tmp := radixtree.New[rule.Route](
+		radixtree.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
+			// only rules from the same rule set can be placed in one node
+			return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
+		}))
+	if err := r.addRulesTo(tmp, rules); err != nil {
+		return err
+	}
+
+	// Check if adding existing rules would result in the violation of the constraint, that
+	// more specific and more generic rules must be defined in the same rule set
+	if err := r.addRulesTo(tmp, r.knownRules); err != nil {
+		return err
+	}
+
+	// Try adding the new rules into the existing index now.
+	tmp = r.index.Clone()
 
 	if err := r.addRulesTo(tmp, rules); err != nil {
 		return err
@@ -195,7 +215,7 @@ func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Route], rules []rule.R
 			)
 			if entry != nil {
 				return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-					"failed adding rule %s from %s due to a conflict with rule %s from %s",
+					"rule %s from %s conflicts with rule %s from %s",
 					rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
 			}
 
