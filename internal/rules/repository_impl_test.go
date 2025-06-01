@@ -93,10 +93,10 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"adding a route with wildcard at the path start from another ruleset is still possible": {
+		"adding a route with wildcard at the path start from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -109,23 +109,15 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.Len(t, repo.knownRules, 2)
-				assert.False(t, repo.index.Empty())
-
-				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/2/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"adding a route with wildcard at the path end from another ruleset is still possible": {
+		"adding a route with wildcard at the path end from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -138,23 +130,15 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.Len(t, repo.knownRules, 2)
-				assert.False(t, repo.index.Empty())
-
-				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"adding a route with free wildcard at the path end from another ruleset is still possible": {
+		"adding a route with free wildcard at the path end from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -167,31 +151,15 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.Len(t, repo.knownRules, 2)
-				assert.False(t, repo.index.Empty())
-
-				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"adding a route with free wildcard at the path start from another ruleset is still possible": {
+		"adding a route with free wildcard at the path start from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
@@ -204,28 +172,12 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.Len(t, repo.knownRules, 2)
-				assert.False(t, repo.index.Empty())
-
-				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
 		"overriding existing rule with wildcard at path end by a more specific rule from another rule set is not possible": {
@@ -246,7 +198,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
 		"overriding existing rule with wildcard at path start by a more specific rule from another rule set is not possible": {
@@ -267,10 +219,10 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
-		"adding a route with free wildcard at the path end from another ruleset for a rule starting with a wildcard is still possible": {
+		"adding a route with free wildcard at the path end from another ruleset for a rule starting with a wildcard is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
@@ -283,31 +235,15 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.Len(t, repo.knownRules, 2)
-				assert.False(t, repo.index.Empty())
-
-				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/2/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"adding a route with free wildcard at the path start from another ruleset for a rule starting with a wildcard is still possible": {
+		"adding a route with free wildcard at the path start from another ruleset for a rule starting with a wildcard is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
@@ -320,32 +256,12 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				return []rule.Rule{rul}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.Len(t, repo.knownRules, 2)
-				assert.False(t, repo.index.Empty())
-
-				entry, err := repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/2/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "1", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
-
-				entry, err = repo.index.Find("/1/1/", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
-				require.NoError(t, err)
-				assert.Equal(t, "2", entry.Value.Rule().SrcID())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
 		"overriding a rule with multiple wildcards by a more specific rule for some of the path segments defined in a different rule set is not possible": {
@@ -366,7 +282,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
 		"overriding of a rule defining a free wildcard at the end of the path by a more specific rule from another rule set is not possible": {
@@ -387,7 +303,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "conflict with rule 1")
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
 	} {
