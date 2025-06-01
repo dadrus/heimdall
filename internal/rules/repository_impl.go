@@ -184,12 +184,28 @@ func (r *repository) DeleteRuleSet(_ context.Context, srcID string) error {
 func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Route], rules []rule.Rule) error {
 	for _, rul := range rules {
 		for _, route := range rul.Routes() {
+			srcID := rul.SrcID()
+			path := route.Path()
+
+			entry, _ := tree.Find(
+				path,
+				radixtree.LookupMatcherFunc[rule.Route](func(route rule.Route, _, _ []string) bool {
+					return route.Rule().SrcID() != srcID
+				}),
+			)
+			if entry != nil {
+				return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+					"failed adding rule %s from %s due to a conflict with rule %s from %s",
+					rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
+			}
+
 			if err := tree.Add(
-				route.Path(),
+				path,
 				route,
 				radixtree.WithBacktracking[rule.Route](rul.AllowsBacktracking()),
 			); err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed adding rule ID='%s'", rul.ID()).
+				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+					"failed adding rule %s from %s", rul.ID(), srcID).
 					CausedBy(err)
 			}
 		}
@@ -207,7 +223,8 @@ func (r *repository) removeRulesFrom(tree *radixtree.Tree[rule.Route], tbdRules 
 					return route.Rule().SameAs(rul)
 				}),
 			); err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed deleting rule ID='%s'", rul.ID()).
+				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+					"failed deleting rule %s from %s", rul.ID(), rul.SrcID()).
 					CausedBy(err)
 			}
 		}
