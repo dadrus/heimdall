@@ -5,7 +5,7 @@ go 1.24.3
 require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/alicebob/miniredis/v2 v2.34.0
+	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/ccoveille/go-safecast v1.6.1
 	github.com/dadrus/httpsig v0.0.0-20250503064402-a798791d3231
 	github.com/dlclark/regexp2 v1.11.5
