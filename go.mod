@@ -45,8 +45,8 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.22.0
-	github.com/redis/rueidis v1.0.60
-	github.com/redis/rueidis/rueidisotel v1.0.60
+	github.com/redis/rueidis v1.0.61
+	github.com/redis/rueidis/rueidisotel v1.0.61
 	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
@@ -81,7 +81,7 @@ require (
 	go.uber.org/fx v1.24.0
 	gocloud.dev v0.41.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822
-	google.golang.org/grpc v1.72.2
+	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.33.1
