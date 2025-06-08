@@ -335,29 +335,33 @@ You can find further examples as part of mechanism descriptions, supporting temp
 
 == Expressions
 
-Expressions can be used to execute conditional logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
+Expressions can be used to execute conditional logic. Currently, only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard CEL functions, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension functions], are available. The set of available link:{{<  relref "#_objects" >}}[evaluation objects] depends on the specific mechanism in use.
 
-In addition to the built-in extension methods and functions, as well as the methods available on the evaluation objects, the following functions are available as well:
+In addition to the built-in CEL functions, extension methods, and methods on evaluation objects, the following custom functions are also available:
 
-* `split` - this function works on strings and expects a separator as a single argument. The result is a string array.
-+
-Example: `"/foo/bar/baz".split("/")` returns `["", "foo", "bar", "baz"]`.
-
-* `regexFind` - this function returns the first (left most) match of a regular expression in the given string.
-+
-Example: `"abcd1234".regexFind("[a-zA-Z][1-9]")` returns `"d1"`.
-
-* `regexFindAll` - this function returns an array of all matches of a regular expression in the given string.
-+
-Example: `"123456789".regexFindAll("[2,4,6,8]")` returns `["2","4","6","8"]`.
-
-* `at` - this function implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of `[]` to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
+* `at` - Provides Python-like access to array elements. A positive index behaves like standard `[]` array access. A negative index accesses elements from the end of the array (`-1` is the last element, `-2` the second-last, etc.).
 +
 Example: `[1,2,3,4,5].at(2)` returns `3` and `[1,2,3,4,5].at(-2)` returns `4`.
 
-* `last` - this function works on arrays and returns the last element of an array or `nil` if the array is empty.
+* `last` - returns the last element of an array, or nil if the array is empty.
 +
 Example: `[1,2,3,4,5].last()` returns `5`
+
+* `regexFind` - returns the first (leftmost) match of a regular expression within a string.
++
+Example: `"abcd1234".regexFind("[a-zA-Z][1-9]")` returns `"d1"`.
+
+* `regexFindAll` - returns an array of all matches of a regular expression within a string.
++
+Example: `"123456789".regexFindAll("[2,4,6,8]")` returns `["2","4","6","8"]`.
+
+* `split` - splits a string by the given separator and returns an array of strings.
++
+Example: `"/foo/bar/baz".split("/")` returns `["", "foo", "bar", "baz"]`.
+
+* `networks` - accepts a single CIDR string or an array of CIDR strings, and returns a matcher object that can be used to check whether an IP address belongs to one of the specified ranges.
++
+Example: `Request.ClientIPAddresses.all(ip in networks(["172.16.0.0/12", "192.168.0.0/16"]))` checks whether all IPs in the `Request.ClientIPAddresses` array belong to the specified IP ranges.
 
 
 Some examples:
