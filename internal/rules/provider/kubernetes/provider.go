@@ -344,17 +344,27 @@ func (p *Provider) updateStatus(
 	usageIncrement int,
 	msg string,
 ) {
-	modRS := rs.DeepCopy()
-	repository := p.cl.RuleSetRepository(modRS.Namespace)
-
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Updating RuleSet status")
 
+	modRS := rs.DeepCopy()
+	repository := p.cl.RuleSetRepository(modRS.Namespace)
 	conditionType := p.id + "/Reconciliation"
 
 	if reason == v1alpha4.ConditionControllerStopped || reason == v1alpha4.ConditionRuleSetUnloaded {
 		meta.RemoveStatusCondition(&modRS.Status.Conditions, conditionType)
 	} else {
+		// 1024 is currently the length constraint configured
+		// in the ruleset CRD for the status message
+		const (
+			maxStatusMessageLength = 1024
+			messageSuffix          = " (... trimmed)"
+		)
+
+		if len(msg) > maxStatusMessageLength {
+			msg = msg[:maxStatusMessageLength-len(messageSuffix)] + messageSuffix
+		}
+
 		meta.SetStatusCondition(&modRS.Status.Conditions, metav1.Condition{
 			Type:               conditionType,
 			Status:             status,
@@ -394,7 +404,7 @@ func (p *Provider) updateStatus(
 		logger.Debug().Msgf("RuleSet gone")
 
 		return
-	case http.StatusConflict, http.StatusUnprocessableEntity:
+	case http.StatusConflict:
 		logger.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
 
 		// to avoid cascading reads and writes
@@ -406,6 +416,9 @@ func (p *Provider) updateStatus(
 		} else {
 			p.updateStatus(ctx, rs, status, reason, matchIncrement, usageIncrement, msg)
 		}
+	case http.StatusUnprocessableEntity:
+		logger.Error().Err(err).
+			Msgf("Could not update RuleSet status due to an implementation error. Please file a bug report.")
 	default:
 		logger.Warn().Err(err).Msgf("Failed updating RuleSet status")
 	}

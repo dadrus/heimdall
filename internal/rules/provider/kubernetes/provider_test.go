@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -35,7 +36,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 
@@ -276,8 +280,8 @@ func (h *RuleSetResourceHandler) writeUpdateStatusResponse(t *testing.T, r *http
 	require.NoError(t, err)
 
 	var newRS v1alpha4.RuleSet
-	err = json.Unmarshal(updatedRS, &newRS)
 
+	err = json.Unmarshal(updatedRS, &newRS)
 	require.NoError(t, err)
 
 	rv, err := strconv.Atoi(newRS.ResourceVersion)
@@ -415,6 +419,73 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, v1alpha4.ConditionRuleSetActivationFailed, v1alpha4.ConditionReason(condition.Reason))
 			},
 		},
+		"adding rule set, resulting in a very long error message": {
+			conf: []byte("auth_class: bar"),
+			watchEvent: func(rs v1alpha4.RuleSet, _ int) (watch.Event, error) {
+				return watch.Event{Type: watch.Bookmark, Object: &rs}, nil
+			},
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+				errBytes := make([]byte, 2000)
+				for i := range errBytes {
+					errBytes[i] = letterBytes[rand.Int63()%int64(len(letterBytes))] //nolint: gosec
+				}
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New(string(errBytes))).Once()
+			},
+			updateStatus: func(rs v1alpha4.RuleSet, _ int) (*metav1.Status, error) {
+				assert.Contains(t, rs.Status.Conditions[0].Message, "... trimmed")
+
+				return nil, nil
+			},
+			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				assert.Len(t, *statusList, 1)
+				assert.Equal(t, "0/1", (*statusList)[0].ActiveIn)
+
+				assert.Len(t, (*statusList)[0].Conditions, 1)
+				condition := (*statusList)[0].Conditions[0]
+				assert.Equal(t, metav1.ConditionFalse, condition.Status)
+				assert.Equal(t, v1alpha4.ConditionRuleSetActivationFailed, v1alpha4.ConditionReason(condition.Reason))
+			},
+		},
+		"adding unprocessable rule set": {
+			conf: []byte("auth_class: bar"),
+			watchEvent: func(rs v1alpha4.RuleSet, _ int) (watch.Event, error) {
+				return watch.Event{Type: watch.Bookmark, Object: &rs}, nil
+			},
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
+			},
+			updateStatus: func(rs v1alpha4.RuleSet, _ int) (*metav1.Status, error) {
+				return &errors2.NewInvalid(
+					schema.GroupKind{Group: v1alpha4.GroupName, Kind: "ruleset"},
+					rs.Name,
+					field.ErrorList{
+						field.TooLong(
+							field.NewPath("Status.Conditions[0].Message"),
+							rs.Status.Conditions[0].Message,
+							1024,
+						),
+					},
+				).ErrStatus, nil
+			},
+			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				assert.Empty(t, *statusList)
+			},
+		},
 		"a ruleset is added and then removed": {
 			conf: []byte("auth_class: bar"),
 			watchEvent: func(rs v1alpha4.RuleSet, callIdx int) (watch.Event, error) {
@@ -436,7 +507,7 @@ func TestProviderLifecycle(t *testing.T) {
 						Reason:  metav1.StatusReasonNotFound,
 						Details: &metav1.StatusDetails{
 							Name:  rs.Name,
-							Group: "heimdall.dadrus.github.com",
+							Group: v1alpha4.GroupName,
 							Kind:  "rulesets",
 						},
 						Code: http.StatusNotFound,
