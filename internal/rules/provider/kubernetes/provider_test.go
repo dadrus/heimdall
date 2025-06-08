@@ -439,7 +439,7 @@ func TestProviderLifecycle(t *testing.T) {
 			updateStatus: func(rs v1alpha4.RuleSet, _ int) (*metav1.Status, error) {
 				assert.Contains(t, rs.Status.Conditions[0].Message, "... trimmed")
 
-				return nil, nil
+				return nil, nil //nolint: nilnil
 			},
 			assert: func(t *testing.T, statusList *[]*v1alpha4.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
