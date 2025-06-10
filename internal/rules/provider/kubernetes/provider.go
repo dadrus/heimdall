@@ -64,6 +64,7 @@ type Provider struct {
 	ac         string
 	id         string
 	store      cache.Store
+	rsInUse    map[types.UID]bool
 }
 
 func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, factory rule.Factory) (*Provider, error) {
@@ -112,6 +113,7 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 		adc:        adc,
 		id:         x.IfThenElse(len(instanceID) == 0, "unknown", instanceID),
 		configured: true,
+		rsInUse:    make(map[types.UID]bool),
 	}, nil
 }
 
@@ -204,15 +206,18 @@ func (p *Provider) addRuleSet(ctx context.Context, obj any) {
 		return
 	}
 
-	logger := zerolog.Ctx(ctx)
-	logger.Info().Msg("New rule set received")
-
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 	conf := p.toRuleSetConfiguration(rs)
+	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
+	ctx = logger.WithContext(ctx)
+
+	logger.Info().Msg("New rule set received")
 
 	if err := p.p.OnCreated(ctx, conf); err != nil {
-		logger.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
+		logger.Warn().Err(err).Msg("Failed loading rule set")
+
+		p.rsInUse[rs.UID] = false
 
 		p.updateStatus(
 			ctx,
@@ -221,9 +226,13 @@ func (p *Provider) addRuleSet(ctx context.Context, obj any) {
 			v1alpha4.ConditionRuleSetActivationFailed,
 			1,
 			0,
-			fmt.Sprintf("%s instance failed loading RuleSet, reason: %s", p.id, err.Error()),
+			p.id+" instance failed loading RuleSet, reason: "+err.Error(),
 		)
 	} else {
+		logger.Info().Msg("Rule set loaded")
+
+		p.rsInUse[rs.UID] = true
+
 		p.updateStatus(
 			ctx,
 			rs,
@@ -241,8 +250,6 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 		return
 	}
 
-	logger := zerolog.Ctx(ctx)
-
 	// should never be of a different type. ok if panics
 	newRS := newObj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 	oldRS := oldObj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
@@ -252,12 +259,21 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 		return
 	}
 
+	conf := p.toRuleSetConfiguration(newRS)
+	inUse, known := p.rsInUse[newRS.UID]
+	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
+	ctx = logger.WithContext(ctx)
+
 	logger.Info().Msg("Rule set update received")
 
-	conf := p.toRuleSetConfiguration(newRS)
-
 	if err := p.p.OnUpdated(ctx, conf); err != nil {
-		logger.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
+		logger.Warn().Err(err).Msg("Failed to apply rule set updates")
+
+		statusIncrement := x.IfThenElse(known && inUse, -1, 0)
+
+		if !known || inUse {
+			p.rsInUse[newRS.UID] = false
+		}
 
 		p.updateStatus(
 			ctx,
@@ -265,17 +281,25 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 			metav1.ConditionFalse,
 			v1alpha4.ConditionRuleSetActivationFailed,
 			0,
-			-1,
-			fmt.Sprintf("%s instance failed updating RuleSet, reason: %s", p.id, err.Error()),
+			statusIncrement,
+			p.id+" instance failed updating RuleSet, reason: "+err.Error(),
 		)
 	} else {
+		logger.Info().Msg("Rule set updates applied")
+
+		statusIncrement := x.IfThenElse(known && inUse, 0, 1)
+
+		if statusIncrement == 1 {
+			p.rsInUse[newRS.UID] = true
+		}
+
 		p.updateStatus(
 			ctx,
 			newRS,
 			metav1.ConditionTrue,
 			v1alpha4.ConditionRuleSetActive,
 			0,
-			0,
+			statusIncrement,
 			p.id+" instance successfully reloaded RuleSet",
 		)
 	}
@@ -286,15 +310,17 @@ func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 		return
 	}
 
-	logger := zerolog.Ctx(ctx)
-	logger.Info().Msg("Rule set deletion received")
-
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha4.RuleSet) // nolint: forcetypeassert
 	conf := p.toRuleSetConfiguration(rs)
+	inUse, known := p.rsInUse[rs.UID]
+	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
+	ctx = logger.WithContext(ctx)
+
+	logger.Info().Msg("Rule set deletion received")
 
 	if err := p.p.OnDeleted(ctx, conf); err != nil {
-		logger.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
+		logger.Warn().Err(err).Msg("Failed deleting rule set")
 
 		p.updateStatus(
 			ctx,
@@ -306,13 +332,17 @@ func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 			p.id+" instance failed unloading RuleSet, reason: "+err.Error(),
 		)
 	} else {
+		logger.Info().Msg("Rule set deleted")
+
+		delete(p.rsInUse, rs.UID)
+
 		p.updateStatus(
 			ctx,
 			rs,
 			metav1.ConditionFalse,
 			v1alpha4.ConditionRuleSetUnloaded,
 			-1,
-			-1,
+			x.IfThenElse(known && inUse, -1, 0),
 			p.id+" instance dropped RuleSet",
 		)
 	}
@@ -345,17 +375,16 @@ func (p *Provider) updateStatus(
 	msg string,
 ) {
 	logger := zerolog.Ctx(ctx)
-	logger.Debug().Msg("Updating RuleSet status")
-
 	modRS := rs.DeepCopy()
 	repository := p.cl.RuleSetRepository(modRS.Namespace)
 	conditionType := p.id + "/Reconciliation"
 
+	logger.Debug().Msg("Updating RuleSet status")
+
 	if reason == v1alpha4.ConditionControllerStopped || reason == v1alpha4.ConditionRuleSetUnloaded {
 		meta.RemoveStatusCondition(&modRS.Status.Conditions, conditionType)
 	} else {
-		// 1024 is currently the length constraint configured
-		// in the ruleset CRD for the status message
+		// 1024 is currently the length constraint configured in the ruleset CRD for the status message
 		const (
 			maxStatusMessageLength = 1024
 			messageSuffix          = " (... trimmed)"
@@ -375,18 +404,12 @@ func (p *Provider) updateStatus(
 	}
 
 	modRS.Status.ActiveIn = x.IfThenElse(len(modRS.Status.ActiveIn) == 0, "0/0", modRS.Status.ActiveIn)
-
 	usedBy := strings.Split(modRS.Status.ActiveIn, "/")
 	loadedBy, _ := strconv.Atoi(usedBy[0])
 	matchedBy, _ := strconv.Atoi(usedBy[1])
-
 	modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
 
-	_, err := repository.PatchStatus(
-		ctx,
-		v1alpha4.NewJSONPatch(rs, modRS, true),
-		metav1.PatchOptions{},
-	)
+	_, err := repository.PatchStatus(ctx, v1alpha4.NewJSONPatch(rs, modRS, true), metav1.PatchOptions{})
 	if err == nil {
 		logger.Debug().Msgf("RuleSet status updated")
 
@@ -395,12 +418,16 @@ func (p *Provider) updateStatus(
 
 	// if there is an error, it is always of the below type
 	var statusErr *errors2.StatusError
+	if !errors.As(err, &statusErr) {
+		logger.Error().Err(err).
+			Msgf("Could not update RuleSet status due to an implementation error. Please file a bug report.")
 
-	errors.As(err, &statusErr)
+		return
+	}
 
 	switch statusErr.ErrStatus.Code {
 	case http.StatusNotFound:
-		// resource gone. Nothing can be done
+		// resource gone. Nothing can be done. Typically happens on resource delete
 		logger.Debug().Msgf("RuleSet gone")
 
 		return
