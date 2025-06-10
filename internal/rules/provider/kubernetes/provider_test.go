@@ -36,9 +36,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wI2L/jsondiff"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
@@ -48,6 +50,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
+	mocks2 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -501,17 +504,10 @@ func TestProviderLifecycle(t *testing.T) {
 			updateStatus: func(rs v1alpha4.RuleSet, callIdx int) (*metav1.Status, error) {
 				switch callIdx {
 				case 2:
-					return &metav1.Status{
-						Status:  "Failure",
-						Message: "RuleSet gone",
-						Reason:  metav1.StatusReasonNotFound,
-						Details: &metav1.StatusDetails{
-							Name:  rs.Name,
-							Group: v1alpha4.GroupName,
-							Kind:  "rulesets",
-						},
-						Code: http.StatusNotFound,
-					}, nil
+					return &errors2.NewNotFound(
+						schema.GroupResource{Group: v1alpha4.GroupName, Resource: "ruleset"},
+						rs.Name,
+					).ErrStatus, nil
 				default:
 					return nil, nil //nolint:nilnil
 				}
@@ -641,17 +637,11 @@ func TestProviderLifecycle(t *testing.T) {
 			updateStatus: func(rs v1alpha4.RuleSet, callIdx int) (*metav1.Status, error) {
 				switch callIdx {
 				case 1:
-					return &metav1.Status{
-						Status:  "Failure",
-						Message: "RuleSet conflict",
-						Reason:  metav1.StatusReasonConflict,
-						Details: &metav1.StatusDetails{
-							Name:  rs.Name,
-							Group: "heimdall.dadrus.github.com",
-							Kind:  "rulesets",
-						},
-						Code: http.StatusConflict,
-					}, nil
+					return &errors2.NewConflict(
+						schema.GroupResource{Group: v1alpha4.GroupName, Resource: "ruleset"},
+						rs.Name,
+						errors.New("RuleSet conflict"),
+					).ErrStatus, nil
 				default:
 					return nil, nil //nolint:nilnil
 				}
@@ -1125,4 +1115,645 @@ func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
 	assert.NotContains(t, tb.CollectedLog(), "Reconciliation loop exited")
 
 	require.NoError(t, err)
+}
+
+func TestRuleSetStatusUpdate(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		setupMocks func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock)
+		useRuleSet func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet)
+		assert     func(t *testing.T, repository *mocks2.RuleSetRepositoryMock)
+	}{
+		"error on creating new rule set": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Return(errors.New("test error"))
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				provider.addRuleSet(t.Context(), rs)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Value()
+
+				data, err := rawPatch.Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+			},
+		},
+		"unrecoverable error on updating status": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
+					Return(errors.New("test error"))
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Once().Return(nil, errors.New("test error"))
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				provider.addRuleSet(t.Context(), rs)
+			},
+			assert: func(t *testing.T, _ *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				// expectation is that repository.PatchStatus is called once
+			},
+		},
+		"error on creating new rule set followed by multiple successful updates": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(nil)
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				newRS := rs.DeepCopy()
+				newRS.Status.ActiveIn = "0/1"
+				newRS.ResourceVersion = "101"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+
+				oldRS = newRS.DeepCopy()
+				oldRS.Status.ActiveIn = "1/1"
+				newRS = rs.DeepCopy()
+				newRS.Status.ActiveIn = "1/1"
+				newRS.ResourceVersion = "102"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 3)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "1/1", patch[1].Value)
+
+				data, err = rawPatch[2].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "/metadata/resourceVersion", patch[0].Path)
+				assert.Equal(t, "/status/conditions", patch[1].Path)
+			},
+		},
+		"error on creating new rule set followed by a successful update, followed by multiple failed updates": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+					return rs.Name != "error"
+				})).Return(nil)
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+					return rs.Name == "error"
+				})).Return(errors.New("test error"))
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				newRS := rs.DeepCopy()
+				newRS.Status.ActiveIn = "0/1"
+				newRS.ResourceVersion = "101"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+
+				oldRS = newRS.DeepCopy()
+				oldRS.Status.ActiveIn = "1/1"
+				newRS = rs.DeepCopy()
+				newRS.Name = "error"
+				newRS.Status.ActiveIn = "1/1"
+				newRS.ResourceVersion = "102"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+
+				oldRS = newRS.DeepCopy()
+				oldRS.Status.ActiveIn = "0/1"
+				newRS = rs.DeepCopy()
+				newRS.Name = "error"
+				newRS.Status.ActiveIn = "0/1"
+				newRS.ResourceVersion = "103"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 4)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "1/1", patch[1].Value)
+
+				data, err = rawPatch[2].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+
+				data, err = rawPatch[3].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "/metadata/resourceVersion", patch[0].Path)
+				assert.Equal(t, "/status/conditions", patch[1].Path)
+			},
+		},
+		"error on updating previously successfully loaded rule set": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Twice().Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				newRS := oldRS.DeepCopy()
+				newRS.Status.ActiveIn = "1/1"
+				newRS.ResourceVersion = "101"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 2)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "1/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+			},
+		},
+		"successive errors on updating previously successfully loaded rule set": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Times(3).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				newRS := rs.DeepCopy()
+				newRS.Status.ActiveIn = "1/1"
+				newRS.ResourceVersion = "101"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+
+				oldRS = newRS.DeepCopy()
+				oldRS.Status.ActiveIn = "0/1"
+				newRS = rs.DeepCopy()
+				newRS.Status.ActiveIn = "0/1"
+				newRS.ResourceVersion = "102"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 3)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "1/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+
+				data, err = rawPatch[2].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "/metadata/resourceVersion", patch[0].Path)
+				assert.Equal(t, "/status/conditions", patch[1].Path)
+			},
+		},
+		"successive errors on updating previously loaded and once successfully updated rule set": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+					return rs.Name != "error"
+				})).Return(nil)
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+					return rs.Name == "error"
+				})).Return(errors.New("test error"))
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Times(4).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				newRS := oldRS.DeepCopy()
+				newRS.Status.ActiveIn = "1/1"
+				newRS.ResourceVersion = "101"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+
+				oldRS = newRS.DeepCopy()
+				newRS = newRS.DeepCopy()
+				newRS.Name = "error"
+				newRS.Status.ActiveIn = "1/1"
+				newRS.ResourceVersion = "102"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+
+				oldRS = newRS.DeepCopy()
+				oldRS.Status.ActiveIn = "0/1"
+				newRS = newRS.DeepCopy()
+				newRS.Status.ActiveIn = "0/1"
+				newRS.ResourceVersion = "103"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 4)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "1/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "/metadata/resourceVersion", patch[0].Path)
+				assert.Equal(t, "/status/conditions", patch[1].Path)
+
+				data, err = rawPatch[2].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+
+				data, err = rawPatch[3].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "/metadata/resourceVersion", patch[0].Path)
+				assert.Equal(t, "/status/conditions", patch[1].Path)
+			},
+		},
+		"error deleting a successfully loaded rule set": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error"))
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Times(2).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				oldRS.Status.ActiveIn = "1/1"
+				oldRS.ResourceVersion = "101"
+				oldRS.Generation++
+				provider.deleteRuleSet(t.Context(), oldRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 2)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "1/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "/metadata/resourceVersion", patch[0].Path)
+				assert.Equal(t, "/status/conditions", patch[1].Path)
+			},
+		},
+		"successful deleting a successfully loaded rule set": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(nil)
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Times(2).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				oldRS.Status.ActiveIn = "1/1"
+				oldRS.ResourceVersion = "101"
+				oldRS.Generation++
+				provider.deleteRuleSet(t.Context(), oldRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 2)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "1/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/0", patch[1].Value)
+			},
+		},
+		"error deleting a not loaded rule set": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error"))
+
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Times(2).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				oldRS := rs.DeepCopy()
+				provider.addRuleSet(t.Context(), rs)
+
+				oldRS.Status.ActiveIn = "0/1"
+				oldRS.ResourceVersion = "101"
+				oldRS.Generation++
+				provider.deleteRuleSet(t.Context(), oldRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 2)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 3)
+				assert.Equal(t, "replace", patch[1].Type)
+				assert.Equal(t, "/status/activeIn", patch[1].Path)
+				assert.Equal(t, "0/1", patch[1].Value)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				require.Len(t, patch, 2)
+				assert.Equal(t, "/metadata/resourceVersion", patch[0].Path)
+				assert.Equal(t, "/status/conditions", patch[1].Path)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			rs := &v1alpha4.RuleSet{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: fmt.Sprintf("%s/%s", v1alpha4.GroupName, v1alpha4.GroupVersion),
+					Kind:       "RuleSet",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-rule",
+					Namespace:         "foo",
+					ResourceVersion:   "100",
+					UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
+					Generation:        1,
+					CreationTimestamp: metav1.NewTime(time.Now()),
+				},
+				Spec: v1alpha4.RuleSetSpec{},
+			}
+
+			processor := mocks.NewRuleSetProcessorMock(t)
+			repository := mocks2.NewRuleSetRepositoryMock(t)
+			client := mocks2.NewClientMock(t)
+			client.EXPECT().RuleSetRepository(mock.Anything).Return(repository)
+
+			tc.setupMocks(t, processor, repository)
+
+			provider := &Provider{
+				p:       processor,
+				cl:      client,
+				rsInUse: make(map[types.UID]bool),
+			}
+
+			tc.useRuleSet(t, provider, rs)
+
+			tc.assert(t, repository)
+		})
+	}
 }
