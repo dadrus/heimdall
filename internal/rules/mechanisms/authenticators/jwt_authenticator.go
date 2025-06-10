@@ -391,7 +391,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 	for idx := range jwks.Keys {
 		sigKey := jwks.Keys[idx]
 		if err = a.validateJWK(&sigKey); err != nil {
-			logger.Info().Err(err).Str("_key_id", sigKey.KeyID).Msg("JWK is invalid")
+			logger.Warn().Err(err).Str("_key_id", sigKey.KeyID).Msg("JWK is invalid")
 
 			continue
 		}
@@ -401,7 +401,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 			break
 		}
 
-		logger.Info().Err(err).Str("_key_id", sigKey.KeyID).Msg("Failed to verify JWT")
+		logger.Warn().Err(err).Str("_key_id", sigKey.KeyID).Msg("Failed to verify JWT")
 	}
 
 	if len(rawClaims) == 0 {
