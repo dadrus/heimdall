@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.16.5](https://github.com/dadrus/heimdall/compare/v0.16.4...v0.16.5) (2025-06-10)
+
+
+### Bug Fixes
+
+* Authenticator errors are now logged as warnings ([#2525](https://github.com/dadrus/heimdall/issues/2525)) ([c005f92](https://github.com/dadrus/heimdall/commit/c005f9210f09306b0c5814cd190f36c1d18dfd1d))
+* **docs:** networks CEL extension documented ([#2522](https://github.com/dadrus/heimdall/issues/2522)) ([5a34078](https://github.com/dadrus/heimdall/commit/5a34078f597c6e7a0d459ee2bc0bdc3879c83234))
+* RuleSet resource status shows correct activeIn values ([#2524](https://github.com/dadrus/heimdall/issues/2524)) ([44d873e](https://github.com/dadrus/heimdall/commit/44d873e88c9d6d23828861071f10e90062810cf6))
+* Truncate RuleSet status condition messages exceeding max length ([#2521](https://github.com/dadrus/heimdall/issues/2521)) ([b428b14](https://github.com/dadrus/heimdall/commit/b428b14117d86c5c27ad48dd3c2ec1971ca0298e))
+
+
+### Dependencies
+
+* update golang to v1.24.4 ([#2517](https://github.com/dadrus/heimdall/issues/2517)) ([480f5f5](https://github.com/dadrus/heimdall/commit/480f5f574ef55f8855bee2cacdd31e8973d10ffb))
+* update google.golang.org/genproto/googleapis/rpc digest to 513f239 ([#2511](https://github.com/dadrus/heimdall/issues/2511)) ([f475027](https://github.com/dadrus/heimdall/commit/f475027af2816a5614239c940ccad8893ee068d4))
+* update module github.com/knadh/koanf/v2 to v2.2.1 ([#2523](https://github.com/dadrus/heimdall/issues/2523)) ([56c12c9](https://github.com/dadrus/heimdall/commit/56c12c912c2ffc03e2c062262ab88465f5f7a3b4))
+* update module github.com/redis/rueidis to v1.0.61 ([#2519](https://github.com/dadrus/heimdall/issues/2519)) ([379af98](https://github.com/dadrus/heimdall/commit/379af9883ca370ca65ecde1db228314df5773334))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.61 ([#2519](https://github.com/dadrus/heimdall/issues/2519)) ([379af98](https://github.com/dadrus/heimdall/commit/379af9883ca370ca65ecde1db228314df5773334))
+* update module github.com/santhosh-tekuri/jsonschema/v6 to v6.0.2 ([#2501](https://github.com/dadrus/heimdall/issues/2501)) ([66111e1](https://github.com/dadrus/heimdall/commit/66111e1b7b504fc03974e30cbc5d09f4f1ecd16f))
+* update module google.golang.org/grpc to v1.73.0 ([#2520](https://github.com/dadrus/heimdall/issues/2520)) ([9961531](https://github.com/dadrus/heimdall/commit/9961531fc6f755d21d71d27d01cfa5e7352a6445))
 
 ## [0.16.4](https://github.com/dadrus/heimdall/compare/v0.16.3...v0.16.4) (2025-05-23)
 
