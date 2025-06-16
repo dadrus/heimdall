@@ -18,4 +18,5 @@ package contextualizers
 
 const (
 	ContextualizerGeneric = "generic"
+	ContextualizerMap     = "map"
 )
