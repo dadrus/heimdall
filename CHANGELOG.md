@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.17.0) (2025-06-16)
+
+
+### Features
+
+* New `map` contextualizer ([#2537](https://github.com/dadrus/heimdall/issues/2537)) ([8c1fcab](https://github.com/dadrus/heimdall/commit/8c1fcab1b4f9fe1b653981043418bb48a00c955f))
+
 ## [0.16.5](https://github.com/dadrus/heimdall/compare/v0.16.4...v0.16.5) (2025-06-10)
 
 
