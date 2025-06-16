@@ -71,6 +71,7 @@ func (m *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Su
 			"failed to execute generic contextualizer due to 'nil' subject").
 			WithErrorContext(m)
 	}
+
 	resp, err := m.renderTemplates(ctx, sub)
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -137,6 +138,7 @@ func (m *mapContextualizer) renderTemplates(
 	}
 
 	resp := make(map[string]string, len(m.items))
+
 	for key, tmpl := range m.items {
 		if rendered, err = tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
@@ -149,6 +151,7 @@ func (m *mapContextualizer) renderTemplates(
 				WithErrorContext(m).
 				CausedBy(err)
 		}
+
 		resp[key] = rendered
 	}
 

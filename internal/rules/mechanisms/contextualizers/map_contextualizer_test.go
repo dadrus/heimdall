@@ -87,8 +87,8 @@ values:
 				require.NoError(t, err)
 				require.NotNil(t, contextualizer)
 
-				assert.Equal(t, 1, len(contextualizer.items))
-				assert.Equal(t, 1, len(contextualizer.values))
+				assert.Len(t, contextualizer.items, 1)
+				assert.Len(t, contextualizer.values, 1)
 				assert.Equal(t, "http://foo.bar", contextualizer.values["foo"].String())
 				assert.Equal(t, "{{ .Values.foo }}", contextualizer.items["url"].String())
 
@@ -102,7 +102,6 @@ values:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://foo.bar", val)
-
 			},
 		},
 	} {
@@ -333,6 +332,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 					"url": func() template.Template {
 						tpl, err := template.New("{{ len .foo }}")
 						require.NoError(t, err)
+
 						return tpl
 					}(),
 				},
@@ -368,16 +368,19 @@ func TestMapContextualizerExecute(t *testing.T) {
 					"urlValues": func() template.Template {
 						tpl, err := template.New("{{ .Values.url }}")
 						require.NoError(t, err)
+
 						return tpl
 					}(),
 					"subject": func() template.Template {
 						tpl, err := template.New("{{ .Subject.ID }}")
 						require.NoError(t, err)
+
 						return tpl
 					}(),
 					"outputs": func() template.Template {
 						tpl, err := template.New("{{ .Outputs.foo }}")
 						require.NoError(t, err)
+
 						return tpl
 					}(),
 				},
@@ -388,7 +391,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -401,7 +404,6 @@ func TestMapContextualizerExecute(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
 				func(t *testing.T, _ *heimdallmocks.RequestContextMock) { t.Helper() })
