@@ -103,3 +103,68 @@ Since the `values` property is not defined but used in the payload, it must be s
   - # other mechanisms
 ----
 ====
+
+== Map
+
+This mechanism allows you to define (templated) variables which can be used in contextualizers/authorizers/finalizers afterwards to extract common logic out of Rulesets.
+
+To enable the usage of this contextualizer, you have to set the `type` property to `map`.
+
+Configuration using the `config` property is mandatory. Following properties are available:
+
+* *`items`*: _map of strings_ (mandatory, not overridable)
++
+Every entry in the items map is a map of templates. Every key will be present in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object.
+
+* *`continue_pipeline_on_error`*: _boolean_ (optional, overridable)
++
+If set to `true`, allows the pipeline to continue with the execution of the next mechanisms. So the error, if thrown, is ignored. Defaults to `false`, which means the execution of the authentication & authorization pipeline is stopped and the execution of the error pipeline is started.
+
+* *`values`* _map of strings_ (optional, overridable)
++
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+
+.Simple contextualizer configuration
+====
+
+In this example the contextualizer is configured to template a single variable named 'foo'.
+
+[source, yaml]
+----
+id: foo
+type: map
+config:
+  items:
+    foo: "https://some-other.service/users/{{.Subject.ID}}"
+----
+====
+
+.Contextualizer configuration with values
+====
+
+In this example the contextualizer is configured to template a single variable named foo, but contains a reference to local values.
+
+[source, yaml]
+----
+id: foo
+type: map
+config:
+  items:
+    foo: "https://some-other.service/users/{{.Values.user_id}}"
+----
+
+Since the `values` property is not defined but used in items, it must be specified in a rule making use of this contextualizer, e.g. in the following way:
+
+[source, yaml]
+----
+- id: rule1
+  # other rule properties
+  execute:
+  - # other mechanisms
+  - contextualizer: foo
+    config: # overriding with rule specifics
+      values:
+        user_id: "{{ .Subject.ID }}"
+  - # other mechanisms
+----
+====
