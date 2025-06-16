@@ -68,7 +68,7 @@ func (m *mapContextualizer) ContinueOnError() bool {
 func (m *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	if sub == nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute generic contextualizer due to 'nil' subject").
+			"failed to execute map contextualizer due to 'nil' subject").
 			WithErrorContext(m)
 	}
 
