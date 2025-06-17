@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/config"
 	"net/http"
 	"net/url"
 	"testing"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -645,6 +645,8 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				return []rule.Rule{rule2}
 			}(),
 			assert: func(t *testing.T, err error, repo *repository) {
+				t.Helper()
+
 				require.NoError(t, err)
 
 				assert.Len(t, repo.knownRules, 2)
@@ -691,6 +693,8 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				return []rule.Rule{rule2}
 			}(),
 			assert: func(t *testing.T, err error, repo *repository) {
+				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
@@ -728,6 +732,8 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				return []rule.Rule{rule2}
 			}(),
 			assert: func(t *testing.T, err error, repo *repository) {
+				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
@@ -762,6 +768,8 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				return []rule.Rule{rule2}
 			}(),
 			assert: func(t *testing.T, err error, repo *repository) {
+				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")

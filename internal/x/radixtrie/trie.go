@@ -185,7 +185,7 @@ func (n *Trie[V]) addNode(
 				}
 
 				if len(n.values) == 0 {
-					n.canBacktrack = func(values []V) bool { return true }
+					n.canBacktrack = func(_ []V) bool { return true }
 				}
 			}
 
@@ -216,7 +216,7 @@ func (n *Trie[V]) addNode(
 				}
 
 				if len(n.values) == 0 {
-					n.canBacktrack = func(values []V) bool { return true }
+					n.canBacktrack = func(_ []V) bool { return true }
 				}
 			}
 
@@ -268,7 +268,7 @@ func (n *Trie[V]) addNode(
 	n.staticChildren = append(n.staticChildren, child)
 
 	if len(n.values) == 0 {
-		n.canBacktrack = func(values []V) bool { return true }
+		n.canBacktrack = func(_ []V) bool { return true }
 	}
 
 	// Ensure that the rest of this token is not mistaken for a wildcard
@@ -315,7 +315,7 @@ func (n *Trie[V]) deleteNode(
 		newSize := len(n.values)
 
 		if newSize == 0 {
-			n.canBacktrack = func(values []V) bool { return true }
+			n.canBacktrack = func(_ []V) bool { return true }
 		}
 
 		return oldSize != newSize
@@ -486,7 +486,7 @@ func (n *Trie[V]) findNode(
 	// First see if this matches a static token.
 	firstChar := tokens[0]
 	for i, staticIndex := range n.staticIndices {
-		if staticIndex == firstChar {
+		if staticIndex == firstChar { //nolint: nestif
 			child := n.staticChildren[i]
 			childTokenLen := len(child.token)
 
@@ -505,7 +505,7 @@ func (n *Trie[V]) findNode(
 		}
 	}
 
-	if !continueLookup && (found != nil || !(canBacktrack != nil && canBacktrack(n.values))) {
+	if !continueLookup && (found != nil || canBacktrack == nil || !canBacktrack(n.values)) {
 		return found, idx, captures, nil
 	}
 
