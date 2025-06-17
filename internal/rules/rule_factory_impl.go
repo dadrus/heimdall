@@ -59,13 +59,12 @@ func NewRuleFactory(
 }
 
 type ruleFactory struct {
-	hf                  mechanisms.MechanismFactory
-	logger              zerolog.Logger
-	defaultRule         *ruleImpl
-	hasDefaultRule      bool
-	secureDefaultRule   bool
-	mode                config.OperationMode
-	defaultBacktracking bool
+	hf                mechanisms.MechanismFactory
+	logger            zerolog.Logger
+	defaultRule       *ruleImpl
+	hasDefaultRule    bool
+	secureDefaultRule bool
+	mode              config.OperationMode
 }
 
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
@@ -92,16 +91,11 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 		return nil, err
 	}
 
-	var allowsBacktracking bool
-
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
 		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
-		allowsBacktracking = x.IfThenElseExec(rc.Matcher.BacktrackingEnabled != nil,
-			func() bool { return *rc.Matcher.BacktrackingEnabled },
-			func() bool { return f.defaultBacktracking })
 	}
 
 	if len(authenticators) == 0 {
@@ -114,16 +108,15 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 	}
 
 	rul := &ruleImpl{
-		id:                 rc.ID,
-		srcID:              srcID,
-		slashesHandling:    slashesHandling,
-		allowsBacktracking: allowsBacktracking,
-		backend:            rc.Backend,
-		hash:               hash,
-		sc:                 authenticators,
-		sh:                 subHandlers,
-		fi:                 finalizers,
-		eh:                 errorHandlers,
+		id:              rc.ID,
+		srcID:           srcID,
+		slashesHandling: slashesHandling,
+		backend:         rc.Backend,
+		hash:            hash,
+		sc:              authenticators,
+		sh:              subHandlers,
+		fi:              finalizers,
+		eh:              errorHandlers,
 	}
 
 	// filter those host settings, which can be used in the trie structure,
@@ -344,7 +337,6 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	f.hasDefaultRule = true
-	f.defaultBacktracking = ruleConfig.BacktrackingEnabled
 
 	return nil
 }
