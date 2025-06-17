@@ -265,8 +265,8 @@ func TestTrieAdd(t *testing.T) {
 		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
 		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
 		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
-		"katakana /マ":                                   {[]string{"/マ"}, false},
-		"katakana /カ":                                   {[]string{"/カ"}, false},
+		"katakana /マ":                                    {[]string{"/マ"}, false},
+		"katakana /カ":                                    {[]string{"/カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
