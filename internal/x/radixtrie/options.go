@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package radixtree
+package radixtrie
 
 type Option[V any] func(n *Trie[V])
 
