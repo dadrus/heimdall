@@ -316,7 +316,7 @@ func TestTrieAddDuplicates(t *testing.T) {
 	assert.Equal(t, map[string]string{"year": "2024", "month": "04"}, entry.Parameters)
 }
 
-func TestTrieAddWithConstraintsVialation(t *testing.T) {
+func TestTrieAddWithConstraintsViolation(t *testing.T) {
 	t.Parallel()
 
 	tree := New[string](WithValuesConstraints[string](
