@@ -267,7 +267,6 @@ mechanisms:
         realm: Please authenticate
 
 default_rule:
-  backtracking_enabled: false
   execute:
     - authenticator: unauthorized_authenticator
     - finalizer: jwt
