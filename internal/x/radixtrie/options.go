@@ -28,8 +28,10 @@ func WithValuesConstraints[V any](constraints ConstraintsFunc[V]) Option[V] {
 
 type AddOption[V any] func(n *Trie[V])
 
-func WithBacktracking[V any](flag bool) AddOption[V] {
+func WithBacktrackingControl[V any](canBacktrack CanBacktrackFunc[V]) AddOption[V] {
 	return func(n *Trie[V]) {
-		n.backtrackingEnabled = flag
+		if canBacktrack != nil {
+			n.canBacktrack = canBacktrack
+		}
 	}
 }

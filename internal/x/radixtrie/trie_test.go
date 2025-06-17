@@ -224,7 +224,9 @@ func TestTrieFindWithBacktrackingEnabled(t *testing.T) {
 	// GIVEN
 	tree := New[string]()
 
-	err := tree.Add("*.example.com", "/date/:year/abc", "first", WithBacktracking[string](true))
+	err := tree.Add("*.example.com", "/date/:year/abc", "first",
+		WithBacktrackingControl(func(values []string) bool { return true }),
+	)
 	require.NoError(t, err)
 
 	err = tree.Add("*", "/date/**", "second")

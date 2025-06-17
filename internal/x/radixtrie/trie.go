@@ -32,7 +32,8 @@ var (
 )
 
 type (
-	ConstraintsFunc[V any] func(oldValues []V, newValue V) bool
+	ConstraintsFunc[V any]  func(oldValues []V, newValue V) bool
+	CanBacktrackFunc[V any] func(values []V) bool
 
 	Entry[V any] struct {
 		Value      V
@@ -65,14 +66,15 @@ type (
 		canAdd ConstraintsFunc[V]
 
 		// node local options
-		backtrackingEnabled bool
+		canBacktrack CanBacktrackFunc[V]
 	}
 )
 
 func New[V any](opts ...Option[V]) *Trie[V] {
 	root := &Trie[V]{
-		canAdd:     func(_ []V, _ V) bool { return true },
-		isHostNode: true,
+		canAdd:       func(_ []V, _ V) bool { return true },
+		canBacktrack: func(_ []V) bool { return true },
+		isHostNode:   true,
 	}
 
 	for _, opt := range opts {
@@ -183,7 +185,7 @@ func (n *Trie[V]) addNode(
 				}
 
 				if len(n.values) == 0 {
-					n.backtrackingEnabled = true
+					n.canBacktrack = func(values []V) bool { return true }
 				}
 			}
 
@@ -214,7 +216,7 @@ func (n *Trie[V]) addNode(
 				}
 
 				if len(n.values) == 0 {
-					n.backtrackingEnabled = true
+					n.canBacktrack = func(values []V) bool { return true }
 				}
 			}
 
@@ -266,7 +268,7 @@ func (n *Trie[V]) addNode(
 	n.staticChildren = append(n.staticChildren, child)
 
 	if len(n.values) == 0 {
-		n.backtrackingEnabled = true
+		n.canBacktrack = func(values []V) bool { return true }
 	}
 
 	// Ensure that the rest of this token is not mistaken for a wildcard
@@ -313,7 +315,7 @@ func (n *Trie[V]) deleteNode(
 		newSize := len(n.values)
 
 		if newSize == 0 {
-			n.backtrackingEnabled = true
+			n.canBacktrack = func(values []V) bool { return true }
 		}
 
 		return oldSize != newSize
@@ -445,7 +447,7 @@ func (n *Trie[V]) findNode(
 	host, path string,
 	captures []string,
 	matcher LookupMatcher[V],
-) (*Trie[V], int, []string, bool) {
+) (*Trie[V], int, []string, CanBacktrackFunc[V]) {
 	var (
 		tokens     string
 		separator  byte
@@ -454,6 +456,8 @@ func (n *Trie[V]) findNode(
 		found *Trie[V]
 		idx   int
 		value V
+
+		continueLookup bool
 	)
 
 	// Determine which part we're processing and get the appropriate string and separator
@@ -467,20 +471,16 @@ func (n *Trie[V]) findNode(
 		isHostPart = false
 	}
 
-	backtrack := true
+	canBacktrack := n.canBacktrack
 
 	if len(tokens) == 0 {
-		if len(n.values) == 0 {
-			return nil, 0, nil, true
-		}
-
 		for idx, value = range n.values {
 			if match := matcher.Match(value, n.wildcardKeys, captures); match {
-				return n, idx, captures, false
+				return n, idx, captures, nil
 			}
 		}
 
-		return nil, 0, nil, n.backtrackingEnabled
+		return nil, 0, nil, n.canBacktrack
 	}
 
 	// First see if this matches a static token.
@@ -493,18 +493,20 @@ func (n *Trie[V]) findNode(
 			if len(tokens) >= childTokenLen && child.token == tokens[:childTokenLen] {
 				nextTokens := tokens[childTokenLen:]
 				if isHostPart {
-					found, idx, captures, backtrack = child.findNode(nextTokens, path, captures, matcher)
+					found, idx, captures, canBacktrack = child.findNode(nextTokens, path, captures, matcher)
 				} else {
-					found, idx, captures, backtrack = child.findNode("", nextTokens, captures, matcher)
+					found, idx, captures, canBacktrack = child.findNode("", nextTokens, captures, matcher)
 				}
+			} else {
+				continueLookup = true
 			}
 
 			break
 		}
 	}
 
-	if found != nil || !backtrack {
-		return found, idx, captures, backtrack
+	if !continueLookup && (found != nil || !(canBacktrack != nil && canBacktrack(n.values))) {
+		return found, idx, captures, nil
 	}
 
 	if !isHostPart && n.wildcardChild != nil { //nolint:nestif
@@ -516,11 +518,11 @@ func (n *Trie[V]) findNode(
 		if len(thisToken) > 0 { // Don't match on empty tokens.
 			var tmp []string
 
-			found, idx, tmp, backtrack = n.wildcardChild.findNode("", nextToken, append(captures, thisToken), matcher)
+			found, idx, tmp, canBacktrack = n.wildcardChild.findNode("", nextToken, append(captures, thisToken), matcher)
 			if found != nil {
-				return found, idx, tmp, backtrack
-			} else if !backtrack {
-				return nil, 0, nil, false
+				return found, idx, tmp, nil
+			} else if canBacktrack != nil && !canBacktrack(n.values) {
+				return nil, 0, nil, nil
 			}
 		}
 	}
@@ -531,17 +533,16 @@ func (n *Trie[V]) findNode(
 			return n.catchAllChild.findNode("", path, captures, matcher)
 		}
 
-		// Just assign the whole remaining tokens.
 		for idx, value = range n.catchAllChild.values {
 			if match := matcher.Match(value, n.wildcardKeys, captures); match {
-				return n.catchAllChild, idx, append(captures, tokens), false
+				return n.catchAllChild, idx, append(captures, tokens), nil
 			}
 		}
 
-		return nil, 0, captures, n.backtrackingEnabled
+		return nil, 0, captures, n.canBacktrack
 	}
 
-	return nil, 0, captures, true
+	return nil, 0, captures, canBacktrack
 }
 
 func (n *Trie[V]) splitCommonPrefix(existingNodeIndex int, token string) (*Trie[V], int) {
@@ -583,10 +584,9 @@ func (n *Trie[V]) Find(host, path string, matcher LookupMatcher[V]) (*Entry[V], 
 	}
 
 	entry := &Entry[V]{
-		Value: found.values[idx],
+		Value:      found.values[idx],
+		Parameters: make(map[string]string, len(params)),
 	}
-
-	entry.Parameters = make(map[string]string, len(params))
 
 	for i, param := range params {
 		key := found.wildcardKeys[i]
