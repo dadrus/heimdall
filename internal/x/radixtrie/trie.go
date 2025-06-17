@@ -127,11 +127,6 @@ func (n *Trie[V]) addNode(
 	}
 
 	if len(tokens) == 0 {
-		if isHostPart {
-			// Transition from host to path processing
-			return n.addNode("", path, wildcardKeys, false)
-		}
-
 		// we have a leaf node
 		if len(wildcardKeys) != 0 {
 			// Ensure the current wildcard keys are the same as the old ones.
@@ -166,6 +161,10 @@ func (n *Trie[V]) addNode(
 		switch token {
 		case '*':
 			thisToken = thisToken[1:]
+			if isHostPart && len(thisToken) != 0 {
+				return nil, fmt.Errorf("%w: named free wildcards are not supported in host patterns",
+					ErrInvalidHost)
+			}
 
 			if nextSeparator != -1 {
 				if isHostPart {
@@ -189,11 +188,6 @@ func (n *Trie[V]) addNode(
 			}
 
 			if tokens[1:] != n.catchAllChild.token {
-				if isHostPart {
-					return nil, fmt.Errorf("%w: free wildcard name in %s doesn't match %s",
-						ErrInvalidHost, tokens, n.catchAllChild.token)
-				}
-
 				return nil, fmt.Errorf("%w: free wildcard name in %s doesn't match %s",
 					ErrInvalidPath, tokens, n.catchAllChild.token)
 			}
@@ -309,13 +303,7 @@ func (n *Trie[V]) deleteNode(
 		isHostPart = false
 	}
 
-	tokensLen := len(tokens)
-	if tokensLen == 0 {
-		if isHostPart {
-			// Transition from host to path processing
-			return n.deleteNode("", path, matcher)
-		}
-
+	if len(tokens) == 0 {
 		if len(n.values) == 0 {
 			return false
 		}
@@ -380,7 +368,7 @@ func (n *Trie[V]) deleteNode(
 			child = n.staticChildren[i]
 			childTokenLen := len(child.token)
 
-			if tokensLen >= childTokenLen && child.token == tokens[:childTokenLen] {
+			if len(tokens) >= childTokenLen && child.token == tokens[:childTokenLen] {
 				var deleted bool
 				if isHostPart {
 					deleted = child.deleteNode(tokens[childTokenLen:], path, matcher)
@@ -480,14 +468,8 @@ func (n *Trie[V]) findNode(
 	}
 
 	backtrack := true
-	tokensLen := len(tokens)
 
-	if tokensLen == 0 {
-		if isHostPart {
-			// Transition from host to path processing
-			return n.findNode("", path, captures, matcher)
-		}
-
+	if len(tokens) == 0 {
 		if len(n.values) == 0 {
 			return nil, 0, nil, true
 		}
@@ -508,7 +490,7 @@ func (n *Trie[V]) findNode(
 			child := n.staticChildren[i]
 			childTokenLen := len(child.token)
 
-			if tokensLen >= childTokenLen && child.token == tokens[:childTokenLen] {
+			if len(tokens) >= childTokenLen && child.token == tokens[:childTokenLen] {
 				nextTokens := tokens[childTokenLen:]
 				if isHostPart {
 					found, idx, captures, backtrack = child.findNode(nextTokens, path, captures, matcher)
@@ -595,7 +577,7 @@ func (n *Trie[V]) splitCommonPrefix(existingNodeIndex int, token string) (*Trie[
 }
 
 func (n *Trie[V]) Find(host, path string, matcher LookupMatcher[V]) (*Entry[V], error) {
-	found, idx, params, _ := n.findNode(reverseString(host), path, make([]string, 0, 3), matcher)
+	found, idx, params, _ := n.findNode(reverseHost(host), path, make([]string, 0, 3), matcher)
 	if found == nil {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
 	}
@@ -617,7 +599,7 @@ func (n *Trie[V]) Find(host, path string, matcher LookupMatcher[V]) (*Entry[V], 
 }
 
 func (n *Trie[V]) Add(host, path string, value V, opts ...AddOption[V]) error {
-	node, err := n.addNode(reverseString(host), path, nil, false)
+	node, err := n.addNode(reverseHost(host), path, nil, false)
 	if err != nil {
 		return err
 	}
@@ -636,7 +618,7 @@ func (n *Trie[V]) Add(host, path string, value V, opts ...AddOption[V]) error {
 }
 
 func (n *Trie[V]) Delete(host, path string, matcher ValueMatcher[V]) error {
-	if !n.deleteNode(reverseString(host), path, matcher) {
+	if !n.deleteNode(reverseHost(host), path, matcher) {
 		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
 	}
 

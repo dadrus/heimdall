@@ -16,7 +16,7 @@
 
 package radixtree
 
-import "unicode/utf8"
+import "strings"
 
 func commonPrefixLen(a, b string) int {
 	n := 0
@@ -27,15 +27,12 @@ func commonPrefixLen(a, b string) int {
 	return n
 }
 
-func reverseString(s string) string {
-	size := len(s)
-	buf := make([]byte, size)
+func reverseHost(s string) string {
+	parts := strings.Split(s, ".")
 
-	for start := 0; start < size; {
-		r, n := utf8.DecodeRuneInString(s[start:])
-		start += n
-		utf8.EncodeRune(buf[size-start:], r)
+	for i, j := 0, len(parts)-1; i < j; i, j = i+1, j-1 {
+		parts[i], parts[j] = parts[j], parts[i]
 	}
 
-	return string(buf)
+	return strings.Join(parts, ".")
 }

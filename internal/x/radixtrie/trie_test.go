@@ -171,6 +171,53 @@ func TestTrieFindPathWithWildcardHost(t *testing.T) {
 	}
 }
 
+func TestTrieFind(t *testing.T) {
+	t.Parallel()
+
+	tree := New[string]()
+
+	require.NoError(t, tree.Add("*", "/foo/bar", "1"))
+	require.NoError(t, tree.Add("*", "/**", "2"))
+	require.NoError(t, tree.Add("*.example.com", "/foo/bar", "3"))
+	require.NoError(t, tree.Add("*.example.com", "/foo/:bar", "4"))
+	require.NoError(t, tree.Add("*.example.com", "/foo/*", "5"))
+	require.NoError(t, tree.Add("foo.example.com", "/foo/bar", "6"))
+	require.NoError(t, tree.Add("foo.example.com", "/**", "7"))
+	require.NoError(t, tree.Add("baz.example.com", "/**", "8"))
+
+	entry, err := tree.Find("foo.bar", "/foo/bar", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "1", entry.Value)
+
+	entry, err = tree.Find("foo.bar", "/foo", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "2", entry.Value)
+
+	entry, err = tree.Find("bar.example.com", "/foo/bar", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "3", entry.Value)
+
+	entry, err = tree.Find("bar.example.com", "/foo/baz", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "4", entry.Value)
+
+	entry, err = tree.Find("bar.example.com", "/foo/baz/foo", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "5", entry.Value)
+
+	entry, err = tree.Find("foo.example.com", "/foo/bar", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "6", entry.Value)
+
+	entry, err = tree.Find("foo.example.com", "/bar", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "7", entry.Value)
+
+	entry, err = tree.Find("baz.example.com", "/foo/bar", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "8", entry.Value)
+}
+
 func TestTrieFindWithBacktrackingEnabled(t *testing.T) {
 	t.Parallel()
 
@@ -180,7 +227,7 @@ func TestTrieFindWithBacktrackingEnabled(t *testing.T) {
 	err := tree.Add("*.example.com", "/date/:year/abc", "first", WithBacktracking[string](true))
 	require.NoError(t, err)
 
-	err = tree.Add("*.example.com", "/date/**", "second")
+	err = tree.Add("*", "/date/**", "second")
 	require.NoError(t, err)
 
 	// WHEN
@@ -201,7 +248,7 @@ func TestTrieFindWithBacktrackingDisabled(t *testing.T) {
 	err := tree.Add("*.example.com", "/date/:year/abc", "first")
 	require.NoError(t, err)
 
-	err = tree.Add("*.example.com", "/date/**", "second")
+	err = tree.Add("*", "/date/**", "second")
 	require.NoError(t, err)
 
 	// WHEN
@@ -214,6 +261,30 @@ func TestTrieFindWithBacktrackingDisabled(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrNotFound)
 	require.Nil(t, entry)
+}
+
+func TestTrieAddHostPatternWithNamedFreeWildcard(t *testing.T) {
+	t.Parallel()
+
+	tree := New[string]()
+
+	err := tree.Add("*foo.example.com", "/foo/bar", "1")
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrInvalidHost)
+	require.ErrorContains(t, err, "named free wildcards")
+}
+
+func TestTrieAddHostPatternWithSimpleWildcard(t *testing.T) {
+	t.Parallel()
+
+	tree := New[string]()
+
+	err := tree.Add(":.example.com", "/foo/bar", "1")
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrInvalidHost)
+	require.ErrorContains(t, err, "simple wildcards (:) not supported")
 }
 
 func TestTrieAddDuplicates(t *testing.T) {
@@ -245,7 +316,62 @@ func TestTrieAddDuplicates(t *testing.T) {
 	assert.Equal(t, map[string]string{"year": "2024", "month": "04"}, entry.Parameters)
 }
 
-func TestTrieAdd(t *testing.T) {
+func TestTrieAddWithConstraintsVialation(t *testing.T) {
+	t.Parallel()
+
+	tree := New[string](WithValuesConstraints[string](
+		func(oldValues []string, newValue string) bool {
+			return len(oldValues) == 0
+		},
+	))
+
+	err := tree.Add("*", "/foo/bar", "1")
+	require.NoError(t, err)
+
+	err = tree.Add("*", "/foo/bar", "2")
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrConstraintsViolation)
+	require.ErrorContains(t, err, "/foo/bar")
+}
+
+func TestTrieAddWildcardPathsForDifferentHosts(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		hosts      []string
+		shouldFail bool
+	}{
+		"single wildcard host":                                 {[]string{"*"}, false},
+		"multiple same wildcard hosts":                         {[]string{"*.example.com", "*.example.com"}, false},
+		"multiple same hosts":                                  {[]string{"example.com", "example.com"}, false},
+		"multiple different hosts":                             {[]string{"foo.bar.example.com", "bar.foo.example.com"}, false},
+		"host with a wildcard in the middle of the definition": {[]string{"foo.*.bar.example.com"}, true},
+		"using closed wildcard in host definition":             {[]string{":.example.com", "foo.:.example.com"}, true},
+		"mix of different hosts":                               {[]string{"bar.example.com", "bar.foo.com", "foo.bar", "example.com"}, false},
+		"katakana マ.カ":                                       {[]string{"マ.カ"}, false},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			tree := New[string]()
+
+			var err error
+
+			for _, host := range tc.hosts {
+				err = tree.Add(host, "/", host)
+				if err != nil {
+					break
+				}
+			}
+
+			if tc.shouldFail {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTrieAddPathForWildcardHost(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -265,8 +391,8 @@ func TestTrieAdd(t *testing.T) {
 		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
 		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
 		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
-		"katakana /マ":                                    {[]string{"/マ"}, false},
-		"katakana /カ":                                    {[]string{"/カ"}, false},
+		"katakana /マ":                                   {[]string{"/マ"}, false},
+		"katakana /カ":                                   {[]string{"/カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
@@ -307,15 +433,15 @@ func TestTrieDeleteStaticPaths(t *testing.T) {
 	tree := New[int]()
 
 	for idx, path := range paths {
-		err := tree.Add("*", path, idx)
+		err := tree.Add("*.example.com", path, idx)
 		require.NoError(t, err)
 	}
 
 	for i := len(paths) - 1; i >= 0; i-- {
-		err := tree.Delete("*", paths[i], deleteMatcher[int](true))
+		err := tree.Delete("*.example.com", paths[i], deleteMatcher[int](true))
 		require.NoError(t, err)
 
-		err = tree.Delete("*", paths[i], deleteMatcher[int](true))
+		err = tree.Delete("*.example.com", paths[i], deleteMatcher[int](true))
 		require.Error(t, err)
 	}
 }
@@ -338,7 +464,7 @@ func TestTrieDeleteStaticAndWildcardPaths(t *testing.T) {
 	tree := New[int]()
 
 	for idx, path := range paths {
-		err := tree.Add("*", path, idx+1)
+		err := tree.Add("*.example.com", path, idx+1)
 		require.NoError(t, err)
 	}
 
@@ -347,16 +473,16 @@ func TestTrieDeleteStaticAndWildcardPaths(t *testing.T) {
 	for i := len(paths) - 1; i >= 0; i-- {
 		tbdPath := paths[i]
 
-		err := tree.Delete("*", tbdPath, deleteMatcher[int](true))
+		err := tree.Delete("*.example.com", tbdPath, deleteMatcher[int](true))
 		require.NoErrorf(t, err, "Should be able to delete %s", paths[i])
 
-		err = tree.Delete("*", tbdPath, deleteMatcher[int](true))
+		err = tree.Delete("*.example.com", tbdPath, deleteMatcher[int](true))
 		require.Errorf(t, err, "Should not be able to delete %s", paths[i])
 
 		deletedPaths = append(deletedPaths, tbdPath)
 
 		for idx, path := range paths {
-			entry, err := tree.Find("*", path, lookupMatcher[int](true))
+			entry, err := tree.Find("*.example.com", path, lookupMatcher[int](true))
 
 			if slices.Contains(deletedPaths, path) {
 				require.Errorf(t, err, "Should not be able to find %s after deleting %s", path, tbdPath)
@@ -394,17 +520,17 @@ func TestTrieDeleteMixedPaths(t *testing.T) {
 	tree := New[int]()
 
 	for idx, path := range paths {
-		err := tree.Add("*", path, idx+1)
+		err := tree.Add("*.example.com", path, idx+1)
 		require.NoError(t, err)
 	}
 
 	for i := len(paths) - 1; i >= 0; i-- {
 		tbdPath := paths[i]
 
-		err := tree.Delete("*", tbdPath, deleteMatcher[int](true))
+		err := tree.Delete("*.example.com", tbdPath, deleteMatcher[int](true))
 		require.NoErrorf(t, err, "Should be able to delete %s", paths[i])
 
-		err = tree.Delete("*", tbdPath, deleteMatcher[int](true))
+		err = tree.Delete("*.example.com", tbdPath, deleteMatcher[int](true))
 		require.Errorf(t, err, "Should not be able to delete %s", paths[i])
 	}
 
@@ -415,27 +541,27 @@ func TestTrieClone(t *testing.T) {
 	t.Parallel()
 
 	tree := New[string]()
-	paths := map[string]string{
-		"/abc/bca/bbb":   "/abc/bca/bbb",
-		"/abb/abc/bbb":   "/abb/abc/bbb",
-		"/**":            "/foo",
-		"/abc/*foo":      "/abc/bar/baz",
-		"/:foo/abc":      "/bar/abc",
-		"/:foo/:bar/**":  "/bar/baz/foo",
-		"/:foo/:bar/abc": "/bar/baz/abc",
+	config := map[string][]string{
+		"/abc/bca/bbb":   {"example.com", "/abc/bca/bbb"},
+		"/abb/abc/bbb":   {"example.com", "/abb/abc/bbb"},
+		"/**":            {"*", "/foo"},
+		"/abc/*foo":      {"example.com", "/abc/bar/baz"},
+		"/:foo/abc":      {"foo.example.com", "/bar/abc"},
+		"/:foo/:bar/**":  {"*.example.com", "/bar/baz/foo"},
+		"/:foo/:bar/abc": {"*.example.com", "/bar/baz/abc"},
 	}
 
-	for expr, path := range paths {
-		require.NoError(t, tree.Add("*", expr, path))
+	for expr, value := range config {
+		require.NoError(t, tree.Add(value[0], expr, value[1]))
 	}
 
 	clone := tree.Clone()
 
-	for _, path := range slices.Collect(maps.Values(paths)) {
-		entry, err := clone.Find("*", path,
+	for _, values := range slices.Collect(maps.Values(config)) {
+		entry, err := clone.Find(values[0], values[1],
 			LookupMatcherFunc[string](func(_ string, _, _ []string) bool { return true }))
 
 		require.NoError(t, err)
-		assert.Equal(t, path, entry.Value)
+		assert.Equal(t, values[1], entry.Value)
 	}
 }
