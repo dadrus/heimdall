@@ -55,19 +55,22 @@ The actual expression based on the given `type`.
 
 ** *`backtracking_enabled`*: _boolean_ (optional)
 +
-Enables or disables backtracking when a request matches the path expressions but fails to meet additional matching criteria, like `path_params`, `hosts`, etc. This setting is inherited from the default rule and defaults to that rule's setting. When enabled, the system will backtrack to attempt a match with a less specific rule (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details).
+WARNING: This property is deprecated and unused since v0.17.0. Before v0.17.0, it helped control backtracking (see (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking]). Configuring it now triggers a warning, and it will be removed in a future version.
 
 ** *`hosts`*: _HostMatcher array_ (optional)
 +
-Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. Each entry has the following properties:
+Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. If not defined, any host will be matched. Each entry has the following properties:
 
 *** *`type`*: _string_ (mandatory)
 +
 Specifies the type of expression for matching the host, which can be one of:
 
-**** `exact` to match the host exactly
-**** `glob` to use a https://github.com/gobwas/glob[glob expression] which should be satisfied by the host of the incoming request (`.` is used as a delimiter, which means `*` will match anything until the next `.`).
-**** `regex` to use a regular expression which should be satisfied by the host of the incoming request.
+**** `exact`: Matches the host exactly.
+**** `wildcard`: Matches the host using a wildcard expression (e.g., `*.example.com` matches all subdomains under `example.com`). The `*` can only appear once at the start of the expression, and `*` alone matches any host.
+**** `glob`: Uses a https://github.com/gobwas/glob[glob expression] that the host of the incoming request must satisfy, with `.` as a delimiter (e.g., `*` matches any segment until the next `.`).
+**** `regex`: Uses a regular expression that the host of the incoming request must satisfy.
+
+WARNING: The `glob` and `regex` types for host expressions are deprecated and will be removed in a future version. Using them triggers a warning log. Switch to `exact` or `wildcard` types, which improve rule matching, particularly when domains are more significant than paths.
 
 *** *`value`*: _string_ (mandatory)
 +
@@ -243,63 +246,56 @@ match:
 
 == Rule Matching Specificity & Backtracking
 
-The implementation ensures that rules with more specific path expressions are matched first, regardless of their placement within a rule set. In fact, more specific rules are prioritized.
+The implementation ensures that rules with more specific host and path expressions are matched first, regardless of their placement within a rule set. In fact, more specific rules are prioritized.
 
-NOTE: A more specific rule (e.g. for a route `/foo/bar`) can only be defined within the same rule set that defines a more generic rule (e.g. for a route `/foo/:something`). Attempting to define it in a different rule set will result in an error, and the affected rule set will be rejected.
+NOTE: A more specific rule (e.g., for `/foo/bar`) must be defined in the same rule set as a more generic rule (e.g., for `/foo/:something`). Defining it in a different rule set will cause an error, rejecting the affected rule set. This also applies in reverse.
 
-When a path expression matches a request, any additional conditions specified in the rule's matching criteria are evaluated. Only if these conditions are met will the rule's pipeline be executed.
+When a host and path expression matches a request, any additional conditions specified in the rule's matching criteria are evaluated. Only if these conditions are met will the rule's pipeline be executed.
 
 CAUTION: If multiple rules share the same path expression and all their additional conditions match, the first matching rule will be applied. The matching order is determined by the sequence of rules in the rule set.
 
-If no rule is matched, and backtracking is enabled, the process will backtrack to attempt a match with the next less specific rule. Backtracking will stop when:
+If no rule is matched, the process will backtrack to attempt a match with the next less specific rule in the same rule set. Backtracking will stop when:
 
 * a less specific rule successfully matches (including evaluation of any additional conditions), or
-* a less specific rule fails to match and does not permit backtracking.
+* a less specific rule fails to match, and there are no other candidates in the rule set.
 
 The following examples illustrate these principles:
 
-Imagine the following set of rules
+Imagine a rule set with the following rules
 
 [source, yaml]
 ----
-id: rule1
-match:
-  routes:
-    - path: /files/**
-execute:
-  - <pipeline definition>
-----
+- id: rule1
+  match:
+    routes:
+      - path: /files/**
+  execute:
+    - <pipeline definition>
 
-[source, yaml]
-----
-id: rule2
-match:
-  routes:
-    - path: /files/:team/:name
-      path_params:
-        - name: team
-          type: regex
-          value: "(team1|team2)"
-  backtracking_enabled: true
-execute:
-  - <pipeline definition>
-----
+- id: rule2
+  match:
+    routes:
+      - path: /files/:team/:name
+        path_params:
+          - name: team
+            type: regex
+            value: "(team1|team2)"
+  execute:
+    - <pipeline definition>
 
-[source, yaml]
-----
-id: rule3
-match:
-  routes:
-    - path: /files/team3/:name
-execute:
-  - <pipeline definition>
+- id: rule3
+  match:
+    routes:
+      - path: /files/team3/:name
+  execute:
+    - <pipeline definition>
 ----
 
 The request to `/files/team1/document.pdf` will be matched by `rule2`, as it is more specific than `rule1`. Consequently, the pipeline for `rule2` will be executed.
 
 The request to `/files/team3/document.pdf` will be matched by `rule3`, which is more specific than both `rule1` and `rule2`. As a result, the corresponding pipeline will be executed.
 
-However, even though the request to `/files/team4/document.pdf` matches the path defined in `rule2`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Since `backtracking_enabled` is set to `true`, backtracking will occur, and the request will be matched by `rule1`, with its pipeline then being executed.
+However, even though the request to `/files/team4/document.pdf` matches the path defined in `rule2`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Since backtracking will occur, the request will be matched by `rule1`, with its pipeline then being executed.
 
 == Authentication & Authorization Pipeline
 

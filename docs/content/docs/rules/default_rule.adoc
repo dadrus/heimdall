@@ -25,11 +25,6 @@ The default rule does not support all properties available in a link:{{< relref 
 * The authentication stage cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). However, this enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-default-rule-enforcement` flag.
 ====
 
-
-* *`backtracking_enabled`*: _boolean_ (optional)
-+
-Enables or disables backtracking while matching the rules globally. Defaults to `false`.
-
 * *`execute`*: _link:{{< relref "regular_rule.adoc#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline]_ (mandatory)
 +
 Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "regular_rule.adoc" >}}[Regular Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
