@@ -250,8 +250,12 @@ func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.R
 				host,
 				path,
 				route,
-				radixtrie.WithBacktracking[rule.Route](rul.AllowsBacktracking()),
-			); err != nil {
+				radixtrie.WithBacktrackingControl(
+					func(values []rule.Route) bool {
+						// backtracking is only possible within the same rule set
+						return len(values) == 0 || values[0].Rule().SrcID() == srcID
+					},
+				)); err != nil {
 				return errorchain.NewWithMessagef(heimdall.ErrInternal,
 					"failed adding rule %s from %s", rul.ID(), srcID).
 					CausedBy(err)

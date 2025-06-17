@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"net/http"
 	"net/url"
 	"testing"
@@ -915,7 +916,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.Equal(t, &ruleImpl{id: "test", isDefault: true}, rul)
 			},
 		},
-		"matches upstream rule": {
+		"simple upstream rule match": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -925,10 +926,10 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				rule1 := &ruleImpl{id: "test2", srcID: "baz", hash: []byte{1}}
+				rule1 := &ruleImpl{id: "test", srcID: "1", hash: []byte{1}}
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*", path: "/baz/bar", matcher: andMatcher{}})
 
-				err := repo.AddRuleSet(t.Context(), "baz", []rule.Rule{rule1})
+				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1})
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
@@ -939,8 +940,71 @@ func TestRepositoryFindRule(t *testing.T) {
 				impl, ok := rul.(*ruleImpl)
 				require.True(t, ok)
 
-				require.Equal(t, "test2", impl.id)
-				require.Equal(t, "baz", impl.srcID)
+				require.Equal(t, "test", impl.id)
+				require.Equal(t, "1", impl.srcID)
+			},
+		},
+		"upstream rule match with backtracking within the rule set": {
+			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar"},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo *repository) {
+				t.Helper()
+
+				rule1 := &ruleImpl{id: "rule1", srcID: "1", hash: []byte{1}}
+				rule1.routes = append(rule1.routes,
+					&routeImpl{
+						rule: rule1,
+						host: "foo.bar",
+						path: "/baz/:id",
+						matcher: &pathParamMatcher{
+							newExactMatcher("foo"),
+							"id",
+							config.EncodedSlashesOff,
+						},
+					},
+				)
+
+				rule2 := &ruleImpl{id: "rule2", srcID: "1", hash: []byte{1}}
+				rule2.routes = append(rule2.routes,
+					&routeImpl{
+						rule: rule2,
+						host: "foo.bar",
+						path: "/baz/:id",
+						matcher: &pathParamMatcher{
+							newExactMatcher("baz"),
+							"id",
+							config.EncodedSlashesOff,
+						},
+					},
+				)
+
+				rule3 := &ruleImpl{id: "rule3", srcID: "1", hash: []byte{1}}
+				rule3.routes = append(rule3.routes,
+					&routeImpl{
+						rule:    rule3,
+						host:    "*.bar",
+						path:    "/baz/**",
+						matcher: andMatcher{},
+					},
+				)
+
+				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1, rule2, rule3})
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				impl, ok := rul.(*ruleImpl)
+				require.True(t, ok)
+
+				require.Equal(t, "rule3", impl.id)
+				require.Equal(t, "1", impl.srcID)
 			},
 		},
 	} {
