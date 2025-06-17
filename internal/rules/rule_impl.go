@@ -125,6 +125,7 @@ func (r *ruleImpl) AllowsBacktracking() bool { return r.allowsBacktracking }
 
 type routeImpl struct {
 	rule    *ruleImpl
+	host    string
 	path    string
 	matcher RouteMatcher
 }
@@ -148,6 +149,8 @@ func (r *routeImpl) Matches(ctx heimdall.RequestContext, keys, values []string) 
 
 	return true
 }
+
+func (r *routeImpl) Host() string { return r.host }
 
 func (r *routeImpl) Path() string { return r.path }
 

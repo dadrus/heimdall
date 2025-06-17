@@ -19,9 +19,6 @@ package rules
 import (
 	"errors"
 	"fmt"
-
-	"github.com/rs/zerolog"
-
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
@@ -29,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/rs/zerolog"
 )
 
 func NewRuleFactory(
@@ -125,12 +123,32 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		eh:                 errorHandlers,
 	}
 
-	mm, err := createMethodMatcher(ruleConfig.Matcher.Methods)
+	// filter those host settings, which can be used in the trie structure,
+	// and in glob/regex matchers
+	var (
+		trieHosts    []config2.HostMatcher
+		matcherHosts []config2.HostMatcher
+	)
+
+	for _, host := range ruleConfig.Matcher.Hosts {
+		if host.Type == "exact" || host.Type == "wildcard" {
+			trieHosts = append(trieHosts, host)
+		} else {
+			matcherHosts = append(matcherHosts, host)
+		}
+	}
+
+	// if no exact, or wildcard hosts are defined, we create a virtual match everything wildcard host
+	if len(trieHosts) == 0 {
+		trieHosts = append(trieHosts, config2.HostMatcher{Type: "wildcard", Value: "*"})
+	}
+
+	hm, err := createHostMatcher(matcherHosts)
 	if err != nil {
 		return nil, err
 	}
 
-	hm, err := createHostMatcher(ruleConfig.Matcher.Hosts)
+	mm, err := createMethodMatcher(ruleConfig.Matcher.Methods)
 	if err != nil {
 		return nil, err
 	}
@@ -145,12 +163,15 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 				CausedBy(err)
 		}
 
-		rul.routes = append(rul.routes,
-			&routeImpl{
-				rule:    rul,
-				path:    rc.Path,
-				matcher: andMatcher{sm, mm, hm, ppm},
-			})
+		for _, host := range trieHosts {
+			rul.routes = append(rul.routes,
+				&routeImpl{
+					rule:    rul,
+					host:    host.Value,
+					path:    rc.Path,
+					matcher: andMatcher{sm, mm, hm, ppm},
+				})
+		}
 	}
 
 	return rul, nil

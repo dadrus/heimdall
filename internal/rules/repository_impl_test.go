@@ -29,7 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/radixtree"
+	"github.com/dadrus/heimdall/internal/x/radixtrie"
 )
 
 func TestRepositoryAddRuleSet(t *testing.T) {
@@ -43,12 +43,12 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"rule with multiple routes from the same rule set can be added": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/:some"})
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/2"})
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/**"})
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/:some"})
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/4"})
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/3/5/6"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/:some"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/2"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/**"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/:some"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/4"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/5/6"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -59,32 +59,46 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				assert.Len(t, repo.knownRules, 1)
 				assert.False(t, repo.index.Empty())
 
-				_, err = repo.index.Find("/1/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("example.com", "/1/1",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/1/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("example.com", "/1/2",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/1/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("example.com", "/1/3",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/1/3/6/7", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("example.com", "/1/3/6/7",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/1/3/5", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("example.com", "/1/3/5",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/1/3/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("example.com", "/1/3/4",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("/1/3/5/6", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+				_, err = repo.index.Find("example.com", "/1/3/5/6",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 			},
 		},
 		"static path override by a rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -99,13 +113,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"adding a route with wildcard at the path start from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -120,13 +134,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"adding a route with wildcard at the path end from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/:some"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/:some"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -141,13 +155,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"adding a route with free wildcard at the path end from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/**"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -162,13 +176,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"adding a route with free wildcard at the path start from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/**"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/**"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -183,13 +197,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"overriding existing rule with wildcard at path end by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/:some"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/:some"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -204,13 +218,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"overriding existing rule with wildcard at path start by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -225,13 +239,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"adding a route with free wildcard at the path end from another ruleset for a rule starting with a wildcard is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/**"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/**"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -246,13 +260,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"adding a route with free wildcard at the path start from another ruleset for a rule starting with a wildcard is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:some/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/**"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/**"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -267,13 +281,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"overriding a rule with multiple wildcards by a more specific rule for some of the path segments defined in a different rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:a/:b/:c/:d"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:a/:b/:c/:d"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/:a/1/:c/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:a/1/:c/1"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -288,13 +302,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"overriding of a rule defining a free wildcard at the end of the path by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/**"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, path: "/1/2/3"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -330,16 +344,16 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
 
 	rule1 := &ruleImpl{id: "1", srcID: "1"}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/foo/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*", path: "/foo/1"})
 
 	rule2 := &ruleImpl{id: "2", srcID: "1"}
-	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/foo/2"})
+	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "*", path: "/foo/2"})
 
 	rule3 := &ruleImpl{id: "3", srcID: "1"}
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/foo/4"})
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "*", path: "/foo/4"})
 
 	rule4 := &ruleImpl{id: "4", srcID: "1"}
-	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, path: "/foo/4"})
+	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "*", path: "/foo/4"})
 
 	rules := []rule.Rule{rule1, rule2, rule3, rule4}
 
@@ -363,19 +377,19 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
 
 	rule1 := &ruleImpl{id: "1", srcID: "bar"}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
 
 	rule2 := &ruleImpl{id: "3", srcID: "bar"}
-	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/bar/3"})
+	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "*.example.com", path: "/bar/3"})
 
 	rule3 := &ruleImpl{id: "4", srcID: "bar"}
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/bar/4"})
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.com", path: "/bar/4"})
 
 	rule4 := &ruleImpl{id: "2", srcID: "baz"}
-	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, path: "/baz/2"})
+	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "bar.com", path: "/baz/2"})
 
 	rule5 := &ruleImpl{id: "4", srcID: "foo"}
-	rule5.routes = append(rule5.routes, &routeImpl{rule: rule5, path: "/foo/4"})
+	rule5.routes = append(rule5.routes, &routeImpl{rule: rule5, host: "*", path: "/foo/4"})
 
 	rules1 := []rule.Rule{rule1, rule2, rule3}
 	rules2 := []rule.Rule{rule4}
@@ -398,19 +412,19 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 2)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0], rules3[0]})
 
-	_, err = repo.index.Find("/bar/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("example.com", "/bar/1", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/bar/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("foo.example.com", "/bar/3", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/bar/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("foo.com", "/bar/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/baz/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/foo/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -421,10 +435,10 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 1)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0]})
 
-	_, err = repo.index.Find("/foo/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("/baz/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -443,31 +457,31 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
 
 	rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1"})
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1a"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "bar.example.com", path: "/bar/1a"})
 
 	rule2 := &ruleImpl{id: "2", srcID: "1", hash: []byte{1}}
-	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, path: "/bar/2"})
+	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
 
 	rule3 := &ruleImpl{id: "3", srcID: "1", hash: []byte{1}}
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/bar/3"})
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/bar/2"})
 
 	rule4 := &ruleImpl{id: "4", srcID: "1", hash: []byte{1}}
-	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, path: "/bar/4"})
+	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "baz.example.com", path: "/bar/4"})
 
 	initialRules := []rule.Rule{rule1, rule2, rule3, rule4}
 
 	require.NoError(t, repo.AddRuleSet(t.Context(), "1", initialRules))
 
-	// rule 1 changed: /bar/1a gone, /bar/1b added
+	// rule 1 changed: example.com/bar/1a gone, bar.example.com/bar/1b added
 	rule1 = &ruleImpl{id: "1", srcID: "1", hash: []byte{2}}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1"})
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/bar/1b"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
+	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "bar.example.com", path: "/bar/1b"})
 	// rule with id 2 is deleted
-	// rule 3 changed: /bar/2 gone, /foo/3 and /foo/4 added
+	// rule 3 changed: foo.example.com/bar/2 gone, foo.example.com/foo/3 and /foo/4 added
 	rule3 = &ruleImpl{id: "3", srcID: "1", hash: []byte{2}}
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/foo/3"})
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, path: "/foo/4"})
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/3"})
+	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/4"})
 	// rule 4 same as before
 
 	updatedRules := []rule.Rule{rule1, rule3, rule4}
@@ -481,24 +495,40 @@ func TestRepositoryUpdateRuleSet(t *testing.T) {
 	assert.Len(t, repo.knownRules, 3)
 	assert.False(t, repo.index.Empty())
 
-	_, err = repo.index.Find("/bar/1", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("example.com", "/bar/1",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.Find("/bar/1a", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("bar.example.com", "/bar/1a",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.Find("/bar/1b", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("bar.example.com", "/bar/1b",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.Find("/bar/2", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("example.com", "/bar/2",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
 
-	_, err = repo.index.Find("/bar/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("foo.example.com", "/bar/2",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.Find("/foo/3", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("foo.example.com", "/foo/3",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.Find("/foo/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("foo.example.com", "/foo/4",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.Find("/bar/4", radixtree.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.Find("baz.example.com", "/bar/4",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 }
 
@@ -551,7 +581,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				t.Helper()
 
 				rule1 := &ruleImpl{id: "test2", srcID: "baz", hash: []byte{1}}
-				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, path: "/baz/bar", matcher: andMatcher{}})
+				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*", path: "/baz/bar", matcher: andMatcher{}})
 
 				err := repo.AddRuleSet(t.Context(), "baz", []rule.Rule{rule1})
 				require.NoError(t, err)
