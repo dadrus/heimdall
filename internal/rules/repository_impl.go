@@ -153,7 +153,33 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 		return ruleGone || ruleChanged
 	})
 
-	tmp := r.index.Clone()
+	// prepare the new set of known rules, which does not contain the rules, which are gone
+	// with the update
+	knownRules := slices.DeleteFunc(slices.Clone(r.knownRules), func(loaded rule.Rule) bool {
+		return slices.Contains(toBeDeleted, loaded)
+	})
+
+	// Check if the to be added rules define more generic routes for already existing ones.
+	// If so, reject them
+
+	// create a trie containing only the new rules
+	tmp := radixtrie.New[rule.Route](
+		radixtrie.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
+			// only rules from the same rule set can be placed in one node
+			return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
+		}))
+	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
+		return err
+	}
+
+	// Check if adding existing rules would result in the violation of the constraint, that
+	// more specific and more generic rules must be defined in the same rule set
+	if err := r.addRulesTo(tmp, knownRules); err != nil {
+		return err
+	}
+
+	// Try updating the existing index now.
+	tmp = r.index.Clone()
 
 	// delete rules
 	if err := r.removeRulesFrom(tmp, toBeDeleted); err != nil {
@@ -165,10 +191,8 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 		return err
 	}
 
-	r.knownRules = slices.DeleteFunc(r.knownRules, func(loaded rule.Rule) bool {
-		return slices.Contains(toBeDeleted, loaded)
-	})
-	r.knownRules = append(r.knownRules, toBeAdded...)
+	knownRules = append(knownRules, toBeAdded...)
+	r.knownRules = knownRules
 
 	r.rulesTrieMutex.Lock()
 	r.index = tmp
