@@ -183,8 +183,6 @@ func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
 			tm, err = newGlobMatcher(host.Value, '.')
 		case "regex":
 			tm, err = newRegexMatcher(host.Value)
-		case "exact":
-			tm = newExactMatcher(host.Value)
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported host matching expression type '%s' at index %d", host.Type, idx)

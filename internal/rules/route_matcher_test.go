@@ -148,33 +148,18 @@ func TestCreateHostMatcher(t *testing.T) {
 				require.ErrorContains(t, err, "failed to compile host matching expression at index 0")
 			},
 		},
-		"exact expression": {
-			conf: []config.HostMatcher{{Value: "?>?<*??", Type: "exact"}},
-			assert: func(t *testing.T, matcher RouteMatcher, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.IsType(t, orMatcher{}, matcher)
-				assert.Len(t, matcher, 1)
-
-				hms := matcher.(orMatcher)
-				assert.IsType(t, &hostMatcher{}, hms[0])
-				assert.IsType(t, &exactMatcher{}, hms[0].(*hostMatcher).typedMatcher)
-			},
-		},
 		"unsupported type": {
-			conf: []config.HostMatcher{{Value: "foo", Type: "bar"}},
+			conf: []config.HostMatcher{{Value: "foo", Type: "exact"}},
 			assert: func(t *testing.T, _ RouteMatcher, err error) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "unsupported host matching expression type 'bar' at index 0")
+				require.ErrorContains(t, err, "unsupported host matching expression type 'exact' at index 0")
 			},
 		},
 		"multiple expressions": {
 			conf: []config.HostMatcher{
-				{Value: "foo", Type: "exact"},
 				{Value: ".*", Type: "regex"},
 				{Value: "/**", Type: "glob"},
 			},
@@ -183,15 +168,13 @@ func TestCreateHostMatcher(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.IsType(t, orMatcher{}, matcher)
-				assert.Len(t, matcher, 3)
+				assert.Len(t, matcher, 2)
 
 				hms := matcher.(orMatcher)
 				assert.IsType(t, &hostMatcher{}, hms[0])
-				assert.IsType(t, &exactMatcher{}, hms[0].(*hostMatcher).typedMatcher)
+				assert.IsType(t, &regexpMatcher{}, hms[0].(*hostMatcher).typedMatcher)
 				assert.IsType(t, &hostMatcher{}, hms[1])
-				assert.IsType(t, &regexpMatcher{}, hms[1].(*hostMatcher).typedMatcher)
-				assert.IsType(t, &hostMatcher{}, hms[2])
-				assert.IsType(t, &globMatcher{}, hms[2].(*hostMatcher).typedMatcher)
+				assert.IsType(t, &globMatcher{}, hms[1].(*hostMatcher).typedMatcher)
 			},
 		},
 	} {
@@ -367,17 +350,12 @@ func TestHostMatcherMatches(t *testing.T) {
 			toMatch: "foo.example.com",
 			matches: true,
 		},
-		"matches single exact value": {
-			conf:    []config.HostMatcher{{Value: "example.com", Type: "exact"}},
-			toMatch: "example.com",
-			matches: true,
-		},
 		"matches host from request if multiple matches are defined and one is appropriate": {
 			conf: []config.HostMatcher{
-				{Value: "foo.com", Type: "exact"},
-				{Value: "example.com", Type: "exact"},
+				{Value: "foo.com", Type: "glob"},
+				{Value: "*.example.com", Type: "glob"},
 			},
-			toMatch: "example.com",
+			toMatch: "foo.example.com",
 			matches: true,
 		},
 		"does not match single regex based value": {
@@ -386,8 +364,8 @@ func TestHostMatcherMatches(t *testing.T) {
 		},
 		"does not match if multiple values are defined, but none of them are appropriate": {
 			conf: []config.HostMatcher{
-				{Value: "foo.com", Type: "exact"},
-				{Value: "bar.com", Type: "exact"},
+				{Value: "foo.com", Type: "glob"},
+				{Value: "bar.com", Type: "glob"},
 			},
 			toMatch: "example.com",
 		},

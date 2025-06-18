@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package radixtree
+package radixtrie
 
 import (
 	"testing"
@@ -24,8 +24,7 @@ import (
 
 func BenchmarkNodeSearchNoPaths(b *testing.B) {
 	tm := lookupMatcher[string](true)
-	tree := &Tree[string]{
-		path:   "/",
+	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
@@ -33,106 +32,102 @@ func BenchmarkNodeSearchNoPaths(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("", nil, tm)
+		tree.findNode("*", "", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchRoot(b *testing.B) {
 	tm := lookupMatcher[string](true)
-	tree := &Tree[string]{
-		path:   "/",
+	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
+
+	require.NoError(b, tree.Add("*", "/", "foo"))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("/", nil, tm)
+		tree.findNode("*", "/", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneStaticPath(b *testing.B) {
 	tm := lookupMatcher[string](true)
-	tree := &Tree[string]{
-		path:   "/",
+	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
-	tree.Add("abc", "foo")
+	require.NoError(b, tree.Add("*", "/abc", "foo"))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("abc", nil, tm)
+		tree.findNode("*", "/abc", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneLongStaticPath(b *testing.B) {
 	tm := lookupMatcher[string](true)
-	tree := &Tree[string]{
-		path:   "/",
+	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
-	tree.Add("foo/bar/baz", "foo")
+	require.NoError(b, tree.Add("*", "/foo/bar/baz", "foo"))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("foo/bar/baz", nil, tm)
+		tree.findNode("*", "foo/bar/baz", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneWildcardPath(b *testing.B) {
 	tm := lookupMatcher[string](true)
-	tree := &Tree[string]{
-		path:   "/",
+	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
-	require.NoError(b, tree.Add(":abc", "foo"))
+	require.NoError(b, tree.Add("*", "/:abc", "foo"))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("abc", nil, tm)
+		tree.findNode("*", "/abc", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneLongWildcards(b *testing.B) {
 	tm := lookupMatcher[string](true)
-	tree := &Tree[string]{
-		path:   "/",
+	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
-	tree.Add(":abc/:def/:ghi", "foo")
+	require.NoError(b, tree.Add("*", ":abc/:def/:ghi", "foo"))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("abcdefghijklmnop/aaaabbbbccccddddeeeeffffgggg/hijkl", nil, tm)
+		tree.findNode("*", "abcdefghijklmnop/aaaabbbbccccddddeeeeffffgggg/hijkl", nil, tm)
 	}
 }
 
 func BenchmarkNodeSearchOneFreeWildcard(b *testing.B) {
 	tm := lookupMatcher[string](true)
-	tree := &Tree[string]{
-		path:   "/",
+	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
-	require.NoError(b, tree.Add("*abc", "foo"))
+	require.NoError(b, tree.Add("*", "/*abc", "foo"))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for range b.N {
-		tree.findNode("foo", nil, tm)
+		tree.findNode("*", "/foo", nil, tm)
 	}
 }
