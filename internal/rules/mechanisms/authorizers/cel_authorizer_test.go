@@ -381,8 +381,8 @@ expressions:
 		"expressions can use subject, request, outputs, and values properties": {
 			config: []byte(`
 values:
-  a: foo
-  b: bar
+  a: "{{ .Request.URL.Captures.foo }}"
+  b: "{{ .Outputs.foo }}"
 expressions:
   - expression: |
       Subject.Attributes.exists(c, c.startsWith('group'))
@@ -408,7 +408,7 @@ expressions:
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject) {
 				t.Helper()
 
-				sub.ID = "foobar"
+				sub.ID = "barbar"
 				sub.Attributes = map[string]any{
 					"group1": []string{"admin@acme.co", "analyst@acme.co"},
 					"labels": []string{"metadata", "prod", "pii"},
