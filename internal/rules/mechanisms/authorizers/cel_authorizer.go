@@ -17,8 +17,6 @@
 package authorizers
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
@@ -26,6 +24,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
