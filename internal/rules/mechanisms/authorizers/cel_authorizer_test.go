@@ -381,7 +381,8 @@ expressions:
 		"expressions can use subject, request, outputs, and values properties": {
 			config: []byte(`
 values:
-  foo: bar
+  a: foo
+  b: bar
 expressions:
   - expression: |
       Subject.Attributes.exists(c, c.startsWith('group'))
@@ -402,7 +403,7 @@ expressions:
   - expression: Request.URL.Path.split("/").last() == "test"
   - expression: Request.URL.Captures.foo == "bar"
   - expression: Outputs.foo == "bar"
-  - expression: Values.foo == "bar"
+  - expression: Subject.ID == Values.a + Values.b
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject) {
 				t.Helper()
