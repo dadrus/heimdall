@@ -103,12 +103,12 @@ The usage of this type of configuration makes sense in a pipeline, which combine
 
 ====
 
-.Checking for a kubernetes service account by making use of templates
+.Checking for a Kubernetes Service Account
 ====
 
-In this example, the authorizer is configured to make use of `namespace` and `name` "template" properties. The default values for these properties are configured to an empty string.
+In this example, the authorizer is configured to check for a service account name in the format `system:serviceaccount:<namespace>:<name>`, where `namespace` and `name` are provided by making use of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object. By default, both properties are set to an empty string.
 
-[source, yaml]
+[source,yaml]
 ----
 id: check_service_account
 type: cel
@@ -121,9 +121,9 @@ config:
         Subject.ID == "system:serviceaccount:" + Values.namespace + ":" + Values.name
 ----
 
-With that configuration in place, a rule can make use of this authorizer as follows:
+With this configuration in place, rules can override the default expression values by specifying rule-specific settings, as shown below:
 
-[source, yaml]
+[source,yaml]
 ----
 # further rule settings
 execute:
@@ -136,6 +136,7 @@ execute:
   - # some further steps
 ----
 ====
+
 
 == Remote
 
