@@ -76,6 +76,10 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
+	if rc.Matcher.BacktrackingEnabled != nil {
+		f.logger.Warn().Msgf("Rule ID=%s from %s has a deprecated 'backtracking_enabled' property configured", rc.ID, srcID)
+	}
+
 	slashesHandling := x.IfThenElse(len(rc.EncodedSlashesHandling) != 0,
 		rc.EncodedSlashesHandling,
 		config2.EncodedSlashesOff,
