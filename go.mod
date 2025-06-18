@@ -32,7 +32,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
 	github.com/instana/go-otel-exporter v1.0.0
-	github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04
+	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/johannesboyne/gofakes3 v0.0.0-20250603205740-ed9094be7668
 	github.com/justinas/alice v1.2.0
 	github.com/knadh/koanf/maps v0.1.2
@@ -214,7 +214,7 @@ require (
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
@@ -232,8 +232,5 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace (
-	// as recommended in https://github.com/golang/go/issues/73617 to resolve cross-compilation issues for darwin
-	github.com/ebitengine/purego v0.8.2 => github.com/ebitengine/purego v0.8.3-0.20250507171810-1638563e3615
-	github.com/jellydator/ttlcache/v3 v3.3.1-0.20250429181427-27a3fdddbf04 => github.com/dadrus/ttlcache/v3 v3.0.0-20250516173247-cd4dda2d2bab
-)
+// as recommended in https://github.com/golang/go/issues/73617 to resolve cross-compilation issues for darwin
+replace github.com/ebitengine/purego v0.8.2 => github.com/ebitengine/purego v0.8.3-0.20250507171810-1638563e3615
