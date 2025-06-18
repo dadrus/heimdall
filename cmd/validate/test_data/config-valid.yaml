@@ -212,8 +212,10 @@ mechanisms:
     - id: attributes_based_authorizer_2
       type: cel
       config:
+        values:
+          foo: bar
         expressions:
-          - expression: "'admin' in Subject.Attributes.groups"
+          - expression: "'admin' in Subject.Attributes.groups && Values.foo == 'bar'"
   contextualizers:
     - id: subscription_contextualizer
       type: generic

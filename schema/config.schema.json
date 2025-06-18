@@ -1586,6 +1586,12 @@
             "expressions"
           ],
           "properties": {
+            "values": {
+              "description": "Key-Value map with entries required for templating of expressions",
+              "type": "object",
+              "minLength": 0,
+              "uniqueItems": true
+            },
             "expressions": {
               "$ref": "#/definitions/expressionList"
             }
