@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.16.6](https://github.com/dadrus/heimdall/compare/v0.16.5...v0.16.6) (2025-06-19)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 3934645 ([#2536](https://github.com/dadrus/heimdall/issues/2536)) ([2542226](https://github.com/dadrus/heimdall/commit/2542226cd484ce6c263b526dcc6992d422c61234))
+* update kubernetes packages to v0.33.2 ([#2549](https://github.com/dadrus/heimdall/issues/2549)) ([86e3c3f](https://github.com/dadrus/heimdall/commit/86e3c3f467e167817c2db9c97f1296c801144d7d))
+* update module github.com/go-viper/mapstructure/v2 to v2.3.0 ([#2540](https://github.com/dadrus/heimdall/issues/2540)) ([11925fd](https://github.com/dadrus/heimdall/commit/11925fd91c88e09e0a657ec8e6057260242a32a8))
+* update module github.com/jellydator/ttlcache/v3 to v3.4.0 ([#2546](https://github.com/dadrus/heimdall/issues/2546)) ([7ede4ab](https://github.com/dadrus/heimdall/commit/7ede4ab802109ad817cfc8e3c7d55c23a487b4cf))
+
 ## [0.16.5](https://github.com/dadrus/heimdall/compare/v0.16.4...v0.16.5) (2025-06-10)
 
 
