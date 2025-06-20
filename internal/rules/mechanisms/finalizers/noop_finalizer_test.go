@@ -58,8 +58,8 @@ func TestCreateNoopFinalizerFromPrototype(t *testing.T) {
 	prototype := newNoopFinalizer(appCtx, "baz")
 
 	// WHEN
-	fin1, err1 := prototype.WithConfig(nil)
-	fin2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
+	fin1, err1 := prototype.WithConfig("", nil)
+	fin2, err2 := prototype.WithConfig("", map[string]any{"foo": "bar"})
 
 	// THEN
 	require.NoError(t, err1)

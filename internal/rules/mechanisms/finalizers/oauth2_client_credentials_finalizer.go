@@ -106,7 +106,7 @@ func newOAuth2ClientCredentialsFinalizer(
 func (f *oauth2ClientCredentialsFinalizer) ContinueOnError() bool { return false }
 func (f *oauth2ClientCredentialsFinalizer) ID() string            { return f.id }
 
-func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
+func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
 		Scheme string `mapstructure:"scheme"`

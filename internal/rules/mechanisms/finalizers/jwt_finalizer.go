@@ -164,7 +164,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject
 	return nil
 }
 
-func (f *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
+func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
 	if len(rawConfig) == 0 {
 		return f, nil
 	}

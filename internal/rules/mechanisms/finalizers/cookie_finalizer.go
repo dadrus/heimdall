@@ -100,7 +100,7 @@ func (f *cookieFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subj
 	return nil
 }
 
-func (f *cookieFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
+func (f *cookieFinalizer) WithConfig(stepID string, config map[string]any) (Finalizer, error) {
 	if len(config) == 0 {
 		return f, nil
 	}

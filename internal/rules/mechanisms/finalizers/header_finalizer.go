@@ -108,7 +108,7 @@ func (f *headerFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subj
 	return nil
 }
 
-func (f *headerFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
+func (f *headerFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
 	if len(rawConfig) == 0 {
 		return f, nil
 	}

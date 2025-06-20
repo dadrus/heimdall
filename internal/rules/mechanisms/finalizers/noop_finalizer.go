@@ -56,7 +56,7 @@ func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject)
 	return nil
 }
 
-func (f *noopFinalizer) WithConfig(map[string]any) (Finalizer, error) { return f, nil }
+func (f *noopFinalizer) WithConfig(stepID string, _ map[string]any) (Finalizer, error) { return f, nil }
 
 func (f *noopFinalizer) ID() string { return f.id }
 

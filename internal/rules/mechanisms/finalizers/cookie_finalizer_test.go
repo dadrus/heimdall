@@ -215,7 +215,7 @@ cookies:
 			require.NoError(t, err)
 
 			// WHEN
-			finalizer, err := prototype.WithConfig(conf)
+			finalizer, err := prototype.WithConfig("", conf)
 
 			// THEN
 			realFinalizer, ok := finalizer.(*cookieFinalizer)
