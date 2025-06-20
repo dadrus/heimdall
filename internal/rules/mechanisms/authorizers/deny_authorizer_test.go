@@ -36,8 +36,8 @@ func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 	prototype := newDenyAuthorizer(appCtx, "foo")
 
 	// WHEN
-	conf1, err1 := prototype.WithConfig(nil)
-	conf2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
+	conf1, err1 := prototype.WithConfig("", nil)
+	conf2, err2 := prototype.WithConfig("", map[string]any{"foo": "bar"})
 
 	// THEN
 	require.NoError(t, err1)

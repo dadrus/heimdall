@@ -224,7 +224,7 @@ expressions:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig(conf)
+			auth, err := prototype.WithConfig("", conf)
 
 			// THEN
 			locAuth, ok := auth.(*celAuthorizer)

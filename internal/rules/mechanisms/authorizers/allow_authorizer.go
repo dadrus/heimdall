@@ -56,7 +56,7 @@ func (a *allowAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subjec
 	return nil
 }
 
-func (a *allowAuthorizer) WithConfig(map[string]any) (Authorizer, error) {
+func (a *allowAuthorizer) WithConfig(stepID string, _ map[string]any) (Authorizer, error) {
 	return a, nil
 }
 

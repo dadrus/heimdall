@@ -199,7 +199,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Sub
 	return nil
 }
 
-func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
+func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Authorizer, error) {
 	if len(rawConfig) == 0 {
 		return a, nil
 	}

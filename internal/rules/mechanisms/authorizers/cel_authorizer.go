@@ -84,7 +84,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subjec
 	return a.expressions.eval(map[string]any{"Subject": sub, "Request": ctx.Request(), "Outputs": ctx.Outputs()}, a)
 }
 
-func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
+func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Authorizer, error) {
 	if len(rawConfig) == 0 {
 		return a, nil
 	}
