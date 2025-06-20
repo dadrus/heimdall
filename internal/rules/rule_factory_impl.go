@@ -19,6 +19,7 @@ package rules
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/rs/zerolog"
 
@@ -162,13 +163,14 @@ func (f *ruleFactory) createExecutePipeline(
 	pipeline []config.MechanismConfig,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
 	var (
-		authenticators  compositeSubjectCreator
-		subjectHandlers compositeSubjectHandler
-		finalizers      compositeSubjectHandler
+		authenticatorSteps  compositeSubjectCreator
+		subjectHandlerSteps compositeSubjectHandler
+		finalizerSteps      compositeSubjectHandler
+		stepIDs             []string
 	)
 
 	contextualizersCheck := func() error {
-		if len(finalizers) != 0 {
+		if len(finalizerSteps) != 0 {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"at least one finalizer is defined before a contextualizer")
 		}
@@ -177,7 +179,7 @@ func (f *ruleFactory) createExecutePipeline(
 	}
 
 	authorizersCheck := func() error {
-		if len(finalizers) != 0 {
+		if len(finalizerSteps) != 0 {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"at least one finalizer is defined before an authorizer")
 		}
@@ -188,53 +190,59 @@ func (f *ruleFactory) createExecutePipeline(
 	finalizersCheck := func() error { return nil }
 
 	for _, pipelineStep := range pipeline {
-		id, found := pipelineStep["authenticator"]
+		refID, found := pipelineStep["authenticator"]
 		if found {
-			if len(subjectHandlers) != 0 || len(finalizers) != 0 {
+			if len(subjectHandlerSteps) != 0 || len(finalizerSteps) != 0 {
 				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 					"an authenticator is defined after some other non authenticator type")
 			}
 
-			authenticator, err := f.hf.CreateAuthenticator( //nolint: forcetypeassert
+			stepID := getStepID(pipelineStep["id"])
+			authenticator, err := f.hf.CreateAuthenticator(
 				version,
-				id.(string),
+				fmt.Sprintf("%v", refID),
+				stepID,
 				getConfig(pipelineStep["config"]),
 			)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 
-			authenticators = append(authenticators, authenticator)
+			authenticatorSteps = append(authenticatorSteps, authenticator)
+			stepIDs = append(stepIDs, stepID)
 
 			continue
 		}
 
-		handler, err := createHandler(version, "authorizer", pipelineStep, authorizersCheck,
+		handler, stepID, err := createHandler(version, "authorizer", pipelineStep, authorizersCheck,
 			f.hf.CreateAuthorizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
 		} else if handler != nil {
-			subjectHandlers = append(subjectHandlers, handler)
+			subjectHandlerSteps = append(subjectHandlerSteps, handler)
+			stepIDs = append(stepIDs, stepID)
 
 			continue
 		}
 
-		handler, err = createHandler(version, "contextualizer", pipelineStep, contextualizersCheck,
+		handler, stepID, err = createHandler(version, "contextualizer", pipelineStep, contextualizersCheck,
 			f.hf.CreateContextualizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
 		} else if handler != nil {
-			subjectHandlers = append(subjectHandlers, handler)
+			subjectHandlerSteps = append(subjectHandlerSteps, handler)
+			stepIDs = append(stepIDs, stepID)
 
 			continue
 		}
 
-		handler, err = createHandler(version, "finalizer", pipelineStep, finalizersCheck,
+		handler, stepID, err = createHandler(version, "finalizer", pipelineStep, finalizersCheck,
 			f.hf.CreateFinalizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
 		} else if handler != nil {
-			finalizers = append(finalizers, handler)
+			finalizerSteps = append(finalizerSteps, handler)
+			stepIDs = append(stepIDs, stepID)
 
 			continue
 		}
@@ -243,35 +251,57 @@ func (f *ruleFactory) createExecutePipeline(
 			"unsupported configuration in execute")
 	}
 
-	return authenticators, subjectHandlers, finalizers, nil
+	stepIDs = slices.DeleteFunc(stepIDs, func(s string) bool { return len(s) == 0 })
+
+	if slices.Compare(stepIDs, slices.Compact(stepIDs)) != 0 {
+		return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"IDs used for execute pipeline steps must be unique")
+	}
+
+	return authenticatorSteps, subjectHandlerSteps, finalizerSteps, nil
 }
 
 func (f *ruleFactory) createOnErrorPipeline(
 	version string,
 	ehConfigs []config.MechanismConfig,
 ) (compositeErrorHandler, error) {
-	var errorHandlers compositeErrorHandler
+	var (
+		errorHandlers compositeErrorHandler
+		stepIDs       []string
+	)
 
 	for _, ehStep := range ehConfigs {
-		id, found := ehStep["error_handler"]
+		refID, found := ehStep["error_handler"]
 		if found {
-			conf := getConfig(ehStep["config"])
-
 			condition, err := getExecutionCondition(ehStep["if"])
 			if err != nil {
 				return nil, err
 			}
 
-			handler, err := f.hf.CreateErrorHandler(version, id.(string), conf) //nolint: forcetypeassert
+			stepID := getStepID(ehStep["id"])
+			handler, err := f.hf.CreateErrorHandler(
+				version,
+				fmt.Sprintf("%v", refID),
+				stepID,
+				getConfig(ehStep["config"]),
+			)
 			if err != nil {
 				return nil, err
 			}
 
 			errorHandlers = append(errorHandlers, &conditionalErrorHandler{h: handler, c: condition})
+			stepIDs = append(stepIDs, stepID)
 		} else {
 			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"unsupported configuration in error handler")
 		}
+	}
+
+	stepIDs = slices.DeleteFunc(stepIDs, func(s string) bool { return len(s) == 0 })
+
+	if slices.Compare(stepIDs, slices.Compact(stepIDs)) != 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"IDs used for error pipeline steps must be unique")
 	}
 
 	return errorHandlers, nil
@@ -342,28 +372,34 @@ func createHandler[T subjectHandler](
 	handlerType string,
 	configMap map[string]any,
 	check CheckFunc,
-	creteHandler func(version, id string, conf config.MechanismConfig) (T, error),
-) (subjectHandler, error) {
-	id, found := configMap[handlerType]
+	creteHandler func(version, refID, stepID string, conf config.MechanismConfig) (T, error),
+) (subjectHandler, string, error) {
+	refID, found := configMap[handlerType]
 	if !found {
-		return nil, errHandlerNotFound
+		return nil, "", errHandlerNotFound
 	}
 
 	if err := check(); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	condition, err := getExecutionCondition(configMap["if"])
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"])) //nolint: forcetypeassert
+	stepID := getStepID(configMap["id"])
+	handler, err := creteHandler(
+		version,
+		fmt.Sprintf("%v", refID),
+		stepID,
+		getConfig(configMap["config"]),
+	)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &conditionalSubjectHandler{h: handler, c: condition}, nil
+	return &conditionalSubjectHandler{h: handler, c: condition}, stepID, nil
 }
 
 func getConfig(conf any) config.MechanismConfig {
@@ -377,6 +413,14 @@ func getConfig(conf any) config.MechanismConfig {
 	}
 
 	return m
+}
+
+func getStepID(val any) string {
+	if val == nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%v", val)
 }
 
 func getExecutionCondition(conf any) (executionCondition, error) {
