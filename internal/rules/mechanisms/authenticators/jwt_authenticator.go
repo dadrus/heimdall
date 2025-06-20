@@ -229,7 +229,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 	return sub, nil
 }
 
-func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+func (a *jwtAuthenticator) WithConfig(stepID string, config map[string]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

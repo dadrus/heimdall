@@ -77,7 +77,7 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.
 	return &subject.Subject{ID: a.Subject, Attributes: make(map[string]any)}, nil
 }
 
-func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+func (a *anonymousAuthenticator) WithConfig(stepID string, config map[string]any) (Authenticator, error) {
 	// this authenticator allows subject to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

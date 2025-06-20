@@ -62,7 +62,7 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	prototype := newUnauthorizedAuthenticator(appCtx, "unauth")
 
 	// WHEN
-	auth, err := prototype.WithConfig(nil)
+	auth, err := prototype.WithConfig("", nil)
 
 	// THEN
 	require.NoError(t, err)

@@ -156,7 +156,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig(conf)
+			auth, err := prototype.WithConfig("", conf)
 
 			// THEN
 			baa, ok := auth.(*anonymousAuthenticator)

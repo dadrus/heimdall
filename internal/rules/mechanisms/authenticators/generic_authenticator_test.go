@@ -732,7 +732,7 @@ forward_cookies:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig(conf)
+			auth, err := prototype.WithConfig("", conf)
 
 			// THEN
 			var (

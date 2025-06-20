@@ -59,7 +59,7 @@ func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext) (*subje
 		WithErrorContext(a)
 }
 
-func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) {
+func (a *unauthorizedAuthenticator) WithConfig(stepID string, _ map[string]any) (Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }

@@ -204,7 +204,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) 
 	return sub, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) (Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(rawConfig) == 0 {
 		return a, nil

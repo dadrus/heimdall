@@ -152,7 +152,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.
 	return &subject.Subject{ID: userIDAndPassword[0], Attributes: make(map[string]any)}, nil
 }
 
-func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authenticator, error) {
+func (a *basicAuthAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
 	// this authenticator allows full redefinition on the rule level
 	if len(rawConfig) == 0 {
 		return a, nil

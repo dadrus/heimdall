@@ -146,7 +146,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Su
 	return sub, nil
 }
 
-func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+func (a *genericAuthenticator) WithConfig(stepID string, config map[string]any) (Authenticator, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil
