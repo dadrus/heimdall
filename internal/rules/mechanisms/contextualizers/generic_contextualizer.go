@@ -186,7 +186,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 	return nil
 }
 
-func (c *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer, error) {
+func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]any) (Contextualizer, error) {
 	if len(rawConfig) == 0 {
 		return c, nil
 	}

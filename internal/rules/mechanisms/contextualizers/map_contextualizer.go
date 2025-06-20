@@ -89,7 +89,7 @@ func (m *mapContextualizer) ID() string {
 	return m.id
 }
 
-func (m *mapContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer, error) {
+func (m *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) (Contextualizer, error) {
 	if len(rawConfig) == 0 {
 		return m, nil
 	}

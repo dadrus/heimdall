@@ -494,7 +494,7 @@ continue_pipeline_on_error: false
 			require.NoError(t, err)
 
 			// WHEN
-			concrete, err := prototype.WithConfig(conf)
+			concrete, err := prototype.WithConfig("", conf)
 
 			// THEN
 			var (

@@ -250,7 +250,7 @@ continue_pipeline_on_error: true
 			require.NoError(t, err)
 
 			// WHEN
-			concrete, err := prototype.WithConfig(conf)
+			concrete, err := prototype.WithConfig("", conf)
 
 			// THEN
 			var (
