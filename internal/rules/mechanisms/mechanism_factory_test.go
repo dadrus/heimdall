@@ -66,7 +66,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
 
-				mAuth.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
+				mAuth.EXPECT().WithConfig(mock.Anything, mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, _ authenticators.Authenticator) {
 				t.Helper()
@@ -81,7 +81,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
 
-				mAuth.EXPECT().WithConfig(mock.Anything).Return(mAuth, nil)
+				mAuth.EXPECT().WithConfig(mock.Anything, mock.Anything).Return(mAuth, nil)
 			},
 			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
@@ -119,7 +119,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			auth, err := factory.CreateAuthenticator("test", id, tc.conf)
+			auth, err := factory.CreateAuthenticator("test", id, id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -153,7 +153,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			configureMock: func(t *testing.T, mAuth *mocks3.AuthorizerMock) {
 				t.Helper()
 
-				mAuth.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
+				mAuth.EXPECT().WithConfig(mock.Anything, mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, _ authorizers.Authorizer) {
 				t.Helper()
@@ -168,7 +168,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			configureMock: func(t *testing.T, mAuth *mocks3.AuthorizerMock) {
 				t.Helper()
 
-				mAuth.EXPECT().WithConfig(mock.Anything).Return(mAuth, nil)
+				mAuth.EXPECT().WithConfig(mock.Anything, mock.Anything).Return(mAuth, nil)
 			},
 			assert: func(t *testing.T, err error, auth authorizers.Authorizer) {
 				t.Helper()
@@ -206,7 +206,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			auth, err := factory.CreateAuthorizer("test", id, tc.conf)
+			auth, err := factory.CreateAuthorizer("test", id, id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -240,7 +240,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
 
-				mContextualizer.EXPECT().WithConfig(mock.Anything).
+				mContextualizer.EXPECT().WithConfig(mock.Anything, mock.Anything).
 					Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, _ contextualizers.Contextualizer) {
@@ -256,7 +256,8 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
 
-				mContextualizer.EXPECT().WithConfig(mock.Anything).Return(mContextualizer, nil)
+				mContextualizer.EXPECT().WithConfig(mock.Anything, mock.Anything).
+					Return(mContextualizer, nil)
 			},
 			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
@@ -294,7 +295,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			contextualizer, err := factory.CreateContextualizer("test", id, tc.conf)
+			contextualizer, err := factory.CreateContextualizer("test", id, id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, contextualizer)
@@ -328,7 +329,8 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 			configureMock: func(t *testing.T, finalizer *mocks6.FinalizerMock) {
 				t.Helper()
 
-				finalizer.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
+				finalizer.EXPECT().WithConfig(mock.Anything, mock.Anything).
+					Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, _ finalizers.Finalizer) {
 				t.Helper()
@@ -343,7 +345,8 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 			configureMock: func(t *testing.T, finalizer *mocks6.FinalizerMock) {
 				t.Helper()
 
-				finalizer.EXPECT().WithConfig(mock.Anything).Return(finalizer, nil)
+				finalizer.EXPECT().WithConfig(mock.Anything, mock.Anything).
+					Return(finalizer, nil)
 			},
 			assert: func(t *testing.T, err error, finalizer finalizers.Finalizer) {
 				t.Helper()
@@ -381,7 +384,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			finalizer, err := factory.CreateFinalizer("test", id, tc.conf)
+			finalizer, err := factory.CreateFinalizer("test", id, id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -415,7 +418,8 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
 
-				mEH.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
+				mEH.EXPECT().WithConfig(mock.Anything, mock.Anything).
+					Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, _ errorhandlers.ErrorHandler) {
 				t.Helper()
@@ -430,7 +434,8 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
 
-				mEH.EXPECT().WithConfig(mock.Anything).Return(mEH, nil)
+				mEH.EXPECT().WithConfig(mock.Anything, mock.Anything).
+					Return(mEH, nil)
 			},
 			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
@@ -468,7 +473,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			errorHandler, err := factory.CreateErrorHandler("test", id, tc.conf)
+			errorHandler, err := factory.CreateErrorHandler("test", id, id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
