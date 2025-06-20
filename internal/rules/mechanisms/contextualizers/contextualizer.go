@@ -26,6 +26,6 @@ import (
 type Contextualizer interface {
 	ID() string
 	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error
-	WithConfig(config map[string]any) (Contextualizer, error)
+	WithConfig(stepID string, config map[string]any) (Contextualizer, error)
 	ContinueOnError() bool
 }
