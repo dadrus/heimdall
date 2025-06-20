@@ -48,9 +48,9 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 	assert.Equal(t, "foo", prototype.ID())
 
 	// WHEN
-	eh1, err1 := prototype.WithConfig(nil)
-	eh2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
-	eh3, err3 := prototype.WithConfig(map[string]any{})
+	eh1, err1 := prototype.WithConfig("", nil)
+	eh2, err2 := prototype.WithConfig("", map[string]any{"foo": "bar"})
+	eh3, err3 := prototype.WithConfig("", map[string]any{})
 
 	// THEN
 	require.NoError(t, err1)

@@ -100,7 +100,7 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) er
 	return nil
 }
 
-func (eh *redirectErrorHandler) WithConfig(conf map[string]any) (ErrorHandler, error) {
+func (eh *redirectErrorHandler) WithConfig(stepID string, conf map[string]any) (ErrorHandler, error) {
 	if len(conf) != 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"reconfiguration of a redirect error handler is not supported")

@@ -80,7 +80,7 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.RequestContext, _ er
 	return nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
+func (eh *wwwAuthenticateErrorHandler) WithConfig(stepID string, rawConfig map[string]any) (ErrorHandler, error) {
 	if len(rawConfig) == 0 {
 		return eh, nil
 	}

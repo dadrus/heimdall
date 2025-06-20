@@ -55,7 +55,7 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.RequestContext, causeErr err
 	return nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(conf map[string]any) (ErrorHandler, error) {
+func (eh *defaultErrorHandler) WithConfig(stepID string, conf map[string]any) (ErrorHandler, error) {
 	if len(conf) != 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"reconfiguration of the default error handler is not supported")

@@ -175,7 +175,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			errorHandler, err := prototype.WithConfig(conf)
+			errorHandler, err := prototype.WithConfig("", conf)
 
 			// THEN
 			var (
