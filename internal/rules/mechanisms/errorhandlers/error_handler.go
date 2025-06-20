@@ -25,5 +25,5 @@ import (
 type ErrorHandler interface {
 	ID() string
 	Execute(ctx heimdall.RequestContext, causeErr error) error
-	WithConfig(config map[string]any) (ErrorHandler, error)
+	WithConfig(stepID string, config map[string]any) (ErrorHandler, error)
 }
