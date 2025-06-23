@@ -30,8 +30,8 @@ import (
 func TestCreateContextualzerPrototype(t *testing.T) {
 	t.Parallel()
 
-	// there are 3 error handlers implemented, which should have been registered
-	require.Len(t, typeFactories, 1)
+	// there are 2 contextualizers implemented, which should have been registered
+	require.Len(t, typeFactories, 2)
 
 	for uc, tc := range map[string]struct {
 		typ    string

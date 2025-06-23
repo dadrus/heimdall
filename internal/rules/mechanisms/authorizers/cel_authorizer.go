@@ -24,6 +24,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -46,7 +48,9 @@ func init() {
 type celAuthorizer struct {
 	id          string
 	app         app.Context
+	celEnv      *cel.Env
 	expressions compiledExpressions
+	v           values.Values
 }
 
 func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*celAuthorizer, error) {
@@ -54,7 +58,8 @@ func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*ce
 	logger.Info().Str("_id", id).Msg("Creating cel authorizer")
 
 	type Config struct {
-		Expressions []Expression `mapstructure:"expressions" validate:"required,gt=0,dive"`
+		Expressions []Expression  `mapstructure:"expressions" validate:"required,gt=0,dive"`
+		Values      values.Values `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -74,14 +79,37 @@ func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*ce
 		return nil, err
 	}
 
-	return &celAuthorizer{id: id, app: app, expressions: expressions}, nil
+	return &celAuthorizer{
+		id:          id,
+		app:         app,
+		celEnv:      env,
+		expressions: expressions,
+		v:           conf.Values,
+	}, nil
 }
 
 func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using CEL authorizer")
 
-	return a.expressions.eval(map[string]any{"Subject": sub, "Request": ctx.Request(), "Outputs": ctx.Outputs()}, a)
+	vals, err := a.v.Render(map[string]any{
+		"Request": ctx.Request(),
+		"Subject": sub,
+		"Outputs": ctx.Outputs(),
+	})
+	if err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to render values").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	return a.expressions.eval(map[string]any{
+		"Request": ctx.Request(),
+		"Subject": sub,
+		"Values":  vals,
+		"Outputs": ctx.Outputs(),
+	}, a)
 }
 
 func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
@@ -89,7 +117,29 @@ func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error)
 		return a, nil
 	}
 
-	return newCELAuthorizer(a.app, a.id, rawConfig)
+	type Config struct {
+		Expressions []Expression  `mapstructure:"expressions"`
+		Values      values.Values `mapstructure:"values"`
+	}
+
+	var conf Config
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for cel authorizer '%s'", a.id).CausedBy(err)
+	}
+
+	expressions, err := compileExpressions(conf.Expressions, a.celEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	return &celAuthorizer{
+		id:          a.id,
+		app:         a.app,
+		celEnv:      a.celEnv,
+		expressions: x.IfThenElse(len(expressions) != 0, expressions, a.expressions),
+		v:           a.v.Merge(conf.Values),
+	}, nil
 }
 
 func (a *celAuthorizer) ID() string { return a.id }
