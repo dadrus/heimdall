@@ -17,6 +17,7 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -79,11 +80,15 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.
 
 func (a *anonymousAuthenticator) WithConfig(stepID string, config map[string]any) (Authenticator, error) {
 	// this authenticator allows subject to be redefined on the rule level
-	if len(config) == 0 {
+	if len(stepID) == 0 && len(config) == 0 {
 		return a, nil
 	}
 
-	return newAnonymousAuthenticator(a.app, a.id, config)
+	return newAnonymousAuthenticator(
+		a.app,
+		x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		config,
+	)
 }
 
 func (a *anonymousAuthenticator) ID() string {
