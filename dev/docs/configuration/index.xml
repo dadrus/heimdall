@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 16 Jun 2025 12:23:47 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 23 Jun 2025 09:03:28 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_assertions">Assertions&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -266,8 +266,11 @@
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">user_is_admin_authz&lt;/span>
  &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">cel&lt;/span>
  &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">values&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="na">some_key&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">some-value&lt;/span>
  &lt;span class="na">expressions&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">expression&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">&amp;#39;admin&amp;#39;&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">in&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">Subject.Attributes.groups&amp;#34;&lt;/span>
+ &lt;span class="pi">-&lt;/span> &lt;span class="na">expression&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">Values.some_key&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">==&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">foo&amp;#34;&lt;/span>
 
  &lt;span class="na">contextualizers&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">subscription_contextualizer&lt;/span>
