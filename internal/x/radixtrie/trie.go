@@ -103,7 +103,7 @@ func (n *Trie[V]) nextSeparator(token string, separator byte) int {
 
 //nolint:funlen,gocognit,cyclop,gocyclo
 func (n *Trie[V]) addNode(
-	host, path string,
+	hostPattern, pathPattern string,
 	wildcardKeys []string,
 	inStaticToken bool,
 ) (*Trie[V], error) {
@@ -118,12 +118,12 @@ func (n *Trie[V]) addNode(
 		unescaped bool
 	)
 
-	if len(host) != 0 {
-		tokens = host
+	if len(hostPattern) != 0 {
+		tokens = hostPattern
 		separator = '.'
 		isHostPart = true
 	} else {
-		tokens = path
+		tokens = pathPattern
 		separator = '/'
 		isHostPart = false
 	}
@@ -195,7 +195,7 @@ func (n *Trie[V]) addNode(
 			}
 
 			if isHostPart {
-				return n.catchAllChild.addNode("", path, wildcardKeys, false)
+				return n.catchAllChild.addNode("", pathPattern, wildcardKeys, false)
 			}
 
 			wildcardKeys = append(wildcardKeys, thisToken)
@@ -251,7 +251,7 @@ func (n *Trie[V]) addNode(
 			// Ensure that the rest of this token is not mistaken for a wildcard
 			// if a prefix split occurs at a '*' or ':'.
 			if isHostPart {
-				return child.addNode(tokens[prefixSplit:], path, wildcardKeys, token != separator)
+				return child.addNode(tokens[prefixSplit:], pathPattern, wildcardKeys, token != separator)
 			}
 
 			return child.addNode("", tokens[prefixSplit:], wildcardKeys, token != separator)
@@ -274,7 +274,7 @@ func (n *Trie[V]) addNode(
 	// Ensure that the rest of this token is not mistaken for a wildcard
 	// if a prefix split occurs at a '*' or ':'.
 	if isHostPart {
-		return child.addNode(remainder, path, wildcardKeys, token != separator)
+		return child.addNode(remainder, pathPattern, wildcardKeys, token != separator)
 	}
 
 	return child.addNode("", remainder, wildcardKeys, token != separator)
@@ -598,14 +598,14 @@ func (n *Trie[V]) Find(host, path string, matcher LookupMatcher[V]) (*Entry[V], 
 	return entry, nil
 }
 
-func (n *Trie[V]) Add(host, path string, value V, opts ...AddOption[V]) error {
-	node, err := n.addNode(reverseHost(host), path, nil, false)
+func (n *Trie[V]) Add(hostPattern, pathPattern string, value V, opts ...AddOption[V]) error {
+	node, err := n.addNode(reverseHost(hostPattern), pathPattern, nil, false)
 	if err != nil {
 		return err
 	}
 
 	if !n.canAdd(node.values, value) {
-		return fmt.Errorf("%w: %s", ErrConstraintsViolation, path)
+		return fmt.Errorf("%w: %s", ErrConstraintsViolation, pathPattern)
 	}
 
 	for _, apply := range opts {
