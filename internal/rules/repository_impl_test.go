@@ -50,6 +50,8 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/:some"})
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/4"})
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/5/6"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/3/5/6"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*", path: "/**"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -198,7 +200,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		"adding a route with free wildcards at the path end and in the host from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/1"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
@@ -214,6 +216,258 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+			},
+		},
+		"1": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+			},
+		},
+		"2": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+			},
+		},
+		"3": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"4": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/:3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"5": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/:3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"6": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/*"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"7": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/*"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"overriding existing rule with wildcard in the host and at path end by a more specific rule from another rule set is not possible": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:some"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:some"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"8": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"9": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:some/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:some/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"10": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+			},
+		},
+		"11": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
 		"adding a route with free wildcard at the path start from another ruleset is not possible": {
@@ -247,27 +501,6 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
-
-				return []rule.Rule{rul}
-			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
-			},
-		},
-		"overriding existing rule with wildcard in the host and at path end by a more specific rule from another rule set is not possible": {
-			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:some"})
-
-				return []rule.Rule{rul}
-			}(),
-			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
