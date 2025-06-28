@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package radixtree
+package radixtrie
 
 // LookupMatcher is used for additional checks while performing the lookup of values in the spanned tree.
 type LookupMatcher[V any] interface {

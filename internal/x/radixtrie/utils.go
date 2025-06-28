@@ -14,22 +14,25 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package radixtree
+package radixtrie
 
-type Option[V any] func(n *Tree[V])
+import "strings"
 
-func WithValuesConstraints[V any](constraints ConstraintsFunc[V]) Option[V] {
-	return func(n *Tree[V]) {
-		if constraints != nil {
-			n.canAdd = constraints
-		}
+func commonPrefixLen(a, b string) int {
+	n := 0
+	for n < len(a) && n < len(b) && a[n] == b[n] {
+		n++
 	}
+
+	return n
 }
 
-type AddOption[V any] func(n *Tree[V])
+func reverseHost(s string) string {
+	parts := strings.Split(s, ".")
 
-func WithBacktracking[V any](flag bool) AddOption[V] {
-	return func(n *Tree[V]) {
-		n.backtrackingEnabled = flag
+	for i, j := 0, len(parts)-1; i < j; i, j = i+1, j-1 {
+		parts[i], parts[j] = parts[j], parts[i]
 	}
+
+	return strings.Join(parts, ".")
 }
