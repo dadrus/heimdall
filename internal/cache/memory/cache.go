@@ -72,8 +72,8 @@ func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
 			ttlcache.WithDisableTouchOnHit[string, []byte](),
 			ttlcache.WithCapacity[string, []byte](cfg.EntryLimit),
 			ttlcache.WithMaxCost[string, []byte](memoryLimit,
-				func(item *ttlcache.Item[string, []byte]) uint64 {
-					return uint64(len(item.Key()) + len(item.Value()) + ttlCacheOverheadPerEntry) //nolint:gosec
+				func(item ttlcache.CostItem[string, []byte]) uint64 {
+					return uint64(len(item.Key) + len(item.Value) + ttlCacheOverheadPerEntry) //nolint:gosec
 				},
 			),
 		),
