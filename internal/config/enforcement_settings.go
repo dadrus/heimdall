@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"reflect"
 	"slices"
 	"strings"
@@ -25,7 +26,6 @@ import (
 
 var InsecureNetworks = []string{ // nolint: gochecknoglobals
 	"0.0.0.0/0",
-	"0/0",
 	"0000:0000:0000:0000:0000:0000:0000:0000/0",
 	"::/0",
 }
@@ -82,7 +82,9 @@ func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { 
 
 		for i := range field.Len() {
 			elem := field.Index(i)
-			if slices.Contains(InsecureNetworks, elem.String()) {
+			_, ipNet, _ := net.ParseCIDR(elem.String())
+
+			if slices.Contains(InsecureNetworks, ipNet.String()) {
 				return false
 			}
 		}

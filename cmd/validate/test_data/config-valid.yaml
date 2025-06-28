@@ -10,7 +10,7 @@ serve:
       - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
       - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
   trusted_proxies:
-    - 10.10.10.0/0
+    - 10.10.10.0/16
   respond:
     verbose: true
     with:
