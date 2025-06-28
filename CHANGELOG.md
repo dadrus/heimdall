@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.16.6](https://github.com/dadrus/heimdall/compare/v0.16.5...v0.16.6) (2025-06-28)
+
+
+### Bug Fixes
+
+* Insecure trusted proxies handling covers all cases ([#2560](https://github.com/dadrus/heimdall/issues/2560)) ([32bf3cd](https://github.com/dadrus/heimdall/commit/32bf3cdecca1057c396f481fa8964bb637c22b2f))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 3934645 ([#2536](https://github.com/dadrus/heimdall/issues/2536)) ([2542226](https://github.com/dadrus/heimdall/commit/2542226cd484ce6c263b526dcc6992d422c61234))
+* update kubernetes packages to v0.33.2 ([#2549](https://github.com/dadrus/heimdall/issues/2549)) ([86e3c3f](https://github.com/dadrus/heimdall/commit/86e3c3f467e167817c2db9c97f1296c801144d7d))
+* update module github.com/go-jose/go-jose/v4 to v4.1.1 ([#2554](https://github.com/dadrus/heimdall/issues/2554)) ([1b20fe5](https://github.com/dadrus/heimdall/commit/1b20fe5c81d7cbd86fe4b01f3933fc2e87242fbe))
+* update module github.com/go-viper/mapstructure/v2 to v2.3.0 ([#2540](https://github.com/dadrus/heimdall/issues/2540)) ([11925fd](https://github.com/dadrus/heimdall/commit/11925fd91c88e09e0a657ec8e6057260242a32a8))
+* update module github.com/jellydator/ttlcache/v3 to v3.4.0 ([#2546](https://github.com/dadrus/heimdall/issues/2546)) ([7ede4ab](https://github.com/dadrus/heimdall/commit/7ede4ab802109ad817cfc8e3c7d55c23a487b4cf))
+* update module github.com/knadh/koanf/parsers/yaml to v1.1.0 ([#2555](https://github.com/dadrus/heimdall/issues/2555)) ([9d5b1a6](https://github.com/dadrus/heimdall/commit/9d5b1a65276045f51c03f16dc72461df63b74f00))
+* update module github.com/redis/rueidis to v1.0.62 ([#2557](https://github.com/dadrus/heimdall/issues/2557)) ([63d0b04](https://github.com/dadrus/heimdall/commit/63d0b04b445be06587d68610ec986d0d131f0e1b))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.62 ([#2557](https://github.com/dadrus/heimdall/issues/2557)) ([63d0b04](https://github.com/dadrus/heimdall/commit/63d0b04b445be06587d68610ec986d0d131f0e1b))
+* update opentelemetry-go monorepo to v1.37.0 ([#2552](https://github.com/dadrus/heimdall/issues/2552)) ([f8ba183](https://github.com/dadrus/heimdall/commit/f8ba183206c31e660b51833f5bef8dc194efb5a8))
+* update opentelemetry-go-contrib monorepo to v0.62.0 ([#2553](https://github.com/dadrus/heimdall/issues/2553)) ([c057f1b](https://github.com/dadrus/heimdall/commit/c057f1b0ea6ed5dbed738169baa68330a0e80e0e))
+
 ## [0.16.5](https://github.com/dadrus/heimdall/compare/v0.16.4...v0.16.5) (2025-06-10)
 
 
