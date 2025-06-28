@@ -17,14 +17,17 @@
 package trustedproxy
 
 import (
+	"github.com/stretchr/testify/assert"
 	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/justinas/alice"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestHandlerExecution(t *testing.T) {
@@ -33,12 +36,16 @@ func TestHandlerExecution(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		ips        []string
 		shouldDrop bool
+		warningLog string
 	}{
-		"bad IP range":           {[]string{"/128"}, true},
-		"single IP trusted":      {[]string{"127.0.0.1"}, false},
-		"trusted IP range":       {[]string{"127.0.0.0/24"}, false},
-		"source not in IP range": {[]string{"172.0.0.0/24"}, true},
-		"empty list":             {[]string{}, true},
+		"bad IP range":                                  {ips: []string{"/128"}, shouldDrop: true, warningLog: "could not be parsed"},
+		"single IP trusted":                             {ips: []string{"127.0.0.1"}, shouldDrop: false},
+		"trusted IP range":                              {ips: []string{"127.0.0.0/24"}, shouldDrop: false},
+		"source in IP range but not trusted IPv4":       {ips: []string{"172.0.0.0/0"}, shouldDrop: false, warningLog: "trusted proxies contains insecure"},
+		"source not in IPv6 range and is not trusted 1": {ips: []string{"::/0"}, shouldDrop: true, warningLog: "trusted proxies contains insecure"},
+		"source not in IPv6 range and is not trusted 2": {ips: []string{"3209:7473:73ed:a31c:0a08:f214:2434:d5ce/0"}, shouldDrop: true, warningLog: "trusted proxies contains insecure"},
+		"source not in IPv4 range":                      {ips: []string{"172.0.0.0/24"}, shouldDrop: true},
+		"empty list":                                    {ips: []string{}, shouldDrop: true},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -54,8 +61,11 @@ func TestHandlerExecution(t *testing.T) {
 
 			var received http.Header
 
+			tb := &testsupport.TestingLog{TB: t}
+			logger := zerolog.New(zerolog.TestWriter{T: tb})
+
 			srv := httptest.NewServer(
-				alice.New(New(log.Logger, tc.ips...)).
+				alice.New(New(logger, tc.ips...)).
 					ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
 						received = maps.Clone(req.Header)
 
@@ -93,6 +103,12 @@ func TestHandlerExecution(t *testing.T) {
 				require.Equal(t, send.Get("X-Forwarded-For"), received.Get("X-Forwarded-For"))
 				require.Equal(t, send.Get("Forwarded"), received.Get("Forwarded"))
 				require.Equal(t, send.Get("X-Foo-Bar"), received.Get("X-Foo-Bar"))
+			}
+
+			logs := tb.CollectedLog()
+			if len(logs) != 0 {
+				require.NotEmpty(t, tc.warningLog, "logs contain warnings, but no warnings are expected")
+				assert.Contains(t, logs, tc.warningLog)
 			}
 		})
 	}

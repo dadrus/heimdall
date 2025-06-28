@@ -17,15 +17,15 @@
 package trustedproxy
 
 import (
+	"github.com/dadrus/heimdall/internal/config"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/x/httpx"
-	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 var untrustedHeader = []string{ //nolint:gochecknoglobals
@@ -71,14 +71,14 @@ func New(logger zerolog.Logger, proxies ...string) func(http.Handler) http.Handl
 					Msgf("Trusted proxies entry %q could not be parsed and will be ignored", ipAddr)
 			} else {
 				ipHolders = append(ipHolders, ipNet)
+
+				if slices.Contains(config.InsecureNetworks, ipNet.String()) {
+					logger.Warn().Msgf("Configured trusted proxies contains insecure networks: %s", ipAddr)
+				}
 			}
 		} else {
 			ipHolders = append(ipHolders, simpleIP(net.ParseIP(ipAddr)))
 		}
-	}
-
-	if slicex.Intersects(proxies, config.InsecureNetworks) {
-		logger.Warn().Msg("Configured trusted proxies contain insecure networks")
 	}
 
 	trustedProxies := trustedProxySet(ipHolders)
