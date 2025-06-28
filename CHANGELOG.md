@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.16.7](https://github.com/dadrus/heimdall/compare/v0.16.6...v0.16.7) (2025-06-28)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 7390907 ([#2566](https://github.com/dadrus/heimdall/issues/2566)) ([49fc4dc](https://github.com/dadrus/heimdall/commit/49fc4dca46243b54ffeb22b404687a5dc377ae3a))
+* update module gocloud.dev to v0.42.0 ([#2568](https://github.com/dadrus/heimdall/issues/2568)) ([7aa2365](https://github.com/dadrus/heimdall/commit/7aa2365c49949a1513b82241a466abb03284ba08))
+
 ## [0.16.6](https://github.com/dadrus/heimdall/compare/v0.16.5...v0.16.6) (2025-06-28)
 
 
