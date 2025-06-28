@@ -17,7 +17,6 @@
 package trustedproxy
 
 import (
-	"github.com/stretchr/testify/assert"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/x/testsupport"
