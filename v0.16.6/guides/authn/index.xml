@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Authentication Protocols &amp; Services on Heimdall</title><link>https://dadrus.github.io/guides/authn/</link><description>Recent content in Authentication Protocols &amp; Services on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 28 Jun 2025 14:33:56 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/authn/index.xml" rel="self" type="application/rss+xml"/><item><title>First-Party Authentication with OpenID Connect</title><link>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</link><pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate><guid>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</guid><description>&lt;div class="paragraph">
+&lt;p>By the end of this guide, you’ll have a functional setup where heimdall uses &lt;a href="https://www.keycloak.org/">Keycloak&lt;/a> to authenticate users and route requests based on their authentication status and roles for role-based access control.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with &lt;a href="https://zitadel.com">Zitadel&lt;/a>, &lt;a href="https://github.com/malach-it/boruta-server">Boruta&lt;/a>, or any other OpenID Connect compatible IDP.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_overview">Overview&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>In this guide, we’ll set up a Docker Compose environment where heimdall secures services and controls access for specific endpoints:&lt;/p>
+&lt;/div></description></item></channel></rss>

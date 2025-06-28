@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Getting Started on Heimdall</title><link>https://dadrus.github.io/docs/getting_started/</link><description>Recent content in Getting Started on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 28 Jun 2025 14:33:56 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/getting_started/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_what_is_heimdall">What is heimdall?&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Heimdall is a cloud native identity aware proxy and access control decision service inspired by the Zero Trust idea. It brings together authentication and authorization systems and can be thought of as an orchestrator for these in front of your services, allowing you to completely retain control without the need for any type of maintenance in your own code.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>You can use it, in one of the following modes:&lt;/p>
+&lt;/div></description></item><item><title>Install heimdall</title><link>https://dadrus.github.io/docs/getting_started/installation/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/installation/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_source_code">Source Code&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>You can always build a copy of heimdall by following the following instructions for your OS/environment.&lt;/p>
+&lt;/div>
+&lt;div class="sect2">
+&lt;h3 id="_prerequisites">Prerequisites&lt;/h3>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>&lt;a href="https://git-scm.com/">git&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The &lt;a href="https://go.dev/dl/">Go&lt;/a> programming language &amp;gt;= 1.24&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect2">
+&lt;h3 id="_download">Download&lt;/h3>
+&lt;div class="paragraph">
+&lt;p>Retrieve the latest copy of heimdall source code by cloning the git repository&lt;/p>
+&lt;/div>
+&lt;div class="listingblock">
+&lt;div class="content">
+&lt;pre class="rouge highlight">&lt;code data-lang="bash">&lt;span class="nv">$ &lt;/span>git clone git@github.com:dadrus/heimdall.git&lt;/code>&lt;/pre>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect2">
+&lt;h3 id="_build_with_go">Build with go&lt;/h3>
+&lt;div class="paragraph">
+&lt;p>Build using a single line with &lt;code>go build&lt;/code>&lt;/p>
+&lt;/div>
+&lt;div class="listingblock">
+&lt;div class="content">
+&lt;pre class="rouge highlight">&lt;code data-lang="bash">&lt;span class="nv">$ CGO_ENABLED&lt;/span>&lt;span class="o">=&lt;/span>0 go build &lt;span class="nt">-trimpath&lt;/span> &lt;span class="nt">-ldflags&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;-buildid= -w -s -X github.com/dadrus/heimdall/version.Version==my-custom-build&amp;#34;&lt;/span>&lt;/code>&lt;/pre>
+&lt;/div>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>The flags are set by intention. Using &lt;code>-trimpath&lt;/code> and &lt;code>-buildid=&lt;/code> as part of the &lt;code>-ldflags&lt;/code> argument ensures the build is reproducible (See also &lt;a href="https://reproducible-builds.org/">Reproducible Builds&lt;/a>). Other flags remove unused symbols and debug information.&lt;/p>
+&lt;/div></description></item><item><title>Protect an Application</title><link>https://dadrus.github.io/docs/getting_started/protect_an_app/</link><pubDate>Mon, 04 Mar 2024 08:54:47 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/protect_an_app/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_overview">Overview&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>In this guide, we’ll configure two setups to protect a service that exposes a few endpoints:&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>The &lt;code>/public&lt;/code> endpoint is, as the name implies, public. Every request to it should be forwarded as is.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The &lt;code>/user&lt;/code> endpoint should only be accessible to users with the &lt;code>user&lt;/code> role.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The &lt;code>/admin&lt;/code> endpoint should only be accessible to users with the &lt;code>admin&lt;/code> role.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>The &lt;code>/private&lt;/code> endpoint, along with any other potentially exposed endpoints, should not be accessible at all. All requests to it should be rejected.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item></channel></rss>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>API Gateways &amp; Proxies on Heimdall</title><link>https://dadrus.github.io/guides/proxies/</link><description>Recent content in API Gateways &amp; Proxies on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 28 Jun 2025 14:33:56 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/proxies/index.xml" rel="self" type="application/rss+xml"/><item><title>Caddy Integration</title><link>https://dadrus.github.io/guides/proxies/caddy/</link><pubDate>Mon, 17 Feb 2025 10:43:16 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/caddy/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://caddyserver.com">Caddy&lt;/a> is a modern web server and reverse proxy known for its automatic HTTPS and simplicity. Heimdall can be integrated with Caddy using the &lt;a href="https://caddyserver.com/docs/caddyfile/directives/forward_auth">forward_auth&lt;/a> directive. If heimdall responds with a 2XX status code, Caddy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with Caddy requires heimdall being operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_configuration_options">Configuration Options&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Since Caddy offers extensive configuration options and heimdall supports multiple integration methods, you can choose any of the examples below. Each setup ensures heimdall can construct the URL of the protected backend server for rule matching purposes.&lt;/p>
+&lt;/div></description></item><item><title>Contour Integration</title><link>https://dadrus.github.io/guides/proxies/contour/</link><pubDate>Wed, 02 Aug 2023 17:10:52 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/contour/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://projectcontour.io/">Contour&lt;/a> is an ingress controller for Kubernetes, implementing a control plane for &lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a> edge and a service proxy.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with Contour requires heimdall being operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a> exposing Envoy’s external authorization &lt;a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto">GRPC protocol&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Being security first ingress controller, Contour enforces TLS for communication between Envoy and any external authorization service. For that reason, heimdall must be configured with an appropriate key material and certificate. Same is actually also true for the http route definition of the actual upstream service. The only exception is when configuring Contour using heimdall as a global external auth service.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item><item><title>Emissary Ingress Integration</title><link>https://dadrus.github.io/guides/proxies/emissary/</link><pubDate>Mon, 21 Aug 2023 15:23:41 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/emissary/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://www.getambassador.io/products/api-gateway">Emissary-Ingress&lt;/a> is an Envoy-powered open source, high performance ingress controller and API Gateway for Kubernetes from &lt;a href="https://www.getambassador.io/">Ambassador Labs&lt;/a>. Integration happens by letting Emissary-Ingress delegating authentication and authorization to heimdall. If heimdall answers with a 2XX code, the ingress controller will grant access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with Emissary-Ingress requires heimdall being operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item><item><title>Envoy Integration</title><link>https://dadrus.github.io/guides/proxies/envoy/</link><pubDate>Sun, 18 Dec 2022 00:13:59 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/envoy/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a> is a high performance distributed proxy designed for single services and applications, as well as a communication bus and “universal data plane” designed for large microservice “service mesh” architectures.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with Envoy proxy requires heimdall being operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_integration_options">Integration Options&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Envoy makes integration with external authorization services, like heimdall possible via an &lt;a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html">External Authorization&lt;/a> filter in two ways&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>either via HTTP&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>or via GRPC&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>In both cases, the filter calls an external gRPC or HTTP service to check whether an incoming HTTP request is authorized or not. If the request is deemed unauthorized, then the request will be denied normally with 403 (Forbidden) response.&lt;/p>
+&lt;/div></description></item><item><title>Envoy Gateway Integration</title><link>https://dadrus.github.io/guides/proxies/envoy_gateway/</link><pubDate>Thu, 02 May 2024 13:02:43 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/envoy_gateway/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://gateway.envoyproxy.io">Envoy Gateway&lt;/a> is an open source project for managing &lt;a href="https://www.envoyproxy.io/">Envoy Proxy&lt;/a> as a Kubernetes-based application gateway by making use of the &lt;a href="https://gateway-api.sigs.k8s.io/">Gateway API&lt;/a> resources.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>A kubernetes cluster&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Deployed Envoy Gateway (See &lt;a href="https://gateway.envoyproxy.io/v1.0.1/install/">here&lt;/a> for installation options)&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Deployed &lt;a href="https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass">&lt;code>GatewayClass&lt;/code>&lt;/a> resource that matches Envoy Gateway’s configured &lt;code>controllerName&lt;/code> (typically &lt;code>gateway.envoyproxy.io/gatewayclass-controller&lt;/code>), as well as a deployed &lt;a href="https://gateway-api.sigs.k8s.io/api-types/gateway">&lt;code>Gateway&lt;/code>&lt;/a> resource.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>heimdall installed and operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_integration_options">Integration Options&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Technically, the integration happens the same way as with &lt;a href="../../guides/proxies/envoy/">Envoy&lt;/a> itself by making use of the &lt;a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html">External Authorization&lt;/a> filter, and can be done in two ways:&lt;/p>
+&lt;/div></description></item><item><title>HAProxy Integration</title><link>https://dadrus.github.io/guides/proxies/haproxy/</link><pubDate>Tue, 08 Aug 2023 07:32:14 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/haproxy/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://www.haproxy.com/">HAProxy&lt;/a> (High Availability Proxy) is a popular open source, fast, and reliable solution providing load balancer and reverse proxy features for TCP- and HTTP-based applications, capable handling heavy load traffic and rerouting requests seamlessly across multiple workloads (e.g. web, application, database).&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_vanilla_haproxy">Vanilla HAProxy&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>HAProxy is highly extensible thanks to Lua scripting support. For that reason the vanilla HAProxy does not implement any means of external authorization support and requires custom Lua code to achieve integration with heimdall.&lt;/p>
+&lt;/div></description></item><item><title>Istio Service Mesh Integration</title><link>https://dadrus.github.io/guides/proxies/istio/</link><pubDate>Wed, 23 Oct 2024 20:49:17 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/istio/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://istio.io/">Istio&lt;/a> is an open-source service mesh that extends Kubernetes’ capabilities, providing a uniform way to observe, secure, and connect microservices. It also functions as a Kubernetes-based application gateway, using either its built-in &lt;a href="https://istio.io/latest/docs/concepts/traffic-management/#gateways">Ingress Gateway&lt;/a>, the Kubernetes &lt;a href="https://istio.io/latest/docs/tasks/traffic-management/ingress/kubernetes-ingress/">Ingress&lt;/a>, or the &lt;a href="https://gateway-api.sigs.k8s.io/">Gateway API&lt;/a> resources for configuration.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>A kubernetes cluster&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Deployed Istio (See &lt;a href="https://istio.io/latest/docs/setup/install/">here&lt;/a> for installation options)&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>heimdall installed and operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;div class="admonitionblock note">
+&lt;table>
+&lt;tbody>&lt;tr>
+&lt;td class="icon">
+&lt;i class="fa icon-note" title="Note">&lt;/i>
+&lt;/td>
+&lt;td class="content">
+To allow heimdall communicating with services running in the mesh, add the certificate of the CA used by Istio to heimdall’s &lt;a href="../../docs/operations/security/#_trust_store">trust store&lt;/a>.
+&lt;/td>
+&lt;/tr>
+&lt;/tbody>&lt;/table>
+&lt;/div></description></item><item><title>NGINX Integration</title><link>https://dadrus.github.io/guides/proxies/nginx/</link><pubDate>Fri, 29 Jul 2022 00:14:49 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/nginx/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://nginx.org/">NGINX&lt;/a> is an HTTP and reverse proxy server which became famous as one of the fastest web servers out there, heimdall can be integrated with by making use of the &lt;a href="https://nginx.org/en/docs/http/ngx_http_auth_request_module.html">ngx_http_auth_request_module&lt;/a>. In such setup, NGINX delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, NGINX grants access and forwards the original request to the upstream service. If heimdall returns 401 or 403, the access is denied with the corresponding error code. Any other response code returned by heimdall is considered an error.&lt;/p>
+&lt;/div></description></item><item><title>Traefik Proxy Integration</title><link>https://dadrus.github.io/guides/proxies/traefik/</link><pubDate>Thu, 09 Jun 2022 18:59:49 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/traefik/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://doc.traefik.io/traefik/">Traefik Proxy&lt;/a> is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the &lt;a href="https://doc.traefik.io/traefik/middlewares/http/forwardauth/">ForwardAuth Middleware&lt;/a>. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>Integration with traefik requires heimdall being operated in &lt;a href="../../docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a>.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;div class="admonitionblock caution">
+&lt;table>
+&lt;tbody>&lt;tr>
+&lt;td class="icon">
+&lt;i class="fa icon-caution" title="Caution">&lt;/i>
+&lt;/td>
+&lt;td class="content">
+&lt;div class="paragraph">
+&lt;p>Traefik makes use of &lt;code>X-Forwarded-*&lt;/code> HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure &lt;a href="../../docs/services/main/#_trusted_proxies">trusted proxies&lt;/a> in heimdall’s main service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to &amp;#34;0.0.0.0/0&amp;#34;, which would basically disable the check and let heimdall trust requests from any source.&lt;/p>
+&lt;/div></description></item></channel></rss>
