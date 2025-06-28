@@ -110,6 +110,36 @@ func TestEnforcementSettingsValidate(t *testing.T) {
 			field:         reflect.ValueOf("https"),
 			shouldBeValid: true,
 		},
+		"secure networks is not enforced": {
+			param:         paramSecureNetworks,
+			es:            EnforcementSettings{EnforceSecureTrustedProxies: false},
+			field:         reflect.ValueOf([]string{"0.0.0.0.0/0"}),
+			shouldBeValid: true,
+		},
+		"secure networks is enforced and succeeds": {
+			param:         paramSecureNetworks,
+			es:            EnforcementSettings{EnforceSecureTrustedProxies: true},
+			field:         reflect.ValueOf([]string{"10.2.10.0/16"}),
+			shouldBeValid: true,
+		},
+		"secure networks is enforced and fails for IPv4": {
+			param:         paramSecureNetworks,
+			es:            EnforcementSettings{EnforceSecureTrustedProxies: true},
+			field:         reflect.ValueOf([]string{"10.2.0.0/0"}),
+			shouldBeValid: false,
+		},
+		"secure networks is enforced and fails for IPv6": {
+			param:         paramSecureNetworks,
+			es:            EnforcementSettings{EnforceSecureTrustedProxies: true},
+			field:         reflect.ValueOf([]string{"04c9:3cda:907e:eb5a:b55d:ebc2:186c:9995/0"}),
+			shouldBeValid: false,
+		},
+		"secure networks is enforced and fails for ::/0": {
+			param:         paramSecureNetworks,
+			es:            EnforcementSettings{EnforceSecureTrustedProxies: true},
+			field:         reflect.ValueOf([]string{"::/0"}),
+			shouldBeValid: false,
+		},
 		"unknown param": {
 			param: "unknown",
 		},
@@ -124,11 +154,12 @@ func TestEnforcementSettingsErrorMessage(t *testing.T) {
 	t.Parallel()
 
 	for param, msg := range map[string]string{
-		paramIsTLS:  "scheme must be https",
-		paramNotNil: "must be configured",
-		paramFalse:  "must be false",
-		paramHTTPS:  "must be https",
-		"foo":       "parameter is unknown",
+		paramIsTLS:          "scheme must be https",
+		paramNotNil:         "must be configured",
+		paramFalse:          "must be false",
+		paramHTTPS:          "must be https",
+		paramSecureNetworks: "contains insecure networks",
+		"foo":               "parameter is unknown",
 	} {
 		t.Run(param, func(t *testing.T) {
 			assert.Equal(t, msg, EnforcementSettings{}.ErrorMessage(param))
