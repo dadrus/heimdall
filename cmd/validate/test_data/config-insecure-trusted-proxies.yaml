@@ -4,7 +4,7 @@ serve:
     key_store:
       path: /path/to/file.pem
   trusted_proxies:
-    - 0.0.0.0/0
+    - 10.10.0.0/0
 
 management:
   tls:
