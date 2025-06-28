@@ -124,6 +124,8 @@ github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSV
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/dadrus/httpsig v0.0.0-20250612200847-3934645bd079 h1:wY0N/+SpzHDUdNHrXOxtKpDwdqPPzVrFFX1iOZKMrT0=
 github.com/dadrus/httpsig v0.0.0-20250612200847-3934645bd079/go.mod h1:vPpliODXAzOZxWUGkLlFOJtC2TaXBPk/4Jeyr/oig7U=
+github.com/dadrus/httpsig v0.0.0-20250628142050-739090712975 h1:mDFJucOyByL2i8KqQPjrXuGjkGRkLO6CslItWyD223k=
+github.com/dadrus/httpsig v0.0.0-20250628142050-739090712975/go.mod h1:vPpliODXAzOZxWUGkLlFOJtC2TaXBPk/4Jeyr/oig7U=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
