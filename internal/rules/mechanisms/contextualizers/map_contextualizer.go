@@ -8,7 +8,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -33,9 +32,8 @@ func newMapContextualizer(app app.Context, id string, rawConfig map[string]any) 
 	logger.Info().Str("_id", id).Msg("Creating map contextualizer")
 
 	type Config struct {
-		Items           map[string]template.Template `mapstructure:"items"`
-		Values          values.Values                `mapstructure:"values"`
-		ContinueOnError *bool                        `mapstructure:"continue_pipeline_on_error"`
+		Items  map[string]template.Template `mapstructure:"items"`
+		Values values.Values                `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -45,24 +43,22 @@ func newMapContextualizer(app app.Context, id string, rawConfig map[string]any) 
 	}
 
 	return &mapContextualizer{
-		id:              id,
-		app:             app,
-		items:           conf.Items,
-		values:          conf.Values,
-		continueOnError: conf.ContinueOnError != nil && *conf.ContinueOnError,
+		id:     id,
+		app:    app,
+		items:  conf.Items,
+		values: conf.Values,
 	}, nil
 }
 
 type mapContextualizer struct {
-	id              string
-	app             app.Context
-	items           map[string]template.Template
-	values          values.Values
-	continueOnError bool
+	id     string
+	app    app.Context
+	items  map[string]template.Template
+	values values.Values
 }
 
 func (m *mapContextualizer) ContinueOnError() bool {
-	return m.continueOnError
+	return false
 }
 
 func (m *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
@@ -95,8 +91,7 @@ func (m *mapContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer
 	}
 
 	type Config struct {
-		Values          values.Values `mapstructure:"values"`
-		ContinueOnError *bool         `mapstructure:"continue_pipeline_on_error"`
+		Values values.Values `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -110,9 +105,6 @@ func (m *mapContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer
 		app:    m.app,
 		items:  m.items,
 		values: m.values.Merge(conf.Values),
-		continueOnError: x.IfThenElseExec(conf.ContinueOnError != nil,
-			func() bool { return *conf.ContinueOnError },
-			func() bool { return m.continueOnError }),
 	}, nil
 }
 
@@ -121,12 +113,12 @@ func (m *mapContextualizer) renderTemplates(
 	sub *subject.Subject,
 ) (map[string]string, error) {
 	var (
-		values   map[string]string
+		vals     map[string]string
 		rendered string
 		err      error
 	)
 
-	if values, err = m.values.Render(map[string]any{
+	if vals, err = m.values.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
@@ -143,7 +135,7 @@ func (m *mapContextualizer) renderTemplates(
 		if rendered, err = tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
-			"Values":  values,
+			"Values":  vals,
 			"Outputs": ctx.Outputs(),
 		}); err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
