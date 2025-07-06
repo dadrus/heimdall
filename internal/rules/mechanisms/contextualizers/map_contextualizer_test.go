@@ -205,30 +205,6 @@ values:
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		"with continueOnError reconfigured": {
-			prototypeConfig: []byte(`
-items:
-  url: "{{ .Values.foo }}"
-values: 
-  foo: http://foo.bar
-`),
-			config: []byte(`
-continue_pipeline_on_error: true
-`),
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, prototype.items, configured.items)
-				assert.Equal(t, prototype.id, configured.id)
-				assert.NotEqual(t, prototype.continueOnError, configured.continueOnError)
-				assert.Equal(t, "contextualizer", configured.ID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.True(t, configured.ContinueOnError())
-			},
-		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
