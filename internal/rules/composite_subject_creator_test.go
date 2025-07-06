@@ -55,7 +55,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			},
 		},
 		"no fallback due to tls error": {
-			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, sub *subject.Subject) compositeSubjectCreator {
+			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, _ *subject.Subject) compositeSubjectCreator {
 				t.Helper()
 
 				auth1 := rulemocks.NewSubjectCreatorMock(t)

@@ -119,7 +119,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		},
 		"tls related error stops pipeline execution": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				_ *rulemocks.SubjectHandlerMock, sub *subject.Subject,
 			) {
 				t.Helper()
 
