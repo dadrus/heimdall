@@ -54,6 +54,24 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		"no fallback due to tls error": {
+			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, sub *subject.Subject) compositeSubjectCreator {
+				t.Helper()
+
+				auth1 := rulemocks.NewSubjectCreatorMock(t)
+				auth2 := rulemocks.NewSubjectCreatorMock(t)
+
+				auth1.EXPECT().Execute(ctx).Return(nil, errors.New("test error: tls: some error"))
+
+				return compositeSubjectCreator{auth1, auth2}
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+			},
+		},
 		"with fallback but both authenticators returning errors": {
 			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, _ *subject.Subject) compositeSubjectCreator {
 				t.Helper()
