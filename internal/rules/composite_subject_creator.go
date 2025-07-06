@@ -17,11 +17,14 @@
 package rules
 
 import (
+	"strings"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type compositeSubjectCreator []subjectCreator
@@ -38,6 +41,12 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject
 		sub, err = a.Execute(ctx)
 		if err != nil {
 			logger.Warn().Err(err).Msg("Pipeline step execution failed")
+
+			if strings.Contains(err.Error(), "tls:") {
+				err = errorchain.New(heimdall.ErrInternal).CausedBy(err)
+
+				break
+			}
 
 			if idx < len(ca)-1 {
 				logger.Info().Msg("Falling back to next configured one.")
