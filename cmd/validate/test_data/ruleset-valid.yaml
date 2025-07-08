@@ -32,6 +32,10 @@ rules:
             - profile
     - authenticator: introspection_authenticator1
     - contextualizer: subscription_contextualizer
+    - contextualizer: mapping
+      config:
+        values:
+          user_id: foo
     - authorizer: allow_all_authorizer
     - finalizer: jwt
       config:
