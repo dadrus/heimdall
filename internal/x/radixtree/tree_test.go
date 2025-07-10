@@ -171,7 +171,7 @@ func TestTreeSearch(t *testing.T) {
 	}
 }
 
-func TestTreeFindWildcardWithCaptures(t *testing.T) {
+func TestTreeFindWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
 	t.Parallel()
 
 	tree := New[string]()
@@ -189,65 +189,57 @@ func TestTreeFindWildcardWithCaptures(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	_, err := tree.Find("/some/thing", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 2 &&
+	_, err := tree.Find("/some/thing", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some" &&
 			keys[1] == "else" && values[1] == "thing"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = tree.Find("/some", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 1 &&
+	_, err = tree.Find("/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = tree.Find("/some/", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 1 &&
+	_, err = tree.Find("/some/", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = tree.Find("/some", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 1 &&
+	_, err = tree.Find("/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = tree.Find("/machine/12345/da/abcd", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 2 &&
+	_, err = tree.Find("/machine/12345/da/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "id" && values[0] == "12345" &&
 			keys[1] == "remaining" && values[1] == "abcd"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = tree.Find("/machine/12345/abcd", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 2 &&
+	_, err = tree.Find("/machine/12345/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "serial" && values[0] == "12345" &&
 			keys[1] == "*" && values[1] == "abcd"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = tree.Find("/machine/12345", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 1 &&
+	_, err = tree.Find("/machine/12345", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "serial" && values[0] == "12345"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = tree.Find("/dashboard/12345/foo/bar", LookupMatcherFunc[string](func(value string, keys, values []string) bool {
-		return len(keys) == len(values) &&
-			len(keys) == 2 &&
+	_, err = tree.Find("/dashboard/12345/foo/bar", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "id" && values[0] == "12345" &&
 			keys[1] == "*" && values[1] == "foo/bar"
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestTreeSearchWithBacktracking(t *testing.T) {
@@ -344,8 +336,8 @@ func TestTreeAddPath(t *testing.T) {
 		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
 		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
 		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
-		"katakana /マ":                                   {[]string{"/マ"}, false},
-		"katakana /カ":                                   {[]string{"/カ"}, false},
+		"katakana /マ":                                    {[]string{"/マ"}, false},
+		"katakana /カ":                                    {[]string{"/カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
