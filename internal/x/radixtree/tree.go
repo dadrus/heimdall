@@ -409,14 +409,7 @@ func (n *Tree[V]) findNode(path string, captures []string, matcher LookupMatcher
 	}
 
 	if n.catchAllChild != nil {
-		// Hit the catchall, so just assign the whole remaining path.
-		for idx, value = range n.catchAllChild.values {
-			if match := matcher.Match(value, n.wildcardKeys, captures); match {
-				return n.catchAllChild, idx, append(captures, path), false
-			}
-		}
-
-		return nil, 0, captures, n.backtrackingEnabled
+		return n.catchAllChild.findNode("", append(captures, path), matcher)
 	}
 
 	return nil, 0, captures, true
