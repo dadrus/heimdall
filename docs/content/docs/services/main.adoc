@@ -74,7 +74,7 @@ Controls the maximum number of idle (keep-alive) connections per host. Defaults 
 
 * *`cors`*: _link:{{< relref "/docs/configuration/types.adoc#_cors" >}}[CORS]_ (optional)
 +
-https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests neither to its pipeline, nor to the upstream service. Instead, the response will be generated and sent back to the client directly.
+If heimdall is operated in proxy mode, https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests neither to its pipeline, nor to the upstream service. Instead, the response will be generated and sent back to the client directly.
 
 * *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
