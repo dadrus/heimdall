@@ -533,13 +533,7 @@ func (n *Trie[V]) findNode(
 			return n.catchAllChild.findNode("", path, captures, matcher)
 		}
 
-		for idx, value = range n.catchAllChild.values {
-			if match := matcher.Match(value, n.wildcardKeys, captures); match {
-				return n.catchAllChild, idx, append(captures, tokens), nil
-			}
-		}
-
-		return nil, 0, captures, n.canBacktrack
+		return n.catchAllChild.findNode("", "", append(captures, tokens), matcher)
 	}
 
 	return nil, 0, captures, canBacktrack

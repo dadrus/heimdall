@@ -20,7 +20,9 @@ The following configurations and behaviors are enforced by default:
 
 * All outbound communication must use TLS. TLS configuration is required for all services and endpoints heimdall communicates with. This enforcement can be disabled (not recommended) by starting Heimdall with the `--insecure-skip-egress-tls-enforcement` flag.
 
-* If Heimdall is used in link:{{< relref "/docs/concepts/operating_modes.adoc#_proxy_mode" >}}[proxy mode], communication with upstream services while proxying requests must use TLS. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-upstream-tls-enforcement` flag.
+* If heimdall is used in link:{{< relref "/docs/concepts/operating_modes.adoc#_proxy_mode" >}}[proxy mode], communication with upstream services while proxying requests must use TLS. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-upstream-tls-enforcement` flag.
+
+* If heimdall is operated as part of e.g. a service mesh, that handles secure communication between the services, you may choose to disable TLS enforcement. This can be done by using the individual flags mentioned above or, alternatively, by using the `--insecure-skip-all-tls-enforcement` flag, which enables all the above options at once.
 
 * Configuring the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`] property to allow insecure networks (`0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0`) is prohibited. See also link:{{< relref "security.adoc#_http_header_security_considerations" >}}[HTTP Header Security Considerations]. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag.
 

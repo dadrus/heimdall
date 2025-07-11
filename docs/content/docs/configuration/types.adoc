@@ -491,6 +491,8 @@ So with `10B` you can define the byte size of 10 bytes and with `2MB` you can sa
 
 == CORS
 
+NOTE: This functionality is only supported if heimdall is operated in proxy mode. In decision operation mode, this configuration is ignored.
+
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this type. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly. Following properties are supported:
 
 * *`allowed_origins`*: _string array_ (optional)

@@ -218,6 +218,77 @@ func TestTrieFind(t *testing.T) {
 	assert.Equal(t, "8", entry.Value)
 }
 
+func TestTreeFindWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
+	t.Parallel()
+
+	tree := New[string]()
+
+	for _, path := range []string{
+		"/:resource/*else",
+		"/:resource/",
+		"/:resource",
+		"/machine/:id/da/*remaining",
+		"/machine/:serial/**",
+		"/machine/:serial",
+		"/dashboard/:id/**",
+	} {
+		err := tree.Add("*", path, "")
+		require.NoError(t, err)
+	}
+
+	_, err := tree.Find("example.com", "/some/thing", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
+			keys[0] == "resource" && values[0] == "some" &&
+			keys[1] == "else" && values[1] == "thing"
+	}))
+	require.NoError(t, err)
+
+	_, err = tree.Find("example.com", "/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
+			keys[0] == "resource" && values[0] == "some"
+	}))
+	require.NoError(t, err)
+
+	_, err = tree.Find("example.com", "/some/", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
+			keys[0] == "resource" && values[0] == "some"
+	}))
+	require.NoError(t, err)
+
+	_, err = tree.Find("example.com", "/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
+			keys[0] == "resource" && values[0] == "some"
+	}))
+	require.NoError(t, err)
+
+	_, err = tree.Find("example.com", "/machine/12345/da/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
+			keys[0] == "id" && values[0] == "12345" &&
+			keys[1] == "remaining" && values[1] == "abcd"
+	}))
+	require.NoError(t, err)
+
+	_, err = tree.Find("example.com", "/machine/12345/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
+			keys[0] == "serial" && values[0] == "12345" &&
+			keys[1] == "*" && values[1] == "abcd"
+	}))
+	require.NoError(t, err)
+
+	_, err = tree.Find("example.com", "/machine/12345", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
+			keys[0] == "serial" && values[0] == "12345"
+	}))
+	require.NoError(t, err)
+
+	_, err = tree.Find("example.com", "/dashboard/12345/foo/bar", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
+			keys[0] == "id" && values[0] == "12345" &&
+			keys[1] == "*" && values[1] == "foo/bar"
+	}))
+	require.NoError(t, err)
+}
+
 func TestTrieFindWithBacktrackingEnabled(t *testing.T) {
 	t.Parallel()
 
