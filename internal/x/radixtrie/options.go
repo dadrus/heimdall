@@ -14,13 +14,24 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package radixtree
+package radixtrie
 
-func commonPrefixLen(a, b string) int {
-	n := 0
-	for n < len(a) && n < len(b) && a[n] == b[n] {
-		n++
+type Option[V any] func(n *Trie[V])
+
+func WithValuesConstraints[V any](constraints ConstraintsFunc[V]) Option[V] {
+	return func(n *Trie[V]) {
+		if constraints != nil {
+			n.canAdd = constraints
+		}
 	}
+}
 
-	return n
+type AddOption[V any] func(n *Trie[V])
+
+func WithBacktrackingControl[V any](canBacktrack CanBacktrackFunc[V]) AddOption[V] {
+	return func(n *Trie[V]) {
+		if canBacktrack != nil {
+			n.canBacktrack = canBacktrack
+		}
+	}
 }

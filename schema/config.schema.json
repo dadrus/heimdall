@@ -2528,11 +2528,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "backtracking_enabled": {
-          "description": "Enables or disables backtracking while matching the rules globally. Defaults to false.",
-          "type": "boolean",
-          "default": false
-        },
         "execute": {
           "description": "The mechanisms to execute (authenticators, authorizers, etc)",
           "type": "array",
