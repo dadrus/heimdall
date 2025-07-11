@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.16.7](https://github.com/dadrus/heimdall/compare/v0.16.6...v0.16.7) (2025-07-10)
+
+
+### Bug Fixes
+
+* Correct evaluation of named path params in routes with trailing free wildcard ([#2586](https://github.com/dadrus/heimdall/issues/2586)) ([b75be67](https://github.com/dadrus/heimdall/commit/b75be67602dea1d2ce43cf0ea2c3c5ca75dd0f3d))
+* TLS errors during mechanism execution always result in pipeline failure ([#2580](https://github.com/dadrus/heimdall/issues/2580)) ([adf1a83](https://github.com/dadrus/heimdall/commit/adf1a839befdddc56624cc63dcf02930855f16d3))
+
+
+### Documentation
+
+* Added missing description for the `--insecure-skip-all-tls-enforcement` flag ([#2578](https://github.com/dadrus/heimdall/issues/2578)) ([0728154](https://github.com/dadrus/heimdall/commit/07281543f8340d8ca876585ef945e45687836b8a))
+* Clarifications that CORS related functionality is only supported if heimdall is operated as proxy ([#2588](https://github.com/dadrus/heimdall/issues/2588)) ([d4fe70d](https://github.com/dadrus/heimdall/commit/d4fe70de35ed05e54013c79e7ed0a675f9745066))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 7390907 ([#2566](https://github.com/dadrus/heimdall/issues/2566)) ([49fc4dc](https://github.com/dadrus/heimdall/commit/49fc4dca46243b54ffeb22b404687a5dc377ae3a))
+* update golang to v1.24.5 ([#2584](https://github.com/dadrus/heimdall/issues/2584)) ([af14f7a](https://github.com/dadrus/heimdall/commit/af14f7a97b7025295c196fdf3c4171d1a0b64ec6))
+* update google.golang.org/genproto/googleapis/rpc digest to 8d1bb00 ([#2583](https://github.com/dadrus/heimdall/issues/2583)) ([d4a9298](https://github.com/dadrus/heimdall/commit/d4a929867afb9824e0ab96218ed1491a5144f5fc))
+* update module github.com/go-playground/validator/v10 to v10.27.0 ([#2574](https://github.com/dadrus/heimdall/issues/2574)) ([0d71576](https://github.com/dadrus/heimdall/commit/0d71576d02afbc9b06e12482124542c36f4fd844))
+* update module github.com/knadh/koanf/providers/env to v2 ([#2571](https://github.com/dadrus/heimdall/issues/2571)) ([2ad5e1c](https://github.com/dadrus/heimdall/commit/2ad5e1cd90ec4e47671a73bca44cbfe61c103cbc))
+* update module github.com/knadh/koanf/v2 to v2.2.2 ([#2587](https://github.com/dadrus/heimdall/issues/2587)) ([1cdc739](https://github.com/dadrus/heimdall/commit/1cdc739c6116eb7cb4c87bcf584781b662dac5b1))
+* update module gocloud.dev to v0.42.0 ([#2568](https://github.com/dadrus/heimdall/issues/2568)) ([7aa2365](https://github.com/dadrus/heimdall/commit/7aa2365c49949a1513b82241a466abb03284ba08))
+
 ## [0.16.6](https://github.com/dadrus/heimdall/compare/v0.16.5...v0.16.6) (2025-06-28)
 
 
