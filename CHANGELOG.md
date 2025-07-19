@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.16.8](https://github.com/dadrus/heimdall/compare/v0.16.7...v0.16.8) (2025-07-19)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to b53bc18 ([#2609](https://github.com/dadrus/heimdall/issues/2609)) ([e530343](https://github.com/dadrus/heimdall/commit/e530343efafa7c2d601393e8213e3e835f478f49))
+* update google.golang.org/genproto/googleapis/rpc digest to 7130f93 ([#2599](https://github.com/dadrus/heimdall/issues/2599)) ([21da996](https://github.com/dadrus/heimdall/commit/21da9963edf259abcd4cd6705e2b3f3c3082f4c5))
+* update kubernetes packages to v0.33.3 ([#2600](https://github.com/dadrus/heimdall/issues/2600)) ([0919fa5](https://github.com/dadrus/heimdall/commit/0919fa5ae6c22724059b3a2490e40bebd34b0d15))
+* update module github.com/go-viper/mapstructure/v2 to v2.4.0 ([#2596](https://github.com/dadrus/heimdall/issues/2596)) ([34bc499](https://github.com/dadrus/heimdall/commit/34bc499f82e7af5f8a5d8875e3d30262a32740bf))
+* update module github.com/google/cel-go to v0.26.0 ([#2595](https://github.com/dadrus/heimdall/issues/2595)) ([5770ab4](https://github.com/dadrus/heimdall/commit/5770ab40199af1f22be8427015c3629978c11d21))
+* update module github.com/redis/rueidis to v1.0.63 ([#2603](https://github.com/dadrus/heimdall/issues/2603)) ([bdd82a9](https://github.com/dadrus/heimdall/commit/bdd82a97320d17cd7c8644ac493a68c6ea701a56))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.63 ([#2603](https://github.com/dadrus/heimdall/issues/2603)) ([bdd82a9](https://github.com/dadrus/heimdall/commit/bdd82a97320d17cd7c8644ac493a68c6ea701a56))
+* update module github.com/spf13/pflag to v1.0.7 ([#2604](https://github.com/dadrus/heimdall/issues/2604)) ([8a38675](https://github.com/dadrus/heimdall/commit/8a38675cc382b4a7103b4867d7419289d62fd76c))
+* update module gocloud.dev to v0.43.0 ([#2610](https://github.com/dadrus/heimdall/issues/2610)) ([d81a540](https://github.com/dadrus/heimdall/commit/d81a540d2f9ba94b5705387e1aa0e65d6d2082f7))
+* update module google.golang.org/grpc to v1.74.0 ([#2606](https://github.com/dadrus/heimdall/issues/2606)) ([5b14f8c](https://github.com/dadrus/heimdall/commit/5b14f8c3883ea46debaa7214ea89014ac4d77097))
+* update module google.golang.org/grpc to v1.74.1 ([#2608](https://github.com/dadrus/heimdall/issues/2608)) ([5b3815c](https://github.com/dadrus/heimdall/commit/5b3815c0a0b38704fea3a623c14ee4bd7c5337ec))
+
 ## [0.16.7](https://github.com/dadrus/heimdall/compare/v0.16.6...v0.16.7) (2025-07-10)
 
 
