@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.0](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.17.0) (2025-07-22)
+
+
+### Features
+
+* `cel` authorizer extended to support "templating" via `values` property ([#2547](https://github.com/dadrus/heimdall/issues/2547)) ([c597712](https://github.com/dadrus/heimdall/commit/c597712ecff93a73b9499fce15515499f1c2b116))
+* New `map` contextualizer ([#2537](https://github.com/dadrus/heimdall/issues/2537)) ([8c1fcab](https://github.com/dadrus/heimdall/commit/8c1fcab1b4f9fe1b653981043418bb48a00c955f))
+
 ## [0.16.7](https://github.com/dadrus/heimdall/compare/v0.16.6...v0.16.7) (2025-07-10)
 
 
