@@ -186,6 +186,8 @@ github.com/dadrus/httpsig v0.0.0-20250628142050-739090712975 h1:mDFJucOyByL2i8Kq
 github.com/dadrus/httpsig v0.0.0-20250628142050-739090712975/go.mod h1:vPpliODXAzOZxWUGkLlFOJtC2TaXBPk/4Jeyr/oig7U=
 github.com/dadrus/httpsig v0.0.0-20250718084959-b53bc1891b07 h1:i6N6FzL5TRQI61mSrb6yVy3bM6YLRZ/VXE1TCUXPBIU=
 github.com/dadrus/httpsig v0.0.0-20250718084959-b53bc1891b07/go.mod h1:vPpliODXAzOZxWUGkLlFOJtC2TaXBPk/4Jeyr/oig7U=
+github.com/dadrus/httpsig v0.0.0-20250721135904-f7ecd42860fe h1:zO7gaTqkxStOjFf/4IzNDtx7sJ+nf6WPDnZe0+KxHjM=
+github.com/dadrus/httpsig v0.0.0-20250721135904-f7ecd42860fe/go.mod h1:vPpliODXAzOZxWUGkLlFOJtC2TaXBPk/4Jeyr/oig7U=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=

@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/ccoveille/go-safecast v1.6.1
-	github.com/dadrus/httpsig v0.0.0-20250718084959-b53bc1891b07
+	github.com/dadrus/httpsig v0.0.0-20250721135904-f7ecd42860fe
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
