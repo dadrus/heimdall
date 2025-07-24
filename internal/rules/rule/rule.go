@@ -29,5 +29,4 @@ type Rule interface {
 	Routes() []Route
 	SameAs(other Rule) bool
 	EqualTo(other Rule) bool
-	AllowsBacktracking() bool
 }
