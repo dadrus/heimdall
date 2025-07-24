@@ -59,7 +59,7 @@ func (r *repository) FindRule(ctx heimdall.RequestContext) (rule.Rule, error) {
 	r.rulesTrieMutex.RLock()
 	defer r.rulesTrieMutex.RUnlock()
 
-	entry, err := r.index.Find(
+	entry, err := r.index.FindEntry(
 		request.URL.Host,
 		x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path),
 		radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, keys, values []string) bool {
@@ -233,7 +233,7 @@ func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.R
 			path := route.Path()
 			host := route.Host()
 
-			entry, _ := trie.Find(
+			entry, _ := trie.FindEntry(
 				host,
 				path,
 				radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, _, _ []string) bool {
