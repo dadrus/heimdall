@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unsafe"
 )
 
 var (
@@ -84,16 +85,16 @@ func New[V any](opts ...Option[V]) *Trie[V] {
 	return root
 }
 
-func (n *Trie[V]) sortStaticChildren(i int) {
-	for i > 0 && n.staticChildren[i].priority > n.staticChildren[i-1].priority {
-		n.staticChildren[i], n.staticChildren[i-1] = n.staticChildren[i-1], n.staticChildren[i]
-		n.staticIndices[i], n.staticIndices[i-1] = n.staticIndices[i-1], n.staticIndices[i]
+func (t *Trie[V]) sortStaticChildren(i int) {
+	for i > 0 && t.staticChildren[i].priority > t.staticChildren[i-1].priority {
+		t.staticChildren[i], t.staticChildren[i-1] = t.staticChildren[i-1], t.staticChildren[i]
+		t.staticIndices[i], t.staticIndices[i-1] = t.staticIndices[i-1], t.staticIndices[i]
 
 		i--
 	}
 }
 
-func (n *Trie[V]) nextSeparator(token string, separator byte) int {
+func (t *Trie[V]) nextSeparator(token string, separator byte) int {
 	if idx := strings.IndexByte(token, separator); idx != -1 {
 		return idx
 	}
@@ -102,7 +103,7 @@ func (n *Trie[V]) nextSeparator(token string, separator byte) int {
 }
 
 //nolint:funlen,gocognit,cyclop,gocyclo
-func (n *Trie[V]) addNode(
+func (t *Trie[V]) addNode(
 	hostPattern, pathPattern string,
 	wildcardKeys []string,
 	inStaticToken bool,
@@ -132,14 +133,14 @@ func (n *Trie[V]) addNode(
 		// we have a leaf node
 		if len(wildcardKeys) != 0 {
 			// Ensure the current wildcard keys are the same as the old ones.
-			if len(n.wildcardKeys) != 0 && !slices.Equal(n.wildcardKeys, wildcardKeys) {
+			if len(t.wildcardKeys) != 0 && !slices.Equal(t.wildcardKeys, wildcardKeys) {
 				return nil, fmt.Errorf("%w: tokens are ambiguous - wildcard keys differ", ErrInvalidPath)
 			}
 
-			n.wildcardKeys = wildcardKeys
+			t.wildcardKeys = wildcardKeys
 		}
 
-		return n, nil
+		return t, nil
 	}
 
 	token := tokens[0]
@@ -176,51 +177,51 @@ func (n *Trie[V]) addNode(
 				return nil, fmt.Errorf("%w: %s has '/' after a free wildcard", ErrInvalidPath, tokens)
 			}
 
-			if n.catchAllChild == nil {
-				n.catchAllChild = &Trie[V]{
+			if t.catchAllChild == nil {
+				t.catchAllChild = &Trie[V]{
 					token:      thisToken,
 					isCatchAll: true,
 					isHostNode: isHostPart,
-					canAdd:     n.canAdd,
+					canAdd:     t.canAdd,
 				}
 
-				if len(n.values) == 0 {
-					n.canBacktrack = func(_ []V) bool { return true }
+				if len(t.values) == 0 {
+					t.canBacktrack = func(_ []V) bool { return true }
 				}
 			}
 
-			if tokens[1:] != n.catchAllChild.token {
+			if tokens[1:] != t.catchAllChild.token {
 				return nil, fmt.Errorf("%w: free wildcard name in %s doesn't match %s",
-					ErrInvalidPath, tokens, n.catchAllChild.token)
+					ErrInvalidPath, tokens, t.catchAllChild.token)
 			}
 
 			if isHostPart {
-				return n.catchAllChild.addNode("", pathPattern, wildcardKeys, false)
+				return t.catchAllChild.addNode("", pathPattern, wildcardKeys, false)
 			}
 
 			wildcardKeys = append(wildcardKeys, thisToken)
-			n.catchAllChild.wildcardKeys = wildcardKeys
+			t.catchAllChild.wildcardKeys = wildcardKeys
 
-			return n.catchAllChild, nil
+			return t.catchAllChild, nil
 		case ':':
 			if isHostPart {
 				return nil, fmt.Errorf("%w: simple wildcards (:) not supported in host part", ErrInvalidHost)
 			}
 
-			if n.wildcardChild == nil {
-				n.wildcardChild = &Trie[V]{
+			if t.wildcardChild == nil {
+				t.wildcardChild = &Trie[V]{
 					token:      "wildcard",
 					isWildcard: true,
 					isHostNode: isHostPart,
-					canAdd:     n.canAdd,
+					canAdd:     t.canAdd,
 				}
 
-				if len(n.values) == 0 {
-					n.canBacktrack = func(_ []V) bool { return true }
+				if len(t.values) == 0 {
+					t.canBacktrack = func(_ []V) bool { return true }
 				}
 			}
 
-			return n.wildcardChild.addNode("", remainder, append(wildcardKeys, thisToken[1:]), false)
+			return t.wildcardChild.addNode("", remainder, append(wildcardKeys, thisToken[1:]), false)
 		}
 	}
 
@@ -234,14 +235,14 @@ func (n *Trie[V]) addNode(
 		unescaped = true
 	}
 
-	for i, index := range n.staticIndices {
+	for i, index := range t.staticIndices {
 		if token == index {
 			// Yes. Split it based on the common prefix of the existing
 			// node and the new one.
-			child, prefixSplit := n.splitCommonPrefix(i, thisToken)
+			child, prefixSplit := t.splitCommonPrefix(i, thisToken)
 			child.priority++
 
-			n.sortStaticChildren(i)
+			t.sortStaticChildren(i)
 
 			if unescaped {
 				// Account for the removed backslash.
@@ -261,14 +262,14 @@ func (n *Trie[V]) addNode(
 	child := &Trie[V]{
 		token:      thisToken,
 		isHostNode: isHostPart,
-		canAdd:     n.canAdd,
+		canAdd:     t.canAdd,
 	}
 
-	n.staticIndices = append(n.staticIndices, token)
-	n.staticChildren = append(n.staticChildren, child)
+	t.staticIndices = append(t.staticIndices, token)
+	t.staticChildren = append(t.staticChildren, child)
 
-	if len(n.values) == 0 {
-		n.canBacktrack = func(_ []V) bool { return true }
+	if len(t.values) == 0 {
+		t.canBacktrack = func(_ []V) bool { return true }
 	}
 
 	// Ensure that the rest of this token is not mistaken for a wildcard
@@ -280,9 +281,9 @@ func (n *Trie[V]) addNode(
 	return child.addNode("", remainder, wildcardKeys, token != separator)
 }
 
-//nolint:cyclop,funlen,gocognit
-func (n *Trie[V]) deleteNode(
-	host, path string,
+//nolint:cyclop,funlen,gocognit,gocyclo
+func (t *Trie[V]) deleteNode(
+	hostPattern, pathPattern string,
 	matcher ValueMatcher[V],
 ) bool {
 	// Determine which part we're processing and get the appropriate string and separator
@@ -295,27 +296,27 @@ func (n *Trie[V]) deleteNode(
 		child      *Trie[V]
 	)
 
-	if len(host) != 0 {
-		tokens = host
+	if len(hostPattern) != 0 {
+		tokens = hostPattern
 		separator = '.'
 		isHostPart = true
 	} else {
-		tokens = path
+		tokens = pathPattern
 		separator = '/'
 		isHostPart = false
 	}
 
 	if len(tokens) == 0 {
-		if len(n.values) == 0 {
+		if len(t.values) == 0 {
 			return false
 		}
 
-		oldSize := len(n.values)
-		n.values = slices.DeleteFunc(n.values, matcher.Match)
-		newSize := len(n.values)
+		oldSize := len(t.values)
+		t.values = slices.DeleteFunc(t.values, matcher.Match)
+		newSize := len(t.values)
 
 		if newSize == 0 {
-			n.canBacktrack = func(_ []V) bool { return true }
+			t.canBacktrack = func(_ []V) bool { return true }
 		}
 
 		return oldSize != newSize
@@ -323,41 +324,45 @@ func (n *Trie[V]) deleteNode(
 
 	token := tokens[0]
 
-	switch token {
-	case ':':
-		// Only valid for paths
-		if isHostPart || n.wildcardChild == nil {
-			return false
-		}
+	if len(t.token) == 0 || t.token == unsafe.String(&separator, 1) {
+		switch token {
+		case ':':
+			// Only valid for paths
+			if isHostPart || t.wildcardChild == nil {
+				return false
+			}
 
-		child = n.wildcardChild
-		nextSeparator := n.nextSeparator(tokens, separator)
-		nextTokens = tokens[nextSeparator:]
-	case '*':
-		if n.catchAllChild == nil {
-			return false
-		}
+			child = t.wildcardChild
+			nextSeparator := t.nextSeparator(tokens, separator)
+			nextTokens = tokens[nextSeparator:]
+		case '*':
+			if t.catchAllChild == nil {
+				return false
+			}
 
-		child = n.catchAllChild
-		nextTokens = ""
+			child = t.catchAllChild
+			nextTokens = ""
+		}
 	}
 
 	if child != nil {
 		var deleted bool
 		if isHostPart {
-			deleted = child.deleteNode(nextTokens, path, matcher)
+			deleted = child.deleteNode(nextTokens, pathPattern, matcher)
 		} else {
 			deleted = child.deleteNode("", nextTokens, matcher)
 		}
 
 		if deleted && len(child.values) == 0 {
-			n.deleteChild(child, token)
+			t.deleteChild(child, token)
 		}
 
 		return deleted
 	}
 
-	if !isHostPart && len(tokens) >= 2 &&
+	if !isHostPart &&
+		len(tokens) >= 2 &&
+		(len(t.token) == 0 || t.token == string(separator)) &&
 		tokens[0] == '\\' &&
 		(tokens[1] == '*' || tokens[1] == ':' || tokens[1] == '\\') {
 		// The token starts with a character escaped by a backslash. Drop the backslash.
@@ -365,22 +370,22 @@ func (n *Trie[V]) deleteNode(
 		tokens = tokens[1:]
 	}
 
-	for i, staticIndex := range n.staticIndices {
+	for i, staticIndex := range t.staticIndices {
 		if token == staticIndex { //nolint: nestif
-			child = n.staticChildren[i]
+			child = t.staticChildren[i]
 			childTokenLen := len(child.token)
 
 			if len(tokens) >= childTokenLen && child.token == tokens[:childTokenLen] {
 				var deleted bool
 				if isHostPart {
-					deleted = child.deleteNode(tokens[childTokenLen:], path, matcher)
+					deleted = child.deleteNode(tokens[childTokenLen:], pathPattern, matcher)
 				} else {
 					deleted = child.deleteNode("", tokens[childTokenLen:], matcher)
 				}
 
 				if deleted {
 					if len(child.values) == 0 {
-						n.deleteChild(child, token)
+						t.deleteChild(child, token)
 					}
 
 					return true
@@ -395,7 +400,7 @@ func (n *Trie[V]) deleteNode(
 }
 
 //nolint:cyclop
-func (n *Trie[V]) deleteChild(child *Trie[V], token uint8) {
+func (t *Trie[V]) deleteChild(child *Trie[V], token uint8) {
 	separator := byte('/')
 	if child.isHostNode {
 		separator = '.'
@@ -422,28 +427,114 @@ func (n *Trie[V]) deleteChild(child *Trie[V], token uint8) {
 	if len(child.staticIndices) == 0 && child.wildcardChild == nil && child.catchAllChild == nil {
 		switch {
 		case child.isWildcard:
-			n.wildcardChild = nil
+			t.wildcardChild = nil
 		case child.isCatchAll:
-			n.catchAllChild = nil
+			t.catchAllChild = nil
 		default:
-			n.deleteEdge(token)
+			t.deleteEdge(token)
 		}
 	}
 }
 
-func (n *Trie[V]) deleteEdge(token byte) {
-	for i, index := range n.staticIndices {
+func (t *Trie[V]) deleteEdge(token byte) {
+	for i, index := range t.staticIndices {
 		if token == index {
-			n.staticChildren = append(n.staticChildren[:i], n.staticChildren[i+1:]...)
-			n.staticIndices = append(n.staticIndices[:i], n.staticIndices[i+1:]...)
+			t.staticChildren = append(t.staticChildren[:i], t.staticChildren[i+1:]...)
+			t.staticIndices = append(t.staticIndices[:i], t.staticIndices[i+1:]...)
 
 			return
 		}
 	}
 }
 
+//nolint:gocognit,cyclop,gocyclo
+func (t *Trie[V]) lookupNode(hostPattern, pathPattern string) (*Trie[V], error) {
+	var (
+		tokens     string
+		separator  byte
+		isHostPart bool
+
+		nextTokens string
+		child      *Trie[V]
+	)
+
+	if len(hostPattern) != 0 {
+		tokens = hostPattern
+		separator = '.'
+		isHostPart = true
+	} else {
+		tokens = pathPattern
+		separator = '/'
+		isHostPart = false
+	}
+
+	if len(tokens) == 0 {
+		return t, nil
+	}
+
+	token := tokens[0]
+
+	if len(t.token) == 0 || t.token == string(separator) {
+		switch token {
+		case ':':
+			// Only valid for paths
+			if isHostPart || t.wildcardChild == nil {
+				return nil, ErrNotFound
+			}
+
+			child = t.wildcardChild
+			nextSeparator := t.nextSeparator(tokens, separator)
+			nextTokens = tokens[nextSeparator:]
+		case '*':
+			if t.catchAllChild == nil {
+				return nil, ErrNotFound
+			}
+
+			child = t.catchAllChild
+			nextTokens = ""
+		}
+	}
+
+	if child != nil {
+		if isHostPart {
+			return child.lookupNode(nextTokens, pathPattern)
+		}
+
+		return child.lookupNode("", nextTokens)
+	}
+
+	if !isHostPart &&
+		len(tokens) >= 2 &&
+		(len(t.token) == 0 || t.token == unsafe.String(&separator, 1)) &&
+		tokens[0] == '\\' &&
+		(tokens[1] == '*' || tokens[1] == ':' || tokens[1] == '\\') {
+		// The token starts with a character escaped by a backslash. Drop the backslash.
+		token = tokens[1]
+		tokens = tokens[1:]
+	}
+
+	for i, staticIndex := range t.staticIndices {
+		if token == staticIndex { //nolint: nestif
+			child = t.staticChildren[i]
+			childTokenLen := len(child.token)
+
+			if len(tokens) >= childTokenLen && child.token == tokens[:childTokenLen] {
+				if isHostPart {
+					return child.lookupNode(tokens[childTokenLen:], pathPattern)
+				}
+
+				return child.lookupNode("", tokens[childTokenLen:])
+			}
+
+			break
+		}
+	}
+
+	return nil, ErrNotFound
+}
+
 //nolint:funlen,gocognit,cyclop
-func (n *Trie[V]) findNode(
+func (t *Trie[V]) findNode(
 	host, path string,
 	captures []string,
 	matcher LookupMatcher[V],
@@ -471,23 +562,23 @@ func (n *Trie[V]) findNode(
 		isHostPart = false
 	}
 
-	canBacktrack := n.canBacktrack
+	canBacktrack := t.canBacktrack
 
 	if len(tokens) == 0 {
-		for idx, value = range n.values {
-			if match := matcher.Match(value, n.wildcardKeys, captures); match {
-				return n, idx, captures, nil
+		for idx, value = range t.values {
+			if match := matcher.Match(value, t.wildcardKeys, captures); match {
+				return t, idx, captures, nil
 			}
 		}
 
-		return nil, 0, nil, n.canBacktrack
+		return nil, 0, nil, t.canBacktrack
 	}
 
 	// First see if this matches a static token.
 	firstChar := tokens[0]
-	for i, staticIndex := range n.staticIndices {
+	for i, staticIndex := range t.staticIndices {
 		if staticIndex == firstChar { //nolint: nestif
-			child := n.staticChildren[i]
+			child := t.staticChildren[i]
 			childTokenLen := len(child.token)
 
 			if len(tokens) >= childTokenLen && child.token == tokens[:childTokenLen] {
@@ -505,42 +596,42 @@ func (n *Trie[V]) findNode(
 		}
 	}
 
-	if !continueLookup && (found != nil || canBacktrack == nil || !canBacktrack(n.values)) {
+	if !continueLookup && (found != nil || canBacktrack == nil || !canBacktrack(t.values)) {
 		return found, idx, captures, nil
 	}
 
-	if !isHostPart && n.wildcardChild != nil { //nolint:nestif
+	if !isHostPart && t.wildcardChild != nil { //nolint:nestif
 		// Didn't find a static token, so check for a wildcard (only for paths).
-		nextSeparator := n.nextSeparator(tokens, separator)
+		nextSeparator := t.nextSeparator(tokens, separator)
 		thisToken := tokens[0:nextSeparator]
 		nextToken := tokens[nextSeparator:]
 
 		if len(thisToken) > 0 { // Don't match on empty tokens.
 			var tmp []string
 
-			found, idx, tmp, canBacktrack = n.wildcardChild.findNode("", nextToken, append(captures, thisToken), matcher)
+			found, idx, tmp, canBacktrack = t.wildcardChild.findNode("", nextToken, append(captures, thisToken), matcher)
 			if found != nil {
 				return found, idx, tmp, nil
-			} else if canBacktrack != nil && !canBacktrack(n.values) {
+			} else if canBacktrack != nil && !canBacktrack(t.values) {
 				return nil, 0, nil, nil
 			}
 		}
 	}
 
-	if n.catchAllChild != nil {
+	if t.catchAllChild != nil {
 		if isHostPart {
 			// Transit to path part
-			return n.catchAllChild.findNode("", path, captures, matcher)
+			return t.catchAllChild.findNode("", path, captures, matcher)
 		}
 
-		return n.catchAllChild.findNode("", "", append(captures, tokens), matcher)
+		return t.catchAllChild.findNode("", "", append(captures, tokens), matcher)
 	}
 
 	return nil, 0, captures, canBacktrack
 }
 
-func (n *Trie[V]) splitCommonPrefix(existingNodeIndex int, token string) (*Trie[V], int) {
-	childNode := n.staticChildren[existingNodeIndex]
+func (t *Trie[V]) splitCommonPrefix(existingNodeIndex int, token string) (*Trie[V], int) {
+	childNode := t.staticChildren[existingNodeIndex]
 
 	if strings.HasPrefix(token, childNode.token) {
 		// No split needs to be done. Rather, the new path shares the entire
@@ -551,7 +642,7 @@ func (n *Trie[V]) splitCommonPrefix(existingNodeIndex int, token string) (*Trie[
 		return childNode, len(childNode.token)
 	}
 
-	// Find the length of the common prefix of the child node and the new path.
+	// FindEntry the length of the common prefix of the child node and the new path.
 	i := commonPrefixLen(childNode.token, token)
 
 	commonPrefix := token[0:i]
@@ -566,13 +657,13 @@ func (n *Trie[V]) splitCommonPrefix(existingNodeIndex int, token string) (*Trie[
 		staticIndices:  []byte{childNode.token[0]},
 		staticChildren: []*Trie[V]{childNode},
 	}
-	n.staticChildren[existingNodeIndex] = newNode
+	t.staticChildren[existingNodeIndex] = newNode
 
 	return newNode, i
 }
 
-func (n *Trie[V]) Find(host, path string, matcher LookupMatcher[V]) (*Entry[V], error) {
-	found, idx, params, _ := n.findNode(reverseHost(host), path, make([]string, 0, 3), matcher)
+func (t *Trie[V]) FindEntry(host, path string, matcher LookupMatcher[V]) (*Entry[V], error) {
+	found, idx, params, _ := t.findNode(reverseHost(host), path, make([]string, 0, 3), matcher)
 	if found == nil {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
 	}
@@ -592,13 +683,13 @@ func (n *Trie[V]) Find(host, path string, matcher LookupMatcher[V]) (*Entry[V], 
 	return entry, nil
 }
 
-func (n *Trie[V]) Add(hostPattern, pathPattern string, value V, opts ...AddOption[V]) error {
-	node, err := n.addNode(reverseHost(hostPattern), pathPattern, nil, false)
+func (t *Trie[V]) Add(hostPattern, pathPattern string, value V, opts ...AddOption[V]) error {
+	node, err := t.addNode(reverseHost(hostPattern), pathPattern, nil, false)
 	if err != nil {
 		return err
 	}
 
-	if !n.canAdd(node.values, value) {
+	if !t.canAdd(node.values, value) {
 		return fmt.Errorf("%w: %s", ErrConstraintsViolation, pathPattern)
 	}
 
@@ -611,52 +702,52 @@ func (n *Trie[V]) Add(hostPattern, pathPattern string, value V, opts ...AddOptio
 	return nil
 }
 
-func (n *Trie[V]) Delete(host, path string, matcher ValueMatcher[V]) error {
-	if !n.deleteNode(reverseHost(host), path, matcher) {
-		return fmt.Errorf("%w: %s", ErrFailedToDelete, path)
+func (t *Trie[V]) Delete(hostPattern, pathPattern string, matcher ValueMatcher[V]) error {
+	if !t.deleteNode(reverseHost(hostPattern), pathPattern, matcher) {
+		return fmt.Errorf("%w: %s", ErrFailedToDelete, pathPattern)
 	}
 
 	return nil
 }
 
-func (n *Trie[V]) Empty() bool {
-	return len(n.values) == 0 && len(n.staticChildren) == 0 && n.wildcardChild == nil && n.catchAllChild == nil
+func (t *Trie[V]) Empty() bool {
+	return len(t.values) == 0 && len(t.staticChildren) == 0 && t.wildcardChild == nil && t.catchAllChild == nil
 }
 
-func (n *Trie[V]) Clone() *Trie[V] {
+func (t *Trie[V]) Clone() *Trie[V] {
 	root := &Trie[V]{}
 
-	n.cloneInto(root)
+	t.cloneInto(root)
 
 	return root
 }
 
-func (n *Trie[V]) cloneInto(out *Trie[V]) {
-	*out = *n
+func (t *Trie[V]) cloneInto(out *Trie[V]) {
+	*out = *t
 
-	if len(n.wildcardKeys) != 0 {
-		out.wildcardKeys = slices.Clone(n.wildcardKeys)
+	if len(t.wildcardKeys) != 0 {
+		out.wildcardKeys = slices.Clone(t.wildcardKeys)
 	}
 
-	if len(n.values) != 0 {
-		out.values = slices.Clone(n.values)
+	if len(t.values) != 0 {
+		out.values = slices.Clone(t.values)
 	}
 
-	if n.catchAllChild != nil {
+	if t.catchAllChild != nil {
 		out.catchAllChild = &Trie[V]{}
-		n.catchAllChild.cloneInto(out.catchAllChild)
+		t.catchAllChild.cloneInto(out.catchAllChild)
 	}
 
-	if n.wildcardChild != nil {
+	if t.wildcardChild != nil {
 		out.wildcardChild = &Trie[V]{}
-		n.wildcardChild.cloneInto(out.wildcardChild)
+		t.wildcardChild.cloneInto(out.wildcardChild)
 	}
 
-	if len(n.staticChildren) != 0 {
-		out.staticIndices = slices.Clone(n.staticIndices)
-		out.staticChildren = make([]*Trie[V], len(n.staticChildren))
+	if len(t.staticChildren) != 0 {
+		out.staticIndices = slices.Clone(t.staticIndices)
+		out.staticChildren = make([]*Trie[V], len(t.staticChildren))
 
-		for idx, child := range n.staticChildren {
+		for idx, child := range t.staticChildren {
 			newChild := &Trie[V]{}
 
 			child.cloneInto(newChild)

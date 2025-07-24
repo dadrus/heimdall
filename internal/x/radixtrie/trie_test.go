@@ -33,7 +33,85 @@ func deleteMatcher[V any](matches bool) ValueMatcherFunc[V] {
 	return func(_ V) bool { return matches }
 }
 
-func TestTrieFindPathWithWildcardHost(t *testing.T) {
+func TestTrieAddAndLookupNode(t *testing.T) {
+	t.Parallel()
+
+	// Setup & populate tree
+	tree := New[string]()
+
+	for _, path := range []string{
+		"/",
+		"/i",
+		"/i/:aaa",
+		"/images",
+		"/images/abc.jpg",
+		"/images/:imgname",
+		"/images/*path",
+		"/ima",
+		"/ima/:par",
+		"/images1",
+		"/images2",
+		"/apples",
+		"/app/les",
+		"/apples1",
+		"/appeasement",
+		"/appealing",
+		"/date/:year/:month",
+		"/date/:year/month",
+		"/date/:year/:month/abc",
+		"/date/:year/:month/:post",
+		"/date/:year/:month/*post",
+		"/:page",
+		"/:page/:index",
+		"/post/:post/page/:page",
+		"/plaster",
+		"/users/:pk/:related",
+		"/users/:id/updatePassword",
+		"/:something/abc",
+		"/:something/def",
+		"/something/**",
+		"/images/\\*path",
+		"/images/\\*patch",
+		"/date/\\:year/\\:month",
+		"/apples/ab:cde/:fg/*hi",
+		"/apples/ab*cde/:fg/*hi",
+		"/apples/ab\\*cde/:fg/*hi",
+		"/apples/ab*dde",
+		"/マ",
+		"/カ",
+	} {
+		t.Run(path, func(t *testing.T) {
+			added, err := tree.addNode("com.example.*", path, nil, false)
+			require.NoError(t, err)
+
+			found, err := tree.lookupNode("com.example.*", path)
+			require.NoError(t, err)
+
+			assert.Equal(t, added, found)
+		})
+	}
+
+	// errors expected
+	t.Run("host: com.*.example, path: /", func(t *testing.T) {
+		_, err := tree.lookupNode("com.*.example", "/")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNotFound)
+	})
+
+	t.Run("host: com.example.:, path: /", func(t *testing.T) {
+		_, err := tree.lookupNode("com.example.:", "/")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNotFound)
+	})
+
+	t.Run("host: com.example.*, path: /foo/bar/baz", func(t *testing.T) {
+		_, err := tree.lookupNode("com.example.*", "/foo/bar/baz")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNotFound)
+	})
+}
+
+func TestTrieFindEntryPathWithWildcardHost(t *testing.T) {
 	t.Parallel()
 
 	// Setup & populate tree
@@ -150,7 +228,7 @@ func TestTrieFindPathWithWildcardHost(t *testing.T) {
 				matcher = tc.matcher
 			}
 
-			entry, err := tree.Find("*", tc.path, matcher)
+			entry, err := tree.FindEntry("*", tc.path, matcher)
 			if tc.expErr != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.expErr)
@@ -171,7 +249,7 @@ func TestTrieFindPathWithWildcardHost(t *testing.T) {
 	}
 }
 
-func TestTrieFind(t *testing.T) {
+func TestTrieFindEntry(t *testing.T) {
 	t.Parallel()
 
 	tree := New[string]()
@@ -185,40 +263,40 @@ func TestTrieFind(t *testing.T) {
 	require.NoError(t, tree.Add("foo.example.com", "/**", "7"))
 	require.NoError(t, tree.Add("baz.example.com", "/**", "8"))
 
-	entry, err := tree.Find("foo.bar", "/foo/bar", lookupMatcher[string](true))
+	entry, err := tree.FindEntry("foo.bar", "/foo/bar", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "1", entry.Value)
 
-	entry, err = tree.Find("foo.bar", "/foo", lookupMatcher[string](true))
+	entry, err = tree.FindEntry("foo.bar", "/foo", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "2", entry.Value)
 
-	entry, err = tree.Find("bar.example.com", "/foo/bar", lookupMatcher[string](true))
+	entry, err = tree.FindEntry("bar.example.com", "/foo/bar", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "3", entry.Value)
 
-	entry, err = tree.Find("bar.example.com", "/foo/baz", lookupMatcher[string](true))
+	entry, err = tree.FindEntry("bar.example.com", "/foo/baz", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "4", entry.Value)
 
-	entry, err = tree.Find("bar.example.com", "/foo/baz/foo", lookupMatcher[string](true))
+	entry, err = tree.FindEntry("bar.example.com", "/foo/baz/foo", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "5", entry.Value)
 
-	entry, err = tree.Find("foo.example.com", "/foo/bar", lookupMatcher[string](true))
+	entry, err = tree.FindEntry("foo.example.com", "/foo/bar", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "6", entry.Value)
 
-	entry, err = tree.Find("foo.example.com", "/bar", lookupMatcher[string](true))
+	entry, err = tree.FindEntry("foo.example.com", "/bar", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "7", entry.Value)
 
-	entry, err = tree.Find("baz.example.com", "/foo/bar", lookupMatcher[string](true))
+	entry, err = tree.FindEntry("baz.example.com", "/foo/bar", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "8", entry.Value)
 }
 
-func TestTreeFindWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
+func TestTreeFindEntryWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
 	t.Parallel()
 
 	tree := New[string]()
@@ -236,52 +314,52 @@ func TestTreeFindWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
 		require.NoError(t, err)
 	}
 
-	_, err := tree.Find("example.com", "/some/thing", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err := tree.FindEntry("example.com", "/some/thing", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some" &&
 			keys[1] == "else" && values[1] == "thing"
 	}))
 	require.NoError(t, err)
 
-	_, err = tree.Find("example.com", "/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err = tree.FindEntry("example.com", "/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some"
 	}))
 	require.NoError(t, err)
 
-	_, err = tree.Find("example.com", "/some/", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err = tree.FindEntry("example.com", "/some/", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some"
 	}))
 	require.NoError(t, err)
 
-	_, err = tree.Find("example.com", "/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err = tree.FindEntry("example.com", "/some", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "resource" && values[0] == "some"
 	}))
 	require.NoError(t, err)
 
-	_, err = tree.Find("example.com", "/machine/12345/da/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err = tree.FindEntry("example.com", "/machine/12345/da/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "id" && values[0] == "12345" &&
 			keys[1] == "remaining" && values[1] == "abcd"
 	}))
 	require.NoError(t, err)
 
-	_, err = tree.Find("example.com", "/machine/12345/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err = tree.FindEntry("example.com", "/machine/12345/abcd", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "serial" && values[0] == "12345" &&
 			keys[1] == "*" && values[1] == "abcd"
 	}))
 	require.NoError(t, err)
 
-	_, err = tree.Find("example.com", "/machine/12345", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err = tree.FindEntry("example.com", "/machine/12345", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 1 && //nolint: gocritic
 			keys[0] == "serial" && values[0] == "12345"
 	}))
 	require.NoError(t, err)
 
-	_, err = tree.Find("example.com", "/dashboard/12345/foo/bar", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
+	_, err = tree.FindEntry("example.com", "/dashboard/12345/foo/bar", LookupMatcherFunc[string](func(_ string, keys, values []string) bool {
 		return len(keys) == len(values) && len(keys) == 2 && //nolint: gocritic
 			keys[0] == "id" && values[0] == "12345" &&
 			keys[1] == "*" && values[1] == "foo/bar"
@@ -289,7 +367,7 @@ func TestTreeFindWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
 	require.NoError(t, err)
 }
 
-func TestTrieFindWithBacktrackingEnabled(t *testing.T) {
+func TestTrieFindEntryWithBacktrackingEnabled(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -304,7 +382,7 @@ func TestTrieFindWithBacktrackingEnabled(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN
-	entry, err := tree.Find("foo.bar.example.com", "/date/2024/abc",
+	entry, err := tree.FindEntry("foo.bar.example.com", "/date/2024/abc",
 		LookupMatcherFunc[string](func(value string, _, _ []string) bool { return value != "first" }))
 
 	// THEN
@@ -312,7 +390,7 @@ func TestTrieFindWithBacktrackingEnabled(t *testing.T) {
 	assert.Equal(t, "second", entry.Value)
 }
 
-func TestTrieFindWithBacktrackingDisabled(t *testing.T) {
+func TestTrieFindEntryWithBacktrackingDisabled(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -325,7 +403,7 @@ func TestTrieFindWithBacktrackingDisabled(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN
-	entry, err := tree.Find("foo.example.com", "/date/2024/abc",
+	entry, err := tree.FindEntry("foo.example.com", "/date/2024/abc",
 		LookupMatcherFunc[string](func(value string, _, _ []string) bool {
 			return value != "first"
 		}))
@@ -372,7 +450,7 @@ func TestTrieAddDuplicates(t *testing.T) {
 	err = tree.Add("*", path, "second")
 	require.NoError(t, err)
 
-	entry, err := tree.Find("*", "/date/2024/04/abc",
+	entry, err := tree.FindEntry("*", "/date/2024/04/abc",
 		LookupMatcherFunc[string](func(value string, _, _ []string) bool {
 			return value == "first"
 		}))
@@ -380,7 +458,7 @@ func TestTrieAddDuplicates(t *testing.T) {
 	assert.Equal(t, "first", entry.Value)
 	assert.Equal(t, map[string]string{"year": "2024", "month": "04"}, entry.Parameters)
 
-	entry, err = tree.Find("*", "/date/2024/04/abc",
+	entry, err = tree.FindEntry("*", "/date/2024/04/abc",
 		LookupMatcherFunc[string](func(value string, _, _ []string) bool {
 			return value == "second"
 		}))
@@ -421,7 +499,7 @@ func TestTrieAddWildcardPathsForDifferentHosts(t *testing.T) {
 		"host with a wildcard in the middle of the definition": {[]string{"foo.*.bar.example.com"}, true},
 		"using closed wildcard in host definition":             {[]string{":.example.com", "foo.:.example.com"}, true},
 		"mix of different hosts":                               {[]string{"bar.example.com", "bar.foo.com", "foo.bar", "example.com"}, false},
-		"katakana マ.カ":                                         {[]string{"マ.カ"}, false},
+		"katakana マ.カ":                                       {[]string{"マ.カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
@@ -464,8 +542,8 @@ func TestTrieAddPathForWildcardHost(t *testing.T) {
 		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
 		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
 		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
-		"katakana /マ":                                    {[]string{"/マ"}, false},
-		"katakana /カ":                                    {[]string{"/カ"}, false},
+		"katakana /マ":                                   {[]string{"/マ"}, false},
+		"katakana /カ":                                   {[]string{"/カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
@@ -555,7 +633,7 @@ func TestTrieDeleteStaticAndWildcardPaths(t *testing.T) {
 		deletedPaths = append(deletedPaths, tbdPath)
 
 		for idx, path := range paths {
-			entry, err := tree.Find("*.example.com", path, lookupMatcher[int](true))
+			entry, err := tree.FindEntry("*.example.com", path, lookupMatcher[int](true))
 
 			if slices.Contains(deletedPaths, path) {
 				require.Errorf(t, err, "Should not be able to find %s after deleting %s", path, tbdPath)
@@ -582,6 +660,10 @@ func TestTrieDeleteMixedPaths(t *testing.T) {
 		"/abc/les/bananas",
 		"/abc/\\:les/bananas",
 		"/abc/:les/bananas",
+		"/apples/ab:cde/:fg/*hi",
+		"/apples/ab*cde/:fg/*hi",
+		"/apples/ab\\*cde/:fg/*hi",
+		"/apples/ab*dde",
 		"/abc/:les/\\*all",
 		"/abc/:les/*all",
 		"/abb/\\:ba/*all",
@@ -631,7 +713,7 @@ func TestTrieClone(t *testing.T) {
 	clone := tree.Clone()
 
 	for _, values := range slices.Collect(maps.Values(config)) {
-		entry, err := clone.Find(values[0], values[1],
+		entry, err := clone.FindEntry(values[0], values[1],
 			LookupMatcherFunc[string](func(_ string, _, _ []string) bool { return true }))
 
 		require.NoError(t, err)
