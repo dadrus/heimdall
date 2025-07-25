@@ -55,7 +55,7 @@ The actual expression based on the given `type`.
 
 ** *`backtracking_enabled`*: _boolean_ (optional)
 +
-WARNING: This property is deprecated and unused since v0.17.0. Before v0.17.0, it helped control backtracking (see (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking]). Configuring it now triggers a warning, and it will be removed in a future version.
+Enables or disables backtracking when a request matches the host and path expressions but fails to meet additional matching criteria, like `path_params`, `methods`, etc. This setting is inherited from the rule set, which is `true` by default. When enabled, the system will backtrack to attempt a match with a less specific rule (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details).
 
 ** *`hosts`*: _HostMatcher array_ (optional)
 +
@@ -246,22 +246,24 @@ match:
 
 == Rule Matching Specificity & Backtracking
 
-The implementation ensures that rules with more specific host and path expressions are matched first, regardless of their placement within a rule set. In fact, more specific rules are prioritized.
+The implementation ensures that rules with more specific host and path expressions are matched first — regardless of their position within a rule set. In other words, specificity takes precedence over ordering.
 
-NOTE: A more specific rule (e.g., for `/foo/bar`) must be defined in the same rule set as a more generic rule (e.g., for `/foo/:something`). Defining it in a different rule set will cause an error, rejecting the affected rule set. This also applies in reverse.
+NOTE: A more specific rule (e.g., for `/foo/bar`) must be defined in the same rule set as a more generic rule (e.g., for `/foo/:something`). Defining them in different rule sets will cause an error, resulting in rejection of the affected rule set. This applies in both directions.
 
-When a host and path expression matches a request, any additional conditions specified in the rule's matching criteria are evaluated. Only if these conditions are met will the rule's pipeline be executed.
+Once a host and path expression of a rule matches a request, any additional conditions specified in the rule's matching criteria are evaluated. Only if these conditions are met will the rule's pipeline be executed.
 
-CAUTION: If multiple rules share the same path expression and all their additional conditions match, the first matching rule will be applied. The matching order is determined by the sequence of rules in the rule set.
+CAUTION: If multiple rules share the same host and path expression and all their additional conditions match, the first one listed in the rule set will be applied. In such cases, rule order does matter.
 
-If no rule is matched, the process will backtrack to attempt a match with the next less specific rule in the same rule set. Backtracking will stop when:
+If a rule matches on host and path but fails due to unmet conditions, the process may backtrack to a less specific rule within the same rule set. Backtracking stops when:
 
-* a less specific rule successfully matches (including evaluation of any additional conditions), or
-* a less specific rule fails to match, and there are no other candidates in the rule set.
+* it is explicitly disabled (either for the rule or the rule set),
+* a less specific rule matches successfully (including all its conditions),
+* no further candidate rules remain, or
+* a less specific rule fails and disables further backtracking.
 
 The following examples illustrate these principles:
 
-Imagine a rule set with the following rules
+Consider a rule set with the following rules
 
 [source, yaml]
 ----
@@ -280,10 +282,23 @@ Imagine a rule set with the following rules
           - name: team
             type: regex
             value: "(team1|team2)"
+    methods:
+      - GET
   execute:
     - <pipeline definition>
 
 - id: rule3
+  match:
+    routes:
+      - path: /files/:team/:name
+        path_params:
+          - name: team
+            type: regex
+            value: "(team1|team2)"
+  execute:
+    - <pipeline definition>
+
+- id: rule4
   match:
     routes:
       - path: /files/team3/:name
@@ -291,11 +306,15 @@ Imagine a rule set with the following rules
     - <pipeline definition>
 ----
 
-The request to `/files/team1/document.pdf` will be matched by `rule2`, as it is more specific than `rule1`. Consequently, the pipeline for `rule2` will be executed.
+An HTTP GET request to `/files/team1/document.pdf` will be matched by `rule2`, as it is more specific than `rule1` and satisfies both the path and method conditions. Consequently, the pipeline for `rule2` will be executed.
 
-The request to `/files/team3/document.pdf` will be matched by `rule3`, which is more specific than both `rule1` and `rule2`. As a result, the corresponding pipeline will be executed.
+NOTE: If `rule2` had appeared after `rule3` in the rule set, `rule3` would have matched and taken precedence — highlighting the importance of rule order when specificity and match conditions are equal.
 
-However, even though the request to `/files/team4/document.pdf` matches the path defined in `rule2`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Since backtracking will occur, the request will be matched by `rule1`, with its pipeline then being executed.
+An HTTP POST request to `/files/team1/document.pdf` will be matched by `rule3`, as it is more specific than `rule1` and the `methods` constraints in the `rule2` failed. So its pipeline is executed.
+
+An HTTP GET request to `/files/team3/document.pdf` will be matched by `rule4`, which is more specific than all other rules. Its pipeline is executed.
+
+However, even though a request to `/files/team4/document.pdf` matches the path expression defined in `rule2`, respectively `rule3`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Backtracking occurs, and the request falls back to `rule1`, which does match. Thus, the pipeline of `rule1` is executed.
 
 == Authentication & Authorization Pipeline
 

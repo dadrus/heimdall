@@ -17,7 +17,7 @@ Depending on the configured provider, the rules can be then loaded from e.g. a p
 * as a regular JSON/YAML file, the so-called link:{{< relref "#_regular_rule_set" >}}[regular rule set], and
 * as a kubernetes link:{{< relref "#_kubernetes_rule_set" >}}[custom resource rule set], which is actually a YAML/JSON file as well, but adheres to corresponding kubernetes requirements.
 
-The main difference is the internal structure. Both do however require the specification of a version and a list or rules.
+The main difference is the internal structure. Both do however require the specification of a version and a list of rules.
 
 == Regular Rule Set
 
@@ -32,6 +32,10 @@ The version schema of the rule set. The current version of heimdall supports onl
 * *`name`*: _string_ (optional)
 +
 The name of a rule set. Used only for logging purposes.
+
+* *`backtracking_enabled`*: _boolean_ (optional)
++
+Enables or disables backtracking within the rule set (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details). Defaults to `true`.
 
 * *`rules`*: _link:{{< relref "/docs/rules/regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
@@ -97,6 +101,10 @@ The actual specification of the rule set. Following properties are possible, res
 ** *`authClassName`*: _string_ (optional)
 +
 References the heimdall instance, which should use this `RuleSet`.
+
+** *`backtrackingEnabled`*: _boolean_ (optional)
++
+Enables or disables backtracking within the rule set (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details). Defaults to `true`.
 
 ** *`rules`*: _link:{{< relref "regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
