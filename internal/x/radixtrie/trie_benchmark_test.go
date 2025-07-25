@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkNodeSearchNoPaths(b *testing.B) {
+func BenchmarkTrieFindEmptyTrie(b *testing.B) {
 	tm := lookupMatcher[string](true)
 	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -36,98 +36,71 @@ func BenchmarkNodeSearchNoPaths(b *testing.B) {
 	}
 }
 
-func BenchmarkNodeSearchRoot(b *testing.B) {
+func BenchmarkTrieFindRootPath(b *testing.B) {
 	tm := lookupMatcher[string](true)
 	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
-	require.NoError(b, tree.Add("*", "/", "foo"))
+	require.NoError(b, tree.Add("*", "/", "*"))
+	require.NoError(b, tree.Add("*.com", "/", "*.com"))
+	require.NoError(b, tree.Add("example.com", "/", "example.com"))
+	require.NoError(b, tree.Add("*.example.com", "/", "*.example.com"))
+	require.NoError(b, tree.Add("foo.example.com", "/", "foo.example.com"))
+	require.NoError(b, tree.Add("*.foo.example.com", "/", "*.foo.example.com"))
+	require.NoError(b, tree.Add("bar.foo.example.com", "/", "bar.foo.example.com"))
 
-	b.ReportAllocs()
-	b.ResetTimer()
+	for _, host := range []string{
+		"foo.bar",
+		"foo.com",
+		"example.com",
+		"bar.example.com",
+		"foo.example.com",
+		"baz.foo.example.com",
+		"bar.foo.example.com",
+	} {
+		b.Run(host, func(b *testing.B) {
+			host = reverseHost(host)
+			b.ReportAllocs()
+			b.ResetTimer()
 
-	for range b.N {
-		tree.findNode("*", "/", nil, tm)
+			for range b.N {
+				tree.findNode(host, "/", nil, tm)
+			}
+		})
 	}
 }
 
-func BenchmarkNodeSearchOneStaticPath(b *testing.B) {
-	tm := lookupMatcher[string](true)
-	tree := &Trie[string]{
-		canAdd: func(_ []string, _ string) bool { return true },
-	}
-
-	require.NoError(b, tree.Add("*", "/abc", "foo"))
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for range b.N {
-		tree.findNode("*", "/abc", nil, tm)
-	}
-}
-
-func BenchmarkNodeSearchOneLongStaticPath(b *testing.B) {
-	tm := lookupMatcher[string](true)
-	tree := &Trie[string]{
-		canAdd: func(_ []string, _ string) bool { return true },
-	}
-
-	require.NoError(b, tree.Add("*", "/foo/bar/baz", "foo"))
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for range b.N {
-		tree.findNode("*", "foo/bar/baz", nil, tm)
-	}
-}
-
-func BenchmarkNodeSearchOneWildcardPath(b *testing.B) {
-	tm := lookupMatcher[string](true)
-	tree := &Trie[string]{
-		canAdd: func(_ []string, _ string) bool { return true },
-	}
-
-	require.NoError(b, tree.Add("*", "/:abc", "foo"))
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for range b.N {
-		tree.findNode("*", "/abc", nil, tm)
-	}
-}
-
-func BenchmarkNodeSearchOneLongWildcards(b *testing.B) {
-	tm := lookupMatcher[string](true)
-	tree := &Trie[string]{
-		canAdd: func(_ []string, _ string) bool { return true },
-	}
-
-	require.NoError(b, tree.Add("*", ":abc/:def/:ghi", "foo"))
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for range b.N {
-		tree.findNode("*", "abcdefghijklmnop/aaaabbbbccccddddeeeeffffgggg/hijkl", nil, tm)
-	}
-}
-
-func BenchmarkNodeSearchOneFreeWildcard(b *testing.B) {
+func BenchmarkTrieFindPathForWildcardHost(b *testing.B) {
 	tm := lookupMatcher[string](true)
 	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
 	}
 
 	require.NoError(b, tree.Add("*", "/*abc", "foo"))
+	require.NoError(b, tree.Add("*", "/abc", "foo"))
+	require.NoError(b, tree.Add("*", "/:abc", "foo"))
+	require.NoError(b, tree.Add("*", "/aaa", "foo"))
+	require.NoError(b, tree.Add("*", "/foo/bar/baz", "foo"))
+	require.NoError(b, tree.Add("*", "/:abc/:def/:ghi", "foo"))
+	require.NoError(b, tree.Add("*", "/aaa/bbb/ccc", "foo"))
 
-	b.ReportAllocs()
-	b.ResetTimer()
+	for uc, path := range map[string]string{
+		"/baz is matched by /*abc":                   "/baz",
+		"/abc is matched by /abc":                    "/abc",
+		"/foo is matched by /:abc":                   "/foo",
+		"/aaa is matched by /aaa":                    "/aaa",
+		"/foo/bar/baz is matched by /foo/bar/baz":    "/foo/bar/baz",
+		"/bla/bla/bla is matched by /:abc/:def/:ghi": "/bla/bla/bla",
+		"/aaa/bbb/ccc is matched by /aaa/bbb/ccc":    "/aaa/bbb/ccc",
+	} {
+		b.Run(uc, func(b *testing.B) {
+			b.ReportAllocs()
+			b.ResetTimer()
 
-	for range b.N {
-		tree.findNode("*", "/foo", nil, tm)
+			for range b.N {
+				tree.findNode("*", path, nil, tm)
+			}
+		})
 	}
 }
