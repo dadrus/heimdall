@@ -62,37 +62,37 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				assert.Len(t, repo.knownRules, 1)
 				assert.False(t, repo.index.Empty())
 
-				_, err = repo.index.Find("example.com", "/1/1",
+				_, err = repo.index.FindEntry("example.com", "/1/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("example.com", "/1/2",
+				_, err = repo.index.FindEntry("example.com", "/1/2",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("example.com", "/1/3",
+				_, err = repo.index.FindEntry("example.com", "/1/3",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("example.com", "/1/3/6/7",
+				_, err = repo.index.FindEntry("example.com", "/1/3/6/7",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("example.com", "/1/3/5",
+				_, err = repo.index.FindEntry("example.com", "/1/3/5",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("example.com", "/1/3/4",
+				_, err = repo.index.FindEntry("example.com", "/1/3/4",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("example.com", "/1/3/5/6",
+				_, err = repo.index.FindEntry("example.com", "/1/3/5/6",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 			},
 		},
-		"static path override by a rule from another rule set is not possible": {
+		"rule from one ruleset cannot be overridden by a rule with the same matching expressions from another ruleset": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
@@ -218,7 +218,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"1": {
+		"rule matching foo.example.com/1/2/3 from one ruleset cannot be overridden by a rule matching *.example.com/1/:2/3 from another ruleset": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
@@ -239,7 +239,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"2": {
+		"rule matching foo.example.com/1/:2/3 from one ruleset cannot be overridden by a rule matching *.example.com/1/** from another ruleset": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
@@ -260,28 +260,26 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 			},
 		},
-		"3": {
+		"rules matching foo.example.com/1/:2/3 and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.NoError(t, err)
 			},
 		},
-		"4": {
+		"rules matching foo.example.com/1/2/:3 and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -297,12 +295,10 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.NoError(t, err)
 			},
 		},
-		"5": {
+		"rules matching foo.example.com/1/:2/:3 and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -318,12 +314,10 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.NoError(t, err)
 			},
 		},
-		"6": {
+		"rules matching foo.example.com/1/** and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -332,19 +326,17 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			}(),
 			tbaRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/*"})
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
 			}(),
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.NoError(t, err)
 			},
 		},
-		"7": {
+		"rules matching foo.example.com/** and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -360,9 +352,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.NoError(t, err)
 			},
 		},
 		"overriding existing rule with wildcard in the host and at path end by a more specific rule from another rule set is not possible": {
@@ -386,7 +376,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
-		"8": {
+		"rule matching *.example.com/1/** defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/** from another ruleset": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
@@ -407,7 +397,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
-		"9": {
+		"rule matching *.example.com/1/:some/3 defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/:some/3 from another ruleset": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:some/3"})
@@ -428,28 +418,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 			},
 		},
-		"10": {
-			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
-
-				return []rule.Rule{rul}
-			}(),
-			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
-
-				return []rule.Rule{rul}
-			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
-			},
-		},
-		"11": {
+		"rule matching *.example.com/1/** defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/2/3 from another ruleset": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
@@ -730,19 +699,19 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 2)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0], rules3[0]})
 
-	_, err = repo.index.Find("example.com", "/bar/1", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.FindEntry("example.com", "/bar/1", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("foo.example.com", "/bar/3", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.FindEntry("foo.example.com", "/bar/3", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("foo.com", "/bar/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.FindEntry("foo.com", "/bar/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.FindEntry("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.FindEntry("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -753,10 +722,10 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.Len(t, repo.knownRules, 1)
 	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0]})
 
-	_, err = repo.index.Find("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.FindEntry("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.Find("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = repo.index.FindEntry("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -813,38 +782,38 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	assert.Len(t, repo.knownRules, 3)
 	assert.False(t, repo.index.Empty())
 
-	_, err = repo.index.Find("example.com", "/bar/1",
+	_, err = repo.index.FindEntry("example.com", "/bar/1",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.Find("bar.example.com", "/bar/1a",
+	_, err = repo.index.FindEntry("bar.example.com", "/bar/1a",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.Find("bar.example.com", "/bar/1b",
+	_, err = repo.index.FindEntry("bar.example.com", "/bar/1b",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.Find("example.com", "/bar/2",
+	_, err = repo.index.FindEntry("example.com", "/bar/2",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
 
-	_, err = repo.index.Find("foo.example.com", "/bar/2",
+	_, err = repo.index.FindEntry("foo.example.com", "/bar/2",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.Find("foo.example.com", "/foo/3",
+	_, err = repo.index.FindEntry("foo.example.com", "/foo/3",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.Find("foo.example.com", "/foo/4",
+	_, err = repo.index.FindEntry("foo.example.com", "/foo/4",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.Find("baz.example.com", "/bar/4",
+	_, err = repo.index.FindEntry("baz.example.com", "/bar/4",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
@@ -885,25 +854,25 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				assert.Len(t, repo.knownRules, 2)
 				assert.False(t, repo.index.Empty())
 
-				_, err = repo.index.Find("example.com", "/bar/1",
+				_, err = repo.index.FindEntry("example.com", "/bar/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("bar.example.com", "/bar/1a",
+				_, err = repo.index.FindEntry("bar.example.com", "/bar/1a",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 
-				_, err = repo.index.Find("example.com", "/bar/2",
+				_, err = repo.index.FindEntry("example.com", "/bar/2",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.Error(t, err)
 
-				_, err = repo.index.Find("foo.example.com", "/foo/3",
+				_, err = repo.index.FindEntry("foo.example.com", "/foo/3",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.Find("foo.example.com", "/foo/4",
+				_, err = repo.index.FindEntry("foo.example.com", "/foo/4",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
@@ -935,13 +904,13 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				assert.Len(t, repo.knownRules, 2)
 				assert.False(t, repo.index.Empty())
 
-				entry, err := repo.index.Find("foo.example.com", "/bar/1",
+				entry, err := repo.index.FindEntry("foo.example.com", "/bar/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, "1", entry.Value.Rule().ID())
 
-				entry, err = repo.index.Find("example.com", "/bar/2",
+				entry, err = repo.index.FindEntry("example.com", "/bar/2",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
@@ -971,13 +940,13 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
 
-				entry, err := repo.index.Find("foo.example.com", "/bar/1",
+				entry, err := repo.index.FindEntry("foo.example.com", "/bar/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, "1", entry.Value.Rule().ID())
 
-				entry, err = repo.index.Find("example.com", "/bar/2",
+				entry, err = repo.index.FindEntry("example.com", "/bar/2",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
@@ -1007,19 +976,19 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
 
-				entry, err := repo.index.Find("foo.example.com", "/bar/1",
+				entry, err := repo.index.FindEntry("foo.example.com", "/bar/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, "1", entry.Value.Rule().ID())
 
-				entry, err = repo.index.Find("example.com", "/bar/2",
+				entry, err = repo.index.FindEntry("example.com", "/bar/2",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
 				assert.Equal(t, "2", entry.Value.Rule().ID())
 
-				_, err = repo.index.Find("bar.example.com", "/foo/2",
+				_, err = repo.index.FindEntry("bar.example.com", "/foo/2",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.Error(t, err)
@@ -1082,38 +1051,38 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 	assert.Len(t, repo.knownRules, 3)
 	assert.False(t, repo.index.Empty())
 
-	_, err = repo.index.Find("example.com", "/bar/1",
+	_, err = repo.index.FindEntry("example.com", "/bar/1",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.Find("bar.example.com", "/bar/1a",
+	_, err = repo.index.FindEntry("bar.example.com", "/bar/1a",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.Find("bar.example.com", "/bar/1b",
+	_, err = repo.index.FindEntry("bar.example.com", "/bar/1b",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.Find("example.com", "/bar/2",
+	_, err = repo.index.FindEntry("example.com", "/bar/2",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
 
-	_, err = repo.index.Find("foo.example.com", "/bar/2",
+	_, err = repo.index.FindEntry("foo.example.com", "/bar/2",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.Find("foo.example.com", "/foo/3",
+	_, err = repo.index.FindEntry("foo.example.com", "/foo/3",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.Find("foo.example.com", "/foo/4",
+	_, err = repo.index.FindEntry("foo.example.com", "/foo/4",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.Find("baz.example.com", "/bar/4",
+	_, err = repo.index.FindEntry("baz.example.com", "/bar/4",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
