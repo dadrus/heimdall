@@ -24,6 +24,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -88,10 +89,11 @@ func newJwtAuthenticator(
 	logger.Info().Str("_id", id).Msg("Creating jwt authenticator")
 
 	type Config struct {
-		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
-		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
+		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without_all=MetadataEndpoint JWKSFile,excluded_with=MetadataEndpoint,excluded_with=JWKSFile"`         //nolint:lll,tagalign
+		JWKSFile             *oauth2.FileMetadataResolver        `mapstructure:"jwks_file"            validate:"required_without_all=JWKSEndpoint MetadataEndpoint,excluded_with=JWKSEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
+		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without_all=JWKSEndpoint JWKSFile,excluded_with=JWKSEndpoint,excluded_with=JWKSFile"`                 //nolint:lll,tagalign
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`                                                                                                                                   //nolint:lll,tagalign
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                                                            //nolint:lll,tagalign
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
@@ -118,6 +120,13 @@ func newJwtAuthenticator(
 		if strings.HasPrefix(conf.JWKSEndpoint.URL, "http://") {
 			logger.Warn().Str("_id", id).
 				Msg("No TLS configured for the jwks endpoint used in jwt authenticator")
+		}
+	}
+
+	if conf.JWKSFile != nil {
+		if len(conf.Assertions.TrustedIssuers) == 0 {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrConfiguration, "'issuers' is a required field if JWKS file is used")
 		}
 	}
 
@@ -153,30 +162,34 @@ func newJwtAuthenticator(
 		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
 	)
 
-	resolver := x.IfThenElseExec(conf.MetadataEndpoint != nil,
-		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
-		func() oauth2.ServerMetadataResolver {
-			ep := conf.JWKSEndpoint
+	var resolver oauth2.ServerMetadataResolver
 
-			if ep.Headers == nil {
-				ep.Headers = make(map[string]string)
-			}
+	switch {
+	case conf.MetadataEndpoint != nil:
+		resolver = conf.MetadataEndpoint
+	case conf.JWKSFile != nil:
+		resolver = conf.JWKSFile
+	default: // conf.JWKSEndpoint != nil
+		ep := conf.JWKSEndpoint
 
-			if _, ok := ep.Headers["Accept"]; !ok {
-				ep.Headers["Accept"] = "application/json"
-			}
+		if ep.Headers == nil {
+			ep.Headers = make(map[string]string)
+		}
 
-			if len(ep.Method) == 0 {
-				ep.Method = http.MethodGet
-			}
+		if _, ok := ep.Headers["Accept"]; !ok {
+			ep.Headers["Accept"] = "application/json"
+		}
 
-			return oauth2.ResolverAdapterFunc(
-				func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{JWKSEndpoint: ep}, nil
-				},
-			)
-		},
-	)
+		if len(ep.Method) == 0 {
+			ep.Method = http.MethodGet
+		}
+
+		resolver = oauth2.ResolverAdapterFunc(
+			func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				return oauth2.ServerMetadata{JWKSEndpoint: ep}, nil
+			},
+		)
+	}
 
 	return &jwtAuthenticator{
 		id:                   id,
@@ -327,9 +340,9 @@ func (a *jwtAuthenticator) serverMetadata(
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
 	}
 
-	if metadata.JWKSEndpoint == nil {
+	if metadata.JWKSEndpoint == nil && len(metadata.JWKSFilePath) == 0 {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"received server metadata does not contain the required jwks_uri").
+			"received server metadata does not contain the required jwks_uri or jwks_file").
 			WithErrorContext(a)
 	}
 
@@ -355,10 +368,10 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.RequestContext, token *jwt.J
 	})
 
 	if len(token.Headers[0].KeyID) == 0 {
-		return a.verifyTokenWithoutKID(ctx, token, claims, metadata.JWKSEndpoint, &assertions)
+		return a.verifyTokenWithoutKID(ctx, token, claims, &metadata, &assertions)
 	}
 
-	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID, claims, metadata.JWKSEndpoint)
+	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID, claims, &metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +383,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 	ctx heimdall.RequestContext,
 	token *jwt.JSONWebToken,
 	tokenClaims map[string]any,
-	ep *endpoint.Endpoint,
+	metadata *oauth2.ServerMetadata,
 	assertions *oauth2.Expectation,
 ) (json.RawMessage, error) {
 	logger := zerolog.Ctx(ctx.Context())
@@ -378,12 +391,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 
 	var rawClaims json.RawMessage
 
-	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
-	if err != nil {
-		return nil, err
-	}
-
-	jwks, err := a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
+	jwks, err := a.loadJWKS(ctx, tokenClaims, metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +415,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 	if len(rawClaims) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication,
-				"None of the keys received from the JWKS endpoint could be used to verify the JWT").
+				"None of the keys from the JWKS could be used to verify the JWT").
 			WithErrorContext(a)
 	}
 
@@ -415,23 +423,15 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 }
 
 func (a *jwtAuthenticator) getKey(
-	ctx heimdall.RequestContext, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
+	ctx heimdall.RequestContext, keyID string, tokenClaims map[string]any, metadata *oauth2.ServerMetadata,
 ) (*jose.JSONWebKey, error) {
 	cch := cache.Ctx(ctx.Context())
 	logger := zerolog.Ctx(ctx.Context())
 
-	var (
-		cacheKey string
-		jwks     *jose.JSONWebKeySet
-	)
-
-	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
-	if err != nil {
-		return nil, err
-	}
+	var cacheKey string
 
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
+		cacheKey = a.calculateCacheKeyForMetadata(metadata, keyID, tokenClaims)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var jwk jose.JSONWebKey
 
@@ -443,7 +443,7 @@ func (a *jwtAuthenticator) getKey(
 		}
 	}
 
-	jwks, err = a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
+	jwks, err := a.loadJWKS(ctx, tokenClaims, metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -620,4 +620,99 @@ func (a *jwtAuthenticator) validateJWK(jwk *jose.JSONWebKey) error {
 			pkix.WithSystemTrustStore,
 			func() pkix.ValidationOption { return pkix.WithRootCACertificates(a.trustStore) }),
 	)
+}
+
+func (a *jwtAuthenticator) loadJWKS(
+	ctx heimdall.RequestContext, tokenClaims map[string]any, metadata *oauth2.ServerMetadata,
+) (*jose.JSONWebKeySet, error) {
+	if metadata.JWKSEndpoint != nil {
+		return a.loadJWKSFromEndpoint(ctx, tokenClaims, metadata.JWKSEndpoint)
+	} else if len(metadata.JWKSFilePath) > 0 {
+		return a.loadJWKSFromFile(ctx, tokenClaims, metadata.JWKSFilePath)
+	}
+
+	return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		"no JWKS endpoint or file path available").WithErrorContext(a)
+}
+
+func (a *jwtAuthenticator) loadJWKSFromEndpoint(
+	ctx heimdall.RequestContext, tokenClaims map[string]any, ep *endpoint.Endpoint,
+) (*jose.JSONWebKeySet, error) {
+	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
+}
+
+func (a *jwtAuthenticator) loadJWKSFromFile(
+	ctx heimdall.RequestContext, tokenClaims map[string]any, filePath string,
+) (*jose.JSONWebKeySet, error) {
+	logger := zerolog.Ctx(ctx.Context())
+	logger.Debug().Str("path", filePath).Msg("Loading JWKS from file")
+
+	// Render template in file path if needed
+	renderedPath, err := a.renderFilePath(filePath, tokenClaims)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read file contents
+	contents, err := os.ReadFile(renderedPath)
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"failed to read JWKS file '%s'", renderedPath).
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	// Parse JWKS
+	var jwks jose.JSONWebKeySet
+	if err := json.Unmarshal(contents, &jwks); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"failed to unmarshal JWKS from file '%s'", renderedPath).
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	return &jwks, nil
+}
+
+func (a *jwtAuthenticator) renderFilePath(filePath string, tokenClaims map[string]any) (string, error) {
+	if tokenClaims == nil || len(tokenClaims) == 0 || !strings.Contains(filePath, "{{") {
+		return filePath, nil
+	}
+
+	tpl, err := template.New(filePath)
+	if err != nil {
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template for JWKS file path").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	return tpl.Render(map[string]any{"TokenIssuer": tokenClaims["iss"]})
+}
+
+func (a *jwtAuthenticator) calculateCacheKeyForMetadata(metadata *oauth2.ServerMetadata, keyID string, tokenClaims map[string]any) string {
+	digest := sha256.New()
+
+	if metadata.JWKSEndpoint != nil {
+		digest.Write(metadata.JWKSEndpoint.Hash())
+		// Render URL with token claims for backward compatibility with existing cache keys
+		renderedURL := metadata.JWKSEndpoint.URL
+		if tokenClaims != nil && strings.Contains(renderedURL, "{{") {
+			if issuer, ok := tokenClaims["iss"].(string); ok {
+				renderedURL = strings.ReplaceAll(renderedURL, "{{ .TokenIssuer }}", issuer)
+			}
+		}
+		digest.Write(stringx.ToBytes(renderedURL))
+	} else if len(metadata.JWKSFilePath) > 0 {
+		digest.Write(stringx.ToBytes("file:"))
+		digest.Write(stringx.ToBytes(metadata.JWKSFilePath))
+	}
+
+	digest.Write(stringx.ToBytes(keyID))
+
+	return hex.EncodeToString(digest.Sum(nil))
 }

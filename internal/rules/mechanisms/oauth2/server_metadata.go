@@ -28,6 +28,7 @@ import (
 type ServerMetadata struct {
 	Issuer                string
 	JWKSEndpoint          *endpoint.Endpoint
+	JWKSFilePath          string
 	IntrospectionEndpoint *endpoint.Endpoint
 }
 
