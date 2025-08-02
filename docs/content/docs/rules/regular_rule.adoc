@@ -55,7 +55,7 @@ The actual expression based on the given `type`.
 
 ** *`backtracking_enabled`*: _boolean_ (optional)
 +
-Enables or disables backtracking when a request matches the host and path expressions but fails to meet additional matching criteria, like `path_params`, `methods`, etc. This setting is inherited from the rule set, which is `true` by default. When enabled, the system will backtrack to attempt a match with a less specific rule (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details).
+WARNING: This property is deprecated, is unused since v0.17.0, and it will be removed in a future version. Before v0.17.0, it helped control backtracking. Configuring it now triggers a warning.
 
 ** *`hosts`*: _HostMatcher array_ (optional)
 +
@@ -256,10 +256,9 @@ CAUTION: If multiple rules share the same host and path expression and all their
 
 If a rule matches on host and path but fails due to unmet conditions, the process may backtrack to a less specific rule within the same rule set. Backtracking stops when:
 
-* it is explicitly disabled (either for the rule or the rule set),
 * a less specific rule matches successfully (including all its conditions),
-* no further candidate rules remain, or
-* a less specific rule fails and disables further backtracking.
+* a less specific rule fails and
+* no further candidate rules remain in the given rule set
 
 The following examples illustrate these principles:
 
@@ -315,6 +314,32 @@ An HTTP POST request to `/files/team1/document.pdf` will be matched by `rule3`, 
 An HTTP GET request to `/files/team3/document.pdf` will be matched by `rule4`, which is more specific than all other rules. Its pipeline is executed.
 
 However, even though a request to `/files/team4/document.pdf` matches the path expression defined in `rule2`, respectively `rule3`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Backtracking occurs, and the request falls back to `rule1`, which does match. Thus, the pipeline of `rule1` is executed.
+
+
+Here’s another example:
+
+[source, yaml]
+----
+- id: rule1
+  match:
+    routes:
+      - path: /foo/**
+  execute:
+    - <pipeline definition>
+
+- id: rule2
+  match:
+    routes:
+      - path: /foo/bar/:name
+  execute:
+    - <pipeline definition>
+----
+
+In this example:
+
+* A request to `/foo/something` matches `rule1`, as its wildcard path (`/foo/**`) covers any path starting with `/foo`.
+* A request to `/foo/bar/something` matches `rule2`, which targets paths with a single segment after `/foo/bar` (e.g., `/foo/bar/<single-segment>`).
+* A request to `/foo/bar/baz/something` partially matches `rule2` because it shares the `/foo/bar/` prefix. However, since `rule2` requires exactly one segment after `/foo/bar/`, it does not fully match. Therefore, backtracking happens and `rule1`, which is configured with a broader `/foo/**` pattern, matches and is executed.
 
 == Authentication & Authorization Pipeline
 

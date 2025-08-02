@@ -84,7 +84,7 @@ As written above, an link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstrea
 
 The actual matching is primarily based on the request’s host and path, which are evaluated against the expressions defined in the loaded rules. This matching process is optimized for performance and guaranteed to run with O(log n) time complexity. Host expressions can use exact values, wildcards, globs, or regular expressions. For paths, both static segments and wildcards are supported. Wildcards may span a single segment or the remainder of the path and can be named, allowing their captured values to be reused — for example, to apply additional pattern constraints or to reference them later in the rule's pipeline. HTTP scheme and method can also be taken into account during matching.
 
-The values used for matching — host, path, scheme, and method — are typically extracted directly from the incoming HTTP request. If configured to do so, heimdall can instead rely on values from standard `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri`, and `X-Forwarded-Method` headers.
+The values used for matching — host, path, scheme, and method — are typically extracted directly from the incoming HTTP request. If link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configured to do so], heimdall can instead rely on values from standard `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri`, and `X-Forwarded-Method` headers.
 
 
 == Default Rule & Inheritance

@@ -18,17 +18,17 @@ Regular, or link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream-specifi
 
 A rule set is essentially a container for a list of rules, along with metadata such as its name and version. The actual format is provider-specific and depends on the rule provider in use — for example, rule sets may be defined in files, Kubernetes custom resources, or received via an API.
 
-However, rule sets offer more than just grouping: they also support ordering of rules to account for additional match constraints, such as HTTP methods, specific glob or regex patterns on path segments, or other conditions. For example, if two rules match the same host and path, but one additionally restricts the HTTP method that more specific rule should appear earlier in the list. Otherwise, the more general rule may be matched first and take precedence.
+However, rule sets offer more than just grouping: they also support ordering of rules to account for additional match constraints, such as HTTP methods, specific glob or regex patterns on path segments, or other conditions. For example, if two rules match the same host and path, but one additionally restricts the HTTP method that more specific rule should appear earlier in the list. Otherwise, the more general rule will be matched first and take precedence.
 
-Rule sets also support link:{{< relref "/docs/rules/regular_rule.adoc#_rule_matching_specificity_backtracking" >}}[backracking]: if a rule matches based on host and path, but fails due to its additional match conditions, Heimdall may fall back to a less specific rule within the same rule set. This controlled fallback mechanism ensures that requests can still be processed meaningfully within the defined context. Backtracking is enabled by default but can be explicitly disabled — either at the rule set level or for individual rules — to prevent fallback beyond a certain point.
+Rule sets also support link:{{< relref "/docs/rules/regular_rule.adoc#_rule_matching_specificity_backtracking" >}}[backracking]. E.g., if a rule matches based on host and path, but fails due to its additional match conditions, heimdall may fall back to a less specific rule within the same rule set. This controlled fallback mechanism ensures that requests can still be processed meaningfully within the defined context.
 
-NOTE: Defining multiple rules for the same host and path expressions is only allowed within the same rule set.
+NOTE: Defining multiple rules with matching expressions that would result in handling the same requests — for example, rules with identical or overlapping host and path expressions — is only permitted within the same rule set.
 
 == Provider Types
 
 While all providers are different in the sense that they support different sources to load rule sets from, respectively monitor them, most of the providers use the same rule set format.
 
-The following table gives an overview about existing providers
+The following table gives an overview of existing providers
 
 [cols="2,2,5"]
 |===
