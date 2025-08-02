@@ -35,3 +35,17 @@ func WithBacktrackingControl[V any](canBacktrack CanBacktrackFunc[V]) AddOption[
 		}
 	}
 }
+
+type LookupOption[V any] func(opts *lookupOpts[V])
+
+func WithExactMatch[V any]() LookupOption[V] {
+	return func(opts *lookupOpts[V]) {
+		opts.ls = exactLookupStrategy[V]{}
+	}
+}
+
+func WithWildcardMatch[V any]() LookupOption[V] {
+	return func(opts *lookupOpts[V]) {
+		opts.ls = wildcardLookupStrategy[V]{}
+	}
+}
