@@ -84,31 +84,123 @@ func TestTrieAddAndLookupNode(t *testing.T) {
 			added, err := tree.addNode("com.example.*", path, nil, false)
 			require.NoError(t, err)
 
-			found, err := tree.lookupNode("com.example.*", path)
+			found, err := tree.Lookup("*.example.com", path)
 			require.NoError(t, err)
 
-			assert.Equal(t, added, found)
+			require.Len(t, found, 1)
+			assert.Equal(t, added, found[0])
 		})
 	}
 
 	// errors expected
-	t.Run("host: com.*.example, path: /", func(t *testing.T) {
-		_, err := tree.lookupNode("com.*.example", "/")
+	t.Run("host: example.*.com, path: /", func(t *testing.T) {
+		_, err := tree.Lookup("example.*.com", "/", WithExactMatch[string]())
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrNotFound)
 	})
 
-	t.Run("host: com.example.:, path: /", func(t *testing.T) {
-		_, err := tree.lookupNode("com.example.:", "/")
+	t.Run("host: :.example.com, path: /", func(t *testing.T) {
+		_, err := tree.Lookup(":.example.com", "/", WithExactMatch[string]())
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrNotFound)
 	})
 
-	t.Run("host: com.example.*, path: /foo/bar/baz", func(t *testing.T) {
-		_, err := tree.lookupNode("com.example.*", "/foo/bar/baz")
+	t.Run("host: *.example.com, path: /foo/bar/baz", func(t *testing.T) {
+		_, err := tree.Lookup("*.example.com", "/foo/bar/baz", WithExactMatch[string]())
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrNotFound)
 	})
+}
+
+func TestTrieLookup(t *testing.T) {
+	t.Parallel()
+
+	tree := New[string]()
+
+	err := tree.Add("*.example.com", "/1/2/3", "1")
+	require.NoError(t, err)
+
+	hostNode, err := tree.Lookup("foo.example.com", "", WithExactMatch[string]())
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotFound)
+
+	hostNode, err = tree.Lookup("foo.example.com", "", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	pathNode, err := hostNode[0].Lookup("", "/*", WithExactMatch[string]())
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotFound)
+
+	pathNode, err = hostNode[0].Lookup("", "/*", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, pathNode)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/*", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/1/*", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/1/:2/:3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/1/2/:3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	// "*.example.com", path: "/1/2/3"
+	// "foo.example.com", path: "/*"
+
+	err = tree.Add("*.example.com", "/1/:2/3", "1")
+	require.NoError(t, err)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/*", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/1/*", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/1/:2/:3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("foo.example.com", "/1/2/:3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	err = tree.Add("foo.example.com", "/1/:2/3", "1")
+	require.NoError(t, err)
+
+	hostNode, err = tree.Lookup("*.example.com", "/*", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("*.example.com", "/1/*", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("*.example.com", "/1/:2/:3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("*.example.com", "/1/2/3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("*.example.com", "/1/:2/3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
+	hostNode, err = tree.Lookup("*.example.com", "/1/2/:3", WithWildcardMatch[string]())
+	require.NoError(t, err)
+	require.NotNil(t, hostNode)
+
 }
 
 func TestTrieFindEntryPathWithWildcardHost(t *testing.T) {
@@ -499,7 +591,7 @@ func TestTrieAddWildcardPathsForDifferentHosts(t *testing.T) {
 		"host with a wildcard in the middle of the definition": {[]string{"foo.*.bar.example.com"}, true},
 		"using closed wildcard in host definition":             {[]string{":.example.com", "foo.:.example.com"}, true},
 		"mix of different hosts":                               {[]string{"bar.example.com", "bar.foo.com", "foo.bar", "example.com"}, false},
-		"katakana マ.カ":                                         {[]string{"マ.カ"}, false},
+		"katakana マ.カ":                                       {[]string{"マ.カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
@@ -542,8 +634,8 @@ func TestTrieAddPathForWildcardHost(t *testing.T) {
 		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
 		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
 		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
-		"katakana /マ":                                    {[]string{"/マ"}, false},
-		"katakana /カ":                                    {[]string{"/カ"}, false},
+		"katakana /マ":                                   {[]string{"/マ"}, false},
+		"katakana /カ":                                   {[]string{"/カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()

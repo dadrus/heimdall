@@ -69,6 +69,14 @@ type (
 		// node local options
 		canBacktrack CanBacktrackFunc[V]
 	}
+
+	lookupStrategy[V any] interface {
+		lookupNodes(trie *Trie[V], hostPattern, pathPattern string) ([]*Trie[V], error)
+	}
+
+	lookupOpts[V any] struct {
+		ls lookupStrategy[V]
+	}
 )
 
 func New[V any](opts ...Option[V]) *Trie[V] {
@@ -448,89 +456,8 @@ func (t *Trie[V]) deleteEdge(token byte) {
 }
 
 //nolint:gocognit,cyclop,gocyclo
-func (t *Trie[V]) lookupNode(hostPattern, pathPattern string) (*Trie[V], error) {
-	var (
-		tokens     string
-		separator  byte
-		isHostPart bool
-
-		nextTokens string
-		child      *Trie[V]
-	)
-
-	if len(hostPattern) != 0 {
-		tokens = hostPattern
-		separator = '.'
-		isHostPart = true
-	} else {
-		tokens = pathPattern
-		separator = '/'
-		isHostPart = false
-	}
-
-	if len(tokens) == 0 {
-		return t, nil
-	}
-
-	token := tokens[0]
-
-	if len(t.token) == 0 || t.token == string(separator) {
-		switch token {
-		case ':':
-			// Only valid for paths
-			if isHostPart || t.wildcardChild == nil {
-				return nil, ErrNotFound
-			}
-
-			child = t.wildcardChild
-			nextSeparator := t.nextSeparator(tokens, separator)
-			nextTokens = tokens[nextSeparator:]
-		case '*':
-			if t.catchAllChild == nil {
-				return nil, ErrNotFound
-			}
-
-			child = t.catchAllChild
-			nextTokens = ""
-		}
-	}
-
-	if child != nil {
-		if isHostPart {
-			return child.lookupNode(nextTokens, pathPattern)
-		}
-
-		return child.lookupNode("", nextTokens)
-	}
-
-	if !isHostPart &&
-		len(tokens) >= 2 &&
-		(len(t.token) == 0 || t.token == unsafe.String(&separator, 1)) &&
-		tokens[0] == '\\' &&
-		(tokens[1] == '*' || tokens[1] == ':' || tokens[1] == '\\') {
-		// The token starts with a character escaped by a backslash. Drop the backslash.
-		token = tokens[1]
-		tokens = tokens[1:]
-	}
-
-	for i, staticIndex := range t.staticIndices {
-		if token == staticIndex { //nolint: nestif
-			child = t.staticChildren[i]
-			childTokenLen := len(child.token)
-
-			if len(tokens) >= childTokenLen && child.token == tokens[:childTokenLen] {
-				if isHostPart {
-					return child.lookupNode(tokens[childTokenLen:], pathPattern)
-				}
-
-				return child.lookupNode("", tokens[childTokenLen:])
-			}
-
-			break
-		}
-	}
-
-	return nil, ErrNotFound
+func (t *Trie[V]) lookupNodes(hostPattern, pathPattern string, opts *lookupOpts[V]) ([]*Trie[V], error) {
+	return opts.ls.lookupNodes(t, hostPattern, pathPattern)
 }
 
 //nolint:funlen,gocognit,cyclop
@@ -708,6 +635,20 @@ func (t *Trie[V]) Delete(hostPattern, pathPattern string, matcher ValueMatcher[V
 	}
 
 	return nil
+}
+
+func (t *Trie[V]) Lookup(hostPattern, pathPattern string, opts ...LookupOption[V]) ([]*Trie[V], error) {
+	lOpts := &lookupOpts[V]{}
+
+	if len(opts) == 0 {
+		opts = append(opts, WithExactMatch[V]())
+	}
+
+	for _, opt := range opts {
+		opt(lOpts)
+	}
+
+	return t.lookupNodes(reverseHost(hostPattern), pathPattern, lOpts)
 }
 
 func (t *Trie[V]) Empty() bool {
