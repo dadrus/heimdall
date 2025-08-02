@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Concepts on Heimdall</title><link>https://dadrus.github.io/docs/concepts/</link><description>Recent content in Concepts on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 11 Jul 2025 00:08:45 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/concepts/index.xml" rel="self" type="application/rss+xml"/><item><title>Pipelines</title><link>https://dadrus.github.io/docs/concepts/pipelines/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/pipelines/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Concepts on Heimdall</title><link>https://dadrus.github.io/docs/concepts/</link><description>Recent content in Concepts on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 02 Aug 2025 19:10:30 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/concepts/index.xml" rel="self" type="application/rss+xml"/><item><title>Pipelines</title><link>https://dadrus.github.io/docs/concepts/pipelines/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/pipelines/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_overview">Overview&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -36,10 +36,10 @@
 &lt;h2 id="_rules_sets">Rules Sets&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>Regular, respectively upstream specific rules must somehow be organized, versioned and also loaded. So, there must be some structure allowing all of that. That structure is defined by the so-called rule sets.&lt;/p>
+&lt;p>Regular, or &lt;a href="../../docs/rules/regular_rule/">upstream-specific rules&lt;/a> must be organized, versioned, and loaded in a structured way. This structure is provided by so-called rule sets.&lt;/p>
 &lt;/div>
 &lt;div class="paragraph">
-&lt;p>A rule set can be considered to be just a file containing a list of rules and some additional meta information, like format version, name of the rule set and alike. Rule sets do also allow ordering of rules, e.g. with most specific matching expressions first allowing simpler matching expressions.&lt;/p>
+&lt;p>A rule set is essentially a container for a list of rules, along with metadata such as its name and version. The actual format is provider-specific and depends on the rule provider in use — for example, rule sets may be defined in files, Kubernetes custom resources, or received via an API.&lt;/p>
 &lt;/div></description></item><item><title>Operating Modes</title><link>https://dadrus.github.io/docs/concepts/operating_modes/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/operating_modes/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_decision_mode">Decision Mode&lt;/h2>
 &lt;div class="sectionbody">

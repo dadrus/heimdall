@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 11 Jul 2025 00:08:45 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 02 Aug 2025 19:10:30 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_what_is_heimdall">What is heimdall?&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -187,10 +187,10 @@
 &lt;h2 id="_rules_sets">Rules Sets&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
-&lt;p>Regular, respectively upstream specific rules must somehow be organized, versioned and also loaded. So, there must be some structure allowing all of that. That structure is defined by the so-called rule sets.&lt;/p>
+&lt;p>Regular, or &lt;a href="./docs/rules/regular_rule/">upstream-specific rules&lt;/a> must be organized, versioned, and loaded in a structured way. This structure is provided by so-called rule sets.&lt;/p>
 &lt;/div>
 &lt;div class="paragraph">
-&lt;p>A rule set can be considered to be just a file containing a list of rules and some additional meta information, like format version, name of the rule set and alike. Rule sets do also allow ordering of rules, e.g. with most specific matching expressions first allowing simpler matching expressions.&lt;/p>
+&lt;p>A rule set is essentially a container for a list of rules, along with metadata such as its name and version. The actual format is provider-specific and depends on the rule provider in use — for example, rule sets may be defined in files, Kubernetes custom resources, or received via an API.&lt;/p>
 &lt;/div></description></item><item><title>Envoy Gateway Integration</title><link>https://dadrus.github.io/guides/proxies/envoy_gateway/</link><pubDate>Thu, 02 May 2024 13:02:43 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/envoy_gateway/</guid><description>&lt;div class="paragraph">
 &lt;p>&lt;a href="https://gateway.envoyproxy.io">Envoy Gateway&lt;/a> is an open source project for managing &lt;a href="https://www.envoyproxy.io/">Envoy Proxy&lt;/a> as a Kubernetes-based application gateway by making use of the &lt;a href="https://gateway-api.sigs.k8s.io/">Gateway API&lt;/a> resources.&lt;/p>
 &lt;/div>
@@ -946,7 +946,6 @@ heimdall &lt;span class="o">[&lt;/span>&lt;span class="nt">--flag&lt;/span>&lt;s
  &lt;span class="na">to&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}&lt;/span>
 
 &lt;span class="na">default_rule&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">backtracking_enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">false&lt;/span>
  &lt;span class="na">execute&lt;/span>&lt;span class="pi">:&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">authenticator&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">anonymous_authenticator&lt;/span>
  &lt;span class="pi">-&lt;/span> &lt;span class="na">finalizer&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt&lt;/span>
