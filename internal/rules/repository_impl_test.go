@@ -1234,7 +1234,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.Equal(t, "1", impl.srcID)
 			},
 		},
-		"upstream rule match with backtracking within the rule set": {
+		"upstream rule match with backtracking due to constraints limitations within the rule set": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/bar"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
@@ -1294,6 +1294,51 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.True(t, ok)
 
 				require.Equal(t, "rule3", impl.id)
+				require.Equal(t, "1", impl.srcID)
+			},
+		},
+		"upstream rule match with backtracking within the rule set": {
+			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz/foo/bar/baz"},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo *repository) {
+				t.Helper()
+
+				rule1 := &ruleImpl{id: "rule1", srcID: "1", hash: []byte{1}}
+				rule1.routes = append(rule1.routes,
+					&routeImpl{
+						rule:    rule1,
+						host:    "foo.bar",
+						path:    "/baz/foo/:id",
+						matcher: &andMatcher{},
+					},
+				)
+
+				rule2 := &ruleImpl{id: "rule2", srcID: "1", hash: []byte{1}}
+				rule2.routes = append(rule2.routes,
+					&routeImpl{
+						rule:    rule2,
+						host:    "foo.bar",
+						path:    "/baz/**",
+						matcher: andMatcher{},
+					},
+				)
+
+				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1, rule2})
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				impl, ok := rul.(*ruleImpl)
+				require.True(t, ok)
+
+				require.Equal(t, "rule2", impl.id)
 				require.Equal(t, "1", impl.srcID)
 			},
 		},
