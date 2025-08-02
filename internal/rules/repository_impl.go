@@ -242,8 +242,24 @@ func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.R
 			)
 			if entry != nil {
 				return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-					"rule %s from %s conflicts with rule %s from %s",
+					"conflicting rules: %s from %s and %s from %s",
 					rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
+			}
+
+			nodes, _ := trie.Lookup(host, "", radixtrie.WithWildcardMatch[rule.Route]())
+			for _, node := range nodes {
+				entry, _ = node.FindEntry(
+					"",
+					path,
+					radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, _, _ []string) bool {
+						return route.Rule().SrcID() != srcID
+					}),
+				)
+				if entry != nil {
+					return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+						"conflicting rules: %s from %s and %s from %s",
+						rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
+				}
 			}
 
 			if err := trie.Add(

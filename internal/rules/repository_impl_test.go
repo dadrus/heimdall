@@ -92,6 +92,25 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		"adding rules matching example.com/1/1 and example.com/2/1 defined in different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
 		"rule from one ruleset cannot be overridden by a rule with the same matching expressions from another ruleset": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
@@ -110,7 +129,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"adding a route with wildcard at the path start from another ruleset is not possible": {
@@ -131,7 +150,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"adding a route with more specific host from another ruleset is not possible": {
@@ -152,7 +171,26 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
+			},
+		},
+		"adding rules matching * for host and /1/1 for path and example.com/2/1 defined in different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*", path: "/1/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.NoError(t, err)
 			},
 		},
 		"adding a route with wildcard at the path end from another ruleset is not possible": {
@@ -173,7 +211,26 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
+			},
+		},
+		"adding rules matching example.com/1/1 and example.com/2/:some defined in different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/:some"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.NoError(t, err)
 			},
 		},
 		"adding a route with free wildcard at the path end from another ruleset is not possible": {
@@ -194,7 +251,26 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
+			},
+		},
+		"adding rules matching example.com/1/1 and example.com/2/* defined in different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.NoError(t, err)
 			},
 		},
 		"adding a route with free wildcards at the path end and in the host from another ruleset is not possible": {
@@ -215,7 +291,26 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
+			},
+		},
+		"adding rules matching foo.example.com/1/2/3 and *.example.com/2/** defined in different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/2/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.NoError(t, err)
 			},
 		},
 		"rule matching foo.example.com/1/2/3 from one ruleset cannot be overridden by a rule matching *.example.com/1/:2/3 from another ruleset": {
@@ -236,7 +331,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"rule matching foo.example.com/1/:2/3 from one ruleset cannot be overridden by a rule matching *.example.com/1/** from another ruleset": {
@@ -257,10 +352,10 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
-		"rules matching foo.example.com/1/:2/3 and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
+		"adding rules matching foo.example.com/1/:2/3 and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
@@ -276,10 +371,12 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
-		"rules matching foo.example.com/1/2/:3 and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
+		"adding rules matching foo.example.com/1/2/:3 and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -295,10 +392,31 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflicting rules")
+			},
+		},
+		"adding rules matching *.example.com/1/2/3 and foo.example.com/2/2/:3 defined in different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/2/2/:3"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
 				require.NoError(t, err)
 			},
 		},
-		"rules matching foo.example.com/1/:2/:3 and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
+		"adding rules matching foo.example.com/1/:2/:3 and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -314,10 +432,12 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
-		"rules matching foo.example.com/1/** and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
+		"adding rules matching foo.example.com/1/** and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -333,10 +453,31 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflicting rules")
+			},
+		},
+		"adding rules matching *.example.com/1/2/3 and foo.example.com/2/** defined in different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/2/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
 				require.NoError(t, err)
 			},
 		},
-		"rules matching foo.example.com/** and *.example.com/1/2/3 defined in different rulesets are not overlapping": {
+		"adding rules matching foo.example.com/** and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
 				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
@@ -352,7 +493,9 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *repository) {
 				t.Helper()
 
-				require.NoError(t, err)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"overriding existing rule with wildcard in the host and at path end by a more specific rule from another rule set is not possible": {
@@ -373,7 +516,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"rule matching *.example.com/1/** defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/** from another ruleset": {
@@ -394,7 +537,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"rule matching *.example.com/1/:some/3 defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/:some/3 from another ruleset": {
@@ -415,28 +558,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
-			},
-		},
-		"rule matching *.example.com/1/** defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/2/3 from another ruleset": {
-			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
-
-				return []rule.Rule{rul}
-			}(),
-			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
-
-				return []rule.Rule{rul}
-			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"adding a route with free wildcard at the path start from another ruleset is not possible": {
@@ -457,49 +579,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
-			},
-		},
-		"overriding existing rule with wildcard at path end by a more specific rule from another rule set is not possible": {
-			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/:some"})
-
-				return []rule.Rule{rul}
-			}(),
-			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
-
-				return []rule.Rule{rul}
-			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
-			},
-		},
-		"overriding existing rule with wildcard at path start by a more specific rule from another rule set is not possible": {
-			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
-
-				return []rule.Rule{rul}
-			}(),
-			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
-				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
-
-				return []rule.Rule{rul}
-			}(),
-			assert: func(t *testing.T, err error, _ *repository) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"adding a route with free wildcard at the path end from another ruleset for a rule starting with a wildcard is not possible": {
@@ -520,7 +600,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"adding a route with free wildcard at the path start from another ruleset for a rule starting with a wildcard is not possible": {
@@ -541,7 +621,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"adding a route with free wildcard as host and at the path start from another ruleset for a rule starting with a wildcard is not possible": {
@@ -562,7 +642,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"overriding a rule with multiple wildcards by a more specific rule for some of the path segments defined in a different rule set is not possible": {
@@ -583,7 +663,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 		"overriding of a rule defining a free wildcard at the end of the path by a more specific rule from another rule set is not possible": {
@@ -604,7 +684,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 	} {
@@ -899,7 +979,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 
 				assert.Len(t, repo.knownRules, 2)
 				assert.False(t, repo.index.Empty())
@@ -938,7 +1018,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 2 from 2 conflicts with rule 1 from 1")
+				require.ErrorContains(t, err, "conflicting rules")
 
 				entry, err := repo.index.FindEntry("foo.example.com", "/bar/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
@@ -974,7 +1054,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "rule 1 from 1 conflicts with rule 2 from 2")
+				require.ErrorContains(t, err, "conflicting rules")
 
 				entry, err := repo.index.FindEntry("foo.example.com", "/bar/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
