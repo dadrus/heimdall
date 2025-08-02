@@ -66,7 +66,7 @@ Defines a set of hosts to match against the HTTP `Host` header. These conditions
 Specifies the type of expression for matching the host, which can be one of:
 
 **** `exact`: Matches the host exactly.
-**** `wildcard`: Matches the host using a wildcard expression (e.g., `*.example.com` matches all subdomains under `example.com`). The `*` can only appear once at the start of the expression, and `*` alone matches any host.
+**** `wildcard`: Matches the host using a wildcard expression (e.g., `\*.example.com` matches all subdomains under `example.com`). The `*` can only appear once at the start of the expression, and `*` alone matches any host.
 **** `glob`: Uses a https://github.com/gobwas/glob[glob expression] that the host of the incoming request must satisfy, with `.` as a delimiter (e.g., `*` matches any segment until the next `.`).
 **** `regex`: Uses a regular expression that the host of the incoming request must satisfy.
 
@@ -117,7 +117,7 @@ Defines the destination for proxied requests when heimdall operates in proxy mod
 
 ** *`host`*: _string_ (mandatory)
 +
-Specifies the host (and port) to which the request should be forwarded. If no `rewrite` property (see below) is defined, the original URL's scheme, path, and other components remain unchanged. For example, if the original request is `https://mydomain.com/api/v1/something?foo=bar&bar=baz` and this property is set to `my-backend:8080`, the forwarded request will be sent to `https://my-backend:8080/api/v1/something?foo=bar&bar=baz`.
+Specifies the host (and port) to which the request should be forwarded. If no `rewrite` property (see below) is defined, the original URL's scheme, path, and other components remain unchanged. For example, if the original request is `\https://mydomain.com/api/v1/something?foo=bar&bar=baz` and this property is set to `my-backend:8080`, the forwarded request will be sent to `\https://my-backend:8080/api/v1/something?foo=bar&bar=baz`.
 
 ** *`forward_host_header`*: _boolean_ (optional)
 +
