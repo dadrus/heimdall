@@ -33,10 +33,6 @@ The version schema of the rule set. The current version of heimdall supports onl
 +
 The name of a rule set. Used only for logging purposes.
 
-* *`backtracking_enabled`*: _boolean_ (optional)
-+
-Enables or disables backtracking within the rule set (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details). Defaults to `true`.
-
 * *`rules`*: _link:{{< relref "/docs/rules/regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
 The list of the actual rule definitions.
@@ -101,10 +97,6 @@ The actual specification of the rule set. Following properties are possible, res
 ** *`authClassName`*: _string_ (optional)
 +
 References the heimdall instance, which should use this `RuleSet`.
-
-** *`backtrackingEnabled`*: _boolean_ (optional)
-+
-Enables or disables backtracking within the rule set (see link:{{< relref "#_rule_matching_specificity_backtracking" >}}[Rule Matching Specificity & Backtracking] for more details). Defaults to `true`.
 
 ** *`rules`*: _link:{{< relref "regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
