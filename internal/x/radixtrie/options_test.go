@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package radixtree
+package radixtrie
 
 import (
 	"testing"
@@ -32,15 +32,15 @@ func TestValuesConstrainedTree(t *testing.T) {
 
 	tree2 := New[string]()
 
-	err := tree1.Add("/foo", "bar")
+	err := tree1.Add("*", "/foo", "bar")
 	require.NoError(t, err)
 
-	err = tree2.Add("/foo", "bar")
+	err = tree2.Add("*", "/foo", "bar")
 	require.NoError(t, err)
 
 	// WHEN
-	err1 := tree1.Add("/foo", "bar")
-	err2 := tree2.Add("/foo", "bar")
+	err1 := tree1.Add("*", "/foo", "bar")
+	err2 := tree2.Add("*", "/foo", "bar")
 
 	// THEN
 	require.Error(t, err1)

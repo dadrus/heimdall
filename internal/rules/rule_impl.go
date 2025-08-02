@@ -30,18 +30,17 @@ import (
 )
 
 type ruleImpl struct {
-	id                 string
-	srcID              string
-	isDefault          bool
-	allowsBacktracking bool
-	hash               []byte
-	routes             []rule.Route
-	slashesHandling    config.EncodedSlashesHandling
-	backend            *config.Backend
-	sc                 compositeSubjectCreator
-	sh                 compositeSubjectHandler
-	fi                 compositeSubjectHandler
-	eh                 compositeErrorHandler
+	id              string
+	srcID           string
+	isDefault       bool
+	hash            []byte
+	routes          []rule.Route
+	slashesHandling config.EncodedSlashesHandling
+	backend         *config.Backend
+	sc              compositeSubjectCreator
+	sh              compositeSubjectHandler
+	fi              compositeSubjectHandler
+	eh              compositeErrorHandler
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
@@ -121,10 +120,9 @@ func (r *ruleImpl) EqualTo(other rule.Rule) bool {
 		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
-func (r *ruleImpl) AllowsBacktracking() bool { return r.allowsBacktracking }
-
 type routeImpl struct {
 	rule    *ruleImpl
+	host    string
 	path    string
 	matcher RouteMatcher
 }
@@ -148,6 +146,8 @@ func (r *routeImpl) Matches(ctx heimdall.RequestContext, keys, values []string) 
 
 	return true
 }
+
+func (r *routeImpl) Host() string { return r.host }
 
 func (r *routeImpl) Path() string { return r.path }
 

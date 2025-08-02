@@ -17,7 +17,6 @@
 package config
 
 type DefaultRule struct {
-	BacktrackingEnabled bool              `koanf:"backtracking_enabled"`
-	Execute             []MechanismConfig `koanf:"execute"`
-	ErrorHandler        []MechanismConfig `koanf:"on_error"`
+	Execute      []MechanismConfig `koanf:"execute"`
+	ErrorHandler []MechanismConfig `koanf:"on_error"`
 }
