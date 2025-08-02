@@ -61,6 +61,7 @@ func BenchmarkTrieFindRootPath(b *testing.B) {
 	} {
 		b.Run(host, func(b *testing.B) {
 			host = reverseHost(host)
+
 			b.ReportAllocs()
 			b.ResetTimer()
 

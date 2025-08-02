@@ -1,7 +1,10 @@
 package radixtrie
 
+import "unsafe"
+
 type wildcardLookupStrategy[V any] struct{}
 
+// nolint: gocognit, unused, cyclop, funlen
 func (s wildcardLookupStrategy[V]) lookupNodes(trie *Trie[V], hostPattern, pathPattern string) ([]*Trie[V], error) {
 	var (
 		tokens     string
@@ -46,7 +49,7 @@ func (s wildcardLookupStrategy[V]) lookupNodes(trie *Trie[V], hostPattern, pathP
 		}
 	}
 
-	if len(trie.token) == 0 || trie.token == string(separator) {
+	if len(trie.token) == 0 || trie.token == unsafe.String(&separator, 1) { //nolint: nestif
 		switch token {
 		case ':':
 			// Only valid for paths
@@ -61,6 +64,7 @@ func (s wildcardLookupStrategy[V]) lookupNodes(trie *Trie[V], hostPattern, pathP
 				child = trie.wildcardChild
 			} else {
 				var nodes []*Trie[V]
+
 				for _, node := range trie.staticChildren {
 					_, err := s.lookupNodes(node, "", nextTokens)
 					if err == nil {

@@ -4,6 +4,7 @@ import "unsafe"
 
 type exactLookupStrategy[V any] struct{}
 
+// nolint: gocognit, unused, cyclop
 func (s exactLookupStrategy[V]) lookupNodes(trie *Trie[V], hostPattern, pathPattern string) ([]*Trie[V], error) {
 	var (
 		tokens     string
@@ -30,7 +31,7 @@ func (s exactLookupStrategy[V]) lookupNodes(trie *Trie[V], hostPattern, pathPatt
 
 	token := tokens[0]
 
-	if len(trie.token) == 0 || trie.token == string(separator) {
+	if len(trie.token) == 0 || trie.token == unsafe.String(&separator, 1) {
 		switch token {
 		case ':':
 			// Only valid for paths

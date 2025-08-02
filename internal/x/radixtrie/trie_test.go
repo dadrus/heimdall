@@ -120,19 +120,19 @@ func TestTrieLookup(t *testing.T) {
 	err := tree.Add("*.example.com", "/1/2/3", "1")
 	require.NoError(t, err)
 
-	hostNode, err := tree.Lookup("foo.example.com", "", WithExactMatch[string]())
+	_, err = tree.Lookup("foo.example.com", "", WithExactMatch[string]())
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrNotFound)
 
-	hostNode, err = tree.Lookup("foo.example.com", "", WithWildcardMatch[string]())
+	hostNode, err := tree.Lookup("foo.example.com", "", WithWildcardMatch[string]())
 	require.NoError(t, err)
 	require.NotNil(t, hostNode)
 
-	pathNode, err := hostNode[0].Lookup("", "/*", WithExactMatch[string]())
+	_, err = hostNode[0].Lookup("", "/*", WithExactMatch[string]())
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrNotFound)
 
-	pathNode, err = hostNode[0].Lookup("", "/*", WithWildcardMatch[string]())
+	pathNode, err := hostNode[0].Lookup("", "/*", WithWildcardMatch[string]())
 	require.NoError(t, err)
 	require.NotNil(t, pathNode)
 
@@ -200,7 +200,6 @@ func TestTrieLookup(t *testing.T) {
 	hostNode, err = tree.Lookup("*.example.com", "/1/2/:3", WithWildcardMatch[string]())
 	require.NoError(t, err)
 	require.NotNil(t, hostNode)
-
 }
 
 func TestTrieFindEntryPathWithWildcardHost(t *testing.T) {
@@ -591,7 +590,7 @@ func TestTrieAddWildcardPathsForDifferentHosts(t *testing.T) {
 		"host with a wildcard in the middle of the definition": {[]string{"foo.*.bar.example.com"}, true},
 		"using closed wildcard in host definition":             {[]string{":.example.com", "foo.:.example.com"}, true},
 		"mix of different hosts":                               {[]string{"bar.example.com", "bar.foo.com", "foo.bar", "example.com"}, false},
-		"katakana マ.カ":                                       {[]string{"マ.カ"}, false},
+		"katakana マ.カ":                                         {[]string{"マ.カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
@@ -634,8 +633,8 @@ func TestTrieAddPathForWildcardHost(t *testing.T) {
 		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
 		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
 		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
-		"katakana /マ":                                   {[]string{"/マ"}, false},
-		"katakana /カ":                                   {[]string{"/カ"}, false},
+		"katakana /マ":                                    {[]string{"/マ"}, false},
+		"katakana /カ":                                    {[]string{"/カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
