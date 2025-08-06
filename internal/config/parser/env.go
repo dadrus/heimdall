@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/v2"
 	"gopkg.in/yaml.v3"
 
@@ -114,8 +114,9 @@ func cleanSuffix(val any) any {
 func koanfFromEnv(prefix string) (*koanf.Koanf, error) {
 	parser := koanf.New(".")
 
-	err := parser.Load(env.ProviderWithValue(prefix, ".",
-		func(key, val string) (string, any) {
+	provider := env.Provider(".", env.Opt{
+		Prefix: prefix,
+		TransformFunc: func(key, val string) (string, any) {
 			tmp := strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(key, prefix)), "__", `\:\`)
 			tmp = strings.ReplaceAll(tmp, "_", ".")
 			normalizedKey := strings.ReplaceAll(tmp, `\:\`, "_")
@@ -123,7 +124,10 @@ func koanfFromEnv(prefix string) (*koanf.Koanf, error) {
 			newKey, newVal, hash := convert(normalizedKey, val, normalizedKey)
 
 			return fmt.Sprintf("%s#%s", newKey, hash), newVal
-		}),
+		},
+	})
+
+	err := parser.Load(provider,
 		nil,
 		koanf.WithMergeFunc(func(src, dest map[string]any) error {
 			for key, val := range src {

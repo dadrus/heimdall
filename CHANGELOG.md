@@ -1,5 +1,71 @@
 # Changelog
 
+## [0.16.8](https://github.com/dadrus/heimdall/compare/v0.16.7...v0.16.8) (2025-08-06)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to f7ecd42 ([#2611](https://github.com/dadrus/heimdall/issues/2611)) ([9f4de03](https://github.com/dadrus/heimdall/commit/9f4de03bf521f1cd5d1426627eec5e5c375e9ba0))
+* update google.golang.org/genproto/googleapis/rpc digest to a7a43d2 ([#2632](https://github.com/dadrus/heimdall/issues/2632)) ([6bf40b4](https://github.com/dadrus/heimdall/commit/6bf40b4890a04886f56539628dd65d2c95a15da1))
+* update kubernetes packages to v0.33.3 ([#2600](https://github.com/dadrus/heimdall/issues/2600)) ([0919fa5](https://github.com/dadrus/heimdall/commit/0919fa5ae6c22724059b3a2490e40bebd34b0d15))
+* update module github.com/go-co-op/gocron/v2 to v2.16.3 ([#2627](https://github.com/dadrus/heimdall/issues/2627)) ([c9a0a46](https://github.com/dadrus/heimdall/commit/c9a0a46e67cdd2ed890a2aa76949207aa2a58661))
+* update module github.com/go-jose/go-jose/v4 to v4.1.2 ([#2630](https://github.com/dadrus/heimdall/issues/2630)) ([bfd8f3e](https://github.com/dadrus/heimdall/commit/bfd8f3ebaadcf6651461753a89bef33020781434))
+* update module github.com/go-viper/mapstructure/v2 to v2.4.0 ([#2596](https://github.com/dadrus/heimdall/issues/2596)) ([34bc499](https://github.com/dadrus/heimdall/commit/34bc499f82e7af5f8a5d8875e3d30262a32740bf))
+* update module github.com/google/cel-go to v0.26.0 ([#2595](https://github.com/dadrus/heimdall/issues/2595)) ([5770ab4](https://github.com/dadrus/heimdall/commit/5770ab40199af1f22be8427015c3629978c11d21))
+* update module github.com/prometheus/client_golang to v1.23.0 ([#2628](https://github.com/dadrus/heimdall/issues/2628)) ([15a0f77](https://github.com/dadrus/heimdall/commit/15a0f772b20099cbe055a534dcee0bab3285e802))
+* update module github.com/redis/rueidis to v1.0.64 ([#2635](https://github.com/dadrus/heimdall/issues/2635)) ([b7579da](https://github.com/dadrus/heimdall/commit/b7579da826d71216a62c7b168087c867f590c118))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.64 ([#2635](https://github.com/dadrus/heimdall/issues/2635)) ([b7579da](https://github.com/dadrus/heimdall/commit/b7579da826d71216a62c7b168087c867f590c118))
+* update module github.com/spf13/pflag to v1.0.7 ([#2604](https://github.com/dadrus/heimdall/issues/2604)) ([8a38675](https://github.com/dadrus/heimdall/commit/8a38675cc382b4a7103b4867d7419289d62fd76c))
+* update module go.opentelemetry.io/otel/exporters/prometheus to v0.59.1 ([#2615](https://github.com/dadrus/heimdall/issues/2615)) ([84982d1](https://github.com/dadrus/heimdall/commit/84982d1fa173936b93dfcc2b1c202a2f807cbb9f))
+* update module gocloud.dev to v0.43.0 ([#2610](https://github.com/dadrus/heimdall/issues/2610)) ([d81a540](https://github.com/dadrus/heimdall/commit/d81a540d2f9ba94b5705387e1aa0e65d6d2082f7))
+* update module google.golang.org/grpc to v1.74.2 ([#2619](https://github.com/dadrus/heimdall/issues/2619)) ([4b9053a](https://github.com/dadrus/heimdall/commit/4b9053a810577632a7c57dce2465fcad0b38cbc0))
+
+## [0.16.7](https://github.com/dadrus/heimdall/compare/v0.16.6...v0.16.7) (2025-07-10)
+
+
+### Bug Fixes
+
+* Correct evaluation of named path params in routes with trailing free wildcard ([#2586](https://github.com/dadrus/heimdall/issues/2586)) ([b75be67](https://github.com/dadrus/heimdall/commit/b75be67602dea1d2ce43cf0ea2c3c5ca75dd0f3d))
+* TLS errors during mechanism execution always result in pipeline failure ([#2580](https://github.com/dadrus/heimdall/issues/2580)) ([adf1a83](https://github.com/dadrus/heimdall/commit/adf1a839befdddc56624cc63dcf02930855f16d3))
+
+
+### Documentation
+
+* Added missing description for the `--insecure-skip-all-tls-enforcement` flag ([#2578](https://github.com/dadrus/heimdall/issues/2578)) ([0728154](https://github.com/dadrus/heimdall/commit/07281543f8340d8ca876585ef945e45687836b8a))
+* Clarifications that CORS related functionality is only supported if heimdall is operated as proxy ([#2588](https://github.com/dadrus/heimdall/issues/2588)) ([d4fe70d](https://github.com/dadrus/heimdall/commit/d4fe70de35ed05e54013c79e7ed0a675f9745066))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 7390907 ([#2566](https://github.com/dadrus/heimdall/issues/2566)) ([49fc4dc](https://github.com/dadrus/heimdall/commit/49fc4dca46243b54ffeb22b404687a5dc377ae3a))
+* update golang to v1.24.5 ([#2584](https://github.com/dadrus/heimdall/issues/2584)) ([af14f7a](https://github.com/dadrus/heimdall/commit/af14f7a97b7025295c196fdf3c4171d1a0b64ec6))
+* update google.golang.org/genproto/googleapis/rpc digest to 8d1bb00 ([#2583](https://github.com/dadrus/heimdall/issues/2583)) ([d4a9298](https://github.com/dadrus/heimdall/commit/d4a929867afb9824e0ab96218ed1491a5144f5fc))
+* update module github.com/go-playground/validator/v10 to v10.27.0 ([#2574](https://github.com/dadrus/heimdall/issues/2574)) ([0d71576](https://github.com/dadrus/heimdall/commit/0d71576d02afbc9b06e12482124542c36f4fd844))
+* update module github.com/knadh/koanf/providers/env to v2 ([#2571](https://github.com/dadrus/heimdall/issues/2571)) ([2ad5e1c](https://github.com/dadrus/heimdall/commit/2ad5e1cd90ec4e47671a73bca44cbfe61c103cbc))
+* update module github.com/knadh/koanf/v2 to v2.2.2 ([#2587](https://github.com/dadrus/heimdall/issues/2587)) ([1cdc739](https://github.com/dadrus/heimdall/commit/1cdc739c6116eb7cb4c87bcf584781b662dac5b1))
+* update module gocloud.dev to v0.42.0 ([#2568](https://github.com/dadrus/heimdall/issues/2568)) ([7aa2365](https://github.com/dadrus/heimdall/commit/7aa2365c49949a1513b82241a466abb03284ba08))
+
+## [0.16.6](https://github.com/dadrus/heimdall/compare/v0.16.5...v0.16.6) (2025-06-28)
+
+
+### Bug Fixes
+
+* Insecure trusted proxies handling covers all cases ([#2560](https://github.com/dadrus/heimdall/issues/2560)) ([32bf3cd](https://github.com/dadrus/heimdall/commit/32bf3cdecca1057c396f481fa8964bb637c22b2f))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 3934645 ([#2536](https://github.com/dadrus/heimdall/issues/2536)) ([2542226](https://github.com/dadrus/heimdall/commit/2542226cd484ce6c263b526dcc6992d422c61234))
+* update kubernetes packages to v0.33.2 ([#2549](https://github.com/dadrus/heimdall/issues/2549)) ([86e3c3f](https://github.com/dadrus/heimdall/commit/86e3c3f467e167817c2db9c97f1296c801144d7d))
+* update module github.com/go-jose/go-jose/v4 to v4.1.1 ([#2554](https://github.com/dadrus/heimdall/issues/2554)) ([1b20fe5](https://github.com/dadrus/heimdall/commit/1b20fe5c81d7cbd86fe4b01f3933fc2e87242fbe))
+* update module github.com/go-viper/mapstructure/v2 to v2.3.0 ([#2540](https://github.com/dadrus/heimdall/issues/2540)) ([11925fd](https://github.com/dadrus/heimdall/commit/11925fd91c88e09e0a657ec8e6057260242a32a8))
+* update module github.com/jellydator/ttlcache/v3 to v3.4.0 ([#2546](https://github.com/dadrus/heimdall/issues/2546)) ([7ede4ab](https://github.com/dadrus/heimdall/commit/7ede4ab802109ad817cfc8e3c7d55c23a487b4cf))
+* update module github.com/knadh/koanf/parsers/yaml to v1.1.0 ([#2555](https://github.com/dadrus/heimdall/issues/2555)) ([9d5b1a6](https://github.com/dadrus/heimdall/commit/9d5b1a65276045f51c03f16dc72461df63b74f00))
+* update module github.com/redis/rueidis to v1.0.62 ([#2557](https://github.com/dadrus/heimdall/issues/2557)) ([63d0b04](https://github.com/dadrus/heimdall/commit/63d0b04b445be06587d68610ec986d0d131f0e1b))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.62 ([#2557](https://github.com/dadrus/heimdall/issues/2557)) ([63d0b04](https://github.com/dadrus/heimdall/commit/63d0b04b445be06587d68610ec986d0d131f0e1b))
+* update opentelemetry-go monorepo to v1.37.0 ([#2552](https://github.com/dadrus/heimdall/issues/2552)) ([f8ba183](https://github.com/dadrus/heimdall/commit/f8ba183206c31e660b51833f5bef8dc194efb5a8))
+* update opentelemetry-go-contrib monorepo to v0.62.0 ([#2553](https://github.com/dadrus/heimdall/issues/2553)) ([c057f1b](https://github.com/dadrus/heimdall/commit/c057f1b0ea6ed5dbed738169baa68330a0e80e0e))
+
 ## [0.16.5](https://github.com/dadrus/heimdall/compare/v0.16.4...v0.16.5) (2025-06-10)
 
 

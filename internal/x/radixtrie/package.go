@@ -5,4 +5,4 @@
 //
 // This package is a modified fork of https://github.com/dimfeld/httptreemux
 
-package radixtree
+package radixtrie

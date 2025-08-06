@@ -260,8 +260,11 @@ mechanisms:
   - id: user_is_admin_authz
     type: cel
     config:
+      values:
+         some_key: some-value
       expressions:
         - expression: "'admin' in Subject.Attributes.groups"
+        - expression: "Values.some_key == foo"
 
   contextualizers:
   - id: subscription_contextualizer
@@ -341,7 +344,6 @@ mechanisms:
       to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
 default_rule:
-  backtracking_enabled: false
   execute:
   - authenticator: anonymous_authenticator
   - finalizer: jwt

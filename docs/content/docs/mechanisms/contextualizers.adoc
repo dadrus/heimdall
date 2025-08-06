@@ -116,10 +116,6 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 Every entry in the items map is a map of templates. Every key will be present in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object.
 
-* *`continue_pipeline_on_error`*: _boolean_ (optional, overridable)
-+
-If set to `true`, allows the pipeline to continue with the execution of the next mechanisms. So the error, if thrown, is ignored. Defaults to `false`, which means the execution of the authentication & authorization pipeline is stopped and the execution of the error pipeline is started.
-
 * *`values`* _map of strings_ (optional, overridable)
 +
 A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.

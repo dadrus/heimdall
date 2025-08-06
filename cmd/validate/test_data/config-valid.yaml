@@ -10,7 +10,7 @@ serve:
       - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
       - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
   trusted_proxies:
-    - 10.10.10.0/0
+    - 10.10.10.0/16
   respond:
     verbose: true
     with:
@@ -212,8 +212,10 @@ mechanisms:
     - id: attributes_based_authorizer_2
       type: cel
       config:
+        values:
+          foo: bar
         expressions:
-          - expression: "'admin' in Subject.Attributes.groups"
+          - expression: "'admin' in Subject.Attributes.groups && Values.foo == 'bar'"
   contextualizers:
     - id: subscription_contextualizer
       type: generic
@@ -225,6 +227,13 @@ mechanisms:
             bla: bla
         payload: foo
         continue_pipeline_on_error: true
+    - id: mapping
+      type: map
+      config:
+        items:
+          my_endpoint: "https://some-other.service/users/{{ .Values.user_id }}"
+        values:
+          user_id: "{{ .Subject.ID }}"
     - id: profile_data_contextualizer
       type: generic
       config:
@@ -267,7 +276,6 @@ mechanisms:
         realm: Please authenticate
 
 default_rule:
-  backtracking_enabled: false
   execute:
     - authenticator: unauthorized_authenticator
     - finalizer: jwt

@@ -1586,6 +1586,12 @@
             "expressions"
           ],
           "properties": {
+            "values": {
+              "description": "Key-Value map with entries required for templating of expressions",
+              "type": "object",
+              "minLength": 0,
+              "uniqueItems": true
+            },
             "expressions": {
               "$ref": "#/definitions/expressionList"
             }
@@ -1667,7 +1673,7 @@
           "const": "generic"
         },
         "id": {
-          "description": "The unique id of the contextualizers to be used in the rule definition",
+          "description": "The unique id of the contextualizer to be used in the rule definition",
           "type": "string"
         },
         "config": {
@@ -1723,6 +1729,48 @@
               "minLength": 0,
               "uniqueItems": true,
               "default": []
+            }
+          }
+        }
+      }
+    },
+    "contextualizerMap": {
+      "description": "Map Contextualizer",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "config"
+      ],
+      "properties": {
+        "type": {
+          "const": "map"
+        },
+        "id": {
+          "description": "The unique id of the contextualizer to be used in the rule definition",
+          "type": "string"
+        },
+        "config": {
+          "description": "Map Contextualizer Configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "items"
+          ],
+          "properties": {
+            "items": {
+              "description": "Key-Value map with templated entries. Referenced template variables will be resolved from the values property defined below.",
+              "type": "object",
+              "minLength": 1,
+              "uniqueItems": true
+            },
+            "values": {
+              "description": "Key-Value map with entries required for templating",
+              "type": "object",
+              "minLength": 0,
+              "uniqueItems": true,
+              "default": {}
             }
           }
         }
@@ -2145,8 +2193,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "authenticators",
-        "finalizers"
+        "authenticators"
       ],
       "properties": {
         "error_handlers": {
@@ -2223,7 +2270,14 @@
           "additionalItems": false,
           "uniqueItems": true,
           "items": {
-            "$ref": "#/definitions/contextualizerGeneric"
+            "anyOf": [
+              {
+                "$ref": "#/definitions/contextualizerGeneric"
+              },
+              {
+                "$ref": "#/definitions/contextualizerMap"
+              }
+            ]
           }
         },
         "finalizers": {
@@ -2474,11 +2528,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "backtracking_enabled": {
-          "description": "Enables or disables backtracking while matching the rules globally. Defaults to false.",
-          "type": "boolean",
-          "default": false
-        },
         "execute": {
           "description": "The mechanisms to execute (authenticators, authorizers, etc)",
           "type": "array",

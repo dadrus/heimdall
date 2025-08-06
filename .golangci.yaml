@@ -28,7 +28,6 @@ linters:
     gomoddirectives:
       replace-allow-list:
         - github.com/ebitengine/purego
-        - github.com/jellydator/ttlcache/v3
     mnd:
       ignored-functions:
         - ^make

@@ -9,7 +9,6 @@ rules:
           - name: bar
             type: glob
             value: "*baz"
-    backtracking_enabled: false
     methods:
       - GET
       - POST

@@ -80,13 +80,12 @@ The diagram below sketches the logic executed by heimdall for each and every inc
 
 == Matching of Rules
 
-As written above, an link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream specific rule] is only executed when it matches an incoming request.
+As written above, an link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream-specific rule] is only executed if it matches an incoming request.
 
-The actual matching happens via the requests URL path, which is guaranteed to happen with O(log(n)) time complexity and is based on the path expressions specified in the loaded rules. These expressions support usage of (named) wildcards to capture segments of the matched path. The implementation ensures, that more specific path expressions are matched first regardless of the placement of rules in a link:{{< relref "/docs/concepts/provider.adoc#_rule_sets" >}}[rule set].
+The actual matching is primarily based on the request’s host and path, which are evaluated against the expressions defined in the loaded rules. This matching process is optimized for performance and guaranteed to run with O(log n) time complexity. Host expressions can use exact values, wildcards, globs, or regular expressions. For paths, both static segments and wildcards are supported. Wildcards may span a single segment or the remainder of the path and can be named, allowing their captured values to be reused — for example, to apply additional pattern constraints or to reference them later in the rule's pipeline. HTTP scheme and method can also be taken into account during matching.
 
-Additional conditions, like the host, the HTTP method, or application of regular or glob expressions can also be taken into account, allowing different rules for the same path expressions. The information about the HTTP method, scheme, host, path and query is taken either from the request itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri` and `X-Forwarded-Method` headers of the incoming request.
+The values used for matching — host, path, scheme, and method — are typically extracted directly from the incoming HTTP request. If link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configured to do so], heimdall can instead rely on values from standard `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri`, and `X-Forwarded-Method` headers.
 
-There is also an option to have backtracking to a rule with a less specific path expression, if the actual specific path is matched, but the above said additional conditions are not satisfied.
 
 == Default Rule & Inheritance
 

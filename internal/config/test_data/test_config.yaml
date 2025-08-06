@@ -363,6 +363,13 @@ mechanisms:
             bla: bla
         payload: http://foo
         continue_pipeline_on_error: true
+    - id: mapping
+      type: map
+      config:
+        items:
+          my_endpoint: "https://some-other.service/users/{{ .Values.user_id }}"
+        values:
+          user_id: "{{ .Subject.ID }}"
     - id: profile_data_contextualizer
       type: generic
       config:
@@ -439,7 +446,6 @@ mechanisms:
         to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 
 default_rule:
-  backtracking_enabled: false
   execute:
     - authenticator: anonymous_authenticator
     - finalizer: jwt

@@ -30,6 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 func NewRuleFactory(
@@ -59,86 +60,95 @@ func NewRuleFactory(
 }
 
 type ruleFactory struct {
-	hf                  mechanisms.MechanismFactory
-	logger              zerolog.Logger
-	defaultRule         *ruleImpl
-	hasDefaultRule      bool
-	secureDefaultRule   bool
-	mode                config.OperationMode
-	defaultBacktracking bool
+	hf                mechanisms.MechanismFactory
+	logger            zerolog.Logger
+	defaultRule       *ruleImpl
+	hasDefaultRule    bool
+	secureDefaultRule bool
+	mode              config.OperationMode
 }
 
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
 // nolint:cyclop,funlen
-func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (rule.Rule, error) {
-	if f.mode == config.ProxyMode && ruleConfig.Backend == nil {
+func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.Rule, error) {
+	if f.mode == config.ProxyMode && rc.Backend == nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
-	slashesHandling := x.IfThenElse(len(ruleConfig.EncodedSlashesHandling) != 0,
-		ruleConfig.EncodedSlashesHandling,
+	if rc.Matcher.BacktrackingEnabled != nil {
+		f.logger.Warn().Msgf("Rule ID=%s from %s has a deprecated 'backtracking_enabled' property configured", rc.ID, srcID)
+	}
+
+	slashesHandling := x.IfThenElse(len(rc.EncodedSlashesHandling) != 0,
+		rc.EncodedSlashesHandling,
 		config2.EncodedSlashesOff,
 	)
 
-	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
+	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, rc.Execute)
 	if err != nil {
 		return nil, err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(version, ruleConfig.ErrorHandler)
+	errorHandlers, err := f.createOnErrorPipeline(version, rc.ErrorHandler)
 	if err != nil {
 		return nil, err
 	}
-
-	var allowsBacktracking bool
 
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
 		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
-		allowsBacktracking = x.IfThenElseExec(ruleConfig.Matcher.BacktrackingEnabled != nil,
-			func() bool { return *ruleConfig.Matcher.BacktrackingEnabled },
-			func() bool { return f.defaultBacktracking })
 	}
 
 	if len(authenticators) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
 	}
 
-	hash, err := ruleConfig.Hash()
+	hash, err := rc.Hash()
 	if err != nil {
 		return nil, err
 	}
 
 	rul := &ruleImpl{
-		id:                 ruleConfig.ID,
-		srcID:              srcID,
-		slashesHandling:    slashesHandling,
-		allowsBacktracking: allowsBacktracking,
-		backend:            ruleConfig.Backend,
-		hash:               hash,
-		sc:                 authenticators,
-		sh:                 subHandlers,
-		fi:                 finalizers,
-		eh:                 errorHandlers,
+		id:              rc.ID,
+		srcID:           srcID,
+		slashesHandling: slashesHandling,
+		backend:         rc.Backend,
+		hash:            hash,
+		sc:              authenticators,
+		sh:              subHandlers,
+		fi:              finalizers,
+		eh:              errorHandlers,
 	}
 
-	mm, err := createMethodMatcher(ruleConfig.Matcher.Methods)
+	// filter those host settings, which can be used in the trie structure,
+	trieHosts := slicex.Filter(rc.Matcher.Hosts, func(hm config2.HostMatcher) bool {
+		return hm.Type == "exact" || hm.Type == "wildcard"
+	})
+	// get the remaining entries
+	matcherHosts := slicex.Subtract(rc.Matcher.Hosts, trieHosts)
+
+	// if no exact, or wildcard hosts are defined, we create a virtual "match everything" wildcard host
+	if len(trieHosts) == 0 {
+		trieHosts = append(trieHosts, config2.HostMatcher{Type: "wildcard", Value: "*"})
+	}
+
+	hm, err := createHostMatcher(matcherHosts)
 	if err != nil {
 		return nil, err
 	}
 
-	hm, err := createHostMatcher(ruleConfig.Matcher.Hosts)
+	mm, err := createMethodMatcher(rc.Matcher.Methods)
 	if err != nil {
 		return nil, err
 	}
 
-	sm := schemeMatcher(ruleConfig.Matcher.Scheme)
+	sm := schemeMatcher(rc.Matcher.Scheme)
 
-	for _, rc := range ruleConfig.Matcher.Routes {
+	for _, rc := range rc.Matcher.Routes {
 		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
@@ -146,12 +156,15 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 				CausedBy(err)
 		}
 
-		rul.routes = append(rul.routes,
-			&routeImpl{
-				rule:    rul,
-				path:    rc.Path,
-				matcher: andMatcher{sm, mm, hm, ppm},
-			})
+		for _, host := range trieHosts {
+			rul.routes = append(rul.routes,
+				&routeImpl{
+					rule:    rul,
+					host:    host.Value,
+					path:    rc.Path,
+					matcher: andMatcher{sm, mm, hm, ppm},
+				})
+		}
 	}
 
 	return rul, nil
@@ -358,7 +371,6 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	f.hasDefaultRule = true
-	f.defaultBacktracking = ruleConfig.BacktrackingEnabled
 
 	return nil
 }

@@ -17,10 +17,13 @@
 package rules
 
 import (
+	"strings"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type compositeSubjectHandler []subjectHandler
@@ -32,6 +35,10 @@ func (cm compositeSubjectHandler) Execute(ctx heimdall.RequestContext, sub *subj
 		err := handler.Execute(ctx, sub)
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
+
+			if strings.Contains(err.Error(), "tls:") {
+				return errorchain.New(heimdall.ErrInternal).CausedBy(err)
+			}
 
 			if handler.ContinueOnError() {
 				logger.Info().Msg("Error ignored. Continuing pipeline execution")

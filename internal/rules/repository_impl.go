@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/radixtree"
+	"github.com/dadrus/heimdall/internal/x/radixtrie"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
@@ -35,8 +35,8 @@ type repository struct {
 	knownRules      []rule.Rule
 	knownRulesMutex sync.Mutex
 
-	index          *radixtree.Tree[rule.Route]
-	rulesTreeMutex sync.RWMutex
+	index          *radixtrie.Trie[rule.Route]
+	rulesTrieMutex sync.RWMutex
 }
 
 func newRepository(ruleFactory rule.Factory) rule.Repository {
@@ -44,8 +44,8 @@ func newRepository(ruleFactory rule.Factory) rule.Repository {
 		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
 			func() rule.Rule { return ruleFactory.DefaultRule() },
 			func() rule.Rule { return nil }),
-		index: radixtree.New[rule.Route](
-			radixtree.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
+		index: radixtrie.New[rule.Route](
+			radixtrie.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
 				// only rules from the same rule set can be placed in one node
 				return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
 			}),
@@ -56,12 +56,13 @@ func newRepository(ruleFactory rule.Factory) rule.Repository {
 func (r *repository) FindRule(ctx heimdall.RequestContext) (rule.Rule, error) {
 	request := ctx.Request()
 
-	r.rulesTreeMutex.RLock()
-	defer r.rulesTreeMutex.RUnlock()
+	r.rulesTrieMutex.RLock()
+	defer r.rulesTrieMutex.RUnlock()
 
-	entry, err := r.index.Find(
+	entry, err := r.index.FindEntry(
+		request.URL.Host,
 		x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path),
-		radixtree.LookupMatcherFunc[rule.Route](func(route rule.Route, keys, values []string) bool {
+		radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, keys, values []string) bool {
 			return route.Matches(ctx, keys, values)
 		}),
 	)
@@ -83,7 +84,27 @@ func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) 
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
-	tmp := r.index.Clone()
+	// Check if the rules from the new rule set define more generic routes for
+	// already existing ones. If so, reject them
+
+	// create a trie containing only the new rules
+	tmp := radixtrie.New[rule.Route](
+		radixtrie.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
+			// only rules from the same rule set can be placed in one node
+			return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
+		}))
+	if err := r.addRulesTo(tmp, rules); err != nil {
+		return err
+	}
+
+	// Check if adding existing rules would result in the violation of the constraint, that
+	// more specific and more generic rules must be defined in the same rule set
+	if err := r.addRulesTo(tmp, r.knownRules); err != nil {
+		return err
+	}
+
+	// Try adding the new rules into the existing index now.
+	tmp = r.index.Clone()
 
 	if err := r.addRulesTo(tmp, rules); err != nil {
 		return err
@@ -91,9 +112,9 @@ func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) 
 
 	r.knownRules = append(r.knownRules, rules...)
 
-	r.rulesTreeMutex.Lock()
+	r.rulesTrieMutex.Lock()
 	r.index = tmp
-	r.rulesTreeMutex.Unlock()
+	r.rulesTrieMutex.Unlock()
 
 	return nil
 }
@@ -132,7 +153,33 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 		return ruleGone || ruleChanged
 	})
 
-	tmp := r.index.Clone()
+	// prepare the new set of known rules, which does not contain the rules, which are gone
+	// with the update
+	knownRules := slices.DeleteFunc(slices.Clone(r.knownRules), func(loaded rule.Rule) bool {
+		return slices.Contains(toBeDeleted, loaded)
+	})
+
+	// Check if the to be added rules define more generic routes for already existing ones.
+	// If so, reject them
+
+	// create a trie containing only the new rules
+	tmp := radixtrie.New[rule.Route](
+		radixtrie.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
+			// only rules from the same rule set can be placed in one node
+			return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
+		}))
+	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
+		return err
+	}
+
+	// Check if adding existing rules would result in the violation of the constraint, that
+	// more specific and more generic rules must be defined in the same rule set
+	if err := r.addRulesTo(tmp, knownRules); err != nil {
+		return err
+	}
+
+	// Try updating the existing index now.
+	tmp = r.index.Clone()
 
 	// delete rules
 	if err := r.removeRulesFrom(tmp, toBeDeleted); err != nil {
@@ -144,14 +191,12 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 		return err
 	}
 
-	r.knownRules = slices.DeleteFunc(r.knownRules, func(loaded rule.Rule) bool {
-		return slices.Contains(toBeDeleted, loaded)
-	})
-	r.knownRules = append(r.knownRules, toBeAdded...)
+	knownRules = append(knownRules, toBeAdded...)
+	r.knownRules = knownRules
 
-	r.rulesTreeMutex.Lock()
+	r.rulesTrieMutex.Lock()
 	r.index = tmp
-	r.rulesTreeMutex.Unlock()
+	r.rulesTrieMutex.Unlock()
 
 	return nil
 }
@@ -174,22 +219,61 @@ func (r *repository) DeleteRuleSet(_ context.Context, srcID string) error {
 		return slices.Contains(applicable, r)
 	})
 
-	r.rulesTreeMutex.Lock()
+	r.rulesTrieMutex.Lock()
 	r.index = tmp
-	r.rulesTreeMutex.Unlock()
+	r.rulesTrieMutex.Unlock()
 
 	return nil
 }
 
-func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Route], rules []rule.Rule) error {
+func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.Rule) error {
 	for _, rul := range rules {
 		for _, route := range rul.Routes() {
-			if err := tree.Add(
-				route.Path(),
+			srcID := rul.SrcID()
+			path := route.Path()
+			host := route.Host()
+
+			entry, _ := trie.FindEntry(
+				host,
+				path,
+				radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, _, _ []string) bool {
+					return route.Rule().SrcID() != srcID
+				}),
+			)
+			if entry != nil {
+				return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+					"conflicting rules: %s from %s and %s from %s",
+					rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
+			}
+
+			nodes, _ := trie.Lookup(host, "", radixtrie.WithWildcardMatch[rule.Route]())
+			for _, node := range nodes {
+				entry, _ = node.FindEntry(
+					"",
+					path,
+					radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, _, _ []string) bool {
+						return route.Rule().SrcID() != srcID
+					}),
+				)
+				if entry != nil {
+					return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+						"conflicting rules: %s from %s and %s from %s",
+						rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
+				}
+			}
+
+			if err := trie.Add(
+				host,
+				path,
 				route,
-				radixtree.WithBacktracking[rule.Route](rul.AllowsBacktracking()),
-			); err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed adding rule ID='%s'", rul.ID()).
+				radixtrie.WithBacktrackingControl(
+					func(values []rule.Route) bool {
+						// backtracking is only possible within the same rule set
+						return len(values) == 0 || values[0].Rule().SrcID() == srcID
+					},
+				)); err != nil {
+				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+					"failed adding rule %s from %s", rul.ID(), srcID).
 					CausedBy(err)
 			}
 		}
@@ -198,16 +282,18 @@ func (r *repository) addRulesTo(tree *radixtree.Tree[rule.Route], rules []rule.R
 	return nil
 }
 
-func (r *repository) removeRulesFrom(tree *radixtree.Tree[rule.Route], tbdRules []rule.Rule) error {
+func (r *repository) removeRulesFrom(trie *radixtrie.Trie[rule.Route], tbdRules []rule.Rule) error {
 	for _, rul := range tbdRules {
 		for _, route := range rul.Routes() {
-			if err := tree.Delete(
+			if err := trie.Delete(
+				route.Host(),
 				route.Path(),
-				radixtree.ValueMatcherFunc[rule.Route](func(route rule.Route) bool {
+				radixtrie.ValueMatcherFunc[rule.Route](func(route rule.Route) bool {
 					return route.Rule().SameAs(rul)
 				}),
 			); err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed deleting rule ID='%s'", rul.ID()).
+				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+					"failed deleting rule %s from %s", rul.ID(), rul.SrcID()).
 					CausedBy(err)
 			}
 		}

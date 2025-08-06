@@ -17,7 +17,7 @@ Depending on the configured provider, the rules can be then loaded from e.g. a p
 * as a regular JSON/YAML file, the so-called link:{{< relref "#_regular_rule_set" >}}[regular rule set], and
 * as a kubernetes link:{{< relref "#_kubernetes_rule_set" >}}[custom resource rule set], which is actually a YAML/JSON file as well, but adheres to corresponding kubernetes requirements.
 
-The main difference is the internal structure. Both do however require the specification of a version and a list or rules.
+The main difference is the internal structure. Both do however require the specification of a version and a list of rules.
 
 == Regular Rule Set
 

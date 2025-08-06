@@ -37,7 +37,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 			second *rulemocks.SubjectHandlerMock, sub *subject.Subject)
 		assert func(t *testing.T, err error)
 	}{
-		"All succeeded": {
+		"all succeeded": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
 				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
 			) {
@@ -52,7 +52,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		"First fails without pipeline continuation": {
+		"first fails without pipeline continuation": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
 				_ *rulemocks.SubjectHandlerMock, sub *subject.Subject,
 			) {
@@ -68,7 +68,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				assert.Equal(t, "first fails", err.Error())
 			},
 		},
-		"First fails with pipeline continuation, second succeeds": {
+		"first fails with pipeline continuation, second succeeds": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
 				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
 			) {
@@ -84,7 +84,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		"Second fails without pipeline continuation": {
+		"second fails without pipeline continuation": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
 				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
 			) {
@@ -101,7 +101,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				assert.Equal(t, "second fails", err.Error())
 			},
 		},
-		"Second fails with pipeline continuation": {
+		"second fails with pipeline continuation": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
 				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
 			) {
@@ -115,6 +115,21 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
+			},
+		},
+		"tls related error stops pipeline execution": {
+			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
+				_ *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+			) {
+				t.Helper()
+
+				first.EXPECT().Execute(ctx, sub).Return(errors.New("tls: some error"))
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 			},
 		},
 	} {
