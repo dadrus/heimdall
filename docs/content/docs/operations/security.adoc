@@ -217,7 +217,7 @@ cosign verify ghcr.io/dadrus/heimdall/chart/heimdall:<tag> \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.15.0`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.15.8`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
 
 ==== Provenance Verification with slsa-verifier
 
@@ -238,7 +238,7 @@ slsa-verifier verify-image "${IMAGE}@${DIGEST}" \
   --source-tag <heimdall release version>
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.15.0`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.15.8`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
 
 === Release Binary Verification
 
