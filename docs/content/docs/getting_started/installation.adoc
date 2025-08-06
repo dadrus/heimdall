@@ -91,8 +91,8 @@ Following tag patterns exist:
 +
 [source, bash]
 ----
-$ docker pull dadrus/heimdall:0.15.10 && docker run dadrus/heimdall:0.15.10 --version
-heimdall version v0.15.10
+$ docker pull dadrus/heimdall:0.16.8 && docker run dadrus/heimdall:0.16.8 --version
+heimdall version v0.16.8
 ----
 
 * `latest` - will pull the most recent tagged release.
@@ -100,7 +100,7 @@ heimdall version v0.15.10
 [source, bash]
 ----
 $ docker pull dadrus/heimdall:latest && docker run dadrus/heimdall:latest --version
-heimdall version 0.15.10
+heimdall version 0.16.8
 ----
 
 == Helm Chart
