@@ -26,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -44,8 +45,11 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "anon", auth.Subject)
+				assert.Equal(t, "anon", auth.subject.ID)
 				assert.Equal(t, "subject is set to anon", auth.ID())
+				assert.Equal(t, auth.Name(), auth.Name())
+				assert.Empty(t, auth.subject.Attributes)
+				assert.NotNil(t, auth.subject.Attributes)
 			},
 		},
 		"default subject": {
@@ -55,8 +59,11 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "anonymous", auth.Subject)
+				assert.Equal(t, "anonymous", auth.subject.ID)
 				assert.Equal(t, "default subject", auth.ID())
+				assert.Equal(t, auth.Name(), auth.Name())
+				assert.Empty(t, auth.subject.Attributes)
+				assert.NotNil(t, auth.subject.Attributes)
 			},
 		},
 		"unsupported attributes": {
@@ -97,6 +104,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator)
 	}{
 		"no new configuration for the configured authenticator": {
@@ -106,7 +114,6 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "anonymous", configured.Subject)
 				assert.Equal(t, "no new configuration for the configured authenticator", configured.ID())
 			},
 		},
@@ -119,11 +126,42 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, prototype.id, configured.id)
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Empty(t, prototype.subject.Attributes)
+				assert.NotNil(t, prototype.subject.Attributes)
+				assert.Equal(t, prototype.subject.Attributes, configured.subject.Attributes)
 				assert.Equal(t, "new subject for the configured authenticator", configured.ID())
-				assert.NotEqual(t, prototype.Subject, configured.Subject)
-				assert.Equal(t, "anon", prototype.Subject)
-				assert.Equal(t, "foo", configured.Subject)
+				assert.NotEqual(t, prototype.subject, configured.subject)
+				assert.Equal(t, "anon", prototype.subject.ID)
+				assert.Equal(t, "foo", configured.subject.ID)
+			},
+		},
+		"step id is configured": {
+			prototypeConfig: []byte("subject: anon"),
+			stepID:          "foo",
+			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "step id is configured", prototype.ID())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.subject, configured.subject)
+				assert.NotNil(t, prototype.subject.Attributes)
+			},
+		},
+		"empty subject for the configured authenticator": {
+			prototypeConfig: []byte("subject: anon"),
+			config:          []byte("subject: ''"),
+			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"malformed configured authenticator config": {
@@ -133,7 +171,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 	} {
@@ -156,11 +194,13 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig("", conf)
+			auth, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			baa, ok := auth.(*anonymousAuthenticator)
-			require.True(t, ok)
+			if err == nil {
+				require.True(t, ok)
+			}
 
 			tc.assert(t, err, prototype, baa)
 		})
@@ -171,21 +211,18 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	subjectID := "anon"
-	auth := anonymousAuthenticator{Subject: subjectID, id: "anon_auth"}
+	sub := &subject.Subject{ID: "anon"}
+	auth := anonymousAuthenticator{subject: sub, id: "anon_auth"}
 
 	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
 	// WHEN
-	sub, err := auth.Execute(ctx)
+	res, err := auth.Execute(ctx)
 
 	// THEN
 	require.NoError(t, err)
-	assert.NotNil(t, sub)
-	assert.Equal(t, subjectID, sub.ID)
-	assert.Empty(t, sub.Attributes)
-	assert.NotNil(t, sub.Attributes)
+	assert.Equal(t, sub, res)
 }
 
 func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {
