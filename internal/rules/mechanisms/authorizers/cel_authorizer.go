@@ -34,18 +34,19 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerCEL {
 				return false, nil, nil
 			}
 
-			auth, err := newCELAuthorizer(app, id, conf)
+			auth, err := newCELAuthorizer(app, name, conf)
 
 			return true, auth, err
 		})
 }
 
 type celAuthorizer struct {
+	name        string
 	id          string
 	app         app.Context
 	celEnv      *cel.Env
@@ -53,9 +54,12 @@ type celAuthorizer struct {
 	v           values.Values
 }
 
-func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*celAuthorizer, error) {
+func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (*celAuthorizer, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating cel authorizer")
+	logger.Info().
+		Str("_type", AuthorizerCEL).
+		Str("_name", name).
+		Msg("Creating authorizer")
 
 	type Config struct {
 		Expressions []Expression  `mapstructure:"expressions" validate:"required,gt=0,dive"`
@@ -65,7 +69,7 @@ func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*ce
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for cel authorizer '%s'", id).CausedBy(err)
+			"failed decoding config for cel authorizer '%s'", name).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
@@ -80,7 +84,8 @@ func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*ce
 	}
 
 	return &celAuthorizer{
-		id:          id,
+		name:        name,
+		id:          name,
 		app:         app,
 		celEnv:      env,
 		expressions: expressions,
@@ -90,7 +95,11 @@ func newCELAuthorizer(app app.Context, id string, rawConfig map[string]any) (*ce
 
 func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", a.id).Msg("Authorizing using CEL authorizer")
+	logger.Debug().
+		Str("_type", AuthorizerCEL).
+		Str("_name", a.name).
+		Str("_id", a.id).
+		Msg("Executing authorizer")
 
 	vals, err := a.v.Render(map[string]any{
 		"Request": ctx.Request(),
@@ -113,8 +122,15 @@ func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subjec
 }
 
 func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Authorizer, error) {
-	if len(rawConfig) == 0 {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
+	}
+
+	if len(rawConfig) == 0 {
+		auth := *a
+		auth.id = stepID
+
+		return &auth, nil
 	}
 
 	type Config struct {
@@ -125,7 +141,7 @@ func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Aut
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for cel authorizer '%s'", a.id).CausedBy(err)
+			"failed decoding config for cel authorizer '%s'", a.name).CausedBy(err)
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)
@@ -134,13 +150,16 @@ func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Aut
 	}
 
 	return &celAuthorizer{
-		id:          a.id,
+		name:        a.name,
+		id:          x.IfThenElse(len(stepID) == 0, a.id, stepID),
 		app:         a.app,
 		celEnv:      a.celEnv,
 		expressions: x.IfThenElse(len(expressions) != 0, expressions, a.expressions),
 		v:           a.v.Merge(conf.Values),
 	}, nil
 }
+
+func (a *celAuthorizer) Name() string { return a.name }
 
 func (a *celAuthorizer) ID() string { return a.id }
 

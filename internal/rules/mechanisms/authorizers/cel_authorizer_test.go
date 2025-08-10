@@ -46,7 +46,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'expressions' is a required field")
+				require.ErrorContains(t, err, "'expressions' is a required field")
 			},
 		},
 		"without rules": {
@@ -56,7 +56,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'expressions' must contain more than 0 items")
+				require.ErrorContains(t, err, "'expressions' must contain more than 0 items")
 			},
 		},
 		"with malformed expressions": {
@@ -69,7 +69,7 @@ expressions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to compile")
+				require.ErrorContains(t, err, "failed to compile")
 			},
 		},
 		"with expression, which doesn't return bool value": {
@@ -82,7 +82,7 @@ expressions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "wanted bool")
+				require.ErrorContains(t, err, "wanted bool")
 			},
 		},
 		"with unsupported attributes": {
@@ -97,7 +97,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with expression list without expression value": {
@@ -110,7 +110,7 @@ expressions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'expressions'[0].'expression' is a required field")
+				require.ErrorContains(t, err, "'expressions'[0].'expression' is a required field")
 			},
 		},
 		"with minimal valid configuration": {
@@ -124,6 +124,7 @@ expressions:
 
 				require.NoError(t, err)
 				assert.Equal(t, "with minimal valid configuration", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.NotNil(t, auth.celEnv)
 				assert.NotEmpty(t, auth.expressions)
 				assert.Empty(t, auth.v)
@@ -143,6 +144,7 @@ expressions:
 
 				require.NoError(t, err)
 				assert.Equal(t, "with full configuration", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.NotNil(t, auth.celEnv)
 				assert.NotEmpty(t, auth.expressions)
 				assert.Len(t, auth.v, 1)
@@ -177,9 +179,10 @@ func TestCreateCELAuthorizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer)
 	}{
-		"no new configuration provided": {
+		"no new configuration and no step id": {
 			prototypeConfig: []byte(`
 values:
   foo: bar
@@ -191,6 +194,30 @@ expressions:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+			},
+		},
+		"no new configuration but step id": {
+			prototypeConfig: []byte(`
+values:
+  foo: bar
+expressions: 
+  - expression: "Request.URL.Scheme == 'http'"
+`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, configured)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.v, configured.v)
+				assert.Equal(t, prototype.expressions, configured.expressions)
+				assert.Equal(t, prototype.celEnv, configured.celEnv)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 			},
 		},
 		"new values provided": {
@@ -242,6 +269,33 @@ expressions:
 				assert.Equal(t, "new expressions provided", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
+			},
+		},
+		"new expressions and step id provided": {
+			prototypeConfig: []byte(`
+values:
+  foo: bar
+expressions: 
+  - expression: "Request.URL.Scheme == 'http'"
+`),
+			config: []byte(`
+expressions: 
+  - expression: "Request.Header('X-Foo-Bar') == 'Baz'"
+`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				require.NotNil(t, configured)
+				assert.NotEqual(t, prototype.expressions, configured.expressions)
+				assert.Equal(t, prototype.celEnv, configured.celEnv)
+				assert.Equal(t, prototype.v, configured.v)
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 			},
 		},
 		"malformed values": {
@@ -302,7 +356,7 @@ expressions:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig("", conf)
+			auth, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
@@ -345,7 +399,7 @@ expressions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthorization)
-				assert.Contains(t, err.Error(), "expression 1 failed")
+				require.ErrorContains(t, err, "expression 1 failed")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -371,7 +425,7 @@ expressions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render values")
+				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
