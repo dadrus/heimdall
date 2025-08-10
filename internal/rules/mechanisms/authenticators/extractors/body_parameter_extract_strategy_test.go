@@ -49,7 +49,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "no usable body present")
+				require.ErrorContains(t, err, "no usable body present")
 			},
 		},
 		"json body does not contain required parameter": {
@@ -67,7 +67,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "no foobar parameter present")
+				require.ErrorContains(t, err, "no foobar parameter present")
 			},
 		},
 		"form url encoded body does not contain required parameter": {
@@ -85,7 +85,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "no foobar parameter present")
+				require.ErrorContains(t, err, "no foobar parameter present")
 			},
 		},
 		"body contains required parameter multiple times #1": {
@@ -103,7 +103,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "multiple times")
+				require.ErrorContains(t, err, "multiple times")
 			},
 		},
 		"body contains required parameter multiple times #2": {
@@ -121,7 +121,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "multiple times")
+				require.ErrorContains(t, err, "multiple times")
 			},
 		},
 		"body contains required parameter in wrong format #1": {
@@ -139,7 +139,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "unexpected type")
+				require.ErrorContains(t, err, "unexpected type")
 			},
 		},
 		"body contains required parameter in wrong format #2": {
@@ -157,7 +157,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "unexpected type")
+				require.ErrorContains(t, err, "unexpected type")
 			},
 		},
 		"body contains required parameter #1": {
