@@ -101,7 +101,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"missing url config": {
@@ -118,7 +118,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'jwks_endpoint' is a required field")
+				require.ErrorContains(t, err, "'jwks_endpoint' is a required field")
 			},
 		},
 		"missing trusted_issuers for jwks endpoint based configuration": {
@@ -205,15 +205,13 @@ assertions:
 				// cache settings
 				assert.Nil(t, auth.ttl)
 
-				// fallback settings
-				assert.False(t, auth.allowFallbackOnError)
-
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
 				assert.Empty(t, auth.trustStore)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Equal(t, "minimal jwks endpoint based configuration with defaults, without cache and TLS enforcement", auth.ID())
 			},
 		},
 		"minimal jwks endpoint based configuration with cache and TLS enforcement": {
@@ -271,15 +269,13 @@ cache_ttl: 5s`),
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 
-				// fallback settings
-				assert.False(t, auth.allowFallbackOnError)
-
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
 				assert.Empty(t, auth.trustStore)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Equal(t, "minimal jwks endpoint based configuration with cache and TLS enforcement", auth.ID())
 			},
 		},
 		"minimal jwks endpoint based configuration with enforced but disabled TLS": {
@@ -369,15 +365,13 @@ trust_store: ` + trustStorePath),
 				// cache settings
 				assert.Nil(t, auth.ttl)
 
-				// fallback settings
-				assert.True(t, auth.allowFallbackOnError)
-
 				// jwk validation settings
 				assert.False(t, auth.validateJWKCert)
 				assert.Contains(t, auth.trustStore, rootCA1.Certificate)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Equal(t, "valid configuration with overwrites, without cache", auth.ID())
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -451,15 +445,13 @@ cache_ttl: 5s`),
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 
-				// fallback settings
-				assert.False(t, auth.allowFallbackOnError)
-
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
 				assert.Empty(t, auth.trustStore)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Equal(t, "metadata endpoint based configuration with cache and enabled TLS enforcement", auth.ID())
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -539,15 +531,13 @@ cache_ttl: 5s`),
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 
-				// fallback settings
-				assert.False(t, auth.allowFallbackOnError)
-
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
 				assert.Empty(t, auth.trustStore)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
 			},
 		},
 	} {
@@ -568,7 +558,7 @@ cache_ttl: 5s`),
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			a, err := newJwtAuthenticator(appCtx, "auth1", conf)
+			a, err := newJwtAuthenticator(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -597,9 +587,10 @@ func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator)
 	}{
-		"using empty target config": {
+		"using empty target config and step ID": {
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -614,7 +605,34 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.ID())
+			},
+		},
+		"using empty target config and step ID configured": {
+			prototypeConfig: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+cache_ttl: 5s`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				t.Helper()
+
+				// THEN
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "using empty target config and step ID configured", prototype.ID())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 			},
 		},
 		"using unsupported fields": {
@@ -632,7 +650,7 @@ cache_ttl: 5s`),
 				// THEN
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"prototype config without cache, target config with overwrites, but without cache": {
@@ -665,11 +683,10 @@ assertions:
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config without cache, target config with overwrites, but without cache", configured.ID())
 			},
 		},
 		"prototype config without cache, config with overwrites incl cache": {
@@ -706,11 +723,10 @@ cache_ttl: 5s`),
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config without cache, config with overwrites incl cache", configured.ID())
 			},
 		},
 		"prototype config with cache, config without": {
@@ -745,11 +761,10 @@ assertions:
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config with cache, config without", configured.ID())
 			},
 		},
 		"prototype config with cache, target config with cache only": {
@@ -774,11 +789,10 @@ cache_ttl: 5s`),
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype config with cache, target config with cache only", configured.ID())
 			},
 		},
 		"prototype without scopes configured, created authenticator configures them and merges other fields": {
@@ -815,39 +829,10 @@ assertions:
 				assert.Len(t, configured.a.ScopesMatcher, 2)
 				assert.Contains(t, configured.a.ScopesMatcher, "foo")
 				assert.Contains(t, configured.a.ScopesMatcher, "bar")
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.ID())
-			},
-		},
-		"prototype with defaults, configured allows fallback on errors": {
-			prototypeConfig: []byte(`
-metadata_endpoint:
-  url: http://test.com
-`),
-			config: []byte(`
-allow_fallback_on_error: true
-`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, prototype.r, configured.r)
-				assert.Equal(t, prototype.ads, configured.ads)
-				assert.Equal(t, prototype.sf, configured.sf)
-				assert.Equal(t, prototype.a, configured.a)
-				assert.Equal(t, prototype.ttl, configured.ttl)
-
-				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
-				assert.True(t, configured.allowFallbackOnError)
-				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
-
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, "prototype without scopes configured, created authenticator configures them and merges other fields", configured.ID())
 			},
 		},
 		"prototype with defaults, configured does not allow jwk trust store override": {
@@ -864,7 +849,7 @@ assertions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "has invalid keys: trust_store")
+				require.ErrorContains(t, err, "has invalid keys: trust_store")
 			},
 		},
 		"prototype with defaults, configured does not allow jwk validation override": {
@@ -878,7 +863,7 @@ metadata_endpoint:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "has invalid keys: validate_jwk")
+				require.ErrorContains(t, err, "has invalid keys: validate_jwk")
 			},
 		},
 	} {
@@ -898,11 +883,11 @@ metadata_endpoint:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newJwtAuthenticator(appCtx, "auth2", pc)
+			prototype, err := newJwtAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig("", conf)
+			auth, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (

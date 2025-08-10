@@ -54,38 +54,41 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorJwt {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
+			if typ != AuthenticatorJWT {
 				return false, nil, nil
 			}
 
-			auth, err := newJwtAuthenticator(app, id, conf)
+			auth, err := newJwtAuthenticator(app, name, conf)
 
 			return true, auth, err
 		})
 }
 
 type jwtAuthenticator struct {
-	id                   string
-	app                  app.Context
-	r                    oauth2.ServerMetadataResolver
-	a                    oauth2.Expectation
-	ttl                  *time.Duration
-	sf                   SubjectFactory
-	ads                  extractors.AuthDataExtractStrategy
-	allowFallbackOnError bool
-	trustStore           truststore.TrustStore
-	validateJWKCert      bool
+	name            string
+	id              string
+	app             app.Context
+	r               oauth2.ServerMetadataResolver
+	a               oauth2.Expectation
+	ttl             *time.Duration
+	sf              SubjectFactory
+	ads             extractors.AuthDataExtractStrategy
+	trustStore      truststore.TrustStore
+	validateJWKCert bool
 }
 
 // nolint: funlen, cyclop
 func newJwtAuthenticator(
 	app app.Context,
-	id string,
+	name string,
 	rawConfig map[string]any,
 ) (*jwtAuthenticator, error) { // nolint: funlen
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating jwt authenticator")
+	logger.Info().
+		Str("_type", AuthenticatorJWT).
+		Str("_name", name).
+		Msg("Creating authenticator")
 
 	type Config struct {
 		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
@@ -102,11 +105,14 @@ func newJwtAuthenticator(
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for jwt authenticator '%s'", id).CausedBy(err)
+			"failed decoding config for jwt authenticator '%s'", name).CausedBy(err)
 	}
 
 	if conf.AllowFallbackOnError {
-		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+		logger.Warn().
+			Str("_type", AuthenticatorJWT).
+			Str("_name", name).
+			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	if conf.JWKSEndpoint != nil {
@@ -116,14 +122,18 @@ func newJwtAuthenticator(
 		}
 
 		if strings.HasPrefix(conf.JWKSEndpoint.URL, "http://") {
-			logger.Warn().Str("_id", id).
-				Msg("No TLS configured for the jwks endpoint used in jwt authenticator")
+			logger.Warn().
+				Str("_type", AuthenticatorJWT).
+				Str("_name", name).
+				Msg("No TLS configured for the jwks endpoint used in authenticator")
 		}
 	}
 
 	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
-		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the metadata endpoint used in jwt authenticator")
+		logger.Warn().
+			Str("_type", AuthenticatorJWT).
+			Str("_name", name).
+			Msg("No TLS configured for the metadata endpoint used in authenticator")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -179,22 +189,26 @@ func newJwtAuthenticator(
 	)
 
 	return &jwtAuthenticator{
-		id:                   id,
-		app:                  app,
-		r:                    resolver,
-		a:                    conf.Assertions,
-		ttl:                  conf.CacheTTL,
-		sf:                   &conf.SubjectInfo,
-		ads:                  ads,
-		allowFallbackOnError: conf.AllowFallbackOnError,
-		validateJWKCert:      validateJWKCert,
-		trustStore:           conf.TrustStore,
+		name:            name,
+		id:              name,
+		app:             app,
+		r:               resolver,
+		a:               conf.Assertions,
+		ttl:             conf.CacheTTL,
+		sf:              &conf.SubjectInfo,
+		ads:             ads,
+		validateJWKCert: validateJWKCert,
+		trustStore:      conf.TrustStore,
 	}, nil
 }
 
 func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", a.id).Msg("Authenticating using JWT authenticator")
+	logger.Debug().
+		Str("_type", AuthenticatorJWT).
+		Str("_name", a.name).
+		Str("_id", a.id).
+		Msg("Executing authenticator")
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
@@ -229,10 +243,17 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 	return sub, nil
 }
 
-func (a *jwtAuthenticator) WithConfig(stepID string, config map[string]any) (Authenticator, error) {
+func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(config) == 0 {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
+	}
+
+	if len(rawConfig) == 0 {
+		auth := *a
+		auth.id = stepID
+
+		return &auth, nil
 	}
 
 	type Config struct {
@@ -242,31 +263,34 @@ func (a *jwtAuthenticator) WithConfig(stepID string, config map[string]any) (Aut
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, config, &conf); err != nil {
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for jwt authenticator '%s'", a.id).CausedBy(err)
+			"failed decoding config for jwt authenticator '%s'", a.name).CausedBy(err)
 	}
 
 	if conf.AllowFallbackOnError != nil {
 		logger := a.app.Logger()
-		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+		logger.Warn().
+			Str("_type", AuthenticatorJWT).
+			Str("_name", a.name).
+			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	return &jwtAuthenticator{
-		id:  a.id,
-		app: a.app,
-		r:   a.r,
-		a:   conf.Assertions.Merge(a.a),
-		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
-		sf:  a.sf,
-		ads: a.ads,
-		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
-			func() bool { return *conf.AllowFallbackOnError },
-			func() bool { return a.allowFallbackOnError }),
+		name:            a.name,
+		id:              x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		app:             a.app,
+		r:               a.r,
+		a:               conf.Assertions.Merge(a.a),
+		ttl:             x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		sf:              a.sf,
+		ads:             a.ads,
 		validateJWKCert: a.validateJWKCert,
 		trustStore:      a.trustStore,
 	}, nil
 }
+
+func (a *jwtAuthenticator) Name() string { return a.name }
 
 func (a *jwtAuthenticator) ID() string {
 	return a.id
