@@ -54,7 +54,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with invalid configuration": {
@@ -70,7 +70,7 @@ values:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with minimal valid configuration": {
@@ -87,17 +87,19 @@ values:
 				require.NoError(t, err)
 				require.NotNil(t, contextualizer)
 
+				assert.Equal(t, "with minimal valid configuration", contextualizer.ID())
+				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
 				assert.Len(t, contextualizer.items, 1)
 				assert.Len(t, contextualizer.values, 1)
 				assert.Equal(t, "http://foo.bar", contextualizer.values["foo"].String())
 				assert.Equal(t, "{{ .Values.foo }}", contextualizer.items["url"].String())
 
-				values, err := contextualizer.values.Render(map[string]any{})
+				vals, err := contextualizer.values.Render(map[string]any{})
 				require.NoError(t, err)
-				assert.Equal(t, map[string]string{"foo": "http://foo.bar"}, values)
+				assert.Equal(t, map[string]string{"foo": "http://foo.bar"}, vals)
 
 				val, err := contextualizer.items["url"].Render(map[string]any{
-					"Values":  values,
+					"Values":  vals,
 					"Subject": &subject.Subject{ID: "baz"},
 				})
 				require.NoError(t, err)
@@ -121,7 +123,7 @@ values:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			contextualizer, err := newMapContextualizer(appCtx, "contextualizer", conf)
+			contextualizer, err := newMapContextualizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, contextualizer)
@@ -135,9 +137,10 @@ func TestCreateMapContextualizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer)
 	}{
-		"with empty config": {
+		"with empty target config and no step ID": {
 			prototypeConfig: []byte(`
 items:
   url: "{{ .Values.foo }}"
@@ -150,7 +153,24 @@ values:
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "contextualizer", configured.ID())
+			},
+		},
+		"with empty target config but with step ID": {
+			prototypeConfig: []byte(`
+items:
+  url: "{{ .Values.foo }}"
+values: 
+  foo: http://foo.bar
+`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "foo", configured.ID())
 			},
 		},
 		"with unsupported fields": {
@@ -166,7 +186,7 @@ values:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with only values reconfigured": {
@@ -187,7 +207,9 @@ values:
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.items, configured.items)
-				assert.Equal(t, prototype.id, configured.id)
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "with only values reconfigured", configured.ID())
 				assert.NotEqual(t, prototype.values, configured.values)
 				require.NotNil(t, configured.values)
 				val, err := configured.values.Render(map[string]any{
@@ -200,7 +222,6 @@ values:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://bar.foo", resp)
-				assert.Equal(t, "contextualizer", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -222,11 +243,11 @@ values:
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newMapContextualizer(appCtx, "contextualizer", pc)
+			prototype, err := newMapContextualizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			concrete, err := prototype.WithConfig("", conf)
+			concrete, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
@@ -253,20 +274,6 @@ func TestMapContextualizerExecute(t *testing.T) {
 		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
 		assert           func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any)
 	}{
-		"fails due to nil subject": {
-			contextualizer: &mapContextualizer{id: "contextualizer"},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "'nil' subject")
-
-				var identifier interface{ ID() string }
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "contextualizer", identifier.ID())
-			},
-		},
 		"with error in values rendering": {
 			contextualizer: &mapContextualizer{
 				id: "contextualizer1",
@@ -288,7 +295,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render values")
+				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -324,7 +331,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render item")
+				require.ErrorContains(t, err, "failed to render item")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -386,6 +393,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 			ctx := heimdallmocks.NewRequestContextMock(t)
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+			ctx.EXPECT().Context().Return(t.Context())
 
 			configureContext(t, ctx)
 

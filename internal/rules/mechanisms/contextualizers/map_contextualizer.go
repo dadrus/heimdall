@@ -3,11 +3,14 @@ package contextualizers
 import (
 	"fmt"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -16,20 +19,23 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Contextualizer, error) {
 			if typ != ContextualizerMap {
 				return false, nil, nil
 			}
 
-			eh, err := newMapContextualizer(app, id, conf)
+			eh, err := newMapContextualizer(app, name, conf)
 
 			return true, eh, err
 		})
 }
 
-func newMapContextualizer(app app.Context, id string, rawConfig map[string]any) (*mapContextualizer, error) {
+func newMapContextualizer(app app.Context, name string, rawConfig map[string]any) (*mapContextualizer, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating map contextualizer")
+	logger.Info().
+		Str("_type", ContextualizerMap).
+		Str("_name", name).
+		Msg("Creating contextualizer")
 
 	type Config struct {
 		Items  map[string]template.Template `mapstructure:"items"`
@@ -39,11 +45,12 @@ func newMapContextualizer(app app.Context, id string, rawConfig map[string]any) 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for map contextualizer '%s'", id).CausedBy(err)
+			"failed decoding config for map contextualizer '%s'", name).CausedBy(err)
 	}
 
 	return &mapContextualizer{
-		id:     id,
+		name:   name,
+		id:     name,
 		app:    app,
 		items:  conf.Items,
 		values: conf.Values,
@@ -51,43 +58,53 @@ func newMapContextualizer(app app.Context, id string, rawConfig map[string]any) 
 }
 
 type mapContextualizer struct {
+	name   string
 	id     string
 	app    app.Context
 	items  map[string]template.Template
 	values values.Values
 }
 
-func (m *mapContextualizer) ContinueOnError() bool {
+func (c *mapContextualizer) ContinueOnError() bool {
 	return false
 }
 
-func (m *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
-	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute map contextualizer due to 'nil' subject").
-			WithErrorContext(m)
-	}
+func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
+	logger.Debug().
+		Str("_type", ContextualizerMap).
+		Str("_name", c.name).
+		Str("_id", c.id).
+		Msg("Executing contextualizer")
 
-	resp, err := m.renderTemplates(ctx, sub)
+	resp, err := c.renderTemplates(ctx, sub)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to render templates for the map contextualizer").WithErrorContext(m).CausedBy(err)
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed to render templates for the map contextualizer").
+			WithErrorContext(c).
+			CausedBy(err)
 	}
 
 	if resp != nil {
-		ctx.Outputs()[m.id] = resp
+		ctx.Outputs()[c.id] = resp
 	}
 
 	return nil
 }
 
-func (m *mapContextualizer) ID() string {
-	return m.id
-}
+func (c *mapContextualizer) Name() string { return c.name }
 
-func (m *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) (Contextualizer, error) {
+func (c *mapContextualizer) ID() string { return c.id }
+
+func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) (Contextualizer, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
+		return c, nil
+	}
+
 	if len(rawConfig) == 0 {
-		return m, nil
+		cont := *c
+		cont.id = stepID
+
+		return &cont, nil
 	}
 
 	type Config struct {
@@ -95,20 +112,21 @@ func (m *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(m.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(c.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for map contextualizer '%s'", m.id).CausedBy(err)
+			"failed decoding config for map contextualizer '%s'", c.name).CausedBy(err)
 	}
 
 	return &mapContextualizer{
-		id:     m.id,
-		app:    m.app,
-		items:  m.items,
-		values: m.values.Merge(conf.Values),
+		name:   c.name,
+		id:     x.IfThenElse(len(stepID) == 0, c.id, stepID),
+		app:    c.app,
+		items:  c.items,
+		values: c.values.Merge(conf.Values),
 	}, nil
 }
 
-func (m *mapContextualizer) renderTemplates(
+func (c *mapContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 ) (map[string]string, error) {
@@ -118,20 +136,20 @@ func (m *mapContextualizer) renderTemplates(
 		err      error
 	)
 
-	if vals, err = m.values.Render(map[string]any{
+	if vals, err = c.values.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
 	}); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the map contextualizer").
-			WithErrorContext(m).
+			WithErrorContext(c).
 			CausedBy(err)
 	}
 
-	resp := make(map[string]string, len(m.items))
+	resp := make(map[string]string, len(c.items))
 
-	for key, tmpl := range m.items {
+	for key, tmpl := range c.items {
 		if rendered, err = tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
@@ -140,7 +158,7 @@ func (m *mapContextualizer) renderTemplates(
 		}); err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 				fmt.Sprintf("failed to render item %s for the map contextualizer", key)).
-				WithErrorContext(m).
+				WithErrorContext(c).
 				CausedBy(err)
 		}
 
