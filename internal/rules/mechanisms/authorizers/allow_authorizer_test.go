@@ -19,6 +19,7 @@ package authorizers
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,27 +29,61 @@ import (
 )
 
 func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
-	// GIVEN
-	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Logger().Return(log.Logger)
+	for uc, tc := range map[string]struct {
+		stepID  string
+		newConf map[string]any
+		assert  func(t *testing.T, err error, prototype *allowAuthorizer, configured *allowAuthorizer)
+	}{
+		"no new config and no step ID": {
+			assert: func(t *testing.T, err error, prototype *allowAuthorizer, configured *allowAuthorizer) {
+				t.Helper()
 
-	prototype := newAllowAuthorizer(appCtx, "baz")
+				assert.Equal(t, prototype, configured)
+			},
+		},
+		"no new config but with step ID": {
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *allowAuthorizer, configured *allowAuthorizer) {
+				t.Helper()
 
-	// WHEN
-	conf1, err1 := prototype.WithConfig("", nil)
-	conf2, err2 := prototype.WithConfig("", map[string]any{"foo": "bar"})
+				require.NoError(t, err)
 
-	// THEN
-	require.NoError(t, err1)
-	require.NoError(t, err2)
+				assert.NotEqual(t, configured, prototype)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "foo", configured.ID())
+			},
+		},
+		"with new config": {
+			newConf: map[string]any{"foo": "bar"},
+			assert: func(t *testing.T, err error, _ *allowAuthorizer, _ *allowAuthorizer) {
+				t.Helper()
 
-	assert.Equal(t, prototype, conf1)
-	assert.Equal(t, prototype, conf2)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "cannot be reconfigured")
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
-	assert.Equal(t, "baz", prototype.ID())
-	assert.False(t, conf1.ContinueOnError())
-	assert.False(t, conf2.ContinueOnError())
-	assert.False(t, prototype.ContinueOnError())
+			prototype := newAllowAuthorizer(appCtx, uc)
+			assert.False(t, prototype.ContinueOnError())
+
+			// WHEN
+			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
+			authz, ok := conf.(*allowAuthorizer)
+
+			// THEN
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, prototype, authz)
+		})
+	}
 }
 
 func TestAllowAuthorizerExecute(t *testing.T) {
