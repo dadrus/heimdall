@@ -73,7 +73,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 	} {
