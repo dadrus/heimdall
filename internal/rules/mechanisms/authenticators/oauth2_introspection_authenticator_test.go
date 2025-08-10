@@ -72,7 +72,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with missing introspection url config": {
@@ -88,7 +88,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'introspection_endpoint' is a required field")
+				require.ErrorContains(t, err, "'introspection_endpoint' is a required field")
 			},
 		},
 		"minimal introspection endpoint based config with malformed url": {
@@ -155,7 +155,7 @@ introspection_endpoint:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.False(t, auth.allowFallbackOnError)
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with minimal introspection endpoint based config with used enforced TLS", auth.ID())
 			},
 		},
@@ -245,8 +245,7 @@ allow_fallback_on_error: true
 				assert.True(t, ok)
 				assert.Equal(t, "some_claim", sess.IDFrom)
 
-				assert.True(t, auth.allowFallbackOnError)
-
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with valid introspection endpoint based config with overwrites", auth.ID())
 			},
 		},
@@ -303,8 +302,7 @@ metadata_endpoint:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.False(t, auth.allowFallbackOnError)
-
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with metadata endpoint based config", auth.ID())
 			},
 		},
@@ -381,8 +379,7 @@ metadata_endpoint:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.False(t, auth.allowFallbackOnError)
-
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
 			},
 		},
@@ -418,10 +415,11 @@ func TestOAuth2IntrospectionAuthenticatorWithConfig(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 			configured *oauth2IntrospectionAuthenticator)
 	}{
-		"without target config": {
+		"without target config and step id": {
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -438,7 +436,29 @@ subject:
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "without target config", configured.ID())
+				assert.Equal(t, "without target config and step id", configured.ID())
+			},
+		},
+		"without target config but with step id": {
+			prototypeConfig: []byte(`
+introspection_endpoint:
+  url: http://foobar.local
+assertions:
+  issuers:
+    - foobar
+subject:
+  id: some_template`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
+				configured *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "without target config but with step id", prototype.ID())
+				assert.Equal(t, "foo", configured.ID())
 			},
 		},
 		"with unsupported fields": {
@@ -458,7 +478,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with overwrites without cache": {
@@ -498,7 +518,6 @@ assertions:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "with overwrites without cache", configured.ID())
 			},
 		},
@@ -526,7 +545,6 @@ subject:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config without cache, target config with cache overwrite", configured.ID())
 			},
 		},
@@ -566,7 +584,6 @@ cache_ttl: 5s`),
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 
 				assert.Equal(t, "metadata endpoint based prototype config without cache, config with overwrites incl cache", configured.ID())
 			},
@@ -602,36 +619,7 @@ cache_ttl: 15s
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, "prototype config with cache, target config with overwrites including cache", configured.ID())
-			},
-		},
-		"prototype config with defaults, target config with fallback on error enabled": {
-			prototypeConfig: []byte(`
-introspection_endpoint:
-  url: http://foobar.local
-assertions:
-  issuers:
-    - foobar
-subject:
-  id: some_template`),
-			config: []byte(`allow_fallback_on_error: true`),
-			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator,
-			) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
-				assert.Equal(t, prototype.ads, configured.ads)
-				assert.Equal(t, prototype.sf, configured.sf)
-				assert.Equal(t, prototype.a, configured.a)
-
-				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
-				assert.True(t, configured.allowFallbackOnError)
-				assert.Equal(t, "prototype config with defaults, target config with fallback on error enabled", configured.ID())
 			},
 		},
 	} {
@@ -656,7 +644,7 @@ subject:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig("", conf)
+			auth, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
@@ -758,7 +746,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "no access token")
+				require.ErrorContains(t, err, "no access token")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -790,7 +778,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "introspection endpoint failed")
+				require.ErrorContains(t, err, "introspection endpoint failed")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -827,7 +815,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "unexpected response code")
+				require.ErrorContains(t, err, "unexpected response code")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -863,7 +851,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "unexpected response code")
+				require.ErrorContains(t, err, "unexpected response code")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -924,7 +912,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "received introspection response")
+				require.ErrorContains(t, err, "received introspection response")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -989,7 +977,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "assertion conditions")
+				require.ErrorContains(t, err, "assertion conditions")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1065,7 +1053,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "assertion conditions")
+				require.ErrorContains(t, err, "assertion conditions")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1152,7 +1140,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "issuer")
+				require.ErrorContains(t, err, "issuer")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1428,7 +1416,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to extract subject")
+				require.ErrorContains(t, err, "failed to extract subject")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1486,7 +1474,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "required introspection_endpoint")
+				require.ErrorContains(t, err, "required introspection_endpoint")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
