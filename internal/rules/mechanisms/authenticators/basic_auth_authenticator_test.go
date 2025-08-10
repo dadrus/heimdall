@@ -301,6 +301,19 @@ password: bar`),
 				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 			},
 		},
+		"decoding error": {
+			prototypeConfig: []byte(`
+user_id: foo
+password: bar`),
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator, _ *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding config")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -325,7 +338,9 @@ password: bar`),
 
 			// THEN
 			baa, ok := auth.(*basicAuthAuthenticator)
-			require.True(t, ok)
+			if err == nil {
+				require.True(t, ok)
+			}
 
 			tc.assert(t, err, prototype, baa)
 		})
