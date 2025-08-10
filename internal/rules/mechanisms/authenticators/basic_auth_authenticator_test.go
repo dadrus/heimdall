@@ -378,7 +378,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "expected header not present")
+				require.ErrorContains(t, err, "expected header not present")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -402,7 +402,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorContains(t, err, "failed to decode")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -427,7 +427,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "malformed user-id - password")
+				require.ErrorContains(t, err, "malformed user-id - password")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -477,7 +477,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "invalid user credentials")
+				require.ErrorContains(t, err, "invalid user credentials")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
