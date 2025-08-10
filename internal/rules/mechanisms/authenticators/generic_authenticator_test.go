@@ -66,7 +66,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"missing url config": {
@@ -80,7 +80,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'identity_info_endpoint' is a required field")
+				require.ErrorContains(t, err, "'identity_info_endpoint' is a required field")
 			},
 		},
 		"bad url config": {
@@ -96,7 +96,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'identity_info_endpoint'.'url' must be a valid URL")
+				require.ErrorContains(t, err, "'identity_info_endpoint'.'url' must be a valid URL")
 			},
 		},
 		"missing subject config": {
@@ -110,7 +110,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'subject' is a required field")
+				require.ErrorContains(t, err, "'subject' is a required field")
 			},
 		},
 		"missing authentication data source config": {
@@ -124,7 +124,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'authentication_data_source' is a required field")
+				require.ErrorContains(t, err, "'authentication_data_source' is a required field")
 			},
 		},
 		"missing subject id config": {
@@ -140,7 +140,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'subject'.'id' is a required field")
+				require.ErrorContains(t, err, "'subject'.'id' is a required field")
 			},
 		},
 		"with valid configuration but disabled cache": {
@@ -171,8 +171,8 @@ subject:
 				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.False(t, auth.allowFallbackOnError)
 				assert.Nil(t, auth.sessionLifespanConf)
+				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
@@ -204,43 +204,8 @@ cache_ttl: 5s`),
 				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
-				assert.False(t, auth.allowFallbackOnError)
 				assert.Nil(t, auth.sessionLifespanConf)
-				assert.Equal(t, "auth1", auth.ID())
-			},
-		},
-		"with valid configuration enabling fallback on errors and header forwarding": {
-			config: []byte(`
-identity_info_endpoint:
-  url: http://test.com
-  method: POST
-authentication_data_source:
-  - cookie: foo-cookie
-forward_cookies:
-  - foo-cookie
-subject:
-  id: some_template
-allow_fallback_on_error: true`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				require.NotNil(t, auth)
-				assert.Equal(t, "http://test.com", auth.e.URL)
-				assert.Equal(t, http.MethodPost, auth.e.Method)
-				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
-				assert.True(t, ok)
-				assert.Len(t, ces, 1)
-				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
-				assert.Nil(t, auth.payload)
-				assert.Len(t, auth.fwdCookies, 1)
-				assert.Contains(t, auth.fwdCookies, "foo-cookie")
-				assert.Empty(t, auth.fwdHeaders)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.True(t, auth.allowFallbackOnError)
-				assert.Nil(t, auth.sessionLifespanConf)
+				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
@@ -280,7 +245,6 @@ session_lifespan:
 				assert.Empty(t, auth.fwdCookies)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
-				assert.False(t, auth.allowFallbackOnError)
 				assert.NotNil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "foo", auth.sessionLifespanConf.ActiveField)
 				assert.Equal(t, "bar", auth.sessionLifespanConf.IssuedAtField)
@@ -288,6 +252,7 @@ session_lifespan:
 				assert.Equal(t, "zab", auth.sessionLifespanConf.NotAfterField)
 				assert.Equal(t, "foo bar", auth.sessionLifespanConf.TimeFormat)
 				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
+				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
@@ -340,14 +305,13 @@ func TestGenericAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		id              string
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *genericAuthenticator,
 			configured *genericAuthenticator)
 	}{
 		"prototype config without cache configured and empty target config": {
-			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -371,7 +335,6 @@ allow_fallback_on_error: true`),
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		"with unsupported fields in target config": {
@@ -391,11 +354,10 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"prototype config without cache, config with cache": {
-			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -427,44 +389,13 @@ subject:
 				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
-				assert.Equal(t, "auth2", configured.ID())
-			},
-		},
-		"prototype config with disabled fallback on error, config with enabled fallback on error": {
-			id: "auth2",
-			prototypeConfig: []byte(`
-identity_info_endpoint:
-  url: http://test.com
-  method: POST
-authentication_data_source:
-  - header: foo-header
-subject:
-  id: some_template`),
-			config: []byte(`allow_fallback_on_error: true`),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
-			) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.ads, configured.ads)
-				assert.Equal(t, prototype.payload, configured.payload)
-				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
-				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
-				assert.Equal(t, prototype.sf, configured.sf)
-				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
-				assert.True(t, configured.allowFallbackOnError)
-				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, "prototype config without cache, config with cache", configured.ID())
 			},
 		},
 		"prototype config with cache ttl, config with cache tll": {
-			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -496,13 +427,13 @@ cache_ttl: 15s`),
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, 5*time.Second, prototype.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, "prototype config with cache ttl, config with cache tll", configured.ID())
 			},
 		},
 		"prototype with session lifespan config and empty target config": {
-			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -537,7 +468,6 @@ session_lifespan:
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.NotNil(t, configured.sessionLifespanConf)
 				assert.Equal(t, "foo", configured.sessionLifespanConf.ActiveField)
@@ -546,7 +476,9 @@ session_lifespan:
 				assert.Equal(t, "zab", configured.sessionLifespanConf.NotAfterField)
 				assert.Equal(t, "foo bar", configured.sessionLifespanConf.TimeFormat)
 				assert.Equal(t, 2*time.Second, configured.sessionLifespanConf.ValidityLeeway)
-				assert.Equal(t, "auth2", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, "prototype with session lifespan config and empty target config", configured.ID())
 			},
 		},
 		"reconfiguration of identity_info_endpoint not possible": {
@@ -569,7 +501,7 @@ identity_info_endpoint:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"reconfiguration of authentication_data_source not possible": {
@@ -592,7 +524,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"reconfiguration of subject not possible": {
@@ -615,7 +547,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"reconfiguration of session_lifespan not possible": {
@@ -638,7 +570,7 @@ session_lifespan:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"reconfiguration of payload not possible": {
@@ -661,7 +593,7 @@ payload: |
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"reconfiguration of header to be forwarded not possible": {
@@ -684,7 +616,7 @@ forward_headers:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"reconfiguration of cookies to be forwarded not possible": {
@@ -707,7 +639,41 @@ forward_cookies:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
+		"minimal valid prototype config and step ID configured": {
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+authentication_data_source:
+  - header: foo-header
+forward_headers:
+  - X-My-Header
+subject:
+  id: some_template`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, time.Duration(0), prototype.ttl)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 0*time.Second, configured.ttl)
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.Name(), prototype.ID())
+				assert.Equal(t, "minimal valid prototype config and step ID configured", prototype.Name())
+				assert.Equal(t, "foo", configured.ID())
 			},
 		},
 	} {
@@ -728,11 +694,11 @@ forward_cookies:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newGenericAuthenticator(appCtx, tc.id, pc)
+			prototype, err := newGenericAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig("", conf)
+			auth, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
@@ -816,7 +782,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "failed to get authentication data")
+				require.ErrorContains(t, err, "failed to get authentication data")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -851,7 +817,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render payload")
+				require.ErrorContains(t, err, "failed to render payload")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -880,7 +846,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render URL")
+				require.ErrorContains(t, err, "failed to render URL")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -909,7 +875,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "request to the endpoint")
+				require.ErrorContains(t, err, "request to the endpoint")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -943,7 +909,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "unexpected response code")
+				require.ErrorContains(t, err, "unexpected response code")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -995,7 +961,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to extract subject")
+				require.ErrorContains(t, err, "failed to extract subject")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1212,7 +1178,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "not active")
+				require.ErrorContains(t, err, "not active")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1266,7 +1232,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed parsing issued_at")
+				require.ErrorContains(t, err, "failed parsing issued_at")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
