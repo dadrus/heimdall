@@ -29,6 +29,8 @@ import (
 )
 
 func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
+	t.Parallel()
+
 	for uc, tc := range map[string]struct {
 		stepID  string
 		newConf map[string]any
@@ -87,6 +89,8 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 }
 
 func TestAllowAuthorizerExecute(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
