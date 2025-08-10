@@ -58,7 +58,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrAuthenticatorCreation)
-				assert.Contains(t, err.Error(), "no authenticator prototype")
+				require.ErrorContains(t, err, "no authenticator prototype")
 			},
 		},
 		"with failing creation from prototype": {
@@ -73,7 +73,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrAuthenticatorCreation)
-				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
+				require.ErrorContains(t, err, heimdall.ErrArgument.Error())
 			},
 		},
 		"successful creation from prototype": {
@@ -145,7 +145,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrAuthorizerCreation)
-				assert.Contains(t, err.Error(), "no authorizer prototype")
+				require.ErrorContains(t, err, "no authorizer prototype")
 			},
 		},
 		"with failing creation from prototype": {
@@ -160,7 +160,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrAuthorizerCreation)
-				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
+				require.ErrorContains(t, err, heimdall.ErrArgument.Error())
 			},
 		},
 		"successful creation from prototype": {
@@ -232,7 +232,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrContextualizerCreation)
-				assert.Contains(t, err.Error(), "no contextualizer prototype")
+				require.ErrorContains(t, err, "no contextualizer prototype")
 			},
 		},
 		"with failing creation from prototype": {
@@ -248,7 +248,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrContextualizerCreation)
-				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
+				require.ErrorContains(t, err, heimdall.ErrArgument.Error())
 			},
 		},
 		"successful creation from prototype": {
@@ -321,7 +321,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrFinalizerCreation)
-				assert.Contains(t, err.Error(), "no finalizer prototype")
+				require.ErrorContains(t, err, "no finalizer prototype")
 			},
 		},
 		"with failing creation from prototype": {
@@ -337,7 +337,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrFinalizerCreation)
-				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
+				require.ErrorContains(t, err, heimdall.ErrArgument.Error())
 			},
 		},
 		"successful creation from prototype": {
@@ -410,7 +410,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrErrorHandlerCreation)
-				assert.Contains(t, err.Error(), "no error handler prototype")
+				require.ErrorContains(t, err, "no error handler prototype")
 			},
 		},
 		"with failing creation from prototype": {
@@ -426,7 +426,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrErrorHandlerCreation)
-				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
+				require.ErrorContains(t, err, heimdall.ErrArgument.Error())
 			},
 		},
 		"successful creation from prototype": {

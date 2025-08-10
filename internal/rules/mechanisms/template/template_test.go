@@ -129,7 +129,7 @@ func TestAtIndex(t *testing.T) {
 
 			if len(tc.err) != 0 {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tc.err)
+				require.ErrorContains(t, err, tc.err)
 			} else {
 				require.Equal(t, tc.res, res)
 			}

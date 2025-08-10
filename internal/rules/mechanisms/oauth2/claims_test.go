@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,7 +45,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "issuer")
+				require.ErrorContains(t, err, "issuer")
 			},
 		},
 		"fails on audience assertion": {
@@ -62,7 +61,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "audience")
+				require.ErrorContains(t, err, "audience")
 			},
 		},
 		"fails on validity assertion": {
@@ -79,7 +78,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "valid")
+				require.ErrorContains(t, err, "valid")
 			},
 		},
 		"fails on issuance time assertion": {
@@ -97,7 +96,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "issued")
+				require.ErrorContains(t, err, "issued")
 			},
 		},
 		"fails on scp assertion": {
@@ -117,7 +116,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "scope")
+				require.ErrorContains(t, err, "scope")
 			},
 		},
 		"fails on scope assertion": {
@@ -137,7 +136,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "scope")
+				require.ErrorContains(t, err, "scope")
 			},
 		},
 		"succeeds using scope claim": {

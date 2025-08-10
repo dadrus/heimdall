@@ -48,7 +48,7 @@ func TestNewCelExecutionCondition(t *testing.T) {
 			// THEN
 			if len(tc.err) != 0 {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tc.err)
+				require.ErrorContains(t, err, tc.err)
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, condition)

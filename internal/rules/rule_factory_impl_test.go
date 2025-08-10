@@ -463,7 +463,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires forward_to")
+				require.ErrorContains(t, err, "requires forward_to")
 			},
 		},
 		"with error while creating method matcher": {
@@ -592,7 +592,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no authenticator defined")
+				require.ErrorContains(t, err, "no authenticator defined")
 			},
 		},
 		"without default rule and minimum required configuration in decision mode": {

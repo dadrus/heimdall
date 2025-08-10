@@ -78,7 +78,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "unexpected content")
+				require.ErrorContains(t, err, "unexpected content")
 			},
 		},
 		"bad scope encoding (not expected json array content)": {
@@ -88,7 +88,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "scopes array")
+				require.ErrorContains(t, err, "scopes array")
 			},
 		},
 	} {
