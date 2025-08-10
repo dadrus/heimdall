@@ -64,6 +64,7 @@ func init() {
 }
 
 type remoteAuthorizer struct {
+	name               string
 	id                 string
 	app                app.Context
 	e                  endpoint.Endpoint
@@ -95,9 +96,12 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Reques
 	}
 }
 
-func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
+func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating remote authorizer")
+	logger.Info().
+		Str("_type", AuthorizerRemote).
+		Str("_name", name).
+		Msg("Creating authorizer")
 
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"                             validate:"required"` //nolint:lll
@@ -111,7 +115,7 @@ func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for remote authorizer '%s'", id).CausedBy(err)
+			"failed decoding config for remote authorizer '%s'", name).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
@@ -126,12 +130,15 @@ func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (
 	}
 
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
-		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the endpoint used in remote authorizer")
+		logger.Warn().
+			Str("_type", AuthorizerRemote).
+			Str("_name", name).
+			Msg("No TLS configured for the endpoint used in authorizer")
 	}
 
 	return &remoteAuthorizer{
-		id:                 id,
+		name:               name,
+		id:                 name,
 		app:                app,
 		e:                  conf.Endpoint,
 		payload:            conf.Payload,
@@ -145,13 +152,11 @@ func newRemoteAuthorizer(app app.Context, id string, rawConfig map[string]any) (
 
 func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", a.id).Msg("Authorizing using remote authorizer")
-
-	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute remote authorizer due to 'nil' subject").
-			WithErrorContext(a)
-	}
+	logger.Debug().
+		Str("_type", AuthorizerRemote).
+		Str("_name", a.name).
+		Str("_id", a.id).
+		Msg("Executing authorizer")
 
 	cch := cache.Ctx(ctx.Context())
 
@@ -200,8 +205,15 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Sub
 }
 
 func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Authorizer, error) {
-	if len(rawConfig) == 0 {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
+	}
+
+	if len(rawConfig) == 0 {
+		auth := *a
+		auth.id = stepID
+
+		return &auth, nil
 	}
 
 	type Config struct {
@@ -215,7 +227,7 @@ func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for remote authorizer '%s'", a.id).CausedBy(err)
+			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)
@@ -224,7 +236,8 @@ func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (
 	}
 
 	return &remoteAuthorizer{
-		id:          a.id,
+		name:        a.name,
+		id:          x.IfThenElse(len(stepID) == 0, a.id, stepID),
 		app:         a.app,
 		e:           a.e,
 		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
@@ -236,6 +249,8 @@ func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (
 		v:   a.v.Merge(conf.Values),
 	}, nil
 }
+
+func (a *remoteAuthorizer) Name() string { return a.name }
 
 func (a *remoteAuthorizer) ID() string { return a.id }
 
