@@ -66,7 +66,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with invalid endpoint configuration": {
@@ -80,7 +80,7 @@ payload: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'endpoint'.'url' is a required field")
+				require.ErrorContains(t, err, "'endpoint'.'url' is a required field")
 			},
 		},
 		"with minimal valid configuration and enforced and used TLS": {
@@ -108,7 +108,8 @@ payload: bar
 				assert.Equal(t, defaultTTL, contextualizer.ttl)
 				assert.False(t, contextualizer.ContinueOnError())
 
-				assert.Equal(t, "contextualizer", contextualizer.ID())
+				assert.Equal(t, "with minimal valid configuration and enforced and used TLS", contextualizer.ID())
+				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
 				assert.False(t, contextualizer.ContinueOnError())
 			},
 		},
@@ -168,7 +169,8 @@ continue_pipeline_on_error: true
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, res)
 
-				assert.Equal(t, "contextualizer", contextualizer.ID())
+				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
+				assert.Equal(t, "with all fields configured", contextualizer.ID())
 				assert.True(t, contextualizer.ContinueOnError())
 			},
 		},
@@ -189,7 +191,7 @@ continue_pipeline_on_error: true
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			contextualizer, err := newGenericContextualizer(appCtx, "contextualizer", conf)
+			contextualizer, err := newGenericContextualizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, contextualizer)
@@ -203,9 +205,10 @@ func TestCreateGenericContextualizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer)
 	}{
-		"with empty config": {
+		"with empty target config and no step id": {
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -217,7 +220,23 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "contextualizer", configured.ID())
+			},
+		},
+		"with empty target config but with step id": {
+			prototypeConfig: []byte(`
+endpoint:
+  url: http://foo.bar
+payload: bar
+`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "foo", configured.ID())
 			},
 		},
 		"with unsupported fields": {
@@ -232,7 +251,7 @@ payload: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with only payload reconfigured": {
@@ -268,7 +287,9 @@ payload: foo
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, "contextualizer", configured.ID())
+				assert.Equal(t, "with only payload reconfigured", configured.ID())
+				assert.Equal(t, configured.Name(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -310,7 +331,9 @@ forward_headers:
 				assert.Contains(t, configured.fwdHeaders, "Foo-Bar")
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, "contextualizer", configured.ID())
+				assert.Equal(t, "with payload and forward_headers reconfigured", configured.ID())
+				assert.Equal(t, configured.Name(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -357,7 +380,9 @@ forward_cookies:
 				assert.Len(t, configured.fwdCookies, 1)
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, "contextualizer", configured.ID())
+				assert.Equal(t, "with payload, forward_headers and forward_cookies reconfigured", configured.ID())
+				assert.Equal(t, configured.Name(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.True(t, prototype.ContinueOnError())
 				assert.True(t, configured.ContinueOnError())
 			},
@@ -410,12 +435,14 @@ continue_pipeline_on_error: false
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, prototype.v, configured.v)
-				assert.Equal(t, "contextualizer", configured.ID())
+				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
+				assert.Equal(t, configured.Name(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.True(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		"with everything possible reconfigured": {
+		"with everything possible reconfigured and a step id": {
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -441,6 +468,7 @@ values:
   bar: foo
 continue_pipeline_on_error: false
 `),
+			stepID: "bar",
 			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
@@ -452,7 +480,6 @@ continue_pipeline_on_error: false
 				res, err := configured.v.Render(map[string]any{})
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"bar": "foo", "foo": "bar"}, res)
-				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(map[string]any{
@@ -468,7 +495,10 @@ continue_pipeline_on_error: false
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
-				assert.Equal(t, "contextualizer", configured.ID())
+				assert.Equal(t, prototype.Name(), prototype.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "with everything possible reconfigured and a step id", prototype.ID())
+				assert.Equal(t, "bar", configured.ID())
 				assert.True(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -490,11 +520,11 @@ continue_pipeline_on_error: false
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newGenericContextualizer(appCtx, "contextualizer", pc)
+			prototype, err := newGenericContextualizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			concrete, err := prototype.WithConfig("", conf)
+			concrete, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
@@ -558,7 +588,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "'nil' subject")
+				require.ErrorContains(t, err, "'nil' subject")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -630,7 +660,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render values")
+				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -661,7 +691,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render payload")
+				require.ErrorContains(t, err, "failed to render payload")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -686,7 +716,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "contextualizer endpoint failed")
+				require.ErrorContains(t, err, "contextualizer endpoint failed")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -716,7 +746,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "unexpected response code")
+				require.ErrorContains(t, err, "unexpected response code")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
