@@ -74,6 +74,7 @@ if: true == false
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with minimal valid configuration, enforced and used TLS", redEH.ID())
+				assert.Equal(t, redEH.Name(), redEH.ID())
 
 				toURL, err := redEH.to.Render(nil)
 				require.NoError(t, err)
@@ -104,6 +105,7 @@ code: 301
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with full valid configuration", redEH.ID())
+				assert.Equal(t, redEH.Name(), redEH.ID())
 
 				ctx := mocks.NewRequestContextMock(t)
 				ctx.EXPECT().Request().
@@ -152,9 +154,10 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler)
 	}{
-		"no new configuration provided": {
+		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
 				t.Helper()
@@ -163,14 +166,18 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"empty configuration provided": {
+		"no new configuration but with step ID": {
 			prototypeConfig: []byte(`to: http://foo.bar`),
-			config:          []byte(``),
+			stepID:          "foo",
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, prototype, configured)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.code, configured.code)
+				assert.Equal(t, prototype.to, configured.to)
 			},
 		},
 		"unsupported configuration provided": {
@@ -206,7 +213,7 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			errorHandler, err := prototype.WithConfig("", conf)
+			errorHandler, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
