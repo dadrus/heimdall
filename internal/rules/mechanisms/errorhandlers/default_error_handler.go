@@ -29,39 +29,62 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(_ app.Context, id string, typ string, _ map[string]any) (bool, ErrorHandler, error) {
+		func(app app.Context, name string, typ string, _ map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerDefault {
 				return false, nil, nil
 			}
 
-			return true, newDefaultErrorHandler(id), nil
+			return true, newDefaultErrorHandler(app, name), nil
 		})
 }
 
 type defaultErrorHandler struct {
-	id string
+	name string
+	id   string
 }
 
-func newDefaultErrorHandler(id string) *defaultErrorHandler {
-	return &defaultErrorHandler{id: id}
+func newDefaultErrorHandler(app app.Context, name string) *defaultErrorHandler {
+	logger := app.Logger()
+	logger.Info().
+		Str("_type", ErrorHandlerDefault).
+		Str("_name", name).
+		Msg("Creating error handler")
+
+	return &defaultErrorHandler{
+		name: name,
+		id:   name,
+	}
 }
 
 func (eh *defaultErrorHandler) Execute(ctx heimdall.RequestContext, causeErr error) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Info().Str("_id", eh.id).Msg("Handling error using default error handler")
+	logger.Debug().
+		Str("_type", ErrorHandlerDefault).
+		Str("_name", eh.name).
+		Str("_id", eh.id).
+		Msg("Executing error handler")
 
 	ctx.SetPipelineError(causeErr)
 
 	return nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(stepID string, conf map[string]any) (ErrorHandler, error) {
-	if len(conf) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"reconfiguration of the default error handler is not supported")
+func (eh *defaultErrorHandler) WithConfig(stepID string, rawConfig map[string]any) (ErrorHandler, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
+		return eh, nil
 	}
 
-	return eh, nil
+	if len(rawConfig) == 0 {
+		erh := *eh
+		erh.id = stepID
+
+		return &erh, nil
+	}
+
+	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		"default error handler cannot be reconfigured")
 }
+
+func (eh *defaultErrorHandler) Name() string { return eh.name }
 
 func (eh *defaultErrorHandler) ID() string { return eh.id }
