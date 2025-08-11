@@ -26,16 +26,6 @@ func WithValuesConstraints[V any](constraints ConstraintsFunc[V]) Option[V] {
 	}
 }
 
-type AddOption[V any] func(n *Trie[V])
-
-func WithBacktrackingControl[V any](canBacktrack CanBacktrackFunc[V]) AddOption[V] {
-	return func(n *Trie[V]) {
-		if canBacktrack != nil {
-			n.canBacktrack = canBacktrack
-		}
-	}
-}
-
 type LookupOption[V any] func(opts *lookupOpts[V])
 
 func WithExactMatch[V any]() LookupOption[V] {
