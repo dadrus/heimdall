@@ -349,7 +349,7 @@ func TestTrieFindEntry(t *testing.T) {
 	require.NoError(t, tree.Add("*", "/**", "2"))
 	require.NoError(t, tree.Add("*.example.com", "/foo/bar", "3"))
 	require.NoError(t, tree.Add("*.example.com", "/foo/:bar", "4"))
-	require.NoError(t, tree.Add("*.example.com", "/foo/*", "5"))
+	require.NoError(t, tree.Add("*.example.com", "/foo/**", "5"))
 	require.NoError(t, tree.Add("foo.example.com", "/foo/bar", "6"))
 	require.NoError(t, tree.Add("foo.example.com", "/**", "7"))
 	require.NoError(t, tree.Add("baz.example.com", "/**", "8"))
@@ -385,6 +385,10 @@ func TestTrieFindEntry(t *testing.T) {
 	entry, err = tree.FindEntry("baz.example.com", "/foo/bar", lookupMatcher[string](true))
 	require.NoError(t, err)
 	assert.Equal(t, "8", entry.Value)
+
+	entry, err = tree.FindEntry("bla.example.com", "/bar/foo", lookupMatcher[string](true))
+	require.NoError(t, err)
+	assert.Equal(t, "2", entry.Value)
 }
 
 func TestTreeFindEntryWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
@@ -458,30 +462,7 @@ func TestTreeFindEntryWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
 	require.NoError(t, err)
 }
 
-func TestTrieFindEntryWithBacktrackingEnabled(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	tree := New[string]()
-
-	err := tree.Add("*.example.com", "/date/:year/abc", "first",
-		WithBacktrackingControl(func(_ []string) bool { return true }),
-	)
-	require.NoError(t, err)
-
-	err = tree.Add("*", "/date/**", "second")
-	require.NoError(t, err)
-
-	// WHEN
-	entry, err := tree.FindEntry("foo.bar.example.com", "/date/2024/abc",
-		LookupMatcherFunc[string](func(value string, _, _ []string) bool { return value != "first" }))
-
-	// THEN
-	require.NoError(t, err)
-	assert.Equal(t, "second", entry.Value)
-}
-
-func TestTrieFindEntryWithBacktrackingDisabled(t *testing.T) {
+func TestTrieFindEntryWithBacktracking(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -494,15 +475,12 @@ func TestTrieFindEntryWithBacktrackingDisabled(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN
-	entry, err := tree.FindEntry("foo.example.com", "/date/2024/abc",
-		LookupMatcherFunc[string](func(value string, _, _ []string) bool {
-			return value != "first"
-		}))
+	entry, err := tree.FindEntry("foo.bar.example.com", "/date/2024/abc",
+		LookupMatcherFunc[string](func(value string, _, _ []string) bool { return value != "first" }))
 
 	// THEN
-	require.Error(t, err)
-	require.ErrorIs(t, err, ErrNotFound)
-	require.Nil(t, entry)
+	require.NoError(t, err)
+	assert.Equal(t, "second", entry.Value)
 }
 
 func TestTrieAddHostPatternWithNamedFreeWildcard(t *testing.T) {

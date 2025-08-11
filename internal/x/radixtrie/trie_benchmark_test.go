@@ -17,12 +17,13 @@
 package radixtrie
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkTrieFindEmptyTrie(b *testing.B) {
+func BenchmarkTrieFindNodeOnEmptyTrie(b *testing.B) {
 	tm := lookupMatcher[string](true)
 	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -36,7 +37,7 @@ func BenchmarkTrieFindEmptyTrie(b *testing.B) {
 	}
 }
 
-func BenchmarkTrieFindRootPath(b *testing.B) {
+func BenchmarkTrieFindNodeRootPath(b *testing.B) {
 	tm := lookupMatcher[string](true)
 	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -72,7 +73,7 @@ func BenchmarkTrieFindRootPath(b *testing.B) {
 	}
 }
 
-func BenchmarkTrieFindPathForWildcardHost(b *testing.B) {
+func BenchmarkTrieFindNodeForPathUsingWildcardHost(b *testing.B) {
 	tm := lookupMatcher[string](true)
 	tree := &Trie[string]{
 		canAdd: func(_ []string, _ string) bool { return true },
@@ -101,6 +102,51 @@ func BenchmarkTrieFindPathForWildcardHost(b *testing.B) {
 
 			for range b.N {
 				tree.findNode("*", path, nil, tm)
+			}
+		})
+	}
+}
+
+func BenchmarkTrieFindEntry(b *testing.B) {
+	tm := lookupMatcher[string](true)
+	tree := &Trie[string]{
+		canAdd: func(_ []string, _ string) bool { return true },
+	}
+
+	require.NoError(b, tree.Add("*", "/foo/bar", "1"))
+	require.NoError(b, tree.Add("*", "/**", "2"))
+	require.NoError(b, tree.Add("*.example.com", "/foo/bar", "3"))
+	require.NoError(b, tree.Add("*.example.com", "/foo/:bar", "4"))
+	require.NoError(b, tree.Add("*.example.com", "/foo/**", "5"))
+	require.NoError(b, tree.Add("foo.example.com", "/foo/bar", "6"))
+	require.NoError(b, tree.Add("foo.example.com", "/**", "7"))
+	require.NoError(b, tree.Add("baz.example.com", "/**", "8"))
+
+	for uc, tc := range map[string]struct {
+		expVal string
+		uri    url.URL
+	}{
+		"foo.bar/foo/bar is matched by 1":             {"1", url.URL{Host: "foo.bar", Path: "/foo/bar"}},
+		"foo.bar/foo is matched by 2":                 {"2", url.URL{Host: "foo.bar", Path: "/foo"}},
+		"bar.example.com/foo/bar is matched by 3":     {"3", url.URL{Host: "bar.example.com", Path: "/foo/bar"}},
+		"bar.example.com/foo/baz is matched by 4":     {"4", url.URL{Host: "bar.example.com", Path: "/foo/baz"}},
+		"bar.example.com/foo/baz/foo is matched by 5": {"5", url.URL{Host: "bar.example.com", Path: "/foo/baz/foo"}},
+		"foo.example.com/foo/bar is matched by 6":     {"6", url.URL{Host: "foo.example.com", Path: "/foo/bar"}},
+		"foo.example.com/bar is matched 7":            {"7", url.URL{Host: "foo.example.com", Path: "/bar"}},
+		"foo.example.com/foo/bar is matched by 8":     {"8", url.URL{Host: "baz.example.com", Path: "/foo/bar"}},
+		"bla.example.com/bar/foo is matched by 2":     {"2", url.URL{Host: "bla.example.com", Path: "/bar/foo"}},
+	} {
+		b.Run(uc, func(b *testing.B) {
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for range b.N {
+				entry, err := tree.FindEntry(tc.uri.Host, tc.uri.Path, tm)
+
+				b.StopTimer()
+				require.NoError(b, err)
+				require.Equal(b, tc.expVal, entry.Value)
+				b.StartTimer()
 			}
 		})
 	}
