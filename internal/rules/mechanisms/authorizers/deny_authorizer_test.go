@@ -40,6 +40,8 @@ func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 			assert: func(t *testing.T, err error, prototype *denyAuthorizer, configured *denyAuthorizer) {
 				t.Helper()
 
+				require.NoError(t, err)
+
 				assert.Equal(t, prototype, configured)
 			},
 		},

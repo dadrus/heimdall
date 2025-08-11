@@ -47,7 +47,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 
 				assert.Equal(t, "anon", auth.subject.ID)
 				assert.Equal(t, "subject is set to anon", auth.ID())
-				assert.Equal(t, auth.Name(), auth.Name())
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.subject.Attributes)
 				assert.NotNil(t, auth.subject.Attributes)
 			},
@@ -61,7 +61,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 
 				assert.Equal(t, "anonymous", auth.subject.ID)
 				assert.Equal(t, "default subject", auth.ID())
-				assert.Equal(t, auth.Name(), auth.Name())
+				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.subject.Attributes)
 				assert.NotNil(t, auth.subject.Attributes)
 			},
@@ -156,7 +156,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 		"empty subject for the configured authenticator": {
 			prototypeConfig: []byte("subject: anon"),
 			config:          []byte("subject: ''"),
-			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
+			assert: func(t *testing.T, err error, _ *anonymousAuthenticator, _ *anonymousAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)

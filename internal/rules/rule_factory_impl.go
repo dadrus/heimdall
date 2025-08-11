@@ -211,6 +211,7 @@ func (f *ruleFactory) createExecutePipeline(
 			}
 
 			stepID := getStepID(pipelineStep["id"])
+
 			authenticator, err := f.hf.CreateAuthenticator(
 				version,
 				fmt.Sprintf("%v", refID),
@@ -292,6 +293,7 @@ func (f *ruleFactory) createOnErrorPipeline(
 			}
 
 			stepID := getStepID(ehStep["id"])
+
 			handler, err := f.hf.CreateErrorHandler(
 				version,
 				fmt.Sprintf("%v", refID),
@@ -401,6 +403,7 @@ func createHandler[T subjectHandler](
 	}
 
 	stepID := getStepID(configMap["id"])
+
 	handler, err := creteHandler(
 		version,
 		fmt.Sprintf("%v", refID),

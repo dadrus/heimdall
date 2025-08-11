@@ -166,7 +166,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			prototypeConfig: []byte(`realm: "Foobar"`),
 			config:          []byte(`realm: ""`),
 			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler,
-				configured *wwwAuthenticateErrorHandler,
+				_ *wwwAuthenticateErrorHandler,
 			) {
 				t.Helper()
 

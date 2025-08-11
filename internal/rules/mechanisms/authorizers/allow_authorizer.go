@@ -17,12 +17,12 @@
 package authorizers
 
 import (
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap

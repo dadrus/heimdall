@@ -19,12 +19,12 @@ package authorizers
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
@@ -39,6 +39,8 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 		"no new config and no step ID": {
 			assert: func(t *testing.T, err error, prototype *allowAuthorizer, configured *allowAuthorizer) {
 				t.Helper()
+
+				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
 			},

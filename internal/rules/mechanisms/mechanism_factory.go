@@ -42,7 +42,7 @@ var (
 type MechanismFactory interface {
 	CreateAuthenticator(version, refID, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error)
 	CreateAuthorizer(version, refID, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error)
-	CreateContextualizer(version, refID, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)
+	CreateContextualizer(version, refID, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) //nolint: lll
 	CreateFinalizer(version, refID, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error)
 	CreateErrorHandler(version, refID, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }

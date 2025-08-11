@@ -254,10 +254,10 @@ header:
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.Name(), prototype.ID())
-				assert.Equal(t, prototype.cfg, prototype.cfg)
-				assert.Equal(t, prototype.app, prototype.app)
-				assert.Equal(t, prototype.headerName, prototype.headerName)
-				assert.Equal(t, prototype.headerScheme, prototype.headerScheme)
+				assert.Equal(t, prototype.cfg, configured.cfg)
+				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.headerName, configured.headerName)
+				assert.Equal(t, prototype.headerScheme, configured.headerScheme)
 			},
 		},
 		"scopes reconfigured and step ID set": {

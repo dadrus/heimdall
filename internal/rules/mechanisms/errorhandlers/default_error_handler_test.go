@@ -57,6 +57,8 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 			assert: func(t *testing.T, err error, prototype *defaultErrorHandler, configured *defaultErrorHandler) {
 				t.Helper()
 
+				require.NoError(t, err)
+
 				assert.Equal(t, prototype, configured)
 			},
 		},

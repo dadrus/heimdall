@@ -234,7 +234,7 @@ cookies:
   foo: bar
 `),
 			config: []byte(`cookies: {}`),
-			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
+			assert: func(t *testing.T, err error, _ *cookieFinalizer, _ *cookieFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -296,6 +296,8 @@ cookies:
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 			},
 			assert: func(t *testing.T, err error) {
+				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
 				require.ErrorContains(t, err, "failed to render")

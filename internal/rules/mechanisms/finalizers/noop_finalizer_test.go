@@ -61,6 +61,8 @@ func TestCreateNoopFinalizerFromPrototype(t *testing.T) {
 			assert: func(t *testing.T, err error, prototype *noopFinalizer, configured *noopFinalizer) {
 				t.Helper()
 
+				require.NoError(t, err)
+
 				assert.Equal(t, prototype, configured)
 			},
 		},
