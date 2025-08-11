@@ -91,8 +91,8 @@ Following tag patterns exist:
 +
 [source, bash]
 ----
-$ docker pull dadrus/heimdall:0.16.8 && docker run dadrus/heimdall:0.16.8 --version
-heimdall version v0.16.8
+$ docker pull dadrus/heimdall:0.17.0 && docker run dadrus/heimdall:0.17.0 --version
+heimdall version v0.17.0
 ----
 
 * `latest` - will pull the most recent tagged release.
@@ -100,7 +100,7 @@ heimdall version v0.16.8
 [source, bash]
 ----
 $ docker pull dadrus/heimdall:latest && docker run dadrus/heimdall:latest --version
-heimdall version 0.16.8
+heimdall version 0.17.0
 ----
 
 == Helm Chart
@@ -111,7 +111,7 @@ NOTE: Autoscaling (HPA) is disabled by default to avoid misconfigured setups. If
 
 === Prerequisites
 
-* A Kubernetes version >= 1.29
+* A Kubernetes version >= 1.30
 * https://helm.sh/docs/intro/install/[Helm] 3.0+
 
 === Adding the Helm Repository
