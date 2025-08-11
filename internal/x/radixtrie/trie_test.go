@@ -568,7 +568,7 @@ func TestTrieAddWildcardPathsForDifferentHosts(t *testing.T) {
 		"host with a wildcard in the middle of the definition": {[]string{"foo.*.bar.example.com"}, true},
 		"using closed wildcard in host definition":             {[]string{":.example.com", "foo.:.example.com"}, true},
 		"mix of different hosts":                               {[]string{"bar.example.com", "bar.foo.com", "foo.bar", "example.com"}, false},
-		"katakana マ.カ":                                       {[]string{"マ.カ"}, false},
+		"katakana マ.カ":                                         {[]string{"マ.カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
@@ -611,8 +611,8 @@ func TestTrieAddPathForWildcardHost(t *testing.T) {
 		": in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab:cd"}, false},
 		"* in middle of path segment":                    {[]string{"/abc/ab*cd"}, false},
 		"* in middle of path segment with existing path": {[]string{"/abc/ab", "/abc/ab*cd"}, false},
-		"katakana /マ":                                   {[]string{"/マ"}, false},
-		"katakana /カ":                                   {[]string{"/カ"}, false},
+		"katakana /マ":                                    {[]string{"/マ"}, false},
+		"katakana /カ":                                    {[]string{"/カ"}, false},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			tree := New[string]()
