@@ -123,7 +123,8 @@ func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 
 type testIdentifier string
 
-func (tid testIdentifier) ID() string { return string(tid) }
+func (tid testIdentifier) ID() string   { return string(tid) }
+func (tid testIdentifier) Name() string { return string(tid) }
 
 func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 	t.Parallel()
@@ -134,7 +135,7 @@ func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 	}{
 		"complex expression evaluating to true": {
 			expression: `type(Error) in [communication_error, authorization_error] && 
-                           Error.Source == "foobar" &&
+                           Error.Source == "foobar" && Error.StepID == "foobar" &&
                            "bar" in Request.URL.Query().foo`,
 			expected: true,
 		},
