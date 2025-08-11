@@ -45,7 +45,7 @@ func TestCreateCookieFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'cookies' is a required field")
+				require.ErrorContains(t, err, "'cookies' is a required field")
 			},
 		},
 		"with empty cookies configuration": {
@@ -55,7 +55,7 @@ func TestCreateCookieFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'cookies' must contain more than 0 items")
+				require.ErrorContains(t, err, "'cookies' must contain more than 0 items")
 			},
 		},
 		"with unsupported attributes": {
@@ -69,7 +69,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with bad template": {
@@ -83,7 +83,7 @@ cookies:
 				require.Nil(t, finalizer)
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with valid config": {

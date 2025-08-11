@@ -62,7 +62,7 @@ func TestCreateSpanExporters(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrUnsupportedTracesExporterType)
-				assert.Contains(t, err.Error(), "foobar")
+				require.ErrorContains(t, err, "foobar")
 			},
 		},
 		"fails creating exporter type": {
@@ -75,9 +75,9 @@ func TestCreateSpanExporters(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrFailedCreatingTracesExporter)
-				assert.Contains(t, err.Error(), "instana")
+				require.ErrorContains(t, err, "instana")
 				require.ErrorIs(t, err, ErrFailedCreatingInstanaExporter)
-				assert.Contains(t, err.Error(), "environment variable")
+				require.ErrorContains(t, err, "environment variable")
 			},
 		},
 		"default exporter type with error": {
@@ -90,7 +90,7 @@ func TestCreateSpanExporters(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
-				assert.Contains(t, err.Error(), "foobar")
+				require.ErrorContains(t, err, "foobar")
 			},
 		},
 		"default exporter type": {

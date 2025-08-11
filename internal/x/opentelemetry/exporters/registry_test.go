@@ -66,7 +66,7 @@ func TestRegistryDuplicateStore(t *testing.T) {
 	// THEN
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrDuplicateRegistration)
-	assert.Contains(t, err.Error(), "first")
+	require.ErrorContains(t, err, "first")
 }
 
 func TestRegistryEmptyLoad(t *testing.T) {
@@ -100,5 +100,5 @@ func TestRegistryExistentLoad(t *testing.T) {
 	assert.NotNil(t, value)
 
 	_, err := value(t.Context())
-	assert.Contains(t, err.Error(), "for test purpose")
+	require.ErrorContains(t, err, "for test purpose")
 }

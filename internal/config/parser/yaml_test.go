@@ -119,7 +119,7 @@ nested_2:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "failed to load")
+				require.ErrorContains(t, err, "failed to load")
 			},
 		},
 		"invalid yaml env substitution": {
@@ -129,7 +129,7 @@ nested_2:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorContains(t, err, "failed to parse")
 			},
 		},
 		"can't read content": {
@@ -145,7 +145,7 @@ nested_2:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "failed to read")
+				require.ErrorContains(t, err, "failed to read")
 			},
 		},
 	} {

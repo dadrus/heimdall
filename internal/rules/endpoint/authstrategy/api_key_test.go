@@ -74,7 +74,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unsupported")
+				require.ErrorContains(t, err, "unsupported")
 			},
 		},
 	} {

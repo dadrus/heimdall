@@ -49,7 +49,7 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'to' is a required field")
+				require.ErrorContains(t, err, "'to' is a required field")
 			},
 		},
 		"with unexpected fields in configuration": {
@@ -62,7 +62,7 @@ if: true == false
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with minimal valid configuration, enforced and used TLS": {
@@ -253,7 +253,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render")
+				require.ErrorContains(t, err, "failed to render")
 			},
 		},
 		"without return to url templating": {

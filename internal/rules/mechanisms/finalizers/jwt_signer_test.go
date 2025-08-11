@@ -359,7 +359,7 @@ func TestNewJWTSigner(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to get information about")
+				require.ErrorContains(t, err, "failed to get information about")
 			},
 		},
 		"with certificate, which cannot be used for signature due to missing key usage": {
@@ -377,7 +377,7 @@ func TestNewJWTSigner(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "missing key usage: DigitalSignature")
+				require.ErrorContains(t, err, "missing key usage: DigitalSignature")
 			},
 		},
 		"with self-signed certificate usable for JWT signing": {
@@ -531,7 +531,7 @@ func TestJWTSignerSign(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "JWT signer")
+				require.ErrorContains(t, err, "JWT signer")
 			},
 		},
 	} {

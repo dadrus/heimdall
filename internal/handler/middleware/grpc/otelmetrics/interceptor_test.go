@@ -304,7 +304,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown service or method")
+	require.ErrorContains(t, err, "unknown service or method")
 	srv.Stop()
 
 	var rm metricdata.ResourceMetrics

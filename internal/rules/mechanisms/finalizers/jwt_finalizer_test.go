@@ -208,7 +208,7 @@ signer:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
+				require.ErrorContains(t, err, "'ttl' must be greater than 1s")
 			},
 		},
 		"with claims and key store": {
@@ -321,7 +321,7 @@ foo: bar"
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with bad header config": {
@@ -338,7 +338,7 @@ header:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'header'.'name' is a required field")
+				require.ErrorContains(t, err, "'header'.'name' is a required field")
 			},
 		},
 		"with valid header config without scheme": {
@@ -556,7 +556,7 @@ signer:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
+				require.ErrorContains(t, err, "'ttl' must be greater than 1s")
 			},
 		},
 		"configuration with claims only provided": {
@@ -699,7 +699,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 	} {
@@ -791,7 +791,7 @@ signer:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "'nil' subject")
+				require.ErrorContains(t, err, "'nil' subject")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -932,7 +932,7 @@ claims: "foo: bar"
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to unmarshal claims")
+				require.ErrorContains(t, err, "failed to unmarshal claims")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -961,7 +961,7 @@ claims: "{{ len .foobar }}"
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render claims")
+				require.ErrorContains(t, err, "failed to render claims")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -992,7 +992,7 @@ values:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render values")
+				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)

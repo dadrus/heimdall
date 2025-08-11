@@ -60,7 +60,7 @@ func TestCreateMetricReaders(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrUnsupportedMetricExporterType)
-				assert.Contains(t, err.Error(), "foobar")
+				require.ErrorContains(t, err, "foobar")
 			},
 		},
 		"fails creating exporter type": {
@@ -75,9 +75,9 @@ func TestCreateMetricReaders(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrFailedCreatingMetricExporter)
-				assert.Contains(t, err.Error(), "otlp")
+				require.ErrorContains(t, err, "otlp")
 				require.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
-				assert.Contains(t, err.Error(), "foobar")
+				require.ErrorContains(t, err, "foobar")
 			},
 		},
 		"default exporter type with error": {
@@ -90,7 +90,7 @@ func TestCreateMetricReaders(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
-				assert.Contains(t, err.Error(), "foobar")
+				require.ErrorContains(t, err, "foobar")
 			},
 		},
 		"default exporter type": {

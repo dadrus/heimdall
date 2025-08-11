@@ -57,7 +57,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorContains(t, err, "failed to decode")
 			},
 		},
 		"without buckets": {
@@ -67,7 +67,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no buckets configured")
+				require.ErrorContains(t, err, "no buckets configured")
 			},
 		},
 		"without url in one of the configured bucket": {
@@ -81,7 +81,7 @@ buckets:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "missing url for #1")
+				require.ErrorContains(t, err, "missing url for #1")
 			},
 		},
 		"with watch interval and unsupported property in one of the buckets configured": {
@@ -96,7 +96,7 @@ buckets:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorContains(t, err, "failed to decode")
 			},
 		},
 		"with watch interval and two buckets configured": {

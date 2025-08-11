@@ -178,7 +178,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to create a request")
+				require.ErrorContains(t, err, "failed to create a request")
 			},
 		},
 		"with only URL, method and body set": {
@@ -238,7 +238,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to authenticate request")
+				require.ErrorContains(t, err, "failed to authenticate request")
 			},
 		},
 		"with auth strategy and additional header": {
@@ -292,7 +292,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render URL")
+				require.ErrorContains(t, err, "failed to render URL")
 			},
 		},
 		"with templated header": {
@@ -325,7 +325,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "header value")
+				require.ErrorContains(t, err, "header value")
 			},
 		},
 	} {
@@ -378,7 +378,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to create a request")
+				require.ErrorContains(t, err, "failed to create a request")
 			},
 		},
 		"with dns error": {
@@ -388,7 +388,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "lookup heimdall")
+				require.ErrorContains(t, err, "lookup heimdall")
 			},
 		},
 		"with unexpected response from server": {
@@ -403,7 +403,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "unexpected response code")
+				require.ErrorContains(t, err, "unexpected response code")
 			},
 		},
 		"successful": {

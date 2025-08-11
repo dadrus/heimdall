@@ -316,7 +316,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "certificate has expired or is not yet valid")
+				require.ErrorContains(t, err, "certificate has expired or is not yet valid")
 			},
 		},
 		"chain is valid": {
@@ -342,7 +342,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "parent certificate cannot sign")
+				require.ErrorContains(t, err, "parent certificate cannot sign")
 			},
 		},
 		"chain with cross cert is valid": {

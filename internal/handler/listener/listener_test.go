@@ -105,7 +105,7 @@ func TestNewListener(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "foo")
+				require.ErrorContains(t, err, "foo")
 			},
 		},
 		"without TLS": {
@@ -131,7 +131,7 @@ func TestNewListener(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed loading")
+				require.ErrorContains(t, err, "failed loading")
 			},
 		},
 		"fails due to not specified key store": {
@@ -142,7 +142,7 @@ func TestNewListener(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no path to tls key store")
+				require.ErrorContains(t, err, "no path to tls key store")
 			},
 		},
 		"successful with specified key id": {

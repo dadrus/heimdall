@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,7 +37,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrSessionValidity)
-				assert.Contains(t, err.Error(), "not active")
+				require.ErrorContains(t, err, "not active")
 			},
 		},
 		"nothing configured": {
@@ -70,7 +69,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrSessionValidity)
-				assert.Contains(t, err.Error(), "issued in the future")
+				require.ErrorContains(t, err, "issued in the future")
 			},
 		},
 		"active session with only not before set to the past": {
@@ -94,7 +93,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrSessionValidity)
-				assert.Contains(t, err.Error(), "not yet valid")
+				require.ErrorContains(t, err, "not yet valid")
 			},
 		},
 		"active session with only not after set to the past": {
@@ -107,7 +106,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrSessionValidity)
-				assert.Contains(t, err.Error(), "expired")
+				require.ErrorContains(t, err, "expired")
 			},
 		},
 		"active session with only not after set to the future": {

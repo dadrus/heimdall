@@ -212,7 +212,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "no such file")
+				require.ErrorContains(t, err, "no such file")
 			},
 		},
 		"path is a directory": {
@@ -225,7 +225,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "not a file")
+				require.ErrorContains(t, err, "not a file")
 			},
 		},
 		"file not readable": {
@@ -244,7 +244,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "failed to read")
+				require.ErrorContains(t, err, "failed to read")
 			},
 		},
 		"file contains three keys": {
@@ -314,7 +314,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "duplicate entry")
+				require.ErrorContains(t, err, "duplicate entry")
 			},
 		},
 	} {
@@ -357,7 +357,7 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "duplicate entry")
+				require.ErrorContains(t, err, "duplicate entry")
 			},
 		},
 		"pem contains unsupported entries": {
@@ -377,7 +377,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "unsupported entry")
+				require.ErrorContains(t, err, "unsupported entry")
 			},
 		},
 		"key decoding error": {
@@ -397,7 +397,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorContains(t, err, "failed to parse")
 			},
 		},
 		"pem contains a key with X-Key-ID specified": {
@@ -592,7 +592,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "duplicate entry for key_id=foo")
+				require.ErrorContains(t, err, "duplicate entry for key_id=foo")
 			},
 		},
 	} {
@@ -631,7 +631,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unsupported key type")
+				require.ErrorContains(t, err, "unsupported key type")
 			},
 		},
 		"from rsa private key": {

@@ -64,7 +64,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorContains(t, err, "failed to decode")
 			},
 		},
 		"no src configured": {
@@ -74,7 +74,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no src")
+				require.ErrorContains(t, err, "no src")
 			},
 		},
 		"configured src does not exist": {
@@ -84,7 +84,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to get info")
+				require.ErrorContains(t, err, "failed to get info")
 			},
 		},
 		"successfully created provider without watcher": {
@@ -164,7 +164,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "no such file")
+				require.ErrorContains(t, err, "no such file")
 			},
 		},
 		"start provider using file without read permissions": {
@@ -179,7 +179,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "permission denied")
+				require.ErrorContains(t, err, "permission denied")
 			},
 		},
 		"successfully start provider without watcher using empty file": {

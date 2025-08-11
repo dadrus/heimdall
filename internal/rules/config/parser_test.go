@@ -45,7 +45,7 @@ func TestParseRules(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "unsupported 'foobar'")
+				require.ErrorContains(t, err, "unsupported 'foobar'")
 			},
 		},
 		"unsupported content type and empty contents": {
@@ -416,7 +416,7 @@ rules:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "evaluate env")
+				require.ErrorContains(t, err, "evaluate env")
 				require.Nil(t, ruleSet)
 			},
 		},

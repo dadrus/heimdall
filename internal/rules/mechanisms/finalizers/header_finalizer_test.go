@@ -45,7 +45,7 @@ func TestCreateHeaderFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'headers' is a required field")
+				require.ErrorContains(t, err, "'headers' is a required field")
 			},
 		},
 		"with empty headers configuration": {
@@ -55,7 +55,7 @@ func TestCreateHeaderFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'headers' must contain more than 0 items")
+				require.ErrorContains(t, err, "'headers' must contain more than 0 items")
 			},
 		},
 		"with unsupported attributes": {
@@ -69,7 +69,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with bad template": {
@@ -82,7 +82,7 @@ headers:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with valid config": {
@@ -245,7 +245,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 	} {
@@ -314,7 +314,7 @@ headers:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render value for 'X-Baz' header")
+				require.ErrorContains(t, err, "failed to render value for 'X-Baz' header")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)

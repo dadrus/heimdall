@@ -93,7 +93,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "endpoint failed")
+				require.ErrorContains(t, err, "endpoint failed")
 			},
 		},
 		"rule set loading error due to server error response": {
@@ -113,7 +113,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "response code: 400")
+				require.ErrorContains(t, err, "response code: 400")
 			},
 		},
 		"rule set loading error due to not set Content-Type for a not empty body": {
@@ -142,7 +142,7 @@ rules:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "content type")
+				require.ErrorContains(t, err, "content type")
 			},
 		},
 		"empty rule set is returned on response with empty body": {
