@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.16.9](https://github.com/dadrus/heimdall/compare/v0.16.8...v0.16.9) (2025-08-11)
+
+
+### Dependencies
+
+* update golang to v1.24.6 ([#2640](https://github.com/dadrus/heimdall/issues/2640)) ([63b4509](https://github.com/dadrus/heimdall/commit/63b45098713095915dcadda2c055e09158992d1c))
+* update google.golang.org/genproto/googleapis/rpc digest to 6b04f9b ([#2649](https://github.com/dadrus/heimdall/issues/2649)) ([183d045](https://github.com/dadrus/heimdall/commit/183d045d722da9aa7e1fc7f610c8b05170c39810))
+* update module google.golang.org/protobuf to v1.36.7 ([#2642](https://github.com/dadrus/heimdall/issues/2642)) ([26be6eb](https://github.com/dadrus/heimdall/commit/26be6ebea358e6418eea6c45c172ae352b85a038))
+
 ## [0.16.8](https://github.com/dadrus/heimdall/compare/v0.16.7...v0.16.8) (2025-08-06)
 
 
