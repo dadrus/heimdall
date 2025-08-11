@@ -30,39 +30,65 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, _ map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, name string, typ string, _ map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorUnauthorized {
 				return false, nil, nil
 			}
 
-			return true, newUnauthorizedAuthenticator(app, id), nil
+			return true, newUnauthorizedAuthenticator(app, name), nil
 		})
 }
 
 type unauthorizedAuthenticator struct {
-	id string
+	name string
+	id   string
 }
 
-func newUnauthorizedAuthenticator(app app.Context, id string) *unauthorizedAuthenticator {
+func newUnauthorizedAuthenticator(app app.Context, name string) *unauthorizedAuthenticator {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating unauthorized authenticator")
+	logger.Info().
+		Str("_type", AuthenticatorUnauthorized).
+		Str("_name", name).
+		Msg("Creating authenticator")
 
-	return &unauthorizedAuthenticator{id: id}
+	return &unauthorizedAuthenticator{
+		name: name,
+		id:   name,
+	}
 }
 
 func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", a.id).Msg("Authenticating using unauthorized authenticator")
+	logger.Debug().
+		Str("_type", AuthenticatorUnauthorized).
+		Str("_name", a.name).
+		Str("_id", a.id).
+		Msg("Executing authenticator")
 
 	return nil, errorchain.
 		NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator").
 		WithErrorContext(a)
 }
 
-func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) {
+func (a *unauthorizedAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
 	// nothing can be reconfigured
-	return a, nil
+	if len(stepID) == 0 && len(rawConfig) == 0 {
+		return a, nil
+	}
+
+	if len(rawConfig) != 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "unauthorized authenticator cannot be reconfigured").
+			WithErrorContext(a)
+	}
+
+	auth := *a
+	auth.id = stepID
+
+	return &auth, nil
 }
+
+func (a *unauthorizedAuthenticator) Name() string { return a.name }
 
 func (a *unauthorizedAuthenticator) ID() string {
 	return a.id

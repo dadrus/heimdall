@@ -22,18 +22,19 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorAnonymous {
 				return false, nil, nil
 			}
 
-			auth, err := newAnonymousAuthenticator(app, id, conf)
+			auth, err := newAnonymousAuthenticator(app, name, conf)
 
 			return true, auth, err
 		})
@@ -41,53 +42,89 @@ func init() { // nolint: gochecknoinits
 
 func newAnonymousAuthenticator(
 	app app.Context,
-	id string,
+	name string,
 	rawConfig map[string]any,
 ) (*anonymousAuthenticator, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating anonymous authenticator")
+	logger.Info().
+		Str("_type", AuthenticatorAnonymous).
+		Str("_name", name).
+		Msg("Creating authenticator")
 
-	var auth anonymousAuthenticator
+	type Config struct {
+		Subject string `mapstructure:"subject"`
+	}
 
-	if err := decodeConfig(app, rawConfig, &auth); err != nil {
+	var conf Config
+
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for anonymous authenticator '%s'", id).CausedBy(err)
+			"failed decoding config for anonymous authenticator '%s'", name).CausedBy(err)
 	}
 
-	if len(auth.Subject) == 0 {
-		auth.Subject = "anonymous"
+	if len(conf.Subject) == 0 {
+		conf.Subject = "anonymous"
 	}
 
-	auth.id = id
-	auth.app = app
-
-	return &auth, nil
+	return &anonymousAuthenticator{
+		name:    name,
+		id:      name,
+		subject: &subject.Subject{ID: conf.Subject, Attributes: make(map[string]any)},
+		app:     app,
+	}, nil
 }
 
 type anonymousAuthenticator struct {
+	name    string
 	id      string
 	app     app.Context
-	Subject string `mapstructure:"subject"`
+	subject *subject.Subject
 }
 
 func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", a.id).Msg("Authenticating using anonymous authenticator")
+	logger.Debug().
+		Str("_type", AuthenticatorAnonymous).
+		Str("_name", a.name).
+		Str("_id", a.id).
+		Msg("Executing authenticator")
 
-	return &subject.Subject{ID: a.Subject, Attributes: make(map[string]any)}, nil
+	return a.subject, nil
 }
 
-func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
-	// this authenticator allows subject to be redefined on the rule level
-	if len(config) == 0 {
+func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
 	}
 
-	return newAnonymousAuthenticator(a.app, a.id, config)
+	if len(rawConfig) == 0 {
+		auth := *a
+		auth.id = stepID
+
+		return &auth, nil
+	}
+
+	type Config struct {
+		Subject string `mapstructure:"subject" validate:"required"`
+	}
+
+	var conf Config
+
+	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for anonymous authenticator '%s'", a.name).CausedBy(err)
+	}
+
+	return &anonymousAuthenticator{
+		name:    a.name,
+		id:      x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		subject: &subject.Subject{ID: conf.Subject, Attributes: a.subject.Attributes},
+		app:     a.app,
+	}, nil
 }
 
-func (a *anonymousAuthenticator) ID() string {
-	return a.id
-}
+func (a *anonymousAuthenticator) Name() string { return a.name }
+
+func (a *anonymousAuthenticator) ID() string { return a.id }
 
 func (a *anonymousAuthenticator) IsInsecure() bool { return true }

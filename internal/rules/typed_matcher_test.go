@@ -45,7 +45,7 @@ func TestRegexPatternMatcher(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "error parsing regexp")
+				require.ErrorContains(t, err, "error parsing regexp")
 			},
 		},
 		"doesn't match": {
@@ -104,7 +104,7 @@ func TestGlobPatternMatcher(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unexpected end of input")
+				require.ErrorContains(t, err, "unexpected end of input")
 			},
 		},
 		"doesn't match": {

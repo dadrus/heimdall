@@ -1,4 +1,3 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,10 +57,10 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "validation error")
-				assert.Contains(t, err.Error(), "token_url")
-				assert.Contains(t, err.Error(), "client_id")
-				assert.Contains(t, err.Error(), "client_secret")
+				require.ErrorContains(t, err, "validation error")
+				require.ErrorContains(t, err, "token_url")
+				require.ErrorContains(t, err, "client_id")
+				require.ErrorContains(t, err, "client_secret")
 			},
 		},
 		"with empty configuration": {
@@ -71,10 +70,10 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "validation error")
-				assert.Contains(t, err.Error(), "token_url")
-				assert.Contains(t, err.Error(), "client_id")
-				assert.Contains(t, err.Error(), "client_secret")
+				require.ErrorContains(t, err, "validation error")
+				require.ErrorContains(t, err, "token_url")
+				require.ErrorContains(t, err, "client_id")
+				require.ErrorContains(t, err, "client_secret")
 			},
 		},
 		"with unsupported attributes": {
@@ -87,7 +86,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "invalid keys")
+				require.ErrorContains(t, err, "invalid keys")
 			},
 		},
 		"with bad auth method attributes": {
@@ -102,7 +101,7 @@ auth_method: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'auth_method' must be one of [basic_auth request_body]")
+				require.ErrorContains(t, err, "'auth_method' must be one of [basic_auth request_body]")
 			},
 		},
 		"with minimal valid config with enforced and used TLS": {
@@ -118,7 +117,8 @@ client_secret: bar
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
 
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with minimal valid config with enforced and used TLS", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -141,7 +141,7 @@ client_secret: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'token_url' scheme must be https")
+				require.ErrorContains(t, err, "'token_url' scheme must be https")
 			},
 		},
 		"with full valid config": {
@@ -164,7 +164,8 @@ header:
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
 
-				assert.Equal(t, "fin", finalizer.ID())
+				assert.Equal(t, "with full valid config", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -196,7 +197,7 @@ header:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			finalizer, err := newOAuth2ClientCredentialsFinalizer(appCtx, "fin", conf)
+			finalizer, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -210,9 +211,10 @@ func TestCreateClientCredentialsFinalizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer)
 	}{
-		"no new configuration provided": {
+		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -231,7 +233,7 @@ header:
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"empty configuration provided": {
+		"no new configuration but with step ID": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -243,16 +245,22 @@ scopes:
 header: 
   name: "X-My-Header"
 `),
-			config: []byte(``),
+			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "fin", configured.ID())
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.Name(), prototype.ID())
+				assert.Equal(t, prototype.cfg, configured.cfg)
+				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.headerName, configured.headerName)
+				assert.Equal(t, prototype.headerScheme, configured.headerScheme)
 			},
 		},
-		"scopes reconfigured": {
+		"scopes reconfigured and step ID set": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
 client_id: foo
@@ -264,13 +272,16 @@ scopes:
   - foo
   - baz
 `),
+			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -305,6 +316,7 @@ cache_ttl: 12s
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -335,7 +347,7 @@ foo: 10s
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 
 				require.NotNil(t, prototype)
 				require.Nil(t, configured)
@@ -359,6 +371,7 @@ header:
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -391,11 +404,11 @@ header:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newOAuth2ClientCredentialsFinalizer(appCtx, "fin", pc)
+			prototype, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			finalizer, err := prototype.WithConfig(conf)
+			finalizer, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (

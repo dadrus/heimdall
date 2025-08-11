@@ -34,7 +34,10 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	var identifier interface{ ID() string }
+	var identifier interface {
+		ID() string
+		Name() string
+	}
 
 	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
@@ -51,28 +54,65 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 
 	require.ErrorAs(t, err, &identifier)
 	assert.Equal(t, "unauth", identifier.ID())
+	assert.Equal(t, identifier.Name(), identifier.ID())
 }
 
 func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
-	// GIVEN
-	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	prototype := newUnauthorizedAuthenticator(appCtx, "unauth")
+	for uc, tc := range map[string]struct {
+		stepID  string
+		newConf map[string]any
+		assert  func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator)
+	}{
+		"without new config and step ID": {
+			assert: func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator) {
+				t.Helper()
 
-	// WHEN
-	auth, err := prototype.WithConfig(nil)
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
+			},
+		},
+		"with new config": {
+			newConf: map[string]any{"foo": "bar"},
+			assert: func(t *testing.T, err error, _ *unauthorizedAuthenticator, _ *unauthorizedAuthenticator) {
+				t.Helper()
 
-	// THEN
-	require.NoError(t, err)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "cannot be reconfigured")
+			},
+		},
+		"with new step ID": {
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator) {
+				t.Helper()
 
-	uaa, ok := auth.(*unauthorizedAuthenticator)
-	require.True(t, ok)
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, "with new step ID", prototype.ID())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
 
-	// prototype and "created" authenticator are same
-	assert.Equal(t, prototype, uaa)
-	assert.Equal(t, "unauth", uaa.ID())
+			prototype := newUnauthorizedAuthenticator(appCtx, uc)
+
+			auth, err := prototype.WithConfig(tc.stepID, tc.newConf)
+
+			uaa, ok := auth.(*unauthorizedAuthenticator)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, prototype, uaa)
+		})
+	}
 }
 
 func TestUnauthorizedAuthenticatorIsInsecure(t *testing.T) {

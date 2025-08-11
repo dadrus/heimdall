@@ -78,7 +78,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "unexpected content")
+				require.ErrorContains(t, err, "unexpected content")
 			},
 		},
 		"bad audience encoding (not expected json array content)": {
@@ -88,7 +88,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "audience array")
+				require.ErrorContains(t, err, "audience array")
 			},
 		},
 	} {

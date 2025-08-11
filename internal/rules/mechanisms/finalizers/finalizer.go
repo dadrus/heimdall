@@ -26,6 +26,6 @@ import (
 type Finalizer interface {
 	ID() string
 	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error
-	WithConfig(config map[string]any) (Finalizer, error)
+	WithConfig(stepID string, config map[string]any) (Finalizer, error)
 	ContinueOnError() bool
 }

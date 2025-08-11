@@ -40,11 +40,11 @@ var (
 //go:generate mockery --name MechanismFactory --structname MechanismFactoryMock
 
 type MechanismFactory interface {
-	CreateAuthenticator(version, id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
-	CreateAuthorizer(version, id string, conf config.MechanismConfig) (authorizers.Authorizer, error)
-	CreateContextualizer(version, id string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)
-	CreateFinalizer(version, id string, conf config.MechanismConfig) (finalizers.Finalizer, error)
-	CreateErrorHandler(version, id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
+	CreateAuthenticator(version, refID, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error)
+	CreateAuthorizer(version, refID, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error)
+	CreateContextualizer(version, refID, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) //nolint: lll
+	CreateFinalizer(version, refID, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error)
+	CreateErrorHandler(version, refID, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
 
 func NewMechanismFactory(app app.Context) (MechanismFactory, error) {
@@ -65,16 +65,16 @@ type mechanismsFactory struct {
 	r *mechanismRepository
 }
 
-func (hf *mechanismsFactory) CreateAuthenticator(_, id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateAuthenticator(_, refID, stepID string, conf config.MechanismConfig) (
 	authenticators.Authenticator, error,
 ) {
-	prototype, err := hf.r.Authenticator(id)
+	prototype, err := hf.r.Authenticator(refID)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		authenticator, err := prototype.WithConfig(conf)
+		authenticator, err := prototype.WithConfig(stepID, conf)
 		if err != nil {
 			return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 		}
@@ -85,16 +85,16 @@ func (hf *mechanismsFactory) CreateAuthenticator(_, id string, conf config.Mecha
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateAuthorizer(_, id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateAuthorizer(_, refID, stepID string, conf config.MechanismConfig) (
 	authorizers.Authorizer, error,
 ) {
-	prototype, err := hf.r.Authorizer(id)
+	prototype, err := hf.r.Authorizer(refID)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		authorizer, err := prototype.WithConfig(conf)
+		authorizer, err := prototype.WithConfig(stepID, conf)
 		if err != nil {
 			return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 		}
@@ -105,16 +105,16 @@ func (hf *mechanismsFactory) CreateAuthorizer(_, id string, conf config.Mechanis
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateContextualizer(_, id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateContextualizer(_, refID, stepID string, conf config.MechanismConfig) (
 	contextualizers.Contextualizer, error,
 ) {
-	prototype, err := hf.r.Contextualizer(id)
+	prototype, err := hf.r.Contextualizer(refID)
 	if err != nil {
 		return nil, errorchain.New(ErrContextualizerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		contextualizer, err := prototype.WithConfig(conf)
+		contextualizer, err := prototype.WithConfig(stepID, conf)
 		if err != nil {
 			return nil, errorchain.New(ErrContextualizerCreation).CausedBy(err)
 		}
@@ -125,16 +125,16 @@ func (hf *mechanismsFactory) CreateContextualizer(_, id string, conf config.Mech
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateFinalizer(_, id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateFinalizer(_, refID, stepID string, conf config.MechanismConfig) (
 	finalizers.Finalizer, error,
 ) {
-	prototype, err := hf.r.Finalizer(id)
+	prototype, err := hf.r.Finalizer(refID)
 	if err != nil {
 		return nil, errorchain.New(ErrFinalizerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		finalizer, err := prototype.WithConfig(conf)
+		finalizer, err := prototype.WithConfig(stepID, conf)
 		if err != nil {
 			return nil, errorchain.New(ErrFinalizerCreation).CausedBy(err)
 		}
@@ -145,16 +145,16 @@ func (hf *mechanismsFactory) CreateFinalizer(_, id string, conf config.Mechanism
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateErrorHandler(_, id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateErrorHandler(_, refID, stepID string, conf config.MechanismConfig) (
 	errorhandlers.ErrorHandler, error,
 ) {
-	prototype, err := hf.r.ErrorHandler(id)
+	prototype, err := hf.r.ErrorHandler(refID)
 	if err != nil {
 		return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		errorHandler, err := prototype.WithConfig(conf)
+		errorHandler, err := prototype.WithConfig(stepID, conf)
 		if err != nil {
 			return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 		}

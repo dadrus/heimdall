@@ -60,8 +60,10 @@ password: bar`),
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.False(t, auth.allowFallbackOnError)
 				assert.Equal(t, "valid configuration without set fallback", auth.ID())
+				assert.Equal(t, auth.ID(), auth.Name())
+				assert.Empty(t, auth.emptyAttributes)
+				assert.NotNil(t, auth.emptyAttributes)
 			},
 		},
 		"valid configuration without fallback set to true": {
@@ -85,8 +87,10 @@ allow_fallback_on_error: true
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.True(t, auth.allowFallbackOnError)
 				assert.Equal(t, "valid configuration without fallback set to true", auth.ID())
+				assert.Equal(t, auth.ID(), auth.Name())
+				assert.Empty(t, auth.emptyAttributes)
+				assert.NotNil(t, auth.emptyAttributes)
 			},
 		},
 		"without user_id": {
@@ -155,6 +159,7 @@ func TestCreateBasicAuthAuthenticatorFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator)
 	}{
 		"no new configuration for the configured authenticator": {
@@ -167,24 +172,6 @@ password: bar`),
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 				assert.Equal(t, "no new configuration for the configured authenticator", configured.ID())
-			},
-		},
-		"fallback on error set to true": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			config: []byte(`
-allow_fallback_on_error: true
-`),
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, prototype.userID, configured.userID)
-				assert.Equal(t, prototype.password, configured.password)
-				assert.NotEqual(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
-				assert.True(t, configured.allowFallbackOnError)
-				assert.Equal(t, "fallback on error set to true", configured.ID())
 			},
 		},
 		"password differs": {
@@ -202,8 +189,9 @@ password: baz`),
 
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "password differs", configured.ID())
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 			},
 		},
 		"no user_id provided": {
@@ -220,8 +208,9 @@ password: baz`),
 
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no user_id provided", configured.ID())
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 			},
 		},
 		"no password provided": {
@@ -238,8 +227,9 @@ user_id: baz`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no password provided", configured.ID())
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 			},
 		},
 		"user_id differs": {
@@ -257,8 +247,9 @@ password: bar`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "user_id differs", configured.ID())
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 			},
 		},
 		"user_id and password differs": {
@@ -276,8 +267,10 @@ password: baz`),
 
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.allowFallbackOnError, configured.allowFallbackOnError)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "user_id and password differs", configured.ID())
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 
 				md := sha256.New()
 				md.Write([]byte("baz"))
@@ -285,6 +278,40 @@ password: baz`),
 
 				assert.Equal(t, value, configured.userID)
 				assert.Equal(t, value, configured.password)
+			},
+		},
+		"step id configured": {
+			prototypeConfig: []byte(`
+user_id: foo
+password: bar`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				require.Equal(t, prototype.Name(), configured.Name())
+				require.NotEqual(t, prototype.ID(), configured.ID())
+				require.Equal(t, "foo", configured.ID())
+				require.Equal(t, prototype.userID, configured.userID)
+				require.Equal(t, prototype.password, configured.password)
+				require.Equal(t, prototype.ads, configured.ads)
+				require.Equal(t, prototype.app, configured.app)
+				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+			},
+		},
+		"decoding error": {
+			prototypeConfig: []byte(`
+user_id: foo
+password: bar`),
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator, _ *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding config")
 			},
 		},
 	} {
@@ -307,11 +334,13 @@ password: baz`),
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig(conf)
+			auth, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			baa, ok := auth.(*basicAuthAuthenticator)
-			require.True(t, ok)
+			if err == nil {
+				require.True(t, ok)
+			}
 
 			tc.assert(t, err, prototype, baa)
 		})
@@ -349,7 +378,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "expected header not present")
+				require.ErrorContains(t, err, "expected header not present")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -373,7 +402,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorContains(t, err, "failed to decode")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -398,7 +427,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "malformed user-id - password")
+				require.ErrorContains(t, err, "malformed user-id - password")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -448,7 +477,7 @@ password: bar`))
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "invalid user credentials")
+				require.ErrorContains(t, err, "invalid user credentials")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)

@@ -29,28 +29,32 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerWWWAuthenticate {
 				return false, nil, nil
 			}
 
-			eh, err := newWWWAuthenticateErrorHandler(app, id, conf)
+			eh, err := newWWWAuthenticateErrorHandler(app, name, conf)
 
 			return true, eh, err
 		})
 }
 
 type wwwAuthenticateErrorHandler struct {
+	name  string
 	id    string
 	app   app.Context
 	realm string
 }
 
 func newWWWAuthenticateErrorHandler(
-	app app.Context, id string, rawConfig map[string]any,
+	app app.Context, name string, rawConfig map[string]any,
 ) (*wwwAuthenticateErrorHandler, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating www-authenticate error handler")
+	logger.Info().
+		Str("_type", ErrorHandlerWWWAuthenticate).
+		Str("_name", name).
+		Msg("Creating error handler")
 
 	type Config struct {
 		Realm string `mapstructure:"realm"`
@@ -62,17 +66,24 @@ func newWWWAuthenticateErrorHandler(
 	}
 
 	return &wwwAuthenticateErrorHandler{
-		id:    id,
+		name:  name,
+		id:    name,
 		app:   app,
 		realm: x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
 	}, nil
 }
 
+func (eh *wwwAuthenticateErrorHandler) Name() string { return eh.name }
+
 func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", eh.id).Msg("Handling error using www-authenticate error handler")
+	logger.Debug().
+		Str("_type", ErrorHandlerWWWAuthenticate).
+		Str("_name", eh.name).
+		Str("_id", eh.id).
+		Msg("Executing error handler")
 
 	ctx.AddHeaderForUpstream("WWW-Authenticate", "Basic realm="+eh.realm)
 	ctx.SetPipelineError(heimdall.ErrAuthentication)
@@ -80,13 +91,20 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.RequestContext, _ er
 	return nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
-	if len(rawConfig) == 0 {
+func (eh *wwwAuthenticateErrorHandler) WithConfig(stepID string, rawConfig map[string]any) (ErrorHandler, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return eh, nil
 	}
 
+	if len(rawConfig) == 0 {
+		erh := *eh
+		erh.id = stepID
+
+		return &erh, nil
+	}
+
 	type Config struct {
-		Realm string `mapstructure:"realm"`
+		Realm string `mapstructure:"realm" validate:"required"`
 	}
 
 	var (
@@ -99,7 +117,8 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	return &wwwAuthenticateErrorHandler{
-		id:    eh.id,
+		name:  eh.name,
+		id:    x.IfThenElse(len(stepID) == 0, eh.id, stepID),
 		app:   eh.app,
 		realm: conf.Realm,
 	}, nil

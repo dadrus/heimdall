@@ -21,6 +21,6 @@ const (
 	AuthenticatorBasicAuth           = "basic_auth"
 	AuthenticatorAnonymous           = "anonymous"
 	AuthenticatorOAuth2Introspection = "oauth2_introspection"
-	AuthenticatorJwt                 = "jwt"
+	AuthenticatorJWT                 = "jwt"
 	AuthenticatorGeneric             = "generic"
 )

@@ -50,36 +50,39 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorOAuth2Introspection {
 				return false, nil, nil
 			}
 
-			auth, err := newOAuth2IntrospectionAuthenticator(app, id, conf)
+			auth, err := newOAuth2IntrospectionAuthenticator(app, name, conf)
 
 			return true, auth, err
 		})
 }
 
 type oauth2IntrospectionAuthenticator struct {
-	id                   string
-	app                  app.Context
-	r                    oauth2.ServerMetadataResolver
-	a                    oauth2.Expectation
-	sf                   SubjectFactory
-	ads                  extractors.AuthDataExtractStrategy
-	ttl                  *time.Duration
-	allowFallbackOnError bool
+	name string
+	id   string
+	app  app.Context
+	r    oauth2.ServerMetadataResolver
+	a    oauth2.Expectation
+	sf   SubjectFactory
+	ads  extractors.AuthDataExtractStrategy
+	ttl  *time.Duration
 }
 
 // nolint: funlen, cyclop
 func newOAuth2IntrospectionAuthenticator(
 	app app.Context,
-	id string,
+	name string,
 	rawConfig map[string]any,
 ) (*oauth2IntrospectionAuthenticator, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating oauth2_introspection authenticator")
+	logger.Info().
+		Str("_type", AuthenticatorOAuth2Introspection).
+		Str("_name", name).
+		Msg("Creating authenticator")
 
 	type Config struct {
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
@@ -94,21 +97,28 @@ func newOAuth2IntrospectionAuthenticator(
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for oauth2_introspection authenticator '%s'", id).CausedBy(err)
+			"failed decoding config for oauth2_introspection authenticator '%s'", name).CausedBy(err)
 	}
 
 	if conf.AllowFallbackOnError {
-		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+		logger.Warn().
+			Str("_type", AuthenticatorOAuth2Introspection).
+			Str("_name", name).
+			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
-		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the introspection endpoint used in oauth2_introspection authenticator")
+		logger.Warn().
+			Str("_type", AuthenticatorOAuth2Introspection).
+			Str("_name", name).
+			Msg("No TLS configured for the introspection endpoint used in authenticator")
 	}
 
 	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
-		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the metadata endpoint used in oauth2_introspection authenticator")
+		logger.Warn().
+			Str("_type", AuthenticatorOAuth2Introspection).
+			Str("_name", name).
+			Msg("No TLS configured for the metadata endpoint used in authenticator")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -164,20 +174,24 @@ func newOAuth2IntrospectionAuthenticator(
 	)
 
 	return &oauth2IntrospectionAuthenticator{
-		id:                   id,
-		app:                  app,
-		ads:                  ads,
-		r:                    resolver,
-		a:                    conf.Assertions,
-		sf:                   &conf.SubjectInfo,
-		ttl:                  conf.CacheTTL,
-		allowFallbackOnError: conf.AllowFallbackOnError,
+		name: name,
+		id:   name,
+		app:  app,
+		ads:  ads,
+		r:    resolver,
+		a:    conf.Assertions,
+		sf:   &conf.SubjectInfo,
+		ttl:  conf.CacheTTL,
 	}, nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", a.id).Msg("Authenticating using OAuth2 introspect authenticator")
+	logger.Debug().
+		Str("_type", AuthenticatorOAuth2Introspection).
+		Str("_name", a.name).
+		Str("_id", a.id).
+		Msg("Executing authenticator")
 
 	accessToken, err := a.ads.GetAuthData(ctx)
 	if err != nil {
@@ -204,10 +218,17 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) 
 	return sub, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) (Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(rawConfig) == 0 {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
+	}
+
+	if len(rawConfig) == 0 {
+		auth := *a
+		auth.id = stepID
+
+		return &auth, nil
 	}
 
 	type Config struct {
@@ -219,31 +240,32 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for oauth2_introspection authenticator '%s'", a.id).CausedBy(err)
+			"failed decoding config for oauth2_introspection authenticator '%s'", a.name).CausedBy(err)
 	}
 
 	if conf.AllowFallbackOnError != nil {
 		logger := a.app.Logger()
-		logger.Warn().Str("_id", a.id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+		logger.Warn().
+			Str("_type", AuthenticatorOAuth2Introspection).
+			Str("_name", a.name).
+			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	return &oauth2IntrospectionAuthenticator{
-		id:  a.id,
-		app: a.app,
-		r:   a.r,
-		a:   conf.Assertions.Merge(a.a),
-		sf:  a.sf,
-		ads: a.ads,
-		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
-		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
-			func() bool { return *conf.AllowFallbackOnError },
-			func() bool { return a.allowFallbackOnError }),
+		name: a.name,
+		id:   x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		app:  a.app,
+		r:    a.r,
+		a:    conf.Assertions.Merge(a.a),
+		sf:   a.sf,
+		ads:  a.ads,
+		ttl:  x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) ID() string {
-	return a.id
-}
+func (a *oauth2IntrospectionAuthenticator) Name() string { return a.name }
+
+func (a *oauth2IntrospectionAuthenticator) ID() string { return a.id }
 
 func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
 

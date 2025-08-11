@@ -29,34 +29,70 @@ import (
 )
 
 func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
-	// GIVEN
-	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Logger().Return(log.Logger)
+	t.Parallel()
 
-	prototype := newDenyAuthorizer(appCtx, "foo")
+	for uc, tc := range map[string]struct {
+		stepID  string
+		newConf map[string]any
+		assert  func(t *testing.T, err error, prototype *denyAuthorizer, configured *denyAuthorizer)
+	}{
+		"no new config and no step ID": {
+			assert: func(t *testing.T, err error, prototype *denyAuthorizer, configured *denyAuthorizer) {
+				t.Helper()
 
-	// WHEN
-	conf1, err1 := prototype.WithConfig(nil)
-	conf2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
+				require.NoError(t, err)
 
-	// THEN
-	require.NoError(t, err1)
-	require.NoError(t, err2)
+				assert.Equal(t, prototype, configured)
+			},
+		},
+		"no new config but with step ID": {
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *denyAuthorizer, configured *denyAuthorizer) {
+				t.Helper()
 
-	assert.Equal(t, prototype, conf1)
-	assert.Equal(t, prototype, conf2)
+				require.NoError(t, err)
 
-	assert.IsType(t, &denyAuthorizer{}, conf1)
-	assert.IsType(t, &denyAuthorizer{}, conf2)
+				assert.NotEqual(t, configured, prototype)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "foo", configured.ID())
+			},
+		},
+		"with new config": {
+			newConf: map[string]any{"foo": "bar"},
+			assert: func(t *testing.T, err error, _ *denyAuthorizer, _ *denyAuthorizer) {
+				t.Helper()
 
-	// nolint: forcetypeassert
-	assert.Equal(t, "foo", conf1.(*denyAuthorizer).ID())
-	assert.False(t, conf1.ContinueOnError())
-	assert.False(t, conf2.ContinueOnError())
-	assert.False(t, prototype.ContinueOnError())
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "cannot be reconfigured")
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			prototype := newDenyAuthorizer(appCtx, uc)
+			assert.False(t, prototype.ContinueOnError())
+
+			// WHEN
+			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
+			authz, ok := conf.(*denyAuthorizer)
+
+			// THEN
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, prototype, authz)
+		})
+	}
 }
 
 func TestDenyAuthorizerExecute(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	var identifier interface{ ID() string }
 

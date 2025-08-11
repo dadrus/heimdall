@@ -124,7 +124,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				require.Nil(t, session)
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrSessionLifespanParseError)
-				assert.Contains(t, err.Error(), "issued_at")
+				require.ErrorContains(t, err, "issued_at")
 			},
 		},
 		"only not before field is defined in session config": {
@@ -183,7 +183,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				require.Nil(t, session)
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrSessionLifespanParseError)
-				assert.Contains(t, err.Error(), "not_before")
+				require.ErrorContains(t, err, "not_before")
 			},
 		},
 		"only not after field is defined in session config": {
@@ -242,7 +242,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				require.Nil(t, session)
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrSessionLifespanParseError)
-				assert.Contains(t, err.Error(), "not_after")
+				require.ErrorContains(t, err, "not_after")
 			},
 		},
 	} {

@@ -34,26 +34,30 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
 			}
 
-			eh, err := newRedirectErrorHandler(app, id, conf)
+			eh, err := newRedirectErrorHandler(app, name, conf)
 
 			return true, eh, err
 		})
 }
 
 type redirectErrorHandler struct {
+	name string
 	id   string
 	to   template.Template
 	code int
 }
 
-func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
+func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]any) (*redirectErrorHandler, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating redirect error handler")
+	logger.Info().
+		Str("_type", ErrorHandlerRedirect).
+		Str("_name", name).
+		Msg("Creating error handler")
 
 	type Config struct {
 		To   template.Template `mapstructure:"to"   validate:"required,enforced=istls"`
@@ -66,22 +70,31 @@ func newRedirectErrorHandler(app app.Context, id string, rawConfig map[string]an
 	}
 
 	if strings.HasPrefix(conf.To.String(), "http://") {
-		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the redirect endpoint used in redirect error handler")
+		logger.Warn().
+			Str("_type", ErrorHandlerRedirect).
+			Str("_name", name).
+			Msg("No TLS configured for the endpoint used in error handler")
 	}
 
 	return &redirectErrorHandler{
-		id:   id,
+		name: name,
+		id:   name,
 		to:   conf.To,
 		code: x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
 	}, nil
 }
 
+func (eh *redirectErrorHandler) Name() string { return eh.name }
+
 func (eh *redirectErrorHandler) ID() string { return eh.id }
 
 func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", eh.id).Msg("Handling error using redirect error handler")
+	logger.Debug().
+		Str("_type", ErrorHandlerRedirect).
+		Str("_name", eh.name).
+		Str("_id", eh.id).
+		Msg("Executing error handler")
 
 	toURL, err := eh.to.Render(map[string]any{
 		"Request": ctx.Request(),
@@ -100,11 +113,18 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) er
 	return nil
 }
 
-func (eh *redirectErrorHandler) WithConfig(conf map[string]any) (ErrorHandler, error) {
-	if len(conf) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"reconfiguration of a redirect error handler is not supported")
+func (eh *redirectErrorHandler) WithConfig(stepID string, rawConfig map[string]any) (ErrorHandler, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
+		return eh, nil
 	}
 
-	return eh, nil
+	if len(rawConfig) == 0 {
+		erh := *eh
+		erh.id = stepID
+
+		return &erh, nil
+	}
+
+	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		"reconfiguration of a redirect error handler is not supported")
 }

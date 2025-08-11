@@ -345,19 +345,21 @@ In this example:
 
 As described in the link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, this pipeline consists of mechanisms, previously configured in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanisms catalogue], organized in stages as described below, with authentication stage (consisting of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticators]) being mandatory.
 
-* **Authentication Stage:** List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references, each using authenticator as the key, followed by the required authenticator id. Regardless of their order in the pipeline, each authenticator serves as a fallback for the preceding one if it fails.
+* **Authentication Stage:** List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references, each using authenticator as the key, followed by the required authenticator id. Regardless of their order in the pipeline, each authenticator step serves as a fallback for the preceding one if it fails.
 +
 [NOTE]
 ====
 Some authenticators rely on the same sources to obtain the subject authentication object. For example, both the `jwt` and `oauth2_introspection` authenticators retrieve tokens from the `Authorization` header by default. When using such authenticators within the same pipeline, it's best to configure the more specific ones before the more general ones to optimize performance. In this case, the `jwt` authenticator is more specific since it only processes tokens in JWT format. In contrast, the `oauth2_introspection` authenticator is more general - it doesn’t depend on the token format and will attempt to handle any request containing a bearer token.
 ====
 
-* **Authorization Stage:** List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanisms in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional.
-* **Finalization Stage:** List of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalizer] references using `finalizers` as key, followed by the required finalizer `id`. All finalizers in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional. If a link:{{< relref "default_rule.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
+* **Authorization Stage:** List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanism steps in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional.
+* **Finalization Stage:** List of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalizer] references using `finalizers` as key, followed by the required finalizer `id`. All finalizer steps in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional. If a link:{{< relref "default_rule.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
 
-In all cases, the used mechanism can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
+In all cases, the mechanisms used in each step can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
 
 Execution of an `contextualizer`, `authorizer`, or `finalizer` mechanisms can optionally happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects. If the `if` clause is not present, the corresponding mechanism is always executed.
+
+All steps can optionally define a step `id`. If not configured, its value is set to the `id` of the used mechanism.
 
 .Complex pipeline
 ====
@@ -377,9 +379,11 @@ Execution of an `contextualizer`, `authorizer`, or `finalizer` mechanisms can op
   config:
     cache_ttl: 0s
 - authorizer: zab
-- contextualizer: foo
+- contextualizer: bar
+  id: 1
   if: Subject.ID != "anonymous"
 - contextualizer: bar
+  id: 2
 - authorizer: foo
   if: Request.Method == "POST"
   config:
@@ -403,7 +407,7 @@ This example uses
 * two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`. This fallback authenticator is obviously of type link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous] as it reconfigures the referenced prototype to use `anon` for subject id.
 * multiple contextualizers and authorizers, with first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization expression.
 * two finalizers, with the second one being obviously of type link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id to be forwarded to the upstream service.
-* contextualizer `foo` is only executed if the authenticated subject is not anonymous.
+* step referring the `bar` contextualizer with the `id` set to `1` is only executed if the authenticated subject is not anonymous.
 * authorizer `foo` is only executed if the request method is HTTP POST.
 ====
 
@@ -413,7 +417,7 @@ Compared to the link:{{< relref "#_authentication_authorization_pipeline" >}}[Au
 
 Execution of the error handlers should happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects. Otherwise, the first error handler will be executed and the error pipeline will exit.
 
-As with the authentication & authorization pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. The overrides are always local to the given rule as well.
+As with the authentication & authorization pipeline, each step can optionally have an `id` and supports partial reconfiguration of the used mechanisms if allowed by the corresponding type. The overrides are always local to the given rule as well.
 
 .Two error handlers
 ====

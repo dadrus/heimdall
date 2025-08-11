@@ -96,6 +96,7 @@ headers:
 				require.NoError(t, err)
 				assert.Len(t, finalizer.headers, 2)
 				assert.Equal(t, "with valid config", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 
 				val, err := finalizer.headers["foo"].Render(nil)
 				require.NoError(t, err)
@@ -138,9 +139,10 @@ func TestCreateHeaderFinalizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer)
 	}{
-		"no new configuration provided": {
+		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`
 headers:
   foo: bar
@@ -150,21 +152,24 @@ headers:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "no new configuration provided", configured.ID())
 			},
 		},
-		"configuration without headers provided": {
+		"no new configuration but with step ID": {
 			prototypeConfig: []byte(`
 headers:
   foo: bar
 `),
-			config: []byte(``),
+			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "configuration without headers provided", configured.ID())
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
+				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.headers, configured.headers)
 			},
 		},
 		"new headers provided": {
@@ -185,6 +190,35 @@ headers:
 				assert.NotEmpty(t, configured.headers)
 				assert.Equal(t, "new headers provided", configured.ID())
 				assert.Equal(t, prototype.ID(), configured.ID())
+
+				val, err := configured.headers["bar"].Render(nil)
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
+
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
+			},
+		},
+		"new headers and step id": {
+			prototypeConfig: []byte(`
+headers:
+  foo: bar
+`),
+			config: []byte(`
+headers:
+  bar: foo
+`),
+			stepID: "bar",
+			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				require.NotNil(t, configured)
+				assert.NotEmpty(t, configured.headers)
+				assert.Equal(t, "bar", configured.ID())
+				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
@@ -234,7 +268,7 @@ foo: bar
 			require.NoError(t, err)
 
 			// WHEN
-			finalizer, err := prototype.WithConfig(conf)
+			finalizer, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
@@ -261,24 +295,6 @@ func TestHeaderFinalizerExecute(t *testing.T) {
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
-		"with nil subject": {
-			config: []byte(`
-headers:
-  foo: bar
-  bar: "{{ .Subject.ID }}"
-`),
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "'nil' subject")
-
-				var identifier interface{ ID() string }
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "with nil subject", identifier.ID())
-			},
-		},
 		"template rendering error": {
 			config: []byte(`
 headers:

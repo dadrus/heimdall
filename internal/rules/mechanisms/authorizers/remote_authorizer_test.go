@@ -69,7 +69,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"configuration with invalid endpoint config": {
@@ -83,7 +83,7 @@ payload: FooBar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'endpoint'.'url' is a required field")
+				require.ErrorContains(t, err, "'endpoint'.'url' is a required field")
 			},
 		},
 		"configuration without both payload and header": {
@@ -96,7 +96,7 @@ endpoint:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'payload' is a required field")
+				require.ErrorContains(t, err, "'payload' is a required field")
 			},
 		},
 		"minimal valid configuration with enforced and used TLS": {
@@ -121,7 +121,8 @@ payload: "{{ .Subject.ID }}"
 				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
 
-				assert.Equal(t, "authz", auth.ID())
+				assert.Equal(t, "minimal valid configuration with enforced and used TLS", auth.ID())
+				assert.Equal(t, auth.ID(), auth.Name())
 				assert.False(t, auth.ContinueOnError())
 			},
 		},
@@ -137,7 +138,7 @@ payload: "{{ .Subject.ID }}"
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'endpoint'.'url' scheme must be https")
+				require.ErrorContains(t, err, "'endpoint'.'url' scheme must be https")
 			},
 		},
 		"configuration with endpoint and endpoint header": {
@@ -158,7 +159,8 @@ endpoint:
 				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
 
-				assert.Equal(t, "authz", auth.ID())
+				assert.Equal(t, "configuration with endpoint and endpoint header", auth.ID())
+				assert.Equal(t, auth.ID(), auth.Name())
 				assert.False(t, auth.ContinueOnError())
 			},
 		},
@@ -175,7 +177,7 @@ expressions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to compile")
+				require.ErrorContains(t, err, "failed to compile")
 			},
 		},
 		"full configuration": {
@@ -230,7 +232,8 @@ values:
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, res)
 
-				assert.Equal(t, "authz", auth.ID())
+				assert.Equal(t, "full configuration", auth.ID())
+				assert.Equal(t, auth.ID(), auth.Name())
 				assert.False(t, auth.ContinueOnError())
 			},
 		},
@@ -252,7 +255,7 @@ values:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			auth, err := newRemoteAuthorizer(appCtx, "authz", conf)
+			auth, err := newRemoteAuthorizer(appCtx, uc, conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -266,9 +269,10 @@ func TestCreateRemoteAuthorizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer)
 	}{
-		"without new configuration": {
+		"without new configuration and without step ID": {
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -280,24 +284,29 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "authz", configured.ID())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		"with empty configuration": {
+		"without new configuration but with step ID": {
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(``),
+			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "authz", configured.ID())
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.expressions, configured.expressions)
+				assert.Empty(t, configured.headersForUpstream)
+				assert.NotNil(t, configured.ttl)
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -315,7 +324,7 @@ foo: bar
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with overridden empty payload": {
@@ -336,12 +345,38 @@ cache_ttl: 1s
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.expressions, configured.expressions)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
-				assert.Equal(t, "authz", configured.ID())
+				assert.Equal(t, "with overridden empty payload", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.False(t, configured.ContinueOnError())
+			},
+		},
+		"with new config and step id": {
+			prototypeConfig: []byte(`
+endpoint:
+  url: http://foo.bar
+payload: bar
+`),
+			config: []byte(`cache_ttl: 1s`),
+			stepID: "foo",
+			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.NotNil(t, configured)
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.expressions, configured.expressions)
+				assert.Empty(t, configured.headersForUpstream)
+				assert.Equal(t, 1*time.Second, configured.ttl)
+				assert.Equal(t, "foo", configured.ID())
+				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -360,7 +395,7 @@ expressions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to compile")
+				require.ErrorContains(t, err, "failed to compile")
 			},
 		},
 		"with everything possible, but values reconfigured": {
@@ -389,7 +424,6 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil)
 				require.NoError(t, err)
@@ -409,7 +443,8 @@ cache_ttl: 15s
 				assert.Equal(t, prototype.v, configured.v)
 				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, "authz", configured.ID())
+				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -448,7 +483,6 @@ cache_ttl: 15s
 				res, err := configured.v.Render(map[string]any{})
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"bar": "foo", "foo": "bar"}, res)
-				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil)
 				require.NoError(t, err)
@@ -467,7 +501,8 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, "authz", configured.ID())
+				assert.Equal(t, "with everything possible", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -489,11 +524,11 @@ cache_ttl: 15s
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newRemoteAuthorizer(appCtx, "authz", pc)
+			prototype, err := newRemoteAuthorizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig(conf)
+			auth, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (
@@ -924,7 +959,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				require.Error(t, err)
 
 				require.ErrorIs(t, err, heimdall.ErrAuthorization)
-				assert.Contains(t, err.Error(), "authorization failed")
+				require.ErrorContains(t, err, "authorization failed")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -984,25 +1019,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "endpoint failed")
+				require.ErrorContains(t, err, "endpoint failed")
 
 				assert.False(t, authorizationEndpointCalled)
-
-				var identifier interface{ ID() string }
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "authz", identifier.ID())
-			},
-		},
-		"with error due to nil subject": {
-			authorizer: &remoteAuthorizer{id: "authz"},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
-				t.Helper()
-
-				assert.False(t, authorizationEndpointCalled)
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "due to 'nil' subject")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -1079,7 +1098,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthorization)
-				assert.Contains(t, err.Error(), "false != true")
+				require.ErrorContains(t, err, "false != true")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -1196,7 +1215,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render payload")
+				require.ErrorContains(t, err, "failed to render payload")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -1227,7 +1246,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render values")
+				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)

@@ -59,6 +59,7 @@ if: type(Error) == authentication_error
 				require.NoError(t, err)
 				require.NotNil(t, errorHandler)
 				assert.Equal(t, "without configuration (minimal configuration)", errorHandler.ID())
+				assert.Equal(t, errorHandler.Name(), errorHandler.ID())
 				assert.Equal(t, "Please authenticate", errorHandler.realm)
 			},
 		},
@@ -70,6 +71,7 @@ if: type(Error) == authentication_error
 				require.NoError(t, err)
 				require.NotNil(t, errorHandler)
 				assert.Equal(t, "with all possible attributes", errorHandler.ID())
+				assert.Equal(t, errorHandler.Name(), errorHandler.ID())
 				assert.Equal(t, "What is your password", errorHandler.realm)
 			},
 		},
@@ -101,10 +103,11 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 			configured *wwwAuthenticateErrorHandler)
 	}{
-		"no new configuration provided": {
+		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`realm: "foo"`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
@@ -115,16 +118,20 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"empty configuration provided": {
+		"no new configuration but with step ID": {
 			prototypeConfig: []byte(`realm: "foo"`),
-			config:          []byte(``),
+			stepID:          "bar",
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
 			) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, prototype, configured)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "bar", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, prototype.app, configured.app)
 			},
 		},
 		"unsupported fields provided": {
@@ -155,6 +162,19 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, "You password please", configured.realm)
 			},
 		},
+		"with empty 'realm' reconfigured": {
+			prototypeConfig: []byte(`realm: "Foobar"`),
+			config:          []byte(`realm: ""`),
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler,
+				_ *wwwAuthenticateErrorHandler,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'realm' is a required field")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -175,7 +195,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			errorHandler, err := prototype.WithConfig(conf)
+			errorHandler, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (

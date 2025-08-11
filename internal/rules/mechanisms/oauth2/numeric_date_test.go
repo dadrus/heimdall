@@ -54,7 +54,7 @@ func TestNumericDateUnmarshalJSON(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorContains(t, err, "failed to parse")
 			},
 		},
 	} {

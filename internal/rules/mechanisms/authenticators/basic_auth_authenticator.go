@@ -42,32 +42,38 @@ const (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorBasicAuth {
 				return false, nil, nil
 			}
 
-			auth, err := newBasicAuthAuthenticator(app, id, conf)
+			auth, err := newBasicAuthAuthenticator(app, name, conf)
 
 			return true, auth, err
 		})
 }
 
 type basicAuthAuthenticator struct {
-	id                   string
-	app                  app.Context
-	userID               string
-	password             string
-	allowFallbackOnError bool
+	name     string
+	id       string
+	app      app.Context
+	userID   string
+	password string
+
+	emptyAttributes map[string]any
+	ads             extractors.HeaderValueExtractStrategy
 }
 
 func newBasicAuthAuthenticator(
 	app app.Context,
-	id string,
+	name string,
 	rawConfig map[string]any,
 ) (*basicAuthAuthenticator, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating basic auth authenticator")
+	logger.Info().
+		Str("_type", AuthenticatorBasicAuth).
+		Str("_name", name).
+		Msg("Creating authenticator")
 
 	type Config struct {
 		UserID               string `mapstructure:"user_id"                 validate:"required"`
@@ -78,17 +84,21 @@ func newBasicAuthAuthenticator(
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for basic auth authenticator '%s'", id).CausedBy(err)
+			"failed decoding config for basic_auth authenticator '%s'", name).CausedBy(err)
 	}
 
 	if conf.AllowFallbackOnError {
-		logger.Warn().Str("_id", id).Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
+		logger.Warn().
+			Str("_name", name).
+			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	auth := basicAuthAuthenticator{
-		id:                   id,
-		app:                  app,
-		allowFallbackOnError: conf.AllowFallbackOnError,
+		name:            name,
+		id:              name,
+		app:             app,
+		emptyAttributes: make(map[string]any),
+		ads:             extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
 	}
 
 	// rewrite user id and password as hashes to mitigate potential side-channel attacks
@@ -106,11 +116,13 @@ func newBasicAuthAuthenticator(
 
 func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", a.id).Msg("Authenticating using basic_auth authenticator")
+	logger.Debug().
+		Str("_type", AuthenticatorBasicAuth).
+		Str("_name", a.name).
+		Str("_id", a.id).
+		Msg("Executing authenticator")
 
-	strategy := extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"}
-
-	authData, err := strategy.GetAuthData(ctx)
+	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "expected header not present in request").
@@ -149,13 +161,19 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.
 			WithErrorContext(a)
 	}
 
-	return &subject.Subject{ID: userIDAndPassword[0], Attributes: make(map[string]any)}, nil
+	return &subject.Subject{ID: userIDAndPassword[0], Attributes: a.emptyAttributes}, nil
 }
 
-func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authenticator, error) {
-	// this authenticator allows full redefinition on the rule level
-	if len(rawConfig) == 0 {
+func (a *basicAuthAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
+	}
+
+	if len(rawConfig) == 0 {
+		auth := *a
+		auth.id = stepID
+
+		return &auth, nil
 	}
 
 	type Config struct {
@@ -167,7 +185,7 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for basic auth authenticator '%s'", a.id).CausedBy(err)
+			"failed decoding config for basic auth authenticator '%s'", a.name).CausedBy(err)
 	}
 
 	if conf.AllowFallbackOnError != nil {
@@ -177,8 +195,11 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	return &basicAuthAuthenticator{
-		id:  a.id,
-		app: a.app,
+		app:             a.app,
+		name:            a.name,
+		emptyAttributes: a.emptyAttributes,
+		ads:             a.ads,
+		id:              x.IfThenElse(len(stepID) == 0, a.id, stepID),
 		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()
@@ -197,11 +218,10 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 			}, func() string {
 				return a.password
 			}),
-		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
-			func() bool { return *conf.AllowFallbackOnError },
-			func() bool { return a.allowFallbackOnError }),
 	}, nil
 }
+
+func (a *basicAuthAuthenticator) Name() string { return a.name }
 
 func (a *basicAuthAuthenticator) ID() string {
 	return a.id

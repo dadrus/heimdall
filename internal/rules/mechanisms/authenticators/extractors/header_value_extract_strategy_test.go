@@ -66,7 +66,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "'Foo' scheme")
+				require.ErrorContains(t, err, "'Foo' scheme")
 			},
 		},
 		"scheme is required, header is present, but with different scheme": {
@@ -84,7 +84,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "'Foo' scheme")
+				require.ErrorContains(t, err, "'Foo' scheme")
 			},
 		},
 		"header with required scheme is present": {
@@ -119,7 +119,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "no 'X-Test-Header' header")
+				require.ErrorContains(t, err, "no 'X-Test-Header' header")
 			},
 		},
 	} {

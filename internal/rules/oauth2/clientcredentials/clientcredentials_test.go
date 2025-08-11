@@ -487,7 +487,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "invalid_request")
+				require.ErrorContains(t, err, "invalid_request")
 			},
 		},
 		"misbehaving server on error, response code unexpected": {
@@ -514,7 +514,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unexpected response code: 403")
+				require.ErrorContains(t, err, "unexpected response code: 403")
 			},
 		},
 		"compliant server on error ": {
@@ -561,7 +561,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "invalid_request")
+				require.ErrorContains(t, err, "invalid_request")
 			},
 		},
 	} {

@@ -20,7 +20,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -59,7 +58,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "loading rule ID='foo' failed")
+				require.ErrorContains(t, err, "loading rule ID='foo' failed")
 			},
 		},
 		"error while adding rule set": {
@@ -74,7 +73,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "test error")
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		"successful": {
@@ -150,7 +149,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "loading rule ID='foo' failed")
+				require.ErrorContains(t, err, "loading rule ID='foo' failed")
 			},
 		},
 		"error while updating rule set": {
@@ -165,7 +164,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "test error")
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		"successful": {

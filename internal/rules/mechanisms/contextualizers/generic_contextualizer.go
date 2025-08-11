@@ -54,12 +54,12 @@ var errNoContent = errors.New("no payload received")
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Contextualizer, error) {
 			if typ != ContextualizerGeneric {
 				return false, nil, nil
 			}
 
-			eh, err := newGenericContextualizer(app, id, conf)
+			eh, err := newGenericContextualizer(app, name, conf)
 
 			return true, eh, err
 		})
@@ -70,6 +70,7 @@ type contextualizerData struct {
 }
 
 type genericContextualizer struct {
+	name            string
 	id              string
 	app             app.Context
 	e               endpoint.Endpoint
@@ -83,11 +84,14 @@ type genericContextualizer struct {
 
 func newGenericContextualizer(
 	app app.Context,
-	id string,
+	name string,
 	rawConfig map[string]any,
 ) (*genericContextualizer, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating generic contextualizer")
+	logger.Info().
+		Str("_type", ContextualizerGeneric).
+		Str("_name", name).
+		Msg("Creating contextualizer")
 
 	type Config struct {
 		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
@@ -102,12 +106,14 @@ func newGenericContextualizer(
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for generic contextualizer '%s'", id).CausedBy(err)
+			"failed decoding config for generic contextualizer '%s'", name).CausedBy(err)
 	}
 
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
-		logger.Warn().Str("_id", id).
-			Msg("No TLS configured for the endpoint used in generic contextualizer")
+		logger.Warn().
+			Str("_type", ContextualizerGeneric).
+			Str("_name", name).
+			Msg("No TLS configured for the endpoint used in contextualizer")
 	}
 
 	ttl := defaultTTL
@@ -116,7 +122,8 @@ func newGenericContextualizer(
 	}
 
 	return &genericContextualizer{
-		id:              id,
+		name:            name,
+		id:              name,
 		app:             app,
 		e:               conf.Endpoint,
 		payload:         conf.Payload,
@@ -131,7 +138,11 @@ func newGenericContextualizer(
 //nolint:cyclop
 func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", c.id).Msg("Updating using generic contextualizer")
+	logger.Debug().
+		Str("_type", ContextualizerGeneric).
+		Str("_name", c.name).
+		Str("_id", c.id).
+		Msg("Executing contextualizer")
 
 	if sub == nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -186,9 +197,16 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 	return nil
 }
 
-func (c *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer, error) {
-	if len(rawConfig) == 0 {
+func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]any) (Contextualizer, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return c, nil
+	}
+
+	if len(rawConfig) == 0 {
+		cont := *c
+		cont.id = stepID
+
+		return &cont, nil
 	}
 
 	type Config struct {
@@ -203,11 +221,12 @@ func (c *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	var conf Config
 	if err := decodeConfig(c.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for generic contextualizer '%s'", c.id).CausedBy(err)
+			"failed decoding config for generic contextualizer '%s'", c.name).CausedBy(err)
 	}
 
 	return &genericContextualizer{
-		id:         c.id,
+		name:       c.name,
+		id:         x.IfThenElse(len(stepID) == 0, c.id, stepID),
 		app:        c.app,
 		e:          c.e,
 		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, c.payload),
@@ -222,6 +241,8 @@ func (c *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 		v: c.v.Merge(conf.Values),
 	}, nil
 }
+
+func (c *genericContextualizer) Name() string { return c.name }
 
 func (c *genericContextualizer) ID() string { return c.id }
 
