@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -29,34 +30,62 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, _ map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, name string, typ string, _ map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerNoop {
 				return false, nil, nil
 			}
 
-			return true, newNoopFinalizer(app, id), nil
+			return true, newNoopFinalizer(app, name), nil
 		})
 }
 
-func newNoopFinalizer(app app.Context, id string) *noopFinalizer {
+func newNoopFinalizer(app app.Context, name string) *noopFinalizer {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating noop finalizer")
+	logger.Info().
+		Str("_type", FinalizerNoop).
+		Str("_name", name).
+		Msg("Creating finalizer")
 
-	return &noopFinalizer{id: id}
+	return &noopFinalizer{
+		name: name,
+		id:   name,
+	}
 }
 
 type noopFinalizer struct {
-	id string
+	name string
+	id   string
 }
 
 func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", f.id).Msg("Finalizing using noop finalizer")
+	logger.Debug().
+		Str("_type", FinalizerNoop).
+		Str("_name", f.name).
+		Str("_id", f.id).
+		Msg("Executing finalizer")
 
 	return nil
 }
 
-func (f *noopFinalizer) WithConfig(stepID string, _ map[string]any) (Finalizer, error) { return f, nil }
+func (f *noopFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
+		return f, nil
+	}
+
+	if len(rawConfig) != 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "noop finalizer cannot be reconfigured").
+			WithErrorContext(f)
+	}
+
+	fin := *f
+	fin.id = stepID
+
+	return &fin, nil
+}
+
+func (f *noopFinalizer) Name() string { return f.name }
 
 func (f *noopFinalizer) ID() string { return f.id }
 
