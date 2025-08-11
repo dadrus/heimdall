@@ -181,7 +181,7 @@ Request = {
 
 === Outputs
 
-This object represents a pipeline execution specific key value map. It is used by pipeline steps to store or read results of particular step executions. Mechanism id used by a pipeline step is used as a key and the value is the corresponding result.
+This object represents a pipeline execution specific key value map. It is used by pipeline steps to store or read results of particular step executions. Step id is used as a key and the value is the corresponding result.
 
 Example:
 
@@ -225,6 +225,10 @@ This object represents an error, which has been raised during the execution of a
 * *`Source`*: _string_
 +
 The ID of the mechanism, which raised the error.
+
+* *`StepID`*: _string_
++
+The ID of the pipeline step, which raised the error
 
 Proper error handling requires attention to the actual _link:{{< relref "/docs/configuration/types.adoc#_errorstate_type" >}}[error type]_ available via `type(Error)`.
 
