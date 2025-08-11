@@ -19,7 +19,7 @@ name: heimdall
 description: A cloud native Identity Aware Proxy and Access Control Decision Service
 version: 0.16.0
 appVersion: latest
-kubeVersion: ^1.27.0
+kubeVersion: ^1.30.0
 type: application
 
 home: https://dadrus.github.io/heimdall/

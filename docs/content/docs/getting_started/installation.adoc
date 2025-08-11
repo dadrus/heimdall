@@ -111,7 +111,7 @@ NOTE: Autoscaling (HPA) is disabled by default to avoid misconfigured setups. If
 
 === Prerequisites
 
-* A Kubernetes version >= 1.29
+* A Kubernetes version >= 1.30
 * https://helm.sh/docs/intro/install/[Helm] 3.0+
 
 === Adding the Helm Repository
