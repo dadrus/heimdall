@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Concepts on Heimdall</title><link>https://dadrus.github.io/docs/concepts/</link><description>Recent content in Concepts on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 11 Aug 2025 20:52:05 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/concepts/index.xml" rel="self" type="application/rss+xml"/><item><title>Pipelines</title><link>https://dadrus.github.io/docs/concepts/pipelines/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/pipelines/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_overview">Overview&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Pipelines are specified in &lt;a href="../../docs/concepts/rules/">rules&lt;/a> and are used to authenticate and authorize the particular requests, as well as to handle encountered errors.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>As described in the &lt;a href="../../docs/getting_started/discover_heimdall/">Discover heimdall&lt;/a> chapter and also shown in the diagram below, central aspects of heimdall are upstream specific pipelines, which allow you orchestrating different services to authenticate, enrich and authorize incoming HTTP requests, transform the resulting subject information into a format, or obtain credentials required for the communication with the particular upstream services.&lt;/p>
+&lt;/div></description></item><item><title>Mechanisms</title><link>https://dadrus.github.io/docs/concepts/mechanisms/</link><pubDate>Tue, 29 Nov 2022 22:31:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/mechanisms/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_mechanism_categories">Mechanism Categories&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>All supported mechanisms fall into the following five categories, each implementing different mechanisms types (addressing different protocols or scenarios):&lt;/p>
+&lt;/div>
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>&lt;a href="../../docs/mechanisms/authenticators/">Authenticators&lt;/a>, which inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="../../docs/mechanisms/authorizers/">Authorizers&lt;/a>, which ensure that the subject obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a &amp;#34;user&amp;#34; from the &amp;#34;admin&amp;#34; group, or to an HTTP request if a specific HTTP header is set.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="../../docs/mechanisms/contextualizers/">Contextualizers&lt;/a>, which enrich the information about the subject obtained via an authenticator with further contextual information, required either by the upstream service itself or an authorizer. This can be handy if the actual authentication system doesn’t have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="../../docs/mechanisms/finalizers/">Finalizers&lt;/a>, which, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from doing nothing, adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="../../docs/mechanisms/error_handlers/">Error Handlers&lt;/a>, which are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;/div></description></item><item><title>Rules</title><link>https://dadrus.github.io/docs/concepts/rules/</link><pubDate>Tue, 29 Nov 2022 22:33:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/rules/</guid><description>&lt;div class="paragraph">
+&lt;p>You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behavior. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some &amp;#34;tuning&amp;#34; to be applied to better suit your needs.&lt;/p>
+&lt;/div></description></item><item><title>Rule Provider</title><link>https://dadrus.github.io/docs/concepts/provider/</link><pubDate>Tue, 29 Nov 2022 22:31:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/provider/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_rules_sets">Rules Sets&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Regular, or &lt;a href="../../docs/rules/regular_rule/">upstream-specific rules&lt;/a> must be organized, versioned, and loaded in a structured way. This structure is provided by so-called rule sets.&lt;/p>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>A rule set is essentially a container for a list of rules, along with metadata such as its name and version. The actual format is provider-specific and depends on the rule provider in use — for example, rule sets may be defined in files, Kubernetes custom resources, or received via an API.&lt;/p>
+&lt;/div></description></item><item><title>Operating Modes</title><link>https://dadrus.github.io/docs/concepts/operating_modes/</link><pubDate>Tue, 29 Nov 2022 22:29:36 +0200</pubDate><guid>https://dadrus.github.io/docs/concepts/operating_modes/</guid><description>&lt;div class="sect1">
+&lt;h2 id="_decision_mode">Decision Mode&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>In this mode you can integrate heimdall with existing reverse proxies, or API gateways (like &lt;a href="https://konghq.com/">Kong&lt;/a>, &lt;a href="https://nginx.org">NGNIX&lt;/a>, &lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a>, &lt;a href="https://traefik.io/">Traefik&lt;/a> and much more)&lt;/p>
+&lt;/div>
+&lt;div id="_fig_heimdall_decision_deployment" class="imageblock">
+&lt;div class="content">
+&lt;img src="diag-ditaa-md5-6aa79a33899aaf938fd0bdc4e82460e2.svg" alt="Diagram" width="1020" height="490"/>
+&lt;/div>
+&lt;div class="title">Figure 1. Decision Deployment&lt;/div>
+&lt;/div>
+&lt;div class="paragraph">
+&lt;p>In this mode heimdall can be integrated with most probably all modern API gateways and reverse proxies as a so-called &amp;#34;authentication middleware&amp;#34;. Here the reverse proxy, respectively API gateway integrating with heimdall, will forward requests to heimdall by making use of its main service endpoint for authentication and authorization purposes. As in the &lt;a href="#_proxy_mode">Reverse Proxy&lt;/a> mode, heimdall will check if these requests match and satisfy the conditions defined in the available rules. If not, heimdall returns an error to its client (here API gateway/reverse proxy). If the rule execution was successful, it also responds to the API gateway/reverse proxy with &lt;code>200 OK&lt;/code> (can be overridden if required) and sets headers/cookies, specified in the matched rule, which are then forwarded to the upstream service.&lt;/p>
+&lt;/div></description></item></channel></rss>
