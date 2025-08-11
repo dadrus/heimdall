@@ -476,9 +476,10 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer)
 	}{
-		"no new configuration provided": {
+		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
@@ -489,33 +490,42 @@ signer:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "no new configuration provided", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
-		"empty configuration provided": {
+		"no new configuration but with step ID": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(``),
+			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "empty configuration provided", configured.ID())
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.claims, configured.claims)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, defaultJWTTTL, configured.ttl)
+				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
+				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
-		"configuration with ttl only provided": {
+		"configuration with ttl and step ID": {
 			prototypeConfig: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
 			config: []byte(`ttl: 5s`),
+			stepID: "bar",
 			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
@@ -526,7 +536,9 @@ signer:
 				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
-				assert.Equal(t, "configuration with ttl only provided", configured.ID())
+				assert.Equal(t, "configuration with ttl and step ID", prototype.ID())
+				assert.Equal(t, "bar", configured.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
@@ -721,7 +733,7 @@ foo: bar
 			require.NoError(t, err)
 
 			// WHEN
-			finalizer, err := prototype.WithConfig("", conf)
+			finalizer, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			var (

@@ -48,18 +48,19 @@ const (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(app app.Context, id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(app app.Context, name string, typ string, conf map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerJwt {
 				return false, nil, nil
 			}
 
-			finalizer, err := newJWTFinalizer(app, id, conf)
+			finalizer, err := newJWTFinalizer(app, name, conf)
 
 			return true, finalizer, err
 		})
 }
 
 type jwtFinalizer struct {
+	name         string
 	id           string
 	app          app.Context
 	claims       template.Template
@@ -70,9 +71,12 @@ type jwtFinalizer struct {
 	v            values.Values
 }
 
-func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwtFinalizer, error) {
+func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (*jwtFinalizer, error) {
 	logger := app.Logger()
-	logger.Info().Str("_id", id).Msg("Creating jwt finalizer")
+	logger.Info().
+		Str("_type", FinalizerJwt).
+		Str("_name", name).
+		Msg("Creating finalizer")
 
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
@@ -90,7 +94,7 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 	var conf Config
 	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for jwt finalizer '%s'", id).CausedBy(err)
+			"failed decoding config for jwt finalizer '%s'", name).CausedBy(err)
 	}
 
 	signer, err := newJWTSigner(&conf.Signer, app.Watcher())
@@ -101,7 +105,8 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 	app.KeyHolderRegistry().AddKeyHolder(signer)
 
 	fin := &jwtFinalizer{
-		id:     id,
+		name:   name,
+		id:     name,
 		app:    app,
 		claims: conf.Claims,
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -124,7 +129,11 @@ func newJWTFinalizer(app app.Context, id string, rawConfig map[string]any) (*jwt
 
 func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Str("_id", f.id).Msg("Finalizing using JWT finalizer")
+	logger.Debug().
+		Str("_type", FinalizerJwt).
+		Str("_name", f.name).
+		Str("_id", f.id).
+		Msg("Executing finalizer")
 
 	if sub == nil {
 		return errorchain.
@@ -165,8 +174,15 @@ func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject
 }
 
 func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
-	if len(rawConfig) == 0 {
+	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return f, nil
+	}
+
+	if len(rawConfig) == 0 {
+		fin := *f
+		fin.id = stepID
+
+		return &fin, nil
 	}
 
 	type Config struct {
@@ -178,11 +194,12 @@ func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fina
 	var conf Config
 	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for jwt finalizer '%s'", f.id).CausedBy(err)
+			"failed decoding config for jwt finalizer '%s'", f.name).CausedBy(err)
 	}
 
 	return &jwtFinalizer{
-		id:     f.id,
+		name:   f.name,
+		id:     x.IfThenElse(len(stepID) == 0, f.id, stepID),
 		app:    f.app,
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, f.claims),
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -194,6 +211,8 @@ func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fina
 		v:            f.v.Merge(conf.Values),
 	}, nil
 }
+
+func (f *jwtFinalizer) Name() string { return f.name }
 
 func (f *jwtFinalizer) ID() string { return f.id }
 
@@ -278,5 +297,4 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub *subje
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (f *jwtFinalizer) Name() string                      { return f.id }
 func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.activeCertificateChain() }
