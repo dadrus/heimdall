@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.17.0](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.17.0) (2025-08-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* Backtracking happens automatically and is limited to a rule set ([#2544](https://github.com/dadrus/heimdall/issues/2544))
+
+### Features
+
+* `cel` authorizer extended to support "templating" via `values` property ([#2547](https://github.com/dadrus/heimdall/issues/2547)) ([c597712](https://github.com/dadrus/heimdall/commit/c597712ecff93a73b9499fce15515499f1c2b116))
+* Backtracking happens automatically and is limited to a rule set ([#2544](https://github.com/dadrus/heimdall/issues/2544)) ([6abbf7f](https://github.com/dadrus/heimdall/commit/6abbf7fbf49e35631de016f6798728cd17b714c1))
+* Better Host matching support ([#2544](https://github.com/dadrus/heimdall/issues/2544)) ([6abbf7f](https://github.com/dadrus/heimdall/commit/6abbf7fbf49e35631de016f6798728cd17b714c1))
+* New `map` contextualizer ([#2537](https://github.com/dadrus/heimdall/issues/2537)) ([8c1fcab](https://github.com/dadrus/heimdall/commit/8c1fcab1b4f9fe1b653981043418bb48a00c955f))
+* Overlapping rule matching expressions can be defined in the same rule set only ([#2544](https://github.com/dadrus/heimdall/issues/2544)) ([6abbf7f](https://github.com/dadrus/heimdall/commit/6abbf7fbf49e35631de016f6798728cd17b714c1))
+* Steps in the pipeline can optionally have their own ids. ([#2645](https://github.com/dadrus/heimdall/issues/2645)) ([913e276](https://github.com/dadrus/heimdall/commit/913e2763de0892e4b96c7c324fe921261c0bf01f))
+
+
+### Dependencies
+
+* update golang to v1.24.6 ([#2653](https://github.com/dadrus/heimdall/issues/2653)) ([e70d5b7](https://github.com/dadrus/heimdall/commit/e70d5b7a7c917b2ee1762b52abb7c8b85b88c07f))
+* update google.golang.org/genproto/googleapis/rpc digest to 6b04f9b ([#2653](https://github.com/dadrus/heimdall/issues/2653)) ([e70d5b7](https://github.com/dadrus/heimdall/commit/e70d5b7a7c917b2ee1762b52abb7c8b85b88c07f))
+* update module google.golang.org/protobuf to v1.36.7 ([#2653](https://github.com/dadrus/heimdall/issues/2653)) ([e70d5b7](https://github.com/dadrus/heimdall/commit/e70d5b7a7c917b2ee1762b52abb7c8b85b88c07f))
+
 ## [0.16.8](https://github.com/dadrus/heimdall/compare/v0.16.7...v0.16.8) (2025-08-06)
 
 
