@@ -1141,3 +1141,45 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 		})
 	}
 }
+
+func TestRuleFactoryStepIDExtraction(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		stepID any
+		assert func(t *testing.T, value string)
+	}{
+		"nil value": {
+			assert: func(t *testing.T, value string) {
+				t.Helper()
+
+				require.NotNil(t, value)
+				require.Empty(t, value)
+			},
+		},
+		"string": {
+			stepID: "foo",
+			assert: func(t *testing.T, value string) {
+				t.Helper()
+
+				require.Equal(t, "foo", value)
+			},
+		},
+		"int": {
+			stepID: 1,
+			assert: func(t *testing.T, value string) {
+				t.Helper()
+
+				require.Equal(t, "1", value)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			conf := getStepID(tc.stepID)
+
+			// THEN
+			tc.assert(t, conf)
+		})
+	}
+}
