@@ -97,6 +97,7 @@ cookies:
 				require.NoError(t, err)
 				assert.Len(t, finalizer.cookies, 2)
 				assert.Equal(t, "with valid config", finalizer.ID())
+				assert.Equal(t, finalizer.Name(), finalizer.ID())
 
 				val, err := finalizer.cookies["foo"].Render(nil)
 				require.NoError(t, err)
@@ -139,9 +140,10 @@ func TestCreateCookieFinalizerFromPrototype(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
 		config          []byte
+		stepID          string
 		assert          func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer)
 	}{
-		"no new configuration provided": {
+		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
@@ -151,21 +153,23 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "no new configuration provided", configured.ID())
 			},
 		},
-		"configuration without cookies provided": {
+		"no new configuration but with step ID": {
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
 `),
-			config: []byte(``),
+			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "configuration without cookies provided", configured.ID())
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.cookies, configured.cookies)
+				assert.Equal(t, prototype.app, configured.app)
 			},
 		},
 		"new cookies provided": {
@@ -195,6 +199,49 @@ cookies:
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
+		"new cookies and step ID provided": {
+			prototypeConfig: []byte(`
+cookies:
+  foo: bar
+`),
+			config: []byte(`
+cookies:
+  bar: foo
+`),
+			stepID: "bar",
+			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				require.NotNil(t, configured)
+				assert.NotEmpty(t, configured.cookies)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.Name(), prototype.ID())
+				assert.Equal(t, "bar", configured.ID())
+
+				val, err := configured.cookies["bar"].Render(nil)
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
+
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
+			},
+		},
+		"empty cookies provided": {
+			prototypeConfig: []byte(`
+cookies:
+  foo: bar
+`),
+			config: []byte(`cookies: {}`),
+			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "empty cookies")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -215,11 +262,13 @@ cookies:
 			require.NoError(t, err)
 
 			// WHEN
-			finalizer, err := prototype.WithConfig("", conf)
+			finalizer, err := prototype.WithConfig(tc.stepID, conf)
 
 			// THEN
 			realFinalizer, ok := finalizer.(*cookieFinalizer)
-			require.True(t, ok)
+			if err == nil {
+				require.True(t, ok)
+			}
 
 			tc.assert(t, err, prototype, realFinalizer)
 		})
@@ -235,25 +284,24 @@ func TestCookieFinalizerExecute(t *testing.T) {
 		createSubject    func(t *testing.T) *subject.Subject
 		assert           func(t *testing.T, err error)
 	}{
-		"with nil subject": {
+		"rendering error": {
 			config: []byte(`
 cookies:
-  foo: bar
-  bar: "{{ .Subject.ID }}"
+  foo: "{{ .Subject.ID.foo }}"
 `),
-			assert: func(t *testing.T, err error) {
+			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
 
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: mocks.NewRequestFunctionsMock(t)})
+				ctx.EXPECT().Outputs().Return(map[string]any{})
+			},
+			assert: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "'nil' subject")
-
-				var identifier interface{ ID() string }
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "with nil subject", identifier.ID())
+				require.ErrorContains(t, err, "failed to render")
 			},
 		},
-		"with all preconditions satisfied": {
+		"all preconditions satisfied": {
 			config: []byte(`
 cookies:
   foo: "{{ .Subject.Attributes.bar }}"
@@ -295,7 +343,7 @@ cookies:
 				func(t *testing.T) *subject.Subject {
 					t.Helper()
 
-					return nil
+					return &subject.Subject{ID: "foo", Attributes: map[string]any{}}
 				})
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
