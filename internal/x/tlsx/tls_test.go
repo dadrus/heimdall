@@ -131,7 +131,7 @@ func TestToTLSConfig(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed loading")
+				require.ErrorContains(t, err, "failed loading")
 			},
 		},
 		"fails due to not existent key for the given key id for TLS usage": {
@@ -150,7 +150,7 @@ func TestToTLSConfig(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no such key")
+				require.ErrorContains(t, err, "no such key")
 			},
 		},
 		"fails due to not present certificates for the given key id": {
@@ -169,7 +169,7 @@ func TestToTLSConfig(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no certificate present")
+				require.ErrorContains(t, err, "no certificate present")
 			},
 		},
 		"fails due to failing watcher registration": {
@@ -188,7 +188,7 @@ func TestToTLSConfig(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "test error")
+				require.ErrorContains(t, err, "test error")
 			},
 		},
 		"successful with default key for TLS server auth": {

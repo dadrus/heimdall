@@ -60,7 +60,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"without endpoints": {
@@ -70,7 +70,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'endpoints' is a required field")
+				require.ErrorContains(t, err, "'endpoints' is a required field")
 			},
 		},
 		"with watch interval and unsupported endpoint property configured": {
@@ -84,7 +84,7 @@ endpoints:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"with one endpoint without url": {
@@ -97,7 +97,7 @@ endpoints:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'endpoints'[0].'url' is a required field")
+				require.ErrorContains(t, err, "'endpoints'[0].'url' is a required field")
 			},
 		},
 		"with enforced TLS, only one endpoint and its url configured to use TLS": {
@@ -137,7 +137,7 @@ endpoints:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'endpoints'[1].'url' scheme must be https")
+				require.ErrorContains(t, err, "'endpoints'[1].'url' scheme must be https")
 			},
 		},
 		"with two endpoints and watch interval configured": {

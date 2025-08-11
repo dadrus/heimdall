@@ -20,7 +20,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -36,7 +35,7 @@ func TestValidateEmptyConfig(t *testing.T) {
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, heimdall.ErrConfiguration)
-	assert.Contains(t, err.Error(), "EOF")
+	require.ErrorContains(t, err, "EOF")
 }
 
 func TestValidateConfigWithInvalidYAMLContent(t *testing.T) {
@@ -52,7 +51,7 @@ func TestValidateConfigWithInvalidYAMLContent(t *testing.T) {
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, heimdall.ErrConfiguration)
-	assert.Contains(t, err.Error(), "parse config")
+	require.ErrorContains(t, err, "parse config")
 }
 
 func TestValidateConfigWithValidYAMLContentButFailingSchemaValidation(t *testing.T) {
@@ -71,7 +70,7 @@ func TestValidateConfigWithValidYAMLContentButFailingSchemaValidation(t *testing
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, heimdall.ErrConfiguration)
-	assert.Contains(t, err.Error(), "'foo' not allowed")
+	require.ErrorContains(t, err, "'foo' not allowed")
 }
 
 func TestValidateValidConfigFile(t *testing.T) {

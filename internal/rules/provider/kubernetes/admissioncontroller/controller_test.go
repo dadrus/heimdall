@@ -139,7 +139,7 @@ func TestControllerLifecycle(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "connection refused")
+				require.ErrorContains(t, err, "connection refused")
 			},
 		},
 		"unsupported review request kind": {

@@ -58,7 +58,7 @@ func TestKoanfFromStruct(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(),
+				require.ErrorContains(t, err,
 					"field ThisIsMissingAKoanfTag does not have lowercase key")
 			},
 		},

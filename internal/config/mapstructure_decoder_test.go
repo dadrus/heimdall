@@ -131,7 +131,7 @@ cipher_suites:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unsupported")
+				require.ErrorContains(t, err, "unsupported")
 			},
 		},
 		"all supported cipher suites": {
@@ -204,7 +204,7 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unsupported")
+				require.ErrorContains(t, err, "unsupported")
 			},
 		},
 		"TLS v1.2 version": {

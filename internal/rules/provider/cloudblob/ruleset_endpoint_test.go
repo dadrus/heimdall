@@ -81,7 +81,7 @@ func TestFetchRuleSets(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to open bucket")
+				require.ErrorContains(t, err, "failed to open bucket")
 			},
 		},
 		"iterate not existing bucket": {
@@ -97,7 +97,7 @@ func TestFetchRuleSets(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "failed iterate blobs")
+				require.ErrorContains(t, err, "failed iterate blobs")
 			},
 		},
 		"invalid rule set": {
@@ -123,7 +123,7 @@ func TestFetchRuleSets(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorContains(t, err, "failed to decode")
 			},
 		},
 		"empty bucket": {
@@ -327,7 +327,7 @@ rules:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "attributes")
+				require.ErrorContains(t, err, "attributes")
 			},
 		},
 		"empty blob specified in the path": {
