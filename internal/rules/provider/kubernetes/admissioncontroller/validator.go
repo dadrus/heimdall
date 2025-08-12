@@ -23,12 +23,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/admission"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
