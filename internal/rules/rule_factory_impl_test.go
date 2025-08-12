@@ -682,7 +682,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					},
 					Scheme:  "https",
 					Methods: []string{"BAR", "BAZ"},
-					Hosts:   []config2.HostMatcher{{Type: "glob", Value: "**.example.com"}},
+					Hosts:   []config2.HostMatcher{{Type: "wildcard", Value: "*.example.com"}},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOnNoDecode,
 				Execute: []config.MechanismConfig{
@@ -761,7 +761,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					},
 					Scheme:  "https",
 					Methods: []string{"BAR", "BAZ"},
-					Hosts:   []config2.HostMatcher{{Type: "glob", Value: "**.example.com"}},
+					Hosts:   []config2.HostMatcher{{Type: "wildcard", Value: "*.example.com"}},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOn,
 				Backend: &config2.Backend{

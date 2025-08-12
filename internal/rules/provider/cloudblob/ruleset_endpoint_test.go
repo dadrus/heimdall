@@ -281,7 +281,7 @@ rules:
                         { "path": "/foo/bar/api2" }
                       ],
                       "scheme": "http",
-                      "hosts": [{ "type": "glob", "value": "**"}],
+                      "hosts": [{ "type": "wildcard", "value": "*"}],
                       "methods": ["GET", "POST"]
                     },
 					"execute": [

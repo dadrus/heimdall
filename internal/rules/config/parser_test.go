@@ -110,7 +110,7 @@ func TestParseRules(t *testing.T) {
   {
     "id": "foo",
     "match": {
-      "hosts":[{ "value": "*.foo.bar", "type": "glob" }]
+      "hosts":[{ "value": "*.foo.bar", "type": "wildcard" }]
     },
     "execute": [{"authenticator":"test"}]}]
 }`),
