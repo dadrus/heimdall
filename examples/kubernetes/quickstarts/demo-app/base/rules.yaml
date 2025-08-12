@@ -1,4 +1,4 @@
-apiVersion: heimdall.dadrus.github.com/v1alpha4
+apiVersion: heimdall.dadrus.github.com/v1beta1
 kind: RuleSet
 metadata:
   name: echo-app-rules
