@@ -5,7 +5,6 @@ rules:
   match:
     routes:
       - path: /**
-    backtracking_enabled: true
     scheme: http
     hosts:
       - type: glob
