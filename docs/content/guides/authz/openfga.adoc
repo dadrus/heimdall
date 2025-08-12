@@ -260,7 +260,7 @@ Note or write down the value of `authorization_model_id`.
 +
 [source, yaml]
 ----
-version: "1alpha4"
+version: "1beta1"
 rules:
 - id: access_document  # <1>
   match:

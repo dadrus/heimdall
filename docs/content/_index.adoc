@@ -15,7 +15,7 @@ Use declarative techniques you are already familiar with
 
 [source, yaml]
 ----
-apiVersion: heimdall.dadrus.github.com/v1alpha4
+apiVersion: heimdall.dadrus.github.com/v1beta1
 kind: RuleSet
 metadata:
   name: My awesome service

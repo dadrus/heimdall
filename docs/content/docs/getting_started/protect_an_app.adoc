@@ -136,7 +136,7 @@ WARNING: Do not use this for purposes beyond this tutorial!
 +
 [source, yaml]
 ----
-version: "1alpha4"
+version: "1beta1"
 rules:
 - id: demo:public  # <1>
   match:

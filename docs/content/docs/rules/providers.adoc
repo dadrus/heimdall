@@ -44,7 +44,7 @@ WARNING: All environment variables, used in the rule set files must be known in 
 ====
 [source, yaml]
 ----
-version: "1alpha4"
+version: "1beta1"
 name: my-rule-set
 rules:
 - id: rule:1
