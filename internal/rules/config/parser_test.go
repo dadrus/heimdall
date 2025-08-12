@@ -206,7 +206,7 @@ func TestParseRules(t *testing.T) {
     "match":{
       "routes": [{ "path":"/foo/bar" }],
       "methods": ["ALL"],
-      "hosts":[{ "value": "*.foo.bar", "type": "glob" }],
+      "hosts":[{ "value": "*.foo.bar", "type": "wildcard" }],
       "scheme": "https"
     },
     "execute": [{"authenticator":"test"}]

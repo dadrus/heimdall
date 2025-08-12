@@ -56,8 +56,8 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 			Scheme: "https",
 			Hosts: []HostMatcher{
 				{
-					Value: "*example.com",
-					Type:  "glob",
+					Value: "*.example.com",
+					Type:  "wildcard",
 				},
 			},
 			Methods: []string{"GET", "POST"},

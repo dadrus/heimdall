@@ -186,7 +186,7 @@ func TestFetchRuleSets(t *testing.T) {
             { "path": "/foo/bar/api1" }
           ],
           "scheme": "http",
-          "hosts": [{ "type": "glob", "value": "**"}],
+          "hosts": [{ "type": "wildcard", "value": "*.example.com"}],
           "methods": ["GET", "POST"]
         },
 		"execute": [
@@ -205,8 +205,8 @@ rules:
       - path: /foo/bar/api2
     scheme: http
     hosts:
-      - type: glob
-        value: "**"
+      - type: wildcard
+        value: "*.example.com"
     methods: 
       - GET
       - POST
@@ -263,7 +263,7 @@ rules:
                          { "path": "/foo/bar/api1" }
                       ],
                       "scheme": "http",
-                      "hosts": [{ "type": "glob", "value": "**" }],
+                      "hosts": [{ "type": "exact", "value": "example.com" }],
                       "methods": ["GET", "POST"]
                     },
 					"execute": [
@@ -378,7 +378,7 @@ rules:
                         { "path": "/foo/bar/api1" }
                       ],
                       "scheme": "http",
-                      "hosts": [{ "type": "glob", "value": "**" }],
+                      "hosts": [{ "type": "exact", "value": "example.com" }],
                       "methods": ["GET", "POST"]
                     },
 					"execute": [
