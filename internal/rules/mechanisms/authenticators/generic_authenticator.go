@@ -86,20 +86,12 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 		Payload               template.Template                   `mapstructure:"payload"`
 		SessionLifespanConfig *SessionLifespanConfig              `mapstructure:"session_lifespan"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for generic authenticator '%s'", name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError {
-		logger.Warn().
-			Str("_type", AuthenticatorGeneric).
-			Str("_name", name).
-			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
@@ -172,22 +164,13 @@ func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]an
 	}
 
 	type Config struct {
-		CacheTTL             *time.Duration `mapstructure:"cache_ttl"`
-		AllowFallbackOnError *bool          `mapstructure:"allow_fallback_on_error"`
+		CacheTTL *time.Duration `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for generic authenticator '%s'", a.name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError != nil {
-		logger := a.app.Logger()
-		logger.Warn().
-			Str("_type", AuthenticatorGeneric).
-			Str("_name", a.name).
-			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	return &genericAuthenticator{

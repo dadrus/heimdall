@@ -317,7 +317,6 @@ assertions:
     - ES256
 subject:
   id: some_claim
-allow_fallback_on_error: true
 validate_jwk: false
 trust_store: ` + trustStorePath),
 			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {

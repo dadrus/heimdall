@@ -197,7 +197,6 @@ assertions:
 subject:
   id: some_claim
 cache_ttl: 5s
-allow_fallback_on_error: true
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
