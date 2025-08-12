@@ -7,8 +7,8 @@ rules:
       - path: /**
     scheme: http
     hosts:
-      - type: glob
-        value: foo.bar
+      - type: wildcard
+        value: "*.foo.bar"
     methods: [ GET, POST ]
   forward_to:
     host: bar.foo
