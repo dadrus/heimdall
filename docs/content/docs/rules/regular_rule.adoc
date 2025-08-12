@@ -63,10 +63,6 @@ Specifies the type of expression for matching the host, which can be one of:
 
 **** `exact`: Matches the host exactly.
 **** `wildcard`: Matches the host using a wildcard expression (e.g., `\*.example.com` matches all subdomains under `example.com`). The `*` can only appear once at the start of the expression, and `*` alone matches any host.
-**** `glob`: Uses a https://github.com/gobwas/glob[glob expression] that the host of the incoming request must satisfy, with `.` as a delimiter (e.g., `*` matches any segment until the next `.`).
-**** `regex`: Uses a regular expression that the host of the incoming request must satisfy.
-
-WARNING: The `glob` and `regex` types for host expressions are deprecated and will be removed in a future version. Using them triggers a warning log. Switch to `exact` or `wildcard` types, which improve rule matching, particularly when domains are more significant than paths.
 
 *** *`value`*: _string_ (mandatory)
 +
