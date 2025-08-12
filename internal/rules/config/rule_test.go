@@ -28,8 +28,6 @@ import (
 func TestRuleConfigDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
-	trueValue := true
-
 	// GIVEN
 	var out Rule
 
@@ -48,8 +46,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 					Path: "/some/static/path",
 				},
 			},
-			BacktrackingEnabled: &trueValue,
-			Scheme:              "https",
+			Scheme: "https",
 			Hosts: []HostMatcher{
 				{
 					Value: "**.example.com",

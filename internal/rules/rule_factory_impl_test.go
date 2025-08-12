@@ -443,8 +443,6 @@ func TestRuleFactoryNew(t *testing.T) {
 func TestRuleFactoryCreateRule(t *testing.T) {
 	t.Parallel()
 
-	trueValue := true
-
 	for uc, tc := range map[string]struct {
 		opMode         config.OperationMode
 		config         config2.Rule
@@ -707,10 +705,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 							PathParams: []config2.ParameterMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
 						},
 					},
-					BacktrackingEnabled: &trueValue,
-					Scheme:              "https",
-					Methods:             []string{"BAR", "BAZ"},
-					Hosts:               []config2.HostMatcher{{Type: "glob", Value: "**.example.com"}},
+					Scheme:  "https",
+					Methods: []string{"BAR", "BAZ"},
+					Hosts:   []config2.HostMatcher{{Type: "glob", Value: "**.example.com"}},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOnNoDecode,
 				Execute: []config.MechanismConfig{
