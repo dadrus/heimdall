@@ -68,10 +68,6 @@ The identifier of the subject to be verified.
 +
 The password of the subject to be verified.
 
-* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
-+
-**Deprecated:** As of v0.16.0, this property is ineffective and will be removed in v0.17.0. Refer to the authentication stage description in the link:{{< relref "/docs/concepts/pipelines/#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipline] for details on the current behavior.
-
 .Configuration of Basic Auth authenticator
 ====
 [source, yaml]
@@ -121,10 +117,6 @@ Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 How long to cache the response. If not set, response caching if disabled. The cache key is calculated from the `identity_info_endpoint` configuration and the actual authentication data value.
-
-* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
-+
-**Deprecated:** As of v0.16.0, this property is ineffective and will be removed in v0.17.0. Refer to the authentication stage description in the link:{{< relref "/docs/concepts/pipelines/#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipline] for details on the current behavior.
 
 * *`session_lifespan`*: _link:{{< relref "/docs/configuration/types.adoc#_session_lifespan" >}}[Session Lifespan]_ (optional, not overridable)
 +
@@ -295,10 +287,6 @@ Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_
 +
 How long to cache the response. If not set, caching of the introspection response is based on the available token expiration information. To disable caching, set it to `0s`. If you set the ttl to a custom value > 0, the expiration time (if available) of the token will be considered. The cache key is calculated from the `introspection_endpoint` configuration and the value of the access token.
 
-* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
-+
-**Deprecated:** As of v0.16.0, this property is ineffective and will be removed in v0.17.0. Refer to the authentication stage description in the link:{{< relref "/docs/concepts/pipelines/#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipline] for details on the current behavior.
-
 .Minimal possible configuration based on the Introspection endpoint
 ====
 [source, yaml]
@@ -396,10 +384,6 @@ Where to extract the subject id from the JWT, as well as which attributes to use
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 How long to cache the key from the JWKS response, which was used for signature verification purposes. If not set, heimdall will cache this key for 10 minutes and not call JWKS endpoint again if the same `kid` is referenced in an JWT and same JWKS endpoint is used. The cache key is calculated from the `jwks_endpoint` configuration and the `kid` referenced in the JWT.
-
-* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
-+
-**Deprecated:** As of v0.16.0, this property is ineffective and will be removed in v0.17.0. Refer to the authentication stage description in the link:{{< relref "/docs/concepts/pipelines/#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipline] for details on the current behavior.
 
 * *`validate_jwk`*: _boolean_ (optional, not overridable)
 +
