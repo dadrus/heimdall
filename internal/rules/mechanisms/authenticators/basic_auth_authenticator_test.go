@@ -41,7 +41,7 @@ func TestCreateBasicAuthAuthenticator(t *testing.T) {
 		config []byte
 		assert func(t *testing.T, err error, auth *basicAuthAuthenticator)
 	}{
-		"valid configuration without set fallback": {
+		"valid configuration": {
 			config: []byte(`
 user_id: foo
 password: bar`),
@@ -60,34 +60,7 @@ password: bar`),
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.Equal(t, "valid configuration without set fallback", auth.ID())
-				assert.Equal(t, auth.ID(), auth.Name())
-				assert.Empty(t, auth.emptyAttributes)
-				assert.NotNil(t, auth.emptyAttributes)
-			},
-		},
-		"valid configuration without fallback set to true": {
-			config: []byte(`
-user_id: foo
-password: bar
-allow_fallback_on_error: true
-`),
-			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				md := sha256.New()
-				md.Write([]byte("foo"))
-				userID := hex.EncodeToString(md.Sum(nil))
-
-				md.Reset()
-				md.Write([]byte("bar"))
-				password := hex.EncodeToString(md.Sum(nil))
-
-				assert.Equal(t, userID, auth.userID)
-				assert.Equal(t, password, auth.password)
-				assert.Equal(t, "valid configuration without fallback set to true", auth.ID())
+				assert.Equal(t, "valid configuration", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
 				assert.NotNil(t, auth.emptyAttributes)

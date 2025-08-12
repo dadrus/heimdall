@@ -91,20 +91,12 @@ func newOAuth2IntrospectionAuthenticator(
 		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for oauth2_introspection authenticator '%s'", name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError {
-		logger.Warn().
-			Str("_type", AuthenticatorOAuth2Introspection).
-			Str("_name", name).
-			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
@@ -232,23 +224,14 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig m
 	}
 
 	type Config struct {
-		Assertions           oauth2.Expectation `mapstructure:"assertions"`
-		CacheTTL             *time.Duration     `mapstructure:"cache_ttl"`
-		AllowFallbackOnError *bool              `mapstructure:"allow_fallback_on_error"`
+		Assertions oauth2.Expectation `mapstructure:"assertions"`
+		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for oauth2_introspection authenticator '%s'", a.name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError != nil {
-		logger := a.app.Logger()
-		logger.Warn().
-			Str("_type", AuthenticatorOAuth2Introspection).
-			Str("_name", a.name).
-			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	return &oauth2IntrospectionAuthenticator{

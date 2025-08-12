@@ -76,21 +76,14 @@ func newBasicAuthAuthenticator(
 		Msg("Creating authenticator")
 
 	type Config struct {
-		UserID               string `mapstructure:"user_id"                 validate:"required"`
-		Password             string `mapstructure:"password"                validate:"required"`
-		AllowFallbackOnError bool   `mapstructure:"allow_fallback_on_error"`
+		UserID   string `mapstructure:"user_id"  validate:"required"`
+		Password string `mapstructure:"password" validate:"required"`
 	}
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for basic_auth authenticator '%s'", name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError {
-		logger.Warn().
-			Str("_name", name).
-			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	auth := basicAuthAuthenticator{
@@ -177,21 +170,14 @@ func (a *basicAuthAuthenticator) WithConfig(stepID string, rawConfig map[string]
 	}
 
 	type Config struct {
-		UserID               string `mapstructure:"user_id"`
-		Password             string `mapstructure:"password"`
-		AllowFallbackOnError *bool  `mapstructure:"allow_fallback_on_error"`
+		UserID   string `mapstructure:"user_id"`
+		Password string `mapstructure:"password"`
 	}
 
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for basic auth authenticator '%s'", a.name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError != nil {
-		logger := a.app.Logger()
-		logger.Warn().Str("_id", a.id).
-			Msg("Usage of allow_fallback_on_error is deprecated and has no effect")
 	}
 
 	return &basicAuthAuthenticator{

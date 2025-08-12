@@ -91,28 +91,20 @@ func newJwtAuthenticator(
 		Msg("Creating authenticator")
 
 	type Config struct {
-		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
-		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
-		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
-		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
-		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
-		TrustStore           truststore.TrustStore               `mapstructure:"trust_store"`
+		JWKSEndpoint     *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
+		MetadataEndpoint *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
+		Assertions       oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
+		SubjectInfo      SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
+		AuthDataSource   extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
+		CacheTTL         *time.Duration                      `mapstructure:"cache_ttl"`
+		ValidateJWK      *bool                               `mapstructure:"validate_jwk"`
+		TrustStore       truststore.TrustStore               `mapstructure:"trust_store"`
 	}
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for jwt authenticator '%s'", name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError {
-		logger.Warn().
-			Str("_type", AuthenticatorJWT).
-			Str("_name", name).
-			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	if conf.JWKSEndpoint != nil {
@@ -257,23 +249,14 @@ func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (
 	}
 
 	type Config struct {
-		Assertions           oauth2.Expectation `mapstructure:"assertions"              validate:"-"`
-		CacheTTL             *time.Duration     `mapstructure:"cache_ttl"`
-		AllowFallbackOnError *bool              `mapstructure:"allow_fallback_on_error"`
+		Assertions oauth2.Expectation `mapstructure:"assertions" validate:"-"`
+		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for jwt authenticator '%s'", a.name).CausedBy(err)
-	}
-
-	if conf.AllowFallbackOnError != nil {
-		logger := a.app.Logger()
-		logger.Warn().
-			Str("_type", AuthenticatorJWT).
-			Str("_name", a.name).
-			Msg("Usage of allow_fallback_on_error on authenticator is deprecated and has no effect")
 	}
 
 	return &jwtAuthenticator{

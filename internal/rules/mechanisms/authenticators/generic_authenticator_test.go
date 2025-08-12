@@ -325,15 +325,13 @@ forward_cookies:
 payload: |
   foo=bar
 subject:
-  id: some_template
-allow_fallback_on_error: true`),
+  id: some_template`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
 			) {
 				t.Helper()
 
 				require.NoError(t, err)
-
 				assert.Equal(t, prototype, configured)
 			},
 		},
