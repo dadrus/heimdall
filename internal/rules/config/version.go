@@ -16,4 +16,4 @@
 
 package config
 
-const CurrentRuleSetVersion = "1alpha4"
+const CurrentRuleSetVersion = "1beta1"
