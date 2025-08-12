@@ -1,4 +1,4 @@
-version: "1alpha4"
+version: "1beta1"
 rules:
 - id: demo:public
   match:

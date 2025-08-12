@@ -25,8 +25,6 @@ import (
 func TestMatcherDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
-	trueValue := true
-
 	for uc, tc := range map[string]*Matcher{
 		"single route defining only a path": {
 			Routes: []Route{{Path: "/foo/bar"}},
@@ -55,8 +53,7 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 					Path: "/some/static/path",
 				},
 			},
-			BacktrackingEnabled: &trueValue,
-			Scheme:              "https",
+			Scheme: "https",
 			Hosts: []HostMatcher{
 				{
 					Value: "*example.com",

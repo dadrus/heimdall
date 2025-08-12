@@ -1,11 +1,10 @@
-version: "1alpha4"
+version: "1beta1"
 name: test-rule-set
 rules:
 - id: rule:foo
   match:
     routes:
       - path: /**
-    backtracking_enabled: true
     scheme: http
     hosts:
       - type: glob

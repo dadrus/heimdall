@@ -283,7 +283,7 @@ tests:
             - apiGroups:
                 - heimdall.dadrus.github.com
               apiVersions:
-                - v1alpha4
+                - v1beta1
               operations:
                 - CREATE
                 - UPDATE

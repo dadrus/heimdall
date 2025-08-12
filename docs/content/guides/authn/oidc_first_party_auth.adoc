@@ -147,7 +147,7 @@ WARNING: Do not use it for any purposes beyond this tutorial!
 +
 [source, yaml]
 ----
-version: "1alpha4"
+version: "1beta1"
 rules:
 - id: upstream:public  # <1>
   match:
@@ -194,7 +194,7 @@ rules:
 +
 [source, yaml]
 ----
-version: "1alpha4"
+version: "1beta1"
 rules:
 - id: oauth2-proxy:public
   match:

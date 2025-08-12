@@ -206,7 +206,6 @@ func TestParseRules(t *testing.T) {
     "match":{
       "routes": [{ "path":"/foo/bar" }],
       "methods": ["ALL"],
-      "backtracking_enabled": true,
       "hosts":[{ "value": "*.foo.bar", "type": "glob" }],
       "scheme": "https"
     },
@@ -228,7 +227,6 @@ func TestParseRules(t *testing.T) {
 				assert.Len(t, rul.Matcher.Routes, 1)
 				assert.Equal(t, "/foo/bar", rul.Matcher.Routes[0].Path)
 				assert.ElementsMatch(t, []string{"ALL"}, rul.Matcher.Methods)
-				assert.True(t, *rul.Matcher.BacktrackingEnabled)
 				assert.Len(t, rul.Execute, 1)
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
 			},

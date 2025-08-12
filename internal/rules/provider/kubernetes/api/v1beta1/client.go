@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1alpha4
+package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +26,7 @@ import (
 
 const (
 	GroupName    = "heimdall.dadrus.github.com"
-	GroupVersion = "v1alpha4"
+	GroupVersion = "v1beta1"
 )
 
 func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {

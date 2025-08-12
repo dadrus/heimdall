@@ -27,7 +27,7 @@ Available properties are:
 
 * *`version`*: _string_ (mandatory)
 +
-The version schema of the rule set. The current version of heimdall supports only the version `1alpha4`.
+The version schema of the rule set. The current version of heimdall supports only the version `1beta1`.
 
 * *`name`*: _string_ (optional)
 +
@@ -44,7 +44,7 @@ An imaginary rule set file defining two rules could look like shown below.
 
 [source, yaml]
 ----
-version: "1alpha4"
+version: "1beta1"
 name: my-rule-set
 rules:
 - id: rule:1
@@ -80,7 +80,7 @@ If you operate heimdall in kubernetes, most probably, you would like to make use
 
 * *`apiVersion`*: _string_ (mandatory)
 +
-The api version of the custom resource definition, the given rule set is based on. The current version of heimdall supports only `heimdall.dadrus.github.com/v1alpha4` version.
+The api version of the custom resource definition, the given rule set is based on. The current version of heimdall supports only `heimdall.dadrus.github.com/v1beta1` version.
 
 * *`kind`*: _string_ (mandatory)
 +
@@ -118,7 +118,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts
 ====
 [source, yaml]
 ----
-apiVersion: heimdall.dadrus.github.com/v1alpha4
+apiVersion: heimdall.dadrus.github.com/v1beta1
 kind: RuleSet
 metadata:
   name: "<some name>"
