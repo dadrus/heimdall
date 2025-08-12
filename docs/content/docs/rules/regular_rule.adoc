@@ -53,10 +53,6 @@ The type of expression used to match the captured wildcard's value. The supporte
 +
 The actual expression based on the given `type`.
 
-** *`backtracking_enabled`*: _boolean_ (optional)
-+
-WARNING: This property is deprecated, is unused since v0.17.0, and it will be removed in a future version. Before v0.17.0, it helped control backtracking. Configuring it now triggers a warning.
-
 ** *`hosts`*: _HostMatcher array_ (optional)
 +
 Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. If not defined, any host will be matched. Each entry has the following properties:
