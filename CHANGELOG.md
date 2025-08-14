@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.17.1](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.17.1) (2025-08-14)
+
+
+### Bug Fixes
+
+* CRD updated to include wildcard host expression type ([#2675](https://github.com/dadrus/heimdall/issues/2675)) ([ea69a03](https://github.com/dadrus/heimdall/commit/ea69a03fac7dfebc3ef53ecf071d5bb9558959e5))
+
+
+### Dependencies
+
+* update golang to v1.25.0 ([#2670](https://github.com/dadrus/heimdall/issues/2670)) ([1d79d2c](https://github.com/dadrus/heimdall/commit/1d79d2ce4e9de5a4caa918e57e0761ae12bd1210))
+* update google.golang.org/genproto/googleapis/rpc digest to 5f3141c ([#2657](https://github.com/dadrus/heimdall/issues/2657)) ([9fdbd45](https://github.com/dadrus/heimdall/commit/9fdbd45ee8853f8b71f4309c303d86c54a401e37))
+* update kubernetes packages to v0.33.4 ([#2671](https://github.com/dadrus/heimdall/issues/2671)) ([dfb3334](https://github.com/dadrus/heimdall/commit/dfb333474f1f709c668c6f2751e03acd872dd23c))
+
 ## [0.17.0](https://github.com/dadrus/heimdall/compare/v0.16.0...v0.17.0) (2025-08-11)
 
 
