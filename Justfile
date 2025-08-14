@@ -30,8 +30,13 @@ dependencies:
   go mod download
   go mod verify
 
+test-chart:
+  helm unittest ./charts/heimdall
+
 test: dependencies
   go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
+
+test-all: lint test-chart test
 
 coverage: test
   go tool cover -html coverage.cov
