@@ -17,6 +17,7 @@
 package listener
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"sync/atomic"
@@ -98,7 +99,9 @@ func New(
 	cw watcher.Watcher,
 	co certificate.Observer,
 ) (net.Listener, error) {
-	listnr, err := net.Listen(network, address)
+	var lc net.ListenConfig
+
+	listnr, err := lc.Listen(context.Background(), network, address)
 	if err != nil {
 		return nil, err
 	}

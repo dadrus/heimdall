@@ -17,6 +17,7 @@
 package redis
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"net"
@@ -182,12 +183,17 @@ func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientO
 			return rueidis.AuthCredentials{}, nil
 		},
 
-		DialFn: func(addr string, dialer *net.Dialer, _ *tls.Config) (net.Conn, error) {
+		DialCtxFn: func(ctx context.Context, addr string, dialer *net.Dialer, _ *tls.Config) (net.Conn, error) {
 			if tlsCfg != nil {
-				return tls.DialWithDialer(dialer, "tcp", addr, tlsCfg)
+				td := tls.Dialer{
+					NetDialer: dialer,
+					Config:    tlsCfg,
+				}
+
+				return td.DialContext(ctx, "tcp", addr)
 			}
 
-			return dialer.Dial("tcp", addr)
+			return dialer.DialContext(ctx, "tcp", addr)
 		},
 	}, nil
 }
