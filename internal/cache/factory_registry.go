@@ -50,8 +50,8 @@ func Create(ctx app.Context, typ string, config map[string]any) (Cache, error) {
 	}
 
 	factoriesMu.RLock()
-	factory, ok := factories[typ]
-	factoriesMu.RUnlock()
+	factory, ok := factories[typ] // nolint: wsl_v5
+	factoriesMu.RUnlock()         // nolint: wsl_v5
 
 	if !ok {
 		return nil, errorchain.NewWithMessagef(ErrUnsupportedCacheType, "'%s'", typ)

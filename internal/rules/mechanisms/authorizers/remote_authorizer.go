@@ -396,17 +396,14 @@ func (a *remoteAuthorizer) renderTemplates(
 	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 ) (map[string]string, string, error) {
-	var (
-		values  map[string]string
-		payload string
-		err     error
-	)
+	var payload string
 
-	if values, err = a.v.Render(map[string]any{
+	vals, err := a.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the authorization endpoint").
 			WithErrorContext(a).
@@ -417,7 +414,7 @@ func (a *remoteAuthorizer) renderTemplates(
 		if payload, err = a.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
-			"Values":  values,
+			"Values":  vals,
 			"Outputs": ctx.Outputs(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -427,5 +424,5 @@ func (a *remoteAuthorizer) renderTemplates(
 		}
 	}
 
-	return values, payload, nil
+	return vals, payload, nil
 }

@@ -550,14 +550,13 @@ func validateTestJWT(t *testing.T, rawJWT string, signer *jwtSigner,
 ) {
 	t.Helper()
 
-	const jwtDotCount = 2
+	var jwtClaims map[string]any
 
-	require.Equal(t, jwtDotCount, strings.Count(rawJWT, "."))
+	require.Equal(t, 2, strings.Count(rawJWT, "."))
 
 	token, err := jwt.ParseSigned(rawJWT, []jose.SignatureAlgorithm{jose.SignatureAlgorithm(signer.jwk.Algorithm)})
 	require.NoError(t, err)
 
-	var jwtClaims map[string]any
 	err = token.Claims(signer.key.Public(), &jwtClaims)
 	require.NoError(t, err)
 

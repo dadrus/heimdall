@@ -157,6 +157,7 @@ func (p *Provider) Stop(ctx context.Context) error {
 	_ = p.adc.Stop(ctx)
 
 	done := make(chan struct{})
+
 	go func() {
 		p.wg.Wait()
 		close(done)
