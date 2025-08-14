@@ -94,14 +94,15 @@ func (l *listener) Accept() (net.Conn, error) {
 }
 
 func New(
-	network, name, address string,
+	ctx context.Context,
+	name, address string,
 	tlsConf *config.TLS,
 	cw watcher.Watcher,
 	co certificate.Observer,
 ) (net.Listener, error) {
 	var lc net.ListenConfig
 
-	listnr, err := lc.Listen(context.Background(), network, address)
+	listnr, err := lc.Listen(ctx, "tcp", address)
 	if err != nil {
 		return nil, err
 	}
