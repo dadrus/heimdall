@@ -7,7 +7,7 @@ rules:
       - path: /**
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [ GET, POST ]
   execute:

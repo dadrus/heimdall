@@ -90,18 +90,6 @@ func (m methodMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 	return nil
 }
 
-type hostMatcher struct {
-	typedMatcher
-}
-
-func (m *hostMatcher) Matches(request *heimdall.Request, _, _ []string) error {
-	if !m.match(request.URL.Host) {
-		return errorchain.NewWithMessagef(ErrRequestHostMismatch, "'%s' is not expected", request.URL.Host)
-	}
-
-	return nil
-}
-
 type pathParamMatcher struct {
 	typedMatcher
 
@@ -167,36 +155,6 @@ func createMethodMatcher(methods []string) (methodMatcher, error) {
 	tbr = slicex.Map[string, string](tbr, func(s string) string { return strings.TrimPrefix(s, "!") })
 
 	return slicex.Subtract(methods, tbr), nil
-}
-
-func createHostMatcher(hosts []config.HostMatcher) (RouteMatcher, error) {
-	matchers := make(orMatcher, len(hosts))
-
-	for idx, host := range hosts {
-		var (
-			tm  typedMatcher
-			err error
-		)
-
-		switch host.Type {
-		case "glob":
-			tm, err = newGlobMatcher(host.Value, '.')
-		case "regex":
-			tm, err = newRegexMatcher(host.Value)
-		default:
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"unsupported host matching expression type '%s' at index %d", host.Type, idx)
-		}
-
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"failed to compile host matching expression at index %d", idx).CausedBy(err)
-		}
-
-		matchers[idx] = &hostMatcher{tm}
-	}
-
-	return matchers, nil
 }
 
 func createPathParamsMatcher(

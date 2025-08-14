@@ -43,8 +43,8 @@ type ParameterMatcher struct {
 }
 
 type HostMatcher struct {
-	Value string `json:"value" yaml:"value" validate:"required"`                                 //nolint:tagalign
-	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex wildcard"` //nolint:tagalign
+	Value string `json:"value" yaml:"value" validate:"required"`                      //nolint:tagalign
+	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact wildcard"` //nolint:tagalign
 }
 
 func (m *Matcher) DeepCopyInto(out *Matcher) {

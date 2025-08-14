@@ -30,7 +30,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 func NewRuleFactory(
@@ -121,20 +120,11 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 	}
 
 	// filter those host settings, which can be used in the trie structure,
-	trieHosts := slicex.Filter(rc.Matcher.Hosts, func(hm config2.HostMatcher) bool {
-		return hm.Type == "exact" || hm.Type == "wildcard"
-	})
-	// get the remaining entries
-	matcherHosts := slicex.Subtract(rc.Matcher.Hosts, trieHosts)
+	trieHosts := rc.Matcher.Hosts
 
 	// if no exact, or wildcard hosts are defined, we create a virtual "match everything" wildcard host
 	if len(trieHosts) == 0 {
 		trieHosts = append(trieHosts, config2.HostMatcher{Type: "wildcard", Value: "*"})
-	}
-
-	hm, err := createHostMatcher(matcherHosts)
-	if err != nil {
-		return nil, err
 	}
 
 	mm, err := createMethodMatcher(rc.Matcher.Methods)
@@ -158,7 +148,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 					rule:    rul,
 					host:    host.Value,
 					path:    rc.Path,
-					matcher: andMatcher{sm, mm, hm, ppm},
+					matcher: andMatcher{sm, mm, ppm},
 				})
 		}
 	}

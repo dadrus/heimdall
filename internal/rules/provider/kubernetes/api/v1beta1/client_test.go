@@ -67,8 +67,7 @@ const response = `{
               ],
               "scheme": "http",
               "hosts": [ 
-                {"type": "exact","value": "127.0.0.1"}, 
-                {"type": "glob","value": "172.*.*.1"} 
+                {"type": "exact","value": "127.0.0.1"}
               ],
               "methods": ["GET", "POST"]
             },
@@ -156,11 +155,9 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 	assert.Equal(t, "foos*", rule.Matcher.Routes[0].PathParams[0].Value)
 	assert.Equal(t, "/foobar/baz", rule.Matcher.Routes[1].Path)
 	assert.Equal(t, "http", rule.Matcher.Scheme)
-	assert.Len(t, rule.Matcher.Hosts, 2)
+	assert.Len(t, rule.Matcher.Hosts, 1)
 	assert.Equal(t, "127.0.0.1", rule.Matcher.Hosts[0].Value)
 	assert.Equal(t, "exact", rule.Matcher.Hosts[0].Type)
-	assert.Equal(t, "172.*.*.1", rule.Matcher.Hosts[1].Value)
-	assert.Equal(t, "glob", rule.Matcher.Hosts[1].Type)
 	assert.ElementsMatch(t, rule.Matcher.Methods, []string{"GET", "POST"})
 	assert.Empty(t, rule.ErrorHandler)
 	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.Backend.CreateURL(&url.URL{

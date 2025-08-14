@@ -49,8 +49,8 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 			Scheme: "https",
 			Hosts: []HostMatcher{
 				{
-					Value: "**.example.com",
-					Type:  "glob",
+					Value: "*.example.com",
+					Type:  "wildcard",
 				},
 			},
 			Methods: []string{"GET", "PATCH"},
@@ -97,8 +97,8 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 			Scheme: "https",
 			Hosts: []HostMatcher{
 				{
-					Value: "**.example.com",
-					Type:  "glob",
+					Value: "*.example.com",
+					Type:  "wildcard",
 				},
 			},
 			Methods: []string{"GET", "PATCH"},

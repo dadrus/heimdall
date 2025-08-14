@@ -517,31 +517,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "failed creating route '/foo/:bar'")
 			},
 		},
-		"with error while creating host matcher": {
-			config: config2.Rule{
-				ID: "foobar",
-				Matcher: config2.Matcher{
-					Routes: []config2.Route{{Path: "/foo/bar"}},
-					Hosts:  []config2.HostMatcher{{Type: "regex", Value: "?>?<*??"}},
-				},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo", "id": "bar"},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("test", "foo", "bar", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed to compile host matching expression")
-			},
-		},
 		"with error while creating execute pipeline": {
 			config: config2.Rule{
 				ID:      "foobar",
@@ -707,7 +682,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					},
 					Scheme:  "https",
 					Methods: []string{"BAR", "BAZ"},
-					Hosts:   []config2.HostMatcher{{Type: "glob", Value: "**.example.com"}},
+					Hosts:   []config2.HostMatcher{{Type: "wildcard", Value: "*.example.com"}},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOnNoDecode,
 				Execute: []config.MechanismConfig{
@@ -786,7 +761,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					},
 					Scheme:  "https",
 					Methods: []string{"BAR", "BAZ"},
-					Hosts:   []config2.HostMatcher{{Type: "glob", Value: "**.example.com"}},
+					Hosts:   []config2.HostMatcher{{Type: "wildcard", Value: "*.example.com"}},
 				},
 				EncodedSlashesHandling: config2.EncodedSlashesOn,
 				Backend: &config2.Backend{
