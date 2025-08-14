@@ -38,24 +38,6 @@ type CA struct {
 	Certificate  *x509.Certificate
 }
 
-func (ca *CA) nextSN() *big.Int {
-	ca.lastEECertSN++
-
-	return big.NewInt(ca.lastEECertSN)
-}
-
-func (ca *CA) IssueCertificate(opts ...CertificateBuilderOption) (*x509.Certificate, error) {
-	options := slices.Clone(opts)
-	options = append(options,
-		WithSerialNumber(ca.nextSN()),
-		WithIssuer(ca.PrivKey, ca.Certificate),
-	)
-
-	cb := NewCertificateBuilder(options...)
-
-	return cb.Build()
-}
-
 func NewCA(privKey *ecdsa.PrivateKey, cert *x509.Certificate) *CA {
 	return &CA{
 		lastEECertSN: 0,
@@ -96,4 +78,22 @@ func NewRootCA(CN string, validity time.Duration) (*CA, error) { // nolint: gocr
 		Certificate:  cert,
 		lastEECertSN: 0,
 	}, nil
+}
+
+func (ca *CA) IssueCertificate(opts ...CertificateBuilderOption) (*x509.Certificate, error) {
+	options := slices.Clone(opts)
+	options = append(options,
+		WithSerialNumber(ca.nextSN()),
+		WithIssuer(ca.PrivKey, ca.Certificate),
+	)
+
+	cb := NewCertificateBuilder(options...)
+
+	return cb.Build()
+}
+
+func (ca *CA) nextSN() *big.Int {
+	ca.lastEECertSN++
+
+	return big.NewInt(ca.lastEECertSN)
 }

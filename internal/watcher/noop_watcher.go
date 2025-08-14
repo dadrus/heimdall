@@ -20,6 +20,6 @@ import "context"
 
 type NoopWatcher struct{}
 
+func (*NoopWatcher) Add(_ string, _ ChangeListener) error { return nil }
 func (*NoopWatcher) start(_ context.Context)              {}
 func (*NoopWatcher) stop(_ context.Context) error         { return nil }
-func (*NoopWatcher) Add(_ string, _ ChangeListener) error { return nil }

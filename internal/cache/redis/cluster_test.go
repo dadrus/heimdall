@@ -266,7 +266,6 @@ func TestClusterCache(t *testing.T) {
 
 			// WHEN
 			cch, err := NewClusterCache(appCtx, conf)
-
 			if err == nil {
 				err = cch.Start(t.Context())
 				if err == nil {

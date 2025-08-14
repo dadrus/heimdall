@@ -68,6 +68,7 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			log.Warn().Err(err).Msg("Failed parsing timeout query parameter. Ignoring it.")
 		} else {
 			var cancel context.CancelFunc
+
 			ctx, cancel = context.WithTimeout(ctx, timeout)
 
 			defer cancel()

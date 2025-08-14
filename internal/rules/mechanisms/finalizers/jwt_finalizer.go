@@ -212,6 +212,8 @@ func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fina
 	}, nil
 }
 
+func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.activeCertificateChain() }
+
 func (f *jwtFinalizer) Name() string { return f.name }
 
 func (f *jwtFinalizer) ID() string { return f.id }
@@ -296,5 +298,3 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub *subje
 
 	return hex.EncodeToString(hash.Sum(nil))
 }
-
-func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.activeCertificateChain() }

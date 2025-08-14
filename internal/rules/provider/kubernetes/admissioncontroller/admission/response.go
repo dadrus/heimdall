@@ -26,6 +26,10 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
+type Response struct {
+	admissionv1.AdmissionResponse
+}
+
 func NewResponse(code int, msg string, reasons ...string) *Response {
 	resp := &Response{
 		AdmissionResponse: admissionv1.AdmissionResponse{
@@ -54,10 +58,6 @@ func NewResponse(code int, msg string, reasons ...string) *Response {
 	}
 
 	return resp
-}
-
-type Response struct {
-	admissionv1.AdmissionResponse
 }
 
 func (r *Response) complete(req *Request) {

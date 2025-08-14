@@ -90,20 +90,6 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 	return r.createBackend(request), nil
 }
 
-func (r *ruleImpl) createBackend(request *heimdall.Request) rule.Backend {
-	var upstream rule.Backend
-
-	if r.backend != nil {
-		upstream = backend{
-			targetURL: r.backend.CreateURL(&request.URL.URL),
-			forwardHostHeader: r.backend.ForwardHostHeader == nil ||
-				(r.backend.ForwardHostHeader != nil && *r.backend.ForwardHostHeader),
-		}
-	}
-
-	return upstream
-}
-
 func (r *ruleImpl) ID() string { return r.id }
 
 func (r *ruleImpl) SrcID() string { return r.srcID }
@@ -118,6 +104,20 @@ func (r *ruleImpl) EqualTo(other rule.Rule) bool {
 	return r.ID() == other.ID() &&
 		r.SrcID() == other.SrcID() &&
 		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
+}
+
+func (r *ruleImpl) createBackend(request *heimdall.Request) rule.Backend {
+	var upstream rule.Backend
+
+	if r.backend != nil {
+		upstream = backend{
+			targetURL: r.backend.CreateURL(&request.URL.URL),
+			forwardHostHeader: r.backend.ForwardHostHeader == nil ||
+				(r.backend.ForwardHostHeader != nil && *r.backend.ForwardHostHeader),
+		}
+	}
+
+	return upstream
 }
 
 type routeImpl struct {

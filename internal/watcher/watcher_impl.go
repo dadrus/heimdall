@@ -27,6 +27,14 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type watcher struct {
+	w *fsnotify.Watcher
+	m map[string][]ChangeListener
+	l zerolog.Logger
+
+	mut sync.Mutex
+}
+
 func newWatcher(logger zerolog.Logger) (*watcher, error) {
 	fsw, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -38,12 +46,23 @@ func newWatcher(logger zerolog.Logger) (*watcher, error) {
 	return &watcher{w: fsw, m: make(map[string][]ChangeListener), l: logger}, err
 }
 
-type watcher struct {
-	w *fsnotify.Watcher
-	m map[string][]ChangeListener
-	l zerolog.Logger
+func (w *watcher) Add(path string, cl ChangeListener) error {
+	w.mut.Lock()
+	defer w.mut.Unlock()
 
-	mut sync.Mutex
+	list, ok := w.m[path]
+	if !ok {
+		if err := w.w.Add(path); err != nil {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"listener registration for file %s failed", path).CausedBy(err)
+		}
+
+		w.m[path] = []ChangeListener{cl}
+	} else {
+		w.m[path] = append(list, cl)
+	}
+
+	return nil
 }
 
 func (w *watcher) startWatching() {
@@ -81,25 +100,6 @@ func (w *watcher) stop(_ context.Context) error {
 	w.l.Debug().Msg("Stopping watching config files for changes")
 
 	return w.w.Close()
-}
-
-func (w *watcher) Add(path string, cl ChangeListener) error {
-	w.mut.Lock()
-	defer w.mut.Unlock()
-
-	list, ok := w.m[path]
-	if !ok {
-		if err := w.w.Add(path); err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"listener registration for file %s failed", path).CausedBy(err)
-		}
-
-		w.m[path] = []ChangeListener{cl}
-	} else {
-		w.m[path] = append(list, cl)
-	}
-
-	return nil
 }
 
 func (w *watcher) fireOnChange(evt fsnotify.Event) {

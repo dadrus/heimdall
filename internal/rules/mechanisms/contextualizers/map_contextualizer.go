@@ -130,17 +130,14 @@ func (c *mapContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 ) (map[string]string, error) {
-	var (
-		vals     map[string]string
-		rendered string
-		err      error
-	)
+	var rendered string
 
-	if vals, err = c.values.Render(map[string]any{
+	vals, err := c.values.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the map contextualizer").
 			WithErrorContext(c).

@@ -17,6 +17,7 @@
 package listener
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"sync/atomic"
@@ -93,12 +94,15 @@ func (l *listener) Accept() (net.Conn, error) {
 }
 
 func New(
-	network, name, address string,
+	ctx context.Context,
+	name, address string,
 	tlsConf *config.TLS,
 	cw watcher.Watcher,
 	co certificate.Observer,
 ) (net.Listener, error) {
-	listnr, err := net.Listen(network, address)
+	var lc net.ListenConfig
+
+	listnr, err := lc.Listen(ctx, "tcp", address)
 	if err != nil {
 		return nil, err
 	}

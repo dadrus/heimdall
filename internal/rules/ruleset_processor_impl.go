@@ -45,26 +45,6 @@ func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory, op co
 	}
 }
 
-func (p *ruleSetProcessor) isVersionSupported(version string) bool {
-	return version == config.CurrentRuleSetVersion
-}
-
-func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, error) {
-	rules := make([]rule.Rule, len(ruleSet.Rules))
-
-	for idx, rc := range ruleSet.Rules {
-		rul, err := p.f.CreateRule(ruleSet.Version, ruleSet.Source, rc)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"loading rule ID='%s' failed", rc.ID).CausedBy(err)
-		}
-
-		rules[idx] = rul
-	}
-
-	return rules, nil
-}
-
 func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Str("_rule_set", ruleSet.Name).Msg("New rule set received")
@@ -124,4 +104,24 @@ func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *config.RuleSe
 	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Deletion of a rule set received")
 
 	return p.r.DeleteRuleSet(ctx, ruleSet.Source)
+}
+
+func (p *ruleSetProcessor) isVersionSupported(version string) bool {
+	return version == config.CurrentRuleSetVersion
+}
+
+func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, error) {
+	rules := make([]rule.Rule, len(ruleSet.Rules))
+
+	for idx, rc := range ruleSet.Rules {
+		rul, err := p.f.CreateRule(ruleSet.Version, ruleSet.Source, rc)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"loading rule ID='%s' failed", rc.ID).CausedBy(err)
+		}
+
+		rules[idx] = rul
+	}
+
+	return rules, nil
 }

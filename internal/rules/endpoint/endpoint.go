@@ -164,22 +164,6 @@ func (e Endpoint) SendRequest(
 	return e.readResponse(resp)
 }
 
-func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		rawData, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
-				CausedBy(err)
-		}
-
-		return rawData, nil
-	}
-
-	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
-}
-
 func (e Endpoint) Hash() []byte {
 	hash := sha256.New()
 
@@ -199,4 +183,20 @@ func (e Endpoint) Hash() []byte {
 	}
 
 	return hash.Sum(nil)
+}
+
+func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		rawData, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to read response").
+				CausedBy(err)
+		}
+
+		return rawData, nil
+	}
+
+	return nil, errorchain.
+		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 }

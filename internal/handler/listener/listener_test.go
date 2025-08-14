@@ -94,22 +94,21 @@ func TestNewListener(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		network     string
 		serviceConf config.ServeConfig
 		assert      func(t *testing.T, err error, ln net.Listener, port string)
 	}{
 		"creation fails": {
-			network:     "foo",
-			serviceConf: config.ServeConfig{},
+			serviceConf: config.ServeConfig{
+				Host: ".....",
+			},
 			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "foo")
+				require.ErrorContains(t, err, "no such host")
 			},
 		},
 		"without TLS": {
-			network:     "tcp",
 			serviceConf: config.ServeConfig{Host: "127.0.0.1"},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
@@ -122,7 +121,6 @@ func TestNewListener(t *testing.T) {
 			},
 		},
 		"fails due to not existent key store for TLS usage": {
-			network: "tcp",
 			serviceConf: config.ServeConfig{
 				TLS: &config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
 			},
@@ -135,7 +133,6 @@ func TestNewListener(t *testing.T) {
 			},
 		},
 		"fails due to not specified key store": {
-			network:     "tcp",
 			serviceConf: config.ServeConfig{TLS: &config.TLS{}},
 			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
 				t.Helper()
@@ -146,7 +143,6 @@ func TestNewListener(t *testing.T) {
 			},
 		},
 		"successful with specified key id": {
-			network: "tcp",
 			serviceConf: config.ServeConfig{
 				TLS: &config.TLS{
 					KeyStore:   config.KeyStore{Path: pemFile.Name()},
@@ -172,7 +168,7 @@ func TestNewListener(t *testing.T) {
 			tc.serviceConf.Port = port
 
 			// WHEN
-			ln, err := New(tc.network, "test", tc.serviceConf.Address(), tc.serviceConf.TLS, nil, nil)
+			ln, err := New(t.Context(), "test", tc.serviceConf.Address(), tc.serviceConf.TLS, nil, nil)
 
 			// THEN
 			defer func() {
