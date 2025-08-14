@@ -165,11 +165,12 @@ spec:
                                 type:
                                   description: The type of the host matching expression
                                   type: string
-                                  maxLength: 5
+                                  maxLength: 10
                                   enum:
                                     - "exact"
                                     - "glob"
                                     - "regex"
+                                    - "wildcard"
                                 value:
                                   description: The actual host matching expression
                                   type: string
