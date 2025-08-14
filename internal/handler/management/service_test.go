@@ -43,6 +43,7 @@ import (
 
 type ServiceTestSuite struct {
 	suite.Suite
+
 	rootCA1 *testsupport.CA
 	intCA1  *testsupport.CA
 	ee1     *testsupport.EndEntity

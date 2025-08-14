@@ -29,39 +29,6 @@ const pemBlockTypeCertificate = "CERTIFICATE"
 
 type TrustStore []*x509.Certificate
 
-func (ts *TrustStore) addEntry(strict bool) pemx.PEMBlockCallback {
-	return func(idx int, blockType string, _ map[string]string, content []byte) error {
-		var (
-			cert *x509.Certificate
-			err  error
-		)
-
-		if blockType == pemBlockTypeCertificate {
-			cert, err = x509.ParseCertificate(content)
-			if err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal,
-					"failed to parse %d entry in the pem file", idx).CausedBy(err)
-			}
-
-			*ts = append(*ts, cert)
-		} else if strict {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"unsupported entry '%s' entry in the pem file", blockType)
-		}
-
-		return nil
-	}
-}
-
-func (ts *TrustStore) CertPool() *x509.CertPool {
-	pool := x509.NewCertPool()
-	for _, cert := range *ts {
-		pool.AddCert(cert)
-	}
-
-	return pool
-}
-
 func NewTrustStoreFromPEMFile(pemFilePath string, strict bool) (TrustStore, error) {
 	fInfo, err := os.Stat(pemFilePath)
 	if err != nil {
@@ -87,4 +54,37 @@ func NewTrustStoreFromPEMBytes(pemBytes []byte, strict bool) (TrustStore, error)
 	err := pemx.ReadPEM(pemBytes, certs.addEntry(strict))
 
 	return certs, err
+}
+
+func (ts *TrustStore) CertPool() *x509.CertPool {
+	pool := x509.NewCertPool()
+	for _, cert := range *ts {
+		pool.AddCert(cert)
+	}
+
+	return pool
+}
+
+func (ts *TrustStore) addEntry(strict bool) pemx.PEMBlockCallback {
+	return func(idx int, blockType string, _ map[string]string, content []byte) error {
+		var (
+			cert *x509.Certificate
+			err  error
+		)
+
+		if blockType == pemBlockTypeCertificate {
+			cert, err = x509.ParseCertificate(content)
+			if err != nil {
+				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+					"failed to parse %d entry in the pem file", idx).CausedBy(err)
+			}
+
+			*ts = append(*ts, cert)
+		} else if strict {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"unsupported entry '%s' entry in the pem file", blockType)
+		}
+
+		return nil
+	}
 }

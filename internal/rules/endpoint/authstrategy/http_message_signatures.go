@@ -78,6 +78,66 @@ func (s *HTTPMessageSignatures) OnChanged(logger zerolog.Logger) {
 	}
 }
 
+func (s *HTTPMessageSignatures) Apply(ctx context.Context, req *http.Request) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().Msg("Applying http_message_signatures strategy to authenticate request")
+
+	s.mut.RLock()
+	defer s.mut.RUnlock()
+
+	header, err := s.signer.Sign(httpsig.MessageFromRequest(req))
+	if err != nil {
+		return err
+	}
+
+	// set the updated headers
+	req.Header = header
+
+	return nil
+}
+
+func (s *HTTPMessageSignatures) Keys() []jose.JSONWebKey {
+	s.mut.RLock()
+	defer s.mut.RUnlock()
+
+	return s.pubKeys
+}
+
+func (s *HTTPMessageSignatures) Hash() []byte {
+	const int64BytesCount = 8
+
+	hash := sha256.New()
+	hash.Write(stringx.ToBytes(s.Label))
+
+	for _, component := range s.Components {
+		hash.Write(stringx.ToBytes(component))
+	}
+
+	if s.TTL != nil {
+		ttlBytes := make([]byte, int64BytesCount)
+
+		//nolint:gosec
+		// no integer overflow during conversion possible
+		binary.LittleEndian.PutUint64(ttlBytes, uint64(*s.TTL))
+
+		hash.Write(ttlBytes)
+	}
+
+	hash.Write(stringx.ToBytes(s.Signer.Name))
+	hash.Write(stringx.ToBytes(s.Signer.KeyID))
+
+	return hash.Sum(nil)
+}
+
+func (s *HTTPMessageSignatures) Name() string { return "http message signer" }
+
+func (s *HTTPMessageSignatures) Certificates() []*x509.Certificate {
+	s.mut.RLock()
+	defer s.mut.RUnlock()
+
+	return s.certChain
+}
+
 func (s *HTTPMessageSignatures) init() error {
 	ks, err := keystore.NewKeyStoreFromPEMFile(s.Signer.KeyStore.Path, s.Signer.KeyStore.Password)
 	if err != nil {
@@ -144,65 +204,6 @@ func (s *HTTPMessageSignatures) init() error {
 	s.certChain = kse.CertChain
 
 	return nil
-}
-
-func (s *HTTPMessageSignatures) Apply(ctx context.Context, req *http.Request) error {
-	logger := zerolog.Ctx(ctx)
-	logger.Debug().Msg("Applying http_message_signatures strategy to authenticate request")
-
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	header, err := s.signer.Sign(httpsig.MessageFromRequest(req))
-	if err != nil {
-		return err
-	}
-
-	// set the updated headers
-	req.Header = header
-
-	return nil
-}
-
-func (s *HTTPMessageSignatures) Keys() []jose.JSONWebKey {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.pubKeys
-}
-
-func (s *HTTPMessageSignatures) Hash() []byte {
-	const int64BytesCount = 8
-
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes(s.Label))
-
-	for _, component := range s.Components {
-		hash.Write(stringx.ToBytes(component))
-	}
-
-	if s.TTL != nil {
-		ttlBytes := make([]byte, int64BytesCount)
-
-		//nolint:gosec
-		// no integer overflow during conversion possible
-		binary.LittleEndian.PutUint64(ttlBytes, uint64(*s.TTL))
-
-		hash.Write(ttlBytes)
-	}
-
-	hash.Write(stringx.ToBytes(s.Signer.Name))
-	hash.Write(stringx.ToBytes(s.Signer.KeyID))
-
-	return hash.Sum(nil)
-}
-
-func (s *HTTPMessageSignatures) Name() string { return "http message signer" }
-func (s *HTTPMessageSignatures) Certificates() []*x509.Certificate {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.certChain
 }
 
 func toHTTPSigKey(entry *keystore.Entry) httpsig.Key {

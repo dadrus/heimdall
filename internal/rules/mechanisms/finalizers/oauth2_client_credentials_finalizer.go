@@ -74,7 +74,8 @@ func newOAuth2ClientCredentialsFinalizer(
 
 	type Config struct {
 		clientcredentials.Config `mapstructure:",squash"`
-		Header                   *HeaderConfig `mapstructure:"header"`
+
+		Header *HeaderConfig `mapstructure:"header"`
 	}
 
 	var conf Config
