@@ -24,6 +24,7 @@ import (
 
 type TestingLog struct {
 	testing.TB
+
 	buf bytes.Buffer
 }
 

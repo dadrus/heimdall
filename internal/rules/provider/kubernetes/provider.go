@@ -117,26 +117,6 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 	}, nil
 }
 
-func (p *Provider) newController(ctx context.Context, namespace string) (cache.Store, cache.Controller) {
-	repository := p.cl.RuleSetRepository(namespace)
-
-	return cache.NewInformerWithOptions(cache.InformerOptions{
-		ListerWatcher: &cache.ListWatch{
-			ListWithContextFunc:  repository.List,
-			WatchFuncWithContext: repository.Watch,
-		},
-		ObjectType: &v1beta1.RuleSet{},
-		Handler: cache.FilteringResourceEventHandler{
-			FilterFunc: p.filter,
-			Handler: cache.ResourceEventHandlerFuncs{
-				AddFunc:    func(obj any) { p.addRuleSet(ctx, obj) },
-				DeleteFunc: func(obj any) { p.deleteRuleSet(ctx, obj) },
-				UpdateFunc: func(oldObj, newObj any) { p.updateRuleSet(ctx, oldObj, newObj) },
-			},
-		},
-	})
-}
-
 func (p *Provider) Start(ctx context.Context) error {
 	if !p.configured {
 		return nil
@@ -177,6 +157,7 @@ func (p *Provider) Stop(ctx context.Context) error {
 	_ = p.adc.Stop(ctx)
 
 	done := make(chan struct{})
+
 	go func() {
 		p.wg.Wait()
 		close(done)
@@ -192,6 +173,26 @@ func (p *Provider) Stop(ctx context.Context) error {
 
 		return nil
 	}
+}
+
+func (p *Provider) newController(ctx context.Context, namespace string) (cache.Store, cache.Controller) {
+	repository := p.cl.RuleSetRepository(namespace)
+
+	return cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: &cache.ListWatch{
+			ListWithContextFunc:  repository.List,
+			WatchFuncWithContext: repository.Watch,
+		},
+		ObjectType: &v1beta1.RuleSet{},
+		Handler: cache.FilteringResourceEventHandler{
+			FilterFunc: p.filter,
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc:    func(obj any) { p.addRuleSet(ctx, obj) },
+				DeleteFunc: func(obj any) { p.deleteRuleSet(ctx, obj) },
+				UpdateFunc: func(oldObj, newObj any) { p.updateRuleSet(ctx, oldObj, newObj) },
+			},
+		},
+	})
 }
 
 func (p *Provider) filter(obj any) bool {

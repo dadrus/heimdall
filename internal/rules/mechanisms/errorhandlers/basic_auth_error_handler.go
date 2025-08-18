@@ -107,12 +107,10 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(stepID string, rawConfig map[s
 		Realm string `mapstructure:"realm" validate:"required"`
 	}
 
-	var (
-		conf Config
-		err  error
-	)
+	var conf Config
 
-	if err = decodeConfig(eh.app.Validator(), ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+	err := decodeConfig(eh.app.Validator(), ErrorHandlerWWWAuthenticate, rawConfig, &conf)
+	if err != nil {
 		return nil, err
 	}
 

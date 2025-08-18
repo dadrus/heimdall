@@ -1,13 +1,13 @@
 module github.com/dadrus/heimdall
 
-go 1.24.6
+go 1.25.0
 
 require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/ccoveille/go-safecast v1.6.1
-	github.com/dadrus/httpsig v0.0.0-20250721135904-f7ecd42860fe
+	github.com/dadrus/httpsig v0.0.0-20250818084617-05a2ee62f86d
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
@@ -80,13 +80,13 @@ require (
 	go.opentelemetry.io/otel/trace v1.37.0
 	go.uber.org/fx v1.24.0
 	gocloud.dev v0.43.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811160224-6b04f9b4fc78
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.7
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
-	k8s.io/client-go v0.33.3
+	k8s.io/api v0.33.4
+	k8s.io/apimachinery v0.33.4
+	k8s.io/client-go v0.33.4
 	k8s.io/klog/v2 v2.130.1
 )
 

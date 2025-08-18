@@ -418,17 +418,14 @@ func (c *genericContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 ) (map[string]string, string, error) {
-	var (
-		values  map[string]string
-		payload string
-		err     error
-	)
+	var payload string
 
-	if values, err = c.v.Render(map[string]any{
+	vals, err := c.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render values for the contextualization endpoint").
 			WithErrorContext(c).
@@ -439,7 +436,7 @@ func (c *genericContextualizer) renderTemplates(
 		if payload, err = c.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
-			"Values":  values,
+			"Values":  vals,
 			"Outputs": ctx.Outputs(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -449,5 +446,5 @@ func (c *genericContextualizer) renderTemplates(
 		}
 	}
 
-	return values, payload, nil
+	return vals, payload, nil
 }

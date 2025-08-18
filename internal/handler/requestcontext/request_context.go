@@ -139,6 +139,21 @@ func (r *RequestContext) Request() *heimdall.Request {
 	return r.hmdlReq
 }
 
+func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
+func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
+func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
+func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
+func (r *RequestContext) Context() context.Context                { return r.req.Context() }
+func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
+func (r *RequestContext) PipelineError() error                    { return r.err }
+func (r *RequestContext) Outputs() map[string]any {
+	if r.outputs == nil {
+		r.outputs = make(map[string]any)
+	}
+
+	return r.outputs
+}
+
 func (r *RequestContext) requestClientIPs() []string {
 	var ips []string
 
@@ -164,19 +179,4 @@ func (r *RequestContext) requestClientIPs() []string {
 	ips = append(ips, httpx.IPFromHostPort(r.req.RemoteAddr)) // nolint: makezero
 
 	return ips
-}
-
-func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
-func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
-func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
-func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
-func (r *RequestContext) Context() context.Context                { return r.req.Context() }
-func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
-func (r *RequestContext) PipelineError() error                    { return r.err }
-func (r *RequestContext) Outputs() map[string]any {
-	if r.outputs == nil {
-		r.outputs = make(map[string]any)
-	}
-
-	return r.outputs
 }

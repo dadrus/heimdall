@@ -17,6 +17,7 @@
 package redis
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"net"
@@ -73,6 +74,20 @@ type fileCredentials struct {
 	mut   sync.Mutex
 }
 
+func (c *fileCredentials) OnChanged(log zerolog.Logger) {
+	if err := c.load(); err != nil {
+		log.Warn().Err(err).
+			Str("_source", "redis-cache").
+			Str("_file", c.Path).
+			Msg("Config reload failed")
+	} else {
+		log.Info().
+			Str("_source", "redis-cache").
+			Str("_file", c.Path).
+			Msg("Config reloaded")
+	}
+}
+
 func (c *fileCredentials) load() error {
 	cf, err := os.Open(c.Path)
 	if err != nil {
@@ -93,20 +108,6 @@ func (c *fileCredentials) load() error {
 	c.mut.Unlock()
 
 	return nil
-}
-
-func (c *fileCredentials) OnChanged(log zerolog.Logger) {
-	if err := c.load(); err != nil {
-		log.Warn().Err(err).
-			Str("_source", "redis-cache").
-			Str("_file", c.Path).
-			Msg("Config reload failed")
-	} else {
-		log.Info().
-			Str("_source", "redis-cache").
-			Str("_file", c.Path).
-			Msg("Config reloaded")
-	}
 }
 
 func (c *fileCredentials) register(cw watcher.Watcher) error {
@@ -182,12 +183,17 @@ func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientO
 			return rueidis.AuthCredentials{}, nil
 		},
 
-		DialFn: func(addr string, dialer *net.Dialer, _ *tls.Config) (net.Conn, error) {
+		DialCtxFn: func(ctx context.Context, addr string, dialer *net.Dialer, _ *tls.Config) (net.Conn, error) {
 			if tlsCfg != nil {
-				return tls.DialWithDialer(dialer, "tcp", addr, tlsCfg)
+				td := tls.Dialer{
+					NetDialer: dialer,
+					Config:    tlsCfg,
+				}
+
+				return td.DialContext(ctx, "tcp", addr)
 			}
 
-			return dialer.Dial("tcp", addr)
+			return dialer.DialContext(ctx, "tcp", addr)
 		},
 	}, nil
 }

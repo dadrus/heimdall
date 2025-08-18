@@ -216,8 +216,8 @@ func TestProviderLifecycle(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		rcm.Lock()
-		requestCount++
-		rcm.Unlock()
+		requestCount++ // nolint: wsl_v5
+		rcm.Unlock()   // nolint: wsl_v5
 
 		writeResponse(t, w)
 	}))

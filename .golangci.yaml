@@ -17,6 +17,9 @@ linters:
     - wrapcheck
     - zerologlint
     - goconst
+    - noinlineerr
+    # deprecated
+    - wsl
   settings:
     cyclop:
       max-complexity: 11

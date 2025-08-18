@@ -916,7 +916,7 @@ func TestProxyService(t *testing.T) {
 			proxyConf.Host = "127.0.0.1"
 			proxyConf.Port = port
 
-			lstnr, err := listener.New("tcp", "test", proxyConf.Address(), proxyConf.TLS, nil, nil)
+			lstnr, err := listener.New(t.Context(), "test", proxyConf.Address(), proxyConf.TLS, nil, nil)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
@@ -1037,7 +1037,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 	defer proxy.Shutdown(t.Context())
 
-	lstnr, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
+	lstnr, err := listener.New(t.Context(), "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -1136,7 +1136,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	defer proxy.Shutdown(t.Context())
 
-	lstnr, err := listener.New("tcp", "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
+	lstnr, err := listener.New(t.Context(), "test", conf.Serve.Address(), conf.Serve.TLS, nil, nil)
 	require.NoError(t, err)
 
 	go func() {

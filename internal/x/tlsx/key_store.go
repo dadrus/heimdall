@@ -58,6 +58,19 @@ func newTLSKeyStore(path, keyID, password string) (*keyStore, error) {
 	return ks, nil
 }
 
+func (cr *keyStore) OnChanged(log zerolog.Logger) {
+	err := cr.load()
+	if err != nil {
+		log.Warn().Err(err).
+			Str("_file", cr.path).
+			Msg("TLS key store reload failed")
+	} else {
+		log.Info().
+			Str("_file", cr.path).
+			Msg("TLS key store reloaded")
+	}
+}
+
 func (cr *keyStore) load() error {
 	if len(cr.path) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no path to tls key store specified")
@@ -115,17 +128,4 @@ func (cr *keyStore) certificate(cc compatibilityChecker) (*tls.Certificate, erro
 	}
 
 	return cert, nil
-}
-
-func (cr *keyStore) OnChanged(log zerolog.Logger) {
-	err := cr.load()
-	if err != nil {
-		log.Warn().Err(err).
-			Str("_file", cr.path).
-			Msg("TLS key store reload failed")
-	} else {
-		log.Info().
-			Str("_file", cr.path).
-			Msg("TLS key store reloaded")
-	}
 }

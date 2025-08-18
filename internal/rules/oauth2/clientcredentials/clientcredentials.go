@@ -90,6 +90,37 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 	return tokenInfo, nil
 }
 
+func (c *Config) Apply(_ context.Context, req *http.Request) error {
+	if c.AuthMethod == AuthMethodRequestBody {
+		// This is not recommended, but there are non-compliant servers out there
+		// which do not support the Basic Auth authentication method required by
+		// the spec. See also https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+		data, _ := io.ReadAll(req.Body)
+		values, _ := url.ParseQuery(stringx.ToString(data))
+
+		values.Add("client_id", c.ClientID)
+		values.Add("client_secret", c.ClientSecret)
+
+		body := strings.NewReader(values.Encode())
+		req.Body = io.NopCloser(body)
+		req.ContentLength = int64(body.Len())
+	} else {
+		req.SetBasicAuth(url.QueryEscape(c.ClientID), url.QueryEscape(c.ClientSecret))
+	}
+
+	return nil
+}
+
+func (c *Config) Hash() []byte {
+	digest := sha256.New()
+	digest.Write(stringx.ToBytes(c.ClientID))
+	digest.Write(stringx.ToBytes(c.ClientSecret))
+	digest.Write(stringx.ToBytes(c.TokenURL))
+	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
+
+	return digest.Sum(nil)
+}
+
 func (c *Config) calculateCacheKey() string {
 	digest := sha256.New()
 	digest.Write(stringx.ToBytes(c.ClientID))
@@ -204,35 +235,4 @@ func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 	}
 
 	return tokenInfo, nil
-}
-
-func (c *Config) Apply(_ context.Context, req *http.Request) error {
-	if c.AuthMethod == AuthMethodRequestBody {
-		// This is not recommended, but there are non-compliant servers out there
-		// which do not support the Basic Auth authentication method required by
-		// the spec. See also https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
-		data, _ := io.ReadAll(req.Body)
-		values, _ := url.ParseQuery(stringx.ToString(data))
-
-		values.Add("client_id", c.ClientID)
-		values.Add("client_secret", c.ClientSecret)
-
-		body := strings.NewReader(values.Encode())
-		req.Body = io.NopCloser(body)
-		req.ContentLength = int64(body.Len())
-	} else {
-		req.SetBasicAuth(url.QueryEscape(c.ClientID), url.QueryEscape(c.ClientSecret))
-	}
-
-	return nil
-}
-
-func (c *Config) Hash() []byte {
-	digest := sha256.New()
-	digest.Write(stringx.ToBytes(c.ClientID))
-	digest.Write(stringx.ToBytes(c.ClientSecret))
-	digest.Write(stringx.ToBytes(c.TokenURL))
-	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
-
-	return digest.Sum(nil)
 }
