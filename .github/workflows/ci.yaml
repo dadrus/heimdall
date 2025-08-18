@@ -261,9 +261,10 @@ jobs:
       - name: Install go-junit-report
         run: go install github.com/jstemmer/go-junit-report/v2@v2.1.0
       - name: Test
-        run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./... 2>&1 | tee >(go-junit-report > junit-report.xml)
+        run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./... 2>&1 | tee >(go-junit-report -set-exit-code > junit-report.xml)
       - name: Upload test results to Codecov
         uses: codecov/test-results-action@v1
+        if: ${{ !cancelled() }}
         with:
           files: junit-report.xml
           verbose: true
