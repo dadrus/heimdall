@@ -263,7 +263,6 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./... 2>&1 | tee > (go-junit-report > junit-report.xml)
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
           files: junit-report.xml
