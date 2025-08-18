@@ -258,9 +258,18 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: "${{ env.GO_VERSION }}"
+      - name: Install go-junit-report
+        run: go install github.com/jstemmer/go-junit-report/v2@v2.1.0
       - name: Test
-        run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
-      - name: Code Coverage
+        run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./... 2>&1 | tee >(go-junit-report -set-exit-code > junit-report.xml)
+      - name: Upload test results to Codecov
+        uses: codecov/test-results-action@v1
+        if: ${{ !cancelled() }}
+        with:
+          files: junit-report.xml
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload code coverage report to Codecov
         uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
         with:
           files: coverage.cov
