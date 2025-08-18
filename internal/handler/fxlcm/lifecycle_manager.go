@@ -49,8 +49,15 @@ type LifecycleManager struct {
 	CertificateObserver certificate.Observer
 }
 
-func (m *LifecycleManager) Start(_ context.Context) error {
-	ln, err := listener.New("tcp", m.ServiceName, m.ServiceAddress, m.TLSConf, m.FileWatcher, m.CertificateObserver)
+func (m *LifecycleManager) Start(ctx context.Context) error {
+	ln, err := listener.New(
+		ctx,
+		m.ServiceName,
+		m.ServiceAddress,
+		m.TLSConf,
+		m.FileWatcher,
+		m.CertificateObserver,
+	)
 	if err != nil {
 		return errorchain.NewWithMessagef(heimdall.ErrInternal,
 			"Could not create listener for %s service", m.ServiceName).

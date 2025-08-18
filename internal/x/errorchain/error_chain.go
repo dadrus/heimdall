@@ -33,6 +33,12 @@ type element struct {
 	next *element
 }
 
+type message struct { //nolint:musttag
+	XMLName xml.Name `json:"-"`
+	Code    string   `json:"code"              xml:"code"`
+	Message string   `json:"message,omitempty" xml:"message,omitempty"`
+}
+
 type ErrorChain struct { // nolint: errname
 	head    *element
 	tail    *element
@@ -69,22 +75,6 @@ func (ec *ErrorChain) Error() string {
 	}
 
 	return strings.Join(errs, ": ")
-}
-
-func (ec *ErrorChain) causedBy(err error, msg string) *ErrorChain {
-	wrappedError := &element{err: err, msg: msg}
-
-	if ec.head == nil {
-		ec.head = wrappedError
-		ec.tail = wrappedError
-
-		return ec
-	}
-
-	ec.tail.next = wrappedError
-	ec.tail = wrappedError
-
-	return ec
 }
 
 func (ec *ErrorChain) CausedBy(err error) *ErrorChain {
@@ -129,23 +119,6 @@ func (ec *ErrorChain) As(target any) bool {
 	return errors.As(ec.head.err, target)
 }
 
-func (ec *ErrorChain) asTarget(target any) bool {
-	if ec.context == nil {
-		return false
-	}
-
-	val := reflect.ValueOf(target)
-	targetType := val.Type().Elem()
-
-	if targetType.Kind() != reflect.Interface || !reflect.TypeOf(ec.context).AssignableTo(targetType) {
-		return false
-	}
-
-	val.Elem().Set(reflect.ValueOf(ec.context))
-
-	return true
-}
-
 func (ec *ErrorChain) ErrorContext() any {
 	return ec.context
 }
@@ -181,8 +154,35 @@ func (ec *ErrorChain) String() string {
 	return ec.head.err.Error() + ": " + ec.head.msg
 }
 
-type message struct { //nolint:musttag
-	XMLName xml.Name `json:"-"`
-	Code    string   `json:"code"              xml:"code"`
-	Message string   `json:"message,omitempty" xml:"message,omitempty"`
+func (ec *ErrorChain) asTarget(target any) bool {
+	if ec.context == nil {
+		return false
+	}
+
+	val := reflect.ValueOf(target)
+	targetType := val.Type().Elem()
+
+	if targetType.Kind() != reflect.Interface || !reflect.TypeOf(ec.context).AssignableTo(targetType) {
+		return false
+	}
+
+	val.Elem().Set(reflect.ValueOf(ec.context))
+
+	return true
+}
+
+func (ec *ErrorChain) causedBy(err error, msg string) *ErrorChain {
+	wrappedError := &element{err: err, msg: msg}
+
+	if ec.head == nil {
+		ec.head = wrappedError
+		ec.tail = wrappedError
+
+		return ec
+	}
+
+	ec.tail.next = wrappedError
+	ec.tail = wrappedError
+
+	return ec
 }

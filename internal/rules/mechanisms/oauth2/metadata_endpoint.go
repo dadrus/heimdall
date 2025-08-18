@@ -45,24 +45,6 @@ type MetadataEndpoint struct {
 	ResolvedEndpoints                   map[string]ResolvedEndpointSettings `mapstructure:"resolved_endpoints"`
 }
 
-func (e *MetadataEndpoint) init() {
-	if e.Headers == nil {
-		e.Headers = make(map[string]string)
-	}
-
-	if _, ok := e.Headers["Accept"]; !ok {
-		e.Headers["Accept"] = "application/json"
-	}
-
-	if len(e.Method) == 0 {
-		e.Method = http.MethodGet
-	}
-
-	if e.HTTPCache == nil {
-		e.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute} //nolint:mnd
-	}
-}
-
 func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (ServerMetadata, error) {
 	e.init()
 
@@ -111,6 +93,24 @@ func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (Server
 	}
 
 	return sm, nil
+}
+
+func (e *MetadataEndpoint) init() {
+	if e.Headers == nil {
+		e.Headers = make(map[string]string)
+	}
+
+	if _, ok := e.Headers["Accept"]; !ok {
+		e.Headers["Accept"] = "application/json"
+	}
+
+	if len(e.Method) == 0 {
+		e.Method = http.MethodGet
+	}
+
+	if e.HTTPCache == nil {
+		e.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute} //nolint:mnd
+	}
 }
 
 func (e *MetadataEndpoint) decodeResponse(resp *http.Response) (ServerMetadata, error) {

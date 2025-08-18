@@ -94,58 +94,6 @@ func (s *jwtSigner) OnChanged(logger zerolog.Logger) {
 	}
 }
 
-func (s *jwtSigner) load() error {
-	ks, err := keystore.NewKeyStoreFromPEMFile(s.path, s.password)
-	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
-			CausedBy(err)
-	}
-
-	var kse *keystore.Entry
-
-	if len(s.keyID) == 0 {
-		kse, err = ks.Entries()[0], nil
-	} else {
-		kse, err = ks.GetKey(s.keyID)
-	}
-
-	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed retrieving key from key store").CausedBy(err)
-	}
-
-	if len(kse.CertChain) != 0 {
-		opts := []pkix.ValidationOption{
-			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
-			pkix.WithRootCACertificates([]*x509.Certificate{kse.CertChain[len(kse.CertChain)-1]}),
-			pkix.WithCurrentTime(time.Now()),
-		}
-
-		if len(kse.CertChain) > 2 { //nolint: mnd
-			opts = append(opts, pkix.WithIntermediateCACertificates(kse.CertChain[1:len(kse.CertChain)-1]))
-		}
-
-		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"configured certificate cannot be used for JWT signing purposes").CausedBy(err)
-		}
-	}
-
-	keys := make([]jose.JSONWebKey, len(ks.Entries()))
-	for idx, entry := range ks.Entries() {
-		keys[idx] = entry.JWK()
-	}
-
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	s.jwk = kse.JWK()
-	s.key = kse.PrivateKey
-	s.pubKeys = keys
-
-	return nil
-}
-
 func (s *jwtSigner) Hash() []byte {
 	s.mut.RLock()
 	jwk := s.jwk
@@ -209,4 +157,56 @@ func (s *jwtSigner) activeCertificateChain() []*x509.Certificate {
 	defer s.mut.RUnlock()
 
 	return s.jwk.Certificates
+}
+
+func (s *jwtSigner) load() error {
+	ks, err := keystore.NewKeyStoreFromPEMFile(s.path, s.password)
+	if err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
+			CausedBy(err)
+	}
+
+	var kse *keystore.Entry
+
+	if len(s.keyID) == 0 {
+		kse, err = ks.Entries()[0], nil
+	} else {
+		kse, err = ks.GetKey(s.keyID)
+	}
+
+	if err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed retrieving key from key store").CausedBy(err)
+	}
+
+	if len(kse.CertChain) != 0 {
+		opts := []pkix.ValidationOption{
+			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
+			pkix.WithRootCACertificates([]*x509.Certificate{kse.CertChain[len(kse.CertChain)-1]}),
+			pkix.WithCurrentTime(time.Now()),
+		}
+
+		if len(kse.CertChain) > 2 { //nolint: mnd
+			opts = append(opts, pkix.WithIntermediateCACertificates(kse.CertChain[1:len(kse.CertChain)-1]))
+		}
+
+		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"configured certificate cannot be used for JWT signing purposes").CausedBy(err)
+		}
+	}
+
+	keys := make([]jose.JSONWebKey, len(ks.Entries()))
+	for idx, entry := range ks.Entries() {
+		keys[idx] = entry.JWK()
+	}
+
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	s.jwk = kse.JWK()
+	s.key = kse.PrivateKey
+	s.pubKeys = keys
+
+	return nil
 }
