@@ -21,8 +21,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-//go:generate mockery --name Context --structname ContextMock
-
 type Context interface {
 	heimdall.RequestContext
 

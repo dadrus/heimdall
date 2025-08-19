@@ -18,8 +18,6 @@ package rule
 
 import "github.com/dadrus/heimdall/internal/rules/config"
 
-//go:generate mockery --name Factory --structname FactoryMock
-
 type Factory interface {
 	CreateRule(version, srcID string, ruleConfig config.Rule) (Rule, error)
 	DefaultRule() Rule

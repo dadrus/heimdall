@@ -22,8 +22,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-//go:generate mockery --name Repository --structname RepositoryMock
-
 type Repository interface {
 	FindRule(ctx heimdall.RequestContext) (Rule, error)
 

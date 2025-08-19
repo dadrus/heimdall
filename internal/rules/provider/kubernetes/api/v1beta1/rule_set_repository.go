@@ -37,8 +37,6 @@ type Patch interface {
 	Data() ([]byte, error)
 }
 
-//go:generate mockery --name RuleSetRepository --structname RuleSetRepositoryMock
-
 type RuleSetRepository interface {
 	List(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)

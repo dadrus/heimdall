@@ -22,8 +22,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/config"
 )
 
-//go:generate mockery --name SetProcessor --structname RuleSetProcessorMock
-
 type SetProcessor interface {
 	OnCreated(ctx context.Context, ruleSet *config.RuleSet) error
 	OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error

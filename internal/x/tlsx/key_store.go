@@ -28,8 +28,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-//go:generate mockery --name compatibilityChecker --structname compatibilityCheckerMock --inpackage --testonly
-
 type compatibilityChecker interface {
 	SupportsCertificate(c *tls.Certificate) error
 }
