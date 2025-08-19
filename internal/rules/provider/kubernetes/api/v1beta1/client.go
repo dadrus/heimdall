@@ -24,9 +24,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+var GroupVersion = schema.GroupVersion{
+	Group:   "heimdall.dadrus.github.com",
+	Version: "v1beta1",
+}
+
 const (
-	GroupName    = "heimdall.dadrus.github.com"
-	GroupVersion = "v1beta1"
+	ResourceName     = "RuleSet"
+	ResourceListName = "RuleSets"
 )
 
 func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {
@@ -38,20 +43,24 @@ func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {
 	}
 }
 
-type Client interface {
-	RuleSetRepository(namespace string) RuleSetRepository
-}
+type (
+	Client interface {
+		RuleSetRepository(namespace string) RuleSetRepository
+	}
+
+	client struct {
+		cl rest.Interface
+	}
+)
 
 func NewClient(conf *rest.Config) (Client, error) {
-	gv := schema.GroupVersion{Group: GroupName, Version: GroupVersion}
-
-	schemeBuilder := runtime.NewSchemeBuilder(addKnownTypes(gv))
+	schemeBuilder := runtime.NewSchemeBuilder(addKnownTypes(GroupVersion))
 	if err := schemeBuilder.AddToScheme(scheme.Scheme); err != nil {
 		return nil, err
 	}
 
 	config := *conf
-	config.GroupVersion = &gv
+	config.GroupVersion = &GroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
@@ -62,10 +71,6 @@ func NewClient(conf *rest.Config) (Client, error) {
 	}
 
 	return &client{cl: cl}, nil
-}
-
-type client struct {
-	cl rest.Interface
 }
 
 func (c *client) RuleSetRepository(namespace string) RuleSetRepository {

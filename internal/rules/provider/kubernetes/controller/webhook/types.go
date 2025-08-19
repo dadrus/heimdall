@@ -1,0 +1,46 @@
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package webhook
+
+import (
+	"context"
+	"net/http"
+)
+
+//go:generate mockery --name Handler --structname HandlerMock --inpackage --testonly
+//go:generate mockery --name Request --structname RequestMock --inpackage --testonly
+//go:generate mockery --name Response --structname ResponseMock --inpackage --testonly
+//go:generate mockery --name Review --structname ReviewMock --inpackage --testonly
+
+type (
+	Handler[Req Request, Resp Response[Req]] interface {
+		Handle(ctx context.Context, req Req) Resp
+	}
+
+	Request interface {
+		GetUID() string
+	}
+
+	Response[Req Request] interface {
+		Complete(Req)
+	}
+
+	Review[Req Request, Resp Response[Req]] interface {
+		Decode(r *http.Request) (Req, error)
+		WrapResponse(Resp) any
+	}
+)

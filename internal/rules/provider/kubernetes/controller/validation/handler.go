@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admissioncontroller
+package validation
 
 import (
 	"context"
@@ -27,29 +27,29 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/admission"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/controller/webhook"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-var ErrInvalidObject = errors.New("only rule sets are supported here")
+var ErrInvalidObject = errors.New("invalid Kind - only RuleSet is supported")
 
 type rulesetValidator struct {
 	f  rule.Factory
 	ac string
 }
 
-func (rv *rulesetValidator) Handle(ctx context.Context, req *admission.Request) *admission.Response {
+func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response {
 	log := zerolog.Ctx(ctx)
 
 	rs, err := rv.ruleSetFrom(req)
 	if err != nil {
 		log.Error().Err(err).Msg("could not parse rule set")
 
-		return admission.NewResponse(
+		return newResponse(
 			http.StatusBadRequest,
 			"failed parsing RuleSet",
-			admission.WithReasons(err.Error()))
+			withReasons(err.Error()))
 	}
 
 	if rs.Spec.AuthClassName != rv.ac {
@@ -62,7 +62,7 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *admission.Request) 
 		// deploying the ruleset resource, even if another deployment was successfully able validating the rule set.
 		// When the resource will be made available to this instance upon deployment, it will anyway be filtered
 		// due the authClassName mismatch and not loaded.
-		return admission.NewResponse(http.StatusOK, msg)
+		return newResponse(http.StatusOK, msg)
 	}
 
 	ruleSet := &config.RuleSet{
@@ -85,16 +85,16 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *admission.Request) 
 	}
 
 	if len(errs) != 0 {
-		return admission.NewResponse(
+		return newResponse(
 			http.StatusForbidden,
 			"RuleSet invalid",
-			admission.WithReasons(errs...))
+			withReasons(errs...))
 	}
 
-	return admission.NewResponse(http.StatusOK, "RuleSet valid")
+	return newResponse(http.StatusOK, "RuleSet valid")
 }
 
-func (rv *rulesetValidator) ruleSetFrom(req *admission.Request) (*v1beta1.RuleSet, error) {
+func (rv *rulesetValidator) ruleSetFrom(req *request) (*v1beta1.RuleSet, error) {
 	if req.Kind.Kind != v1beta1.ResourceName {
 		return nil, ErrInvalidObject
 	}
@@ -108,4 +108,8 @@ func (rv *rulesetValidator) ruleSetFrom(req *admission.Request) (*v1beta1.RuleSe
 func (rv *rulesetValidator) mapVersion(_ string) string {
 	// currently the only possible version is v1beta1, which is mapped to the version "1beta1" used internally
 	return "1beta1"
+}
+
+func NewHandler(factory rule.Factory, authClass string) http.Handler {
+	return webhook.New(&rulesetValidator{f: factory, ac: authClass}, &review{})
 }

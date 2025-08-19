@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
@@ -203,8 +202,8 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 
 	rs := v1beta1.RuleSet{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s", v1beta1.GroupName, v1beta1.GroupVersion),
-			Kind:       "RuleSet",
+			APIVersion: v1beta1.GroupVersion.String(),
+			Kind:       v1beta1.ResourceName,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "test-rule",
@@ -245,7 +244,7 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 
 	rsl := v1beta1.RuleSetList{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s", v1beta1.GroupName, v1beta1.GroupVersion),
+			APIVersion: v1beta1.GroupVersion.String(),
 			Kind:       "RuleSetList",
 		},
 		ListMeta: metav1.ListMeta{ResourceVersion: "735820"},
@@ -470,7 +469,7 @@ func TestProviderLifecycle(t *testing.T) {
 			},
 			updateStatus: func(rs v1beta1.RuleSet, _ int) (*metav1.Status, error) {
 				return &errors2.NewInvalid(
-					schema.GroupKind{Group: v1beta1.GroupName, Kind: "ruleset"},
+					schema.GroupKind{Group: v1beta1.GroupVersion.Group, Kind: v1beta1.ResourceName},
 					rs.Name,
 					field.ErrorList{
 						field.TooLong(
@@ -505,7 +504,7 @@ func TestProviderLifecycle(t *testing.T) {
 				switch callIdx {
 				case 2:
 					return &errors2.NewNotFound(
-						schema.GroupResource{Group: v1beta1.GroupName, Resource: "ruleset"},
+						schema.GroupResource{Group: v1beta1.GroupVersion.Group, Resource: v1beta1.ResourceName},
 						rs.Name,
 					).ErrStatus, nil
 				default:
@@ -638,7 +637,7 @@ func TestProviderLifecycle(t *testing.T) {
 				switch callIdx {
 				case 1:
 					return &errors2.NewConflict(
-						schema.GroupResource{Group: v1beta1.GroupName, Resource: "ruleset"},
+						schema.GroupResource{Group: v1beta1.GroupVersion.Group, Resource: v1beta1.ResourceName},
 						rs.Name,
 						errors.New("RuleSet conflict"),
 					).ErrStatus, nil
@@ -1724,8 +1723,8 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			rs := &v1beta1.RuleSet{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: fmt.Sprintf("%s/%s", v1beta1.GroupName, v1beta1.GroupVersion),
-					Kind:       "RuleSet",
+					APIVersion: v1beta1.GroupVersion.String(),
+					Kind:       v1beta1.ResourceName,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "test-rule",

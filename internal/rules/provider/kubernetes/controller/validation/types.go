@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,26 +14,45 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admission
+package validation
 
 import (
 	"net/http"
 	"strings"
 
+	"github.com/goccy/go-json"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/controller/webhook"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-type Response struct {
-	admissionv1.AdmissionResponse
-}
+var (
+	_ webhook.Request                     = (*request)(nil)
+	_ webhook.Response[*request]          = (*response)(nil)
+	_ webhook.Review[*request, *response] = (*review)(nil)
+)
 
-type ResponseOption func(*Response)
+type (
+	request struct {
+		admissionv1.AdmissionRequest
+	}
 
-func WithReasons(reasons ...string) ResponseOption {
-	return func(resp *Response) {
+	response struct {
+		admissionv1.AdmissionResponse
+	}
+
+	responseOption func(*response)
+
+	// Adapter for AdmissionReview
+	review struct{}
+)
+
+func (r request) GetUID() string { return string(r.UID) }
+
+func withReasons(reasons ...string) responseOption {
+	return func(resp *response) {
 		if len(reasons) > 0 {
 			resp.Result.Details = &metav1.StatusDetails{Causes: make([]metav1.StatusCause, len(reasons))}
 
@@ -49,8 +68,8 @@ func WithReasons(reasons ...string) ResponseOption {
 	}
 }
 
-func NewResponse(code int, msg string, opts ...ResponseOption) *Response {
-	resp := &Response{
+func newResponse(code int, msg string, opts ...responseOption) *response {
+	resp := &response{
 		AdmissionResponse: admissionv1.AdmissionResponse{
 			Allowed: x.IfThenElse(code == http.StatusOK, true, false),
 			Result: &metav1.Status{
@@ -70,7 +89,7 @@ func NewResponse(code int, msg string, opts ...ResponseOption) *Response {
 	return resp
 }
 
-func (r *Response) complete(req *Request) {
+func (r *response) Complete(req *request) {
 	r.UID = req.UID
 
 	// ensure that we have a valid status code
@@ -80,5 +99,25 @@ func (r *Response) complete(req *Request) {
 
 	if r.Result.Code == 0 {
 		r.Result.Code = http.StatusOK
+	}
+}
+
+func (review) Decode(r *http.Request) (*request, error) {
+	ar := admissionv1.AdmissionReview{}
+
+	if err := json.NewDecoder(r.Body).Decode(&ar); err != nil {
+		return nil, err
+	}
+
+	return &request{AdmissionRequest: *ar.Request}, nil
+}
+
+func (review) WrapResponse(resp *response) any {
+	return admissionv1.AdmissionReview{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "AdmissionReview",
+			APIVersion: "admission.k8s.io/v1",
+		},
+		Response: &resp.AdmissionResponse,
 	}
 }

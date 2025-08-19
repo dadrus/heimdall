@@ -138,8 +138,8 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 	assert.Len(t, rls.Items, 1)
 
 	ruleSet := rls.Items[0]
-	assert.Equal(t, "RuleSet", ruleSet.Kind)
-	assert.Equal(t, "heimdall.dadrus.github.com/v1beta1", ruleSet.APIVersion)
+	assert.Equal(t, ResourceName, ruleSet.Kind)
+	assert.Equal(t, GroupVersion.String(), ruleSet.APIVersion)
 	assert.Equal(t, "test-rule-set", ruleSet.Name)
 	assert.Equal(t, "foo", ruleSet.Namespace)
 	assert.Equal(t, "foobar", ruleSet.Spec.AuthClassName)

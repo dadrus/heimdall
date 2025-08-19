@@ -18,7 +18,6 @@ package admission
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -46,8 +45,8 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if contentType := req.Header.Get("Content-Type"); contentType != "application/json" {
 		log.Error().Msgf("unable to process a request with an unknown content type %s", contentType)
-		wh.writeResponse(log, rw, NewResponse(http.StatusBadRequest,
-			fmt.Sprintf("unexpected contentType=%s, expected application/json", contentType)))
+		wh.writeResponse(log, rw,
+			NewResponse(http.StatusBadRequest, "unexpected contentType="+contentType+"expected application/json"))
 
 		return
 	}
@@ -55,7 +54,8 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	ar := admissionv1.AdmissionReview{}
 	if err := json.NewDecoder(req.Body).Decode(&ar); err != nil {
 		log.Error().Err(err).Msg("unable to decode the request")
-		wh.writeResponse(log, rw, NewResponse(http.StatusBadRequest, "failed decoding request", err.Error()))
+		wh.writeResponse(log, rw,
+			NewResponse(http.StatusInternalServerError, "failed decoding request", WithReasons(err.Error())))
 
 		return
 	}
