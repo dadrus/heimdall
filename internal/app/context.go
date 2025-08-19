@@ -26,8 +26,6 @@ import (
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 
-//go:generate mockery --name Context --structname ContextMock  --inpackage
-
 type Context interface {
 	Watcher() watcher.Watcher
 	KeyHolderRegistry() keyholder.Registry

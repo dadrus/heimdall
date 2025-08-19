@@ -28,8 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//go:generate mockery --name Handler --structname HandlerMock --inpackage --testonly
-
 type Handler interface {
 	Handle(ctx context.Context, req *Request) *Response
 }

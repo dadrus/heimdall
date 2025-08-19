@@ -37,8 +37,6 @@ const (
 	dnsNameAttrKey  = attribute.Key("dns_names")
 )
 
-//go:generate mockery --name Observer --structname ObserverMock
-
 type Observer interface {
 	Add(sup Supplier)
 	Start() error

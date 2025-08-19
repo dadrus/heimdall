@@ -21,8 +21,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
-//go:generate mockery --name Finalizer --structname FinalizerMock
-
 type Finalizer interface {
 	ID() string
 	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error

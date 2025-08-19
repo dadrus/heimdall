@@ -20,8 +20,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-//go:generate mockery --name errorHandler --structname ErrorHandlerMock
-
 type errorHandler interface {
 	ID() string
 	Execute(ctx heimdall.RequestContext, causeErr error) error

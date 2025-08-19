@@ -21,8 +21,6 @@ import (
 	"net/url"
 )
 
-//go:generate mockery --name RequestContext --structname RequestContextMock
-
 type RequestContext interface {
 	Request() *Request
 
@@ -35,8 +33,6 @@ type RequestContext interface {
 
 	Outputs() map[string]any
 }
-
-//go:generate mockery --name RequestFunctions --structname RequestFunctionsMock
 
 type RequestFunctions interface {
 	Header(name string) string

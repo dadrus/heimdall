@@ -28,11 +28,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/x/httpx/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
-
-//go:generate mockery --srcpkg "net/http" --name RoundTripper --structname RoundTripperMock
 
 func TestTraceRoundTripperRoundTrip(t *testing.T) {
 	t.Parallel()
@@ -134,7 +131,7 @@ X-Bar: Foo
 
 			defer resp.Body.Close()
 
-			rt := mocks.NewRoundTripperMock(t)
+			rt := NewRoundTripperMock(t)
 			rt.EXPECT().RoundTrip(req).Return(resp, tc.err)
 
 			trt := NewTraceRoundTripper(rt)

@@ -20,8 +20,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-//go:generate mockery --name Rule --structname RuleMock
-
 type Rule interface {
 	ID() string
 	SrcID() string

@@ -1,2 +1,117 @@
-case: underscore
-with-expecter: true
+template: testify
+filename: "{{ snakecase .InterfaceName | lower }}.go"
+structname: "{{ firstUpper .InterfaceName }}Mock"
+dir: "{{ .InterfaceDir }}/mocks"
+pkgname: "mocks"
+template-data:
+  unroll-variadic: true
+packages:
+  net/http:
+    interfaces:
+      Handler:
+        config:
+          dir: internal/handler/middleware/http/methodfilter
+          pkgname: methodfilter
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+      RoundTripper:
+        config:
+          dir: internal/x/httpx
+          pkgname: httpx
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+  github.com/dadrus/heimdall/internal/app:
+    interfaces:
+      Context:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}.go"
+          pkgname: "{{ .SrcPackageName }}"
+  github.com/dadrus/heimdall/internal/cache:
+    interfaces:
+      Cache: {}
+  github.com/dadrus/heimdall/internal/handler/fxlcm:
+    interfaces:
+      Server: {}
+  github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler:
+    interfaces:
+      ErrorHandler: {}
+  github.com/dadrus/heimdall/internal/handler/requestcontext:
+    interfaces:
+      Context: {}
+      ContextFactory: {}
+  github.com/dadrus/heimdall/internal/heimdall:
+    interfaces:
+      RequestContext: {}
+      RequestFunctions: {}
+  github.com/dadrus/heimdall/internal/keyholder:
+    interfaces:
+      Registry: {}
+  github.com/dadrus/heimdall/internal/otel/metrics/certificate:
+    interfaces:
+      Observer: {}
+  github.com/dadrus/heimdall/internal/rules:
+    interfaces:
+      errorHandler: {}
+      executionCondition: {}
+      subjectCreator: {}
+      subjectHandler: {}
+  github.com/dadrus/heimdall/internal/rules/endpoint:
+    interfaces:
+      AuthenticationStrategy: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms:
+    interfaces:
+      MechanismFactory: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators:
+    interfaces:
+      Authenticator: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors:
+    interfaces:
+      AuthDataExtractStrategy: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers:
+    interfaces:
+      Authorizer: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers:
+    interfaces:
+      Contextualizer: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers:
+    interfaces:
+      ErrorHandler: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers:
+    interfaces:
+      Finalizer: {}
+  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/admission:
+    interfaces:
+      Handler:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1:
+    interfaces:
+      Client: {}
+      RuleSetRepository: {}
+  github.com/dadrus/heimdall/internal/rules/rule:
+    interfaces:
+      Backend: {}
+      Executor: {}
+      Factory: {}
+      Repository: {}
+      Rule: {}
+      SetProcessor:
+        config:
+          structname: RuleSetProcessorMock
+  github.com/dadrus/heimdall/internal/watcher:
+    interfaces:
+      ChangeListener:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      Watcher: {}
+  github.com/dadrus/heimdall/internal/x/tlsx:
+    interfaces:
+      compatibilityChecker:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+          structname: "{{ .InterfaceName }}Mock"

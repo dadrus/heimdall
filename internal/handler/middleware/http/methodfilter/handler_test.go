@@ -23,11 +23,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter/mocks"
 )
-
-//go:generate mockery --srcpkg "net/http" --name Handler --structname HandlerMock
 
 func TestHandler(t *testing.T) {
 	t.Parallel()
@@ -35,13 +31,13 @@ func TestHandler(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		requestMethod string
 		filterMethod  string
-		setupNext     func(t *testing.T, next *mocks.HandlerMock)
+		setupNext     func(t *testing.T, next *HandlerMock)
 		assert        func(t *testing.T, rec *httptest.ResponseRecorder)
 	}{
 		"method accepted": {
 			requestMethod: http.MethodDelete,
 			filterMethod:  http.MethodDelete,
-			setupNext: func(t *testing.T, next *mocks.HandlerMock) {
+			setupNext: func(t *testing.T, next *HandlerMock) {
 				t.Helper()
 
 				next.EXPECT().ServeHTTP(mock.Anything, mock.Anything)
@@ -53,7 +49,7 @@ func TestHandler(t *testing.T) {
 		"method not allowed": {
 			requestMethod: http.MethodDelete,
 			filterMethod:  http.MethodGet,
-			setupNext: func(t *testing.T, _ *mocks.HandlerMock) {
+			setupNext: func(t *testing.T, _ *HandlerMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, rec *httptest.ResponseRecorder) {
@@ -65,7 +61,7 @@ func TestHandler(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			next := mocks.NewHandlerMock(t)
+			next := NewHandlerMock(t)
 			tc.setupNext(t, next)
 
 			handler := New(tc.filterMethod)

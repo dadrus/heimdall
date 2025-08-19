@@ -32,8 +32,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-//go:generate mockery --name Server --structname ServerMock
-
 type Server interface {
 	Serve(l net.Listener) error
 	Shutdown(ctx context.Context) error

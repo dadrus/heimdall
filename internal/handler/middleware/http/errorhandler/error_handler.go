@@ -26,8 +26,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-//go:generate mockery --name ErrorHandler --structname ErrorHandlerMock
-
 type ErrorHandler interface {
 	HandleError(rw http.ResponseWriter, req *http.Request, err error)
 }
