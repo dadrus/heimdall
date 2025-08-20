@@ -85,6 +85,16 @@ packages:
           dir: "{{ .InterfaceDir }}"
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
           pkgname: "{{ .SrcPackageName }}"
+  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/controller/webhook:
+    config:
+      dir: "{{ .InterfaceDir }}"
+      filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+      pkgname: "{{ .SrcPackageName }}"
+    interfaces:
+      Handler: {}
+      Request: {}
+      Response: {}
+      Review: {}
   github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1:
     interfaces:
       Client: {}

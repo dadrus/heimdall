@@ -21,11 +21,6 @@ import (
 	"net/http"
 )
 
-//go:generate mockery --name Handler --structname HandlerMock --inpackage --testonly
-//go:generate mockery --name Request --structname RequestMock --inpackage --testonly
-//go:generate mockery --name Response --structname ResponseMock --inpackage --testonly
-//go:generate mockery --name Review --structname ReviewMock --inpackage --testonly
-
 type (
 	Handler[Req Request, Resp Response[Req]] interface {
 		Handle(ctx context.Context, req Req) Resp
