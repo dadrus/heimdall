@@ -37,18 +37,19 @@ func New[Req Request, Resp Response[Req]](
 	return &Webhook[Req, Resp]{h: handler, review: review}
 }
 
-func (wh *Webhook[Req, Resp]) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
+func (wh *Webhook[Req, Resp]) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
+	done := make(chan struct{})
 
-	if ct := req.Header.Get("Content-Type"); ct != "application/json" {
+	if ct := r.Header.Get("Content-Type"); ct != "application/json" {
 		log.Error().Msgf("unexpected content type %s", ct)
 		rw.WriteHeader(http.StatusBadRequest)
 
 		return
 	}
 
-	if val := req.URL.Query().Get("timeout"); len(val) != 0 {
+	if val := r.URL.Query().Get("timeout"); len(val) != 0 {
 		timeout, err := time.ParseDuration(val)
 		if err == nil {
 			var cancel context.CancelFunc
@@ -59,7 +60,7 @@ func (wh *Webhook[Req, Resp]) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 		}
 	}
 
-	reviewReq, err := wh.review.Decode(req)
+	req, err := wh.review.Decode(r)
 	if err != nil {
 		log.Error().Err(err).Msg("failed decoding request")
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -67,18 +68,30 @@ func (wh *Webhook[Req, Resp]) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	resp := wh.h.Handle(ctx, reviewReq)
-	resp.Complete(reviewReq)
+	var resp Resp
 
-	encoded, err := json.Marshal(wh.review.WrapResponse(resp))
-	if err != nil {
-		log.Error().Err(err).Msg("failed encoding response")
-		rw.WriteHeader(http.StatusInternalServerError)
+	go func() {
+		resp = wh.h.Handle(ctx, req)
+		resp.Complete(req)
 
-		return
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Error().Err(ctx.Err()).Msg("timed out while processing request")
+		rw.WriteHeader(http.StatusGatewayTimeout)
+	case <-done:
+		encoded, err := json.Marshal(wh.review.WrapResponse(resp))
+		if err != nil {
+			log.Error().Err(err).Msg("failed encoding response")
+			rw.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
+		rw.Header().Set("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		_, _ = rw.Write(encoded)
 	}
-
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	_, _ = rw.Write(encoded)
 }
