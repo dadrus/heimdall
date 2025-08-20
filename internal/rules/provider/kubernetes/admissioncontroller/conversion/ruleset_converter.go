@@ -3,24 +3,20 @@ package conversion
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
-	"strings"
 
-	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/controller/webhook"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-var ErrConversion = errors.New("conversion error")
-var ErrInvalidObject = errors.New("invalid object")
+var (
+	ErrConversion    = errors.New("conversion error")
+	ErrInvalidObject = errors.New("invalid object")
+)
 
 type rulesetConverter struct {
 }
@@ -29,6 +25,10 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 	_ = zerolog.Ctx(ctx)
 
 	convertedObjects := make([]runtime.RawExtension, len(req.Objects))
+
+	if len(req.Objects) == 0 {
+		return newResponse(http.StatusBadRequest, "no objects to convert provided")
+	}
 
 	for idx, obj := range req.Objects {
 		cr := unstructured.Unstructured{}
@@ -113,52 +113,48 @@ func (rc *rulesetConverter) convert(
 ) (*unstructured.Unstructured, error) {
 	convertedObject := obj.DeepCopy()
 
-	switch fromVersion {
-	case "v1alpha4":
-		switch toVersion {
-		case "v1beta1":
-			hostPort, ok := convertedObject.Object["hostPort"]
-			if ok {
-				delete(convertedObject.Object, "hostPort")
-				parts := strings.Split(hostPort.(string), ":")
-				if len(parts) != 2 {
-					return nil, statusErrorWithMessage("invalid hostPort value `%v`", hostPort)
-				}
-				convertedObject.Object["host"] = parts[0]
-				convertedObject.Object["port"] = parts[1]
-			}
-		default:
-			return nil, errorchain.NewWithMessagef(
-				ErrConversion, "unexpected conversion version %s", toAPIVersion)
-		}
-	case v1beta1.GroupVersion:
-		switch toVersion {
-		case "v1alpha4":
-			host, hasHost := convertedObject.Object["host"]
-			port, hasPort := convertedObject.Object["port"]
-			if hasHost || hasPort {
-				if !hasHost {
-					host = ""
-				}
-				if !hasPort {
-					port = ""
-				}
-				convertedObject.Object["hostPort"] = fmt.Sprintf("%s:%s", host, port)
-				delete(convertedObject.Object, "host")
-				delete(convertedObject.Object, "port")
-			}
-		default:
-			return nil, errorchain.NewWithMessagef(
-				ErrConversion, "unexpected conversion version %s", toAPIVersion)
-		}
-	default:
-		return nil, errorchain.NewWithMessagef(
-			ErrConversion, "unexpected conversion version %s", toAPIVersion)
-	}
+	//switch fromVersion {
+	//case "v1alpha4":
+	//	switch toVersion {
+	//	case "v1beta1":
+	//		hostPort, ok := convertedObject.Object["hostPort"]
+	//		if ok {
+	//			delete(convertedObject.Object, "hostPort")
+	//			parts := strings.Split(hostPort.(string), ":")
+	//			if len(parts) != 2 {
+	//				return nil, statusErrorWithMessage("invalid hostPort value `%v`", hostPort)
+	//			}
+	//			convertedObject.Object["host"] = parts[0]
+	//			convertedObject.Object["port"] = parts[1]
+	//		}
+	//	default:
+	//		return nil, errorchain.NewWithMessagef(
+	//			ErrConversion, "unexpected conversion version %s", toAPIVersion)
+	//	}
+	//case v1beta1.GroupVersion:
+	//	switch toVersion {
+	//	case "v1alpha4":
+	//		host, hasHost := convertedObject.Object["host"]
+	//		port, hasPort := convertedObject.Object["port"]
+	//		if hasHost || hasPort {
+	//			if !hasHost {
+	//				host = ""
+	//			}
+	//			if !hasPort {
+	//				port = ""
+	//			}
+	//			convertedObject.Object["hostPort"] = fmt.Sprintf("%s:%s", host, port)
+	//			delete(convertedObject.Object, "host")
+	//			delete(convertedObject.Object, "port")
+	//		}
+	//	default:
+	//		return nil, errorchain.NewWithMessagef(
+	//			ErrConversion, "unexpected conversion version %s", toAPIVersion)
+	//	}
+	//default:
+	//	return nil, errorchain.NewWithMessagef(
+	//		ErrConversion, "unexpected conversion version %s", toAPIVersion)
+	//}
 
 	return convertedObject, nil
-}
-
-func NewHandler(factory rule.Factory, authClass string) http.Handler {
-	return webhook.New(&rulesetConverter{}, &review{})
 }

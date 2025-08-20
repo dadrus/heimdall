@@ -52,7 +52,7 @@ func New(
 	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Validating Admission Controller",
+		ServiceName:    "Admission Controller",
 		ServiceAddress: listeningAddress,
 		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
 		Logger:         logger,

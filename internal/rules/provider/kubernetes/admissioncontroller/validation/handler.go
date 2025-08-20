@@ -19,7 +19,7 @@ package validation
 import (
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/controller/webhook"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/webhook"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 

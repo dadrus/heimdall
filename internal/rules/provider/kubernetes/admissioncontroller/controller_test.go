@@ -24,7 +24,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -37,13 +36,14 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/dadrus/heimdall/internal/config"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -104,49 +104,21 @@ func TestControllerLifecycle(t *testing.T) {
 
 	notTLSClient := &http.Client{}
 
-	authClass := "test"
-
-	reviewReq := admissionv1.AdmissionReview{
-		TypeMeta: metav1.TypeMeta{Kind: "AdmissionReview", APIVersion: "admission.k8s.io/v1"},
-		Request: &admissionv1.AdmissionRequest{
-			UID:       "ce409862-eae0-4704-b7d5-46634efdaf9b",
-			Namespace: "test",
-			Name:      "test-rules",
-			Operation: admissionv1.Create,
-			Kind: metav1.GroupVersionKind{
-				Group:   v1beta1.GroupVersion.Group,
-				Version: v1beta1.GroupVersion.Version,
-				Kind:    v1beta1.ResourceName,
-			},
-			Resource: metav1.GroupVersionResource{
-				Group:    v1beta1.GroupVersion.Group,
-				Version:  v1beta1.GroupVersion.Version,
-				Resource: v1beta1.ResourceListName,
-			},
-			RequestKind: &metav1.GroupVersionKind{
-				Group:   v1beta1.GroupVersion.Group,
-				Version: v1beta1.GroupVersion.Version,
-				Kind:    v1beta1.ResourceName,
-			},
-			RequestResource: &metav1.GroupVersionResource{
-				Group:    v1beta1.GroupVersion.Group,
-				Version:  v1beta1.GroupVersion.Version,
-				Resource: v1beta1.ResourceListName,
-			},
-		},
-	}
-
 	for uc, tc := range map[string]struct {
-		tls              *config.TLS
-		request          func(t *testing.T, URL string) *http.Request
-		setupRuleFactory func(t *testing.T, factory *mocks.FactoryMock)
-		assert           func(t *testing.T, err error, resp *http.Response)
+		tls     *config.TLS
+		request func(t *testing.T, baseURL string) *http.Request
+		assert  func(t *testing.T, err error, resp *http.Response)
 	}{
-		"admission controller not started": {
-			request: func(t *testing.T, URL string) *http.Request {
+		"admission controller not started without TLS": {
+			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
 
-				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, nil)
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					baseURL+"/",
+					nil,
+				)
 				require.NoError(t, err)
 
 				return req
@@ -158,17 +130,33 @@ func TestControllerLifecycle(t *testing.T) {
 				require.ErrorContains(t, err, "connection refused")
 			},
 		},
-		"unsupported review request kind": {
+		"/validate-ruleset endpoint is exposed": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
-			request: func(t *testing.T, URL string) *http.Request {
+			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
 
-				reviewReq.Request.Kind.Kind = "FooBar"
-
-				data, err := json.Marshal(&reviewReq)
+				data, err := json.Marshal(admissionv1.AdmissionReview{
+					TypeMeta: metav1.TypeMeta{Kind: "AdmissionReview", APIVersion: "admission.k8s.io/v1"},
+					Request: &admissionv1.AdmissionRequest{
+						UID:       "ce409862-eae0-4704-b7d5-46634efdaf9b",
+						Namespace: "test",
+						Name:      "test-rules",
+						Operation: admissionv1.Create,
+						Kind: metav1.GroupVersionKind{
+							Group:   v1beta1.GroupVersion.Group,
+							Version: v1beta1.GroupVersion.Version,
+							Kind:    "FooBar",
+						},
+					},
+				})
 				require.NoError(t, err)
 
-				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					baseURL+"/validate-ruleset",
+					bytes.NewReader(data),
+				)
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -195,41 +183,32 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Equal(t, http.StatusBadRequest, int(status.Code))
 				assert.Equal(t, "Failure", status.Status)
 				assert.Contains(t, status.Message, "failed parsing RuleSet")
-				assert.Contains(t, status.Reason, "only rule sets")
-				require.NotNil(t, status.Details)
-				require.Len(t, status.Details.Causes, 1)
-				assert.Contains(t, status.Details.Causes[0].Message, "only rule sets")
+				assert.Contains(t, status.Reason, "invalid Kind")
 			},
 		},
-		"RuleSet filtered": {
+		"/convert-rulesets endpoint is exposed": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
-			request: func(t *testing.T, URL string) *http.Request {
+			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
 
-				ruleSet := v1beta1.RuleSet{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1beta1.GroupVersion.String(),
-						Kind:       v1beta1.ResourceName,
+				reqUID := types.UID("ce409862-eae0-4704-b7d5-46634efdaf9b")
+
+				data, err := json.Marshal(apiextv1.ConversionReview{
+					TypeMeta: metav1.TypeMeta{Kind: "ConversionReview", APIVersion: "apiextensions.k8s.io/v1"},
+					Request: &apiextv1.ConversionRequest{
+						UID:               reqUID,
+						DesiredAPIVersion: "foobar",
+						Objects:           []runtime.RawExtension{},
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-rule",
-						Namespace:         "foo",
-						ResourceVersion:   "702666",
-						UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
-						Generation:        1,
-						CreationTimestamp: metav1.NewTime(time.Now()),
-					},
-					Spec: v1beta1.RuleSetSpec{AuthClassName: "foo"},
-				}
-				data, err := json.Marshal(&ruleSet)
+				})
 				require.NoError(t, err)
 
-				reviewReq.Request.Object.Raw = data
-
-				data, err = json.Marshal(&reviewReq)
-				require.NoError(t, err)
-
-				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					baseURL+"/convert-rulesets",
+					bytes.NewReader(data),
+				)
 				require.NoError(t, err)
 				req.Header.Set("Content-Type", "application/json")
 
@@ -238,228 +217,40 @@ func TestControllerLifecycle(t *testing.T) {
 			assert: func(t *testing.T, err error, resp *http.Response) {
 				t.Helper()
 
-				require.NoError(t, err)
-
-				assert.Equal(t, http.StatusOK, resp.StatusCode)
-				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
-
-				var reviewResp admissionv1.AdmissionReview
-				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
-				require.NoError(t, err)
-
-				vResp := reviewResp.Response
-				require.NotNil(t, vResp)
-				assert.True(t, vResp.Allowed)
-
-				status := vResp.Result
-				assert.NotNil(t, status)
-				assert.Equal(t, http.StatusOK, int(status.Code))
-				assert.Equal(t, "Success", status.Status)
-				assert.Contains(t, status.Message, "RuleSet ignored")
-			},
-		},
-		"RuleSet validation fails": {
-			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
-			request: func(t *testing.T, URL string) *http.Request {
-				t.Helper()
-
-				ruleSet := v1beta1.RuleSet{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1beta1.GroupVersion.String(),
-						Kind:       v1beta1.ResourceName,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-rule",
-						Namespace:         "foo",
-						ResourceVersion:   "702666",
-						UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
-						Generation:        1,
-						CreationTimestamp: metav1.NewTime(time.Now()),
-					},
-					Spec: v1beta1.RuleSetSpec{
-						AuthClassName: authClass,
-						Rules: []config2.Rule{
-							{
-								ID: "test",
-								Matcher: config2.Matcher{
-									Routes:  []config2.Route{{Path: "/foo.bar"}},
-									Scheme:  "http",
-									Methods: []string{http.MethodGet},
-								},
-								Backend: &config2.Backend{
-									Host: "baz",
-									URLRewriter: &config2.URLRewriter{
-										Scheme:              "http",
-										PathPrefixToCut:     "/foo",
-										PathPrefixToAdd:     "/bar",
-										QueryParamsToRemove: []string{"baz"},
-									},
-								},
-								Execute: []config.MechanismConfig{
-									{"authenticator": "authn"},
-									{"authorizer": "authz"},
-								},
-							},
-						},
-					},
-				}
-				data, err := json.Marshal(&ruleSet)
-				require.NoError(t, err)
-
-				reviewReq.Request.Object.Raw = data
-
-				data, err = json.Marshal(&reviewReq)
-				require.NoError(t, err)
-
-				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
-				require.NoError(t, err)
-				req.Header.Set("Content-Type", "application/json")
-
-				return req
-			},
-			setupRuleFactory: func(t *testing.T, factory *mocks.FactoryMock) {
-				t.Helper()
-
-				factory.EXPECT().CreateRule("1beta1", mock.Anything, mock.Anything).
-					Once().Return(nil, errors.New("Test error"))
-			},
-			assert: func(t *testing.T, err error, resp *http.Response) {
-				t.Helper()
+				reqUID := types.UID("ce409862-eae0-4704-b7d5-46634efdaf9b")
 
 				require.NoError(t, err)
 
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
-				var reviewResp admissionv1.AdmissionReview
+				var reviewResp apiextv1.ConversionReview
 				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
 				require.NoError(t, err)
 
 				vResp := reviewResp.Response
+
 				require.NotNil(t, vResp)
-				assert.False(t, vResp.Allowed)
+				assert.Equal(t, reqUID, vResp.UID)
+				assert.Empty(t, vResp.ConvertedObjects)
 
 				status := vResp.Result
 				assert.NotNil(t, status)
-				assert.Equal(t, http.StatusForbidden, int(status.Code))
+				assert.Equal(t, http.StatusBadRequest, int(status.Code))
 				assert.Equal(t, "Failure", status.Status)
-				assert.Contains(t, status.Message, "RuleSet invalid")
-				assert.Contains(t, status.Reason, "Test error")
-				require.NotNil(t, status.Details)
-				require.Len(t, status.Details.Causes, 1)
-				assert.Contains(t, status.Details.Causes[0].Message, "Test error")
-			},
-		},
-		"successful RuleSet validation": {
-			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
-			request: func(t *testing.T, URL string) *http.Request {
-				t.Helper()
-
-				ruleSet := v1beta1.RuleSet{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1beta1.GroupVersion.String(),
-						Kind:       v1beta1.ResourceName,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-rule",
-						Namespace:         "foo",
-						ResourceVersion:   "702666",
-						UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
-						Generation:        1,
-						CreationTimestamp: metav1.NewTime(time.Now()),
-					},
-					Spec: v1beta1.RuleSetSpec{
-						AuthClassName: authClass,
-						Rules: []config2.Rule{
-							{
-								ID: "test",
-								Matcher: config2.Matcher{
-									Routes:  []config2.Route{{Path: "/foo.bar"}},
-									Scheme:  "http",
-									Methods: []string{http.MethodGet},
-								},
-								Backend: &config2.Backend{
-									Host: "baz",
-									URLRewriter: &config2.URLRewriter{
-										Scheme:              "http",
-										PathPrefixToCut:     "/foo",
-										PathPrefixToAdd:     "/bar",
-										QueryParamsToRemove: []string{"baz"},
-									},
-								},
-								Execute: []config.MechanismConfig{
-									{"authenticator": "authn"},
-									{"authorizer": "authz"},
-								},
-							},
-						},
-					},
-				}
-				data, err := json.Marshal(&ruleSet)
-				require.NoError(t, err)
-
-				reviewReq.Request.Object.Raw = data
-
-				data, err = json.Marshal(&reviewReq)
-				require.NoError(t, err)
-
-				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, URL, bytes.NewReader(data))
-				require.NoError(t, err)
-				req.Header.Set("Content-Type", "application/json")
-
-				return req
-			},
-			setupRuleFactory: func(t *testing.T, factory *mocks.FactoryMock) {
-				t.Helper()
-
-				factory.EXPECT().CreateRule("1beta1", mock.Anything, mock.Anything).
-					Once().Return(nil, nil)
-			},
-			assert: func(t *testing.T, err error, resp *http.Response) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.Equal(t, http.StatusOK, resp.StatusCode)
-				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
-
-				var reviewResp admissionv1.AdmissionReview
-				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
-				require.NoError(t, err)
-
-				vResp := reviewResp.Response
-				require.NotNil(t, vResp)
-				assert.True(t, vResp.Allowed)
-
-				status := vResp.Result
-				assert.NotNil(t, status)
-				assert.Equal(t, http.StatusOK, int(status.Code))
-				assert.Equal(t, "Success", status.Status)
-				assert.Contains(t, status.Message, "RuleSet valid")
+				assert.Contains(t, status.Message, "no objects to convert")
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			reviewReq.Request.Kind.Kind = v1beta1.ResourceName
-			reviewReq.Request.Object.Raw = nil
-
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
 
-			setupMock := x.IfThenElse(
-				tc.setupRuleFactory != nil,
-				tc.setupRuleFactory,
-				func(t *testing.T, _ *mocks.FactoryMock) { t.Helper() },
-			)
-
-			rf := mocks.NewFactoryMock(t)
-			setupMock(t, rf)
-
-			controller := New(tc.tls, log.Logger, authClass, rf)
-			serviceAddress := fmt.Sprintf("%s://%s/validate-ruleset",
+			controller := New(tc.tls, log.Logger, "", mocks.NewFactoryMock(t))
+			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,
 			)
@@ -473,7 +264,7 @@ func TestControllerLifecycle(t *testing.T) {
 			defer controller.Stop(t.Context())
 
 			// WHEN
-			resp, err := client.Do(tc.request(t, serviceAddress))
+			resp, err := client.Do(tc.request(t, baseURL))
 
 			// THEN
 			if err == nil {
