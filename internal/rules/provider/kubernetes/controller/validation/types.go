@@ -35,13 +35,9 @@ var (
 )
 
 type (
-	request struct {
-		admissionv1.AdmissionRequest
-	}
+	request admissionv1.AdmissionRequest
 
-	response struct {
-		admissionv1.AdmissionResponse
-	}
+	response admissionv1.AdmissionResponse
 
 	responseOption func(*response)
 
@@ -70,15 +66,13 @@ func withReasons(reasons ...string) responseOption {
 
 func newResponse(code int, msg string, opts ...responseOption) *response {
 	resp := &response{
-		AdmissionResponse: admissionv1.AdmissionResponse{
-			Allowed: x.IfThenElse(code == http.StatusOK, true, false),
-			Result: &metav1.Status{
-				//nolint:gosec
-				// no integer overflow during conversion possible
-				Code:    int32(code),
-				Status:  x.IfThenElse(code == http.StatusOK, "Success", "Failure"),
-				Message: msg,
-			},
+		Allowed: x.IfThenElse(code == http.StatusOK, true, false),
+		Result: &metav1.Status{
+			//nolint:gosec
+			// no integer overflow during conversion possible
+			Code:    int32(code),
+			Status:  x.IfThenElse(code == http.StatusOK, metav1.StatusSuccess, metav1.StatusFailure),
+			Message: msg,
 		},
 	}
 
@@ -109,7 +103,7 @@ func (review) Decode(r *http.Request) (*request, error) {
 		return nil, err
 	}
 
-	return &request{AdmissionRequest: *ar.Request}, nil
+	return (*request)(ar.Request), nil
 }
 
 func (review) WrapResponse(resp *response) any {
@@ -118,6 +112,6 @@ func (review) WrapResponse(resp *response) any {
 			Kind:       "AdmissionReview",
 			APIVersion: "admission.k8s.io/v1",
 		},
-		Response: &resp.AdmissionResponse,
+		Response: (*admissionv1.AdmissionResponse)(resp),
 	}
 }
