@@ -115,7 +115,7 @@ func TestFetchRuleSets(t *testing.T) {
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(data), int64(len(data)))
+					strings.NewReader(data), int64(len(data)), nil)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
@@ -154,7 +154,7 @@ func TestFetchRuleSets(t *testing.T) {
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(""), 0)
+					strings.NewReader(""), 0, nil)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
@@ -215,12 +215,12 @@ rules:
 `
 				_, err := backend.PutObject(bucketName, "test-rule1",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
+					strings.NewReader(ruleSet1), int64(len(ruleSet1)), nil)
 				require.NoError(t, err)
 
 				_, err = backend.PutObject(bucketName, "test-rule2",
 					map[string]string{"Content-Type": "application/yaml"},
-					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
+					strings.NewReader(ruleSet2), int64(len(ruleSet2)), nil)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
@@ -291,12 +291,12 @@ rules:
 
 				_, err := backend.PutObject(bucketName, "api-rule",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
+					strings.NewReader(ruleSet1), int64(len(ruleSet1)), nil)
 				require.NoError(t, err)
 
 				_, err = backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
+					strings.NewReader(ruleSet2), int64(len(ruleSet2)), nil)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
@@ -345,7 +345,7 @@ rules:
 
 				_, err := backend.PutObject(bucketName, "ruleset",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(""), 0)
+					strings.NewReader(""), 0, nil)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
@@ -388,7 +388,7 @@ rules:
 
 				_, err := backend.PutObject(bucketName, "ruleset",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
+					strings.NewReader(ruleSet1), int64(len(ruleSet1)), nil)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
