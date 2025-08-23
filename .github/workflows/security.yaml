@@ -30,7 +30,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@77137e9dc3ab1b329b7c8a38c2eb7475850a14e8 # master
+        uses: aquasecurity/trivy-action@c26e17b164b0cdf202a7ad18bb218748d7eac385 # master
         with:
           scan-type: 'fs'
           ignore-unfixed: true
