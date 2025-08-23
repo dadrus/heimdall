@@ -39,7 +39,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           skip-dirs: 'docs/content/docs,docs/build'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@96f518a34f7a870018057716cc4d7a5c014bd61c # v3.29.10
+        uses: github/codeql-action/upload-sarif@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -61,11 +61,11 @@ jobs:
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@96f518a34f7a870018057716cc4d7a5c014bd61c # v3.29.10
+        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
         with:
           languages: go
           queries: security-and-quality
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@96f518a34f7a870018057716cc4d7a5c014bd61c # v3.29.10
+        uses: github/codeql-action/analyze@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
         with:
           category: "/language:go"
