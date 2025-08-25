@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-08-25)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 3122310 ([#2688](https://github.com/dadrus/heimdall/issues/2688)) ([4fef286](https://github.com/dadrus/heimdall/commit/4fef286943cac3970233394f90a886f27eb14cf4))
+* update module google.golang.org/grpc to v1.75.0 ([#2693](https://github.com/dadrus/heimdall/issues/2693)) ([a635400](https://github.com/dadrus/heimdall/commit/a63540095dc7e68cfde01546bd1be626d022f402))
+* update module google.golang.org/protobuf to v1.36.8 ([#2697](https://github.com/dadrus/heimdall/issues/2697)) ([5ca8e21](https://github.com/dadrus/heimdall/commit/5ca8e211cf9a949197095c99718964282d6db434))
+
 ## [0.17.1](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.17.1) (2025-08-18)
 
 
