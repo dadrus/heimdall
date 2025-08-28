@@ -52,7 +52,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/undefinedlabs/go-mpatch v1.0.7
