@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-08-28)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 3122310 ([#2688](https://github.com/dadrus/heimdall/issues/2688)) ([4fef286](https://github.com/dadrus/heimdall/commit/4fef286943cac3970233394f90a886f27eb14cf4))
+* update kubernetes packages to v0.34.0 ([#2712](https://github.com/dadrus/heimdall/issues/2712)) ([1d6bb79](https://github.com/dadrus/heimdall/commit/1d6bb79f466a511a69402d48a8e91a270edbb5e4))
+* update module github.com/google/cel-go to v0.26.1 ([#2711](https://github.com/dadrus/heimdall/issues/2711)) ([7541d97](https://github.com/dadrus/heimdall/commit/7541d978f9e09d1d03747095faf9ff290ea27c3e))
+* update module google.golang.org/grpc to v1.75.0 ([#2693](https://github.com/dadrus/heimdall/issues/2693)) ([a635400](https://github.com/dadrus/heimdall/commit/a63540095dc7e68cfde01546bd1be626d022f402))
+* update module google.golang.org/protobuf to v1.36.8 ([#2697](https://github.com/dadrus/heimdall/issues/2697)) ([5ca8e21](https://github.com/dadrus/heimdall/commit/5ca8e211cf9a949197095c99718964282d6db434))
+
 ## [0.17.1](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.17.1) (2025-08-18)
 
 
