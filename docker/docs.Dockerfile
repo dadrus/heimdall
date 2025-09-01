@@ -3,7 +3,7 @@ LABEL maintainer=dadrus@gmx.de
 
 # hadolint ignore=DL3028
 RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
-    hugo=0.148.2-r0 npm=11.3.0-r0 && fc-cache -f && \
+    hugo=0.148.2-r1 npm=11.5.2-r0 && fc-cache -f && \
     gem install asciidoctor-html5s
 
 COPY scripts/run-docs.sh /run-docs.sh
