@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-09-05)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 72a88c0 ([#2719](https://github.com/dadrus/heimdall/issues/2719)) ([bdfd34d](https://github.com/dadrus/heimdall/commit/bdfd34d49a927369982369b91bc677aaeb102450))
+* update google.golang.org/genproto/googleapis/rpc digest to ef028d9 ([#2706](https://github.com/dadrus/heimdall/issues/2706)) ([9b43ffc](https://github.com/dadrus/heimdall/commit/9b43ffccd1152ebd9a3f551e51c35e7a2ee27851))
+* update kubernetes packages to v0.34.0 ([#2712](https://github.com/dadrus/heimdall/issues/2712)) ([1d6bb79](https://github.com/dadrus/heimdall/commit/1d6bb79f466a511a69402d48a8e91a270edbb5e4))
+* update module github.com/go-co-op/gocron/v2 to v2.16.4 ([#2714](https://github.com/dadrus/heimdall/issues/2714)) ([f86babe](https://github.com/dadrus/heimdall/commit/f86babe5fd8d9c3c3a880eb907d94e06ca7eb22f))
+* update module github.com/go-co-op/gocron/v2 to v2.16.5 ([#2723](https://github.com/dadrus/heimdall/issues/2723)) ([b40b989](https://github.com/dadrus/heimdall/commit/b40b989f4352457e670593c90a79989a0c20ef06))
+* update module github.com/google/cel-go to v0.26.1 ([#2711](https://github.com/dadrus/heimdall/issues/2711)) ([7541d97](https://github.com/dadrus/heimdall/commit/7541d978f9e09d1d03747095faf9ff290ea27c3e))
+* update module github.com/prometheus/client_golang to v1.23.1 ([#2729](https://github.com/dadrus/heimdall/issues/2729)) ([3e0d271](https://github.com/dadrus/heimdall/commit/3e0d27178a825a69442d00c20b2201172b54482d))
+* update module github.com/prometheus/client_golang to v1.23.2 ([#2731](https://github.com/dadrus/heimdall/issues/2731)) ([382fbd2](https://github.com/dadrus/heimdall/commit/382fbd237c41200691297d822db9ca05d4ad74cd))
+* update module github.com/spf13/cobra to v1.10.1 ([#2722](https://github.com/dadrus/heimdall/issues/2722)) ([a48a973](https://github.com/dadrus/heimdall/commit/a48a9730cdf36c0d018470830dc9f7fe41f117db))
+* update module github.com/spf13/pflag to v1.0.10 ([#2724](https://github.com/dadrus/heimdall/issues/2724)) ([db0e2df](https://github.com/dadrus/heimdall/commit/db0e2df3a9213df3514317f78949192f1dfe9420))
+* update module github.com/spf13/pflag to v1.0.9 ([#2718](https://github.com/dadrus/heimdall/issues/2718)) ([f5a1179](https://github.com/dadrus/heimdall/commit/f5a11791e03f1160fa8435f4f66cb2a0eebe4468))
+* update module google.golang.org/grpc to v1.75.0 ([#2693](https://github.com/dadrus/heimdall/issues/2693)) ([a635400](https://github.com/dadrus/heimdall/commit/a63540095dc7e68cfde01546bd1be626d022f402))
+* update module google.golang.org/protobuf to v1.36.8 ([#2697](https://github.com/dadrus/heimdall/issues/2697)) ([5ca8e21](https://github.com/dadrus/heimdall/commit/5ca8e211cf9a949197095c99718964282d6db434))
+* update opentelemetry-go monorepo to v1.38.0 ([#2716](https://github.com/dadrus/heimdall/issues/2716)) ([b30ec47](https://github.com/dadrus/heimdall/commit/b30ec47ae6532ec15bb0da8d4ed0612366d221f7))
+* update opentelemetry-go-contrib monorepo to v0.63.0 ([#2717](https://github.com/dadrus/heimdall/issues/2717)) ([759d7a7](https://github.com/dadrus/heimdall/commit/759d7a71d682cbc4375214fcc74095cb50ed3123))
+
 ## [0.17.1](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.17.1) (2025-08-18)
 
 
