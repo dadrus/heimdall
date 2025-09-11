@@ -20,6 +20,7 @@ meshConfig:
       envoyExtAuthzGrpc:
         service: heimdall.heimdall.svc.cluster.local
         port: "4456"
+      # alternatively, one can use the config from below.
       #envoyExtAuthzHttp:
       #  service: heimdall.heimdall.svc.cluster.local
       #  port: "4456"
