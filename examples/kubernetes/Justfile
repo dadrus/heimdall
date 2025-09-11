@@ -194,7 +194,6 @@ install-istio with_ingress_gw="true":
     -f istio/istio-values.yaml \
     --wait
 
-  kubectl apply -f istio/envoy-filter.yaml
   kubectl apply -f istio/destination-rule.yaml
 
 
