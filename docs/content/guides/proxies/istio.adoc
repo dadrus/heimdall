@@ -60,7 +60,7 @@ data:
         port: "4456"
 ----
 <1> `heimdall-ext-auth` is the name of our extension provider, which will be referenced later in the https://istio.io/latest/docs/reference/config/security/authorization-policy/[`AuthorizationPolicy`] configuration.
-<2> We're using a gRPC based implementation here. However, since Istio does not automatically configure Envoy to use HTTP/2 for gRPC calls, it requires an additional https://istio.io/latest/docs/reference/config/networking/envoy-filter/[`EnvoyFilter`] resource. This appears to be a bug in Istio's implementation.
+<2> We're using a gRPC based implementation here.
 <3> Heimdall's address within the cluster, which the extension provider will use for communication.
 ====
 +
@@ -84,38 +84,6 @@ data:
 <1> Include further headers, you expect to make use of in your heimdall rules.
 <2> Include further headers, you expect to be set in your heimdall rules and which should be forwarded to the upstream service.
 ====
-
-3. Deploy the following https://istio.io/latest/docs/reference/config/networking/envoy-filter/[`EnvoyFilter`] resource to correct the cluster configuration that Istio sets up for the heimdall service.
-+
-NOTE: This is only required if you made use of the `envoyExtAuthzGrpc` provider as shown above.
-+
-[source, yaml]
-----
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
-  name: http2-protocol-for-heimdall
-  namespace: istio-system # <1>
-spec:
-  configPatches:
-    - applyTo: CLUSTER # <2>
-      match: # <3>
-        context: GATEWAY
-        cluster:
-          name: outbound|4456||heimdall.heimdall.svc.cluster.local
-      patch:
-        operation: MERGE
-        value:
-          typed_extension_protocol_options: # <4>
-            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-              explicit_http_config:
-                http2_protocol_options: {}
-----
-<1> The namespace where the Istio control plane is deployed (the config root namespace). That way this filter is used each time envoy instance is created by Istio.
-<2> Specifies that we want to apply the patch for a cluster
-<3> Since we want this patch to be applied for gateways only, we limit the context accordingly
-<4> This is the actual config we would like to merge into the cluster definition to enable HTTP/2 support.
 
 === Configure additional CA certificates
 
