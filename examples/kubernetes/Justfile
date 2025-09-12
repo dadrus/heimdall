@@ -345,3 +345,4 @@ install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
+
