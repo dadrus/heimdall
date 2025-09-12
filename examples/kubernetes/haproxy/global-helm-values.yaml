@@ -5,6 +5,6 @@ controller:
     auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
     auth-headers-succeed: "authorization"
     headers: |
-      X-Forwarded-Uri: %[baseq]
+      X-Forwarded-Uri: %[pathq]
       X-Forwarded-Method: %[method]
       X-Forwarded-Host: %[req.hdr(host)]
