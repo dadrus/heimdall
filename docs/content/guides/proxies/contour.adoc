@@ -80,7 +80,6 @@ metadata:
   namespace: <namespace in which heimdall is installed>
   name: heimdall-ext-service
 spec:
-  protocol: h2
   services:
     - name: heimdall
       port: 4456
