@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-app
+  namespace: quickstarts
+  labels:
+    app.kubernetes.io/name: echo-app
+spec:
+  ingressClassName: "haproxy"
+  tls:
+    - hosts:
+        - echo-app.local
+      secretName: echo-app
+  rules:
+    - host: echo-app.local
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: echo-app
+                port:
+                  number: 8080
