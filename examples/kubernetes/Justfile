@@ -6,7 +6,7 @@ pyroscope_version := '1.10.0'
 nginx_version := '4.13.2'
 contour_version := '21.1.4'
 emissary_version := '8.12.2'
-haproxy_version := '0.14.6'
+haproxy_version := '0.14.9'
 envoy_gw_version := 'v1.0.1'
 traefik_version := '33.2.1'
 metallb_version := '0.14.9'
@@ -146,11 +146,15 @@ install-emissary-ingress-controller:
   kubectl apply -f emissary/listener.yaml
 
 
-install-haproxy-ingress-controller:
+install-haproxy-ingress-controller global_ext_auth="true":
+  #!/usr/bin/env bash
+
+  valuesFile=$({{global_ext_auth}} && echo global-helm-values.yaml || echo helm-values.yaml)
+
   helm upgrade --install haproxy-controller haproxy/haproxy-ingress \
     -n haproxy-controller --create-namespace \
     --version {{haproxy_version}} \
-    -f haproxy/helm-values.yaml \
+    -f haproxy/${valuesFile} \
     --wait
 
 install-envoy-gateway:
@@ -321,7 +325,9 @@ install-ngnix-global-demo: setup-cluster install-nginx-ingress-controller (insta
 
 install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
 
-install-haproxy-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
+install-haproxy-demo: setup-cluster (install-haproxy-ingress-controller "false") (install-heimdall "haproxy") (install-echo-service "haproxy-route-based")
+
+install-haproxy-global-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy-global")
 
 install-emissary-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
 
