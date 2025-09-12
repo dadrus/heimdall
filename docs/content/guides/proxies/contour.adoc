@@ -21,7 +21,7 @@ https://projectcontour.io/[Contour] is an ingress controller for Kubernetes, imp
 
 == General Configuration
 
-The official https://projectcontour.io/docs/main/guides/external-authorization/[External Authorization Guide] from Contour describes the required steps in great detail. While following it, please make attention to the following details specific to heimdall as described below.
+The official https://projectcontour.io/docs/1.32/guides/external-authorization/[External Authorization Guide] from Contour describes the required steps in great detail. While following it, please make attention to the following details specific to heimdall as described below.
 
 * If you use https://cert-manager.io/[cert-manager], ensure the feature gate `AdditionalCertificateOutputFormats` is set to `true`. This lets cert-manager creating secrets with a property named `tls-combined.pem`, combining both the key and the certificate in one object, as also typically provided by any other CA and expected by heimdall.
 
@@ -70,7 +70,7 @@ deployment:
     mountPath: /certs
 ----
 
-* Define an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1alpha1.ExtensionService[`ExtensionService`] as described in the referenced Contour guide for heimdall and also shown below
+* Define an https://projectcontour.io/docs/1.32/config/api/#projectcontour.io/v1alpha1.ExtensionService[`ExtensionService`] as described in the referenced Contour guide for heimdall and also shown below
 +
 [source, yaml]
 ----
@@ -100,11 +100,11 @@ globalExtAuth:
   responseTimeout: 1s
 ----
 
-You can now define your https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource[Ingress Rules]. When using https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resources instead, Contour allows overriding or disabling of the external auth service on the route level for HTTPs routes.
+You can now define your https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource[Ingress Rules]. When using https://projectcontour.io/docs/1.32/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resources instead, Contour allows overriding or disabling of the external auth service on the route level for HTTPs routes.
 
 == Route-based Configuration
 
-The only way to have route based external auth service configuration in Contour, is the usage of https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resource instead of the regular Ingress rules, allowing referencing the `ExtensionService`. Here an example:
+The only way to have route based external auth service configuration in Contour, is the usage of https://projectcontour.io/docs/1.32/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resource instead of the regular Ingress rules, allowing referencing the `ExtensionService`. Here an example:
 
 [source, yaml]
 ----
