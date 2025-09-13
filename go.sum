@@ -118,6 +118,8 @@ github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSV
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/dadrus/httpsig v0.0.0-20250910115430-5ddc1d614251 h1:DAcRmZvuiqh1buKUvLMvA2TZI6/Om/izqKTwobSJdYg=
 github.com/dadrus/httpsig v0.0.0-20250910115430-5ddc1d614251/go.mod h1:TDRD3gLJb8A4rPpzacEwEJWEw8eH5ay/7/4VMmOJ2as=
+github.com/dadrus/httpsig v0.0.0-20250913110742-1b6f37c312e9 h1:ILDeEtc1Gm/QNjSI4cU36u3KKsfqqgvJd+NiT3Jp1jk=
+github.com/dadrus/httpsig v0.0.0-20250913110742-1b6f37c312e9/go.mod h1:TDRD3gLJb8A4rPpzacEwEJWEw8eH5ay/7/4VMmOJ2as=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
