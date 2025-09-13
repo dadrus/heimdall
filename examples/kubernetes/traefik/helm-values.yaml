@@ -36,7 +36,8 @@ gateway:
       port: 8443
       hostname: echo-app.local
       protocol: HTTPS
-      namespacePolicy: All
+      namespacePolicy:
+        from: All
       mode: Terminate
       certificateRefs:
         - name: traefik-tls
