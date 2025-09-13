@@ -8,7 +8,7 @@ contour_version := '21.1.4'
 emissary_version := '8.12.2'
 haproxy_version := '0.14.9'
 envoy_gw_version := 'v1.0.1'
-traefik_version := '33.2.1'
+traefik_version := '37.1.1'
 metallb_version := '0.14.9'
 certmanager_version := '1.16.2'
 trustmanager_version := '0.14.0'
@@ -171,7 +171,7 @@ install-traefik global_mw="true":
 
   kubectl apply -f traefik/certificate.yaml
 
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
 
   helm upgrade --install traefik traefik/traefik \
       -n traefik \
