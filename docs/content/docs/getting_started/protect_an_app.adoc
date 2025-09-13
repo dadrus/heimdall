@@ -186,7 +186,7 @@ package demo
 
 default can_access = false # <1>
 
-can_access { split(input.path, "/")[1] == input.role } # <2>
+can_access if { split(input.path, "/")[1] == input.role } # <2>
 ----
 +
 Here, we define our policy `can_access` within the `demo` package. The policy is straightforward, evaluating to either true or false.
@@ -261,14 +261,14 @@ services:
     - --port=8081
 
   idp: # <3>
-    image: nginx:1.25.4
+    image: nginx:1.29.1
     volumes:
     - ./idp.nginx:/etc/nginx/nginx.conf:ro
     - ./jwks.json:/var/www/nginx/jwks.json:ro
 
   opa: # <4>
-    image: openpolicyagent/opa:0.62.1
-    command: run --server /etc/opa/policies
+    image: openpolicyagent/opa:1.8.0
+    command: run --server --addr=0.0.0.0:8181 /etc/opa/policies
     volumes:
     - ./policy.rego:/etc/opa/policies/policy.rego:ro
 ----
