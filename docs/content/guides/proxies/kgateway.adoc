@@ -1,0 +1,107 @@
+---
+title: "KGateway Integration"
+date: 2025-09-17T10:17:23+02:00
+draft: false
+weight: 20
+menu:
+  guides:
+    parent: "API Gateways & Proxies"
+description: This guide explains how to integrate heimdall with KGateway.
+---
+
+:toc:
+
+https://kgateway.dev/[KGateway] is an open source project for managing https://www.envoyproxy.io/[Envoy Proxy] as a Kubernetes-based application gateway by making use of the https://gateway-api.sigs.k8s.io/[Gateway API] resources.
+
+== Prerequisites
+
+* A Kubernetes cluster
+* Deployed KGateway (see https://kgateway.dev/docs/main/quickstart/[here] for installation options)
+* Deployed https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass[`GatewayClass`] resource, as well as a deployed https://gateway-api.sigs.k8s.io/api-types/gateway[`Gateway`] resource
+* heimdall installed and operated in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode] and exposing Envoy’s external authorization GRPC protocol (achieved by passing the `--envoy-grpc` flag while starting heimdall)
++
+[source, yaml]
+----
+extraArgs:
+  - --envoy-grpc
+----
+
+== Integration Options
+
+Technically, the integration happens the same way as with link:{{< relref "/guides/proxies/envoy.adoc" >}}[Envoy] itself by making use of the https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] filter, and can be integrated only via gRPC.
+
+The filter calls an external gRPC service (here heimdall) to check whether an incoming HTTP request is authorized or not. If heimdall responses with `2xx` the request is forwarded to the upstream service, otherwise the response from heimdall is returned to the caller.
+
+In the case of KGateway, the configuration described above happens via a https://kgateway.dev/docs/main/about/policies/trafficpolicy/[`TrafficPolicy`] custom resource that attaches to a https://gateway-api.sigs.k8s.io/api-types/gateway/[`Gateway`] or https://gateway-api.sigs.k8s.io/api-types/httproute[`HTTPRoute`] resource. The https://kgateway.dev/docs/main/about/policies/trafficpolicy/[`TrafficPolicy`] references a https://kgateway.dev/docs/main/reference/api/#gatewayextension[`GatewayExtension`] resource which points to the `heimdall` service.
+
+NOTE: To be able to have your `HTTPRoute`/`Gateway`, `TrafficPolicy` and `GatewayExtension` resources in different namespaces than `heimdall`, make sure that you set up a Kubernetes https://gateway-api.sigs.k8s.io/api-types/referencegrant/[`ReferenceGrant`] from the `GatewayExtension` to the `heimdall` service. 
+
+== Route-level Configuration
+
+To integrate heimdall on a per-route basis, you need three resources:
+
+1.  A `GatewayExtension` to define the connection to heimdall.
+2.  A `TrafficPolicy` to apply the external authentication to a specific `HTTPRoute`.
+3.  A `ReferenceGrant` to permit the `GatewayExtension` in your application namespace to access the `heimdall` service in its namespace.
+
+The example below shows how to protect an `HTTPRoute` named `example-httproute` in the `example` namespace by using `heimdall` running in the `auth` namespace.
+
+First, define the `TrafficPolicy` and `GatewayExtension` in your application's namespace.
+
+[source, yaml]
+----
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: gateway-ext-auth-policy
+  namespace: example
+spec:
+  targetRefs: # <1>
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: example-httproute
+  extAuth:
+    extensionRef: 
+      name: ext-auth-heimdall
+---
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: GatewayExtension
+metadata:
+  name: ext-auth-heimdall
+  namespace: example
+spec:
+  type: ExtAuth
+  extAuth:
+    grpcService: # <2>
+      backendRef:
+        name: heimdall
+        port: 4456
+        namespace: auth
+----
+<1> The `targetRefs` points to the `HTTPRoute` that should be protected.
+<2> The `grpcService` section defines the reference to the heimdall `service`. Note that `namespace: auth` points to a different namespace.
+
+Next, create a `ReferenceGrant` in the namespace where `heimdall` is running to allow access from the application namespace.
+
+[source, yaml]
+----
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-example-access
+  namespace: auth
+spec:
+  from: # <3>
+    - group: gateway.kgateway.dev
+      kind: GatewayExtension
+      namespace: example
+  to: # <4>
+    - group: ""
+      kind: Service
+----
+<3> The `from` section specifies which resources are allowed to create a reference. Here, we allow `GatewayExtension` resources from the `example` namespace.
+<4> The `to` section specifies what can be referenced. Here, we allow references to all `Service` resources.
+
+== Additional Resources
+
+* You can find the official external authentication guide for KGateway https://kgateway.dev/docs/main/security/external-auth/[here].
