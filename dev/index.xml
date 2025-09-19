@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 20 Aug 2025 06:05:25 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 19 Sep 2025 07:56:35 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1">
 &lt;h2 id="_what_is_heimdall">What is heimdall?&lt;/h2>
 &lt;div class="sectionbody">
 &lt;div class="paragraph">
@@ -293,6 +293,41 @@ To allow heimdall communicating with services running in the mesh, add the certi
 &lt;td class="content">
 &lt;div class="paragraph">
 &lt;p>Traefik makes use of &lt;code>X-Forwarded-*&lt;/code> HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure &lt;a href="./docs/services/main/#_trusted_proxies">trusted proxies&lt;/a> in heimdall’s main service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to &amp;#34;0.0.0.0/0&amp;#34;, which would basically disable the check and let heimdall trust requests from any source.&lt;/p>
+&lt;/div></description></item><item><title>KGateway Integration</title><link>https://dadrus.github.io/guides/proxies/kgateway/</link><pubDate>Wed, 17 Sep 2025 10:17:23 +0200</pubDate><guid>https://dadrus.github.io/guides/proxies/kgateway/</guid><description>&lt;div class="paragraph">
+&lt;p>&lt;a href="https://kgateway.dev/">KGateway&lt;/a> is an open source project for managing &lt;a href="https://www.envoyproxy.io/">Envoy Proxy&lt;/a> as a Kubernetes-based application gateway by making use of the &lt;a href="https://gateway-api.sigs.k8s.io/">Gateway API&lt;/a> resources.&lt;/p>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_prerequisites">Prerequisites&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="ulist">
+&lt;ul>
+&lt;li>
+&lt;p>A Kubernetes cluster&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Deployed KGateway (see &lt;a href="https://kgateway.dev/docs/main/quickstart/">here&lt;/a> for installation options)&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Deployed &lt;a href="https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass">&lt;code>GatewayClass&lt;/code>&lt;/a> resource, as well as a deployed &lt;a href="https://gateway-api.sigs.k8s.io/api-types/gateway">&lt;code>Gateway&lt;/code>&lt;/a> resource&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>heimdall installed and operated in &lt;a href="./docs/concepts/operating_modes/#_decision_mode">Decision Operation Mode&lt;/a> and exposing Envoy’s external authorization GRPC protocol (achieved by passing the &lt;code>--envoy-grpc&lt;/code> flag while starting heimdall)&lt;/p>
+&lt;div class="listingblock">
+&lt;div class="content">
+&lt;pre class="rouge highlight">&lt;code data-lang="yaml">&lt;span class="na">extraArgs&lt;/span>&lt;span class="pi">:&lt;/span>
+ &lt;span class="pi">-&lt;/span> &lt;span class="s">--envoy-grpc&lt;/span>&lt;/code>&lt;/pre>
+&lt;/div>
+&lt;/div>
+&lt;/li>
+&lt;/ul>
+&lt;/div>
+&lt;/div>
+&lt;/div>
+&lt;div class="sect1">
+&lt;h2 id="_integration_options">Integration Options&lt;/h2>
+&lt;div class="sectionbody">
+&lt;div class="paragraph">
+&lt;p>Technically, the integration happens the same way as with &lt;a href="./guides/proxies/envoy/">Envoy&lt;/a> itself by making use of the &lt;a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html">External Authorization&lt;/a> filter, and can be integrated only via gRPC.&lt;/p>
 &lt;/div></description></item><item><title>Integration with OPA</title><link>https://dadrus.github.io/guides/authz/opa/</link><pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate><guid>https://dadrus.github.io/guides/authz/opa/</guid><description>&lt;div class="paragraph">
 &lt;p>The &lt;a href="./docs/getting_started/protect_an_app/">Protect an Application&lt;/a> quickstart guide, describing the steps required to protect an application with heimdall, shows already how &lt;a href="https://www.openpolicyagent.org/">OPA&lt;/a> can be used with heimdall. This document provides some further examples.&lt;/p>
 &lt;/div>
