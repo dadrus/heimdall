@@ -1,31 +1,31 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Authorization Services on Heimdall</title><link>https://dadrus.github.io/guides/authz/</link><description>Recent content in Authorization Services on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 19 Sep 2025 07:56:35 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/authz/index.xml" rel="self" type="application/rss+xml"/><item><title>Integration with OPA</title><link>https://dadrus.github.io/guides/authz/opa/</link><pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate><guid>https://dadrus.github.io/guides/authz/opa/</guid><description>&lt;div class="paragraph">
-&lt;p>The &lt;a href="../../docs/getting_started/protect_an_app/">Protect an Application&lt;/a> quickstart guide, describing the steps required to protect an application with heimdall, shows already how &lt;a href="https://www.openpolicyagent.org/">OPA&lt;/a> can be used with heimdall. This document provides some further examples.&lt;/p>
-&lt;/div>
-&lt;div class="sect1">
-&lt;h2 id="_example_1_sharing_service">Example 1: Sharing Service&lt;/h2>
-&lt;div class="sectionbody">
-&lt;div class="paragraph">
-&lt;p>Imagine you have a sharing service, e.g. to let friends share all their photos with each other and the API looks roughly as follows:&lt;/p>
-&lt;/div>
-&lt;div class="ulist">
-&lt;ul>
-&lt;li>
-&lt;p>&lt;code>GET /&amp;lt;user&amp;gt;/photos&lt;/code> returns all the photos of the user either to the owner of the photo collection itself or to its friends.&lt;/p>
-&lt;/li>
-&lt;/ul>
-&lt;/div></description></item><item><title>Integration with OpenFGA</title><link>https://dadrus.github.io/guides/authz/openfga/</link><pubDate>Mon, 25 Mar 2024 12:32:07 +0200</pubDate><guid>https://dadrus.github.io/guides/authz/openfga/</guid><description>&lt;div class="paragraph">
-&lt;p>&lt;a href="https://openfga.dev">OpenFGA&lt;/a> is inspired by &lt;a href="https://zanzibar.academy/">Google’s Zanzibar&lt;/a>, Google’s Relationship Based Access Control system and allows easily implementing authorization for any kind of application relying on Role-Based Access Control with additional Attribute-Based Access Control capabilities.&lt;/p>
-&lt;/div>
-&lt;div class="paragraph">
-&lt;p>This guide is based on the OpenFGA’s official &lt;a href="https://openfga.dev/docs/getting-started">Getting Started&lt;/a> guide and highlights the relevant differences. It mimics a RESTful document management API, allowing listing, creating, reading, updating, and deleting documents. The API consists of two endpoints:&lt;/p>
-&lt;/div>
-&lt;div class="ulist">
-&lt;ul>
-&lt;li>
-&lt;p>&lt;code>/document/&amp;lt;id&amp;gt;&lt;/code> with &lt;code>id&lt;/code> being the id of the document and the HTTP verbs reflecting the actual operations. E.g. a &lt;code>GET /document/1234&lt;/code> request should read the document with the id &lt;code>1234&lt;/code>.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>/documents&lt;/code> which supports the HTTP &lt;code>GET&lt;/code> verb only and allows the user to list the documents it can access.&lt;/p>
-&lt;/li>
-&lt;/ul>
-&lt;/div></description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Authorization Services on Heimdall</title><link>https://dadrus.github.io/guides/authz/</link><description>Recent content in Authorization Services on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 21 Sep 2025 22:20:25 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/authz/index.xml" rel="self" type="application/rss+xml"/><item><title>Integration with OPA</title><link>https://dadrus.github.io/guides/authz/opa/</link><pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate><guid>https://dadrus.github.io/guides/authz/opa/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;The &lt;a href="../../docs/getting_started/protect_an_app/"&gt;Protect an Application&lt;/a&gt; quickstart guide, describing the steps required to protect an application with heimdall, shows already how &lt;a href="https://www.openpolicyagent.org/"&gt;OPA&lt;/a&gt; can be used with heimdall. This document provides some further examples.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="sect1"&gt;
+&lt;h2 id="_example_1_sharing_service"&gt;Example 1: Sharing Service&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Imagine you have a sharing service, e.g. to let friends share all their photos with each other and the API looks roughly as follows:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="ulist"&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;GET /&amp;lt;user&amp;gt;/photos&lt;/code&gt; returns all the photos of the user either to the owner of the photo collection itself or to its friends.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;</description></item><item><title>Integration with OpenFGA</title><link>https://dadrus.github.io/guides/authz/openfga/</link><pubDate>Mon, 25 Mar 2024 12:32:07 +0200</pubDate><guid>https://dadrus.github.io/guides/authz/openfga/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;&lt;a href="https://openfga.dev"&gt;OpenFGA&lt;/a&gt; is inspired by &lt;a href="https://zanzibar.academy/"&gt;Google’s Zanzibar&lt;/a&gt;, Google’s Relationship Based Access Control system and allows easily implementing authorization for any kind of application relying on Role-Based Access Control with additional Attribute-Based Access Control capabilities.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;This guide is based on the OpenFGA’s official &lt;a href="https://openfga.dev/docs/getting-started"&gt;Getting Started&lt;/a&gt; guide and highlights the relevant differences. It mimics a RESTful document management API, allowing listing, creating, reading, updating, and deleting documents. The API consists of two endpoints:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="ulist"&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/document/&amp;lt;id&amp;gt;&lt;/code&gt; with &lt;code&gt;id&lt;/code&gt; being the id of the document and the HTTP verbs reflecting the actual operations. E.g. a &lt;code&gt;GET /document/1234&lt;/code&gt; request should read the document with the id &lt;code&gt;1234&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/documents&lt;/code&gt; which supports the HTTP &lt;code&gt;GET&lt;/code&gt; verb only and allows the user to list the documents it can access.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;</description></item></channel></rss>

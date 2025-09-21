@@ -1,405 +1,405 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 19 Sep 2025 07:56:35 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1">
-&lt;h2 id="_assertions">Assertions&lt;/h2>
-&lt;div class="sectionbody">
-&lt;div class="paragraph">
-&lt;p>This type enables configuration of required token and claim assertions. Depending on the object type (JWT or introspection response), the assertions apply to different parts of such objects.&lt;/p>
-&lt;/div>
-&lt;div class="ulist">
-&lt;ul>
-&lt;li>
-&lt;p>&lt;strong>&lt;code>scopes&lt;/code>&lt;/strong>: &lt;em>&lt;a href="#_scopes_matcher">Scopes Matcher&lt;/a>&lt;/em> (optional)&lt;/p>
-&lt;div class="paragraph">
-&lt;p>Required scopes given to the client.&lt;/p>
-&lt;/div>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;strong>&lt;code>audience&lt;/code>&lt;/strong>: &lt;em>string array&lt;/em> (optional)&lt;/p>
-&lt;div class="paragraph">
-&lt;p>Values to be matched in the &lt;code>aud&lt;/code> claim. This assertion evaluates to &lt;code>true&lt;/code> if at least one entry in the given &lt;code>audience&lt;/code> array is present in the &lt;code>aud&lt;/code> claim. Both cases, either as whitespace separated string, or a JSON array are considered.&lt;/p>
-&lt;/div></description></item><item><title>Reference</title><link>https://dadrus.github.io/docs/configuration/reference/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/reference/</guid><description>&lt;div class="paragraph">
-&lt;p>Below you can find possible contents (not exhaustive) for Heimdall’s &lt;code>config.yaml&lt;/code> file. Head over to configuration documentation to get detailed explanation.&lt;/p>
-&lt;/div>
-&lt;div class="listingblock">
-&lt;div class="content">
-&lt;pre class="rouge highlight">&lt;code data-lang="yaml">&lt;span class="na">serve&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">127.0.0.1&lt;/span>
- &lt;span class="na">port&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">4469&lt;/span>
- &lt;span class="na">respond&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">verbose&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">with&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">authorization_error&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">code&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">404&lt;/span>
- &lt;span class="na">authentication_error&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">code&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">404&lt;/span>
- &lt;span class="na">timeout&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">read&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2s&lt;/span>
- &lt;span class="na">write&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>
- &lt;span class="na">idle&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2m&lt;/span>
- &lt;span class="na">connections_limit&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">max_per_host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">10&lt;/span>
- &lt;span class="na">max_idle&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">100&lt;/span>
- &lt;span class="na">max_idle_per_host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">50&lt;/span>
- &lt;span class="na">buffer_limit&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">read&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">10KB&lt;/span>
- &lt;span class="na">write&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">10KB&lt;/span>
- &lt;span class="na">cors&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">allowed_origins&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">example.org&lt;/span>
- &lt;span class="na">allowed_methods&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">GET&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">POST&lt;/span>
- &lt;span class="na">allowed_headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">Authorization&lt;/span>
- &lt;span class="na">exposed_headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">X-My-Header&lt;/span>
- &lt;span class="na">allow_credentials&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">max_age&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">1m&lt;/span>
- &lt;span class="na">tls&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">key_store&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">path&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">/path/to/key/store.pem&lt;/span>
- &lt;span class="na">password&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">VerySecure!&lt;/span>
- &lt;span class="na">key_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">first_entry&lt;/span>
- &lt;span class="na">min_version&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">TLS1.2&lt;/span>
- &lt;span class="na">cipher_suites&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span>
- &lt;span class="na">trusted_proxies&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">192.168.1.0/24&lt;/span>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 21 Sep 2025 22:20:25 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1"&gt;
+&lt;h2 id="_assertions"&gt;Assertions&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;This type enables configuration of required token and claim assertions. Depending on the object type (JWT or introspection response), the assertions apply to different parts of such objects.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="ulist"&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;scopes&lt;/code&gt;&lt;/strong&gt;: &lt;em&gt;&lt;a href="#_scopes_matcher"&gt;Scopes Matcher&lt;/a&gt;&lt;/em&gt; (optional)&lt;/p&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Required scopes given to the client.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;audience&lt;/code&gt;&lt;/strong&gt;: &lt;em&gt;string array&lt;/em&gt; (optional)&lt;/p&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Values to be matched in the &lt;code&gt;aud&lt;/code&gt; claim. This assertion evaluates to &lt;code&gt;true&lt;/code&gt; if at least one entry in the given &lt;code&gt;audience&lt;/code&gt; array is present in the &lt;code&gt;aud&lt;/code&gt; claim. Both cases, either as whitespace separated string, or a JSON array are considered.&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>Reference</title><link>https://dadrus.github.io/docs/configuration/reference/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/reference/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;Below you can find possible contents (not exhaustive) for Heimdall’s &lt;code&gt;config.yaml&lt;/code&gt; file. Head over to configuration documentation to get detailed explanation.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="listingblock"&gt;
+&lt;div class="content"&gt;
+&lt;pre class="rouge highlight"&gt;&lt;code data-lang="yaml"&gt;&lt;span class="na"&gt;serve&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;host&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;127.0.0.1&lt;/span&gt;
+ &lt;span class="na"&gt;port&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;4469&lt;/span&gt;
+ &lt;span class="na"&gt;respond&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;verbose&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;with&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;authorization_error&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;code&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;404&lt;/span&gt;
+ &lt;span class="na"&gt;authentication_error&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;code&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;404&lt;/span&gt;
+ &lt;span class="na"&gt;timeout&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;read&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;2s&lt;/span&gt;
+ &lt;span class="na"&gt;write&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5s&lt;/span&gt;
+ &lt;span class="na"&gt;idle&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;2m&lt;/span&gt;
+ &lt;span class="na"&gt;connections_limit&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;max_per_host&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;10&lt;/span&gt;
+ &lt;span class="na"&gt;max_idle&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;100&lt;/span&gt;
+ &lt;span class="na"&gt;max_idle_per_host&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;50&lt;/span&gt;
+ &lt;span class="na"&gt;buffer_limit&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;read&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;10KB&lt;/span&gt;
+ &lt;span class="na"&gt;write&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;10KB&lt;/span&gt;
+ &lt;span class="na"&gt;cors&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;allowed_origins&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;example.org&lt;/span&gt;
+ &lt;span class="na"&gt;allowed_methods&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;GET&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;POST&lt;/span&gt;
+ &lt;span class="na"&gt;allowed_headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;Authorization&lt;/span&gt;
+ &lt;span class="na"&gt;exposed_headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;X-My-Header&lt;/span&gt;
+ &lt;span class="na"&gt;allow_credentials&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;max_age&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;1m&lt;/span&gt;
+ &lt;span class="na"&gt;tls&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;key_store&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/path/to/key/store.pem&lt;/span&gt;
+ &lt;span class="na"&gt;password&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;VerySecure!&lt;/span&gt;
+ &lt;span class="na"&gt;key_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;first_entry&lt;/span&gt;
+ &lt;span class="na"&gt;min_version&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;TLS1.2&lt;/span&gt;
+ &lt;span class="na"&gt;cipher_suites&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span&gt;
+ &lt;span class="na"&gt;trusted_proxies&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;192.168.1.0/24&lt;/span&gt;
 
-&lt;span class="na">management&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">127.0.0.1&lt;/span>
- &lt;span class="na">port&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">4457&lt;/span>
- &lt;span class="na">timeout&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">read&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2s&lt;/span>
- &lt;span class="na">write&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>
- &lt;span class="na">idle&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2m&lt;/span>
- &lt;span class="na">cors&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">allowed_origins&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">example.org&lt;/span>
- &lt;span class="na">allowed_methods&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">GET&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">POST&lt;/span>
- &lt;span class="na">allowed_headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">Authorization&lt;/span>
- &lt;span class="na">exposed_headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">X-My-Header&lt;/span>
- &lt;span class="na">allow_credentials&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">max_age&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">1m&lt;/span>
- &lt;span class="na">tls&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">key_store&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">path&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">/path/to/key/store.pem&lt;/span>
- &lt;span class="na">min_version&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">TLS1.2&lt;/span>
+&lt;span class="na"&gt;management&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;host&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;127.0.0.1&lt;/span&gt;
+ &lt;span class="na"&gt;port&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;4457&lt;/span&gt;
+ &lt;span class="na"&gt;timeout&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;read&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;2s&lt;/span&gt;
+ &lt;span class="na"&gt;write&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5s&lt;/span&gt;
+ &lt;span class="na"&gt;idle&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;2m&lt;/span&gt;
+ &lt;span class="na"&gt;cors&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;allowed_origins&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;example.org&lt;/span&gt;
+ &lt;span class="na"&gt;allowed_methods&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;GET&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;POST&lt;/span&gt;
+ &lt;span class="na"&gt;allowed_headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;Authorization&lt;/span&gt;
+ &lt;span class="na"&gt;exposed_headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;X-My-Header&lt;/span&gt;
+ &lt;span class="na"&gt;allow_credentials&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;max_age&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;1m&lt;/span&gt;
+ &lt;span class="na"&gt;tls&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;key_store&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/path/to/key/store.pem&lt;/span&gt;
+ &lt;span class="na"&gt;min_version&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;TLS1.2&lt;/span&gt;
 
-&lt;span class="na">cache&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">redis-sentinel&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">db&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">2&lt;/span>
- &lt;span class="na">master&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">whatever&lt;/span>
- &lt;span class="na">nodes&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">foo:1234&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">bar:1234&lt;/span>
- &lt;span class="na">credentials&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">path&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">/path/to/credentials.yaml&lt;/span>
- &lt;span class="na">tls&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">key_store&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">path&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">/path/to/redis_client_keystore.pem&lt;/span>
- &lt;span class="na">key_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bf5d129a7fec8b1fde11eab459784cc2f14e6c1d&lt;/span>
- &lt;span class="na">min_version&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">TLS1.2&lt;/span>
- &lt;span class="na">cipher_suites&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span>
- &lt;span class="na">client_cache&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">10m&lt;/span>
- &lt;span class="na">max_flush_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">20us&lt;/span>
+&lt;span class="na"&gt;cache&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;redis-sentinel&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;db&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;2&lt;/span&gt;
+ &lt;span class="na"&gt;master&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;whatever&lt;/span&gt;
+ &lt;span class="na"&gt;nodes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;foo:1234&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bar:1234&lt;/span&gt;
+ &lt;span class="na"&gt;credentials&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/path/to/credentials.yaml&lt;/span&gt;
+ &lt;span class="na"&gt;tls&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;key_store&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/path/to/redis_client_keystore.pem&lt;/span&gt;
+ &lt;span class="na"&gt;key_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bf5d129a7fec8b1fde11eab459784cc2f14e6c1d&lt;/span&gt;
+ &lt;span class="na"&gt;min_version&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;TLS1.2&lt;/span&gt;
+ &lt;span class="na"&gt;cipher_suites&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256&lt;/span&gt;
+ &lt;span class="na"&gt;client_cache&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;10m&lt;/span&gt;
+ &lt;span class="na"&gt;max_flush_delay&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;20us&lt;/span&gt;
 
-&lt;span class="na">secrets_reload_enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
+&lt;span class="na"&gt;secrets_reload_enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
 
-&lt;span class="na">log&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">level&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">debug&lt;/span>
- &lt;span class="na">format&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">text&lt;/span>
+&lt;span class="na"&gt;log&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;level&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;debug&lt;/span&gt;
+ &lt;span class="na"&gt;format&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;text&lt;/span&gt;
 
-&lt;span class="na">tracing&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">span_processor&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">batch&lt;/span>
+&lt;span class="na"&gt;tracing&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;span_processor&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;batch&lt;/span&gt;
 
-&lt;span class="na">metrics&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
+&lt;span class="na"&gt;metrics&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
 
-&lt;span class="na">profiling&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">false&lt;/span>
- &lt;span class="na">host&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">0.0.0.0&lt;/span>
- &lt;span class="na">port&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="m">9000&lt;/span>
+&lt;span class="na"&gt;profiling&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;
+ &lt;span class="na"&gt;host&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;0.0.0.0&lt;/span&gt;
+ &lt;span class="na"&gt;port&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;9000&lt;/span&gt;
 
-&lt;span class="na">mechanisms&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">authenticators&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">anonymous_authenticator&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">anonymous&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">unauthorized_authenticator&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">unauthorized&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">basic_auth&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">user_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
- &lt;span class="na">password&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">baz&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">kratos_session_authenticator&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">generic&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">identity_info_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://127.0.0.1:4433/sessions/whoami&lt;/span>
- &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">basic_auth&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">user&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">password&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
- &lt;span class="na">retry&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">max_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">300ms&lt;/span>
- &lt;span class="na">give_up_after&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2s&lt;/span>
- &lt;span class="na">authentication_data_source&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">cookie&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">ory_kratos_session&lt;/span>
- &lt;span class="na">forward_cookies&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">ory_kratos_session&lt;/span>
- &lt;span class="na">subject&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">attributes&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">@this&amp;#34;&lt;/span>
- &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">identity.id&amp;#34;&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">hydra_authenticator&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_introspection&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">introspection_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://hydra:4445/oauth2/introspect&lt;/span>
- &lt;span class="na">retry&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">max_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">300ms&lt;/span>
- &lt;span class="na">give_up_after&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">2s&lt;/span>
- &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">api_key&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">in&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">header&lt;/span>
- &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">X-Api-Key&lt;/span>
- &lt;span class="na">value&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">VerySecret!&lt;/span>
- &lt;span class="na">token_source&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Authorization&lt;/span>
- &lt;span class="na">scheme&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Bearer&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">query_parameter&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">access_token&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">body_parameter&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">access_token&lt;/span>
- &lt;span class="na">assertions&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">issuers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">https://127.0.0.1:4444/&lt;/span>
- &lt;span class="na">scopes&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">bar&lt;/span>
- &lt;span class="na">audience&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">bla&lt;/span>
- &lt;span class="na">subject&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">attributes&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">@this&amp;#34;&lt;/span>
- &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">sub&amp;#34;&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt_authenticator&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">metadata_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://auth-server/.well-known/oauth-authorization-server&lt;/span>
- &lt;span class="na">disable_issuer_identifier_verification&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">http_cache&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">cache_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">1h&lt;/span>
- &lt;span class="na">resolved_endpoints&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">jwks_uri&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_client_credentials&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">token_url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://auth-server/token&lt;/span>
- &lt;span class="na">client_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">client_secret&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
- &lt;span class="na">retry&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">give_up_after&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">1m&lt;/span>
- &lt;span class="na">max_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>
- &lt;span class="na">http_cache&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
- &lt;span class="na">default_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">10m&lt;/span>
- &lt;span class="na">jwt_source&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Authorization&lt;/span>
- &lt;span class="na">scheme&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Bearer&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">query_parameter&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">access_token&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">body_parameter&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">access_token&lt;/span>
- &lt;span class="na">assertions&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">audience&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">bla&lt;/span>
- &lt;span class="na">scopes&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">allowed_algorithms&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">RS256&lt;/span>
- &lt;span class="na">subject&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">attributes&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">@this&amp;#34;&lt;/span>
- &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">identity.id&amp;#34;&lt;/span>
- &lt;span class="na">cache_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5m&lt;/span>
+&lt;span class="na"&gt;mechanisms&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;authenticators&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;anonymous_authenticator&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;anonymous&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;unauthorized_authenticator&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;unauthorized&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;basic_auth&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;user_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
+ &lt;span class="na"&gt;password&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;baz&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;kratos_session_authenticator&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;generic&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;identity_info_endpoint&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://127.0.0.1:4433/sessions/whoami&lt;/span&gt;
+ &lt;span class="na"&gt;auth&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;auth&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;basic_auth&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;user&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;password&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
+ &lt;span class="na"&gt;retry&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;max_delay&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;300ms&lt;/span&gt;
+ &lt;span class="na"&gt;give_up_after&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;2s&lt;/span&gt;
+ &lt;span class="na"&gt;authentication_data_source&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;cookie&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;ory_kratos_session&lt;/span&gt;
+ &lt;span class="na"&gt;forward_cookies&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;ory_kratos_session&lt;/span&gt;
+ &lt;span class="na"&gt;subject&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
+ &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;identity.id&amp;#34;&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;hydra_authenticator&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;oauth2_introspection&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;introspection_endpoint&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://hydra:4445/oauth2/introspect&lt;/span&gt;
+ &lt;span class="na"&gt;retry&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;max_delay&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;300ms&lt;/span&gt;
+ &lt;span class="na"&gt;give_up_after&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;2s&lt;/span&gt;
+ &lt;span class="na"&gt;auth&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;api_key&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;in&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;header&lt;/span&gt;
+ &lt;span class="na"&gt;name&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;X-Api-Key&lt;/span&gt;
+ &lt;span class="na"&gt;value&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;VerySecret!&lt;/span&gt;
+ &lt;span class="na"&gt;token_source&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;header&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Authorization&lt;/span&gt;
+ &lt;span class="na"&gt;scheme&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Bearer&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;query_parameter&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;access_token&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;body_parameter&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;access_token&lt;/span&gt;
+ &lt;span class="na"&gt;assertions&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;issuers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;https://127.0.0.1:4444/&lt;/span&gt;
+ &lt;span class="na"&gt;scopes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
+ &lt;span class="na"&gt;audience&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bla&lt;/span&gt;
+ &lt;span class="na"&gt;subject&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
+ &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;sub&amp;#34;&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt_authenticator&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;metadata_endpoint&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://auth-server/.well-known/oauth-authorization-server&lt;/span&gt;
+ &lt;span class="na"&gt;disable_issuer_identifier_verification&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;http_cache&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;cache_ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;1h&lt;/span&gt;
+ &lt;span class="na"&gt;resolved_endpoints&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;jwks_uri&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;auth&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;oauth2_client_credentials&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;token_url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://auth-server/token&lt;/span&gt;
+ &lt;span class="na"&gt;client_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;client_secret&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
+ &lt;span class="na"&gt;retry&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;give_up_after&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;1m&lt;/span&gt;
+ &lt;span class="na"&gt;max_delay&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5s&lt;/span&gt;
+ &lt;span class="na"&gt;http_cache&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;default_ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;10m&lt;/span&gt;
+ &lt;span class="na"&gt;jwt_source&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;header&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Authorization&lt;/span&gt;
+ &lt;span class="na"&gt;scheme&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Bearer&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;query_parameter&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;access_token&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;body_parameter&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;access_token&lt;/span&gt;
+ &lt;span class="na"&gt;assertions&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;audience&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bla&lt;/span&gt;
+ &lt;span class="na"&gt;scopes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;allowed_algorithms&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;RS256&lt;/span&gt;
+ &lt;span class="na"&gt;subject&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
+ &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;identity.id&amp;#34;&lt;/span&gt;
+ &lt;span class="na"&gt;cache_ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5m&lt;/span&gt;
 
- &lt;span class="na">authorizers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">allow_all_authorizer&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">allow&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">deny_all_authorizer&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">deny&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">remote_authorizer&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">remote&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://my-authz-system/{{ .Values.some-key }}&lt;/span>
- &lt;span class="na">method&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">POST&lt;/span>
- &lt;span class="na">headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">foo-bar&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">{{&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">.Subject.ID&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">}}&amp;#34;&lt;/span>
- &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">api_key&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">in&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">header&lt;/span>
- &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">X-API-Key&lt;/span>
- &lt;span class="na">value&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">super duper secret&lt;/span>
- &lt;span class="na">values&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">some-key&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">some-value&lt;/span>
- &lt;span class="na">payload&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">https://bla.bar&amp;#34;&lt;/span>
- &lt;span class="na">expressions&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">expression&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="pi">|&lt;/span>
- &lt;span class="s">Payload.response == true&lt;/span>
- &lt;span class="na">forward_response_headers_to_upstream&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">bla-bar&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">user_is_admin_authz&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">cel&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">values&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">some_key&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">some-value&lt;/span>
- &lt;span class="na">expressions&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">expression&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">&amp;#39;admin&amp;#39;&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">in&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">Subject.Attributes.groups&amp;#34;&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">expression&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">Values.some_key&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">==&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">foo&amp;#34;&lt;/span>
+ &lt;span class="na"&gt;authorizers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;allow_all_authorizer&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;allow&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;deny_all_authorizer&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;deny&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;remote_authorizer&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;remote&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;endpoint&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://my-authz-system/{{ .Values.some-key }}&lt;/span&gt;
+ &lt;span class="na"&gt;method&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;POST&lt;/span&gt;
+ &lt;span class="na"&gt;headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;foo-bar&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;{{&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;.Subject.ID&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;}}&amp;#34;&lt;/span&gt;
+ &lt;span class="na"&gt;auth&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;api_key&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;in&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;header&lt;/span&gt;
+ &lt;span class="na"&gt;name&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;X-API-Key&lt;/span&gt;
+ &lt;span class="na"&gt;value&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;super duper secret&lt;/span&gt;
+ &lt;span class="na"&gt;values&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;some-key&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;some-value&lt;/span&gt;
+ &lt;span class="na"&gt;payload&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;https://bla.bar&amp;#34;&lt;/span&gt;
+ &lt;span class="na"&gt;expressions&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;expression&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="pi"&gt;|&lt;/span&gt;
+ &lt;span class="s"&gt;Payload.response == true&lt;/span&gt;
+ &lt;span class="na"&gt;forward_response_headers_to_upstream&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bla-bar&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;user_is_admin_authz&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;cel&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;values&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;some_key&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;some-value&lt;/span&gt;
+ &lt;span class="na"&gt;expressions&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;expression&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;admin&amp;#39;&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;in&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;Subject.Attributes.groups&amp;#34;&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;expression&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;Values.some_key&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;==&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;foo&amp;#34;&lt;/span&gt;
 
- &lt;span class="na">contextualizers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">subscription_contextualizer&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">generic&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://foo.bar&lt;/span>
- &lt;span class="na">method&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">GET&lt;/span>
- &lt;span class="na">headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">bla&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bla&lt;/span>
- &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_client_credentials&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">auth_method&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">request_body&lt;/span>
- &lt;span class="na">token_url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://bar.foo&lt;/span>
- &lt;span class="na">client_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">client_secret&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
- &lt;span class="na">cache_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">20s&lt;/span>
- &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">X-Foo&lt;/span>
- &lt;span class="na">scheme&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Bar&lt;/span>
- &lt;span class="na">payload&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">profile_data_contextualizer&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">generic&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://profile&lt;/span>
- &lt;span class="na">headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">foo&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bar&lt;/span>
- &lt;span class="na">continue_pipeline_on_error&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
+ &lt;span class="na"&gt;contextualizers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;subscription_contextualizer&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;generic&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;endpoint&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://foo.bar&lt;/span&gt;
+ &lt;span class="na"&gt;method&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;GET&lt;/span&gt;
+ &lt;span class="na"&gt;headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;bla&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bla&lt;/span&gt;
+ &lt;span class="na"&gt;auth&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;oauth2_client_credentials&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;auth_method&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;request_body&lt;/span&gt;
+ &lt;span class="na"&gt;token_url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://bar.foo&lt;/span&gt;
+ &lt;span class="na"&gt;client_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;client_secret&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
+ &lt;span class="na"&gt;cache_ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;20s&lt;/span&gt;
+ &lt;span class="na"&gt;header&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;name&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;X-Foo&lt;/span&gt;
+ &lt;span class="na"&gt;scheme&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Bar&lt;/span&gt;
+ &lt;span class="na"&gt;payload&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;profile_data_contextualizer&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;generic&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;endpoint&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://profile&lt;/span&gt;
+ &lt;span class="na"&gt;headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;foo&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
+ &lt;span class="na"&gt;continue_pipeline_on_error&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
 
- &lt;span class="na">finalizers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">signer&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foobar&lt;/span>
- &lt;span class="na">key_store&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">path&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">/opt/heimdall/keystore.pem&lt;/span>
- &lt;span class="na">password&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">VeryInsecure!&lt;/span>
- &lt;span class="na">key_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5m&lt;/span>
- &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Foo&lt;/span>
- &lt;span class="na">scheme&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Bar&lt;/span>
- &lt;span class="na">claims&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="s">{&amp;#39;user&amp;#39;:&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">{{&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">quote&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">.Subject.ID&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">}}&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">}&amp;#34;&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bla&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">header&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">headers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">foo-bar&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">bla&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">blabla&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">cookie&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">cookies&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">foo-bar&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s1">&amp;#39;&lt;/span>&lt;span class="s">{{&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">.Subject.ID&lt;/span>&lt;span class="nv"> &lt;/span>&lt;span class="s">}}&amp;#39;&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">get_token&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">oauth2_client_credentials&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">X-Token&lt;/span>
- &lt;span class="na">token_url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://my-oauth-provider.com/token&lt;/span>
- &lt;span class="na">client_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">my_client&lt;/span>
- &lt;span class="na">client_secret&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">VerySecret!&lt;/span>
- &lt;span class="na">auth_method&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">basic_auth&lt;/span>
- &lt;span class="na">cache_ttl&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5m&lt;/span>
- &lt;span class="na">scopes&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="s">bar&lt;/span>
+ &lt;span class="na"&gt;finalizers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;signer&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;name&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foobar&lt;/span&gt;
+ &lt;span class="na"&gt;key_store&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/opt/heimdall/keystore.pem&lt;/span&gt;
+ &lt;span class="na"&gt;password&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;VeryInsecure!&lt;/span&gt;
+ &lt;span class="na"&gt;key_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5m&lt;/span&gt;
+ &lt;span class="na"&gt;header&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;name&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Foo&lt;/span&gt;
+ &lt;span class="na"&gt;scheme&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Bar&lt;/span&gt;
+ &lt;span class="na"&gt;claims&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;{&amp;#39;user&amp;#39;:&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;{{&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;quote&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;.Subject.ID&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;}}&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;}&amp;#34;&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bla&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;header&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;foo-bar&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bla&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;blabla&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;cookie&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;cookies&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;foo-bar&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="s"&gt;{{&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;.Subject.ID&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;}}&amp;#39;&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;get_token&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;oauth2_client_credentials&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;header&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;name&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;X-Token&lt;/span&gt;
+ &lt;span class="na"&gt;token_url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://my-oauth-provider.com/token&lt;/span&gt;
+ &lt;span class="na"&gt;client_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;my_client&lt;/span&gt;
+ &lt;span class="na"&gt;client_secret&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;VerySecret!&lt;/span&gt;
+ &lt;span class="na"&gt;auth_method&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;basic_auth&lt;/span&gt;
+ &lt;span class="na"&gt;cache_ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5m&lt;/span&gt;
+ &lt;span class="na"&gt;scopes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
 
- &lt;span class="na">error_handlers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">default&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">default&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">authenticate_with_kratos&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">redirect&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">to&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}&lt;/span>
+ &lt;span class="na"&gt;error_handlers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;default&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;default&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;authenticate_with_kratos&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;redirect&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;to&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}&lt;/span&gt;
 
-&lt;span class="na">default_rule&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">execute&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">authenticator&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">anonymous_authenticator&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">finalizer&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">jwt&lt;/span>
- &lt;span class="na">on_error&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">error_handler&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">authenticate_with_kratos&lt;/span>
- &lt;span class="na">if&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="pi">|&lt;/span>
- &lt;span class="s">((type(Error) == authentication_error &amp;amp;&amp;amp; Error.Source == &amp;#34;kratos_session_authenticator&amp;#34;) ||&lt;/span>
- &lt;span class="s">type(Error) == authorization_error) &amp;amp;&amp;amp;&lt;/span>
- &lt;span class="s">Request.Header(&amp;#34;Accept&amp;#34;).contains(&amp;#34;*/*&amp;#34;)&lt;/span>
+&lt;span class="na"&gt;default_rule&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;execute&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;authenticator&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;anonymous_authenticator&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;finalizer&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt&lt;/span&gt;
+ &lt;span class="na"&gt;on_error&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;error_handler&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;authenticate_with_kratos&lt;/span&gt;
+ &lt;span class="na"&gt;if&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="pi"&gt;|&lt;/span&gt;
+ &lt;span class="s"&gt;((type(Error) == authentication_error &amp;amp;&amp;amp; Error.Source == &amp;#34;kratos_session_authenticator&amp;#34;) ||&lt;/span&gt;
+ &lt;span class="s"&gt;type(Error) == authorization_error) &amp;amp;&amp;amp;&lt;/span&gt;
+ &lt;span class="s"&gt;Request.Header(&amp;#34;Accept&amp;#34;).contains(&amp;#34;*/*&amp;#34;)&lt;/span&gt;
 
-&lt;span class="na">providers&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">file_system&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">src&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">test_rules.yaml&lt;/span>
- &lt;span class="na">watch&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">true&lt;/span>
+&lt;span class="na"&gt;providers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;file_system&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;src&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;test_rules.yaml&lt;/span&gt;
+ &lt;span class="na"&gt;watch&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
 
- &lt;span class="na">http_endpoint&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">watch_interval&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5m&lt;/span>
- &lt;span class="na">endpoints&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://foo.bar/ruleset1&lt;/span>
- &lt;span class="na">http_cache&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">enabled&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="kc">false&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">https://foo.bar/ruleset2&lt;/span>
- &lt;span class="na">retry&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">give_up_after&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">5s&lt;/span>
- &lt;span class="na">max_delay&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">250ms&lt;/span>
- &lt;span class="na">auth&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">type&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">api_key&lt;/span>
- &lt;span class="na">config&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">name&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">api_key&lt;/span>
- &lt;span class="na">value&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">super-secret&lt;/span>
- &lt;span class="na">in&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">cookie&lt;/span>
- &lt;span class="na">header&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">X-Customer-Header&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">Some Value&lt;/span>
+ &lt;span class="na"&gt;http_endpoint&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;watch_interval&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5m&lt;/span&gt;
+ &lt;span class="na"&gt;endpoints&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://foo.bar/ruleset1&lt;/span&gt;
+ &lt;span class="na"&gt;http_cache&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://foo.bar/ruleset2&lt;/span&gt;
+ &lt;span class="na"&gt;retry&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;give_up_after&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5s&lt;/span&gt;
+ &lt;span class="na"&gt;max_delay&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;250ms&lt;/span&gt;
+ &lt;span class="na"&gt;auth&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;api_key&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;name&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;api_key&lt;/span&gt;
+ &lt;span class="na"&gt;value&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;super-secret&lt;/span&gt;
+ &lt;span class="na"&gt;in&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;cookie&lt;/span&gt;
+ &lt;span class="na"&gt;header&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;X-Customer-Header&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;Some Value&lt;/span&gt;
 
- &lt;span class="na">cloud_blob&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">watch_interval&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">1m&lt;/span>
- &lt;span class="na">buckets&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">gs://my-bucket&lt;/span>
- &lt;span class="na">prefix&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">service1&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">azblob://my-bucket&lt;/span>
- &lt;span class="na">prefix&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">service2&lt;/span>
- &lt;span class="pi">-&lt;/span> &lt;span class="na">url&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">s3://my-bucket/my-rule-set&lt;/span>
+ &lt;span class="na"&gt;cloud_blob&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;watch_interval&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;1m&lt;/span&gt;
+ &lt;span class="na"&gt;buckets&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;gs://my-bucket&lt;/span&gt;
+ &lt;span class="na"&gt;prefix&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;service1&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;azblob://my-bucket&lt;/span&gt;
+ &lt;span class="na"&gt;prefix&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;service2&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;s3://my-bucket/my-rule-set&lt;/span&gt;
 
- &lt;span class="na">kubernetes&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">auth_class&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">tls&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">key_id&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">foo&lt;/span>
- &lt;span class="na">key_store&lt;/span>&lt;span class="pi">:&lt;/span>
- &lt;span class="na">path&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">/path/to/pem.file&lt;/span>
- &lt;span class="na">password&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">VerySecret!&lt;/span>
- &lt;span class="na">min_version&lt;/span>&lt;span class="pi">:&lt;/span> &lt;span class="s">TLS1.3&lt;/span>&lt;/code>&lt;/pre>
-&lt;/div>
-&lt;/div></description></item></channel></rss>
+ &lt;span class="na"&gt;kubernetes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;auth_class&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;tls&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;key_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
+ &lt;span class="na"&gt;key_store&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/path/to/pem.file&lt;/span&gt;
+ &lt;span class="na"&gt;password&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;VerySecret!&lt;/span&gt;
+ &lt;span class="na"&gt;min_version&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;TLS1.3&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;</description></item></channel></rss>
