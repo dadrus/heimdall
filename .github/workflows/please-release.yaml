@@ -21,8 +21,16 @@ jobs:
         with:
           egress-policy: audit
       - name: Please Release
+        id: create_release
         uses: googleapis/release-please-action@c2a5a2bd6a758a0937f1ddb1e8950609867ed15c # v4.3.0
         with:
           target-branch: ${{ github.ref_name }}
           token: ${{ secrets.RELEASE_TOKEN }}
           skip-github-pull-request: true
+      - name: Please Release PR
+        if: steps.create_release.outputs.release_created == false
+        uses: googleapis/release-please-action@c2a5a2bd6a758a0937f1ddb1e8950609867ed15c # v4.3.0
+        with:
+          target-branch: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-release: true
