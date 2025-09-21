@@ -17,12 +17,20 @@ jobs:
       contents: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           egress-policy: audit
       - name: Please Release
-        uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445 # v4.2.0
+        id: create_release
+        uses: googleapis/release-please-action@c2a5a2bd6a758a0937f1ddb1e8950609867ed15c # v4.3.0
         with:
           target-branch: ${{ github.ref_name }}
           token: ${{ secrets.RELEASE_TOKEN }}
           skip-github-pull-request: true
+      - name: Please Release PR
+        if: steps.create_release.outputs.release_created == false
+        uses: googleapis/release-please-action@c2a5a2bd6a758a0937f1ddb1e8950609867ed15c # v4.3.0
+        with:
+          target-branch: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-release: true

@@ -3,12 +3,12 @@ prometheus_version := '10.2.3'
 loki_version := '6.24.0'
 tempo_version := '1.16.0'
 pyroscope_version := '1.10.0'
-nginx_version := '4.11.3'
-contour_version := '17.0.12'
-emissary_version := '8.9.1'
-haproxy_version := '0.14.6'
+nginx_version := '4.13.2'
+contour_version := '21.1.4'
+emissary_version := '8.12.2'
+haproxy_version := '0.14.9'
 envoy_gw_version := 'v1.0.1'
-traefik_version := '33.2.1'
+traefik_version := '37.1.1'
 metallb_version := '0.14.9'
 certmanager_version := '1.16.2'
 trustmanager_version := '0.14.0'
@@ -146,11 +146,15 @@ install-emissary-ingress-controller:
   kubectl apply -f emissary/listener.yaml
 
 
-install-haproxy-ingress-controller:
+install-haproxy-ingress-controller global_ext_auth="true":
+  #!/usr/bin/env bash
+
+  valuesFile=$({{global_ext_auth}} && echo global-helm-values.yaml || echo helm-values.yaml)
+
   helm upgrade --install haproxy-controller haproxy/haproxy-ingress \
     -n haproxy-controller --create-namespace \
     --version {{haproxy_version}} \
-    -f haproxy/helm-values.yaml \
+    -f haproxy/${valuesFile} \
     --wait
 
 install-envoy-gateway:
@@ -167,7 +171,7 @@ install-traefik global_mw="true":
 
   kubectl apply -f traefik/certificate.yaml
 
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
 
   helm upgrade --install traefik traefik/traefik \
       -n traefik \
@@ -194,7 +198,6 @@ install-istio with_ingress_gw="true":
     -f istio/istio-values.yaml \
     --wait
 
-  kubectl apply -f istio/envoy-filter.yaml
   kubectl apply -f istio/destination-rule.yaml
 
 
@@ -322,7 +325,9 @@ install-ngnix-global-demo: setup-cluster install-nginx-ingress-controller (insta
 
 install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
 
-install-haproxy-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
+install-haproxy-demo: setup-cluster (install-haproxy-ingress-controller "false") (install-heimdall "haproxy") (install-echo-service "haproxy-route-based")
+
+install-haproxy-global-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy-global")
 
 install-emissary-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
 
@@ -340,3 +345,4 @@ install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
+

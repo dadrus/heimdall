@@ -2,6 +2,7 @@ controller:
   allowSnippetAnnotations: true
 
   config:
+    annotations-risk-level: "Critical"
     enable-opentelemetry: "true"
     opentelemetry-config: "/etc/nginx/opentelemetry.toml"
     opentelemetry-operation-name: "HTTP $request_method $service_name $uri"

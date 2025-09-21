@@ -221,7 +221,7 @@ buckets:
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/json"},
-					strings.NewReader(``), 0)
+					strings.NewReader(``), 0, nil)
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, _ testCase, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
@@ -257,7 +257,7 @@ rules:
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/yaml"},
-					strings.NewReader(data), int64(len(data)))
+					strings.NewReader(data), int64(len(data)), nil)
 				require.NoError(t, err)
 			},
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
@@ -306,7 +306,7 @@ rules:
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/yaml"},
-					strings.NewReader(data), int64(len(data)))
+					strings.NewReader(data), int64(len(data)), nil)
 				require.NoError(t, err)
 			},
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
@@ -360,7 +360,7 @@ rules:
 
 						_, err := backend.PutObject(bucketName, "test-rule1",
 							map[string]string{"Content-Type": "application/yaml"},
-							strings.NewReader(data), int64(len(data)))
+							strings.NewReader(data), int64(len(data)), nil)
 						require.NoError(t, err)
 					case 2:
 						clearBucket(t)
@@ -379,7 +379,7 @@ rules:
 
 						_, err := backend.PutObject(bucketName, "test-rule2",
 							map[string]string{"Content-Type": "application/yaml"},
-							strings.NewReader(data), int64(len(data)))
+							strings.NewReader(data), int64(len(data)), nil)
 						require.NoError(t, err)
 					}
 
@@ -455,7 +455,7 @@ rules:
 `
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
-							strings.NewReader(data), int64(len(data)))
+							strings.NewReader(data), int64(len(data)), nil)
 						require.NoError(t, err)
 					case 2:
 						data := `
@@ -471,7 +471,7 @@ rules:
 `
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
-							strings.NewReader(data), int64(len(data)))
+							strings.NewReader(data), int64(len(data)), nil)
 						require.NoError(t, err)
 					default:
 						data := `
@@ -487,7 +487,7 @@ rules:
 `
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
-							strings.NewReader(data), int64(len(data)))
+							strings.NewReader(data), int64(len(data)), nil)
 						require.NoError(t, err)
 					}
 

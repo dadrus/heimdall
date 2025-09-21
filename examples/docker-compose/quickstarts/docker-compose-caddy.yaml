@@ -1,6 +1,6 @@
 services:
   edge-router:
-    image: caddy:2.9.1-alpine
+    image: caddy:2.10.2-alpine
     ports:
       - "9090:9090"
     volumes:
