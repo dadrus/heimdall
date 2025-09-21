@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Services on Heimdall</title><link>https://dadrus.github.io/docs/services/</link><description>Recent content in Services on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 21 Sep 2025 21:56:18 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/services/index.xml" rel="self" type="application/rss+xml"/><item><title>Main Service</title><link>https://dadrus.github.io/docs/services/main/</link><pubDate>Thu, 09 Jun 2022 18:55:45 +0200</pubDate><guid>https://dadrus.github.io/docs/services/main/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;To make use of this service you have to start heimdall with either &lt;code&gt;heimdall serve proxy&lt;/code&gt; or &lt;code&gt;heimdall serve decision&lt;/code&gt;. By default, heimdall listens on &lt;code&gt;0.0.0.0:4456&lt;/code&gt; endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="sect1"&gt;
+&lt;h2 id="_configuration"&gt;Configuration&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;The configuration of this service can be adjusted in the &lt;code&gt;serve&lt;/code&gt; property, which lives on the top level of heimdall’s configuration and supports the following properties.&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>Management Service</title><link>https://dadrus.github.io/docs/services/management/</link><pubDate>Thu, 09 Jun 2022 18:55:36 +0200</pubDate><guid>https://dadrus.github.io/docs/services/management/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;By default, heimdall listens on &lt;code&gt;0.0.0.0:4457&lt;/code&gt; for incoming requests and applies useful default timeouts and buffer limits. No additional options are configured by default, but you can adjust them as needed.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;This service exposes the health and JWKS endpoints.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="sect1"&gt;
+&lt;h2 id="_configuration"&gt;Configuration&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;The configuration of the management endpoint is defined under the &lt;code&gt;management&lt;/code&gt; property. It supports the following properties.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="ulist"&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;host&lt;/code&gt;&lt;/strong&gt;: &lt;em&gt;string&lt;/em&gt; (optional)&lt;/p&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Use this property to specify the TCP/IP address on which heimdall should listen for incoming connections. E.g. the entry &lt;code&gt;0.0.0.0&lt;/code&gt; allows listening on all network interfaces for IPv4 and is the default setting.&lt;/p&gt;
+&lt;/div&gt;</description></item></channel></rss>
