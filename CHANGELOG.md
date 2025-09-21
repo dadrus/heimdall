@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-09-21)
+
+
+### Bug Fixes
+
+* Helm Chart updated to set `appProtocol` to `kubernetes.io/h2c` if heimdall is integrted with Envoy proxy based solutions ([#2741](https://github.com/dadrus/heimdall/issues/2741)) ([2824e59](https://github.com/dadrus/heimdall/commit/2824e5994068750edbda2a9f43f51298cb37983c))
+
+
+### Documentation
+
+* "Protect an Application" chapter updated to make use of the most recent versions of nginx and opa ([#2750](https://github.com/dadrus/heimdall/issues/2750)) ([c000c04](https://github.com/dadrus/heimdall/commit/c000c0416e7bda127f018efea1ca8f63cfce99b7))
+* contour helm chart version used in kubernetes examples updated to v21.1.4 ([#2743](https://github.com/dadrus/heimdall/issues/2743)) ([ebfde4c](https://github.com/dadrus/heimdall/commit/ebfde4c4fe488afc5d3738d3f4fc61edfd0ca95e))
+* docker compose examples updated to use the most recent versions of caddy, traefik and envoy ([#2751](https://github.com/dadrus/heimdall/issues/2751)) ([501f246](https://github.com/dadrus/heimdall/commit/501f246834ee80d37a4acf5e57da6f9e49fe39a3))
+* emissary helm chart version used in kubernetes examples updated to v8.12.2 ([#2745](https://github.com/dadrus/heimdall/issues/2745)) ([4908aa9](https://github.com/dadrus/heimdall/commit/4908aa9ef6887d0935da0894c1408bfe1690bb4d))
+* haproxy helm chart version used in kubernetes examples updated to v0.14.9 ([#2746](https://github.com/dadrus/heimdall/issues/2746)) ([445b7cc](https://github.com/dadrus/heimdall/commit/445b7cc7b75cd381da19e3f3acf8194fd6b5a5dd))
+* nginx helm chart version used in kubernetes examples updated to v4.13.2 ([#2742](https://github.com/dadrus/heimdall/issues/2742)) ([cd2f689](https://github.com/dadrus/heimdall/commit/cd2f68979357d09ffc6e12e1d747e25ae10c0397))
+* traefik helm chart version used in kubernetes examples updated to v37.1.1 ([#2749](https://github.com/dadrus/heimdall/issues/2749)) ([971d195](https://github.com/dadrus/heimdall/commit/971d19513137997bec26a70411f88a2c14990e69))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 5ddc1d6 ([#2738](https://github.com/dadrus/heimdall/issues/2738)) ([64308ca](https://github.com/dadrus/heimdall/commit/64308ca8157cb1bfa112680ee7f1d92708419a7d))
+* update golang v1.25.1 ([#2725](https://github.com/dadrus/heimdall/issues/2725)) ([c3f02a9](https://github.com/dadrus/heimdall/commit/c3f02a997a3721cd55a65075d6eaafbc70931006))
+* update google.golang.org/genproto/googleapis/rpc digest to 9702482 ([#2732](https://github.com/dadrus/heimdall/issues/2732)) ([f18651e](https://github.com/dadrus/heimdall/commit/f18651e445af66560355f50c6e82cc9b0f87d50b))
+* update kubernetes packages to v0.34.1 ([#2736](https://github.com/dadrus/heimdall/issues/2736)) ([1839456](https://github.com/dadrus/heimdall/commit/183945691c8528a5a8f463dc5aba614803183dfb))
+* update module github.com/go-co-op/gocron/v2 to v2.16.5 ([#2723](https://github.com/dadrus/heimdall/issues/2723)) ([b40b989](https://github.com/dadrus/heimdall/commit/b40b989f4352457e670593c90a79989a0c20ef06))
+* update module github.com/google/cel-go to v0.26.1 ([#2711](https://github.com/dadrus/heimdall/issues/2711)) ([7541d97](https://github.com/dadrus/heimdall/commit/7541d978f9e09d1d03747095faf9ff290ea27c3e))
+* update module github.com/knadh/koanf/v2 to v2.3.0 ([#2757](https://github.com/dadrus/heimdall/issues/2757)) ([3c693dd](https://github.com/dadrus/heimdall/commit/3c693dd84fd2bececf4a1a38bc49059bed7c5083))
+* update module github.com/prometheus/client_golang to v1.23.2 ([#2731](https://github.com/dadrus/heimdall/issues/2731)) ([382fbd2](https://github.com/dadrus/heimdall/commit/382fbd237c41200691297d822db9ca05d4ad74cd))
+* update module github.com/redis/rueidis to v1.0.65 ([#2763](https://github.com/dadrus/heimdall/issues/2763)) ([ab0ea94](https://github.com/dadrus/heimdall/commit/ab0ea94e92020f9406f3ca860098c692db5488a4))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.65 ([#2763](https://github.com/dadrus/heimdall/issues/2763)) ([ab0ea94](https://github.com/dadrus/heimdall/commit/ab0ea94e92020f9406f3ca860098c692db5488a4))
+* update module github.com/spf13/cobra to v1.10.1 ([#2722](https://github.com/dadrus/heimdall/issues/2722)) ([a48a973](https://github.com/dadrus/heimdall/commit/a48a9730cdf36c0d018470830dc9f7fe41f117db))
+* update module github.com/spf13/pflag to v1.0.10 ([#2724](https://github.com/dadrus/heimdall/issues/2724)) ([db0e2df](https://github.com/dadrus/heimdall/commit/db0e2df3a9213df3514317f78949192f1dfe9420))
+* update module google.golang.org/grpc to v1.75.1 ([#2737](https://github.com/dadrus/heimdall/issues/2737)) ([4f266bc](https://github.com/dadrus/heimdall/commit/4f266bc730ad9b7bc4a3a5af5572830ca0ec16e2))
+* update module google.golang.org/protobuf to v1.36.9 ([#2734](https://github.com/dadrus/heimdall/issues/2734)) ([91d6087](https://github.com/dadrus/heimdall/commit/91d6087ada11fd6d1a40a80c98cd1087eb33827e))
+* update opentelemetry-go monorepo to v1.38.0 ([#2716](https://github.com/dadrus/heimdall/issues/2716)) ([b30ec47](https://github.com/dadrus/heimdall/commit/b30ec47ae6532ec15bb0da8d4ed0612366d221f7))
+* update opentelemetry-go-contrib monorepo to v0.63.0 ([#2717](https://github.com/dadrus/heimdall/issues/2717)) ([759d7a7](https://github.com/dadrus/heimdall/commit/759d7a71d682cbc4375214fcc74095cb50ed3123))
+
 ## [0.17.1](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.17.1) (2025-08-18)
 
 
