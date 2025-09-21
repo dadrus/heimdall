@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.18.0](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.18.0) (2025-09-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* Support for `glob` and `regex` host type expressions removed ([#2666](https://github.com/dadrus/heimdall/issues/2666))
+* `allow_fallback_on_error` property removed from authenticators ([#2665](https://github.com/dadrus/heimdall/issues/2665))
+* `backtracking_enabled` removed from the regular rule definition ([#2662](https://github.com/dadrus/heimdall/issues/2662))
+
+### Code Refactorings
+
+* `allow_fallback_on_error` property removed from authenticators ([#2665](https://github.com/dadrus/heimdall/issues/2665)) ([73496bf](https://github.com/dadrus/heimdall/commit/73496bf743c6497aafde5c03c9736399ccee4205))
+* `backtracking_enabled` removed from the regular rule definition ([#2662](https://github.com/dadrus/heimdall/issues/2662)) ([7775046](https://github.com/dadrus/heimdall/commit/77750469e8f97b2e86cd182ba06fce4d3c70a7bf))
+* Support for `glob` and `regex` host type expressions removed ([#2666](https://github.com/dadrus/heimdall/issues/2666)) ([d0f7bdb](https://github.com/dadrus/heimdall/commit/d0f7bdb827d3b769e3fdb6cec8ef1e137f261671))
+
+
+### Documentation
+
+* Integration guide for KGateway ([#2760](https://github.com/dadrus/heimdall/issues/2760)) ([81c8a44](https://github.com/dadrus/heimdall/commit/81c8a442ed5ad4d0e934302c9bb5e76bbebe6814))
+
 ## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-09-21)
 
 
