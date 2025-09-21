@@ -34,6 +34,9 @@ spec:
     - port: {{ .Values.service.main.port }}
       targetPort: http-main
       protocol: TCP
+      {{- if and (eq .Values.operationMode "decision") (has "--envoy-grpc" .Values.extraArgs) }}
+      appProtocol: kubernetes.io/h2c
+      {{- end }}
       name: {{ .Values.service.main.name }}
       {{- $providers := default dict .Values.providers }}
       {{- $kubernetes := default dict $providers.kubernetes }}
