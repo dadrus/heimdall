@@ -1,0 +1,40 @@
+{{- if.Values.podMonitor.enabled -}}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "podMonitor" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "heimdall.fullname" $data }}
+  namespace: {{ include "heimdall.namespace" $data }}
+  labels:
+    {{- include "heimdall.labels" $data | nindent 4 }}
+    {{- with .Values.podMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "heimdall.selectorLabels" $data | nindent 6 }}
+  podMetricsEndpoints:
+    - path: {{ .Values.podMonitor.telemetryPath }}
+      port: http-metrics
+      scheme: http
+      {{- with .Values.podMonitor.interval }}
+      interval: {{ . }}
+      {{- end }}
+      {{- with .Values.podMonitor.scrapeTimeout  }}
+      scrapeTimeout: {{ . }}
+      {{- end }}
+      {{- if .Values.podMonitor.metricRelabelings }}
+      metricRelabelings:
+      {{- toYaml .Values.podMonitor.metricRelabelings | nindent 8 }}
+      {{- end }}
+      {{- if .Values.podMonitor.relabelings }}
+      relabelings:
+      {{- toYaml .Values.podMonitor.relabelings | nindent 8 }}
+      {{- end }}
+  jobLabel: {{ .Release.Name }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end }}
