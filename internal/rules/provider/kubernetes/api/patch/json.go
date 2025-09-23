@@ -38,6 +38,10 @@ type (
 	}
 )
 
+func NewJSONPatch(from, to object, withOptimisticLock bool) *JSON {
+	return &JSON{patchType: types.JSONPatchType, from: from, to: to, enableOptimisticLock: withOptimisticLock}
+}
+
 func (p *JSON) Type() types.PatchType { return p.patchType }
 
 func (p *JSON) Data() ([]byte, error) {
@@ -65,7 +69,3 @@ func (p *JSON) Data() ([]byte, error) {
 
 func (p *JSON) ResourceName() string      { return p.from.GetName() }
 func (p *JSON) ResourceNamespace() string { return p.from.GetNamespace() }
-
-func NewJSONPatch(from, to object, withOptimisticLock bool) *JSON {
-	return &JSON{patchType: types.JSONPatchType, from: from, to: to, enableOptimisticLock: withOptimisticLock}
-}

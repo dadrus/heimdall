@@ -21,11 +21,13 @@ package v1beta1
 import (
 	"fmt"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/dadrus/heimdall/internal/rules/config"
 )
 
+// nolint: gochecknoglobals
 var GroupVersion = schema.GroupVersion{
 	Group:   "heimdall.dadrus.github.com",
 	Version: "v1beta1",

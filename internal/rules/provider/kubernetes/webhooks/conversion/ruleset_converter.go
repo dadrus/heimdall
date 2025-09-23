@@ -118,15 +118,11 @@ func (rc *rulesetConverter) convertSpec(
 			rs        v1alpha4.RuleSet
 			converted []config.Rule
 		)
-
 		if err = json.Unmarshal(rawObj, &rs); err != nil {
 			return nil, err
 		}
 
-		converted, err = rc.convertRules(ctx, rs.Spec.Rules, toVersion)
-		if err != nil {
-			return nil, err
-		}
+		converted = rc.convertRules(ctx, rs.Spec.Rules, toVersion)
 
 		return v1beta1.RuleSetSpec{
 			AuthClassName: rs.Spec.AuthClassName,
@@ -143,15 +139,11 @@ func (rc *rulesetConverter) convertSpec(
 			rs        v1beta1.RuleSet
 			converted []config.Rule
 		)
-
 		if err = json.Unmarshal(rawObj, &rs); err != nil {
 			return nil, err
 		}
 
-		converted, err = rc.convertRules(ctx, rs.Spec.Rules, toVersion)
-		if err != nil {
-			return nil, err
-		}
+		converted = rc.convertRules(ctx, rs.Spec.Rules, toVersion)
 
 		return v1alpha4.RuleSetSpec{
 			AuthClassName: rs.Spec.AuthClassName,
@@ -164,10 +156,10 @@ func (rc *rulesetConverter) convertSpec(
 }
 
 func (rc *rulesetConverter) convertRules(
-	ctx context.Context,
+	_ context.Context,
 	rules []config.Rule,
-	toVersion schema.GroupVersion,
-) ([]config.Rule, error) {
+	_ schema.GroupVersion,
+) []config.Rule {
 	converted := make([]config.Rule, len(rules))
 
 	for idx, rul := range rules {
@@ -186,5 +178,5 @@ func (rc *rulesetConverter) convertRules(
 		}
 	}
 
-	return converted, nil
+	return converted
 }

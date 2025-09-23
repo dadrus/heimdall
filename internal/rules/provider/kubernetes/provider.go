@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/patch"
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +42,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/patch"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -210,7 +210,7 @@ func (p *Provider) newController(ctx context.Context, namespace string) (cache.S
 				UpdateFunc: func(oldObj, newObj any) { p.updateRuleSet(ctx, oldObj, newObj) },
 			},
 		},
-		ResyncPeriod: 10 * time.Minute,
+		ResyncPeriod: 10 * time.Minute, //nolint: mnd
 	})
 }
 

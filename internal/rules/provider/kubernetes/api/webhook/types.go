@@ -31,11 +31,11 @@ type (
 	}
 
 	Response[Req Request] interface {
-		Complete(Req)
+		Complete(req Req)
 	}
 
 	Review[Req Request, Resp Response[Req]] interface {
 		Decode(r *http.Request) (Req, error)
-		WrapResponse(Resp) any
+		WrapResponse(resp Resp) any
 	}
 )

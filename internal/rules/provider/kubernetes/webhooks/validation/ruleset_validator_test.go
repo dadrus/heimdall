@@ -278,7 +278,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 			configureMocks := x.IfThenElse(
 				tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, fm *mocks.FactoryMock) { t.Helper() },
+				func(t *testing.T, _ *mocks.FactoryMock) { t.Helper() },
 			)
 
 			configureMocks(t, fm)

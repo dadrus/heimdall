@@ -26,7 +26,7 @@ type (
 
 	responseOption func(*response)
 
-	// Adapter for ConversionReview
+	// Adapter for ConversionReview.
 	review struct{}
 )
 

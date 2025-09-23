@@ -41,7 +41,7 @@ type (
 
 	responseOption func(*response)
 
-	// Adapter for AdmissionReview
+	// Adapter for AdmissionReview.
 	review struct{}
 )
 

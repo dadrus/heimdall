@@ -42,7 +42,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 
 				return req
 			}(),
-			configureMocks: func(t *testing.T, hm *HandlerMock[*RequestMock, *ResponseMock[*RequestMock]], rm *ReviewMock[*RequestMock, *ResponseMock[*RequestMock]]) {
+			configureMocks: func(t *testing.T, _ *HandlerMock[*RequestMock, *ResponseMock[*RequestMock]], rm *ReviewMock[*RequestMock, *ResponseMock[*RequestMock]]) {
 				t.Helper()
 
 				rm.EXPECT().Decode(mock.Anything).Return(nil, errors.New("test error"))
@@ -186,7 +186,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 			configureMocks := x.IfThenElse(
 				tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, hm *HandlerMock[*RequestMock, *ResponseMock[*RequestMock]], rm *ReviewMock[*RequestMock, *ResponseMock[*RequestMock]]) {
+				func(t *testing.T, _ *HandlerMock[*RequestMock, *ResponseMock[*RequestMock]], _ *ReviewMock[*RequestMock, *ResponseMock[*RequestMock]]) {
 					t.Helper()
 				})
 
