@@ -15,11 +15,19 @@ lint-dockerfile:
   hadolint docker/debug.Dockerfile
 
 lint-helmchart:
+  #!/usr/bin/env bash
+
   helm lint ./charts/heimdall
-  helm template ./charts/heimdall > /tmp/decision-config.yaml
-  helm template --set operationMode=proxy ./charts/heimdall > /tmp/proxy-config.yaml
-  kubeconform --skip RuleSet -kubernetes-version 1.31.0 /tmp/decision-config.yaml
-  kubeconform --skip RuleSet -kubernetes-version 1.31.0 /tmp/proxy-config.yaml
+  helm template --set crds.enabled=true ./charts/heimdall > /tmp/decision-config.yaml
+  helm template --set crds.enabled=true --set operationMode=proxy ./charts/heimdall > /tmp/proxy-config.yaml
+  kubeconform \
+    -schema-location default \
+    -schema-location "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{{{ .NormalizedKubernetesVersion }}/{{{{ .ResourceKind }}.json" \
+    --skip RuleSet -kubernetes-version 1.31.0 /tmp/decision-config.yaml
+  kubeconform \
+    -schema-location default \
+    -schema-location "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{{{ .NormalizedKubernetesVersion }}/{{{{ .ResourceKind }}.json" \
+    --skip RuleSet -kubernetes-version 1.31.0 /tmp/proxy-config.yaml
   rm /tmp/decision-config.yaml
   rm /tmp/proxy-config.yaml
 
