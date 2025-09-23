@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1beta1
+package v1alpha4
 
 //go:generate controller-gen object paths=$GOFILE
 
@@ -28,7 +28,7 @@ import (
 
 var GroupVersion = schema.GroupVersion{
 	Group:   "heimdall.dadrus.github.com",
-	Version: "v1beta1",
+	Version: "v1alpha4",
 }
 
 const (
@@ -64,7 +64,7 @@ func (rs *RuleSet) AsConfig() *config.RuleSet {
 			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
 			ModTime: rs.CreationTimestamp.Time,
 		},
-		Version: "1beta1",
+		Version: "1alpha4",
 		Name:    rs.Name,
 		Rules:   rs.Spec.Rules,
 	}

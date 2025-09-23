@@ -21,21 +21,36 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
 
-type ruleSetRepositoryImpl struct {
-	cl rest.Interface
-	ns string
-}
+type (
+	Patch interface {
+		ResourceName() string
+		ResourceNamespace() string
+		Type() types.PatchType
+		Data() ([]byte, error)
+	}
 
-func (r *ruleSetRepositoryImpl) List(
+	Repository interface {
+		List(ctx context.Context, opts metav1.ListOptions) (*RuleSetList, error)
+		Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+		Get(ctx context.Context, key types.NamespacedName, opts metav1.GetOptions) (*RuleSet, error)
+		PatchStatus(ctx context.Context, patch Patch, opts metav1.PatchOptions) (*RuleSet, error)
+	}
+
+	ruleSetRepository struct {
+		cl rest.Interface
+		ns string
+	}
+)
+
+func (r *ruleSetRepository) List(
 	ctx context.Context, opts metav1.ListOptions,
-) (runtime.Object, error) {
+) (*RuleSetList, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -53,7 +68,7 @@ func (r *ruleSetRepositoryImpl) List(
 	return result, err
 }
 
-func (r *ruleSetRepositoryImpl) Watch(
+func (r *ruleSetRepository) Watch(
 	ctx context.Context, opts metav1.ListOptions,
 ) (watch.Interface, error) {
 	var timeout time.Duration
@@ -71,7 +86,7 @@ func (r *ruleSetRepositoryImpl) Watch(
 		Watch(ctx)
 }
 
-func (r *ruleSetRepositoryImpl) Get(
+func (r *ruleSetRepository) Get(
 	ctx context.Context, key types.NamespacedName, opts metav1.GetOptions,
 ) (*RuleSet, error) {
 	result := &RuleSet{}
@@ -87,7 +102,7 @@ func (r *ruleSetRepositoryImpl) Get(
 	return result, err
 }
 
-func (r *ruleSetRepositoryImpl) PatchStatus(
+func (r *ruleSetRepository) PatchStatus(
 	ctx context.Context, patch Patch, opts metav1.PatchOptions,
 ) (*RuleSet, error) {
 	result := &RuleSet{}

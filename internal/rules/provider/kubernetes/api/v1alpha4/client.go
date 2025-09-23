@@ -14,24 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1beta1
+package v1alpha4
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
-
-func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {
-	return func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(gv, &RuleSet{}, &RuleSetList{})
-		metav1.AddToGroupVersion(scheme, gv)
-
-		return nil
-	}
-}
 
 type (
 	Client interface {

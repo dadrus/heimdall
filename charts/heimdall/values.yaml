@@ -114,14 +114,23 @@ service:
     # Service port name
     name: management
   # Only used if rules.providers.kubernetes.tls is configured
-  admissionController:
+  webhook:
     # Service port
     port: 4458
     # Service port name
     name: admission-controller
 
+crds:
+  # This option decides if the CRDs should be installed as part of the Helm installation.
+  enabled: true
+
+  # This option makes it so that the "helm.sh/resource-policy: keep" annotation is added to
+  # the CRD. This will prevent Helm from uninstalling the CRD when the Helm release is uninstalled.
+  # WARNING: when the CRDs are removed, all RuleSet resources will be removed too by the garbage collector.
+  keep: true
+
 # Only used if rules.providers.kubernetes.tls is configured
-admissionController:
+webhook:
   # Remove the curly braces after 'labels:' if you do want to specify additional labels
   labels: { }
 

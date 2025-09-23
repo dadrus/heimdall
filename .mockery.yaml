@@ -78,14 +78,7 @@ packages:
   github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers:
     interfaces:
       Finalizer: {}
-  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/admission:
-    interfaces:
-      Handler:
-        config:
-          dir: "{{ .InterfaceDir }}"
-          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
-          pkgname: "{{ .SrcPackageName }}"
-  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/controller/webhook:
+  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/webhook:
     config:
       dir: "{{ .InterfaceDir }}"
       filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
@@ -95,10 +88,14 @@ packages:
       Request: {}
       Response: {}
       Review: {}
+  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4:
+    interfaces:
+      Client: { }
+      Repository: { }
   github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1:
     interfaces:
       Client: {}
-      RuleSetRepository: {}
+      Repository: {}
   github.com/dadrus/heimdall/internal/rules/rule:
     interfaces:
       Backend: {}

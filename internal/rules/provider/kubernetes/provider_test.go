@@ -394,7 +394,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"adding rule set fails": {
@@ -418,7 +418,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionFalse, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActivationFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActivationFailed, ConditionReason(condition.Reason))
 			},
 		},
 		"adding rule set, resulting in a very long error message": {
@@ -454,7 +454,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionFalse, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActivationFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActivationFailed, ConditionReason(condition.Reason))
 			},
 		},
 		"adding unprocessable rule set": {
@@ -560,7 +560,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"a ruleset is added with failing status update": {
@@ -685,7 +685,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"removing rule set fails": {
@@ -717,13 +717,13 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 
 				assert.Equal(t, "1/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetUnloadingFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetUnloadingFailed, ConditionReason(condition.Reason))
 			},
 		},
 		"a ruleset is added and then updated": {
@@ -837,13 +837,13 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 
 				assert.Equal(t, "1/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"a ruleset is added and then updated with a mismatching authClassName": {
@@ -933,7 +933,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"failed updating rule set": {
@@ -998,13 +998,13 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 
 				assert.Equal(t, "0/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionFalse, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActivationFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActivationFailed, ConditionReason(condition.Reason))
 			},
 		},
 	} {
@@ -1120,12 +1120,12 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setupMocks func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock)
+		setupMocks func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock)
 		useRuleSet func(t *testing.T, provider *Provider, rs *v1beta1.RuleSet)
-		assert     func(t *testing.T, repository *mocks2.RuleSetRepositoryMock)
+		assert     func(t *testing.T, repository *mocks2.RepositoryMock)
 	}{
 		"error on creating new rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
@@ -1144,7 +1144,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 
 				provider.addRuleSet(t.Context(), rs)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1162,7 +1162,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"unrecoverable error on updating status": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
@@ -1179,14 +1179,14 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 
 				provider.addRuleSet(t.Context(), rs)
 			},
-			assert: func(t *testing.T, _ *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, _ *mocks2.RepositoryMock) {
 				t.Helper()
 
 				// expectation is that repository.PatchStatus is called once
 			},
 		},
 		"error on creating new rule set followed by multiple successful updates": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
@@ -1220,7 +1220,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1256,7 +1256,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error on creating new rule set followed by a successful update, followed by multiple failed updates": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
@@ -1305,7 +1305,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1350,7 +1350,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error on updating previously successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1375,7 +1375,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1403,7 +1403,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"successive errors on updating previously successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1436,7 +1436,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1472,7 +1472,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"successive errors on updating previously loaded and once successfully updated rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1519,7 +1519,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1563,7 +1563,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error deleting a successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1588,7 +1588,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				oldRS.Generation++
 				provider.deleteRuleSet(t.Context(), oldRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1615,7 +1615,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"successful deleting a successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1640,7 +1640,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				oldRS.Generation++
 				provider.deleteRuleSet(t.Context(), oldRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1668,7 +1668,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error deleting a not loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
@@ -1693,7 +1693,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				oldRS.Generation++
 				provider.deleteRuleSet(t.Context(), oldRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1738,9 +1738,9 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			}
 
 			processor := mocks.NewRuleSetProcessorMock(t)
-			repository := mocks2.NewRuleSetRepositoryMock(t)
+			repository := mocks2.NewRepositoryMock(t)
 			client := mocks2.NewClientMock(t)
-			client.EXPECT().RuleSetRepository(mock.Anything).Return(repository)
+			client.EXPECT().Repository(mock.Anything).Return(repository)
 
 			tc.setupMocks(t, processor, repository)
 

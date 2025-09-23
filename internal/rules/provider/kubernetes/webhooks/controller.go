@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admissioncontroller
+package webhooks
 
 import (
 	"context"
@@ -52,7 +52,7 @@ func New(
 	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Admission Controller",
+		ServiceName:    "Kubernetes Webhooks",
 		ServiceAddress: listeningAddress,
 		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
 		Logger:         logger,

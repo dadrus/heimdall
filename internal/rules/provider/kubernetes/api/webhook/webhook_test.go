@@ -127,7 +127,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 			assert: func(t *testing.T, resp *http.Response) {
 				t.Helper()
 
-				assert.Equal(t, http.StatusGatewayTimeout, resp.StatusCode)
+				assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 			},
 		},
 		"successful execution with timeout set": {

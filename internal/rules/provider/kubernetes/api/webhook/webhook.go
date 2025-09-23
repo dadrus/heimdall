@@ -80,7 +80,7 @@ func (wh *Webhook[Req, Resp]) ServeHTTP(rw http.ResponseWriter, r *http.Request)
 	select {
 	case <-ctx.Done():
 		log.Error().Err(ctx.Err()).Msg("timed out while processing request")
-		rw.WriteHeader(http.StatusGatewayTimeout)
+		rw.WriteHeader(http.StatusServiceUnavailable)
 	case <-done:
 		encoded, err := json.Marshal(wh.review.WrapResponse(resp))
 		if err != nil {

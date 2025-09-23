@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admissioncontroller
+package webhooks
 
 import (
 	"fmt"
@@ -32,8 +32,8 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/conversion"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/validation"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks/conversion"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks/validation"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
@@ -66,7 +66,7 @@ func newService(
 			}),
 		),
 		otelmetrics.New(
-			otelmetrics.WithSubsystem("admission webhooks"),
+			otelmetrics.WithSubsystem("kubernetes webhooks"),
 			otelmetrics.WithServerName(serviceName),
 		),
 	).Then(newHandler(ruleFactory, authClass))
@@ -83,8 +83,8 @@ func newService(
 
 func newHandler(ruleFactory rule.Factory, authClass string) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/validate-ruleset", validation.NewHandler(ruleFactory, authClass))
-	mux.Handle("/convert-rulesets", conversion.NewHandler(ruleFactory, authClass))
+	mux.Handle("/validate", validation.NewHandler(ruleFactory, authClass))
+	mux.Handle("/convert", conversion.NewHandler())
 
 	return mux
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +14,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package kubernetes
+package validation
 
-const (
-	DefaultClass = "default"
-	ProviderType = "kubernetes"
+import (
+	"net/http"
+
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/webhook"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
+
+func NewHandler(factory rule.Factory, authClass string) http.Handler {
+	return webhook.New(&rulesetValidator{f: factory, ac: authClass}, &review{})
+}

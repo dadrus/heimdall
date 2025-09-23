@@ -38,10 +38,10 @@ spec:
       {{- $providers := default dict .Values.providers }}
       {{- $kubernetes := default dict $providers.kubernetes }}
       {{- if $kubernetes.tls }}
-    - port: {{ .Values.service.admissionController.port }}
+    - port: {{ .Values.service.webhook.port }}
       targetPort: https-webhook
       protocol: TCP
-      name: {{ .Values.service.admissionController.name }}
+      name: {{ .Values.service.webhook.name }}
       {{- end }}
   selector:
     {{- include "heimdall.selectorLabels" $data | nindent 4 }}

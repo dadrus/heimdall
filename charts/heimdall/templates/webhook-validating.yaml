@@ -2,7 +2,7 @@
 {{- $kubernetes := default dict $providers.kubernetes }}
 {{- if $kubernetes.tls }}
 # Only active if .Values.rules.providers.kubernetes.tls is configured
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "admissionController" }}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "webhook" }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -11,13 +11,13 @@ metadata:
   labels:
     {{- include "heimdall.labels" $data | nindent 4 }}
   annotations:
-    {{- toYaml .Values.admissionController.annotations | nindent 4 }}
+    {{- toYaml .Values.webhook.annotations | nindent 4 }}
 webhooks:
   - name: admission-controller.heimdall.dadrus.github.com
     admissionReviewVersions: [ "v1" ]
     sideEffects: None
-    timeoutSeconds: {{ .Values.admissionController.timeoutSeconds }}
-    {{- with .Values.admissionController.namespaceSelector }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
+    {{- with .Values.webhook.namespaceSelector }}
     namespaceSelector:
       {{- toYaml . | nindent 8 }}
     {{- end }}
@@ -32,12 +32,12 @@ webhooks:
       - name: 'auth-class-filter'
         expression: 'object.spec.authClassName == {{ default (quote "default") (quote $kubernetes.auth_class) }}'
     clientConfig:
-      {{- with .Values.admissionController.caBundle }}
+      {{- with .Values.webhook.caBundle }}
       caBundle: {{ . }}
       {{- end }}
       service:
-        namespace: {{ include "heimdall.namespace" . }}
+        namespace: {{ include "heimdall.namespace" $data }}
         name: {{ include "heimdall.fullname" . }}
-        path: "/validate-ruleset"
-        port: {{ .Values.service.admissionController.port }}
+        path: "/validate"
+        port: {{ .Values.service.webhook.port }}
 {{- end }}

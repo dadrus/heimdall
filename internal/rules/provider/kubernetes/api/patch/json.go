@@ -14,24 +14,33 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1beta1
+package patch
 
 import (
 	"github.com/goccy/go-json"
 	"github.com/wI2L/jsondiff"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type jsonPatch struct {
-	patchType            types.PatchType
-	from                 object
-	to                   object
-	enableOptimisticLock bool
-}
+type (
+	object interface {
+		metav1.Object
+		runtime.Object
+	}
 
-func (p *jsonPatch) Type() types.PatchType { return p.patchType }
+	JSON struct {
+		patchType            types.PatchType
+		from                 object
+		to                   object
+		enableOptimisticLock bool
+	}
+)
 
-func (p *jsonPatch) Data() ([]byte, error) {
+func (p *JSON) Type() types.PatchType { return p.patchType }
+
+func (p *JSON) Data() ([]byte, error) {
 	original := p.from
 	modified := p.to
 
@@ -54,9 +63,9 @@ func (p *jsonPatch) Data() ([]byte, error) {
 	return json.Marshal(patch)
 }
 
-func (p *jsonPatch) ResourceName() string      { return p.from.GetName() }
-func (p *jsonPatch) ResourceNamespace() string { return p.from.GetNamespace() }
+func (p *JSON) ResourceName() string      { return p.from.GetName() }
+func (p *JSON) ResourceNamespace() string { return p.from.GetNamespace() }
 
-func NewJSONPatch(from, to object, withOptimisticLock bool) Patch {
-	return &jsonPatch{patchType: types.JSONPatchType, from: from, to: to, enableOptimisticLock: withOptimisticLock}
+func NewJSONPatch(from, to object, withOptimisticLock bool) *JSON {
+	return &JSON{patchType: types.JSONPatchType, from: from, to: to, enableOptimisticLock: withOptimisticLock}
 }

@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,19 +37,19 @@ func (_m *ClientMock) EXPECT() *ClientMock_Expecter {
 }
 
 // Repository provides a mock function for the type ClientMock
-func (_mock *ClientMock) Repository(namespace string) v1beta1.Repository {
+func (_mock *ClientMock) Repository(namespace string) v1alpha4.Repository {
 	ret := _mock.Called(namespace)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Repository")
 	}
 
-	var r0 v1beta1.Repository
-	if returnFunc, ok := ret.Get(0).(func(string) v1beta1.Repository); ok {
+	var r0 v1alpha4.Repository
+	if returnFunc, ok := ret.Get(0).(func(string) v1alpha4.Repository); ok {
 		r0 = returnFunc(namespace)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v1beta1.Repository)
+			r0 = ret.Get(0).(v1alpha4.Repository)
 		}
 	}
 	return r0
@@ -79,12 +79,12 @@ func (_c *ClientMock_Repository_Call) Run(run func(namespace string)) *ClientMoc
 	return _c
 }
 
-func (_c *ClientMock_Repository_Call) Return(repository v1beta1.Repository) *ClientMock_Repository_Call {
+func (_c *ClientMock_Repository_Call) Return(repository v1alpha4.Repository) *ClientMock_Repository_Call {
 	_c.Call.Return(repository)
 	return _c
 }
 
-func (_c *ClientMock_Repository_Call) RunAndReturn(run func(namespace string) v1beta1.Repository) *ClientMock_Repository_Call {
+func (_c *ClientMock_Repository_Call) RunAndReturn(run func(namespace string) v1alpha4.Repository) *ClientMock_Repository_Call {
 	_c.Call.Return(run)
 	return _c
 }
