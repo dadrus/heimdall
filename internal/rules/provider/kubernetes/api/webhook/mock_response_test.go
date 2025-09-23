@@ -36,8 +36,8 @@ func (_m *ResponseMock[Req]) EXPECT() *ResponseMock_Expecter[Req] {
 }
 
 // Complete provides a mock function for the type ResponseMock
-func (_mock *ResponseMock[Req]) Complete(v Req) {
-	_mock.Called(v)
+func (_mock *ResponseMock[Req]) Complete(req Req) {
+	_mock.Called(req)
 	return
 }
 
@@ -47,12 +47,12 @@ type ResponseMock_Complete_Call[Req Request] struct {
 }
 
 // Complete is a helper method to define mock.On call
-//   - v Req
-func (_e *ResponseMock_Expecter[Req]) Complete(v interface{}) *ResponseMock_Complete_Call[Req] {
-	return &ResponseMock_Complete_Call[Req]{Call: _e.mock.On("Complete", v)}
+//   - req Req
+func (_e *ResponseMock_Expecter[Req]) Complete(req interface{}) *ResponseMock_Complete_Call[Req] {
+	return &ResponseMock_Complete_Call[Req]{Call: _e.mock.On("Complete", req)}
 }
 
-func (_c *ResponseMock_Complete_Call[Req]) Run(run func(v Req)) *ResponseMock_Complete_Call[Req] {
+func (_c *ResponseMock_Complete_Call[Req]) Run(run func(req Req)) *ResponseMock_Complete_Call[Req] {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 Req
 		if args[0] != nil {
@@ -70,7 +70,7 @@ func (_c *ResponseMock_Complete_Call[Req]) Return() *ResponseMock_Complete_Call[
 	return _c
 }
 
-func (_c *ResponseMock_Complete_Call[Req]) RunAndReturn(run func(v Req)) *ResponseMock_Complete_Call[Req] {
+func (_c *ResponseMock_Complete_Call[Req]) RunAndReturn(run func(req Req)) *ResponseMock_Complete_Call[Req] {
 	_c.Run(run)
 	return _c
 }

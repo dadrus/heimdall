@@ -100,8 +100,8 @@ func (_c *ReviewMock_Decode_Call[Req, Resp]) RunAndReturn(run func(r *http.Reque
 }
 
 // WrapResponse provides a mock function for the type ReviewMock
-func (_mock *ReviewMock[Req, Resp]) WrapResponse(v Resp) any {
-	ret := _mock.Called(v)
+func (_mock *ReviewMock[Req, Resp]) WrapResponse(resp Resp) any {
+	ret := _mock.Called(resp)
 
 	if len(ret) == 0 {
 		panic("no return value specified for WrapResponse")
@@ -109,7 +109,7 @@ func (_mock *ReviewMock[Req, Resp]) WrapResponse(v Resp) any {
 
 	var r0 any
 	if returnFunc, ok := ret.Get(0).(func(Resp) any); ok {
-		r0 = returnFunc(v)
+		r0 = returnFunc(resp)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(any)
@@ -124,12 +124,12 @@ type ReviewMock_WrapResponse_Call[Req Request, Resp Response[Req]] struct {
 }
 
 // WrapResponse is a helper method to define mock.On call
-//   - v Resp
-func (_e *ReviewMock_Expecter[Req, Resp]) WrapResponse(v interface{}) *ReviewMock_WrapResponse_Call[Req, Resp] {
-	return &ReviewMock_WrapResponse_Call[Req, Resp]{Call: _e.mock.On("WrapResponse", v)}
+//   - resp Resp
+func (_e *ReviewMock_Expecter[Req, Resp]) WrapResponse(resp interface{}) *ReviewMock_WrapResponse_Call[Req, Resp] {
+	return &ReviewMock_WrapResponse_Call[Req, Resp]{Call: _e.mock.On("WrapResponse", resp)}
 }
 
-func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Run(run func(v Resp)) *ReviewMock_WrapResponse_Call[Req, Resp] {
+func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Run(run func(resp Resp)) *ReviewMock_WrapResponse_Call[Req, Resp] {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 Resp
 		if args[0] != nil {
@@ -142,12 +142,12 @@ func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Run(run func(v Resp)) *Review
 	return _c
 }
 
-func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Return(v1 any) *ReviewMock_WrapResponse_Call[Req, Resp] {
-	_c.Call.Return(v1)
+func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Return(v any) *ReviewMock_WrapResponse_Call[Req, Resp] {
+	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) RunAndReturn(run func(v Resp) any) *ReviewMock_WrapResponse_Call[Req, Resp] {
+func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) RunAndReturn(run func(resp Resp) any) *ReviewMock_WrapResponse_Call[Req, Resp] {
 	_c.Call.Return(run)
 	return _c
 }

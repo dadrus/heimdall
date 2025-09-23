@@ -78,7 +78,7 @@ packages:
   github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers:
     interfaces:
       Finalizer: {}
-  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/webhook:
+  github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/webhook:
     config:
       dir: "{{ .InterfaceDir }}"
       filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
