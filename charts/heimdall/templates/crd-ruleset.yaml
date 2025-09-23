@@ -41,7 +41,7 @@ spec:
       conversionReviewVersions: [ "v1" ]
       clientConfig:
         service:
-          name: {{ .Values.service.webhook.name }}
+          name: {{ include "heimdall.fullname" . }}
           namespace: {{ include "heimdall.namespace" . }}
           path: "/convert"
           port: {{ .Values.service.webhook.port }}
@@ -54,7 +54,7 @@ spec:
   versions:
     - name: v1alpha4
       served: true
-      storage: false
+      storage: true
       schema:
         openAPIV3Schema:
           description: RuleSet is the Schema for heimdall's rule definitions
@@ -317,7 +317,7 @@ spec:
         status: {}
     - name: v1beta1
       served: true
-      storage: true
+      storage: false
       schema:
         openAPIV3Schema:
           description: RuleSet is the Schema for heimdall's rule definitions

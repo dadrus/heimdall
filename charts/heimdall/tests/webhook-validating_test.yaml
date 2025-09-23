@@ -1,13 +1,13 @@
 suite: test suite for validating webhook configuration
 templates:
-  - validating_webhook.yaml
+  - webhook-validating.yaml
 tests:
   - it: should not be configured by default
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: should not be configured by if there is no tls configuration for kubernetes provider
+  - it: should not be configured if there is no tls configuration for kubernetes provider
     set:
       providers:
         kubernetes:
@@ -91,7 +91,7 @@ tests:
 
   - it: should set custom labels in addition to default ones if provided
     set:
-      admissionController.labels:
+      webhook.labels:
         foo: bar
       providers:
         kubernetes:
@@ -147,7 +147,7 @@ tests:
 
   - it: should set custom annotations if provided
     set:
-      admissionController.annotations:
+      webhook.annotations:
         foo: bar
         bar: foo
       providers:
@@ -229,7 +229,7 @@ tests:
           tls:
             key_store:
               path: /path/to/file.pem
-      admissionController.timeoutSeconds: 10
+      webhook.timeoutSeconds: 10
     asserts:
       - equal:
           path: webhooks[0].timeoutSeconds
@@ -253,7 +253,7 @@ tests:
           tls:
             key_store:
               path: /path/to/file.pem
-      admissionController.namespaceSelector:
+      webhook.namespaceSelector:
           matchExpressions:
             - key: runlevel,
               operator: NotIn,
@@ -338,7 +338,7 @@ tests:
             service:
               name: foo-heimdall
               namespace: bar
-              path: /validate-ruleset
+              path: /validate
               port: 4458
 
   - it: should allow configuration of the ca bundle for the client config
@@ -346,7 +346,7 @@ tests:
       name: foo
       namespace: bar
     set:
-      admissionController.caBundle: foobar
+      webhook.caBundle: foobar
       providers:
         kubernetes:
           auth_class: foo
@@ -361,13 +361,13 @@ tests:
             service:
               name: foo-heimdall
               namespace: bar
-              path: /validate-ruleset
+              path: /validate
               port: 4458
 
   - it: should use the port configured for the admission controller service
     set:
-      admissionController.caBundle: foobar
-      service.admissionController.port: 9999
+      webhook.caBundle: foobar
+      service.webhook.port: 9999
       providers:
         kubernetes:
           auth_class: foo
@@ -382,5 +382,5 @@ tests:
             service:
               name: RELEASE-NAME-heimdall
               namespace: NAMESPACE
-              path: /validate-ruleset
+              path: /validate
               port: 9999
