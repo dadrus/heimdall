@@ -167,5 +167,26 @@ profiling:
   port: 10251
   host: 0.0.0.0 # to enable scraping of profiling information by corresponding agents.
 
-
-
+serviceMonitor:
+  # -- Whether to create a ServiceMonitor
+  enabled: false
+  # -- Set of labels to transfer from the Kubernetes Service onto the target
+  additionalLabels: {}
+  # -- Set how frequently Prometheus should scrape
+  interval: 1m
+  # -- Set timeout for scrape
+  scrapeTimeout: 10s
+  # -- Set path to metrics path
+  telemetryPath: /metrics
+  # -- Set of labels to transfer from the Kubernetes Service onto the target
+  targetLabels: []
+  # -- MetricRelabelConfigs to apply to samples before ingestion
+  metricRelabelings: []
+  # - action: replace
+  #   replacement: my-cluster
+  #   targetLabel: cluster
+  # -- Set relabel_configs as per https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+  relabelings: []
+  # - action: replace
+  #   replacement: my-cluster
+  #   targetLabel: cluster
