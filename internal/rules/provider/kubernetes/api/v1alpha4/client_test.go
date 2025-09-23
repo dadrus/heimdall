@@ -37,9 +37,9 @@ const watchResponse = `{
 `
 
 const response = `{
-  "apiVersion": "heimdall.dadrus.github.com/v1beta1",
+  "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
   "items": [{
-      "apiVersion": "heimdall.dadrus.github.com/v1beta1",
+      "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
       "kind": "RuleSet",
       "metadata": {
         "name": "test-rule-set",
