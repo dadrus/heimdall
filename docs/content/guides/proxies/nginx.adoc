@@ -184,6 +184,8 @@ As with the previous integration option, you can add these properties under the 
 
 === Integration on `Ingress` Resource Level
 
+NOTE: Making use of the annotations described below requires setting `controller.allowSnippetAnnotations` to `true` and `config.annotations-risk-level` to `Critical` in the controller's global configuration.
+
 ==== Using `X-Forwarded-*` headers
 
 One option to integrate heimdall with the NGINX Ingress Controller on the `Ingress` resource level is making use of the `nginx.ingress.kubernetes.io/auth-url`, `nginx.ingress.kubernetes.io/auth-response-headers` and the `nginx.ingress.kubernetes.io/auth-snippet` annotation as shown in the example below. This approach requires proper configuration of `trusted_proxies` on heimdall side. On NGINX Ingress Controller side you must allow the usage of `nginx.ingress.kubernetes.io/auth-snippet` (See also https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations[here]).

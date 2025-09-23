@@ -270,7 +270,7 @@ slsa-verifier verify-artifact \
   /path/to/the/downloaded/<archive>
 ----
 
-Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.1`) that corresponds to the archive.
+Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.2`) that corresponds to the archive.
 
 On success, `slsa-verifier` prints a success message and exits with `0`.
 
