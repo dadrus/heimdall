@@ -204,12 +204,18 @@ jobs:
         run: helm lint ./charts/heimdall
       - name: Kubeconform decision mode deployment
         run: |
-          helm template ./charts/heimdall > decision-config.yaml
-          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-config.yaml
+          helm template --set crds.enabled=true ./charts/heimdall > generated-config.yaml
+          kubeconform \
+              -schema-location default \
+              -schema-location "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}.json" \
+              --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} generated-config.yaml
       - name: Kubeconform proxy mode deployment
         run: |
-          helm template --set operationMode=proxy ./charts/heimdall > proxy-config.yaml
-          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} proxy-config.yaml
+          helm template --set crds.enabled=true --set operationMode=proxy ./charts/heimdall > generated-config.yaml
+          kubeconform \
+              -schema-location default \
+              -schema-location "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}.json" \
+              --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} generated-config.yaml
 
   unittest-helm-chart:
     runs-on: ubuntu-24.04
