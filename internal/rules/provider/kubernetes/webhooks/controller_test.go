@@ -130,7 +130,7 @@ func TestControllerLifecycle(t *testing.T) {
 				require.ErrorContains(t, err, "connection refused")
 			},
 		},
-		"/validate-ruleset endpoint is exposed": {
+		"/validate endpoint is exposed": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
@@ -154,7 +154,7 @@ func TestControllerLifecycle(t *testing.T) {
 				req, err := http.NewRequestWithContext(
 					t.Context(),
 					http.MethodPost,
-					baseURL+"/validate-ruleset",
+					baseURL+"/validate",
 					bytes.NewReader(data),
 				)
 				require.NoError(t, err)
@@ -186,7 +186,7 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Contains(t, status.Reason, "invalid Kind")
 			},
 		},
-		"/convert-rulesets endpoint is exposed": {
+		"/convert endpoint is exposed": {
 			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
@@ -206,7 +206,7 @@ func TestControllerLifecycle(t *testing.T) {
 				req, err := http.NewRequestWithContext(
 					t.Context(),
 					http.MethodPost,
-					baseURL+"/convert-rulesets",
+					baseURL+"/convert",
 					bytes.NewReader(data),
 				)
 				require.NoError(t, err)
