@@ -29,6 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/config"
 )
 
+// nolint: gochecknoinits
 func init() {
 	schemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
 		scheme.AddKnownTypes(GroupVersion, &RuleSet{}, &RuleSetList{})
