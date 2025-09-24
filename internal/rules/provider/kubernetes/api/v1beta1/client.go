@@ -17,8 +17,6 @@
 package v1beta1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
@@ -34,16 +32,6 @@ type (
 )
 
 func NewClient(conf *rest.Config) (Client, error) {
-	schemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(GroupVersion, &RuleSet{}, &RuleSetList{})
-		metav1.AddToGroupVersion(scheme, GroupVersion)
-
-		return nil
-	})
-	if err := schemeBuilder.AddToScheme(scheme.Scheme); err != nil {
-		return nil, err
-	}
-
 	config := *conf
 	config.GroupVersion = &GroupVersion
 	config.APIPath = "/apis"

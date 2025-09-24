@@ -22,10 +22,24 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/dadrus/heimdall/internal/rules/config"
 )
+
+func init() {
+	schemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(GroupVersion, &RuleSet{}, &RuleSetList{})
+		metav1.AddToGroupVersion(scheme, GroupVersion)
+
+		return nil
+	})
+	if err := schemeBuilder.AddToScheme(scheme.Scheme); err != nil {
+		panic(err)
+	}
+}
 
 // nolint: gochecknoglobals
 var GroupVersion = schema.GroupVersion{
