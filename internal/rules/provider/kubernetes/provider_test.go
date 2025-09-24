@@ -47,7 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
@@ -215,18 +215,18 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 		},
 		Spec: v1beta1.RuleSetSpec{
 			AuthClassName: "bar",
-			Rules: []config2.Rule{
+			Rules: []cfgv1beta1.Rule{
 				{
 					ID: "test",
-					Matcher: config2.Matcher{
-						Routes:  []config2.Route{{Path: "/"}},
+					Matcher: cfgv1beta1.Matcher{
+						Routes:  []cfgv1beta1.Route{{Path: "/"}},
 						Scheme:  "http",
 						Methods: []string{http.MethodGet},
-						Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "exact"}},
+						Hosts:   []string{"foo.bar"},
 					},
-					Backend: &config2.Backend{
+					Backend: &cfgv1beta1.Backend{
 						Host: "baz",
-						URLRewriter: &config2.URLRewriter{
+						URLRewriter: &cfgv1beta1.URLRewriter{
 							Scheme:              "http",
 							PathPrefixToCut:     "/foo",
 							PathPrefixToAdd:     "/bar",
@@ -358,7 +358,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -366,7 +366,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -376,8 +376,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http", rule.Matcher.Scheme)
 				assert.Len(t, rule.Matcher.Hosts, 1)
-				assert.Equal(t, "foo.bar", rule.Matcher.Hosts[0].Value)
-				assert.Equal(t, "exact", rule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", rule.Matcher.Hosts[0])
 				assert.Len(t, rule.Matcher.Routes, 1)
 				assert.Equal(t, "/", rule.Matcher.Routes[0].Path)
 				assert.Len(t, rule.Matcher.Methods, 1)
@@ -515,11 +514,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -527,7 +526,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -537,8 +536,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -549,7 +547,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -585,7 +583,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -593,7 +591,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -603,8 +601,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -649,7 +646,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -657,7 +654,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -667,8 +664,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -740,18 +736,18 @@ func TestProviderLifecycle(t *testing.T) {
 					rs.Generation++
 					rs.Spec = v1beta1.RuleSetSpec{
 						AuthClassName: "bar",
-						Rules: []config2.Rule{
+						Rules: []cfgv1beta1.Rule{
 							{
 								ID: "test",
-								Matcher: config2.Matcher{
-									Routes:  []config2.Route{{Path: "/"}},
+								Matcher: cfgv1beta1.Matcher{
+									Routes:  []cfgv1beta1.Route{{Path: "/"}},
 									Scheme:  "http",
 									Methods: []string{http.MethodGet},
-									Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "exact"}},
+									Hosts:   []string{"foo.bar"},
 								},
-								Backend: &config2.Backend{
+								Backend: &cfgv1beta1.Backend{
 									Host: "bar",
-									URLRewriter: &config2.URLRewriter{
+									URLRewriter: &cfgv1beta1.URLRewriter{
 										Scheme:              "http",
 										PathPrefixToCut:     "/foo",
 										PathPrefixToAdd:     "/bar",
@@ -776,11 +772,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -788,7 +784,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -798,8 +794,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -810,7 +805,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -820,8 +815,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", updatedRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -872,11 +866,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -884,7 +878,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -894,8 +888,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -906,7 +899,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -916,8 +909,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", deleteRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -950,18 +942,18 @@ func TestProviderLifecycle(t *testing.T) {
 					rs.Generation++
 					rs.Spec = v1beta1.RuleSetSpec{
 						AuthClassName: "bar",
-						Rules: []config2.Rule{
+						Rules: []cfgv1beta1.Rule{
 							{
 								ID: "test",
-								Matcher: config2.Matcher{
-									Routes:  []config2.Route{{Path: "/"}},
+								Matcher: cfgv1beta1.Matcher{
+									Routes:  []cfgv1beta1.Route{{Path: "/"}},
 									Scheme:  "http",
 									Methods: []string{http.MethodGet},
-									Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "exact"}},
+									Hosts:   []string{"foo.bar"},
 								},
-								Backend: &config2.Backend{
+								Backend: &cfgv1beta1.Backend{
 									Host: "bar",
-									URLRewriter: &config2.URLRewriter{
+									URLRewriter: &cfgv1beta1.URLRewriter{
 										Scheme:              "http",
 										PathPrefixToCut:     "/foo",
 										PathPrefixToAdd:     "/bar",
@@ -1260,10 +1252,10 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name != "error"
 				})).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
 				})).Return(errors.New("test error"))
 
@@ -1476,10 +1468,10 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name != "error"
 				})).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
 				})).Return(errors.New("test error"))
 

@@ -31,7 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -47,7 +47,7 @@ func (e *ruleSetEndpoint) ID() string {
 func (e *ruleSetEndpoint) FetchRuleSets(
 	ctx context.Context,
 	app app.Context,
-) ([]*config.RuleSet, error) {
+) ([]*v1beta1.RuleSet, error) {
 	bucket, err := blob.OpenBucket(ctx, e.URL.String())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to open bucket").
@@ -67,8 +67,8 @@ func (e *ruleSetEndpoint) readAllBlobs(
 	ctx context.Context,
 	bucket *blob.Bucket,
 	app app.Context,
-) ([]*config.RuleSet, error) {
-	var ruleSets []*config.RuleSet
+) ([]*v1beta1.RuleSet, error) {
+	var ruleSets []*v1beta1.RuleSet
 
 	it := bucket.List(&blob.ListOptions{Prefix: e.Prefix})
 
@@ -84,7 +84,7 @@ func (e *ruleSetEndpoint) readAllBlobs(
 
 		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key, app)
 		if err != nil {
-			if errors.Is(err, config.ErrEmptyRuleSet) {
+			if errors.Is(err, v1beta1.ErrEmptyRuleSet) {
 				continue
 			}
 
@@ -101,17 +101,17 @@ func (e *ruleSetEndpoint) readSingleBlob(
 	ctx context.Context,
 	bucket *blob.Bucket,
 	app app.Context,
-) ([]*config.RuleSet, error) {
+) ([]*v1beta1.RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path, app)
 	if err != nil {
-		if errors.Is(err, config.ErrEmptyRuleSet) {
-			return []*config.RuleSet{}, nil
+		if errors.Is(err, v1beta1.ErrEmptyRuleSet) {
+			return []*v1beta1.RuleSet{}, nil
 		}
 
 		return nil, err
 	}
 
-	return []*config.RuleSet{ruleSet}, nil
+	return []*v1beta1.RuleSet{ruleSet}, nil
 }
 
 func (e *ruleSetEndpoint) readRuleSet(
@@ -120,7 +120,7 @@ func (e *ruleSetEndpoint) readRuleSet(
 	key string,
 	app app.Context,
 ) (
-	*config.RuleSet, error,
+	*v1beta1.RuleSet, error,
 ) {
 	attrs, err := bucket.Attributes(ctx, key)
 	if err != nil {
@@ -134,7 +134,7 @@ func (e *ruleSetEndpoint) readRuleSet(
 
 	defer reader.Close()
 
-	contents, err := config.ParseRules(app, attrs.ContentType, reader, false)
+	contents, err := v1beta1.ParseRules(app, attrs.ContentType, reader, false)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").

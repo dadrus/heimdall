@@ -7,8 +7,5 @@ import (
 )
 
 func NewHandler() http.Handler {
-	return webhook.New(
-		&rulesetConverter{},
-		&review{},
-	)
+	return webhook.New(&rulesetConverter{}, &review{})
 }

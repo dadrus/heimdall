@@ -30,7 +30,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	rule_config "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -194,7 +195,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 func (p *Provider) ruleSetsUpdated(
 	ctx context.Context,
-	ruleSets []*rule_config.RuleSet,
+	ruleSets []*v1beta1.RuleSet,
 	state BucketState,
 	buketID string,
 ) error {
@@ -209,8 +210,8 @@ func (p *Provider) ruleSetsUpdated(
 	newIDs := slicex.Subtract(currentIDs, oldIDs)
 
 	for _, ID := range removedIDs {
-		conf := &rule_config.RuleSet{
-			MetaData: rule_config.MetaData{
+		conf := &v1beta1.RuleSet{
+			MetaData: common.MetaData{
 				Source:  "blob:" + ID,
 				ModTime: time.Now(),
 			},
@@ -261,7 +262,7 @@ func (p *Provider) getBucketState(key string) BucketState {
 	return value.(BucketState) // nolint: forcetypeassert
 }
 
-func toRuleSetIDs(ruleSets []*rule_config.RuleSet) []string {
+func toRuleSetIDs(ruleSets []*v1beta1.RuleSet) []string {
 	currentIDs := make([]string, len(ruleSets))
 
 	for idx, ruleSet := range ruleSets {

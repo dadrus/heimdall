@@ -6,7 +6,7 @@
 package v1alpha4
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -75,7 +75,7 @@ func (in *RuleSetSpec) DeepCopyInto(out *RuleSetSpec) {
 	*out = *in
 	if in.Rules != nil {
 		in, out := &in.Rules, &out.Rules
-		*out = make([]config.Rule, len(*in))
+		*out = make([]v1alpha4.Rule, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

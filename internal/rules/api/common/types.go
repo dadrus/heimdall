@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package common
+
+import (
+	"time"
+)
 
 type EncodedSlashesHandling string
 
@@ -23,3 +27,9 @@ const (
 	EncodedSlashesOn         EncodedSlashesHandling = "on"
 	EncodedSlashesOnNoDecode EncodedSlashesHandling = "no_decode"
 )
+
+type MetaData struct {
+	Hash    []byte    `json:"-" yaml:"-"`
+	Source  string    `json:"-" yaml:"-"`
+	ModTime time.Time `json:"-" yaml:"-"`
+}

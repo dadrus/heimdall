@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package v1alpha4
 
 import (
 	"crypto"
@@ -24,15 +24,16 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 )
 
 type Rule struct {
-	ID                     string                   `json:"id"                    yaml:"id"                    validate:"required"`                         //nolint:lll,tagalign
-	EncodedSlashesHandling EncodedSlashesHandling   `json:"allow_encoded_slashes" yaml:"allow_encoded_slashes" validate:"omitempty,oneof=off on no_decode"` //nolint:lll,tagalign
-	Matcher                Matcher                  `json:"match"                 yaml:"match"                 validate:"required"`                         //nolint:lll,tagalign
-	Backend                *Backend                 `json:"forward_to"            yaml:"forward_to"            validate:"omitnil"`                          //nolint:lll,tagalign
-	Execute                []config.MechanismConfig `json:"execute"               yaml:"execute"               validate:"gt=0,dive,required"`               //nolint:lll,tagalign
-	ErrorHandler           []config.MechanismConfig `json:"on_error"              yaml:"on_error"`
+	ID                     string                        `json:"id"                    yaml:"id"                    validate:"required"`                         //nolint:lll,tagalign
+	EncodedSlashesHandling common.EncodedSlashesHandling `json:"allow_encoded_slashes" yaml:"allow_encoded_slashes" validate:"omitempty,oneof=off on no_decode"` //nolint:lll,tagalign
+	Matcher                Matcher                       `json:"match"                 yaml:"match"                 validate:"required"`                         //nolint:lll,tagalign
+	Backend                *Backend                      `json:"forward_to"            yaml:"forward_to"            validate:"omitnil"`                          //nolint:lll,tagalign
+	Execute                []config.MechanismConfig      `json:"execute"               yaml:"execute"               validate:"gt=0,dive,required"`               //nolint:lll,tagalign
+	ErrorHandler           []config.MechanismConfig      `json:"on_error"              yaml:"on_error"`
 }
 
 func (r *Rule) Hash() ([]byte, error) {

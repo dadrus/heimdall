@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package common
 
 import (
 	"github.com/go-viper/mapstructure/v2"

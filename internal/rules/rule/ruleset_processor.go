@@ -19,11 +19,11 @@ package rule
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
 type SetProcessor interface {
-	OnCreated(ctx context.Context, ruleSet *config.RuleSet) error
-	OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error
-	OnDeleted(ctx context.Context, ruleSet *config.RuleSet) error
+	OnCreated(ctx context.Context, ruleSet *v1beta1.RuleSet) error
+	OnUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet) error
+	OnDeleted(ctx context.Context, ruleSet *v1beta1.RuleSet) error
 }

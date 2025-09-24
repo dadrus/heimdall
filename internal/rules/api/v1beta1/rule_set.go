@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cloudblob
+package v1beta1
 
 import (
-	"context"
-
-	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 )
 
-type RuleSetFetcher interface {
-	FetchRuleSets(ctx context.Context, app app.Context) ([]*v1beta1.RuleSet, error)
-	ID() string
+type RuleSet struct {
+	common.MetaData
+
+	Version string `json:"version" yaml:"version" validate:"required"` //nolint:tagalign
+	Name    string `json:"name"    yaml:"name"`
+	Rules   []Rule `json:"rules"   yaml:"rules"   validate:"gt=0,dive,required"` //nolint:tagalign
 }

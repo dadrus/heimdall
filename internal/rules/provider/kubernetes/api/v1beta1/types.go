@@ -26,7 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
 // nolint: gochecknoinits
@@ -55,8 +56,8 @@ const (
 
 // +kubebuilder:object:generate=true
 type RuleSetSpec struct {
-	AuthClassName string        `json:"authClassName"` //nolint:tagliatelle
-	Rules         []config.Rule `json:"rules"`
+	AuthClassName string         `json:"authClassName"` //nolint:tagliatelle
+	Rules         []v1beta1.Rule `json:"rules"`
 }
 
 // +kubebuilder:object:generate=true
@@ -75,9 +76,9 @@ type RuleSet struct {
 	Status RuleSetStatus `json:"status"`
 }
 
-func (rs *RuleSet) AsConfig() *config.RuleSet {
-	return &config.RuleSet{
-		MetaData: config.MetaData{
+func (rs *RuleSet) AsConfig() *v1beta1.RuleSet {
+	return &v1beta1.RuleSet{
+		MetaData: common.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
 			ModTime: rs.CreationTimestamp.Time,
 		},

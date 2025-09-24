@@ -14,22 +14,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package v1alpha4
 
-import (
-	"time"
-)
-
-type MetaData struct {
-	Hash    []byte    `json:"-" yaml:"-"`
-	Source  string    `json:"-" yaml:"-"`
-	ModTime time.Time `json:"-" yaml:"-"`
-}
-
-type RuleSet struct {
-	MetaData
-
-	Version string `json:"version" yaml:"version" validate:"required"` //nolint:tagalign
-	Name    string `json:"name"    yaml:"name"`
-	Rules   []Rule `json:"rules"   yaml:"rules"   validate:"gt=0,dive,required"` //nolint:tagalign
-}
+const Version = "1alpha4"

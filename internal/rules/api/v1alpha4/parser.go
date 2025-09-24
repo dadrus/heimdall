@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package v1alpha4
 
 import (
 	"bytes"
@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -87,7 +88,7 @@ func parseYAML(app app.Context, reader io.Reader, envUsageEnabled bool) (*RuleSe
 		return nil, err
 	}
 
-	if err := DecodeConfig(app, rawConfig, &ruleSet); err != nil {
+	if err := common.DecodeConfig(app, rawConfig, &ruleSet); err != nil {
 		return nil, err
 	}
 

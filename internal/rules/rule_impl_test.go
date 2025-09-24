@@ -26,7 +26,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -40,8 +41,8 @@ func TestRuleExecute(t *testing.T) {
 	trueValue := true
 
 	for uc, tc := range map[string]struct {
-		backend        *config.Backend
-		slashHandling  config.EncodedSlashesHandling
+		backend        *v1beta1.Backend
+		slashHandling  common.EncodedSlashesHandling
 		configureMocks func(
 			t *testing.T,
 			ctx *heimdallmocks.RequestContextMock,
@@ -200,8 +201,8 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with disallowed urlencoded slashes": {
-			slashHandling: config.EncodedSlashesOff,
-			backend: &config.Backend{
+			slashHandling: common.EncodedSlashesOff,
+			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, _ *mocks.SubjectCreatorMock,
@@ -226,8 +227,8 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with urlencoded slashes on without urlencoded slash": {
-			slashHandling: config.EncodedSlashesOn,
-			backend: &config.Backend{
+			slashHandling: common.EncodedSlashesOn,
+			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
@@ -265,8 +266,8 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with urlencoded slashes on with urlencoded slash": {
-			slashHandling: config.EncodedSlashesOn,
-			backend: &config.Backend{
+			slashHandling: common.EncodedSlashesOn,
+			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
@@ -303,8 +304,8 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with urlencoded slashes on with urlencoded slash but without decoding it": {
-			slashHandling: config.EncodedSlashesOnNoDecode,
-			backend: &config.Backend{
+			slashHandling: common.EncodedSlashesOnNoDecode,
+			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
@@ -341,9 +342,9 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"stripping path prefix": {
-			backend: &config.Backend{
+			backend: &v1beta1.Backend{
 				Host:        "foo.bar",
-				URLRewriter: &config.URLRewriter{PathPrefixToCut: "/api/v1"},
+				URLRewriter: &v1beta1.URLRewriter{PathPrefixToCut: "/api/v1"},
 			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, finalizer *mocks.SubjectHandlerMock,
@@ -371,7 +372,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"not forwarding Host header": {
-			backend: &config.Backend{
+			backend: &v1beta1.Backend{
 				Host:              "foo.bar",
 				ForwardHostHeader: &falseValue,
 			},
@@ -401,7 +402,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"explicitly forwarding Host header": {
-			backend: &config.Backend{
+			backend: &v1beta1.Backend{
 				Host:              "foo.bar",
 				ForwardHostHeader: &trueValue,
 			},
@@ -443,7 +444,7 @@ func TestRuleExecute(t *testing.T) {
 
 			rul := &ruleImpl{
 				backend:         tc.backend,
-				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, config.EncodedSlashesOff),
+				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, common.EncodedSlashesOff),
 				sc:              compositeSubjectCreator{authenticator},
 				sh:              compositeSubjectHandler{authorizer},
 				fi:              compositeSubjectHandler{finalizer},

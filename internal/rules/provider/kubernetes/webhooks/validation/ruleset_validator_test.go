@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
+	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -142,7 +142,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 						CreationTimestamp: metav1.NewTime(time.Now()),
 					},
 					Spec: v1beta1.RuleSetSpec{
-						Rules: []config.Rule{
+						Rules: []cfgv1beta1.Rule{
 							{ID: "rule1"},
 							{ID: "rule2"},
 						},
@@ -216,7 +216,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 						CreationTimestamp: metav1.NewTime(time.Now()),
 					},
 					Spec: v1beta1.RuleSetSpec{
-						Rules: []config.Rule{
+						Rules: []cfgv1beta1.Rule{
 							{ID: "rule1"},
 						},
 					},

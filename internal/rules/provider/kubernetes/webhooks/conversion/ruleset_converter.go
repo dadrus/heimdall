@@ -10,7 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
+	cfgv1alpha4 "github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
+	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -114,15 +115,45 @@ func (rc *rulesetConverter) convertSpec(
 		}
 
 		var (
-			err       error
-			rs        v1alpha4.RuleSet
-			converted []config.Rule
+			err error
+			rs  v1alpha4.RuleSet
 		)
 		if err = json.Unmarshal(rawObj, &rs); err != nil {
 			return nil, err
 		}
 
-		converted = rc.convertRules(ctx, rs.Spec.Rules, toVersion)
+		converted := make([]cfgv1beta1.Rule, len(rs.Spec.Rules))
+
+		for idx, rul := range rs.Spec.Rules {
+			routes, err := convertObject[[]cfgv1alpha4.Route, []cfgv1beta1.Route](rul.Matcher.Routes)
+			if err != nil {
+				return nil, err
+			}
+
+			backend, err := convertObject[cfgv1alpha4.Backend, cfgv1beta1.Backend](*rul.Backend)
+			if err != nil {
+				return nil, err
+			}
+
+			hosts := make([]string, len(rul.Matcher.Hosts))
+			for idx, host := range rul.Matcher.Hosts {
+				hosts[idx] = host.Value
+			}
+
+			converted[idx] = cfgv1beta1.Rule{
+				ID:                     rul.ID,
+				EncodedSlashesHandling: rul.EncodedSlashesHandling,
+				Matcher: cfgv1beta1.Matcher{
+					Routes:  routes,
+					Scheme:  rul.Matcher.Scheme,
+					Methods: rul.Matcher.Methods,
+					Hosts:   hosts,
+				},
+				Backend:      &backend,
+				Execute:      rul.Execute,
+				ErrorHandler: rul.ErrorHandler,
+			}
+		}
 
 		return v1beta1.RuleSetSpec{
 			AuthClassName: rs.Spec.AuthClassName,
@@ -135,15 +166,45 @@ func (rc *rulesetConverter) convertSpec(
 		}
 
 		var (
-			err       error
-			rs        v1beta1.RuleSet
-			converted []config.Rule
+			err error
+			rs  v1beta1.RuleSet
 		)
 		if err = json.Unmarshal(rawObj, &rs); err != nil {
 			return nil, err
 		}
 
-		converted = rc.convertRules(ctx, rs.Spec.Rules, toVersion)
+		converted := make([]cfgv1alpha4.Rule, len(rs.Spec.Rules))
+
+		for idx, rul := range rs.Spec.Rules {
+			routes, err := convertObject[[]cfgv1beta1.Route, []cfgv1alpha4.Route](rul.Matcher.Routes)
+			if err != nil {
+				return nil, err
+			}
+
+			backend, err := convertObject[cfgv1beta1.Backend, cfgv1alpha4.Backend](*rul.Backend)
+			if err != nil {
+				return nil, err
+			}
+
+			hosts := make([]cfgv1alpha4.HostMatcher, len(rul.Matcher.Hosts))
+			for idx, host := range rul.Matcher.Hosts {
+				hosts[idx] = cfgv1alpha4.HostMatcher{Value: host, Type: "wildcard"}
+			}
+
+			converted[idx] = cfgv1alpha4.Rule{
+				ID:                     rul.ID,
+				EncodedSlashesHandling: rul.EncodedSlashesHandling,
+				Matcher: cfgv1alpha4.Matcher{
+					Routes:  routes,
+					Scheme:  rul.Matcher.Scheme,
+					Methods: rul.Matcher.Methods,
+					Hosts:   hosts,
+				},
+				Backend:      &backend,
+				Execute:      rul.Execute,
+				ErrorHandler: rul.ErrorHandler,
+			}
+		}
 
 		return v1alpha4.RuleSetSpec{
 			AuthClassName: rs.Spec.AuthClassName,
@@ -155,28 +216,17 @@ func (rc *rulesetConverter) convertSpec(
 	}
 }
 
-func (rc *rulesetConverter) convertRules(
-	_ context.Context,
-	rules []config.Rule,
-	_ schema.GroupVersion,
-) []config.Rule {
-	converted := make([]config.Rule, len(rules))
+func convertObject[From any, To any](from From) (To, error) {
+	var to To
 
-	for idx, rul := range rules {
-		converted[idx] = config.Rule{
-			ID:                     rul.ID,
-			EncodedSlashesHandling: rul.EncodedSlashesHandling,
-			Matcher: config.Matcher{
-				Routes:  rul.Matcher.Routes,
-				Scheme:  rul.Matcher.Scheme,
-				Methods: rul.Matcher.Methods,
-				Hosts:   rul.Matcher.Hosts,
-			},
-			Backend:      rul.Backend,
-			Execute:      rul.Execute,
-			ErrorHandler: rul.ErrorHandler,
-		}
+	raw, err := json.Marshal(from)
+	if err != nil {
+		return to, err
 	}
 
-	return converted
+	if err := json.Unmarshal(raw, &to); err != nil {
+		return to, err
+	}
+
+	return to, nil
 }

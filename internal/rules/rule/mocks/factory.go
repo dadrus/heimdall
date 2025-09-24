@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -38,7 +38,7 @@ func (_m *FactoryMock) EXPECT() *FactoryMock_Expecter {
 }
 
 // CreateRule provides a mock function for the type FactoryMock
-func (_mock *FactoryMock) CreateRule(version string, srcID string, ruleConfig config.Rule) (rule.Rule, error) {
+func (_mock *FactoryMock) CreateRule(version string, srcID string, ruleConfig v1beta1.Rule) (rule.Rule, error) {
 	ret := _mock.Called(version, srcID, ruleConfig)
 
 	if len(ret) == 0 {
@@ -47,17 +47,17 @@ func (_mock *FactoryMock) CreateRule(version string, srcID string, ruleConfig co
 
 	var r0 rule.Rule
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, config.Rule) (rule.Rule, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string, v1beta1.Rule) (rule.Rule, error)); ok {
 		return returnFunc(version, srcID, ruleConfig)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, config.Rule) rule.Rule); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string, v1beta1.Rule) rule.Rule); ok {
 		r0 = returnFunc(version, srcID, ruleConfig)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(rule.Rule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, config.Rule) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, string, v1beta1.Rule) error); ok {
 		r1 = returnFunc(version, srcID, ruleConfig)
 	} else {
 		r1 = ret.Error(1)
@@ -73,12 +73,12 @@ type FactoryMock_CreateRule_Call struct {
 // CreateRule is a helper method to define mock.On call
 //   - version string
 //   - srcID string
-//   - ruleConfig config.Rule
+//   - ruleConfig v1beta1.Rule
 func (_e *FactoryMock_Expecter) CreateRule(version interface{}, srcID interface{}, ruleConfig interface{}) *FactoryMock_CreateRule_Call {
 	return &FactoryMock_CreateRule_Call{Call: _e.mock.On("CreateRule", version, srcID, ruleConfig)}
 }
 
-func (_c *FactoryMock_CreateRule_Call) Run(run func(version string, srcID string, ruleConfig config.Rule)) *FactoryMock_CreateRule_Call {
+func (_c *FactoryMock_CreateRule_Call) Run(run func(version string, srcID string, ruleConfig v1beta1.Rule)) *FactoryMock_CreateRule_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -88,9 +88,9 @@ func (_c *FactoryMock_CreateRule_Call) Run(run func(version string, srcID string
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 config.Rule
+		var arg2 v1beta1.Rule
 		if args[2] != nil {
-			arg2 = args[2].(config.Rule)
+			arg2 = args[2].(v1beta1.Rule)
 		}
 		run(
 			arg0,
@@ -106,7 +106,7 @@ func (_c *FactoryMock_CreateRule_Call) Return(rule1 rule.Rule, err error) *Facto
 	return _c
 }
 
-func (_c *FactoryMock_CreateRule_Call) RunAndReturn(run func(version string, srcID string, ruleConfig config.Rule) (rule.Rule, error)) *FactoryMock_CreateRule_Call {
+func (_c *FactoryMock_CreateRule_Call) RunAndReturn(run func(version string, srcID string, ruleConfig v1beta1.Rule) (rule.Rule, error)) *FactoryMock_CreateRule_Call {
 	_c.Call.Return(run)
 	return _c
 }

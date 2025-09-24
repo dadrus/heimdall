@@ -14,6 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package v1alpha4
 
-const CurrentRuleSetVersion = "1beta1"
+import "github.com/dadrus/heimdall/internal/rules/api/common"
+
+type RuleSet struct {
+	common.MetaData
+
+	Version string `json:"version" yaml:"version" validate:"required"` //nolint:tagalign
+	Name    string `json:"name"    yaml:"name"`
+	Rules   []Rule `json:"rules"   yaml:"rules"   validate:"gt=0,dive,required"` //nolint:tagalign
+}

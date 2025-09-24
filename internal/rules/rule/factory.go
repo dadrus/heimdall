@@ -16,10 +16,10 @@
 
 package rule
 
-import "github.com/dadrus/heimdall/internal/rules/config"
+import "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 
 type Factory interface {
-	CreateRule(version, srcID string, ruleConfig config.Rule) (Rule, error)
+	CreateRule(version, srcID string, ruleConfig v1beta1.Rule) (Rule, error)
 	DefaultRule() Rule
 	HasDefaultRule() bool
 }

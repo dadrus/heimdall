@@ -26,7 +26,8 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
@@ -64,8 +65,8 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 		return newResponse(http.StatusOK, msg)
 	}
 
-	ruleSet := &config.RuleSet{
-		MetaData: config.MetaData{
+	ruleSet := &cfgv1beta1.RuleSet{
+		MetaData: common.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
 			ModTime: time.Now(),
 		},

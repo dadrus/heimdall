@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package v1beta1
 
 import (
 	"testing"
@@ -46,13 +46,8 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 					Path: "/some/static/path",
 				},
 			},
-			Scheme: "https",
-			Hosts: []HostMatcher{
-				{
-					Value: "*.example.com",
-					Type:  "wildcard",
-				},
-			},
+			Scheme:  "https",
+			Hosts:   []string{"*.example.com"},
 			Methods: []string{"GET", "PATCH"},
 		},
 		Backend: &Backend{
@@ -94,13 +89,8 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 					Path: "/some/static/path",
 				},
 			},
-			Scheme: "https",
-			Hosts: []HostMatcher{
-				{
-					Value: "*.example.com",
-					Type:  "wildcard",
-				},
-			},
+			Scheme:  "https",
+			Hosts:   []string{"*.example.com"},
 			Methods: []string{"GET", "PATCH"},
 		},
 		Backend: &Backend{

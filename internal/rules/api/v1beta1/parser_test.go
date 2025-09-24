@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package v1beta1
 
 import (
 	"bytes"
@@ -26,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
@@ -110,7 +111,7 @@ func TestParseRules(t *testing.T) {
   {
     "id": "foo",
     "match": {
-      "hosts":[{ "value": "*.foo.bar", "type": "wildcard" }]
+      "hosts":["*.foo.bar"]
     },
     "execute": [{"authenticator":"test"}]}]
 }`),
@@ -206,7 +207,7 @@ func TestParseRules(t *testing.T) {
     "match":{
       "routes": [{ "path":"/foo/bar" }],
       "methods": ["ALL"],
-      "hosts":[{ "value": "*.foo.bar", "type": "wildcard" }],
+      "hosts":["*.foo.bar"],
       "scheme": "https"
     },
     "execute": [{"authenticator":"test"}]
@@ -269,7 +270,7 @@ rules:
 				assert.Len(t, rul.Matcher.Routes[0].PathParams, 1)
 				assert.ElementsMatch(t, []string{"GET"}, rul.Matcher.Methods)
 				assert.Equal(t, "test", rul.Backend.Host)
-				assert.Equal(t, EncodedSlashesOnNoDecode, rul.EncodedSlashesHandling)
+				assert.Equal(t, common.EncodedSlashesOnNoDecode, rul.EncodedSlashesHandling)
 				assert.Len(t, rul.Execute, 1)
 				assert.Equal(t, "test", rul.Execute[0]["authenticator"])
 			},
