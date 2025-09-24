@@ -56,7 +56,7 @@ tests:
           path: metadata.name
           value: test-release-foo-webhook
 
-  - it: namespace should be set
+  - it: namespace should not be set
     release:
       namespace: test-namespace
     set:
@@ -66,9 +66,8 @@ tests:
             key_store:
               path: /path/to/file.pem
     asserts:
-      - equal:
+      - notExists:
           path: metadata.namespace
-          value: test-namespace
 
   - it: should set default labels with default values
     set:
