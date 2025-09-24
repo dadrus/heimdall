@@ -1,11 +1,30 @@
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package conversion
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/goccy/go-json"
+	"github.com/rs/zerolog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -17,76 +36,107 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var (
-	ErrConversion    = errors.New("conversion error")
-	ErrInvalidObject = errors.New("invalid object")
-)
+var ErrConversion = errors.New("conversion error")
 
 type rulesetConverter struct{}
 
+// nolint: funlen
 func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response {
+	log := zerolog.Ctx(ctx)
 	convertedObjects := make([]runtime.RawExtension, len(req.Objects))
 
 	if len(req.Objects) == 0 {
-		return newResponse(http.StatusBadRequest, "no objects to convert provided")
+		log.Error().Msg("no objects to convert provided")
+
+		return newResponse(
+			http.StatusBadRequest,
+			"no objects to convert provided",
+			withErrorDetails(metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueRequired,
+				Field:   "Objects",
+				Message: "no objects to convert provided",
+			}),
+		)
+	}
+
+	toVersion, err := schema.ParseGroupVersion(req.DesiredAPIVersion)
+	if err != nil {
+		log.Error().Err(err).Msg("malformed DesiredAPIVersion in request")
+
+		return newResponse(
+			http.StatusBadRequest,
+			"failed to parse DesiredAPIVersion",
+			withErrorDetails(metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Field:   "DesiredAPIVersion",
+				Message: err.Error(),
+			}),
+		)
 	}
 
 	for idx, obj := range req.Objects {
 		cr := unstructured.Unstructured{}
 		if err := cr.UnmarshalJSON(obj.Raw); err != nil {
+			log.Error().Err(err).Msg("could not unmarshal object")
+
 			return newResponse(
-				http.StatusInternalServerError,
-				"failed to unmarshall object",
-				withReasons(err.Error()),
+				http.StatusBadRequest,
+				fmt.Sprintf("failed to unmarshal object at index %d", idx),
+				withErrorDetails(metav1.StatusCause{
+					Type:    metav1.CauseTypeFieldValueInvalid,
+					Field:   fmt.Sprintf("Objects[%d]", idx),
+					Message: err.Error(),
+				}),
 			)
 		}
 
-		toVersion, err := schema.ParseGroupVersion(req.DesiredAPIVersion)
-		if err != nil {
-			return newResponse(
-				http.StatusBadRequest,
-				"failed to parse desired api version",
-				withReasons(err.Error()),
-			)
-		}
-
-		fromVersion, err := schema.ParseGroupVersion(cr.GetAPIVersion())
-		if err != nil {
-			return newResponse(
-				http.StatusBadRequest,
-				"failed to parse current object api version",
-				withReasons(err.Error()),
-			)
-		}
-
-		if fromVersion.Group != v1beta1.GroupVersion.Group || toVersion.Group != v1beta1.GroupVersion.Group {
-			return newResponse(
-				http.StatusBadRequest,
-				"unexpected object groups from="+fromVersion.Group+", to=%s"+toVersion.Group,
-			)
-		}
+		// error ignored as the validity of the apiVersion is already checked
+		// in UnmarshalJSON above
+		fromVersion, _ := schema.ParseGroupVersion(cr.GetAPIVersion())
 
 		objKind := cr.GetKind()
 		if objKind != v1beta1.ResourceName {
+			log.Error().Msgf("unexpected resource kind in object at index %d - expected %s, got %s",
+				idx, v1beta1.ResourceName, objKind)
+
 			return newResponse(
 				http.StatusBadRequest,
 				"expected "+v1beta1.ResourceName+" but got "+objKind,
+				withErrorDetails(metav1.StatusCause{
+					Type:    metav1.CauseTypeFieldValueInvalid,
+					Field:   fmt.Sprintf("Objects[%d].kind", idx),
+					Message: "expected " + v1beta1.ResourceName + ", got " + objKind,
+				}),
 			)
 		}
 
 		if fromVersion.Version == toVersion.Version {
+			log.Error().Msgf("rule set at index %d is already in the expected version: %s",
+				idx, toVersion.String())
+
 			return newResponse(
 				http.StatusBadRequest,
 				"rule set is already in the expected version: "+toVersion.String(),
+				withErrorDetails(metav1.StatusCause{
+					Type:    metav1.CauseTypeFieldValueInvalid,
+					Field:   fmt.Sprintf("Objects[%d].apiVersion", idx),
+					Message: "rule set is already in the expected version: " + toVersion.String(),
+				}),
 			)
 		}
 
-		converted, err := rc.convertSpec(ctx, obj.Raw, fromVersion, toVersion)
+		converted, err := rc.convertSpec(obj.Raw, fromVersion, toVersion)
 		if err != nil {
+			log.Error().Err(err).Msg("failed to convert rule set")
+
 			return newResponse(
 				http.StatusBadRequest,
 				"failed to convert rule set",
-				withReasons(err.Error()),
+				withErrorDetails(metav1.StatusCause{
+					Type:    metav1.CauseTypeFieldValueInvalid,
+					Field:   fmt.Sprintf("Objects[%d]", idx),
+					Message: err.Error(),
+				}),
 			)
 		}
 
@@ -102,16 +152,13 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 	)
 }
 
-func (rc *rulesetConverter) convertSpec(
-	ctx context.Context,
-	rawObj []byte,
-	fromVersion, toVersion schema.GroupVersion,
-) (any, error) {
+// nolint: gocognit, cyclop, funlen
+func (rc *rulesetConverter) convertSpec(rawObj []byte, fromVersion, toVersion schema.GroupVersion) (any, error) {
 	switch fromVersion {
 	case v1alpha4.GroupVersion:
 		if toVersion != v1beta1.GroupVersion {
 			return nil, errorchain.NewWithMessagef(
-				ErrConversion, "unexpected conversion version %s", toVersion)
+				ErrConversion, "unexpected target conversion version %s", toVersion)
 		}
 
 		var (
@@ -162,7 +209,7 @@ func (rc *rulesetConverter) convertSpec(
 	case v1beta1.GroupVersion:
 		if toVersion != v1alpha4.GroupVersion {
 			return nil, errorchain.NewWithMessagef(
-				ErrConversion, "unexpected conversion version %s", toVersion)
+				ErrConversion, "unexpected target conversion version %s", toVersion)
 		}
 
 		var (
@@ -212,7 +259,7 @@ func (rc *rulesetConverter) convertSpec(
 		}, nil
 	default:
 		return nil, errorchain.NewWithMessagef(
-			ErrConversion, "unexpected conversion version %s", toVersion)
+			ErrConversion, "unexpected source conversion version %s", fromVersion)
 	}
 }
 
