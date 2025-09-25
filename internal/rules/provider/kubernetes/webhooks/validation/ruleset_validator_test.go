@@ -55,10 +55,14 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				require.NotNil(t, resp.Result)
 				assert.Equal(t, http.StatusBadRequest, int(resp.Result.Code))
 				assert.Equal(t, metav1.StatusFailure, resp.Result.Status)
-				assert.Equal(t, "failed parsing RuleSet", resp.Result.Message)
+				assert.Equal(t, "failed to unmarshal RuleSet", resp.Result.Message)
+				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
 				assert.Equal(t, ErrInvalidObject.Error(), resp.Result.Details.Causes[0].Message)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
+				assert.Equal(t, "Object", resp.Result.Details.Causes[0].Field)
+
 			},
 		},
 		"unmarshalling error": {
@@ -77,10 +81,13 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				require.NotNil(t, resp.Result)
 				assert.Equal(t, http.StatusBadRequest, int(resp.Result.Code))
 				assert.Equal(t, metav1.StatusFailure, resp.Result.Status)
-				assert.Equal(t, "failed parsing RuleSet", resp.Result.Message)
+				assert.Equal(t, "failed to unmarshal RuleSet", resp.Result.Message)
+				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
 				assert.Contains(t, resp.Result.Details.Causes[0].Message, "looking for beginning of value")
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
+				assert.Equal(t, "Object", resp.Result.Details.Causes[0].Field)
 			},
 		},
 		"unsupported AuthClassName": {
@@ -210,10 +217,15 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				assert.Equal(t, http.StatusForbidden, int(resp.Result.Code))
 				assert.Equal(t, metav1.StatusFailure, resp.Result.Status)
 				assert.Equal(t, "RuleSet invalid", resp.Result.Message)
+				assert.Equal(t, metav1.StatusReasonForbidden, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 2)
 				assert.Contains(t, resp.Result.Details.Causes[0].Message, "test error")
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
+				assert.Equal(t, "Object.Spec.Rules[0]", resp.Result.Details.Causes[0].Field)
 				assert.Contains(t, resp.Result.Details.Causes[1].Message, "test error")
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[1].Type)
+				assert.Equal(t, "Object.Spec.Rules[1]", resp.Result.Details.Causes[1].Field)
 			},
 		},
 		"successful validation": {

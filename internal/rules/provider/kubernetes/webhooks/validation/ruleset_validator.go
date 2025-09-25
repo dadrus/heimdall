@@ -25,6 +25,7 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/dadrus/heimdall/internal/rules/api/common"
 	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
@@ -48,8 +49,13 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 
 		return newResponse(
 			http.StatusBadRequest,
-			"failed parsing RuleSet",
-			withReasons(err.Error()))
+			"failed to unmarshal RuleSet",
+			withErrorDetails(metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Field:   "Object",
+				Message: err.Error(),
+			}),
+		)
 	}
 
 	if rs.Spec.AuthClassName != rv.ac {
@@ -75,12 +81,18 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 		Rules:   rs.Spec.Rules,
 	}
 
-	var errs []string
+	var errs []metav1.StatusCause
 
-	for _, rc := range ruleSet.Rules {
+	for idx, rc := range ruleSet.Rules {
 		_, err = rv.f.CreateRule(ruleSet.Version, ruleSet.Source, rc)
 		if err != nil {
-			errs = append(errs, err.Error())
+			errs = append(errs, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Field:   fmt.Sprintf("Object.Spec.Rules[%d]", idx),
+				Message: err.Error(),
+			})
+
+			log.Error().Err(err).Msgf("rule at index %d is invalid", idx)
 		}
 	}
 
@@ -88,7 +100,7 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 		return newResponse(
 			http.StatusForbidden,
 			"RuleSet invalid",
-			withReasons(errs...))
+			withErrorDetails(errs...))
 	}
 
 	return newResponse(http.StatusOK, "RuleSet valid")

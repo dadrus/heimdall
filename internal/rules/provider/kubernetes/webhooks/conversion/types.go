@@ -45,26 +45,6 @@ type (
 	review struct{}
 )
 
-// nolint: gochecknoglobals
-var knownReasons = map[int32]metav1.StatusReason{
-	http.StatusUnauthorized:          metav1.StatusReasonUnauthorized,
-	http.StatusForbidden:             metav1.StatusReasonForbidden,
-	http.StatusNotFound:              metav1.StatusReasonNotFound,
-	http.StatusConflict:              metav1.StatusReasonConflict,
-	http.StatusGone:                  metav1.StatusReasonGone,
-	http.StatusUnprocessableEntity:   metav1.StatusReasonInvalid,
-	http.StatusGatewayTimeout:        metav1.StatusReasonServerTimeout,
-	http.StatusRequestTimeout:        metav1.StatusReasonTimeout,
-	http.StatusTooManyRequests:       metav1.StatusReasonTooManyRequests,
-	http.StatusBadRequest:            metav1.StatusReasonBadRequest,
-	http.StatusMethodNotAllowed:      metav1.StatusReasonMethodNotAllowed,
-	http.StatusNotAcceptable:         metav1.StatusReasonNotAcceptable,
-	http.StatusRequestEntityTooLarge: metav1.StatusReasonRequestEntityTooLarge,
-	http.StatusUnsupportedMediaType:  metav1.StatusReasonUnsupportedMediaType,
-	http.StatusInternalServerError:   metav1.StatusReasonInternalError,
-	http.StatusServiceUnavailable:    metav1.StatusReasonServiceUnavailable,
-}
-
 func (r *request) GetUID() string { return string(r.UID) }
 
 func withErrorDetails(details ...metav1.StatusCause) responseOption {
@@ -95,7 +75,7 @@ func newResponse(code int, msg string, opts ...responseOption) *response {
 	}
 
 	if resp.Result.Status != metav1.StatusSuccess {
-		resp.Result.Reason = knownReasons[resp.Result.Code]
+		resp.Result.Reason = webhook.StatusCodeToStatusReason(resp.Result.Code)
 	}
 
 	for _, opt := range opts {

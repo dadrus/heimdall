@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/dadrus/heimdall/internal/rules/api/common"
@@ -38,9 +39,7 @@ func init() {
 
 		return nil
 	})
-	if err := schemeBuilder.AddToScheme(scheme.Scheme); err != nil {
-		panic(err)
-	}
+	utilruntime.Must(schemeBuilder.AddToScheme(scheme.Scheme))
 }
 
 // nolint: gochecknoglobals

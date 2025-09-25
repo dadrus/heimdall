@@ -18,7 +18,6 @@ package validation
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/goccy/go-json"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -47,19 +46,10 @@ type (
 
 func (r request) GetUID() string { return string(r.UID) }
 
-func withReasons(reasons ...string) responseOption {
+func withErrorDetails(details ...metav1.StatusCause) responseOption {
 	return func(resp *response) {
-		if len(reasons) > 0 {
-			resp.Result.Details = &metav1.StatusDetails{Causes: make([]metav1.StatusCause, len(reasons))}
-
-			for idx, reason := range reasons {
-				resp.Result.Details.Causes[idx] = metav1.StatusCause{Message: reason}
-			}
-
-			// Unfortunately details alone are not sufficient. At least when using kubectl
-			// if no Reason is set, only the Message (see above) is printed, which
-			// typically does not provide any details which could help resolving the issue
-			resp.Result.Reason = metav1.StatusReason(strings.Join(reasons, "; "))
+		if len(details) > 0 {
+			resp.Result.Details = &metav1.StatusDetails{Causes: details}
 		}
 	}
 }
@@ -74,6 +64,10 @@ func newResponse(code int, msg string, opts ...responseOption) *response {
 			Status:  x.IfThenElse(code == http.StatusOK, metav1.StatusSuccess, metav1.StatusFailure),
 			Message: msg,
 		},
+	}
+
+	if resp.Result.Status != metav1.StatusSuccess {
+		resp.Result.Reason = webhook.StatusCodeToStatusReason(resp.Result.Code)
 	}
 
 	for _, opt := range opts {

@@ -19,6 +19,8 @@ package webhook
 import (
 	"context"
 	"net/http"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type (
@@ -39,3 +41,25 @@ type (
 		WrapResponse(resp Resp) any
 	}
 )
+
+// nolint: gochecknoglobals
+var knownReasons = map[int32]metav1.StatusReason{
+	http.StatusUnauthorized:          metav1.StatusReasonUnauthorized,
+	http.StatusForbidden:             metav1.StatusReasonForbidden,
+	http.StatusNotFound:              metav1.StatusReasonNotFound,
+	http.StatusConflict:              metav1.StatusReasonConflict,
+	http.StatusGone:                  metav1.StatusReasonGone,
+	http.StatusUnprocessableEntity:   metav1.StatusReasonInvalid,
+	http.StatusGatewayTimeout:        metav1.StatusReasonServerTimeout,
+	http.StatusRequestTimeout:        metav1.StatusReasonTimeout,
+	http.StatusTooManyRequests:       metav1.StatusReasonTooManyRequests,
+	http.StatusBadRequest:            metav1.StatusReasonBadRequest,
+	http.StatusMethodNotAllowed:      metav1.StatusReasonMethodNotAllowed,
+	http.StatusNotAcceptable:         metav1.StatusReasonNotAcceptable,
+	http.StatusRequestEntityTooLarge: metav1.StatusReasonRequestEntityTooLarge,
+	http.StatusUnsupportedMediaType:  metav1.StatusReasonUnsupportedMediaType,
+	http.StatusInternalServerError:   metav1.StatusReasonInternalError,
+	http.StatusServiceUnavailable:    metav1.StatusReasonServiceUnavailable,
+}
+
+func StatusCodeToStatusReason(code int32) metav1.StatusReason { return knownReasons[code] }
