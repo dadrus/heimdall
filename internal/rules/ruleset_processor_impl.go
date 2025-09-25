@@ -24,7 +24,7 @@ import (
 
 	config2 "github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -45,7 +45,7 @@ func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory, op co
 	}
 }
 
-func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSet) error {
+func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Str("_rule_set", ruleSet.Name).Msg("New rule set received")
 
@@ -72,7 +72,7 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSe
 	return p.r.AddRuleSet(ctx, ruleSet.Source, rules)
 }
 
-func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error {
+func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Update of a rule set received")
 
@@ -99,7 +99,7 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *config.RuleSe
 	return p.r.UpdateRuleSet(ctx, ruleSet.Source, rules)
 }
 
-func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *config.RuleSet) error {
+func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Deletion of a rule set received")
 
@@ -107,10 +107,10 @@ func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *config.RuleSe
 }
 
 func (p *ruleSetProcessor) isVersionSupported(version string) bool {
-	return version == config.CurrentRuleSetVersion
+	return version == v1beta1.Version
 }
 
-func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, error) {
+func (p *ruleSetProcessor) loadRules(ruleSet *v1beta1.RuleSet) ([]rule.Rule, error) {
 	rules := make([]rule.Rule, len(ruleSet.Rules))
 
 	for idx, rc := range ruleSet.Rules {

@@ -30,7 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -66,7 +66,7 @@ func TestFetchRuleSets(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		endpoint ruleSetEndpoint
 		setup    func(t *testing.T)
-		assert   func(t *testing.T, err error, ruleSets []*config.RuleSet)
+		assert   func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet)
 	}{
 		"failed to open bucket": {
 			endpoint: ruleSetEndpoint{
@@ -76,7 +76,7 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: "endpoint=does-not-exist.local&foo=bar&region=eu-central-1",
 				},
 			},
-			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -92,7 +92,7 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: fmt.Sprintf("endpoint=%s&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -118,7 +118,7 @@ func TestFetchRuleSets(t *testing.T) {
 					strings.NewReader(data), int64(len(data)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -134,7 +134,7 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: fmt.Sprintf("endpoint=%s&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -157,7 +157,7 @@ func TestFetchRuleSets(t *testing.T) {
 					strings.NewReader(""), 0, nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -186,7 +186,7 @@ func TestFetchRuleSets(t *testing.T) {
             { "path": "/foo/bar/api1" }
           ],
           "scheme": "http",
-          "hosts": [{ "type": "wildcard", "value": "*.example.com"}],
+          "hosts": [ "*.example.com" ],
           "methods": ["GET", "POST"]
         },
 		"execute": [
@@ -205,8 +205,7 @@ rules:
       - path: /foo/bar/api2
     scheme: http
     hosts:
-      - type: wildcard
-        value: "*.example.com"
+      - "*.example.com"
     methods: 
       - GET
       - POST
@@ -223,7 +222,7 @@ rules:
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -263,7 +262,7 @@ rules:
                          { "path": "/foo/bar/api1" }
                       ],
                       "scheme": "http",
-                      "hosts": [{ "type": "exact", "value": "example.com" }],
+                      "hosts": ["example.com"],
                       "methods": ["GET", "POST"]
                     },
 					"execute": [
@@ -299,7 +298,7 @@ rules:
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -322,7 +321,7 @@ rules:
 				},
 				Prefix: "api",
 			},
-			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -348,7 +347,7 @@ rules:
 					strings.NewReader(""), 0, nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -378,7 +377,7 @@ rules:
                         { "path": "/foo/bar/api1" }
                       ],
                       "scheme": "http",
-                      "hosts": [{ "type": "exact", "value": "example.com" }],
+                      "hosts": ["example.com"],
                       "methods": ["GET", "POST"]
                     },
 					"execute": [
@@ -391,7 +390,7 @@ rules:
 					strings.NewReader(ruleSet1), int64(len(ruleSet1)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)

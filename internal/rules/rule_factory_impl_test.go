@@ -28,7 +28,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/mocks"
 	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
@@ -345,7 +346,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
-				assert.Equal(t, config2.EncodedSlashesOff, defRule.slashesHandling)
+				assert.Equal(t, common.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Empty(t, defRule.sh)
 				assert.Empty(t, defRule.fi)
@@ -397,7 +398,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
-				assert.Equal(t, config2.EncodedSlashesOff, defRule.slashesHandling)
+				assert.Equal(t, common.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Len(t, defRule.sh, 2)
 				assert.Len(t, defRule.fi, 1)
@@ -445,16 +446,16 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		opMode         config.OperationMode
-		config         config2.Rule
+		config         v1beta1.Rule
 		defaultRule    *ruleImpl
 		configureMocks func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		"in proxy mode without forward_to definition": {
 			opMode: config.ProxyMode,
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -465,10 +466,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with error while creating method matcher": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID: "foobar",
-				Matcher: config2.Matcher{
-					Routes:  []config2.Route{{Path: "/foo/bar"}},
+				Matcher: v1beta1.Matcher{
+					Routes:  []v1beta1.Route{{Path: "/foo/bar"}},
 					Methods: []string{""},
 				},
 				Execute: []config.MechanismConfig{
@@ -489,13 +490,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with error while creating route path params matcher": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID: "foobar",
-				Matcher: config2.Matcher{
-					Routes: []config2.Route{
+				Matcher: v1beta1.Matcher{
+					Routes: []v1beta1.Route{
 						{
 							Path:       "/foo/:bar",
-							PathParams: []config2.ParameterMatcher{{Name: "bar", Type: "foo", Value: "baz"}},
+							PathParams: []v1beta1.ParameterMatcher{{Name: "bar", Type: "foo", Value: "baz"}},
 						},
 					},
 				},
@@ -518,9 +519,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with error while creating execute pipeline": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
@@ -537,9 +538,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with error while creating on_error pipeline": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:           "foobar",
-				Matcher:      config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher:      v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				ErrorHandler: []config.MechanismConfig{{"error_handler": "foo", "id": "bar"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
@@ -556,9 +557,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"without default rule and without any execute configuration": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -569,9 +570,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"without default rule and minimum required configuration in decision mode": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 				},
@@ -591,7 +592,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOff, rul.slashesHandling)
+				assert.Equal(t, common.EncodedSlashesOff, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
@@ -603,10 +604,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		"without default rule and minimum required configuration in proxy mode": {
 			opMode: config.ProxyMode,
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Backend: &config2.Backend{Host: "foo.bar"},
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Backend: &v1beta1.Backend{Host: "foo.bar"},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 				},
@@ -626,7 +627,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOff, rul.slashesHandling)
+				assert.Equal(t, common.EncodedSlashesOff, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
@@ -638,9 +639,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with default rule and regular rule with id and a single route only": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
 				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
@@ -667,24 +668,24 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with default rule and with all attributes defined by the regular rule itself in decision mode": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID: "foobar",
-				Matcher: config2.Matcher{
-					Routes: []config2.Route{
+				Matcher: v1beta1.Matcher{
+					Routes: []v1beta1.Route{
 						{
 							Path:       "/foo/:resource",
-							PathParams: []config2.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
+							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
 						},
 						{
 							Path:       "/bar/:resource",
-							PathParams: []config2.ParameterMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
+							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
 						},
 					},
 					Scheme:  "https",
 					Methods: []string{"BAR", "BAZ"},
-					Hosts:   []config2.HostMatcher{{Type: "wildcard", Value: "*.example.com"}},
+					Hosts:   []string{"*.example.com"},
 				},
-				EncodedSlashesHandling: config2.EncodedSlashesOnNoDecode,
+				EncodedSlashesHandling: common.EncodedSlashesOnNoDecode,
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo", "id": "1"},
 					{"contextualizer": "bar", "id": "2"},
@@ -724,7 +725,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOnNoDecode, rul.slashesHandling)
+				assert.Equal(t, common.EncodedSlashesOnNoDecode, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 2)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/:resource", rul.Routes()[0].Path())
@@ -746,27 +747,27 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		"with default rule and with all attributes defined by the rule itself in proxy mode": {
 			opMode: config.ProxyMode,
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID: "foobar",
-				Matcher: config2.Matcher{
-					Routes: []config2.Route{
+				Matcher: v1beta1.Matcher{
+					Routes: []v1beta1.Route{
 						{
 							Path:       "/foo/:resource",
-							PathParams: []config2.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
+							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
 						},
 						{
 							Path:       "/bar/:resource",
-							PathParams: []config2.ParameterMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
+							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
 						},
 					},
 					Scheme:  "https",
 					Methods: []string{"BAR", "BAZ"},
-					Hosts:   []config2.HostMatcher{{Type: "wildcard", Value: "*.example.com"}},
+					Hosts:   []string{"*.example.com"},
 				},
-				EncodedSlashesHandling: config2.EncodedSlashesOn,
-				Backend: &config2.Backend{
+				EncodedSlashesHandling: common.EncodedSlashesOn,
+				Backend: &v1beta1.Backend{
 					Host: "bar.foo",
-					URLRewriter: &config2.URLRewriter{
+					URLRewriter: &v1beta1.URLRewriter{
 						Scheme:              "https",
 						PathPrefixToCut:     "/foo",
 						PathPrefixToAdd:     "/baz",
@@ -812,7 +813,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, config2.EncodedSlashesOn, rul.slashesHandling)
+				assert.Equal(t, common.EncodedSlashesOn, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 2)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/:resource", rul.Routes()[0].Path())
@@ -840,9 +841,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with conditional execution configuration type error in the regular pipeline": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"finalizer": "bar", "if": 1},
@@ -863,9 +864,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with empty conditional execution configuration": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"finalizer": "bar", "if": ""},
@@ -886,9 +887,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with conditional execution for some mechanisms": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"authorizer": "bar", "if": "false"},
@@ -951,9 +952,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with bad conditional expression in the error pipeline": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo", "id": 1},
 					{"authorizer": "bar", "id": 2},
@@ -985,9 +986,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		"with conditional execution for error handler": {
-			config: config2.Rule{
+			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"authorizer": "bar"},

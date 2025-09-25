@@ -25,7 +25,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -71,22 +72,22 @@ func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
 // nolint:cyclop,funlen
-func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.Rule, error) {
-	if f.mode == config.ProxyMode && rc.Backend == nil {
+func (f *ruleFactory) CreateRule(version, srcID string, rul v1beta1.Rule) (rule.Rule, error) {
+	if f.mode == config.ProxyMode && rul.Backend == nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
-	slashesHandling := x.IfThenElse(len(rc.EncodedSlashesHandling) != 0,
-		rc.EncodedSlashesHandling,
-		config2.EncodedSlashesOff,
+	slashesHandling := x.IfThenElse(len(rul.EncodedSlashesHandling) != 0,
+		rul.EncodedSlashesHandling,
+		common.EncodedSlashesOff,
 	)
 
-	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, rc.Execute)
+	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, rul.Execute)
 	if err != nil {
 		return nil, err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(version, rc.ErrorHandler)
+	errorHandlers, err := f.createOnErrorPipeline(version, rul.ErrorHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -102,16 +103,16 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
 	}
 
-	hash, err := rc.Hash()
+	hash, err := rul.Hash()
 	if err != nil {
 		return nil, err
 	}
 
-	rul := &ruleImpl{
-		id:              rc.ID,
+	ri := &ruleImpl{
+		id:              rul.ID,
 		srcID:           srcID,
 		slashesHandling: slashesHandling,
-		backend:         rc.Backend,
+		backend:         rul.Backend,
 		hash:            hash,
 		sc:              authenticators,
 		sh:              subHandlers,
@@ -119,22 +120,14 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 		eh:              errorHandlers,
 	}
 
-	// filter those host settings, which can be used in the trie structure,
-	trieHosts := rc.Matcher.Hosts
-
-	// if no exact, or wildcard hosts are defined, we create a virtual "match everything" wildcard host
-	if len(trieHosts) == 0 {
-		trieHosts = append(trieHosts, config2.HostMatcher{Type: "wildcard", Value: "*"})
-	}
-
-	mm, err := createMethodMatcher(rc.Matcher.Methods)
+	mm, err := createMethodMatcher(rul.Matcher.Methods)
 	if err != nil {
 		return nil, err
 	}
 
-	sm := schemeMatcher(rc.Matcher.Scheme)
+	sm := schemeMatcher(rul.Matcher.Scheme)
 
-	for _, rc := range rc.Matcher.Routes {
+	for _, rc := range rul.Matcher.Routes {
 		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
@@ -142,18 +135,22 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 				CausedBy(err)
 		}
 
-		for _, host := range trieHosts {
-			rul.routes = append(rul.routes,
+		if len(rul.Matcher.Hosts) == 0 {
+			rul.Matcher.Hosts = append(rul.Matcher.Hosts, "*")
+		}
+
+		for _, host := range rul.Matcher.Hosts {
+			ri.routes = append(ri.routes,
 				&routeImpl{
-					rule:    rul,
-					host:    host.Value,
+					rule:    ri,
+					host:    host,
 					path:    rc.Path,
 					matcher: andMatcher{sm, mm, ppm},
 				})
 		}
 	}
 
-	return rul, nil
+	return ri, nil
 }
 
 //nolint:funlen,gocognit,cyclop
@@ -320,7 +317,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	logger.Info().Msg("Loading default rule")
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(
-		config2.CurrentRuleSetVersion,
+		v1beta1.Version,
 		ruleConfig.Execute,
 	)
 	if err != nil {
@@ -328,7 +325,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	errorHandlers, err := f.createOnErrorPipeline(
-		config2.CurrentRuleSetVersion,
+		v1beta1.Version,
 		ruleConfig.ErrorHandler,
 	)
 	if err != nil {
@@ -349,7 +346,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	f.defaultRule = &ruleImpl{
 		id:              "default",
-		slashesHandling: config2.EncodedSlashesOff,
+		slashesHandling: common.EncodedSlashesOff,
 		srcID:           "config",
 		isDefault:       true,
 		sc:              authenticators,

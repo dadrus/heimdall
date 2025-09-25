@@ -177,7 +177,7 @@ tests:
               protocol: TCP
               targetPort: http-main
 
-  - it: should expose admission controller web hook port if configured
+  - it: should expose webhook controller port if configured
     set:
       providers.kubernetes:
         tls:
@@ -195,7 +195,7 @@ tests:
               port: 4456
               protocol: TCP
               targetPort: http-main
-            - name: admission-controller
+            - name: webhook
               port: 4458
               protocol: TCP
               targetPort: https-webhook
@@ -212,7 +212,7 @@ tests:
       service.main:
         port: 2222
         name: dec
-      service.admissionController:
+      service.webhook:
         port: 3333
         name: adm
     asserts:
@@ -245,7 +245,7 @@ tests:
       service.main:
         port: 2222
         name: prox
-      service.admissionController:
+      service.webhook:
         port: 3333
         name: adm
     asserts:

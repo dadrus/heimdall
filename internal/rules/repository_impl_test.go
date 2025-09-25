@@ -26,7 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -1253,7 +1253,7 @@ func TestRepositoryFindRule(t *testing.T) {
 						matcher: &pathParamMatcher{
 							newExactMatcher("foo"),
 							"id",
-							config.EncodedSlashesOff,
+							common.EncodedSlashesOff,
 						},
 					},
 				)
@@ -1267,7 +1267,7 @@ func TestRepositoryFindRule(t *testing.T) {
 						matcher: &pathParamMatcher{
 							newExactMatcher("baz"),
 							"id",
-							config.EncodedSlashesOff,
+							common.EncodedSlashesOff,
 						},
 					},
 				)

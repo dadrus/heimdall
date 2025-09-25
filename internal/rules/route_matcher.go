@@ -24,7 +24,8 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -94,7 +95,7 @@ type pathParamMatcher struct {
 	typedMatcher
 
 	name          string
-	slashHandling config.EncodedSlashesHandling
+	slashHandling common.EncodedSlashesHandling
 }
 
 func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []string) error {
@@ -107,12 +108,12 @@ func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []str
 	// URL.RawPath is set only if the original url contains url encoded parts
 	if len(request.URL.RawPath) != 0 {
 		switch m.slashHandling {
-		case config.EncodedSlashesOff:
+		case common.EncodedSlashesOff:
 			if strings.Contains(request.URL.RawPath, "%2F") {
 				return errorchain.NewWithMessage(ErrRequestPathMismatch,
 					"request path contains encoded slashes which are not allowed")
 			}
-		case config.EncodedSlashesOn:
+		case common.EncodedSlashesOn:
 			value, _ = url.PathUnescape(value)
 		default:
 			unescaped, _ := url.PathUnescape(strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$"))
@@ -158,8 +159,8 @@ func createMethodMatcher(methods []string) (methodMatcher, error) {
 }
 
 func createPathParamsMatcher(
-	params []config.ParameterMatcher,
-	esh config.EncodedSlashesHandling,
+	params []v1beta1.ParameterMatcher,
+	esh common.EncodedSlashesHandling,
 ) (RouteMatcher, error) {
 	matchers := make(andMatcher, len(params))
 

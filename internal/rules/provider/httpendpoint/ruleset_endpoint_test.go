@@ -31,7 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -79,7 +79,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		ep            *ruleSetEndpoint
 		writeResponse ResponseWriter
-		assert        func(t *testing.T, err error, ruleSet *config.RuleSet)
+		assert        func(t *testing.T, err error, ruleSet *v1beta1.RuleSet)
 	}{
 		"rule set loading error due to DNS error": {
 			ep: &ruleSetEndpoint{
@@ -88,7 +88,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 					Method: http.MethodGet,
 				},
 			},
-			assert: func(t *testing.T, err error, _ *config.RuleSet) {
+			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -108,7 +108,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 				w.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, err error, _ *config.RuleSet) {
+			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -137,7 +137,7 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, _ *config.RuleSet) {
+			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -157,11 +157,11 @@ rules:
 
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, err error, _ *config.RuleSet) {
+			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, config.ErrEmptyRuleSet)
+				require.ErrorIs(t, err, v1beta1.ErrEmptyRuleSet)
 			},
 		},
 		"valid rule set without path prefix from yaml": {
@@ -193,7 +193,7 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSet *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -239,7 +239,7 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSet *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -272,7 +272,7 @@ rules:
             { "path": "/foo/bar/:baz", "path_params": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
           ],
           "methods": [ "GET" ],
-          "hosts": [{ "value":"moobar.local:9090", "type": "exact"}],
+          "hosts": [ "moobar.local:9090" ],
 	    },
         "execute": [{ "authenticator": "test"}]
 	  }
@@ -280,7 +280,7 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSet *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)

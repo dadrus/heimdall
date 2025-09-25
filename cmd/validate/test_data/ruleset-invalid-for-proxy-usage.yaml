@@ -7,8 +7,7 @@ rules:
       - path: /**
     scheme: http
     hosts:
-      - type: exact
-        value: foo.bar
+      - foo.bar
     methods: [ GET, POST ]
   execute:
     - authenticator: unauthorized_authenticator

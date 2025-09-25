@@ -25,7 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
 func TestCreateMethodMatcher(t *testing.T) {
@@ -87,7 +88,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		conf   []config.ParameterMatcher
+		conf   []v1beta1.ParameterMatcher
 		assert func(t *testing.T, matcher RouteMatcher, err error)
 	}{
 		"empty configuration": {
@@ -100,7 +101,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"valid glob expression": {
-			conf: []config.ParameterMatcher{{Name: "foo", Value: "/**", Type: "glob"}},
+			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "/**", Type: "glob"}},
 			assert: func(t *testing.T, matcher RouteMatcher, err error) {
 				t.Helper()
 
@@ -114,7 +115,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"invalid glob expression": {
-			conf: []config.ParameterMatcher{{Name: "foo", Value: "!*][)(*", Type: "glob"}},
+			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "!*][)(*", Type: "glob"}},
 			assert: func(t *testing.T, _ RouteMatcher, err error) {
 				t.Helper()
 
@@ -124,7 +125,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"valid regex expression": {
-			conf: []config.ParameterMatcher{{Name: "foo", Value: ".*", Type: "regex"}},
+			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: ".*", Type: "regex"}},
 			assert: func(t *testing.T, matcher RouteMatcher, err error) {
 				t.Helper()
 
@@ -138,7 +139,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"invalid regex expression": {
-			conf: []config.ParameterMatcher{{Name: "foo", Value: "?>?<*??", Type: "regex"}},
+			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "?>?<*??", Type: "regex"}},
 			assert: func(t *testing.T, _ RouteMatcher, err error) {
 				t.Helper()
 
@@ -148,7 +149,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"exact expression": {
-			conf: []config.ParameterMatcher{{Name: "foo", Value: "?>?<*??", Type: "exact"}},
+			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "?>?<*??", Type: "exact"}},
 			assert: func(t *testing.T, matcher RouteMatcher, err error) {
 				t.Helper()
 
@@ -162,7 +163,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"unsupported type": {
-			conf: []config.ParameterMatcher{{Name: "foo", Value: "foo", Type: "bar"}},
+			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "foo", Type: "bar"}},
 			assert: func(t *testing.T, _ RouteMatcher, err error) {
 				t.Helper()
 
@@ -173,7 +174,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			pm, err := createPathParamsMatcher(tc.conf, config.EncodedSlashesOff)
+			pm, err := createPathParamsMatcher(tc.conf, common.EncodedSlashesOff)
 
 			tc.assert(t, pm, err)
 		})
@@ -238,65 +239,65 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		conf          []config.ParameterMatcher
-		slashHandling config.EncodedSlashesHandling
+		conf          []v1beta1.ParameterMatcher
+		slashHandling common.EncodedSlashesHandling
 		toMatch       string
 		keys          []string
 		values        []string
 		matches       bool
 	}{
 		"parameter not present in keys": {
-			conf: []config.ParameterMatcher{
+			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar"},
 			},
 			keys:   []string{"bar"},
 			values: []string{"baz"},
 		},
 		"encoded slashes are not allowed": {
-			conf: []config.ParameterMatcher{
+			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz"},
 			},
-			slashHandling: config.EncodedSlashesOff,
+			slashHandling: common.EncodedSlashesOff,
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz"},
 			toMatch:       "http://example.com/bar%2Fbaz",
 		},
 		"matches with path having allowed but not decoded encoded slashes": {
-			conf: []config.ParameterMatcher{
+			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz[id]"},
 			},
-			slashHandling: config.EncodedSlashesOnNoDecode,
+			slashHandling: common.EncodedSlashesOnNoDecode,
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz%5Bid%5D"},
 			toMatch:       "http://example.com/bar%2Fbaz%5Bid%5D",
 			matches:       true,
 		},
 		"matches with path having allowed decoded slashes": {
-			conf: []config.ParameterMatcher{
+			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar/baz[id]"},
 			},
-			slashHandling: config.EncodedSlashesOn,
+			slashHandling: common.EncodedSlashesOn,
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz%5Bid%5D"},
 			toMatch:       "http://example.com/foo%2Fbaz%5Bid%5D",
 			matches:       true,
 		},
 		"does not match the request path if appropriate matcher is not defined as first element": {
-			conf: []config.ParameterMatcher{
+			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar/foo"},
 				{Name: "foo", Type: "exact", Value: "bar/bar"},
 			},
-			slashHandling: config.EncodedSlashesOn,
+			slashHandling: common.EncodedSlashesOn,
 			keys:          []string{"foo"},
 			values:        []string{"bar/bar"},
 			toMatch:       "http://example.com/foo/bar",
 			matches:       false,
 		},
 		"doesn't match": {
-			conf: []config.ParameterMatcher{
+			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar"},
 			},
-			slashHandling: config.EncodedSlashesOn,
+			slashHandling: common.EncodedSlashesOn,
 			keys:          []string{"foo"},
 			values:        []string{"baz"},
 			toMatch:       "http://example.com/bar",

@@ -29,7 +29,8 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -164,13 +165,13 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
-		if !errors.Is(err, config2.ErrEmptyRuleSet) &&
+		if !errors.Is(err, v1beta1.ErrEmptyRuleSet) &&
 			(errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration)) {
 			return err
 		}
 
-		ruleSet = &config2.RuleSet{
-			MetaData: config2.MetaData{
+		ruleSet = &v1beta1.RuleSet{
+			MetaData: common.MetaData{
 				Source:  "http_endpoint:" + rsf.ID(),
 				ModTime: time.Now(),
 			},
@@ -186,7 +187,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *config2.RuleSet, stateID string) error {
+func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet, stateID string) error {
 	logger := zerolog.Ctx(ctx)
 
 	var hash []byte
