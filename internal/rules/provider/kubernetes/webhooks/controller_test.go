@@ -182,8 +182,8 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.NotNil(t, status)
 				assert.Equal(t, http.StatusBadRequest, int(status.Code))
 				assert.Equal(t, "Failure", status.Status)
-				assert.Contains(t, status.Message, "failed parsing RuleSet")
-				assert.Contains(t, status.Reason, "invalid Kind")
+				assert.Contains(t, status.Message, "unmarshal RuleSet")
+				assert.Equal(t, metav1.StatusReasonBadRequest, status.Reason)
 			},
 		},
 		"/convert endpoint is exposed": {
