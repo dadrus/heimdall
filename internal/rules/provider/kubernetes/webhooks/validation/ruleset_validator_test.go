@@ -62,7 +62,6 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				assert.Equal(t, ErrInvalidObject.Error(), resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Object", resp.Result.Details.Causes[0].Field)
-
 			},
 		},
 		"unmarshalling error": {
