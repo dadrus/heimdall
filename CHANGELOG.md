@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.3](https://github.com/dadrus/heimdall/compare/v0.17.2...v0.17.3) (2025-09-26)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 9219d12 ([#2769](https://github.com/dadrus/heimdall/issues/2769)) ([859d142](https://github.com/dadrus/heimdall/commit/859d142959597fdcef6a4326c3b3b0e4ede8cf86))
+* update module github.com/go-co-op/gocron/v2 to v2.16.6 ([#2775](https://github.com/dadrus/heimdall/issues/2775)) ([04dd464](https://github.com/dadrus/heimdall/commit/04dd464fade71394d2b1c7ff946ac1a79f3a0ada))
+* update module github.com/redis/rueidis to v1.0.66 ([#2779](https://github.com/dadrus/heimdall/issues/2779)) ([6acae86](https://github.com/dadrus/heimdall/commit/6acae865ccb51b13e11f0e2b85408b688e7725a6))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.66 ([#2779](https://github.com/dadrus/heimdall/issues/2779)) ([6acae86](https://github.com/dadrus/heimdall/commit/6acae865ccb51b13e11f0e2b85408b688e7725a6))
+
 ## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-09-21)
 
 
