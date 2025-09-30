@@ -2,3 +2,8 @@
 {{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) }}
   {{- fail "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" }}
 {{- end }}
+
+{{- $storageVersion := required "crds.storageVersion is not set! Call helm with --set crds.storageVersion=<v1alpha4 or v1beta1>" .Values.crds.storageVersion }}
+{{- if not (or (eq $storageVersion "v1alpha4") (eq $storageVersion "v1beta1")) }}
+  {{- fail "A valid crds.storageVersion is required! Call helm with --set crds.storageVersion=<v1alpha4 or v1beta1>" }}
+{{- end }}

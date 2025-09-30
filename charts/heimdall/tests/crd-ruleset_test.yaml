@@ -1,6 +1,6 @@
 suite: test suite for ruleset crd
 templates:
-  - crd-ruleset.yaml
+  - crds/ruleset.yaml
 tests:
   - it: should not be configured by default
     asserts:
@@ -61,14 +61,40 @@ tests:
           value:
             helm.sh/resource-policy: keep
 
-  - it: should not set any annotations if keep resource policy is disabled
+  - it: should not set any annotations if keep resource policy is disabled and no other annotations are configured
     set:
       crds:
         enabled: true
         keep: false
     asserts:
-      - notExists:
+      - isNullOrEmpty:
           path: metadata.annotations
+
+  - it: should set custom annotations if conversion and annotations are configured
+    set:
+      crds.enabled: true
+      webhooks.conversion.annotations:
+        foo: bar
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            helm.sh/resource-policy: keep
+            foo: bar
+
+  - it: should set only custom annotations if conversion and annotations are configured, but crds.keep is false
+    set:
+      crds.enabled: true
+      crds.keep: false
+      webhooks.conversion.annotations:
+        foo: bar
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            foo: bar
 
   - it: group should be heimdall.dadrus.github.com
     set:
@@ -110,24 +136,26 @@ tests:
   - it: conversion strategy should be Webhook if TLS is configured for the kubernetes provider
     set:
       crds.enabled: true
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
-          path: spec.conversion
-          value:
-            strategy: Webhook
-            webhook:
-              conversionReviewVersions: [ "v1" ]
-              clientConfig:
-                service:
-                  name: RELEASE-NAME-heimdall
-                  namespace: NAMESPACE
-                  path: "/convert"
-                  port: 4458
+          path: spec.conversion.strategy
+          value: Webhook
+      - equal:
+          path: spec.conversion.webhook.conversionReviewVersions
+          value: [ "v1" ]
+      - matchRegex:
+          path: spec.conversion.webhook.clientConfig.service.name
+          pattern: ^RELEASE-NAME-heimdall-[0-9a-f]{8}$
+      - equal:
+          path: spec.conversion.webhook.clientConfig.service.namespace
+          value: NAMESPACE
+      - equal:
+          path: spec.conversion.webhook.clientConfig.service.path
+          value: "/convert"
+      - equal:
+          path: spec.conversion.webhook.clientConfig.service.port
+          value: 4459
 
   - it: should allow webhook customization
     release:
@@ -135,29 +163,32 @@ tests:
       namespace: bar
     set:
       crds.enabled: true
-      webhook:
-        name: foo
+      webhooks:
         caBundle: foobar
-      service.webhook.port: 1234
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      service.conversionWebhook.port: 1234
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
-          path: spec.conversion
-          value:
-            strategy: Webhook
-            webhook:
-              conversionReviewVersions: [ "v1" ]
-              clientConfig:
-                caBundle: foobar
-                service:
-                  name: foo-heimdall
-                  namespace: bar
-                  path: "/convert"
-                  port: 1234
+          path: spec.conversion.strategy
+          value: Webhook
+      - equal:
+          path: spec.conversion.webhook.conversionReviewVersions
+          value: [ "v1" ]
+      - equal:
+          path: spec.conversion.webhook.clientConfig.caBundle
+          value: foobar
+      - matchRegex:
+          path: spec.conversion.webhook.clientConfig.service.name
+          pattern: ^foo-heimdall-[0-9a-f]{8}$
+      - equal:
+          path: spec.conversion.webhook.clientConfig.service.namespace
+          value: bar
+      - equal:
+          path: spec.conversion.webhook.clientConfig.service.path
+          value: "/convert"
+      - equal:
+          path: spec.conversion.webhook.clientConfig.service.port
+          value: 1234
 
   - it: should contain two versions - v1alpha4 and v1beta1
     set:
@@ -173,7 +204,7 @@ tests:
           path: spec.versions[1].name
           value: v1beta1
 
-  - it: v1alpha4 should be served and be also the storage version
+  - it: v1alpha4 should be served and be also the storage version by default
     set:
       crds.enabled: true
     asserts:
@@ -187,7 +218,7 @@ tests:
           path: spec.versions[0].storage
           value: true
 
-  - it: v1beta1 should be served and not be the storage version
+  - it: v1beta1 should be served and not be the storage version by default
     set:
       crds.enabled: true
     asserts:
@@ -200,3 +231,18 @@ tests:
       - equal:
           path: spec.versions[1].storage
           value: false
+
+  - it: should be able to configure v1beta1 as storage version
+    set:
+      crds.enabled: true
+      crds.storageVersion: v1beta1
+    asserts:
+      - equal:
+          path: spec.versions[1].name
+          value: v1beta1
+      - equal:
+          path: spec.versions[1].served
+          value: true
+      - equal:
+          path: spec.versions[1].storage
+          value: true

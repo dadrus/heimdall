@@ -1,4 +1,22 @@
 {{/*
+Helper to traverse dicts with a dot-notation string.
+Usage:
+  {{ fn.get .Values "foo.bar.baz" }}
+*/}}
+{{- define "fn.get" -}}
+  {{- $vals := index . 0 -}}
+  {{- $path := index . 1 -}}
+  {{- $parts := splitList "." $path -}}
+  {{- $current := $vals -}}
+  {{- range $parts }}
+    {{- $current = get $current . -}}
+  {{- end -}}
+  {{- /* Serialize so caller can deserialize to structured data */ -}}
+{{- $current | toYaml -}}
+{{- end -}}
+
+
+{{/*
 Expand the name of the chart.
 */}}
 {{- define "heimdall.name" -}}
@@ -50,9 +68,11 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
   {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
   {{- if .Component -}}
-    {{- $component := get .Values .Component -}}
-    {{- with $component.labels }}
-{{ toYaml . }}
+    {{- $component := include "fn.get" (list .Values .Component) | fromYaml -}}
+    {{- if $component -}}
+      {{- range $key, $value := $component.labels }}
+{{ $key }}: {{ $value | quote }}
+      {{- end -}}
     {{- end -}}
   {{- end -}}
 {{- end }}
@@ -64,5 +84,36 @@ Selector labels
 app.kubernetes.io/name: {{ include "heimdall.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Component annotations
+*/}}
+{{- define "heimdall.annotations" -}}
+  {{- if .Component -}}
+    {{- $component := include "fn.get" (list .Values .Component) | fromYaml -}}
+    {{- if $component -}}
+      {{- range $key, $value := $component.annotations }}
+{{ $key }}: {{ $value | quote }}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end }}
+
+{{/*
+Component service
+*/}}
+{{- define "heimdall.service" -}}
+{{- $baseName := include "heimdall.fullname" . -}}
+{{- if eq .Component "service.default" -}}
+  {{- $baseName -}}
+{{- else if eq .Component "service.validationWebhook" -}}
+  {{- printf "%s-validation" $baseName | trunc 63 | trimSuffix "-" -}}
+{{- else if eq .Component "service.conversionWebhook" -}}
+  {{- $hash := .Values.crds.targetVersion | sha256sum | trunc 8 -}}
+  {{- printf "%s-%s" $baseName $hash | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+  {{- fail "internal error: unknown component specified in heimdall.service helper!" -}}
+{{- end -}}
+{{- end -}}
 
 

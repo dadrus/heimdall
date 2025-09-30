@@ -1,6 +1,6 @@
 suite: test suite for service configuration
 templates:
-  - service.yaml
+  - service-default.yaml
 tests:
   - it: should be configured by default
     asserts:
@@ -48,7 +48,7 @@ tests:
 
   - it: should set custom labels in addition to default ones if provided
     set:
-      service.labels:
+      service.default.labels:
         foo: bar
     asserts:
       - isSubset:
@@ -83,12 +83,12 @@ tests:
 
   - it: should not set any annotations by default
     asserts:
-      - isNullOrEmpty:
+      - notExists:
           path: metadata.annotations
 
   - it: should not set custom annotations if provided
     set:
-      service.annotations:
+      service.default.annotations:
         foo: bar
     asserts:
       - equal:
@@ -119,14 +119,14 @@ tests:
       - equal:
           path: spec.ports
           value:
-            - name: management
-              port: 4457
-              protocol: TCP
-              targetPort: http-management
             - name: main
               port: 4456
               protocol: TCP
               targetPort: http-main
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
 
   - it: should expose management and main ports if operated in proxy mode
     set:
@@ -135,102 +135,38 @@ tests:
       - equal:
           path: spec.ports
           value:
-            - name: management
-              port: 4457
-              protocol: TCP
-              targetPort: http-management
             - name: main
               port: 4456
               protocol: TCP
               targetPort: http-main
-
-  - it: should not expose metrics port in addition to the standard ports although it is configured
-    set:
-      env:
-        OTEL_METRICS_EXPORTER: "prometheus"
-    asserts:
-      - equal:
-          path: spec.ports
-          value:
             - name: management
               port: 4457
               protocol: TCP
               targetPort: http-management
-            - name: main
-              port: 4456
-              protocol: TCP
-              targetPort: http-main
 
-  - it: should not expose profiling port in addition to the standard ports although it is configured
-    set:
-      profiling.enabled: true
-    asserts:
-      - equal:
-          path: spec.ports
-          value:
-            - name: management
-              port: 4457
-              protocol: TCP
-              targetPort: http-management
-            - name: main
-              port: 4456
-              protocol: TCP
-              targetPort: http-main
-
-  - it: should expose webhook controller port if configured
+  - it: should use provided port and name values for each exposed port in decision mode
     set:
       providers.kubernetes:
         tls:
           key_store:
             path: /path/to/file.pem
+      service.default:
+        mainPort: 1111
+        mainPortName: dec
+        managementPort: 2222
+        managementPortName: man
     asserts:
       - equal:
           path: spec.ports
           value:
-            - name: management
-              port: 4457
-              protocol: TCP
-              targetPort: http-management
-            - name: main
-              port: 4456
-              protocol: TCP
-              targetPort: http-main
-            - name: webhook
-              port: 4458
-              protocol: TCP
-              targetPort: https-webhook
-
-  - it: should use provided port and name values for each exposed service port in decision mode
-    set:
-      providers.kubernetes:
-        tls:
-          key_store:
-            path: /path/to/file.pem
-      service.management:
-        port: 1111
-        name: man
-      service.main:
-        port: 2222
-        name: dec
-      service.webhook:
-        port: 3333
-        name: adm
-    asserts:
-      - equal:
-          path: spec.ports
-          value:
-            - name: man
+            - name: dec
               port: 1111
               protocol: TCP
-              targetPort: http-management
-            - name: dec
+              targetPort: http-main
+            - name: man
               port: 2222
               protocol: TCP
-              targetPort: http-main
-            - name: adm
-              port: 3333
-              protocol: TCP
-              targetPort: https-webhook
+              targetPort: http-management
 
   - it: should use provided port and name values for each exposed service port in proxy mode
     set:
@@ -239,28 +175,57 @@ tests:
         tls:
           key_store:
             path: /path/to/file.pem
-      service.management:
-        port: 1111
-        name: man
-      service.main:
-        port: 2222
-        name: prox
-      service.webhook:
-        port: 3333
-        name: adm
+      service.default:
+        mainPort: 1111
+        mainPortName: proxy
+        managementPort: 2222
+        managementPortName: man
     asserts:
       - equal:
           path: spec.ports
           value:
-            - name: man
+            - name: proxy
               port: 1111
               protocol: TCP
-              targetPort: http-management
-            - name: prox
+              targetPort: http-main
+            - name: man
               port: 2222
               protocol: TCP
-              targetPort: http-main
-            - name: adm
-              port: 3333
+              targetPort: http-management
+
+  - it: should configure kubernetes.io/h2c as appProtocol if --envoy-grpc flag is used in decision operation mode
+    set:
+      operationMode: "decision"
+      extraArgs:
+        - "--envoy-grpc"
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: main
+              port: 4456
               protocol: TCP
-              targetPort: https-webhook
+              appProtocol: kubernetes.io/h2c
+              targetPort: http-main
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+
+  - it: --envoy-grpc flag should be ignored in proxy operation mode
+    set:
+      operationMode: "proxy"
+      extraArgs:
+        - "--envoy-grpc"
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: main
+              port: 4456
+              protocol: TCP
+              targetPort: http-main
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management

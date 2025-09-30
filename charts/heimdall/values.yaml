@@ -96,56 +96,82 @@ deployment:
 
 # Configures k8s services (decision, proxy, management)
 service:
-  # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: { }
-  # Remove the curly braces after 'annotations:' if you want to specify annotations
-  annotations: { }
-
   # Main service
-  main:
-    # Service port
-    port: 4456
-    # Service port name
-    name: main
-  # Management service
-  management:
-    # Service port
-    port: 4457
-    # Service port name
-    name: management
-  # Only used if rules.providers.kubernetes.tls is configured
-  webhook:
+  default:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    annotations: { }
+
+    # Main service port
+    mainPort: 4456
+    # The name of the main port
+    mainPortName: main
+    # Management port
+    managementPort: 4457
+    # Management port name
+    managementPortName: management
+
+  # The following two services are only used if rules.providers.kubernetes.tls is configured
+  # Validating admission controller
+  validationWebhook:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    annotations: { }
     # Service port
     port: 4458
     # Service port name
-    name: webhook
+    portName: validation-webhook
+
+  # Conversion webhook
+  conversionWebhook:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    annotations: { }
+    # Service port
+    port: 4459
+    # Service port name
+    portName: conversion-webhook
 
 crds:
-  # This option decides if the CRDs should be installed as part of the Helm installation.
+  # Whether the CRDs should be installed as part of the Helm installation.
   enabled: false
-
-  # This option adds the "helm.sh/resource-policy: keep" annotation to the CRD. This will prevent Helm from
-  # uninstalling the CRD when the Helm release is uninstalled.
-  # WARNING: when the CRDs are removed, all RuleSet resources will be removed too by the garbage collector.
+  # If enabled, the "helm.sh/resource-policy: keep" annotation will be added to the CRD.
   keep: true
+  # Configures the storage version for the CRD (e.g., v1alpha4, v1beta1).
+  # Used to set the storage flag in the CRD's versions list during upgrades.
+  storageVersion: v1alpha4
+  # The target CRD version supported natively by this release.
+  # Used to generate the conversion webhook service name. DO NOT MODIFY UNLESS INTRODUCING A NEW CRD VERSION!!!
+  targetVersion: v1beta1
 
 # Only used if rules.providers.kubernetes.tls is configured
-webhook:
-  # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: { }
-
-  # Remove the curly braces after 'annotations:' if you want to specify annotations
-  # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
-  annotations: { }
-
-  # Remove the curly braces after 'namespaceSelector:' if you want to specify a namespaceSelector
-  namespaceSelector: {}
-
-  # Set to the required value if you want to specify the caBundle by yourself (see annotations for alternative)
+webhooks:
+  # Set to the required value if you want to specify the caBundle by yourself (see webhook specific
+  # annotations below for alternative options). It should contain CA certificates trusted by the
+  # kubernetes API server.
   caBundle: ""
 
-  # Set to another value if required
-  timeoutSeconds: 5
+  validation:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
+    annotations: { }
+
+    # Remove the curly braces after 'namespaceSelector:' if you want to specify a namespaceSelector
+    namespaceSelector: {}
+
+    # Set to another value if required
+    timeoutSeconds: 5
+
+  conversion:
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
+    annotations: { }
 
 # Configures arbitrary environment variables for the deployment
 # The value can be either a string (propagated to value) or an object (propagated to valueFrom)

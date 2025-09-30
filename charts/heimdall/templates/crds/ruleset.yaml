@@ -14,14 +14,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 {{- if .Values.crds.enabled }}
+{{- $providers := default dict .Values.providers }}
+{{- $kubernetes := default dict $providers.kubernetes }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: rulesets.heimdall.dadrus.github.com
   labels:
     {{- include "heimdall.labels" . | nindent 4 }}
-  {{- if .Values.crds.keep }}
   annotations:
+  {{- if $kubernetes.tls }}
+    {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "webhooks.conversion" }}
+    {{- include "heimdall.annotations" $data | nindent 4 }}
+  {{- end }}
+  {{- if .Values.crds.keep }}
     helm.sh/resource-policy: keep
   {{- end }}
 spec:
@@ -33,19 +39,18 @@ spec:
     singular: ruleset
     listKind: RuleSetList
   conversion:
-    {{- $providers := default dict .Values.providers }}
-    {{- $kubernetes := default dict $providers.kubernetes }}
     {{- if $kubernetes.tls }}
+    {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service.conversionWebhook" }}
     strategy: Webhook
     webhook:
       conversionReviewVersions: [ "v1" ]
       clientConfig:
         service:
-          name: {{ include "heimdall.fullname" . }}
-          namespace: {{ include "heimdall.namespace" . }}
+          name: {{ include "heimdall.service" $data }}
+          namespace: {{ include "heimdall.namespace" $data }}
           path: "/convert"
-          port: {{ .Values.service.webhook.port }}
-        {{- with .Values.webhook.caBundle }}
+          port: {{ .Values.service.conversionWebhook.port }}
+        {{- with .Values.webhooks.caBundle }}
         caBundle: {{ . }}
         {{- end }}
     {{- else }}
@@ -54,7 +59,7 @@ spec:
   versions:
     - name: v1alpha4
       served: true
-      storage: true
+      storage: {{ eq .Values.crds.storageVersion "v1alpha4" }}
       schema:
         openAPIV3Schema:
           description: RuleSet is the Schema for heimdall's rule definitions
@@ -317,7 +322,7 @@ spec:
         status: {}
     - name: v1beta1
       served: true
-      storage: false
+      storage: {{ eq .Values.crds.storageVersion "v1beta1" }}
       schema:
         openAPIV3Schema:
           description: RuleSet is the Schema for heimdall's rule definitions

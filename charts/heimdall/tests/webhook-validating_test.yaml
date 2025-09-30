@@ -9,20 +9,14 @@ tests:
 
   - it: should not be configured if there is no tls configuration for kubernetes provider
     set:
-      providers:
-        kubernetes:
-          auth_class: foo
+      providers.kubernetes.auth_class: foo
     asserts:
       - hasDocuments:
           count: 0
 
   - it: should be configured if tls settings are provided for the kubernetes provider
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - isKind:
           of: ValidatingWebhookConfiguration
@@ -31,51 +25,35 @@ tests:
 
   - it: name should be set with default name
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: metadata.name
-          value: RELEASE-NAME-heimdall-webhook
+          value: RELEASE-NAME-heimdall
 
   - it: name should be set with overwritten name
     release:
       name: test-release
     set:
       nameOverride: foo
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: metadata.name
-          value: test-release-foo-webhook
+          value: test-release-foo
 
   - it: namespace should not be set
     release:
       namespace: test-namespace
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - notExists:
           path: metadata.namespace
 
   - it: should set default labels with default values
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - isSubset:
           path: metadata.labels
@@ -90,13 +68,9 @@ tests:
 
   - it: should set custom labels in addition to default ones if provided
     set:
-      webhook.labels:
+      webhooks.validation.labels:
         foo: bar
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - isSubset:
           path: metadata.labels
@@ -118,11 +92,7 @@ tests:
       name: test-release
     set:
       nameOverride: foo
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: metadata.labels
@@ -135,25 +105,17 @@ tests:
 
   - it: should not set annotations by default
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
-      - isNullOrEmpty:
+      - notExists:
           path: metadata.annotations
 
   - it: should set custom annotations if provided
     set:
-      webhook.annotations:
+      webhooks.validation.annotations:
         foo: bar
         bar: foo
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: metadata.annotations
@@ -163,11 +125,7 @@ tests:
 
   - it: should configure one webhook
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - lengthEqual:
           path: webhooks
@@ -175,23 +133,15 @@ tests:
 
   - it: should set expected webhook name
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: webhooks[0].name
-          value: admission-controller.heimdall.dadrus.github.com
+          value: validation-webhook.heimdall.dadrus.github.com
 
   - it: should set admissionReviewVersions
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: webhooks[0].admissionReviewVersions
@@ -199,11 +149,7 @@ tests:
 
   - it: should set side effects to none
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: webhooks[0].sideEffects
@@ -211,11 +157,7 @@ tests:
 
   - it: should configure webhook timeout to 5 seconds by default
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: webhooks[0].timeoutSeconds
@@ -223,12 +165,8 @@ tests:
 
   - it: webhook timeout should be configurable
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
-      webhook.timeoutSeconds: 10
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      webhooks.validation.timeoutSeconds: 10
     asserts:
       - equal:
           path: webhooks[0].timeoutSeconds
@@ -236,27 +174,19 @@ tests:
 
   - it: should not configure namespace selector by default
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - notExists:
           path: webhooks[0].namespaceSelector
 
   - it: namespace selector should be configurable
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
-      webhook.namespaceSelector:
-          matchExpressions:
-            - key: runlevel,
-              operator: NotIn,
-              values: [ 0, 1 ]
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      webhooks.validation.namespaceSelector:
+        matchExpressions:
+          - key: runlevel,
+            operator: NotIn,
+            values: [ 0, 1 ]
     asserts:
       - equal:
           path: webhooks[0].namespaceSelector
@@ -270,11 +200,7 @@ tests:
 
   - it: should configure expected rules
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: webhooks[0].rules
@@ -292,11 +218,7 @@ tests:
 
   - it: should configure default match conditions if no auth_class is specified
     set:
-      providers:
-        kubernetes:
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
           path: webhooks[0].matchConditions
@@ -306,12 +228,8 @@ tests:
 
   - it: should configure match conditions based on specified auth_class
     set:
-      providers:
-        kubernetes:
-          auth_class: foo
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      providers.kubernetes.auth_class: foo
     asserts:
       - equal:
           path: webhooks[0].matchConditions
@@ -324,18 +242,14 @@ tests:
       name: foo
       namespace: bar
     set:
-      providers:
-        kubernetes:
-          auth_class: foo
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      providers.kubernetes.auth_class: foo
     asserts:
       - equal:
           path: webhooks[0].clientConfig
           value:
             service:
-              name: foo-heimdall
+              name: foo-heimdall-validation
               namespace: bar
               path: /validate
               port: 4458
@@ -345,41 +259,33 @@ tests:
       name: foo
       namespace: bar
     set:
-      webhook.caBundle: foobar
-      providers:
-        kubernetes:
-          auth_class: foo
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      webhooks.caBundle: foobar
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      providers.kubernetes.auth_class: foo
     asserts:
       - equal:
           path: webhooks[0].clientConfig
           value:
             caBundle: foobar
             service:
-              name: foo-heimdall
+              name: foo-heimdall-validation
               namespace: bar
               path: /validate
               port: 4458
 
-  - it: should use the port configured for the admission controller service
+  - it: should use the port configured for the validation webhook service
     set:
-      webhook.caBundle: foobar
-      service.webhook.port: 9999
-      providers:
-        kubernetes:
-          auth_class: foo
-          tls:
-            key_store:
-              path: /path/to/file.pem
+      webhooks.caBundle: foobar
+      service.validationWebhook.port: 9999
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      providers.kubernetes.auth_class: foo
     asserts:
       - equal:
           path: webhooks[0].clientConfig
           value:
             caBundle: foobar
             service:
-              name: RELEASE-NAME-heimdall
+              name: RELEASE-NAME-heimdall-validation
               namespace: NAMESPACE
               path: /validate
               port: 9999

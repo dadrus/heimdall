@@ -1,0 +1,164 @@
+suite: test suite for service configuration
+templates:
+  - service-webhook-conversion.yaml
+tests:
+  - it: should not be configured by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should be configured if tls is configured for the kubernetes provider
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - isKind:
+          of: Service
+      - isAPIVersion:
+          of: v1
+
+  - it: name should be set with default name
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: ^RELEASE-NAME-heimdall-[0-9a-f]{8}$
+
+  - it: name should be set with overwritten name
+    release:
+      name: test-release
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      nameOverride: foo
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: ^test-release-foo-[0-9a-f]{8}$
+
+  - it: namespace should be set
+    release:
+      namespace: test-namespace
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: test-namespace
+
+  - it: should set default labels with default values
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set custom labels in addition to default ones if provided
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      service.conversionWebhook.labels:
+        foo: bar
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+            foo: bar
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set default labels with overwrites
+    chart:
+      appVersion: 1.0.0
+      version: 2.0.0
+    release:
+      name: test-release
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: foo
+            app.kubernetes.io/version: 1.0.0
+            helm.sh/chart: heimdall-2.0.0
+
+  - it: should not set any annotations by default
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: should not set custom annotations if provided
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      service.conversionWebhook.annotations:
+        foo: bar
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            foo: bar
+
+  - it: should set service type to ClusterIP
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should configure selector with the required labels and values
+    release:
+      name: test-release
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/name: foo
+
+  - it: should expose one port
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: conversion-webhook
+              port: 4459
+              protocol: TCP
+              targetPort: http-webhooks
+
+  - it: should use provided port and name values
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+      service.conversionWebhook:
+        port: 1111
+        portName: conv
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: conv
+              port: 1111
+              protocol: TCP
+              targetPort: http-webhooks

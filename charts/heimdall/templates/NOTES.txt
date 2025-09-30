@@ -4,7 +4,7 @@ Heimdall is installed and configured to operate in decision mode.
 To integrate heimdall with your Ingress Controller, you have to annotate the corresponding
 Ingress resources to use it as authentication middleware and forward the requests to
 
-"http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.main.port }}".
+"http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.default.mainPort }}".
 
 as well as forward the HTTP headers and/or cookies from heimdall responses to the upstream
 services. Consult the Ingress Controller documentation of your choice on how to achieve this.

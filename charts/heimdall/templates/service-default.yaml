@@ -14,37 +14,31 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service" }}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service.default" }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "heimdall.fullname" $data }}
+  name: {{ include "heimdall.service" $data }}
   namespace: {{ include "heimdall.namespace" $data }}
   labels:
     {{- include "heimdall.labels" $data | nindent 4 }}
+  {{- with (include "heimdall.annotations" $data) }}
   annotations:
-    {{- toYaml .Values.service.annotations | nindent 4 }}
+    {{- . | nindent 4 }}
+  {{- end }}
 spec:
   type: ClusterIP
   ports:
-    - port: {{ .Values.service.management.port }}
-      targetPort: http-management
-      protocol: TCP
-      name: {{ .Values.service.management.name }}
-    - port: {{ .Values.service.main.port }}
+    - port: {{ .Values.service.default.mainPort }}
       targetPort: http-main
       protocol: TCP
       {{- if and (eq .Values.operationMode "decision") (has "--envoy-grpc" .Values.extraArgs) }}
       appProtocol: kubernetes.io/h2c
       {{- end }}
-      name: {{ .Values.service.main.name }}
-      {{- $providers := default dict .Values.providers }}
-      {{- $kubernetes := default dict $providers.kubernetes }}
-      {{- if $kubernetes.tls }}
-    - port: {{ .Values.service.webhook.port }}
-      targetPort: https-webhook
+      name: {{ .Values.service.default.mainPortName }}
+    - port: {{ .Values.service.default.managementPort }}
+      targetPort: http-management
       protocol: TCP
-      name: {{ .Values.service.webhook.name }}
-      {{- end }}
+      name: {{ .Values.service.default.managementPortName }}
   selector:
     {{- include "heimdall.selectorLabels" $data | nindent 4 }}

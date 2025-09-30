@@ -2,21 +2,23 @@
 {{- $kubernetes := default dict $providers.kubernetes }}
 {{- if $kubernetes.tls }}
 # Only active if .Values.rules.providers.kubernetes.tls is configured
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "webhook" }}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "webhooks.validation" }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: {{ include "heimdall.fullname" $data }}-webhook
+  name: {{ include "heimdall.fullname" $data }}
   labels:
     {{- include "heimdall.labels" $data | nindent 4 }}
+  {{- with (include "heimdall.annotations" $data) }}
   annotations:
-    {{- toYaml .Values.webhook.annotations | nindent 4 }}
+    {{- . | nindent 4 }}
+  {{- end }}
 webhooks:
-  - name: admission-controller.heimdall.dadrus.github.com
+  - name: validation-webhook.heimdall.dadrus.github.com
     admissionReviewVersions: [ "v1" ]
     sideEffects: None
-    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
-    {{- with .Values.webhook.namespaceSelector }}
+    timeoutSeconds: {{ .Values.webhooks.validation.timeoutSeconds }}
+    {{- with .Values.webhooks.validation.namespaceSelector }}
     namespaceSelector:
       {{- toYaml . | nindent 8 }}
     {{- end }}
@@ -31,12 +33,12 @@ webhooks:
       - name: 'auth-class-filter'
         expression: 'object.spec.authClassName == {{ default (quote "default") (quote $kubernetes.auth_class) }}'
     clientConfig:
-      {{- with .Values.webhook.caBundle }}
+      {{- with .Values.webhooks.caBundle }}
       caBundle: {{ . }}
       {{- end }}
       service:
         namespace: {{ include "heimdall.namespace" $data }}
-        name: {{ include "heimdall.fullname" . }}
+        name: {{ include "heimdall.service" ( dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service.validationWebhook" ) }}
         path: "/validate"
-        port: {{ .Values.service.webhook.port }}
+        port: {{ .Values.service.validationWebhook.port }}
 {{- end }}
