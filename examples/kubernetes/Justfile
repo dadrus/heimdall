@@ -312,7 +312,7 @@ install-heimdall router=default_router:
       kubectl apply -f quickstarts/heimdall/istio-authorization-policy.yaml
   fi
 
-  kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
+  #kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
 
 create-cluster:
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
@@ -345,4 +345,7 @@ install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
+
+
+upgrade: (install-heimdall "traefik")
 

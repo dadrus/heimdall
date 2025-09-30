@@ -3,7 +3,15 @@ log:
   level: trace
 
 profiling:
-  enabled: true
+  enabled: false
+
+metrics:
+  enabled: false
+
+tracing:
+  enabled: false
+
+secrets_reload_enabled: true
 
 serve:
   tls:

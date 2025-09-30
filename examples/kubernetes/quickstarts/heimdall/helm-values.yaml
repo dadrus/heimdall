@@ -26,19 +26,21 @@ deployment:
       profiles.grafana.com/goroutine.scrape: "true"
       profiles.grafana.com/goroutine.port_name: "http-profiling"
 
-admissionController:
-  annotations:
-    cert-manager.io/inject-ca-from: heimdall/heimdall-tls
+webhooks:
+  validation:
+    annotations:
+      cert-manager.io/inject-ca-from: heimdall/heimdall-tls
+  conversion:
+    annotations:
+      cert-manager.io/inject-ca-from: heimdall/heimdall-tls
 
-profiling:
-  enabled: true
-
-env:
-  OTEL_METRICS_EXPORTER: "prometheus"
-  OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
-  OTEL_TRACES_EXPORTER: "otlp"
-  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: "grpc"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy.monitoring:4317"
+#env:
+#  OTEL_METRICS_EXPORTER: "prometheus"
+#  OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
+#  OTEL_TRACES_EXPORTER: "otlp"
+#  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: "grpc"
+#  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy.monitoring:4317"
 
 image:
-  tag: dev
+  tag: local
+  repository: heimdall
