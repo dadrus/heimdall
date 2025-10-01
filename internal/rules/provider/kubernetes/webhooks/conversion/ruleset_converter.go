@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
@@ -29,11 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	cfgv1alpha4 "github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
-	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
+	"github.com/dadrus/heimdall/internal/conversion"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var ErrConversion = errors.New("conversion error")
@@ -110,22 +108,9 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 			)
 		}
 
-		if fromVersion.Version == toVersion.Version {
-			log.Error().Msgf("rule set at index %d is already in the expected version: %s",
-				idx, toVersion.String())
+		spec := cr.Object["spec"]
 
-			return newResponse(
-				http.StatusBadRequest,
-				"rule set is already in the expected version: "+toVersion.String(),
-				withErrorDetails(metav1.StatusCause{
-					Type:    metav1.CauseTypeFieldValueInvalid,
-					Field:   fmt.Sprintf("Objects[%d].apiVersion", idx),
-					Message: "rule set is already in the expected version: " + toVersion.String(),
-				}),
-			)
-		}
-
-		converted, err := rc.convertSpec(obj.Raw, fromVersion, toVersion)
+		convertedSpec, err := rc.convertSpec(spec.(map[string]any), fromVersion, toVersion)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to convert rule set")
 
@@ -140,7 +125,7 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 			)
 		}
 
-		cr.Object["spec"] = converted
+		cr.Object["spec"] = convertedSpec
 		cr.SetAPIVersion(toVersion.String())
 		convertedObjects[idx] = runtime.RawExtension{Object: &cr}
 	}
@@ -152,128 +137,36 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 	)
 }
 
-// nolint: gocognit, cyclop, funlen
-func (rc *rulesetConverter) convertSpec(rawObj []byte, fromVersion, toVersion schema.GroupVersion) (any, error) {
-	switch fromVersion {
-	case v1alpha4.GroupVersion:
-		if toVersion != v1beta1.GroupVersion {
-			return nil, errorchain.NewWithMessagef(
-				ErrConversion, "unexpected target conversion version %s", toVersion)
-		}
+func (rc *rulesetConverter) convertSpec(
+	rs map[string]any, fromVersion, toVersion schema.GroupVersion,
+) (map[string]any, error) {
+	// since conversion is delegated to a converter, which expects
+	// the ruleset in a format used for not kubernetes based providers
+	// there is a need to tune some fields, like adding the version and
+	// after the conversion removing it and a potentially empty name
+	// field (see below)
+	rs["version"] = strings.TrimPrefix(fromVersion.Version, "v")
 
-		var (
-			err error
-			rs  v1alpha4.RuleSet
-		)
-		if err = json.Unmarshal(rawObj, &rs); err != nil {
-			return nil, err
-		}
-
-		converted := make([]cfgv1beta1.Rule, len(rs.Spec.Rules))
-
-		for idx, rul := range rs.Spec.Rules {
-			routes, err := convertObject[[]cfgv1alpha4.Route, []cfgv1beta1.Route](rul.Matcher.Routes)
-			if err != nil {
-				return nil, err
-			}
-
-			backend, err := convertObject[cfgv1alpha4.Backend, cfgv1beta1.Backend](*rul.Backend)
-			if err != nil {
-				return nil, err
-			}
-
-			hosts := make([]string, len(rul.Matcher.Hosts))
-			for idx, host := range rul.Matcher.Hosts {
-				hosts[idx] = host.Value
-			}
-
-			converted[idx] = cfgv1beta1.Rule{
-				ID:                     rul.ID,
-				EncodedSlashesHandling: rul.EncodedSlashesHandling,
-				Matcher: cfgv1beta1.Matcher{
-					Routes:  routes,
-					Scheme:  rul.Matcher.Scheme,
-					Methods: rul.Matcher.Methods,
-					Hosts:   hosts,
-				},
-				Backend:      &backend,
-				Execute:      rul.Execute,
-				ErrorHandler: rul.ErrorHandler,
-			}
-		}
-
-		return v1beta1.RuleSetSpec{
-			AuthClassName: rs.Spec.AuthClassName,
-			Rules:         converted,
-		}, nil
-	case v1beta1.GroupVersion:
-		if toVersion != v1alpha4.GroupVersion {
-			return nil, errorchain.NewWithMessagef(
-				ErrConversion, "unexpected target conversion version %s", toVersion)
-		}
-
-		var (
-			err error
-			rs  v1beta1.RuleSet
-		)
-		if err = json.Unmarshal(rawObj, &rs); err != nil {
-			return nil, err
-		}
-
-		converted := make([]cfgv1alpha4.Rule, len(rs.Spec.Rules))
-
-		for idx, rul := range rs.Spec.Rules {
-			routes, err := convertObject[[]cfgv1beta1.Route, []cfgv1alpha4.Route](rul.Matcher.Routes)
-			if err != nil {
-				return nil, err
-			}
-
-			backend, err := convertObject[cfgv1beta1.Backend, cfgv1alpha4.Backend](*rul.Backend)
-			if err != nil {
-				return nil, err
-			}
-
-			hosts := make([]cfgv1alpha4.HostMatcher, len(rul.Matcher.Hosts))
-			for idx, host := range rul.Matcher.Hosts {
-				hosts[idx] = cfgv1alpha4.HostMatcher{Value: host, Type: "wildcard"}
-			}
-
-			converted[idx] = cfgv1alpha4.Rule{
-				ID:                     rul.ID,
-				EncodedSlashesHandling: rul.EncodedSlashesHandling,
-				Matcher: cfgv1alpha4.Matcher{
-					Routes:  routes,
-					Scheme:  rul.Matcher.Scheme,
-					Methods: rul.Matcher.Methods,
-					Hosts:   hosts,
-				},
-				Backend:      &backend,
-				Execute:      rul.Execute,
-				ErrorHandler: rul.ErrorHandler,
-			}
-		}
-
-		return v1alpha4.RuleSetSpec{
-			AuthClassName: rs.Spec.AuthClassName,
-			Rules:         converted,
-		}, nil
-	default:
-		return nil, errorchain.NewWithMessagef(
-			ErrConversion, "unexpected source conversion version %s", fromVersion)
-	}
-}
-
-func convertObject[From any, To any](from From) (To, error) {
-	var to To
-
-	raw, err := json.Marshal(from)
+	data, err := json.Marshal(rs)
 	if err != nil {
-		return to, err
+		return nil, err
 	}
 
-	if err := json.Unmarshal(raw, &to); err != nil {
-		return to, err
+	converter := conversion.NewRuleSetConverter(strings.TrimPrefix(toVersion.Version, "v"))
+
+	result, err := converter.ConvertRuleSet(data)
+	if err != nil {
+		return nil, err
 	}
 
-	return to, nil
+	var convertedRs map[string]any
+	if err = json.Unmarshal(result, &convertedRs); err != nil {
+		return nil, err
+	}
+
+	delete(convertedRs, "version")
+	delete(convertedRs, "name")
+	convertedRs["authClassName"] = rs["authClassName"]
+
+	return convertedRs, nil
 }

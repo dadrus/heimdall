@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,7 +148,8 @@ func TestRulSetConverterHandle(t *testing.T) {
 			req: request{
 				Objects: []runtime.RawExtension{{Raw: []byte(`{
   "apiVersion": "heimdall.dadrus.github.com/v1beta1",
-  "kind": "RuleSet"
+  "kind": "RuleSet",
+  "spec": {}
 }`)}},
 				DesiredAPIVersion: v1beta1.GroupVersion.String(),
 			},
@@ -157,20 +159,21 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Empty(t, resp.ConvertedObjects)
 				assert.Equal(t, int32(http.StatusBadRequest), resp.Result.Code)
 				assert.Equal(t, "Failure", resp.Result.Status)
-				assert.Contains(t, resp.Result.Message, "rule set is already in the expected version")
+				assert.Contains(t, resp.Result.Message, "failed to convert rule set")
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
 				assert.Contains(t, resp.Result.Details.Causes[0].Message, "rule set is already in the expected version")
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
-				assert.Equal(t, "Objects[0].apiVersion", resp.Result.Details.Causes[0].Field)
+				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
 		},
 		"failed to convert ruleset due to unexpected source conversion version": {
 			req: request{
 				Objects: []runtime.RawExtension{{Raw: []byte(`{
   "apiVersion": "foo/bar",
-  "kind": "RuleSet"
+  "kind": "RuleSet",
+  "spec": {}
 }`)}},
 				DesiredAPIVersion: v1beta1.GroupVersion.String(),
 			},
@@ -184,7 +187,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Equal(t, "conversion error: unexpected source conversion version foo/bar", resp.Result.Details.Causes[0].Message)
+				assert.Equal(t, "conversion error: unexpected source rule set version: bar", resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
@@ -193,7 +196,8 @@ func TestRulSetConverterHandle(t *testing.T) {
 			req: request{
 				Objects: []runtime.RawExtension{{Raw: []byte(`{
   "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
-  "kind": "RuleSet"
+  "kind": "RuleSet",
+  "spec": {}
 }`)}},
 				DesiredAPIVersion: "foo/bar",
 			},
@@ -207,7 +211,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Equal(t, "conversion error: unexpected target conversion version foo/bar", resp.Result.Details.Causes[0].Message)
+				assert.Equal(t, "conversion error: unexpected target rule set version: bar", resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
@@ -216,7 +220,8 @@ func TestRulSetConverterHandle(t *testing.T) {
 			req: request{
 				Objects: []runtime.RawExtension{{Raw: []byte(`{
   "apiVersion": "heimdall.dadrus.github.com/v1beta1",
-  "kind": "RuleSet"
+  "kind": "RuleSet",
+  "spec": {}
 }`)}},
 				DesiredAPIVersion: "foo/bar",
 			},
@@ -230,7 +235,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Equal(t, "conversion error: unexpected target conversion version foo/bar", resp.Result.Details.Causes[0].Message)
+				assert.Equal(t, "conversion error: unexpected target rule set version: bar", resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
@@ -242,6 +247,7 @@ func TestRulSetConverterHandle(t *testing.T) {
   "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
   "kind": "RuleSet",
   "spec": {
+    "authClassName": "bla",
     "rules": [
       {
         "id": "public-access",
@@ -291,10 +297,16 @@ func TestRulSetConverterHandle(t *testing.T) {
 				require.IsType(t, &unstructured.Unstructured{}, obj)
 				unstr := obj.(*unstructured.Unstructured)
 				assert.Equal(t, "heimdall.dadrus.github.com/v1beta1", unstr.GetAPIVersion())
-				spec := unstr.Object["spec"]
-				require.IsType(t, v1beta1.RuleSetSpec{}, spec)
-				ruleSetSpec := spec.(v1beta1.RuleSetSpec)
+
+				rawSpec, err := json.Marshal(unstr.Object["spec"])
+				require.NoError(t, err)
+
+				var ruleSetSpec v1beta1.RuleSetSpec
+				err = json.Unmarshal(rawSpec, &ruleSetSpec)
+				require.NoError(t, err)
+
 				assert.Equal(t, v1beta1.RuleSetSpec{
+					AuthClassName: "bla",
 					Rules: []cfgv1beta1.Rule{
 						{
 							ID:                     "public-access",
@@ -377,9 +389,14 @@ func TestRulSetConverterHandle(t *testing.T) {
 				require.IsType(t, &unstructured.Unstructured{}, obj)
 				unstr := obj.(*unstructured.Unstructured)
 				assert.Equal(t, "heimdall.dadrus.github.com/v1alpha4", unstr.GetAPIVersion())
-				spec := unstr.Object["spec"]
-				require.IsType(t, v1alpha4.RuleSetSpec{}, spec)
-				ruleSetSpec := spec.(v1alpha4.RuleSetSpec)
+
+				rawSpec, err := json.Marshal(unstr.Object["spec"])
+				require.NoError(t, err)
+
+				var ruleSetSpec v1alpha4.RuleSetSpec
+				err = json.Unmarshal(rawSpec, &ruleSetSpec)
+				require.NoError(t, err)
+
 				assert.Equal(t, v1alpha4.RuleSetSpec{
 					Rules: []cfgv1alpha4.Rule{
 						{
