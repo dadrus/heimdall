@@ -21,9 +21,9 @@ import (
 )
 
 type Backend struct {
-	Host              string       `json:"host"                yaml:"host"             validate:"required"` //nolint:tagalign,lll
-	ForwardHostHeader *bool        `json:"forward_host_header" yaml:"forward_host_header"`
-	URLRewriter       *URLRewriter `json:"rewrite"             yaml:"rewrite"          validate:"omitnil"` //nolint:tagalign,lll
+	Host              string       `json:"host"                          yaml:"host"                           validate:"required"` //nolint:tagalign,lll
+	ForwardHostHeader *bool        `json:"forward_host_header,omitempty" yaml:"forward_host_header,omitempty"`
+	URLRewriter       *URLRewriter `json:"rewrite,omitempty"             yaml:"rewrite,omitempty"              validate:"omitnil"` //nolint:tagalign,lll
 }
 
 func (b *Backend) CreateURL(value *url.URL) *url.URL {

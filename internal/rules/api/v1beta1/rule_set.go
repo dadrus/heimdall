@@ -21,9 +21,9 @@ import (
 )
 
 type RuleSet struct {
-	common.MetaData
+	common.MetaData `json:"-" yaml:"-"`
 
-	Version string `json:"version" yaml:"version" validate:"required"` //nolint:tagalign
-	Name    string `json:"name"    yaml:"name"`
-	Rules   []Rule `json:"rules"   yaml:"rules"   validate:"gt=0,dive,required"` //nolint:tagalign
+	Version string `json:"version"        yaml:"version" validate:"required"` //nolint:tagalign
+	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
+	Rules   []Rule `json:"rules"          yaml:"rules"   validate:"gt=0,dive,required"` //nolint:tagalign
 }

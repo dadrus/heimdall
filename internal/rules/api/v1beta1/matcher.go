@@ -19,15 +19,15 @@ package v1beta1
 import "slices"
 
 type Matcher struct {
-	Routes  []Route  `json:"routes"               yaml:"routes"               validate:"required,dive"`              //nolint:lll,tagalign
-	Scheme  string   `json:"scheme"               yaml:"scheme"               validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
-	Methods []string `json:"methods"              yaml:"methods"              validate:"omitempty,dive,required"`    //nolint:lll,tagalign
-	Hosts   []string `json:"hosts"                yaml:"hosts"                validate:"omitempty,required"`         //nolint:lll,tagalign
+	Routes  []Route  `json:"routes"            yaml:"routes"            validate:"required,dive"`              //nolint:lll,tagalign
+	Scheme  string   `json:"scheme,omitempty"  yaml:"scheme,omitempty"  validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
+	Methods []string `json:"methods,omitempty" yaml:"methods,omitempty" validate:"omitempty,dive,required"`    //nolint:lll,tagalign
+	Hosts   []string `json:"hosts,omitempty"   yaml:"hosts,omitempty"   validate:"omitempty,required"`         //nolint:lll,tagalign
 }
 
 type Route struct {
-	Path       string             `json:"path"        yaml:"path"        validate:"required"`                //nolint:lll,tagalign
-	PathParams []ParameterMatcher `json:"path_params" yaml:"path_params" validate:"omitempty,dive,required"` //nolint:lll,tagalign
+	Path       string             `json:"path"                  yaml:"path"                  validate:"required"`                //nolint:lll,tagalign
+	PathParams []ParameterMatcher `json:"path_params,omitempty" yaml:"path_params,omitempty" validate:"omitempty,dive,required"` //nolint:lll,tagalign
 }
 
 func (r *Route) DeepCopyInto(out *Route) {
