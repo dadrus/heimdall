@@ -143,8 +143,7 @@ func (rc *rulesetConverter) convertSpec(
 	// since conversion is delegated to a converter, which expects
 	// the ruleset in a format used for not kubernetes based providers
 	// there is a need to tune some fields, like adding the version and
-	// after the conversion removing it and a potentially empty name
-	// field (see below)
+	// after the conversion removing it (see below)
 	rs["version"] = strings.TrimPrefix(fromVersion.Version, "v")
 
 	data, err := json.Marshal(rs)
@@ -165,7 +164,6 @@ func (rc *rulesetConverter) convertSpec(
 	}
 
 	delete(convertedRs, "version")
-	delete(convertedRs, "name")
 	convertedRs["authClassName"] = rs["authClassName"]
 
 	return convertedRs, nil
