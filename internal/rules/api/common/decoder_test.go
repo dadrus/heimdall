@@ -146,6 +146,7 @@ func TestDecode(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			var res TestType
+
 			decoder := NewDecoder(tc.opts...)
 
 			// WHEN
