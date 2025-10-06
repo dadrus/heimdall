@@ -39,6 +39,7 @@ func NewDecoder(opts ...DecoderOption) *Decoder {
 	decoder := &Decoder{
 		decoderOpts: decoderOpts{
 			validator: noopValidator{},
+			tagName:   "json",
 		},
 	}
 
@@ -90,7 +91,7 @@ func (d *Decoder) DecodeMap(out any, in map[string]any) error {
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Result:      out,
 		ErrorUnused: d.errorOnUnused,
-		TagName:     "json",
+		TagName:     d.tagName,
 		DecodeHook:  x.IfThenElse(d.decodeHooks != nil, d.decodeHooks, mapstructure.ComposeDecodeHookFunc()),
 	})
 	if err != nil {

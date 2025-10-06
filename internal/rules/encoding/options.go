@@ -36,6 +36,7 @@ type decoderOpts struct {
 	validator         Validator
 	errorOnUnused     bool
 	decodeHooks       mapstructure.DecodeHookFunc
+	tagName           string
 }
 
 type DecoderOption func(*decoderOpts)
@@ -72,6 +73,14 @@ func WithDecodeHooks(hooks ...mapstructure.DecodeHookFunc) DecoderOption {
 	return func(opts *decoderOpts) {
 		if len(hooks) > 0 {
 			opts.decodeHooks = mapstructure.ComposeDecodeHookFunc(hooks...)
+		}
+	}
+}
+
+func WithTagName(name string) DecoderOption {
+	return func(opts *decoderOpts) {
+		if len(name) != 0 {
+			opts.tagName = name
 		}
 	}
 }

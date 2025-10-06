@@ -109,6 +109,21 @@ func TestWithDecodeHooks(t *testing.T) {
 	assert.NotNil(t, opts.decodeHooks)
 }
 
+func TestWithTagName(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	var opts decoderOpts
+
+	apply := WithTagName("foo")
+
+	// WHEN
+	apply(&opts)
+
+	// THEN
+	assert.Equal(t, "foo", opts.tagName)
+}
+
 func TestWithTargetContentType(t *testing.T) {
 	t.Parallel()
 
