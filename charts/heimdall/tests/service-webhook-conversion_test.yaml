@@ -20,9 +20,9 @@ tests:
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
-      - matchRegex:
+      - equal:
           path: metadata.name
-          pattern: ^RELEASE-NAME-heimdall-[0-9a-f]{8}$
+          value: RELEASE-NAME-heimdall-conversion-v1beta1
 
   - it: name should be set with overwritten name
     release:
@@ -31,9 +31,9 @@ tests:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       nameOverride: foo
     asserts:
-      - matchRegex:
+      - equal:
           path: metadata.name
-          pattern: ^test-release-foo-[0-9a-f]{8}$
+          value: test-release-foo-conversion-v1beta1
 
   - it: namespace should be set
     release:

@@ -139,23 +139,17 @@ tests:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
-          path: spec.conversion.strategy
-          value: Webhook
-      - equal:
-          path: spec.conversion.webhook.conversionReviewVersions
-          value: [ "v1" ]
-      - matchRegex:
-          path: spec.conversion.webhook.clientConfig.service.name
-          pattern: ^RELEASE-NAME-heimdall-[0-9a-f]{8}$
-      - equal:
-          path: spec.conversion.webhook.clientConfig.service.namespace
-          value: NAMESPACE
-      - equal:
-          path: spec.conversion.webhook.clientConfig.service.path
-          value: "/convert"
-      - equal:
-          path: spec.conversion.webhook.clientConfig.service.port
-          value: 4459
+          path: spec.conversion
+          value:
+            strategy: Webhook
+            webhook:
+              conversionReviewVersions: [ "v1" ]
+              clientConfig:
+                service:
+                  name: RELEASE-NAME-heimdall-conversion-v1beta1
+                  namespace: NAMESPACE
+                  path: "/convert"
+                  port: 4459
 
   - it: should allow webhook customization
     release:
@@ -169,26 +163,18 @@ tests:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
-          path: spec.conversion.strategy
-          value: Webhook
-      - equal:
-          path: spec.conversion.webhook.conversionReviewVersions
-          value: [ "v1" ]
-      - equal:
-          path: spec.conversion.webhook.clientConfig.caBundle
-          value: foobar
-      - matchRegex:
-          path: spec.conversion.webhook.clientConfig.service.name
-          pattern: ^foo-heimdall-[0-9a-f]{8}$
-      - equal:
-          path: spec.conversion.webhook.clientConfig.service.namespace
-          value: bar
-      - equal:
-          path: spec.conversion.webhook.clientConfig.service.path
-          value: "/convert"
-      - equal:
-          path: spec.conversion.webhook.clientConfig.service.port
-          value: 1234
+          path: spec.conversion
+          value:
+            strategy: Webhook
+            webhook:
+              conversionReviewVersions: [ "v1" ]
+              clientConfig:
+                caBundle: foobar
+                service:
+                  name: foo-heimdall-conversion-v1beta1
+                  namespace: bar
+                  path: "/convert"
+                  port: 1234
 
   - it: should contain two versions - v1alpha4 and v1beta1
     set:
