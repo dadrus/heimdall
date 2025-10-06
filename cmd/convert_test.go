@@ -23,5 +23,5 @@ func TestNewConvertCmd(t *testing.T) {
 
 	commands := cmd.Commands()
 	assert.Len(t, commands, 1)
-	assert.Contains(t, commands[0].Use, "rules")
+	assert.Contains(t, commands[0].Use, "ruleset")
 }

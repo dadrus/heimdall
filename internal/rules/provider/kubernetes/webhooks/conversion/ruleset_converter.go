@@ -18,7 +18,6 @@ package conversion
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -33,8 +32,6 @@ import (
 	"github.com/dadrus/heimdall/internal/conversion"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 )
-
-var ErrConversion = errors.New("conversion error")
 
 type rulesetConverter struct{}
 
@@ -153,7 +150,7 @@ func (rc *rulesetConverter) convertSpec(
 
 	converter := conversion.NewRuleSetConverter(strings.TrimPrefix(toVersion.Version, "v"))
 
-	result, err := converter.ConvertRuleSet(data)
+	result, err := converter.ConvertRuleSet(data, "application/json")
 	if err != nil {
 		return nil, err
 	}

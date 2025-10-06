@@ -1,75 +1,77 @@
 package convert
 
 import (
+	"io"
 	"os"
+	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/conversion"
-	"github.com/spf13/cobra"
 )
 
 const (
 	convertRuleSetFlagDesiredVersion = "desired-version"
-	convertRuleSetFlagInputFile      = "in"
 	convertRuleSetFlagOutputFile     = "out"
 )
 
 // NewConvertRulesCommand represents the "convert rules" command.
 func NewConvertRulesCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "rules --desired-version <desired version> --in <path/to/ruleset> --out <path/to/converted/ruleset>",
-		Short: "Converts heimdall's ruleset",
-		Args:  cobra.ExactArgs(1),
-		Example: `heimdall convert rules --desired_version v1beta1 \
-   --in /path/to/ruleset.yaml \
-   --out /path/to/converted/ruleset.yaml`,
-		SilenceUsage: true,
-		RunE:         convertRuleSet,
+		Use:   "ruleset [options] /path/to/ruleset.yaml",
+		Short: "Converts heimdall's RuleSet",
+		Example: `heimdall convert ruleset --desired-version v1beta1 \
+   --out /path/to/converted/ruleset.yaml \
+   /path/to/ruleset.yaml`,
+		Args: cobra.ExactArgs(1),
+		RunE: convertRuleSet,
 	}
 
-	cmd.PersistentFlags().String(convertRuleSetFlagDesiredVersion, "", "Target version of the resulting RuleSet")
-	cmd.PersistentFlags().String(convertRuleSetFlagInputFile, "", "RuleSet file to convert")
-	cmd.PersistentFlags().String(convertRuleSetFlagOutputFile, "", "File to write the conversion result to")
+	cmd.Flags().String(convertRuleSetFlagDesiredVersion, "",
+		"Target version of the resulting RuleSet (required)")
+	_ = cmd.MarkFlagRequired(convertRuleSetFlagDesiredVersion)
+	cmd.Flags().String(convertRuleSetFlagOutputFile, "",
+		"File to write the conversion result to. If not used, the converted"+
+			" ruleset is written to the standard output")
 
 	return cmd
 }
 
-func convertRuleSet(cmd *cobra.Command, _ []string) error {
-	inputFile, err := cmd.Flags().GetString(convertRuleSetFlagInputFile)
-	if err != nil {
-		return err
-	}
-
-	outputFile, err := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
-	if err != nil {
-		return err
-	}
-
-	targetVersion, err := cmd.Flags().GetString(convertRuleSetFlagDesiredVersion)
-	if err != nil {
-		return err
-	}
+func convertRuleSet(cmd *cobra.Command, args []string) error {
+	inputFile := args[0]
+	outputFile, _ := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
+	targetVersion, _ := cmd.Flags().GetString(convertRuleSetFlagDesiredVersion)
+	conv := conversion.NewRuleSetConverter(targetVersion)
 
 	contents, err := os.ReadFile(inputFile)
 	if err != nil {
 		return err
 	}
 
-	conv := conversion.NewRuleSetConverter(targetVersion)
+	contentType := "unknown"
+	if strings.HasSuffix(inputFile, ".yaml") || strings.HasSuffix(inputFile, ".yml") {
+		contentType = "application/yaml"
+	} else if strings.HasSuffix(inputFile, ".json") {
+		contentType = "application/json"
+	}
 
-	result, err := conv.ConvertRuleSet(contents)
+	result, err := conv.ConvertRuleSet(contents, contentType)
 	if err != nil {
 		return err
 	}
 
-	file, err := os.Create(outputFile)
-	if err != nil {
-		return err
+	var out io.Writer
+
+	if len(outputFile) == 0 {
+		out = cmd.OutOrStdout()
+	} else {
+		out, err = os.Create(outputFile)
+		if err != nil {
+			return err
+		}
 	}
 
-	_, err = file.Write(result)
-	if err != nil {
-		return err
-	}
+	_, err = out.Write(result)
 
-	return nil
+	return err
 }

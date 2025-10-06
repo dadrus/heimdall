@@ -17,6 +17,7 @@
 package httpendpoint
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -155,13 +156,14 @@ rules:
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
 
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 			},
 			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, v1beta1.ErrEmptyRuleSet)
+				require.ErrorIs(t, err, io.EOF)
 			},
 		},
 		"valid rule set without path prefix from yaml": {

@@ -208,7 +208,7 @@ func (p *Provider) ruleSetsChanged(ctx context.Context, evt fsnotify.Event) erro
 func (p *Provider) ruleSetCreatedOrUpdated(ctx context.Context, fileName string) error {
 	ruleSet, err := p.loadRuleSet(fileName)
 	if err != nil {
-		if errors.Is(err, v1beta1.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrNotExist) {
 			return p.ruleSetDeleted(ctx, fileName)
 		}
 
@@ -246,7 +246,7 @@ func (p *Provider) ruleSetDeleted(ctx context.Context, fileName string) error {
 	}
 
 	conf := &v1beta1.RuleSet{
-		MetaData: common.MetaData{
+		MetaData: v1beta1.MetaData{
 			Source:  "file_system:" + fileName,
 			ModTime: time.Now(),
 		},
@@ -270,7 +270,14 @@ func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 
 	md := sha256.New()
 
-	ruleSet, err := v1beta1.ParseRules(p.app, "application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
+	dec := common.NewDecoder[v1beta1.RuleSet](
+		common.WithSourceContentType("application/yaml"),
+		common.WithValidator(common.ValidatorFunc(p.app.Validator().ValidateStruct)),
+		common.WithEnvVarsSubstitution(p.envVarsEnabled),
+		common.WithErrorOnUnused(true),
+	)
+
+	ruleSet, err := dec.Decode(io.TeeReader(file, md))
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "failed to parse rule set %s", fileName).
 			CausedBy(err)
@@ -282,7 +289,7 @@ func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 	ruleSet.Source = "file_system:" + fileName
 	ruleSet.ModTime = stat.ModTime()
 
-	return ruleSet, nil
+	return &ruleSet, nil
 }
 
 func (p *Provider) loadInitialRuleSet(ctx context.Context) error {

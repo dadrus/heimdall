@@ -23,6 +23,7 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob" // to support azure blobs
 	_ "gocloud.dev/blob/gcsblob"   // to support gc storage blobs
@@ -84,7 +85,7 @@ func (e *ruleSetEndpoint) readAllBlobs(
 
 		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key, app)
 		if err != nil {
-			if errors.Is(err, v1beta1.ErrEmptyRuleSet) {
+			if errors.Is(err, io.EOF) {
 				continue
 			}
 
@@ -104,7 +105,7 @@ func (e *ruleSetEndpoint) readSingleBlob(
 ) ([]*v1beta1.RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path, app)
 	if err != nil {
-		if errors.Is(err, v1beta1.ErrEmptyRuleSet) {
+		if errors.Is(err, io.EOF) {
 			return []*v1beta1.RuleSet{}, nil
 		}
 
@@ -134,7 +135,13 @@ func (e *ruleSetEndpoint) readRuleSet(
 
 	defer reader.Close()
 
-	contents, err := v1beta1.ParseRules(app, attrs.ContentType, reader, false)
+	dec := common.NewDecoder[v1beta1.RuleSet](
+		common.WithSourceContentType(attrs.ContentType),
+		common.WithValidator(common.ValidatorFunc(app.Validator().ValidateStruct)),
+		common.WithErrorOnUnused(true),
+	)
+
+	contents, err := dec.Decode(reader)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
@@ -145,7 +152,7 @@ func (e *ruleSetEndpoint) readRuleSet(
 	contents.Source = fmt.Sprintf("%s@%s", key, e.ID())
 	contents.ModTime = attrs.ModTime
 
-	return contents, nil
+	return &contents, nil
 }
 
 func mapError(err error, message string) error {

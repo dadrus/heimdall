@@ -28,7 +28,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/mocks"
@@ -346,7 +345,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
-				assert.Equal(t, common.EncodedSlashesOff, defRule.slashesHandling)
+				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Empty(t, defRule.sh)
 				assert.Empty(t, defRule.fi)
@@ -398,7 +397,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
-				assert.Equal(t, common.EncodedSlashesOff, defRule.slashesHandling)
+				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Len(t, defRule.sh, 2)
 				assert.Len(t, defRule.fi, 1)
@@ -592,7 +591,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, common.EncodedSlashesOff, rul.slashesHandling)
+				assert.Equal(t, v1beta1.EncodedSlashesOff, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
@@ -627,7 +626,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, common.EncodedSlashesOff, rul.slashesHandling)
+				assert.Equal(t, v1beta1.EncodedSlashesOff, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
@@ -685,7 +684,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Methods: []string{"BAR", "BAZ"},
 					Hosts:   []string{"*.example.com"},
 				},
-				EncodedSlashesHandling: common.EncodedSlashesOnNoDecode,
+				EncodedSlashesHandling: v1beta1.EncodedSlashesOnNoDecode,
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo", "id": "1"},
 					{"contextualizer": "bar", "id": "2"},
@@ -725,7 +724,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, common.EncodedSlashesOnNoDecode, rul.slashesHandling)
+				assert.Equal(t, v1beta1.EncodedSlashesOnNoDecode, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 2)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/:resource", rul.Routes()[0].Path())
@@ -764,7 +763,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Methods: []string{"BAR", "BAZ"},
 					Hosts:   []string{"*.example.com"},
 				},
-				EncodedSlashesHandling: common.EncodedSlashesOn,
+				EncodedSlashesHandling: v1beta1.EncodedSlashesOn,
 				Backend: &v1beta1.Backend{
 					Host: "bar.foo",
 					URLRewriter: &v1beta1.URLRewriter{
@@ -813,7 +812,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
-				assert.Equal(t, common.EncodedSlashesOn, rul.slashesHandling)
+				assert.Equal(t, v1beta1.EncodedSlashesOn, rul.slashesHandling)
 				assert.Len(t, rul.Routes(), 2)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/:resource", rul.Routes()[0].Path())

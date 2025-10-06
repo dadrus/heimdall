@@ -27,7 +27,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
@@ -77,7 +76,7 @@ type RuleSet struct {
 
 func (rs *RuleSet) AsConfig() *v1beta1.RuleSet {
 	return &v1beta1.RuleSet{
-		MetaData: common.MetaData{
+		MetaData: v1beta1.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
 			ModTime: rs.CreationTimestamp.Time,
 		},

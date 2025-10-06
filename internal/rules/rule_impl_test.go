@@ -26,7 +26,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
@@ -42,7 +41,7 @@ func TestRuleExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		backend        *v1beta1.Backend
-		slashHandling  common.EncodedSlashesHandling
+		slashHandling  v1beta1.EncodedSlashesHandling
 		configureMocks func(
 			t *testing.T,
 			ctx *heimdallmocks.RequestContextMock,
@@ -201,7 +200,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with disallowed urlencoded slashes": {
-			slashHandling: common.EncodedSlashesOff,
+			slashHandling: v1beta1.EncodedSlashesOff,
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
@@ -227,7 +226,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with urlencoded slashes on without urlencoded slash": {
-			slashHandling: common.EncodedSlashesOn,
+			slashHandling: v1beta1.EncodedSlashesOn,
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
@@ -266,7 +265,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with urlencoded slashes on with urlencoded slash": {
-			slashHandling: common.EncodedSlashesOn,
+			slashHandling: v1beta1.EncodedSlashesOn,
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
@@ -304,7 +303,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"all handler succeed with urlencoded slashes on with urlencoded slash but without decoding it": {
-			slashHandling: common.EncodedSlashesOnNoDecode,
+			slashHandling: v1beta1.EncodedSlashesOnNoDecode,
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
@@ -444,7 +443,7 @@ func TestRuleExecute(t *testing.T) {
 
 			rul := &ruleImpl{
 				backend:         tc.backend,
-				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, common.EncodedSlashesOff),
+				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, v1beta1.EncodedSlashesOff),
 				sc:              compositeSubjectCreator{authenticator},
 				sh:              compositeSubjectHandler{authorizer},
 				fi:              compositeSubjectHandler{finalizer},

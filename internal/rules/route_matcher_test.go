@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
@@ -174,7 +173,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			pm, err := createPathParamsMatcher(tc.conf, common.EncodedSlashesOff)
+			pm, err := createPathParamsMatcher(tc.conf, v1beta1.EncodedSlashesOff)
 
 			tc.assert(t, pm, err)
 		})
@@ -240,7 +239,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		conf          []v1beta1.ParameterMatcher
-		slashHandling common.EncodedSlashesHandling
+		slashHandling v1beta1.EncodedSlashesHandling
 		toMatch       string
 		keys          []string
 		values        []string
@@ -257,7 +256,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz"},
 			},
-			slashHandling: common.EncodedSlashesOff,
+			slashHandling: v1beta1.EncodedSlashesOff,
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz"},
 			toMatch:       "http://example.com/bar%2Fbaz",
@@ -266,7 +265,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz[id]"},
 			},
-			slashHandling: common.EncodedSlashesOnNoDecode,
+			slashHandling: v1beta1.EncodedSlashesOnNoDecode,
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz%5Bid%5D"},
 			toMatch:       "http://example.com/bar%2Fbaz%5Bid%5D",
@@ -276,7 +275,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar/baz[id]"},
 			},
-			slashHandling: common.EncodedSlashesOn,
+			slashHandling: v1beta1.EncodedSlashesOn,
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz%5Bid%5D"},
 			toMatch:       "http://example.com/foo%2Fbaz%5Bid%5D",
@@ -287,7 +286,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 				{Name: "foo", Type: "exact", Value: "bar/foo"},
 				{Name: "foo", Type: "exact", Value: "bar/bar"},
 			},
-			slashHandling: common.EncodedSlashesOn,
+			slashHandling: v1beta1.EncodedSlashesOn,
 			keys:          []string{"foo"},
 			values:        []string{"bar/bar"},
 			toMatch:       "http://example.com/foo/bar",
@@ -297,7 +296,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar"},
 			},
-			slashHandling: common.EncodedSlashesOn,
+			slashHandling: v1beta1.EncodedSlashesOn,
 			keys:          []string{"foo"},
 			values:        []string{"baz"},
 			toMatch:       "http://example.com/bar",

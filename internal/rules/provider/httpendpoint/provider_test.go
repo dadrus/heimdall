@@ -258,6 +258,7 @@ endpoints:
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
 
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {

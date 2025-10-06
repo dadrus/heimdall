@@ -27,7 +27,6 @@ import (
 	"github.com/rs/zerolog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -72,7 +71,7 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 	}
 
 	ruleSet := &cfgv1beta1.RuleSet{
-		MetaData: common.MetaData{
+		MetaData: cfgv1beta1.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
 			ModTime: time.Now(),
 		},

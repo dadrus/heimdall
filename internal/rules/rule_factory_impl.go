@@ -25,7 +25,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -79,7 +78,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, rul v1beta1.Rule) (rule.
 
 	slashesHandling := x.IfThenElse(len(rul.EncodedSlashesHandling) != 0,
 		rul.EncodedSlashesHandling,
-		common.EncodedSlashesOff,
+		v1beta1.EncodedSlashesOff,
 	)
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, rul.Execute)
@@ -346,7 +345,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	f.defaultRule = &ruleImpl{
 		id:              "default",
-		slashesHandling: common.EncodedSlashesOff,
+		slashesHandling: v1beta1.EncodedSlashesOff,
 		srcID:           "config",
 		isDefault:       true,
 		sc:              authenticators,

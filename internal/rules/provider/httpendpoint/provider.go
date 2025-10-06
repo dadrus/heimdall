@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"sync"
 	"time"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -165,13 +165,13 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
-		if !errors.Is(err, v1beta1.ErrEmptyRuleSet) &&
+		if !errors.Is(err, io.EOF) &&
 			(errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration)) {
 			return err
 		}
 
 		ruleSet = &v1beta1.RuleSet{
-			MetaData: common.MetaData{
+			MetaData: v1beta1.MetaData{
 				Source:  "http_endpoint:" + rsf.ID(),
 				ModTime: time.Now(),
 			},

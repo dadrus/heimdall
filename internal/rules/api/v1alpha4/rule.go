@@ -24,16 +24,15 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 )
 
 type Rule struct {
-	ID                     string                        `json:"id"                              yaml:"id"                              validate:"required"`                         //nolint:lll,tagalign
-	EncodedSlashesHandling common.EncodedSlashesHandling `json:"allow_encoded_slashes,omitempty" yaml:"allow_encoded_slashes,omitempty" validate:"omitempty,oneof=off on no_decode"` //nolint:lll,tagalign
-	Matcher                Matcher                       `json:"match"                           yaml:"match"                           validate:"required"`                         //nolint:lll,tagalign
-	Backend                *Backend                      `json:"forward_to,omitempty"            yaml:"forward_to,omitempty"            validate:"omitnil"`                          //nolint:lll,tagalign
-	Execute                []config.MechanismConfig      `json:"execute"                         yaml:"execute"                         validate:"gt=0,dive,required"`               //nolint:lll,tagalign
-	ErrorHandler           []config.MechanismConfig      `json:"on_error,omitempty"              yaml:"on_error,omitempty"`
+	ID                     string                   `json:"id"                              yaml:"id"                              validate:"required"`                         //nolint:lll,tagalign
+	EncodedSlashesHandling EncodedSlashesHandling   `json:"allow_encoded_slashes,omitempty" yaml:"allow_encoded_slashes,omitempty" validate:"omitempty,oneof=off on no_decode"` //nolint:lll,tagalign
+	Matcher                Matcher                  `json:"match"                           yaml:"match"                           validate:"required"`                         //nolint:lll,tagalign
+	Backend                *Backend                 `json:"forward_to,omitempty"            yaml:"forward_to,omitempty"            validate:"omitnil"`                          //nolint:lll,tagalign
+	Execute                []config.MechanismConfig `json:"execute"                         yaml:"execute"                         validate:"gt=0,dive,required"`               //nolint:lll,tagalign
+	ErrorHandler           []config.MechanismConfig `json:"on_error,omitempty"              yaml:"on_error,omitempty"`
 }
 
 func (r *Rule) Hash() ([]byte, error) {

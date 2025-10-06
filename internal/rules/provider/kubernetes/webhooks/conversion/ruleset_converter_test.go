@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	cfgv1alpha4 "github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
 	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha4"
@@ -310,7 +309,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 					Rules: []cfgv1beta1.Rule{
 						{
 							ID:                     "public-access",
-							EncodedSlashesHandling: common.EncodedSlashesOn,
+							EncodedSlashesHandling: cfgv1beta1.EncodedSlashesOn,
 							Matcher: cfgv1beta1.Matcher{
 								Routes: []cfgv1beta1.Route{
 									{
@@ -401,7 +400,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 					Rules: []cfgv1alpha4.Rule{
 						{
 							ID:                     "public-access",
-							EncodedSlashesHandling: common.EncodedSlashesOn,
+							EncodedSlashesHandling: cfgv1alpha4.EncodedSlashesOn,
 							Matcher: cfgv1alpha4.Matcher{
 								Routes: []cfgv1alpha4.Route{
 									{

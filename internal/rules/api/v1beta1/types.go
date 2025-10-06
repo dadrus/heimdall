@@ -14,8 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// nolint: revive
-package common
+package v1beta1
 
 import (
 	"time"

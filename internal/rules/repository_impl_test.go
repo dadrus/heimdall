@@ -21,12 +21,12 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -1253,7 +1253,7 @@ func TestRepositoryFindRule(t *testing.T) {
 						matcher: &pathParamMatcher{
 							newExactMatcher("foo"),
 							"id",
-							common.EncodedSlashesOff,
+							v1beta1.EncodedSlashesOff,
 						},
 					},
 				)
@@ -1267,7 +1267,7 @@ func TestRepositoryFindRule(t *testing.T) {
 						matcher: &pathParamMatcher{
 							newExactMatcher("baz"),
 							"id",
-							common.EncodedSlashesOff,
+							v1beta1.EncodedSlashesOff,
 						},
 					},
 				)

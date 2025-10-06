@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
@@ -79,7 +78,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 		},
 		"successful": {
 			ruleset: &v1beta1.RuleSet{
-				MetaData: common.MetaData{Source: "test"},
+				MetaData: v1beta1.MetaData{Source: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 				Rules:    []v1beta1.Rule{{ID: "foo"}},
@@ -170,7 +169,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 		},
 		"successful": {
 			ruleset: &v1beta1.RuleSet{
-				MetaData: common.MetaData{Source: "test"},
+				MetaData: v1beta1.MetaData{Source: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 				Rules:    []v1beta1.Rule{{ID: "foo"}},
@@ -220,7 +219,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 	}{
 		"failed removing rule set": {
 			ruleset: &v1beta1.RuleSet{
-				MetaData: common.MetaData{Source: "test"},
+				MetaData: v1beta1.MetaData{Source: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 			},
@@ -238,7 +237,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 		},
 		"successful": {
 			ruleset: &v1beta1.RuleSet{
-				MetaData: common.MetaData{Source: "test"},
+				MetaData: v1beta1.MetaData{Source: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 			},

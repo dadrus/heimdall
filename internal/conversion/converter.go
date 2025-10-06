@@ -1,8 +1,10 @@
 package conversion
 
 import (
+	"bytes"
 	"errors"
 
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -13,7 +15,7 @@ var ErrConversion = errors.New("conversion error")
 
 type (
 	Converter interface {
-		ConvertRuleSet(data []byte) ([]byte, error)
+		ConvertRuleSet(data []byte, contentType string) ([]byte, error)
 	}
 
 	unstructuredRuleSet map[string]any
@@ -29,10 +31,15 @@ func NewRuleSetConverter(targetVersion string) Converter {
 	}
 }
 
-func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte) ([]byte, error) {
+func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte, contentType string) ([]byte, error) {
 	var urs unstructuredRuleSet
 
-	if err := json.Unmarshal(rawObj, &urs); err != nil {
+	dec := common.NewDecoder[unstructuredRuleSet](
+		common.WithSourceContentType(contentType),
+	)
+
+	urs, err := dec.Decode(bytes.NewBuffer(rawObj))
+	if err != nil {
 		return nil, errorchain.NewWithMessage(ErrConversion,
 			"failed to unmarshal rule set").CausedBy(err)
 	}
@@ -51,11 +58,10 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte) ([]byte, error) {
 				"unexpected target rule set version: %s", c.toVersion)
 		}
 
-		var (
-			err      error
-			sourceRs v1alpha4.RuleSet
-		)
-		if err = json.Unmarshal(rawObj, &sourceRs); err != nil {
+		rdec := common.NewDecoder[v1alpha4.RuleSet](common.WithSourceContentType(contentType))
+
+		sourceRs, err := rdec.Decode(bytes.NewReader(rawObj))
+		if err != nil {
 			return nil, err
 		}
 
@@ -81,7 +87,7 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte) ([]byte, error) {
 
 			convertedRules[idx] = v1beta1.Rule{
 				ID:                     rul.ID,
-				EncodedSlashesHandling: rul.EncodedSlashesHandling,
+				EncodedSlashesHandling: v1beta1.EncodedSlashesHandling(rul.EncodedSlashesHandling),
 				Matcher: v1beta1.Matcher{
 					Routes:  routes,
 					Scheme:  rul.Matcher.Scheme,
@@ -100,24 +106,25 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte) ([]byte, error) {
 			Rules:   convertedRules,
 		}
 
-		result, err := json.Marshal(convertedRs)
-		if err != nil {
+		buf := &bytes.Buffer{}
+
+		enc := common.NewEncoder[v1beta1.RuleSet](common.WithTargetContentType(contentType))
+		if err = enc.Encode(convertedRs, buf); err != nil {
 			return nil, errorchain.NewWithMessage(ErrConversion, "failed to marshal converted rule set").
 				CausedBy(err)
 		}
 
-		return result, nil
+		return buf.Bytes(), nil
 	case v1beta1.Version:
 		if c.toVersion != v1alpha4.Version {
 			return nil, errorchain.NewWithMessagef(
 				ErrConversion, "unexpected target rule set version: %s", c.toVersion)
 		}
 
-		var (
-			err      error
-			sourceRs v1beta1.RuleSet
-		)
-		if err = json.Unmarshal(rawObj, &sourceRs); err != nil {
+		rdec := common.NewDecoder[v1beta1.RuleSet](common.WithSourceContentType(contentType))
+
+		sourceRs, err := rdec.Decode(bytes.NewReader(rawObj))
+		if err != nil {
 			return nil, err
 		}
 
@@ -143,7 +150,7 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte) ([]byte, error) {
 
 			convertedRules[idx] = v1alpha4.Rule{
 				ID:                     rul.ID,
-				EncodedSlashesHandling: rul.EncodedSlashesHandling,
+				EncodedSlashesHandling: v1alpha4.EncodedSlashesHandling(rul.EncodedSlashesHandling),
 				Matcher: v1alpha4.Matcher{
 					Routes:  routes,
 					Scheme:  rul.Matcher.Scheme,
@@ -162,13 +169,15 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte) ([]byte, error) {
 			Rules:   convertedRules,
 		}
 
-		result, err := json.Marshal(convertedRs)
-		if err != nil {
+		buf := &bytes.Buffer{}
+
+		enc := common.NewEncoder[v1alpha4.RuleSet](common.WithTargetContentType(contentType))
+		if err = enc.Encode(convertedRs, buf); err != nil {
 			return nil, errorchain.NewWithMessage(ErrConversion, "failed to marshal converted rule set").
 				CausedBy(err)
 		}
 
-		return result, nil
+		return buf.Bytes(), nil
 	default:
 		return nil, errorchain.NewWithMessagef(
 			ErrConversion, "unexpected source rule set version: %s", fromVersion)

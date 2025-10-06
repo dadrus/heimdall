@@ -16,10 +16,8 @@
 
 package v1alpha4
 
-import "github.com/dadrus/heimdall/internal/rules/api/common"
-
 type RuleSet struct {
-	common.MetaData `json:"-" yaml:"-"`
+	MetaData `json:"-" yaml:"-"`
 
 	Version string `json:"version"        yaml:"version" validate:"required"` //nolint:tagalign
 	Name    string `json:"name,omitempty" yaml:"name,omitempty"`

@@ -30,7 +30,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -211,7 +210,7 @@ func (p *Provider) ruleSetsUpdated(
 
 	for _, ID := range removedIDs {
 		conf := &v1beta1.RuleSet{
-			MetaData: common.MetaData{
+			MetaData: v1beta1.MetaData{
 				Source:  "blob:" + ID,
 				ModTime: time.Now(),
 			},
