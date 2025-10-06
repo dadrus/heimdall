@@ -16,7 +16,7 @@ var ErrConversion = errors.New("conversion error")
 
 type (
 	Converter interface {
-		ConvertRuleSet(data []byte, contentType string) ([]byte, error)
+		ConvertRuleSet(data []byte, format string) ([]byte, error)
 	}
 
 	unstructuredRuleSet map[string]any
@@ -32,15 +32,14 @@ func NewRuleSetConverter(targetVersion string) Converter {
 	}
 }
 
-func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte, contentType string) ([]byte, error) {
+// nolint: gocognit
+func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte, format string) ([]byte, error) {
 	var urs unstructuredRuleSet
 
-	dec := common.NewDecoder[unstructuredRuleSet](
-		common.WithSourceContentType(contentType),
-	)
+	dec := common.NewDecoder(common.WithSourceContentType(format))
+	enc := common.NewEncoder(common.WithTargetContentType(format))
 
-	urs, err := dec.Decode(bytes.NewBuffer(rawObj))
-	if err != nil {
+	if err := dec.Decode(&urs, bytes.NewBuffer(rawObj)); err != nil {
 		return nil, errorchain.NewWithMessage(ErrConversion,
 			"failed to unmarshal rule set").CausedBy(err)
 	}
@@ -59,10 +58,8 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte, contentType string) ([]
 				"unexpected target rule set version: %s", c.toVersion)
 		}
 
-		rdec := common.NewDecoder[v1alpha4.RuleSet](common.WithSourceContentType(contentType))
-
-		sourceRs, err := rdec.Decode(bytes.NewReader(rawObj))
-		if err != nil {
+		var sourceRs v1alpha4.RuleSet
+		if err := dec.Decode(&sourceRs, bytes.NewReader(rawObj)); err != nil {
 			return nil, err
 		}
 
@@ -108,9 +105,7 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte, contentType string) ([]
 		}
 
 		buf := &bytes.Buffer{}
-
-		enc := common.NewEncoder[v1beta1.RuleSet](common.WithTargetContentType(contentType))
-		if err = enc.Encode(convertedRs, buf); err != nil {
+		if err := enc.Encode(&convertedRs, buf); err != nil {
 			return nil, errorchain.NewWithMessage(ErrConversion, "failed to marshal converted rule set").
 				CausedBy(err)
 		}
@@ -122,10 +117,8 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte, contentType string) ([]
 				ErrConversion, "unexpected target rule set version: %s", c.toVersion)
 		}
 
-		rdec := common.NewDecoder[v1beta1.RuleSet](common.WithSourceContentType(contentType))
-
-		sourceRs, err := rdec.Decode(bytes.NewReader(rawObj))
-		if err != nil {
+		var sourceRs v1beta1.RuleSet
+		if err := dec.Decode(&sourceRs, bytes.NewReader(rawObj)); err != nil {
 			return nil, err
 		}
 
@@ -171,9 +164,7 @@ func (c *ruleSetConverter) ConvertRuleSet(rawObj []byte, contentType string) ([]
 		}
 
 		buf := &bytes.Buffer{}
-
-		enc := common.NewEncoder[v1alpha4.RuleSet](common.WithTargetContentType(contentType))
-		if err = enc.Encode(convertedRs, buf); err != nil {
+		if err := enc.Encode(&convertedRs, buf); err != nil {
 			return nil, errorchain.NewWithMessage(ErrConversion, "failed to marshal converted rule set").
 				CausedBy(err)
 		}
@@ -193,7 +184,12 @@ func (rs unstructuredRuleSet) getStringValue(key string) string {
 		return ""
 	}
 
-	return val.(string)
+	stringVal, ok := val.(string)
+	if !ok {
+		return ""
+	}
+
+	return stringVal
 }
 
 func convertObject[From any, To any](from From) (To, error) {

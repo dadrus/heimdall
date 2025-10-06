@@ -30,12 +30,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type Decoder[T any] struct {
+type Decoder struct {
 	decoderOpts
 }
 
-func NewDecoder[T any](opts ...DecoderOption) *Decoder[T] {
-	decoder := &Decoder[T]{
+func NewDecoder(opts ...DecoderOption) *Decoder {
+	decoder := &Decoder{
 		decoderOpts: decoderOpts{
 			validator: noopValidator{},
 		},
@@ -48,27 +48,24 @@ func NewDecoder[T any](opts ...DecoderOption) *Decoder[T] {
 	return decoder
 }
 
-func (d *Decoder[T]) Decode(reader io.Reader) (T, error) {
-	var (
-		res       T
-		rawConfig map[string]any
-	)
+func (d *Decoder) Decode(out any, reader io.Reader) error {
+	var rawConfig map[string]any
 
 	if d.contentType != "application/json" && d.contentType != "application/yaml" {
-		return res, errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return errorchain.NewWithMessagef(heimdall.ErrInternal,
 			"unsupported content type: %s", d.contentType)
 	}
 
 	if d.substituteEnvVars {
 		raw, err := io.ReadAll(reader)
 		if err != nil {
-			return res, errorchain.NewWithMessage(heimdall.ErrInternal,
+			return errorchain.NewWithMessage(heimdall.ErrInternal,
 				"reading object failed").CausedBy(err)
 		}
 
 		content, err := envsubst.EvalEnv(stringx.ToString(raw))
 		if err != nil {
-			return res, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"substitution of environment variables failed").CausedBy(err)
 		}
 
@@ -78,10 +75,10 @@ func (d *Decoder[T]) Decode(reader io.Reader) (T, error) {
 	dec := yaml.NewDecoder(reader)
 	if err := dec.Decode(&rawConfig); err != nil {
 		if errors.Is(err, io.EOF) {
-			return res, err
+			return err
 		}
 
-		return res, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"parsing of object failed").CausedBy(err)
 	}
 
@@ -90,24 +87,24 @@ func (d *Decoder[T]) Decode(reader io.Reader) (T, error) {
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
 			),
-			Result:      &res,
+			Result:      out,
 			ErrorUnused: d.errorOnUnused,
 			TagName:     "json",
 		})
 	if err != nil {
-		return res, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed creating object decoder").CausedBy(err)
 	}
 
 	if err = mdec.Decode(rawConfig); err != nil {
-		return res, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"decoding of object failed").CausedBy(err)
 	}
 
-	if err = d.validator.Validate(res); err != nil {
-		return res, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+	if err = d.validator.Validate(out); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"object validation failed").CausedBy(err)
 	}
 
-	return res, nil
+	return nil
 }

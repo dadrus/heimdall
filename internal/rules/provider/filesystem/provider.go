@@ -270,15 +270,16 @@ func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 
 	md := sha256.New()
 
-	dec := common.NewDecoder[v1beta1.RuleSet](
+	dec := common.NewDecoder(
 		common.WithSourceContentType("application/yaml"),
 		common.WithValidator(common.ValidatorFunc(p.app.Validator().ValidateStruct)),
 		common.WithEnvVarsSubstitution(p.envVarsEnabled),
 		common.WithErrorOnUnused(true),
 	)
 
-	ruleSet, err := dec.Decode(io.TeeReader(file, md))
-	if err != nil {
+	var ruleSet v1beta1.RuleSet
+
+	if err = dec.Decode(&ruleSet, io.TeeReader(file, md)); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "failed to parse rule set %s", fileName).
 			CausedBy(err)
 	}

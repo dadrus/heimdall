@@ -135,24 +135,24 @@ func (e *ruleSetEndpoint) readRuleSet(
 
 	defer reader.Close()
 
-	dec := common.NewDecoder[v1beta1.RuleSet](
+	dec := common.NewDecoder(
 		common.WithSourceContentType(attrs.ContentType),
 		common.WithValidator(common.ValidatorFunc(app.Validator().ValidateStruct)),
 		common.WithErrorOnUnused(true),
 	)
 
-	contents, err := dec.Decode(reader)
-	if err != nil {
+	var ruleSet v1beta1.RuleSet
+	if err = dec.Decode(&ruleSet, reader); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
 	}
 
-	contents.Hash = attrs.MD5
-	contents.Source = fmt.Sprintf("%s@%s", key, e.ID())
-	contents.ModTime = attrs.ModTime
+	ruleSet.Hash = attrs.MD5
+	ruleSet.Source = fmt.Sprintf("%s@%s", key, e.ID())
+	ruleSet.ModTime = attrs.ModTime
 
-	return &contents, nil
+	return &ruleSet, nil
 }
 
 func mapError(err error, message string) error {

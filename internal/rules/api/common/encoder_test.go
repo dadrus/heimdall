@@ -67,7 +67,7 @@ func TestEncode(t *testing.T) {
 			// GIVEN
 			obj := TestType{Foo: "bar"}
 			buf := &bytes.Buffer{}
-			encoder := NewEncoder[TestType](WithTargetContentType(tc.contentType))
+			encoder := NewEncoder(WithTargetContentType(tc.contentType))
 
 			// WHEN
 			err := encoder.Encode(obj, buf)

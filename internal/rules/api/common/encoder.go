@@ -26,12 +26,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type Encoder[T any] struct {
+type Encoder struct {
 	encoderOpts
 }
 
-func NewEncoder[T any](opts ...EncoderOption) *Encoder[T] {
-	encoder := &Encoder[T]{}
+func NewEncoder(opts ...EncoderOption) *Encoder {
+	encoder := &Encoder{}
 
 	for _, opt := range opts {
 		opt(&encoder.encoderOpts)
@@ -40,14 +40,14 @@ func NewEncoder[T any](opts ...EncoderOption) *Encoder[T] {
 	return encoder
 }
 
-func (d *Encoder[T]) Encode(obj T, out io.Writer) error {
+func (d *Encoder) Encode(in any, out io.Writer) error {
 	var err error
 
 	switch d.contentType {
 	case "application/json":
-		err = json.NewEncoder(out).Encode(obj)
+		err = json.NewEncoder(out).Encode(in)
 	case "application/yaml":
-		err = yaml.NewEncoder(out).Encode(obj)
+		err = yaml.NewEncoder(out).Encode(in)
 	default:
 		return errorchain.NewWithMessagef(heimdall.ErrInternal,
 			"unsupported content type: %s", d.contentType)

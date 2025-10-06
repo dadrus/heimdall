@@ -72,14 +72,14 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 
 	md := sha256.New()
 
-	dec := common.NewDecoder[v1beta1.RuleSet](
+	dec := common.NewDecoder(
 		common.WithSourceContentType(resp.Header.Get("Content-Type")),
 		common.WithValidator(common.ValidatorFunc(app.Validator().ValidateStruct)),
 		common.WithErrorOnUnused(true),
 	)
 
-	ruleSet, err := dec.Decode(io.TeeReader(resp.Body, md))
-	if err != nil {
+	var ruleSet v1beta1.RuleSet
+	if err = dec.Decode(&ruleSet, io.TeeReader(resp.Body, md)); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
 	}

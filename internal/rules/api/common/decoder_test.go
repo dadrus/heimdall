@@ -145,10 +145,11 @@ func TestDecode(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			decoder := NewDecoder[TestType](tc.opts...)
+			var res TestType
+			decoder := NewDecoder(tc.opts...)
 
 			// WHEN
-			res, err := decoder.Decode(bytes.NewBuffer(tc.data))
+			err := decoder.Decode(&res, bytes.NewBuffer(tc.data))
 
 			// THEN
 			tc.assert(t, err, res)
