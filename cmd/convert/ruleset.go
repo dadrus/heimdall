@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dadrus/heimdall/internal/conversion"
+	"github.com/dadrus/heimdall/internal/rules/converter"
 )
 
 const (
@@ -41,7 +41,7 @@ func convertRuleSet(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
 	outputFile, _ := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
 	targetVersion, _ := cmd.Flags().GetString(convertRuleSetFlagDesiredVersion)
-	conv := conversion.NewRuleSetConverter(targetVersion)
+	conv := converter.New(targetVersion)
 
 	contents, err := os.ReadFile(inputFile)
 	if err != nil {
@@ -55,7 +55,7 @@ func convertRuleSet(cmd *cobra.Command, args []string) error {
 		contentType = "application/json"
 	}
 
-	result, err := conv.ConvertRuleSet(contents, contentType)
+	result, err := conv.Convert(contents, contentType)
 	if err != nil {
 		return err
 	}

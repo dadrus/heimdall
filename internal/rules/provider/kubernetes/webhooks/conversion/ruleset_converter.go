@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/dadrus/heimdall/internal/conversion"
+	"github.com/dadrus/heimdall/internal/rules/converter"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 )
 
@@ -107,7 +107,7 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 
 		spec := cr.Object["spec"]
 
-		convertedSpec, err := rc.convertSpec(spec.(map[string]any), fromVersion, toVersion)
+		convertedSpec, err := rc.convertSpec(spec.(map[string]any), fromVersion, toVersion) //nolint: forcetypeassert
 		if err != nil {
 			log.Error().Err(err).Msg("failed to convert rule set")
 
@@ -139,7 +139,7 @@ func (rc *rulesetConverter) convertSpec(
 ) (map[string]any, error) {
 	// since conversion is delegated to a converter, which expects
 	// the ruleset in a format used for not kubernetes based providers
-	// there is a need to tune some fields, like adding the version and
+	// there is a need to tune some fields, like adding the version, and
 	// after the conversion removing it (see below)
 	rs["version"] = strings.TrimPrefix(fromVersion.Version, "v")
 
@@ -148,9 +148,9 @@ func (rc *rulesetConverter) convertSpec(
 		return nil, err
 	}
 
-	converter := conversion.NewRuleSetConverter(strings.TrimPrefix(toVersion.Version, "v"))
-
-	result, err := converter.ConvertRuleSet(data, "application/json")
+	result, err := converter.
+		New(strings.TrimPrefix(toVersion.Version, "v")).
+		Convert(data, "application/json")
 	if err != nil {
 		return nil, err
 	}

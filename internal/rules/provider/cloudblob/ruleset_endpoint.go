@@ -31,8 +31,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -135,10 +135,10 @@ func (e *ruleSetEndpoint) readRuleSet(
 
 	defer reader.Close()
 
-	dec := common.NewDecoder(
-		common.WithSourceContentType(attrs.ContentType),
-		common.WithValidator(common.ValidatorFunc(app.Validator().ValidateStruct)),
-		common.WithErrorOnUnused(true),
+	dec := encoding.NewDecoder(
+		encoding.WithSourceContentType(attrs.ContentType),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+		encoding.WithErrorOnUnused(true),
 	)
 
 	var ruleSet v1beta1.RuleSet

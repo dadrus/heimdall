@@ -32,8 +32,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -270,11 +270,11 @@ func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 
 	md := sha256.New()
 
-	dec := common.NewDecoder(
-		common.WithSourceContentType("application/yaml"),
-		common.WithValidator(common.ValidatorFunc(p.app.Validator().ValidateStruct)),
-		common.WithEnvVarsSubstitution(p.envVarsEnabled),
-		common.WithErrorOnUnused(true),
+	dec := encoding.NewDecoder(
+		encoding.WithSourceContentType("application/yaml"),
+		encoding.WithValidator(encoding.ValidatorFunc(p.app.Validator().ValidateStruct)),
+		encoding.WithEnvVarsSubstitution(p.envVarsEnabled),
+		encoding.WithErrorOnUnused(true),
 	)
 
 	var ruleSet v1beta1.RuleSet

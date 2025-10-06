@@ -27,8 +27,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -72,10 +72,10 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 
 	md := sha256.New()
 
-	dec := common.NewDecoder(
-		common.WithSourceContentType(resp.Header.Get("Content-Type")),
-		common.WithValidator(common.ValidatorFunc(app.Validator().ValidateStruct)),
-		common.WithErrorOnUnused(true),
+	dec := encoding.NewDecoder(
+		encoding.WithSourceContentType(resp.Header.Get("Content-Type")),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+		encoding.WithErrorOnUnused(true),
 	)
 
 	var ruleSet v1beta1.RuleSet

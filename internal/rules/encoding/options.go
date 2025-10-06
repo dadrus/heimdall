@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package common
+package encoding
 
 type Validator interface {
 	Validate(typ any) error
