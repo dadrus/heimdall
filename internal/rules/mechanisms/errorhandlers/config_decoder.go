@@ -17,37 +17,20 @@
 package errorhandlers
 
 import (
-	"github.com/go-viper/mapstructure/v2"
-
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(validator validation.Validator, errorHandlerType string, input, output any) error {
-	dec, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				template.DecodeTemplateHookFunc(),
-			),
-			Result:      output,
-			ErrorUnused: true,
-		})
-	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding '%s' error handler config", errorHandlerType).CausedBy(err)
-	}
+func decodeConfig(validator validation.Validator, input map[string]any, output any) error {
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithDecodeHooks(
+			template.DecodeTemplateHookFunc(),
+		),
+	)
 
-	if err = dec.Decode(input); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding '%s' error handler config", errorHandlerType).CausedBy(err)
-	}
-
-	if err = validator.ValidateStruct(output); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed validating '%s' error handler config", errorHandlerType).CausedBy(err)
-	}
-
-	return nil
+	return dec.DecodeMap(output, input)
 }

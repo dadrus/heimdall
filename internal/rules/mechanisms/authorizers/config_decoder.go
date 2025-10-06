@@ -20,34 +20,24 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
-func decodeConfig(app app.Context, input, output any) error {
-	dec, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				authstrategy.DecodeAuthenticationStrategyHookFunc(app),
-				endpoint.DecodeEndpointHookFunc(),
-				mapstructure.StringToTimeDurationHookFunc(),
-				template.DecodeTemplateHookFunc(),
-			),
-			Result:      output,
-			ErrorUnused: true,
-		})
-	if err != nil {
-		return err
-	}
+func decodeConfig(app app.Context, input map[string]any, output any) error {
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithDecodeHooks(
+			authstrategy.DecodeAuthenticationStrategyHookFunc(app),
+			endpoint.DecodeEndpointHookFunc(),
+			mapstructure.StringToTimeDurationHookFunc(),
+			template.DecodeTemplateHookFunc(),
+		),
+	)
 
-	if err = dec.Decode(input); err != nil {
-		return err
-	}
-
-	if err = app.Validator().ValidateStruct(output); err != nil {
-		return err
-	}
-
-	return nil
+	return dec.DecodeMap(output, input)
 }
