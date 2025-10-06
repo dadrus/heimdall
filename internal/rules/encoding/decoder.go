@@ -37,7 +37,8 @@ type Decoder struct {
 func NewDecoder(opts ...DecoderOption) *Decoder {
 	decoder := &Decoder{
 		decoderOpts: decoderOpts{
-			validator: noopValidator{},
+			validator:   noopValidator{},
+			decodeHooks: mapstructure.ComposeDecodeHookFunc(),
 		},
 	}
 
@@ -82,11 +83,13 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 			"parsing of object failed").CausedBy(err)
 	}
 
+	return d.DecodeMap(out, rawConfig)
+}
+
+func (d *Decoder) DecodeMap(out any, in map[string]any) error {
 	mdec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeDurationHookFunc(),
-			),
+			DecodeHook:  d.decodeHooks,
 			Result:      out,
 			ErrorUnused: d.errorOnUnused,
 			TagName:     "json",
@@ -96,7 +99,7 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 			"failed creating object decoder").CausedBy(err)
 	}
 
-	if err = mdec.Decode(rawConfig); err != nil {
+	if err = mdec.Decode(in); err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"decoding of object failed").CausedBy(err)
 	}

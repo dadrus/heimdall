@@ -16,6 +16,8 @@
 
 package encoding
 
+import "github.com/go-viper/mapstructure/v2"
+
 type Validator interface {
 	Validate(typ any) error
 }
@@ -33,6 +35,7 @@ type decoderOpts struct {
 	substituteEnvVars bool
 	validator         Validator
 	errorOnUnused     bool
+	decodeHooks       mapstructure.DecodeHookFunc
 }
 
 type DecoderOption func(*decoderOpts)
@@ -62,6 +65,14 @@ func WithValidator(validator Validator) DecoderOption {
 func WithErrorOnUnused(flag bool) DecoderOption {
 	return func(opts *decoderOpts) {
 		opts.errorOnUnused = flag
+	}
+}
+
+func WithDecodeHooks(hooks ...mapstructure.DecodeHookFunc) DecoderOption {
+	return func(opts *decoderOpts) {
+		if len(hooks) > 0 {
+			opts.decodeHooks = mapstructure.ComposeDecodeHookFunc(hooks...)
+		}
 	}
 }
 
