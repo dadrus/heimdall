@@ -60,7 +60,7 @@ func TestNewProvider(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.ErrorContains(t, err, "decoding failed")
 			},
 		},
 		"without endpoints": {
@@ -84,7 +84,7 @@ endpoints:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.ErrorContains(t, err, "decoding failed")
 			},
 		},
 		"with one endpoint without url": {

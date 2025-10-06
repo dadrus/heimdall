@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -97,19 +98,28 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 			"failed to create kubernetes provider").CausedBy(err)
 	}
 
-	type Config struct {
-		AuthClass string      `mapstructure:"auth_class"`
-		TLS       *config.TLS `mapstructure:"tls"`
-	}
-
 	client, err := v1beta1.NewClient(k8sConf)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed creating client for connecting to kubernetes cluster").CausedBy(err)
 	}
 
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithDecodeHooks(
+			config.DecodeTLSMinVersionHookFunc,
+			config.DecodeTLSCipherSuiteHookFunc,
+		),
+	)
+
+	type Config struct {
+		AuthClass string      `mapstructure:"auth_class"`
+		TLS       *config.TLS `mapstructure:"tls"`
+	}
+
 	var providerConf Config
-	if err = decodeConfig(rawConf, &providerConf); err != nil {
+	if err = dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to decode kubernetes rule provider config").CausedBy(err)
 	}

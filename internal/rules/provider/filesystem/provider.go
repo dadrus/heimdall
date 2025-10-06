@@ -58,6 +58,12 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		return &Provider{}, nil
 	}
 
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+	)
+
 	type Config struct {
 		Src            string `mapstructure:"src"`
 		Watch          bool   `mapstructure:"watch"`
@@ -65,7 +71,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 	}
 
 	var providerConf Config
-	if err := decodeConfig(rawConf, &providerConf); err != nil {
+	if err := dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode file_system rule provider config").
 			CausedBy(err)

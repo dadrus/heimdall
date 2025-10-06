@@ -25,7 +25,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/go-co-op/gocron/v2"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -57,13 +59,23 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		return &Provider{}, nil
 	}
 
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+		encoding.WithDecodeHooks(
+			mapstructure.StringToTimeDurationHookFunc(),
+			urlDecodeHookFunc(),
+		),
+	)
+
 	type Config struct {
 		Buckets       []*ruleSetEndpoint `mapstructure:"buckets"`
 		WatchInterval *time.Duration     `mapstructure:"watch_interval"`
 	}
 
 	var providerConf Config
-	if err := decodeConfig(rawConf, &providerConf); err != nil {
+	if err := dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to decode cloud_blob rule provider config").CausedBy(err)
 	}

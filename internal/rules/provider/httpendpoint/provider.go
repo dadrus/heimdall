@@ -24,7 +24,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/encoding"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/go-co-op/gocron/v2"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -53,13 +57,24 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 		return &Provider{}, nil
 	}
 
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+		encoding.WithDecodeHooks(
+			authstrategy.DecodeAuthenticationStrategyHookFunc(app),
+			endpoint.DecodeEndpointHookFunc(),
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+	)
+
 	type Config struct {
 		Endpoints     []*ruleSetEndpoint `mapstructure:"endpoints"      validate:"required,gt=0,dive"`
 		WatchInterval *time.Duration     `mapstructure:"watch_interval"`
 	}
 
 	var providerConf Config
-	if err := decodeConfig(app, rawConf, &providerConf); err != nil {
+	if err := dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, err
 	}
 
