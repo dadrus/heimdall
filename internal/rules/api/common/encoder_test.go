@@ -37,7 +37,7 @@ func TestEncode(t *testing.T) {
 	}{
 		"unknown contentType": {
 			contentType: "unknown",
-			assert: func(t *testing.T, err error, result string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)

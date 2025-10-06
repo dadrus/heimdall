@@ -3,8 +3,9 @@ package cmd
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dadrus/heimdall/cmd/flags"
 )
 
 func TestNewConvertCmd(t *testing.T) {

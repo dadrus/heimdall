@@ -23,7 +23,6 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob" // to support azure blobs
 	_ "gocloud.dev/blob/gcsblob"   // to support gc storage blobs
@@ -32,6 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )

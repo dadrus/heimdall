@@ -22,9 +22,10 @@ import (
 	"io"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestDecode(t *testing.T) {
@@ -41,7 +42,7 @@ func TestDecode(t *testing.T) {
 	}{
 		"unknown content type": {
 			opts: []DecoderOption{WithSourceContentType("foo")},
-			assert: func(t *testing.T, err error, typ TestType) {
+			assert: func(t *testing.T, err error, _ TestType) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -55,7 +56,7 @@ func TestDecode(t *testing.T) {
 				WithEnvVarsSubstitution(true),
 			},
 			data: []byte(`{"foo":"${FOO"}`),
-			assert: func(t *testing.T, err error, typ TestType) {
+			assert: func(t *testing.T, err error, _ TestType) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -67,7 +68,7 @@ func TestDecode(t *testing.T) {
 			opts: []DecoderOption{
 				WithSourceContentType("application/json"),
 			},
-			assert: func(t *testing.T, err error, typ TestType) {
+			assert: func(t *testing.T, err error, _ TestType) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -79,7 +80,7 @@ func TestDecode(t *testing.T) {
 				WithSourceContentType("application/json"),
 			},
 			data: []byte(`{ "foo": `),
-			assert: func(t *testing.T, err error, typ TestType) {
+			assert: func(t *testing.T, err error, _ TestType) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -93,7 +94,7 @@ func TestDecode(t *testing.T) {
 				WithErrorOnUnused(true),
 			},
 			data: []byte(`{ "bar": "baz" }`),
-			assert: func(t *testing.T, err error, typ TestType) {
+			assert: func(t *testing.T, err error, _ TestType) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -108,7 +109,7 @@ func TestDecode(t *testing.T) {
 				WithValidator(ValidatorFunc(func(interface{}) error { return errors.New("test error") })),
 			},
 			data: []byte(`{ "foo": "baz" }`),
-			assert: func(t *testing.T, err error, typ TestType) {
+			assert: func(t *testing.T, err error, _ TestType) {
 				t.Helper()
 
 				require.Error(t, err)

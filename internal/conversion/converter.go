@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/goccy/go-json"
+
 	"github.com/dadrus/heimdall/internal/rules/api/common"
 	"github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/goccy/go-json"
 )
 
 var ErrConversion = errors.New("conversion error")

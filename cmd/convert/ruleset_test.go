@@ -21,7 +21,11 @@ func TestConvertRuleSet(t *testing.T) {
 		assert func(t *testing.T, err error, result string)
 	}{
 		"no options set": {
-			args: func(t *testing.T) []string { return []string{"/foo/bar"} },
+			args: func(t *testing.T) []string {
+				t.Helper()
+
+				return []string{"/foo/bar"}
+			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
@@ -216,7 +220,8 @@ rules:
 				return []string{
 					"--" + convertRuleSetFlagDesiredVersion, "1beta1",
 					"--" + convertRuleSetFlagOutputFile, outputFile,
-					inputFile}
+					inputFile,
+				}
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
@@ -238,13 +243,13 @@ rules:
 
 				inputFile := filepath.Join(testDir, "ruleset2.yaml")
 				outputFile := filepath.Join(testDir, "converted2.yaml")
-				f, err := os.Create(outputFile)
+				file, err := os.Create(outputFile)
 				require.NoError(t, err)
 
-				err = f.Chmod(0o400)
+				err = file.Chmod(0o400)
 				require.NoError(t, err)
 
-				_ = f.Close()
+				_ = file.Close()
 
 				err = os.WriteFile(inputFile, []byte(`
 version: "1alpha4"
@@ -279,7 +284,8 @@ rules:
 				return []string{
 					"--" + convertRuleSetFlagDesiredVersion, "1beta1",
 					"--" + convertRuleSetFlagOutputFile, outputFile,
-					inputFile}
+					inputFile,
+				}
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
