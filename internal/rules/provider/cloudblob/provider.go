@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
@@ -33,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -50,7 +50,7 @@ type Provider struct {
 	configured bool
 }
 
-func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
+func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) { //nolint: funlen
 	conf := app.Config()
 	logger := app.Logger()
 	rawConf := conf.Providers.CloudBlob

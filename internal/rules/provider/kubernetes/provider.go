@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +42,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/patch"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
