@@ -109,11 +109,11 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 
 		convertedSpec, err := rc.convertSpec(spec.(map[string]any), fromVersion, toVersion) //nolint: forcetypeassert
 		if err != nil {
-			log.Error().Err(err).Msg("failed to convert rule set")
+			log.Error().Err(err).Msg("failed to convert ruleset")
 
 			return newResponse(
 				http.StatusBadRequest,
-				"failed to convert rule set",
+				"failed to convert ruleset",
 				withErrorDetails(metav1.StatusCause{
 					Type:    metav1.CauseTypeFieldValueInvalid,
 					Field:   fmt.Sprintf("Objects[%d]", idx),
@@ -129,7 +129,7 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 
 	return newResponse(
 		http.StatusOK,
-		"rule sets converted",
+		"rulesets converted",
 		withConvertedObjects(convertedObjects),
 	)
 }

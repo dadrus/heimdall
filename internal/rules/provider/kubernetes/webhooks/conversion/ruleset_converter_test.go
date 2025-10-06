@@ -158,11 +158,11 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Empty(t, resp.ConvertedObjects)
 				assert.Equal(t, int32(http.StatusBadRequest), resp.Result.Code)
 				assert.Equal(t, "Failure", resp.Result.Status)
-				assert.Contains(t, resp.Result.Message, "failed to convert rule set")
+				assert.Contains(t, resp.Result.Message, "failed to convert ruleset")
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Contains(t, resp.Result.Details.Causes[0].Message, "rule set is already in the expected version")
+				assert.Contains(t, resp.Result.Details.Causes[0].Message, "ruleset is already in the expected version")
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
@@ -182,11 +182,11 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Empty(t, resp.ConvertedObjects)
 				assert.Equal(t, int32(http.StatusBadRequest), resp.Result.Code)
 				assert.Equal(t, "Failure", resp.Result.Status)
-				assert.Equal(t, "failed to convert rule set", resp.Result.Message)
+				assert.Equal(t, "failed to convert ruleset", resp.Result.Message)
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Equal(t, "conversion error: unexpected source rule set version: bar", resp.Result.Details.Causes[0].Message)
+				assert.Equal(t, "conversion error: unexpected source ruleset version: bar", resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
@@ -206,11 +206,11 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Empty(t, resp.ConvertedObjects)
 				assert.Equal(t, int32(http.StatusBadRequest), resp.Result.Code)
 				assert.Equal(t, "Failure", resp.Result.Status)
-				assert.Equal(t, "failed to convert rule set", resp.Result.Message)
+				assert.Equal(t, "failed to convert ruleset", resp.Result.Message)
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Equal(t, "conversion error: unexpected target rule set version: bar", resp.Result.Details.Causes[0].Message)
+				assert.Equal(t, "conversion error: unexpected target ruleset version: bar", resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
@@ -230,11 +230,11 @@ func TestRulSetConverterHandle(t *testing.T) {
 				assert.Empty(t, resp.ConvertedObjects)
 				assert.Equal(t, int32(http.StatusBadRequest), resp.Result.Code)
 				assert.Equal(t, "Failure", resp.Result.Status)
-				assert.Equal(t, "failed to convert rule set", resp.Result.Message)
+				assert.Equal(t, "failed to convert ruleset", resp.Result.Message)
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Equal(t, "conversion error: unexpected target rule set version: bar", resp.Result.Details.Causes[0].Message)
+				assert.Equal(t, "conversion error: unexpected target ruleset version: bar", resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Objects[0]", resp.Result.Details.Causes[0].Field)
 			},
@@ -287,7 +287,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 
 				assert.Equal(t, int32(http.StatusOK), resp.Result.Code)
 				assert.Equal(t, "Success", resp.Result.Status)
-				assert.Equal(t, "rule sets converted", resp.Result.Message)
+				assert.Equal(t, "rulesets converted", resp.Result.Message)
 				assert.Empty(t, resp.Result.Reason)
 				require.Nil(t, resp.Result.Details)
 
@@ -379,7 +379,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 
 				assert.Equal(t, int32(http.StatusOK), resp.Result.Code)
 				assert.Equal(t, "Success", resp.Result.Status)
-				assert.Equal(t, "rule sets converted", resp.Result.Message)
+				assert.Equal(t, "rulesets converted", resp.Result.Message)
 				assert.Empty(t, resp.Result.Reason)
 				require.Nil(t, resp.Result.Details)
 

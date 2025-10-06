@@ -1,3 +1,19 @@
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package converter
 
 import (
@@ -26,9 +42,9 @@ type (
 	}
 )
 
-func New(targetVersion string) Converter {
+func New(desiredVersion string) Converter {
 	return &converter{
-		toVersion: targetVersion,
+		toVersion: desiredVersion,
 	}
 }
 
@@ -45,49 +61,47 @@ func (c *converter) Convert(rawObj []byte, format string) ([]byte, error) {
 
 	if err = dec.Decode(&urs, bytes.NewBuffer(rawObj)); err != nil {
 		return nil, errorchain.NewWithMessage(ErrConversion,
-			"failed to unmarshal rule set").CausedBy(err)
+			"failed to decode ruleset").CausedBy(err)
 	}
 
 	fromVersion := urs.Version()
 	if fromVersion == c.toVersion {
 		return nil, errorchain.NewWithMessagef(ErrConversion,
-			"rule set is already in the expected version: %s", c.toVersion)
+			"ruleset is already in the expected version: %s", c.toVersion)
 	}
 
 	switch fromVersion {
 	case v1alpha4.Version:
 		if c.toVersion != v1beta1.Version {
 			return nil, errorchain.NewWithMessagef(ErrConversion,
-				"unexpected target rule set version: %s", c.toVersion)
+				"unexpected target ruleset version: %s", c.toVersion)
 		}
 
 		var sourceRs v1alpha4.RuleSet
-		if err = dec.Decode(&sourceRs, bytes.NewReader(rawObj)); err != nil {
-			return nil, err
-		}
+
+		// decoding will always succeed, as it was already successful above
+		_ = dec.DecodeMap(&sourceRs, urs)
 
 		converted, err = c.convertV1Alpha4ToV1Beta1(&sourceRs)
-		if err != nil {
-			return nil, err
-		}
 	case v1beta1.Version:
 		if c.toVersion != v1alpha4.Version {
 			return nil, errorchain.NewWithMessagef(
-				ErrConversion, "unexpected target rule set version: %s", c.toVersion)
+				ErrConversion, "unexpected target ruleset version: %s", c.toVersion)
 		}
 
 		var sourceRs v1beta1.RuleSet
-		if err = dec.Decode(&sourceRs, bytes.NewReader(rawObj)); err != nil {
-			return nil, err
-		}
+
+		// decoding will always succeed, as it was already successful above
+		_ = dec.DecodeMap(&sourceRs, urs)
 
 		converted, err = c.convertV1Beta1ToV1Alpha4(&sourceRs)
-		if err != nil {
-			return nil, err
-		}
 	default:
 		return nil, errorchain.NewWithMessagef(
-			ErrConversion, "unexpected source rule set version: %s", fromVersion)
+			ErrConversion, "unexpected source ruleset version: %s", fromVersion)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	buf := &bytes.Buffer{}

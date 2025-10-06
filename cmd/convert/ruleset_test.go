@@ -74,7 +74,7 @@ func TestConvertRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "unexpected source rule set version")
+				require.ErrorContains(t, err, "unexpected source ruleset version")
 			},
 		},
 		"yaml ruleset successfully converted and printed to stdout": {
