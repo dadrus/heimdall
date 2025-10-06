@@ -17,7 +17,7 @@
 package errorhandlers
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/encoding"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/validation"
 )

@@ -20,7 +20,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/rules/encoding"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"

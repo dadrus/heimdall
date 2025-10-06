@@ -41,8 +41,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/patch"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"

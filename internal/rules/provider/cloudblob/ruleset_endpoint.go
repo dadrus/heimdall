@@ -30,9 +30,9 @@ import (
 	"gocloud.dev/gcerrors"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/rules/encoding"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
