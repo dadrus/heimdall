@@ -19,6 +19,7 @@ package encoding
 import (
 	"testing"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -91,6 +92,21 @@ func TestWithEnvVarsSubstitution(t *testing.T) {
 
 	// THEN
 	assert.True(t, opts.substituteEnvVars)
+}
+
+func TestWithDecodeHooks(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	var opts decoderOpts
+
+	apply := WithDecodeHooks(mapstructure.StringToBasicTypeHookFunc())
+
+	// WHEN
+	apply(&opts)
+
+	// THEN
+	assert.NotNil(t, opts.decodeHooks)
 }
 
 func TestWithTargetContentType(t *testing.T) {

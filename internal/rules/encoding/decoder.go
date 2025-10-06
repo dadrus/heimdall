@@ -26,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -37,8 +38,7 @@ type Decoder struct {
 func NewDecoder(opts ...DecoderOption) *Decoder {
 	decoder := &Decoder{
 		decoderOpts: decoderOpts{
-			validator:   noopValidator{},
-			decodeHooks: mapstructure.ComposeDecodeHookFunc(),
+			validator: noopValidator{},
 		},
 	}
 
@@ -87,19 +87,18 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 }
 
 func (d *Decoder) DecodeMap(out any, in map[string]any) error {
-	mdec, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{
-			DecodeHook:  d.decodeHooks,
-			Result:      out,
-			ErrorUnused: d.errorOnUnused,
-			TagName:     "json",
-		})
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		Result:      out,
+		ErrorUnused: d.errorOnUnused,
+		TagName:     "json",
+		DecodeHook:  x.IfThenElse(d.decodeHooks != nil, d.decodeHooks, mapstructure.ComposeDecodeHookFunc()),
+	})
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed creating object decoder").CausedBy(err)
 	}
 
-	if err = mdec.Decode(in); err != nil {
+	if err = dec.Decode(in); err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"decoding of object failed").CausedBy(err)
 	}
