@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"bytes"
 	"io"
 	"os"
 
@@ -64,6 +65,8 @@ func convertRuleSet(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	contents = bytes.TrimSpace(contents)
 
 	result, err := conv.Convert(
 		contents,
