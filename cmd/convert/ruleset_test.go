@@ -17,11 +17,11 @@ func TestConvertRuleSet(t *testing.T) {
 	testDir := t.TempDir()
 
 	for uc, tc := range map[string]struct {
-		args   func(t *testing.T) []string
+		args   func(t *testing.T, out io.Writer) []string
 		assert func(t *testing.T, err error, result string)
 	}{
 		"no options set": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				return []string{"/foo/bar"}
@@ -34,7 +34,7 @@ func TestConvertRuleSet(t *testing.T) {
 			},
 		},
 		"mandatory flags set, but no ruleset path": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				return []string{"--" + convertRuleSetFlagDesiredVersion, "1beta1"}
@@ -47,7 +47,7 @@ func TestConvertRuleSet(t *testing.T) {
 			},
 		},
 		"provided ruleset file does not exist": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				return []string{"--" + convertRuleSetFlagDesiredVersion, "1beta1", "/does/not/exist"}
@@ -60,7 +60,7 @@ func TestConvertRuleSet(t *testing.T) {
 			},
 		},
 		"conversion failed": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				rulesetFile := filepath.Join(t.TempDir(), "ruleset.yaml")
@@ -78,7 +78,7 @@ func TestConvertRuleSet(t *testing.T) {
 			},
 		},
 		"yaml ruleset successfully converted and printed to stdout": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				rulesetFile := filepath.Join(testDir, "ruleset1.yaml")
@@ -124,7 +124,7 @@ rules:
 			},
 		},
 		"json ruleset successfully converted and printed to stdout": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				rulesetFile := filepath.Join(testDir, "ruleset1.json")
@@ -181,7 +181,7 @@ rules:
 			},
 		},
 		"ruleset successfully converted and written to a file": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				inputFile := filepath.Join(testDir, "ruleset2.yaml")
@@ -238,7 +238,7 @@ rules:
 			},
 		},
 		"ruleset successfully converted, but writing to the output file failed": {
-			args: func(t *testing.T) []string {
+			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
 
 				inputFile := filepath.Join(testDir, "ruleset2.yaml")
@@ -294,15 +294,68 @@ rules:
 				require.ErrorContains(t, err, "permission denied")
 			},
 		},
+		"ruleset provided via stdin successfully converted": {
+			args: func(t *testing.T, out io.Writer) []string {
+				t.Helper()
+
+				_, err := out.Write([]byte(`
+version: "1alpha4"
+name: test-rule-set
+rules:
+- id: rule:foo
+  match:
+    routes:
+      - path: /**
+    backtracking_enabled: true
+    scheme: http
+    hosts:
+      - type: glob
+        value: foo.bar
+    methods: [GET, POST]
+  forward_to:
+    host: bar.foo
+    rewrite:
+      strip_path_prefix: /foo
+      add_path_prefix: /baz
+      strip_query_parameters: [boo]
+  execute:
+    - authenticator: jwt_authenticator1
+    - authorizer: allow_all_authorizer
+    - finalizer: jwt
+      config:
+        claims: |
+          {"foo": "bar"}
+`))
+				require.NoError(t, err)
+
+				return []string{
+					"--" + convertRuleSetFlagDesiredVersion, "1beta1",
+					"-",
+				}
+			},
+			assert: func(t *testing.T, err error, result string) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Contains(t, result, "version: 1beta1")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			cmd := NewConvertRulesCommand()
-			cmd.SetArgs(tc.args(t))
+			var in bytes.Buffer
 
-			// Capture stdout
+			cmd := NewConvertRulesCommand()
+			cmd.SetArgs(tc.args(t, &in))
+
+			// Capture std in & out
 			var out bytes.Buffer
 			cmd.SetOut(&out)
+
+			if in.Len() != 0 {
+				cmd.SetIn(&in)
+			}
 
 			// WHEN
 			err := cmd.Execute()

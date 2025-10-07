@@ -3,11 +3,11 @@ package convert
 import (
 	"io"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/rules/converter"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 const (
@@ -18,17 +18,20 @@ const (
 // NewConvertRulesCommand represents the "convert rules" command.
 func NewConvertRulesCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "ruleset [options] /path/to/ruleset.yaml",
-		Short: "Converts heimdall's RuleSet",
-		Example: `heimdall convert ruleset --desired-version v1beta1 \
-   --out /path/to/converted/ruleset.yaml \
-   /path/to/ruleset.yaml`,
-		Args: cobra.ExactArgs(1),
-		RunE: convertRuleSet,
+		Use:   "ruleset [flags] [/path/to/ruleset.yaml]",
+		Short: "Converts rulesets between 1alpha4 and 1beta1 versions",
+		Example: `# Convert a ruleset by providing all arguments
+$ heimdall convert ruleset --desired-version 1beta1 --out converted_ruleset.yaml ruleset.yaml
+
+# Convert a ruleset by providing it over stdin and printing the results to stdout
+$ cat ruleset.yaml | heimdall convert ruleset --desired-version 1beta1 - > converted.yaml`,
+		Args:                  cobra.ExactArgs(1),
+		DisableFlagsInUseLine: true,
+		RunE:                  convertRuleSet,
 	}
 
 	cmd.Flags().String(convertRuleSetFlagDesiredVersion, "",
-		"Target version of the resulting RuleSet (required)")
+		"Target version (1alpha4 or 1beta1) of the resulting RuleSet (required)")
 	_ = cmd.MarkFlagRequired(convertRuleSetFlagDesiredVersion)
 	cmd.Flags().String(convertRuleSetFlagOutputFile, "",
 		"File to write the conversion result to. If not used, the converted"+
@@ -38,34 +41,44 @@ func NewConvertRulesCommand() *cobra.Command {
 }
 
 func convertRuleSet(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
-	outputFile, _ := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
+	inputFileName := args[0]
+	outputFileName, _ := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
 	targetVersion, _ := cmd.Flags().GetString(convertRuleSetFlagDesiredVersion)
 	conv := converter.New(targetVersion)
 
-	contents, err := os.ReadFile(inputFile)
+	var in io.Reader
+	if inputFileName == "-" {
+		in = cmd.InOrStdin()
+	} else {
+		file, err := os.Open(inputFileName)
+		if err != nil {
+			return err
+		}
+
+		defer file.Close()
+
+		in = file
+	}
+
+	contents, err := io.ReadAll(in)
 	if err != nil {
 		return err
 	}
 
-	contentType := "unknown"
-	if strings.HasSuffix(inputFile, ".yaml") || strings.HasSuffix(inputFile, ".yml") {
-		contentType = "application/yaml"
-	} else if strings.HasSuffix(inputFile, ".json") {
-		contentType = "application/json"
-	}
-
-	result, err := conv.Convert(contents, contentType)
+	result, err := conv.Convert(
+		contents,
+		x.IfThenElse(contents[0] == '{', "application/json", "application/yaml"),
+	)
 	if err != nil {
 		return err
 	}
 
 	var out io.Writer
 
-	if len(outputFile) == 0 {
+	if len(outputFileName) == 0 {
 		out = cmd.OutOrStdout()
 	} else {
-		out, err = os.Create(outputFile)
+		out, err = os.Create(outputFileName)
 		if err != nil {
 			return err
 		}
