@@ -232,3 +232,14 @@ tests:
       - equal:
           path: spec.versions[1].storage
           value: true
+
+  - it: v1alpha version is deprecated
+    set:
+      crds.enabled: true
+    asserts:
+      - equal:
+          path: spec.versions[0].name
+          value: v1alpha4
+      - equal:
+          path: spec.versions[0].deprecated
+          value: true

@@ -60,6 +60,7 @@ spec:
     - name: v1alpha4
       served: true
       storage: {{ eq .Values.crds.storageVersion "v1alpha4" }}
+      deprecated: true
       schema:
         openAPIV3Schema:
           description: RuleSet is the Schema for heimdall's rule definitions
