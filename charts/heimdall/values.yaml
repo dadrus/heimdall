@@ -143,6 +143,11 @@ webhooks:
   # kubernetes API server.
   caBundle: ""
 
+  conversion:
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
+    annotations: { }
+
   validation:
     # Remove the curly braces after 'labels:' if you do want to specify additional labels
     labels: { }
@@ -156,11 +161,6 @@ webhooks:
 
     # Set to another value if required
     timeoutSeconds: 5
-
-  conversion:
-    # Remove the curly braces after 'annotations:' if you want to specify annotations
-    # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
-    annotations: { }
 
 # CRD specific configuration. CRDs are automatically installed only on first heimdall installation
 # if these are not already present in the cluster.
