@@ -136,16 +136,11 @@ service:
     portName: conversion-webhook
 
 crds:
-  # Whether the CRDs should be installed as part of the Helm installation.
-  enabled: false
-  # If enabled, the "helm.sh/resource-policy: keep" annotation will be added to the CRD.
-  keep: true
-  # Configures the storage version for the CRD (e.g., v1alpha4, v1beta1).
-  # Used to set the storage flag in the CRD's versions list during upgrades.
-  storageVersion: v1alpha4
-  # The target CRD version supported natively by this release.
-  # Used to generate the conversion webhook service name. DO NOT MODIFY UNLESS INTRODUCING A NEW CRD VERSION!!!
-  targetVersion: v1beta1
+  # Whether the CRDs should be installed during upgrades.
+  updateEnabled: false
+  # Sets the storage flag to true for a particular CRD version (e.g., v1alpha4, v1beta1).
+  # Used only if updateEnabled was set to true.
+  storageVersion: v1beta1
 
 # Only used if rules.providers.kubernetes.tls is configured
 webhooks:

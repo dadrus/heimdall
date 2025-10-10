@@ -2,23 +2,28 @@ suite: test suite for ruleset crd
 templates:
   - crds/ruleset.yaml
 tests:
-  - it: should not be configured by default
+  - it: should be configured on first time install
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should not be configured for upgrades by default
+    release:
+      upgrade: true
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: should be configured if enabled
+  - it: should be configured for upgrades if explicitly enabled
+    release:
+      upgrade: true
     set:
-      crds.enabled: true
+      crds.updateEnabled: true
     asserts:
-      - isKind:
-          of: CustomResourceDefinition
-      - isAPIVersion:
-          of: apiextensions.k8s.io/v1
+      - hasDocuments:
+          count: 1
 
   - it: name should be set to rulesets.heimdall.dadrus.github.com
-    set:
-      crds.enabled: true
     asserts:
       - equal:
           path: metadata.name
@@ -27,8 +32,6 @@ tests:
   - it: namespace should not be set
     release:
       namespace: test-namespace
-    set:
-      crds.enabled: true
     asserts:
       - notExists:
           path: metadata.namespace
@@ -41,7 +44,6 @@ tests:
       name: test-release
     set:
       nameOverride: foo
-      crds.enabled: true
     asserts:
       - equal:
           path: metadata.labels
@@ -53,26 +55,14 @@ tests:
             helm.sh/chart: heimdall-2.0.0
 
   - it: should set keep helm resource policy annotation by default
-    set:
-      crds.enabled: true
     asserts:
       - equal:
           path: metadata.annotations
           value:
             helm.sh/resource-policy: keep
 
-  - it: should not set any annotations if keep resource policy is disabled and no other annotations are configured
+  - it: should set custom annotations if these are configured in addition to helm.sh/resource-policy annotation
     set:
-      crds:
-        enabled: true
-        keep: false
-    asserts:
-      - isNullOrEmpty:
-          path: metadata.annotations
-
-  - it: should set custom annotations if conversion and annotations are configured
-    set:
-      crds.enabled: true
       webhooks.conversion.annotations:
         foo: bar
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
@@ -81,40 +71,21 @@ tests:
           path: metadata.annotations
           value:
             helm.sh/resource-policy: keep
-            foo: bar
-
-  - it: should set only custom annotations if conversion and annotations are configured, but crds.keep is false
-    set:
-      crds.enabled: true
-      crds.keep: false
-      webhooks.conversion.annotations:
-        foo: bar
-      providers.kubernetes.tls.key_store.path: /path/to/file.pem
-    asserts:
-      - equal:
-          path: metadata.annotations
-          value:
             foo: bar
 
   - it: group should be heimdall.dadrus.github.com
-    set:
-      crds.enabled: true
     asserts:
       - equal:
           path: spec.group
           value: heimdall.dadrus.github.com
 
   - it: scope should be namespaced
-    set:
-      crds.enabled: true
     asserts:
       - equal:
           path: spec.scope
           value: Namespaced
 
   - it: should set expected names
-    set:
-      crds.enabled: true
     asserts:
       - equal:
           path: spec.names
@@ -124,18 +95,27 @@ tests:
             singular: ruleset
             listKind: RuleSetList
 
-  - it: conversion strategy should be None of TLS is not configured for the kubernetes provider
+  - it: conversion strategy should not be configured for first time install
+    asserts:
+      - notExists:
+          path: spec.conversion
+
+  - it: conversion strategy should be None for upgrades if TLS is not configured for the kubernetes provider
+    release:
+      upgrade: true
     set:
-      crds.enabled: true
+      crds.updateEnabled: true
     asserts:
       - equal:
           path: spec.conversion
           value:
             strategy: None
 
-  - it: conversion strategy should be Webhook if TLS is configured for the kubernetes provider
+  - it: conversion strategy should be Webhook for upgrades if TLS is configured for the kubernetes provider
+    release:
+      upgrade: true
     set:
-      crds.enabled: true
+      crds.updateEnabled: true
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
@@ -151,12 +131,13 @@ tests:
                   path: "/convert"
                   port: 4459
 
-  - it: should allow webhook customization
+  - it: should allow webhook customization for upgrades
     release:
       name: foo
       namespace: bar
+      upgrade: true
     set:
-      crds.enabled: true
+      crds.updateEnabled: true
       webhooks:
         caBundle: foobar
       service.conversionWebhook.port: 1234
@@ -176,9 +157,26 @@ tests:
                   path: "/convert"
                   port: 1234
 
-  - it: should contain two versions - v1alpha4 and v1beta1
+  - it: should contain only v1beta1 for first time installations, which has both, storage and served set to true
+    asserts:
+      - lengthEqual:
+          path: spec.versions
+          count: 1
+      - equal:
+          path: spec.versions[0].name
+          value: v1beta1
+      - equal:
+          path: spec.versions[0].served
+          value: true
+      - equal:
+          path: spec.versions[0].storage
+          value: true
+
+  - it: should contain two versions on upgrades - v1alpha4 and v1beta1 with expected flags configured by default
+    release:
+      upgrade: true
     set:
-      crds.enabled: true
+      crds.updateEnabled: true
     asserts:
       - lengthEqual:
           path: spec.versions
@@ -187,13 +185,37 @@ tests:
           path: spec.versions[0].name
           value: v1alpha4
       - equal:
+          path: spec.versions[0].served
+          value: true
+      - equal:
+          path: spec.versions[0].storage
+          value: false
+      - equal:
+          path: spec.versions[0].deprecated
+          value: true
+      - equal:
           path: spec.versions[1].name
           value: v1beta1
+      - equal:
+          path: spec.versions[1].served
+          value: true
+      - equal:
+          path: spec.versions[1].storage
+          value: true
+      - notExists:
+          path: spec.versions[1].deprecated
 
-  - it: v1alpha4 should be served and be also the storage version by default
+
+  - it: should be able to configure v1alpha4 as storage version on upgrades
+    release:
+      upgrade: true
     set:
-      crds.enabled: true
+      crds.updateEnabled: true
+      crds.storageVersion: v1alpha4
     asserts:
+      - lengthEqual:
+          path: spec.versions
+          count: 2
       - equal:
           path: spec.versions[0].name
           value: v1alpha4
@@ -203,11 +225,9 @@ tests:
       - equal:
           path: spec.versions[0].storage
           value: true
-
-  - it: v1beta1 should be served and not be the storage version by default
-    set:
-      crds.enabled: true
-    asserts:
+      - equal:
+          path: spec.versions[0].deprecated
+          value: true
       - equal:
           path: spec.versions[1].name
           value: v1beta1
@@ -217,29 +237,5 @@ tests:
       - equal:
           path: spec.versions[1].storage
           value: false
-
-  - it: should be able to configure v1beta1 as storage version
-    set:
-      crds.enabled: true
-      crds.storageVersion: v1beta1
-    asserts:
-      - equal:
-          path: spec.versions[1].name
-          value: v1beta1
-      - equal:
-          path: spec.versions[1].served
-          value: true
-      - equal:
-          path: spec.versions[1].storage
-          value: true
-
-  - it: v1alpha version is deprecated
-    set:
-      crds.enabled: true
-    asserts:
-      - equal:
-          path: spec.versions[0].name
-          value: v1alpha4
-      - equal:
-          path: spec.versions[0].deprecated
-          value: true
+      - notExists:
+          path: spec.versions[1].deprecated

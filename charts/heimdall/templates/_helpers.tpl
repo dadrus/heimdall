@@ -109,7 +109,7 @@ Component service
 {{- else if eq .Component "service.validationWebhook" -}}
   {{- printf "%s-validation" $baseName | trunc 63 | trimSuffix "-" -}}
 {{- else if eq .Component "service.conversionWebhook" -}}
-  {{- printf "%s-conversion-%s" $baseName .Values.crds.targetVersion | trunc 63 | trimSuffix "-" -}}
+  {{- printf "%s-conversion-v1beta1" $baseName | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
   {{- fail "internal error: unknown component specified in heimdall.service helper!" -}}
 {{- end -}}

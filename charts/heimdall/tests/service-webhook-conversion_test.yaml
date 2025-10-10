@@ -1,4 +1,4 @@
-suite: test suite for service configuration
+suite: test suite for conversion webhook service configuration
 templates:
   - service-webhook-conversion.yaml
 tests:
@@ -7,7 +7,19 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: should be configured if tls is configured for the kubernetes provider
+  - it: should not be configured if tls is configured for the kubernetes provider and no upgrade is happening
+    release:
+      upgrade: false
+    set:
+      providers.kubernetes.tls.key_store.path: /path/to/file.pem
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should be configured if both, tls is configured for the kubernetes provider, and upgrade is running
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -17,6 +29,9 @@ tests:
           of: v1
 
   - it: name should be set with default name
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -27,6 +42,8 @@ tests:
   - it: name should be set with overwritten name
     release:
       name: test-release
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       nameOverride: foo
@@ -38,6 +55,8 @@ tests:
   - it: namespace should be set
     release:
       namespace: test-namespace
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -46,6 +65,9 @@ tests:
           value: test-namespace
 
   - it: should set default labels with default values
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -61,6 +83,9 @@ tests:
           pattern: heimdall-*
 
   - it: should set custom labels in addition to default ones if provided
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       service.conversionWebhook.labels:
@@ -84,6 +109,8 @@ tests:
       version: 2.0.0
     release:
       name: test-release
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       nameOverride: foo
@@ -98,6 +125,9 @@ tests:
             helm.sh/chart: heimdall-2.0.0
 
   - it: should not set any annotations by default
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -105,6 +135,9 @@ tests:
           path: metadata.annotations
 
   - it: should not set custom annotations if provided
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       service.conversionWebhook.annotations:
@@ -116,6 +149,9 @@ tests:
             foo: bar
 
   - it: should set service type to ClusterIP
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -126,6 +162,8 @@ tests:
   - it: should configure selector with the required labels and values
     release:
       name: test-release
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       nameOverride: foo
@@ -137,6 +175,9 @@ tests:
             app.kubernetes.io/name: foo
 
   - it: should expose one port
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -149,6 +190,9 @@ tests:
               targetPort: http-webhooks
 
   - it: should use provided port and name values
+    release:
+      upgrade: true
+      revision: 2
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       service.conversionWebhook:
