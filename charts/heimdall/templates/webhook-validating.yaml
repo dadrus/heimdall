@@ -54,7 +54,7 @@ webhooks:
       {{- end }}
       service:
         namespace: {{ include "heimdall.namespace" $data }}
-        name: {{ include "heimdall.service" ( dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service.validationWebhook" ) }}
+        name: {{ include "heimdall.service" ( dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service.validation" ) }}
         path: "/validate"
-        port: {{ .Values.service.validationWebhook.port }}
+        port: {{ .Values.service.validation.port }}
 {{- end }}

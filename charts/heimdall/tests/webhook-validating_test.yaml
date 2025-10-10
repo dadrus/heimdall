@@ -276,7 +276,7 @@ tests:
   - it: should use the port configured for the validation webhook service
     set:
       webhooks.caBundle: foobar
-      service.validationWebhook.port: 9999
+      service.validation.port: 9999
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
       providers.kubernetes.auth_class: foo
     asserts:

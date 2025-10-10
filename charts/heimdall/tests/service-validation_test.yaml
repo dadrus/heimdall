@@ -1,6 +1,6 @@
-suite: test suite for validation webhook service configuration
+suite: test suite for validation service configuration
 templates:
-  - service-webhook-validation.yaml
+  - service-validation.yaml
 tests:
   - it: should not be configured by default
     asserts:
@@ -63,7 +63,7 @@ tests:
   - it: should set custom labels in addition to default ones if provided
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
-      service.validationWebhook.labels:
+      service.validation.labels:
         foo: bar
     asserts:
       - isSubset:
@@ -107,7 +107,7 @@ tests:
   - it: should not set custom annotations if provided
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
-      service.validationWebhook.annotations:
+      service.validation.annotations:
         foo: bar
     asserts:
       - equal:
@@ -151,7 +151,7 @@ tests:
   - it: should use provided port and name values
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
-      service.validationWebhook:
+      service.validation:
         port: 1111
         portName: conv
     asserts:

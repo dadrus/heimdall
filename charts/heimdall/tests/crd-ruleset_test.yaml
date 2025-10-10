@@ -2,10 +2,28 @@ suite: test suite for ruleset crd
 templates:
   - crds/ruleset.yaml
 tests:
-  - it: should be configured on first time install
+  - it: should be configured on first time install if the CRD is not yet present in the cluster
     asserts:
       - hasDocuments:
           count: 1
+
+  - it: should not be configured on first time install if the CRD is already present in the cluster
+    kubernetesProvider:
+      scheme:
+        "apiextensions.k8s.io/v1/CustomResourceDefinition":
+          gvr:
+            group: "apiextensions.k8s.io"
+            version: "v1"
+            resource: "customresourcedefinitions"
+          namespaced: false
+      objects:
+        - kind: CustomResourceDefinition
+          apiVersion: apiextensions.k8s.io/v1
+          metadata:
+            name: rulesets.heimdall.dadrus.github.com
+    asserts:
+      - hasDocuments:
+          count: 0
 
   - it: should not be configured for upgrades by default
     release:
@@ -95,14 +113,7 @@ tests:
             singular: ruleset
             listKind: RuleSetList
 
-  - it: conversion strategy should not be configured for first time install
-    asserts:
-      - notExists:
-          path: spec.conversion
-
-  - it: conversion strategy should be None for upgrades if TLS is not configured for the kubernetes provider
-    release:
-      upgrade: true
+  - it: conversion strategy should be None if TLS is not configured for the kubernetes provider
     set:
       crds.updateEnabled: true
     asserts:
@@ -111,7 +122,7 @@ tests:
           value:
             strategy: None
 
-  - it: conversion strategy should be Webhook for upgrades if TLS is configured for the kubernetes provider
+  - it: conversion strategy should be Webhook if TLS is configured for the kubernetes provider
     release:
       upgrade: true
     set:
@@ -140,7 +151,7 @@ tests:
       crds.updateEnabled: true
       webhooks:
         caBundle: foobar
-      service.conversionWebhook.port: 1234
+      service.conversion.port: 1234
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
       - equal:
@@ -157,20 +168,24 @@ tests:
                   path: "/convert"
                   port: 1234
 
-  - it: should contain only v1beta1 for first time installations, which has both, storage and served set to true
+  - it: should contain two versions on first time installation - v1alpha4 and v1beta1 with expected flags configured by default
     asserts:
       - lengthEqual:
           path: spec.versions
-          count: 1
-      - equal:
-          path: spec.versions[0].name
-          value: v1beta1
-      - equal:
-          path: spec.versions[0].served
-          value: true
-      - equal:
-          path: spec.versions[0].storage
-          value: true
+          count: 2
+      - isSubset:
+          path: spec.versions[0]
+          content:
+            name: v1beta1
+            served: true
+            storage: true
+      - isSubset:
+          path: spec.versions[1]
+          content:
+            name: v1alpha4
+            served: true
+            storage: false
+            deprecated: true
 
   - it: should contain two versions on upgrades - v1alpha4 and v1beta1 with expected flags configured by default
     release:
@@ -181,30 +196,19 @@ tests:
       - lengthEqual:
           path: spec.versions
           count: 2
-      - equal:
-          path: spec.versions[0].name
-          value: v1alpha4
-      - equal:
-          path: spec.versions[0].served
-          value: true
-      - equal:
-          path: spec.versions[0].storage
-          value: false
-      - equal:
-          path: spec.versions[0].deprecated
-          value: true
-      - equal:
-          path: spec.versions[1].name
-          value: v1beta1
-      - equal:
-          path: spec.versions[1].served
-          value: true
-      - equal:
-          path: spec.versions[1].storage
-          value: true
-      - notExists:
-          path: spec.versions[1].deprecated
-
+      - isSubset:
+          path: spec.versions[0]
+          content:
+            name: v1beta1
+            served: true
+            storage: true
+      - isSubset:
+          path: spec.versions[1]
+          content:
+            name: v1alpha4
+            served: true
+            storage: false
+            deprecated: true
 
   - it: should be able to configure v1alpha4 as storage version on upgrades
     release:
@@ -216,26 +220,16 @@ tests:
       - lengthEqual:
           path: spec.versions
           count: 2
-      - equal:
-          path: spec.versions[0].name
-          value: v1alpha4
-      - equal:
-          path: spec.versions[0].served
-          value: true
-      - equal:
-          path: spec.versions[0].storage
-          value: true
-      - equal:
-          path: spec.versions[0].deprecated
-          value: true
-      - equal:
-          path: spec.versions[1].name
-          value: v1beta1
-      - equal:
-          path: spec.versions[1].served
-          value: true
-      - equal:
-          path: spec.versions[1].storage
-          value: false
-      - notExists:
-          path: spec.versions[1].deprecated
+      - isSubset:
+          path: spec.versions[0]
+          content:
+            name: v1beta1
+            served: true
+            storage: false
+      - isSubset:
+          path: spec.versions[1]
+          content:
+            name: v1alpha4
+            served: true
+            storage: true
+            deprecated: true

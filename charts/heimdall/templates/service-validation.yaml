@@ -17,7 +17,7 @@
 {{- $providers := default dict .Values.providers }}
 {{- $kubernetes := default dict $providers.kubernetes }}
 {{- if $kubernetes.tls }}
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service.validationWebhook" }}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service.validation" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -32,10 +32,10 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: {{ .Values.service.validationWebhook.port }}
+    - port: {{ .Values.service.validation.port }}
       targetPort: http-webhooks
       protocol: TCP
-      name: {{ .Values.service.validationWebhook.portName }}
+      name: {{ .Values.service.validation.portName }}
   selector:
     {{- include "heimdall.selectorLabels" $data | nindent 4 }}
 {{- end }}

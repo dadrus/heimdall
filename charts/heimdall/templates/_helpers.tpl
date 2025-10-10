@@ -106,9 +106,9 @@ Component service
 {{- $baseName := include "heimdall.fullname" . -}}
 {{- if eq .Component "service.default" -}}
   {{- $baseName -}}
-{{- else if eq .Component "service.validationWebhook" -}}
+{{- else if eq .Component "service.validation" -}}
   {{- printf "%s-validation" $baseName | trunc 63 | trimSuffix "-" -}}
-{{- else if eq .Component "service.conversionWebhook" -}}
+{{- else if eq .Component "service.conversion" -}}
   {{- printf "%s-conversion-v1beta1" $baseName | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
   {{- fail "internal error: unknown component specified in heimdall.service helper!" -}}
