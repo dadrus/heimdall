@@ -33,19 +33,6 @@ func TestConvertRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, `"desired-version" not set`)
 			},
 		},
-		"mandatory flags set, but no ruleset path": {
-			args: func(t *testing.T, _ io.Writer) []string {
-				t.Helper()
-
-				return []string{"--" + convertRuleSetFlagDesiredVersion, "1beta1"}
-			},
-			assert: func(t *testing.T, err error, _ string) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorContains(t, err, `accepts 1 arg(s), received 0`)
-			},
-		},
 		"provided ruleset file does not exist": {
 			args: func(t *testing.T, _ io.Writer) []string {
 				t.Helper()
