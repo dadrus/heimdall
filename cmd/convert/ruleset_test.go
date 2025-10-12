@@ -330,7 +330,6 @@ rules:
 
 				return []string{
 					"--" + convertRuleSetFlagDesiredVersion, "1beta1",
-					"-",
 				}
 			},
 			assert: func(t *testing.T, err error, result string) {

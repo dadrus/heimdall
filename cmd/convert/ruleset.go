@@ -25,8 +25,8 @@ func NewConvertRulesCommand() *cobra.Command {
 $ heimdall convert ruleset --desired-version 1beta1 --out converted_ruleset.yaml ruleset.yaml
 
 # Convert a ruleset by providing it over stdin and printing the results to stdout
-$ cat ruleset.yaml | heimdall convert ruleset --desired-version 1beta1 - > converted.yaml`,
-		Args:                  cobra.ExactArgs(1),
+$ cat ruleset.yaml | heimdall convert ruleset --desired-version 1beta1 > converted.yaml`,
+		Args:                  cobra.MaximumNArgs(1),
 		DisableFlagsInUseLine: true,
 		RunE:                  convertRuleSet,
 	}
@@ -42,13 +42,16 @@ $ cat ruleset.yaml | heimdall convert ruleset --desired-version 1beta1 - > conve
 }
 
 func convertRuleSet(cmd *cobra.Command, args []string) error {
-	inputFileName := args[0]
+	inputFileName := x.IfThenElseExec(len(args) != 0,
+		func() string { return args[0] },
+		func() string { return "" },
+	)
 	outputFileName, _ := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
 	targetVersion, _ := cmd.Flags().GetString(convertRuleSetFlagDesiredVersion)
 	conv := converter.New(targetVersion)
 
 	var in io.Reader
-	if inputFileName == "-" {
+	if len(inputFileName) == 0 {
 		in = cmd.InOrStdin()
 	} else {
 		file, err := os.Open(inputFileName)
