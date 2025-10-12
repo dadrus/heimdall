@@ -38,6 +38,10 @@ heimdall validate config -c config.yaml
 
 == Commands
 
+* `convert`
++
+Commands for converting heimdall's resources between versions.
+
 * `completion`
 +
 Generates the autocompletion script for the specified shell.
