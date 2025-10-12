@@ -14,24 +14,24 @@ description: This page describes the upgrade and migration procedures required w
 
 Over time, heimdall’s configuration and `RuleSet` schemas evolve to introduce new capabilities or simplify existing configuration structures. Whenever breaking changes are introduced, they are both announced in the corresponding release notes and described in detail.
 
-If a breaking change affects the configuration schema, migration must be performed manually before starting the new Heimdall version. The required steps are outlined in the pull requests introducing the change, which are also linked in the release notes. If migration is not performed, heimdall will refuse to start and display error messages indicating unknown or invalid configuration properties.
+If a breaking change affects the configuration schema, migration must be performed manually before starting the new heimdall version. The required steps are outlined in the pull requests introducing the change, which are also linked in the release notes.
 
-If breaking changes affect the `RuleSet` schema, versions prior to v0.18.0 required the same manual migration procedure. Depending on the setup and number of rules, this could become cumbersome — particularly for Kubernetes deployments (See also ... for legacy upgrade and migration options).
+NOTE: If migration is not performed, heimdall will refuse to start and display error messages indicating unknown or invalid configuration properties.
 
-Starting with v0.18.0, Heimdall addresses this issue through:
+If breaking changes affect the `RuleSet` schema, versions prior to v0.18.0 required the same manual migration procedure. Depending on the setup and number of rules, this could become cumbersome — particularly for Kubernetes deployments (See also  link:{{< relref "#_migration_process_for_releases_prior_to_v0_18_0" >}}[Migration process for releases prior to v0.18.0] for details).
+
+Starting with v0.18.0, this issue is addressed through:
 
 * A new `convert` CLI command that allows conversion of existing `RuleSet` definitions.
 * A conversion controller for Kubernetes, implemented as a webhook registered with the Kubernetes API server through the `RuleSet` CRD included in heimdall’s Helm chart.
 
-The following sections describe the upgrade and migration procedures for new heimdall releases with breaking changes affecting existing `RuleSets` including the old, as well as the new automation options provided by the new conversion features for heimdall installations both in and outside of Kubernetes.
+The following sections describe the upgrade and migration procedures for new heimdall releases with breaking changes affecting existing `RuleSets` including the old, as well as the new automation options provided by the new conversion features for installations both in and outside of Kubernetes.
 
-NOTE: Before executing one of the processes described below, you must migrate your heimdall configuration(s) first. As mentioned above, please follow the descriptions of the PRs that introduced breaking changes for the release you’re upgrading to.
+NOTE: The following upgrade and migration steps are described in an imperative way for the sake of clarity and to remain product-neutral. However, all steps can be easily adapted to declarative, GitOps-based workflows using tools such as Flux, ArgoCD, or similar.
 
 == Upgrade of heimdall in Kubernetes
 
-The following procedures assume, you have enabled the `kubernetes` provider in your heimdall configuration and are making use of the CRD shipped with heimdall. If you're running heimdall in Kubernetes without relying on the `kubernetes` provider, head over to the section ...
-
-The following procedures assume you have enabled the `kubernetes` provider in your heimdall configuration and are using the CRD shipped with Heimdall. If you're running Heimdall in Kubernetes without relying on the `kubernetes` provider, head over to the section ...
+The following procedures assume you have enabled the link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[`kubernetes`] provider in your configuration and are using the CRD shipped with Heimdall. If you're running heimdall in Kubernetes without relying on the `kubernetes` provider, head over to the link:{{< relref "#_upgrade_of_heimdall_configured_to_use_ruleset_files" >}}[Upgrade of heimdall configured to use RuleSet files] section,
 
 === Multiple heimdall deployments in a cluster
 
@@ -248,7 +248,7 @@ status:
 
 === Migration process for releases prior to v0.18.0
 
-For heimdall releases older than v0.18.0, conversion between different `RuleSet` schema versions must be performed manually. The following procedure describes how to migrate to a newer heimdall.
+For heimdall releases older than v0.18.0, conversion between different `RuleSet` schema versions must be performed manually. The following procedure describes how to migrate to a newer version.
 
 . Export all existing `RuleSets` from the cluster
 +
@@ -369,7 +369,9 @@ providers:
 +
 [source,bash]
 ----
-$ kubectl create configmap heimdall-rules --from-file=<converted-ruesets-directory> -n <namespace-heimdall-is-installed-into>
+$ kubectl create configmap heimdall-rules \
+   --from-file=<converted-ruesets-directory> \
+   -n <namespace-heimdall-is-installed-into>
 ----
 
 . Configure the chart to include a volume mount for the above `ConfigMap`:
