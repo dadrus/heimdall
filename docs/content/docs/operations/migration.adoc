@@ -23,7 +23,7 @@ If breaking changes affect the `RuleSet` schema, versions prior to v0.18.0 requi
 Starting with v0.18.0, this issue is addressed through:
 
 * A new `convert` CLI command that allows conversion of existing `RuleSet` definitions.
-* A conversion controller for Kubernetes, implemented as a webhook registered with the Kubernetes API server through the `RuleSet` CRD included in heimdall’s Helm chart.
+* A conversion controller for Kubernetes, registered with the API server through the `RuleSet` CRD.
 
 The following sections describe the upgrade and migration procedures for new heimdall releases with breaking changes affecting existing `RuleSets` including the old, as well as the new automation options provided by the new conversion features for installations both in and outside of Kubernetes.
 
