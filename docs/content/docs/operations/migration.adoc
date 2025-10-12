@@ -39,9 +39,11 @@ If you have multiple heimdall deployments in your cluster, each responsible for 
 
 . Install a new heimdall deployment in a new namespace, which will act as a conversion controller for the already deployed `RuleSet` resources in the cluster, and configure it to listen for some random `auth_class`. This way, this new instance will not load any `RuleSets`, only convert them to the required schema version:
 +
+NOTE: If you already did an upgrade by following this guide in the past, upgrade the existing conversion controller, instead of installing a new one. The procedure is the same in both cases.
++
 [source,bash]
 ----
-$ helm install ruleset-upgrade ./charts/heimdall  \
+$ helm upgrade --install ruleset-upgrade <chart-reference>  \
     --set crds.updateEnabled=true \
     --set crds.storageVersion=<old-crd-schema> \
     -n <namespace-controller-heimdall-should-be-installed-into> \
@@ -58,7 +60,7 @@ The above snippet sets the release name for this new installation to `ruleset-up
 +
 [source,bash]
 ----
-$ helm upgrade --install <release-name> <chart-reference>  \
+$ helm upgrade --install <your-release-name> <chart-reference>  \
     -n <namespace-heimdall-is-installed-into> \
     -f <path/to/your/values.yaml> \
     -f <path/to/your/heimdall/config.yaml>
@@ -117,7 +119,7 @@ The most important settings are:
 +
 [source,bash]
 ----
-$ helm upgrade --install <release-name> <chart-reference>  \
+$ helm upgrade --install <your-release-name> <chart-reference>  \
     --set crds.updateEnabled=true \
     -n <namespace-heimdall-is-installed-into> \
     -f <path/to/your/values.yaml> \
@@ -128,7 +130,7 @@ Alternatively, you can render only the CRD and apply it manually:
 +
 [source,bash]
 ----
-$ helm template <release-name> <chart-reference>  \
+$ helm template <your-release-name> <chart-reference>  \
     --show-only templates/crds/ruleset.yaml \
     --set crds.updateEnabled=true \
     -n <namespace-heimdall-is-installed-into> \
