@@ -297,6 +297,9 @@ install-heimdall router=default_router:
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
     --set "${extraArgs}" \
+    --set crds.updateEnabled=true \
+    --set crds.storageVersion=v1alpha4 \
+    --take-ownership \
     --wait
 
   if [[ "{{router}}" == "contour" ]]; then
