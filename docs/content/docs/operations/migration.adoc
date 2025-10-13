@@ -327,33 +327,33 @@ if [[ -z "${RULESET_LIST}" || -z "${OUT_DIR}" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$RULESET_LIST" ]]; then
-  echo "Error: file '$RULESET_LIST' not found."
+if [[ ! -f "${RULESET_LIST}" ]]; then
+  echo "Error: file '${RULESET_LIST}' not found."
   exit 1
 fi
 
-mkdir -p "$OUT_DIR"
+mkdir -p "${OUT_DIR}"
 
-echo "Converting RuleSets from '$RULESET_LIST' into '$OUT_DIR'..."
+echo "Converting RuleSets from '${RULESET_LIST}' into '${OUT_DIR}'..."
 echo
 
 # Extract each RuleSet and convert
-yq -r '.items[].metadata.name' "$RULESET_LIST" | while IFS= read -r name; do
-  safe_name=$(echo "$name" | tr '[:space:]' '_')
-  version=$(yq -r ".items[] | select(.metadata.name == \"$name\") | .apiVersion" "$RULESET_LIST" | sed 's/.*v//')
+yq -r '.items[].metadata.name' "${RULESET_LIST}" | while IFS= read -r name; do
+  file_name=$(echo "${name}" | tr '[:space:]' '_')
+  version=$(yq -r ".items[] | select(.metadata.name == \"${name}\") | .apiVersion" "${RULESET_LIST}" | sed 's/.*v//')
 
-  echo "→ Converting RuleSet: $name (schema $version)"
+  echo "→ Converting RuleSet: ${name} (schema ${version})"
 
-  yq -r ".items[] | select(.metadata.name == \"$name\") |
+  yq -r ".items[] | select(.metadata.name == \"${name}\") |
     {
-      \"version\": \"$version\",
+      \"version\": \"${version}\",
       \"name\": .metadata.name,
       \"rules\": .spec.rules
-    }" "$RULESET_LIST" | yq -P > "${OUT_DIR}/${safe_name}.yaml"
+    }" "${RULESET_LIST}" | yq -P > "${OUT_DIR}/${file_name}.yaml"
 done
 
 echo
-echo "Conversion complete. All RuleSets written to '$OUT_DIR'."
+echo "Conversion complete. All RuleSets written to '${OUT_DIR}'."
 ----
 
 . Disable the usage of the `kubernetes` provider in your heimdall configuration and configure the `file_system` provider instead, e.g.
@@ -492,25 +492,25 @@ if [[ -z "${DIR:-}" || -z "${NEW_VERSION:-}" ]]; then
   exit 1
 fi
 
-if [[ ! -d "$DIR" ]]; then
-  echo "Error: Directory '$DIR' does not exist."
+if [[ ! -d "${DIR}" ]]; then
+  echo "Error: Directory '${DIR}' does not exist."
   exit 1
 fi
 
-echo "Converting RuleSets in '$DIR' to schema version '$NEW_VERSION'..."
+echo "Converting RuleSets in '${DIR}' to schema version '${NEW_VERSION}'..."
 echo "Converted files will be written to the same directory with prefix '${PREFIX}'."
 echo
 
-for file in "$DIR"/*; do
+for file in "${DIR}"/*; do
   if [[ -f "$file" ]]; then
     filename=$(basename "$file")
     output_file="${DIR}/${PREFIX}${filename}"
 
-    echo "→ Converting $filename ..."
+    echo "→ Converting ${filename} ..."
     heimdall convert ruleset \
-      --desired-version "$NEW_VERSION" \
-      --out "$output_file" \
-      "$file"
+      --desired-version "${NEW_VERSION}" \
+      --out "${output_file}" \
+      "${file}"
   fi
 done
 
