@@ -267,8 +267,7 @@ This returns a `List` resource containing all rule sets across all namespaces.
 ----
 #!/usr/bin/env bash
 
-# Converts all RuleSets from a Kubernetes export (a List resource)
-# into individual file-based RuleSets.
+# Converts all RuleSets from a Kubernetes export (a List resource) into individual file-based RuleSets.
 #
 # The output files will be written to the specified directory, one file per RuleSet.
 #
@@ -284,13 +283,26 @@ This returns a `List` resource containing all rule sets across all namespaces.
 #   -h, --help       Show this help message and exit
 #
 # Requirements:
-#   - yq (https://mikefarah.gitbook.io/yq/) must be available in PATH.
+#   - yq (https://github.com/kislyuk/yq) must be available in PATH. If not installed, you can install it with e.g. apt install yq on Debian based Linux distributions.
+#
 
 set -euo pipefail
 
-# Print help text
+# Print help text (only the leading comment block after the optional shebang)
 usage() {
-  grep '^#' "$0" | sed 's/^#//'
+  awk '
+    # skip shebang on line 1 if present
+    NR==1 { if ($0 ~ /^#!/) { next } }
+    # while lines start with "#", strip the "# " (or "#") and print
+    /^#/ {
+      sub(/^#\s?/, "")
+      print
+      started=1
+      next
+    }
+    # once we have printed at least one comment block line, stop at first non-# line
+    started==1 { exit }
+  ' "$0"
   exit 0
 }
 
@@ -340,16 +352,21 @@ echo
 # Extract each RuleSet and convert
 yq -r '.items[].metadata.name' "${RULESET_LIST}" | while IFS= read -r name; do
   file_name=$(echo "${name}" | tr '[:space:]' '_')
-  version=$(yq -r ".items[] | select(.metadata.name == \"${name}\") | .apiVersion" "${RULESET_LIST}" | sed 's/.*v//')
+
+  version=$(yq -r '.items[] | select(.metadata.name == "'${name}'") | .apiVersion' "${RULESET_LIST}" | sed 's/.*v//')
 
   echo "→ Converting RuleSet: ${name} (schema ${version})"
 
-  yq -r ".items[] | select(.metadata.name == \"${name}\") |
-    {
-      \"version\": \"${version}\",
-      \"name\": .metadata.name,
-      \"rules\": .spec.rules
-    }" "${RULESET_LIST}" | yq -P > "${OUT_DIR}/${file_name}.yaml"
+  # Extract matching object and format as YAML
+  yq -r '.items[] | select(.metadata.name == "'${name}'")' "${RULESET_LIST}" \
+    | jq -r --arg version "${version}" '
+      {
+        version: $version,
+        name: .metadata.name,
+        rules: .spec.rules
+      }
+    ' \
+    | yq -y '.' > "${OUT_DIR}/${file_name}.yaml"
 done
 
 echo
