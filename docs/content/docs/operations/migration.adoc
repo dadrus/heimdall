@@ -48,13 +48,15 @@ $ helm upgrade --install ruleset-upgrade <chart-reference>  \
     --set crds.storageVersion=<old-crd-schema> \
     -n <namespace-controller-heimdall-should-be-installed-into> \
     -f <path/to/your/values.yaml> \
-    -f <path/to/your/heimdall/config.yaml>
+    -f <path/to/your/heimdall/config.yaml> \
+    --take-ownership
 ----
 +
 The above snippet sets the release name for this new installation to `ruleset-upgrade`. You can use configuration from any of the existing heimdall deployments. The most important settings are:
 +
 * `crds.updateEnabled=true`, which instructs the Helm chart to render a new `RuleSet` CRD that includes both the new and the old `RuleSet` schema versions, and
 * `crds.storageVersion=<old-crd-schema>`, which configures the old CRD schema (e.g., `v1alpha1`) — currently used by the heimdall deployments in the cluster — to be the storage schema. This ensures that the existing heimdall pods can still use the old schema version without requiring conversion.
+* `--take-ownership`, which instructs helm to take over the ownership of the CRD installed by the previous installations.
 
 . Upgrade each of your heimdall deployments with
 +
@@ -107,13 +109,15 @@ $ helm upgrade --install <your-release-name> <chart-reference>  \
     --set crds.storageVersion=<old-crd-schema> \
     -n <namespace-heimdall-is-installed-into> \
     -f <path/to/your/values.yaml> \
-    -f <path/to/your/heimdall/config.yaml>
+    -f <path/to/your/heimdall/config.yaml> \
+    --take-ownership
 ----
 +
 The most important settings are:
 +
 * `crds.updateEnabled=true`, which instructs the Helm chart to render a new `RuleSet` CRD that includes both the new and old `RuleSet` schema versions, and
 * `crds.storageVersion=<old-crd-schema>`, which configures the old CRD schema (e.g., `v1alpha1`) — currently used by the heimdall deployment in the cluster — to be the storage schema. This ensures that existing pods can still use the old schema version without conversion, even if the deployment scales up.
+* `--take-ownership`, which instructs helm to take over the ownership of the CRD installed by the previous installations.
 
 . Once the upgrade is complete and no old heimdall pods are running, execute `helm upgrade` again without specifying the `crds.storageVersion`. This reconfigures the CRD to use the new `RuleSet` schema version (e.g., `v1beta1`) as the new storage version:
 +
@@ -124,19 +128,6 @@ $ helm upgrade --install <your-release-name> <chart-reference>  \
     -n <namespace-heimdall-is-installed-into> \
     -f <path/to/your/values.yaml> \
     -f <path/to/your/heimdall/config.yaml>
-----
-+
-Alternatively, you can render only the CRD and apply it manually:
-+
-[source,bash]
-----
-$ helm template <your-release-name> <chart-reference>  \
-    --show-only templates/crds/ruleset.yaml \
-    --set crds.updateEnabled=true \
-    -n <namespace-heimdall-is-installed-into> \
-    -f <path/to/your/values.yaml> \
-    -f <path/to/your/heimdall/config.yaml> | \
-    kubectl apply -f -
 ----
 +
 With the CRD reconfigured, any update to existing `RuleSet` resources, or any new ones added, will now be stored in etcd using the new schema version.
@@ -214,7 +205,7 @@ Further usage examples can also be found https://kubernetes.io/docs/tasks/manage
 +
 [source,bash]
 ----
-$ kubectl get storageversionmigration.storagemigration.k8s.io/ruleset-svm -o yaml
+$ kubectl get storageversionmigration.storagemigration.k8s.io ruleset-svm -o yaml
 ----
 +
 should result in an output similar to:
