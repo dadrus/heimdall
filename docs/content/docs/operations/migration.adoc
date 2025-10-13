@@ -176,9 +176,9 @@ with `<new-schema-version>` being the currently configured storage version of th
 
 ==== Declarative Option
 
-The steps described above can also be automated using the https://github.com/kubernetes-sigs/kube-storage-version-migrator[kube-storage-version-migrator] operator, which watches for the latest CRD schema versions in the cluster, creates conversion requests for resource types whose storage version has changed, and patches the `status.storedVersions` stanza accordingly.
+The steps described above can also be automated using the `StorageVersionMigrator`. The corresponding operator, which watches for the latest CRD schema versions in the cluster, creates conversion requests for resource types whose storage version has changed, and patches the `status.storedVersions` stanza accordingly.
 
-This operator is typically available in managed Kubernetes environments and can also be enabled in self-hosted clusters via the `StorageVersionMigrator` https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/[feature gate].
+This functionality is typically available in managed Kubernetes environments and can also be enabled in self-hosted clusters by enabling the `StorageVersionMigrator` and `InformerResourceVersion` https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/[feature gates] as well as by enabling storage version migration API by setting runtime config `storagemigration.k8s.io/v1alpha1` to true for the API server.
 
 If enabled,
 
