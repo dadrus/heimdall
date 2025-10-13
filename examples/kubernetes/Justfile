@@ -352,3 +352,6 @@ delete-cluster:
 
 upgrade: (install-heimdall "traefik")
 
+migrate:
+  kubectl apply -f quickstarts/heimdall/storageversionmigration.yaml
+
