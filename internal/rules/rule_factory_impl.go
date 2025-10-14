@@ -81,7 +81,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, rul v1beta1.Rule) (rule.
 		v1beta1.EncodedSlashesOff,
 	)
 
-	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, rul.Execute)
+	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(rul.Execute)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,6 @@ func (f *ruleFactory) CreateRule(version, srcID string, rul v1beta1.Rule) (rule.
 
 //nolint:funlen,gocognit,cyclop
 func (f *ruleFactory) createExecutePipeline(
-	version string,
 	pipeline []config.MechanismConfig,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
 	var (
@@ -195,7 +194,6 @@ func (f *ruleFactory) createExecutePipeline(
 			stepID := getStepID(pipelineStep["id"])
 
 			authenticator, err := f.hf.CreateAuthenticator(
-				version,
 				fmt.Sprintf("%v", refID),
 				stepID,
 				getConfig(pipelineStep["config"]),
@@ -210,7 +208,7 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		handler, stepID, err := createHandler(version, "authorizer", pipelineStep, authorizersCheck,
+		handler, stepID, err := createHandler("authorizer", pipelineStep, authorizersCheck,
 			f.hf.CreateAuthorizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
@@ -221,7 +219,7 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		handler, stepID, err = createHandler(version, "contextualizer", pipelineStep, contextualizersCheck,
+		handler, stepID, err = createHandler("contextualizer", pipelineStep, contextualizersCheck,
 			f.hf.CreateContextualizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
@@ -232,7 +230,7 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		handler, stepID, err = createHandler(version, "finalizer", pipelineStep, finalizersCheck,
+		handler, stepID, err = createHandler("finalizer", pipelineStep, finalizersCheck,
 			f.hf.CreateFinalizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
@@ -277,7 +275,6 @@ func (f *ruleFactory) createOnErrorPipeline(
 			stepID := getStepID(ehStep["id"])
 
 			handler, err := f.hf.CreateErrorHandler(
-				version,
 				fmt.Sprintf("%v", refID),
 				stepID,
 				getConfig(ehStep["config"]),
@@ -316,7 +313,6 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	logger.Info().Msg("Loading default rule")
 
 	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(
-		v1beta1.Version,
 		ruleConfig.Execute,
 	)
 	if err != nil {
@@ -364,11 +360,10 @@ type CheckFunc func() error
 var errHandlerNotFound = errors.New("handler not found")
 
 func createHandler[T subjectHandler](
-	version string,
 	handlerType string,
 	configMap map[string]any,
 	check CheckFunc,
-	creteHandler func(version, refID, stepID string, conf config.MechanismConfig) (T, error),
+	createHandler func(refID, stepID string, conf config.MechanismConfig) (T, error),
 ) (subjectHandler, string, error) {
 	refID, found := configMap[handlerType]
 	if !found {
@@ -386,8 +381,7 @@ func createHandler[T subjectHandler](
 
 	stepID := getStepID(configMap["id"])
 
-	handler, err := creteHandler(
-		version,
+	handler, err := createHandler(
 		fmt.Sprintf("%v", refID),
 		stepID,
 		getConfig(configMap["config"]),

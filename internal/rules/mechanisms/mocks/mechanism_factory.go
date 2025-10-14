@@ -42,8 +42,8 @@ func (_m *MechanismFactoryMock) EXPECT() *MechanismFactoryMock_Expecter {
 }
 
 // CreateAuthenticator provides a mock function for the type MechanismFactoryMock
-func (_mock *MechanismFactoryMock) CreateAuthenticator(version string, refID string, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error) {
-	ret := _mock.Called(version, refID, stepID, conf)
+func (_mock *MechanismFactoryMock) CreateAuthenticator(refID string, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error) {
+	ret := _mock.Called(refID, stepID, conf)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAuthenticator")
@@ -51,18 +51,18 @@ func (_mock *MechanismFactoryMock) CreateAuthenticator(version string, refID str
 
 	var r0 authenticators.Authenticator
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) (authenticators.Authenticator, error)); ok {
-		return returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (authenticators.Authenticator, error)); ok {
+		return returnFunc(refID, stepID, conf)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) authenticators.Authenticator); ok {
-		r0 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) authenticators.Authenticator); ok {
+		r0 = returnFunc(refID, stepID, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(authenticators.Authenticator)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, string, config.MechanismConfig) error); ok {
-		r1 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = returnFunc(refID, stepID, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -75,15 +75,14 @@ type MechanismFactoryMock_CreateAuthenticator_Call struct {
 }
 
 // CreateAuthenticator is a helper method to define mock.On call
-//   - version string
 //   - refID string
 //   - stepID string
 //   - conf config.MechanismConfig
-func (_e *MechanismFactoryMock_Expecter) CreateAuthenticator(version interface{}, refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateAuthenticator_Call {
-	return &MechanismFactoryMock_CreateAuthenticator_Call{Call: _e.mock.On("CreateAuthenticator", version, refID, stepID, conf)}
+func (_e *MechanismFactoryMock_Expecter) CreateAuthenticator(refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateAuthenticator_Call {
+	return &MechanismFactoryMock_CreateAuthenticator_Call{Call: _e.mock.On("CreateAuthenticator", refID, stepID, conf)}
 }
 
-func (_c *MechanismFactoryMock_CreateAuthenticator_Call) Run(run func(version string, refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateAuthenticator_Call {
+func (_c *MechanismFactoryMock_CreateAuthenticator_Call) Run(run func(refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateAuthenticator_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -93,19 +92,14 @@ func (_c *MechanismFactoryMock_CreateAuthenticator_Call) Run(run func(version st
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 config.MechanismConfig
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 config.MechanismConfig
-		if args[3] != nil {
-			arg3 = args[3].(config.MechanismConfig)
+			arg2 = args[2].(config.MechanismConfig)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -116,14 +110,14 @@ func (_c *MechanismFactoryMock_CreateAuthenticator_Call) Return(authenticator au
 	return _c
 }
 
-func (_c *MechanismFactoryMock_CreateAuthenticator_Call) RunAndReturn(run func(version string, refID string, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error)) *MechanismFactoryMock_CreateAuthenticator_Call {
+func (_c *MechanismFactoryMock_CreateAuthenticator_Call) RunAndReturn(run func(refID string, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error)) *MechanismFactoryMock_CreateAuthenticator_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateAuthorizer provides a mock function for the type MechanismFactoryMock
-func (_mock *MechanismFactoryMock) CreateAuthorizer(version string, refID string, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error) {
-	ret := _mock.Called(version, refID, stepID, conf)
+func (_mock *MechanismFactoryMock) CreateAuthorizer(refID string, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error) {
+	ret := _mock.Called(refID, stepID, conf)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAuthorizer")
@@ -131,18 +125,18 @@ func (_mock *MechanismFactoryMock) CreateAuthorizer(version string, refID string
 
 	var r0 authorizers.Authorizer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) (authorizers.Authorizer, error)); ok {
-		return returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (authorizers.Authorizer, error)); ok {
+		return returnFunc(refID, stepID, conf)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) authorizers.Authorizer); ok {
-		r0 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) authorizers.Authorizer); ok {
+		r0 = returnFunc(refID, stepID, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(authorizers.Authorizer)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, string, config.MechanismConfig) error); ok {
-		r1 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = returnFunc(refID, stepID, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -155,15 +149,14 @@ type MechanismFactoryMock_CreateAuthorizer_Call struct {
 }
 
 // CreateAuthorizer is a helper method to define mock.On call
-//   - version string
 //   - refID string
 //   - stepID string
 //   - conf config.MechanismConfig
-func (_e *MechanismFactoryMock_Expecter) CreateAuthorizer(version interface{}, refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateAuthorizer_Call {
-	return &MechanismFactoryMock_CreateAuthorizer_Call{Call: _e.mock.On("CreateAuthorizer", version, refID, stepID, conf)}
+func (_e *MechanismFactoryMock_Expecter) CreateAuthorizer(refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateAuthorizer_Call {
+	return &MechanismFactoryMock_CreateAuthorizer_Call{Call: _e.mock.On("CreateAuthorizer", refID, stepID, conf)}
 }
 
-func (_c *MechanismFactoryMock_CreateAuthorizer_Call) Run(run func(version string, refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateAuthorizer_Call {
+func (_c *MechanismFactoryMock_CreateAuthorizer_Call) Run(run func(refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateAuthorizer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -173,19 +166,14 @@ func (_c *MechanismFactoryMock_CreateAuthorizer_Call) Run(run func(version strin
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 config.MechanismConfig
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 config.MechanismConfig
-		if args[3] != nil {
-			arg3 = args[3].(config.MechanismConfig)
+			arg2 = args[2].(config.MechanismConfig)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -196,14 +184,14 @@ func (_c *MechanismFactoryMock_CreateAuthorizer_Call) Return(authorizer authoriz
 	return _c
 }
 
-func (_c *MechanismFactoryMock_CreateAuthorizer_Call) RunAndReturn(run func(version string, refID string, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error)) *MechanismFactoryMock_CreateAuthorizer_Call {
+func (_c *MechanismFactoryMock_CreateAuthorizer_Call) RunAndReturn(run func(refID string, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error)) *MechanismFactoryMock_CreateAuthorizer_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateContextualizer provides a mock function for the type MechanismFactoryMock
-func (_mock *MechanismFactoryMock) CreateContextualizer(version string, refID string, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) {
-	ret := _mock.Called(version, refID, stepID, conf)
+func (_mock *MechanismFactoryMock) CreateContextualizer(refID string, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) {
+	ret := _mock.Called(refID, stepID, conf)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateContextualizer")
@@ -211,18 +199,18 @@ func (_mock *MechanismFactoryMock) CreateContextualizer(version string, refID st
 
 	var r0 contextualizers.Contextualizer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) (contextualizers.Contextualizer, error)); ok {
-		return returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (contextualizers.Contextualizer, error)); ok {
+		return returnFunc(refID, stepID, conf)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) contextualizers.Contextualizer); ok {
-		r0 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) contextualizers.Contextualizer); ok {
+		r0 = returnFunc(refID, stepID, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(contextualizers.Contextualizer)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, string, config.MechanismConfig) error); ok {
-		r1 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = returnFunc(refID, stepID, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -235,15 +223,14 @@ type MechanismFactoryMock_CreateContextualizer_Call struct {
 }
 
 // CreateContextualizer is a helper method to define mock.On call
-//   - version string
 //   - refID string
 //   - stepID string
 //   - conf config.MechanismConfig
-func (_e *MechanismFactoryMock_Expecter) CreateContextualizer(version interface{}, refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateContextualizer_Call {
-	return &MechanismFactoryMock_CreateContextualizer_Call{Call: _e.mock.On("CreateContextualizer", version, refID, stepID, conf)}
+func (_e *MechanismFactoryMock_Expecter) CreateContextualizer(refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateContextualizer_Call {
+	return &MechanismFactoryMock_CreateContextualizer_Call{Call: _e.mock.On("CreateContextualizer", refID, stepID, conf)}
 }
 
-func (_c *MechanismFactoryMock_CreateContextualizer_Call) Run(run func(version string, refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateContextualizer_Call {
+func (_c *MechanismFactoryMock_CreateContextualizer_Call) Run(run func(refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateContextualizer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -253,19 +240,14 @@ func (_c *MechanismFactoryMock_CreateContextualizer_Call) Run(run func(version s
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 config.MechanismConfig
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 config.MechanismConfig
-		if args[3] != nil {
-			arg3 = args[3].(config.MechanismConfig)
+			arg2 = args[2].(config.MechanismConfig)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -276,14 +258,14 @@ func (_c *MechanismFactoryMock_CreateContextualizer_Call) Return(contextualizer 
 	return _c
 }
 
-func (_c *MechanismFactoryMock_CreateContextualizer_Call) RunAndReturn(run func(version string, refID string, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)) *MechanismFactoryMock_CreateContextualizer_Call {
+func (_c *MechanismFactoryMock_CreateContextualizer_Call) RunAndReturn(run func(refID string, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)) *MechanismFactoryMock_CreateContextualizer_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateErrorHandler provides a mock function for the type MechanismFactoryMock
-func (_mock *MechanismFactoryMock) CreateErrorHandler(version string, refID string, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error) {
-	ret := _mock.Called(version, refID, stepID, conf)
+func (_mock *MechanismFactoryMock) CreateErrorHandler(refID string, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error) {
+	ret := _mock.Called(refID, stepID, conf)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateErrorHandler")
@@ -291,18 +273,18 @@ func (_mock *MechanismFactoryMock) CreateErrorHandler(version string, refID stri
 
 	var r0 errorhandlers.ErrorHandler
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) (errorhandlers.ErrorHandler, error)); ok {
-		return returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (errorhandlers.ErrorHandler, error)); ok {
+		return returnFunc(refID, stepID, conf)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) errorhandlers.ErrorHandler); ok {
-		r0 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) errorhandlers.ErrorHandler); ok {
+		r0 = returnFunc(refID, stepID, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(errorhandlers.ErrorHandler)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, string, config.MechanismConfig) error); ok {
-		r1 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = returnFunc(refID, stepID, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -315,15 +297,14 @@ type MechanismFactoryMock_CreateErrorHandler_Call struct {
 }
 
 // CreateErrorHandler is a helper method to define mock.On call
-//   - version string
 //   - refID string
 //   - stepID string
 //   - conf config.MechanismConfig
-func (_e *MechanismFactoryMock_Expecter) CreateErrorHandler(version interface{}, refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateErrorHandler_Call {
-	return &MechanismFactoryMock_CreateErrorHandler_Call{Call: _e.mock.On("CreateErrorHandler", version, refID, stepID, conf)}
+func (_e *MechanismFactoryMock_Expecter) CreateErrorHandler(refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateErrorHandler_Call {
+	return &MechanismFactoryMock_CreateErrorHandler_Call{Call: _e.mock.On("CreateErrorHandler", refID, stepID, conf)}
 }
 
-func (_c *MechanismFactoryMock_CreateErrorHandler_Call) Run(run func(version string, refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateErrorHandler_Call {
+func (_c *MechanismFactoryMock_CreateErrorHandler_Call) Run(run func(refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateErrorHandler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -333,19 +314,14 @@ func (_c *MechanismFactoryMock_CreateErrorHandler_Call) Run(run func(version str
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 config.MechanismConfig
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 config.MechanismConfig
-		if args[3] != nil {
-			arg3 = args[3].(config.MechanismConfig)
+			arg2 = args[2].(config.MechanismConfig)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -356,14 +332,14 @@ func (_c *MechanismFactoryMock_CreateErrorHandler_Call) Return(errorHandler erro
 	return _c
 }
 
-func (_c *MechanismFactoryMock_CreateErrorHandler_Call) RunAndReturn(run func(version string, refID string, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)) *MechanismFactoryMock_CreateErrorHandler_Call {
+func (_c *MechanismFactoryMock_CreateErrorHandler_Call) RunAndReturn(run func(refID string, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)) *MechanismFactoryMock_CreateErrorHandler_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateFinalizer provides a mock function for the type MechanismFactoryMock
-func (_mock *MechanismFactoryMock) CreateFinalizer(version string, refID string, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error) {
-	ret := _mock.Called(version, refID, stepID, conf)
+func (_mock *MechanismFactoryMock) CreateFinalizer(refID string, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error) {
+	ret := _mock.Called(refID, stepID, conf)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateFinalizer")
@@ -371,18 +347,18 @@ func (_mock *MechanismFactoryMock) CreateFinalizer(version string, refID string,
 
 	var r0 finalizers.Finalizer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) (finalizers.Finalizer, error)); ok {
-		return returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (finalizers.Finalizer, error)); ok {
+		return returnFunc(refID, stepID, conf)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, string, config.MechanismConfig) finalizers.Finalizer); ok {
-		r0 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(0).(func(string, string, config.MechanismConfig) finalizers.Finalizer); ok {
+		r0 = returnFunc(refID, stepID, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(finalizers.Finalizer)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, string, config.MechanismConfig) error); ok {
-		r1 = returnFunc(version, refID, stepID, conf)
+	if returnFunc, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = returnFunc(refID, stepID, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -395,15 +371,14 @@ type MechanismFactoryMock_CreateFinalizer_Call struct {
 }
 
 // CreateFinalizer is a helper method to define mock.On call
-//   - version string
 //   - refID string
 //   - stepID string
 //   - conf config.MechanismConfig
-func (_e *MechanismFactoryMock_Expecter) CreateFinalizer(version interface{}, refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateFinalizer_Call {
-	return &MechanismFactoryMock_CreateFinalizer_Call{Call: _e.mock.On("CreateFinalizer", version, refID, stepID, conf)}
+func (_e *MechanismFactoryMock_Expecter) CreateFinalizer(refID interface{}, stepID interface{}, conf interface{}) *MechanismFactoryMock_CreateFinalizer_Call {
+	return &MechanismFactoryMock_CreateFinalizer_Call{Call: _e.mock.On("CreateFinalizer", refID, stepID, conf)}
 }
 
-func (_c *MechanismFactoryMock_CreateFinalizer_Call) Run(run func(version string, refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateFinalizer_Call {
+func (_c *MechanismFactoryMock_CreateFinalizer_Call) Run(run func(refID string, stepID string, conf config.MechanismConfig)) *MechanismFactoryMock_CreateFinalizer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -413,19 +388,14 @@ func (_c *MechanismFactoryMock_CreateFinalizer_Call) Run(run func(version string
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 config.MechanismConfig
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 config.MechanismConfig
-		if args[3] != nil {
-			arg3 = args[3].(config.MechanismConfig)
+			arg2 = args[2].(config.MechanismConfig)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -436,7 +406,7 @@ func (_c *MechanismFactoryMock_CreateFinalizer_Call) Return(finalizer finalizers
 	return _c
 }
 
-func (_c *MechanismFactoryMock_CreateFinalizer_Call) RunAndReturn(run func(version string, refID string, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error)) *MechanismFactoryMock_CreateFinalizer_Call {
+func (_c *MechanismFactoryMock_CreateFinalizer_Call) RunAndReturn(run func(refID string, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error)) *MechanismFactoryMock_CreateFinalizer_Call {
 	_c.Call.Return(run)
 	return _c
 }
