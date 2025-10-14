@@ -298,7 +298,6 @@ install-heimdall router=default_router:
     -f quickstarts/heimdall/helm-values.yaml \
     --set "${extraArgs}" \
     --set crds.updateEnabled=true \
-    --set crds.storageVersion=v1alpha4 \
     --take-ownership \
     --wait
 
@@ -348,10 +347,3 @@ install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
-
-
-upgrade: (install-heimdall "traefik")
-
-migrate:
-  kubectl apply -f quickstarts/heimdall/storageversionmigration.yaml
-

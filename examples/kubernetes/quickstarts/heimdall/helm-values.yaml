@@ -42,5 +42,4 @@ webhooks:
 #  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy.monitoring:4317"
 
 image:
-  tag: local
-  repository: heimdall
+  tag: dev
