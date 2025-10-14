@@ -134,16 +134,14 @@ With the CRD reconfigured, any update to existing `RuleSet` resources, or any ne
 
 === Ensuring all RuleSets are stored in etcd using the new schema
 
-The API server only uses the new storage version for resources in etcd on **write** operations — meaning when `RuleSets` are updated or new ones are added. Therefore, after performing one of the upgrade procedures described above, it is required:
+The API server only uses the new storage version for resources in etcd on **write** operations — meaning when `RuleSets` are updated or new ones are added. Therefore,  to ensure future heimdall releases can still successfully convert and load the `RuleSets` already present in the cluster, it is required:
 
 * to convert the `RuleSets` already stored in etcd to use the new schema version, and
 * to store the converted `RuleSets` alongside the particular services to ensure frictionless upgrades in the future — especially when conversion between older versions (e.g., `v1alpha4` → `v1beta1`) is no longer supported.
 
 The latter can be achieved by reading the existing `RuleSets` from the cluster — the conversion happens automatically thanks to the conversion webhook.
 
-To achieve the former, two options exist:
-
-==== Imperative Option
+To achieve the former, you can do the following:
 
 . Export all existing RuleSets with:
 +
@@ -162,80 +160,6 @@ $ kubectl apply -f allrulesets.yaml
 ----
 +
 Since this is a write operation, the `RuleSets` will now be stored in the new schema format.
-
-. Patch the `status.storedVersions` stanza to ensure only the most recent version is referenced. Otherwise, older schema versions must be retained in future CRD updates:
-+
-[source,bash]
-----
-$ kubectl patch customresourcedefinitions rulesets.heimdall.dadrus.github.com \
-    --subresource='status' --type='merge' \
-    -p '{"status":{"storedVersions": ["<new-schema-version>"]}}'
-----
-+
-with `<new-schema-version>` being the currently configured storage version of the schema in the CRD — e.g., `v1beta1` when migrating from `v1alpha4`.
-
-==== Declarative Option
-
-The steps described above can also be automated using the `StorageVersionMigrator`. The corresponding operator, which watches for the latest CRD schema versions in the cluster, creates conversion requests for resource types whose storage version has changed, and patches the `status.storedVersions` stanza accordingly.
-
-This functionality is typically available in managed Kubernetes environments and can also be enabled in self-hosted clusters by enabling the `StorageVersionMigrator` and `InformerResourceVersion` https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/[feature gates] as well as by enabling storage version migration API by setting runtime config `storagemigration.k8s.io/v1alpha1` to true for the API server.
-
-If enabled,
-
-. create a https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/storage-version-migration-v1alpha1/#StorageVersionMigration[`StorageVersionMigration`] resource with the contents shown below and apply it to the cluster.
-+
-[source,yaml]
-----
-kind: StorageVersionMigration
-apiVersion: storagemigration.k8s.io/v1alpha1
-metadata:
-  name: ruleset-svm
-spec:
-  resource:
-    group: rulesets.heimdall.dadrus.github.com
-    version: <old-schema-version>
-    resource: RuleSet
-----
-+
-with `<old-schema-version>` being the old storage version of the schema in the CRD — e.g., `v1alpha4` when migrating from `v1alpha4` to `v1beta1`.
-+
-Further usage examples can also be found https://kubernetes.io/docs/tasks/manage-kubernetes-objects/storage-version-migration/#update-the-preferred-storage-schema-of-a-crd[here].
-
-. Monitor migration of `RuleSets` by checking the `status` stanza of the `StorageVersionMigration` resource. A successful migration should have its `Succeeded` condition set to `true`. e.g.
-+
-[source,bash]
-----
-$ kubectl get storageversionmigration.storagemigration.k8s.io ruleset-svm -o yaml
-----
-+
-should result in an output similar to:
-+
-[source,yaml]
-----
-kind: StorageVersionMigration
-apiVersion: storagemigration.k8s.io/v1alpha1
-metadata:
-  name: ruleset-svm
-  uid: 4eb91094-487d-4b3c-9176-ce07664d64f7
-  resourceVersion: "90"
-  creationTimestamp: "2025-10-12T17:27:44Z"
-spec:
-  resource:
-    group: rulesets.heimdall.dadrus.github.com
-    version: v1alpha4
-    resource: RuleSet
-status:
-  conditions:
-  - type: Running
-    status: "False"
-    lastUpdateTime: "2025-10-12T17:27:44Z"
-    reason: StorageVersionMigrationInProgress
-  - type: Succeeded
-    status: "True"
-    lastUpdateTime: "2025-10-12T17:27:45Z"
-    reason: StorageVersionMigrationSucceeded
-  resourceVersion: "84"
-----
 
 === Migration process for releases prior to v0.18.0
 
@@ -455,7 +379,7 @@ Here’s an example script that can be used to convert all rule sets stored in a
 #   ./convert-rulesets.sh --dir <ruleset-dir> --desired-version <new-schema-version> [--prefix <prefix>]
 #
 # Example:
-#   ./convert-rulesets.sh --dir ./rulesets --desired-version v1beta1 --prefix upgraded_
+#   ./convert-rulesets.sh --dir ./rulesets --desired-version 1beta1 --prefix upgraded_
 #
 # Requirements:
 #   - Heimdall must be available in PATH.
@@ -465,6 +389,24 @@ set -euo pipefail
 
 # Default values
 PREFIX="converted_"
+
+# Print help text (only the leading comment block after the optional shebang)
+usage() {
+  awk '
+    # skip shebang on line 1 if present
+    NR==1 { if ($0 ~ /^#!/) { next } }
+    # while lines start with "#", strip the "# " (or "#") and print
+    /^#/ {
+      sub(/^#\s?/, "")
+      print
+      started=1
+      next
+    }
+    # once we have printed at least one comment block line, stop at first non-# line
+    started==1 { exit }
+  ' "$0"
+  exit 0
+}
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -482,12 +424,11 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      echo "Usage: $0 --dir <ruleset-dir> --desired-version <new-schema-version> [--prefix <prefix>]"
-      exit 0
+      usage
       ;;
     *)
       echo "Unknown argument: $1"
-      echo "Usage: $0 --dir <ruleset-dir> --desired-version <new-schema-version> [--prefix <prefix>]"
+      echo "Use --help for usage information."
       exit 1
       ;;
   esac
@@ -510,15 +451,12 @@ echo "Converted files will be written to the same directory with prefix '${PREFI
 echo
 
 for file in "${DIR}"/*; do
-  if [[ -f "$file" ]]; then
-    filename=$(basename "$file")
+  if [[ -f "${file}" ]]; then
+    filename=$(basename "${file}")
     output_file="${DIR}/${PREFIX}${filename}"
 
     echo "→ Converting ${filename} ..."
-    heimdall convert ruleset \
-      --desired-version "${NEW_VERSION}" \
-      --out "${output_file}" \
-      "${file}"
+    heimdall convert ruleset -d "${NEW_VERSION}" -o "${output_file}" "${file}"
   fi
 done
 
@@ -537,5 +475,5 @@ NOTE: Don’t overwrite the existing rule sets. Make sure you add a prefix to th
 
 . Deploy the new heimdall version.
 
-This ensures that older instances continue using the old rule set files, while new instances use the converted ones.
+This ensures that older instances continue using the old rule set files and ignore the new ones, while new instances use the converted files.
 
