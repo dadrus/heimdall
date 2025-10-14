@@ -52,8 +52,7 @@ rules:
     routes:
       - path: /**
     hosts:
-      - type: exact
-        value: my-service1.local
+      - my-service1.local
     methods: [ "GET" ]
   forward_to:
     host: ${UPSTREAM_HOST:="default-backend:8080"}

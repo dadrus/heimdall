@@ -54,8 +54,7 @@ rules:
     methods: [ "GET" ]
     scheme: https
     hosts:
-      - type: exact
-        value: my-service1.local
+      - my-service1.local
   execute:
     - authorizer: foobar
 - id: rule:2
@@ -64,8 +63,7 @@ rules:
       - path: /**
     scheme: https
     hosts:
-      - type: exact
-        value: my-service2.local
+      - my-service2.local
     methods: [ "GET" ]
   execute:
     - authorizer: barfoo
@@ -131,8 +129,7 @@ spec:
           - path: /foo/**
         scheme: https
         hosts:
-          - type: exact
-            value: 127.0.0.1:9090
+          - 127.0.0.1:9090
       execute:
         - authenticator: foo
         - authorizer: bar
