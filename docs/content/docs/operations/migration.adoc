@@ -81,20 +81,7 @@ $ helm upgrade --install ruleset-upgrade <chart-reference>  \
     -f <path/to/your/heimdall/config.yaml>
 ----
 +
-Alternatively, you can also render the updated CRD and apply it to the cluster:
-+
-[source,bash]
-----
-$ helm template ruleset-upgrade <chart-reference>  \
-    --show-only templates/crds/ruleset.yaml \
-    --set crds.updateEnabled=true \
-    -n <namespace-controller-heimdall-is-installed-into> \
-    -f <path/to/your/values.yaml> \
-    -f <path/to/your/heimdall/config.yaml> | \
-    kubectl apply -f -
-----
-+
-With the CRD reconfigured, any update to existing `RuleSet` resources or any new `RuleSet` resource added to the cluster will be stored using the new schema version in etcd.
+With the CRD reconfigured, any update to existing `RuleSet` resources or any new `RuleSet` resource added to the cluster will be converted and stored using the new schema version in etcd.
 
 === Single heimdall deployment in a cluster
 
