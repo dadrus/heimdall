@@ -353,7 +353,8 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authDa
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "received credentials rejected").WithErrorContext(a)
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"received authentication data rejected").WithErrorContext(a)
 	case resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices:
 		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).WithErrorContext(a)
