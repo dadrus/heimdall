@@ -195,7 +195,7 @@ func (ec *ErrorChain) firstMessage() string {
 			return current.msg
 		}
 
-		if chained, ok := current.err.(*ErrorChain); ok {
+		if chained, ok := current.err.(*ErrorChain); ok { //nolint: errorlint
 			msg := chained.firstMessage()
 			if msg != chained.Error() {
 				return msg

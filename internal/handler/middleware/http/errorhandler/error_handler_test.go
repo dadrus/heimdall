@@ -68,7 +68,7 @@ func TestHandlerHandle(t *testing.T) {
 			err:     errorchain.New(heimdall.ErrAuthorization),
 			expCode: http.StatusForbidden,
 			accept:  "text/plain",
-			expBody: "authorization error",
+			expBody: "authorization error: authorization error",
 		},
 		"communication timeout error default": {
 			handler: New(),

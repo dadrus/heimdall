@@ -255,7 +255,6 @@ func TestErrorChainString(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			// data from the test case
-
 			value := tc.err.String()
 
 			// THEN
@@ -314,7 +313,6 @@ func TestErrorChainJSONMarshal(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			// data from the test case
-
 			res, err := json.Marshal(tc.err)
 
 			// THEN
@@ -374,7 +372,6 @@ func TestErrorChainXMLMarshal(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			// data from the test case
-
 			res, err := xml.Marshal(tc.err)
 
 			// THEN
