@@ -137,7 +137,7 @@ func (ec *ErrorChain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(
 		message{
 			Code:    strcase.ToLowerCamel(ec.head.err.Error()),
-			Message: ec.head.msg,
+			Message: ec.firstMessage(),
 		})
 }
 
@@ -146,12 +146,12 @@ func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error
 		message{ //nolint:musttag
 			XMLName: xml.Name{Local: "error"},
 			Code:    strcase.ToLowerCamel(ec.head.err.Error()),
-			Message: ec.head.msg,
+			Message: ec.firstMessage(),
 		})
 }
 
 func (ec *ErrorChain) String() string {
-	return ec.head.err.Error() + ": " + ec.head.msg
+	return ec.head.err.Error() + ": " + ec.firstMessage()
 }
 
 func (ec *ErrorChain) asTarget(target any) bool {
@@ -185,4 +185,29 @@ func (ec *ErrorChain) causedBy(err error, msg string) *ErrorChain {
 	ec.tail = wrappedError
 
 	return ec
+}
+
+func (ec *ErrorChain) firstMessage() string {
+	current := ec.head
+
+	for current != nil {
+		if len(current.msg) != 0 {
+			return current.msg
+		}
+
+		if chained, ok := current.err.(*ErrorChain); ok {
+			msg := chained.firstMessage()
+			if msg != chained.Error() {
+				return msg
+			}
+		}
+
+		if current.next == nil {
+			return current.err.Error()
+		}
+
+		current = current.next
+	}
+
+	return "no details available"
 }
