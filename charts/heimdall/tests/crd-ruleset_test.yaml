@@ -168,11 +168,11 @@ tests:
                   path: "/convert"
                   port: 1234
 
-  - it: should contain two versions on first time installation - v1alpha4 and v1beta1 with expected flags configured by default
+  - it: should contain all versions on first time installation with expected flags configured by default
     asserts:
       - lengthEqual:
           path: spec.versions
-          count: 2
+          count: 5
       - isSubset:
           path: spec.versions[0]
           content:
@@ -186,8 +186,29 @@ tests:
             served: true
             storage: false
             deprecated: true
+      - isSubset:
+          path: spec.versions[2]
+          content:
+            name: v1alpha3
+            served: false
+            storage: false
+            deprecated: true
+      - isSubset:
+          path: spec.versions[3]
+          content:
+            name: v1alpha2
+            served: false
+            storage: false
+            deprecated: true
+      - isSubset:
+          path: spec.versions[4]
+          content:
+            name: v1alpha1
+            served: false
+            storage: false
+            deprecated: true
 
-  - it: should contain two versions on upgrades - v1alpha4 and v1beta1 with expected flags configured by default
+  - it: should contain all versions on upgrades with expected flags configured by default
     release:
       upgrade: true
     set:
@@ -195,7 +216,7 @@ tests:
     asserts:
       - lengthEqual:
           path: spec.versions
-          count: 2
+          count: 5
       - isSubset:
           path: spec.versions[0]
           content:
@@ -207,6 +228,27 @@ tests:
           content:
             name: v1alpha4
             served: true
+            storage: false
+            deprecated: true
+      - isSubset:
+          path: spec.versions[2]
+          content:
+            name: v1alpha3
+            served: false
+            storage: false
+            deprecated: true
+      - isSubset:
+          path: spec.versions[3]
+          content:
+            name: v1alpha2
+            served: false
+            storage: false
+            deprecated: true
+      - isSubset:
+          path: spec.versions[4]
+          content:
+            name: v1alpha1
+            served: false
             storage: false
             deprecated: true
 
@@ -219,7 +261,7 @@ tests:
     asserts:
       - lengthEqual:
           path: spec.versions
-          count: 2
+          count: 5
       - isSubset:
           path: spec.versions[0]
           content:
