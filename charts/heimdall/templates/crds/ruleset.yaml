@@ -778,5 +778,116 @@ spec:
           jsonPath: .metadata.creationTimestamp
       subresources:
         status: { }
+    - name: v1alpha2
+      served: false
+      storage: false
+      deprecated: true
+      schema:
+        openAPIV3Schema:
+          description: RuleSet is the Schema for heimdall's rule definitions
+          type: object
+          properties:
+            spec:
+              type: object
+              description: Defines the actual rules and the authClassName these rules should be used by
+              x-kubernetes-validations:
+                - rule: "has(self.rules) && size(self.rules) > 0"
+                  message: "at least one rule definition must be provided"
+              properties:
+                authClassName:
+                  description: Defines which heimdall setup should use the resource
+                  type: string
+                  default: default
+                rules:
+                  description: The actual rule set with rules defining the required pipeline mechanisms
+                  type: array
+                  items:
+                    description: A himedall rule defining the pipeline mechanisms
+                    type: object
+                    x-kubernetes-validations:
+                      - rule: "has(self.id)"
+                        message: "a rule must have an id defined"
+                      - rule: "has(self.match) && has(self.match.url) && size(self.match.url) > 0"
+                        message: "a rule must have a url set to match incoming requests"
+                      - rule: "has(self.execute) && size(self.execute) > 0"
+                        message: "execute pipeline is not allowed to be empty"
+                    properties:
+                      id:
+                        description: The identifier of the rule
+                        type: string
+                      match:
+                        description: How to match the rule
+                        type: object
+                        properties:
+                          url:
+                            description: The url to match
+                            type: string
+                          strategy:
+                            description: Strategy to match the url. Can either be regex or glob.
+                            type: string
+                            default: glob
+                            enum:
+                              - regex
+                              - glob
+                      forward_to:
+                        description: Where to forward the request to. Required only if heimdall is used in proxy operation mode.
+                        type: object
+                        x-kubernetes-validations:
+                          - rule: "has(self.host)"
+                            message: "no host is defined for the forward_to property"
+                        properties:
+                          host:
+                            description: Host and port of the upstream service to forward the request to
+                            type: string
+                          rewrite:
+                            description: Configures middlewares to rewrite parts of the URL
+                            type: object
+                            x-kubernetes-validations:
+                              - rule: "has(self.scheme) || has(self.strip_path_prefix) || has(self.add_path_prefix) || has(self.strip_query_parameters)"
+                                message: "rewrite is defined, but does not contain any middleware"
+                              - rule: "has(self.strip_query_parameters) ? size(self.strip_query_parameters) > 0 : true"
+                                message: "no query parameters defined in strip_query_parameters"
+                            properties:
+                              scheme:
+                                description: If you want to overwrite the used HTTP scheme, set it here
+                                type: string
+                              strip_path_prefix:
+                                description: If you want to cut a prefix from the URL path, set it here
+                                type: string
+                              add_path_prefix:
+                                description: If you want to add a prefix to the URL path, set it here
+                                type: string
+                              strip_query_parameters:
+                                description: If you want to remove some query parameters, specify it here
+                                type: array
+                                items:
+                                  type: string
+                      methods:
+                        description: The allowed HTTP methods
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                            - CONNECT
+                            - DELETE
+                            - GET
+                            - HEAD
+                            - OPTIONS
+                            - PATCH
+                            - POST
+                            - PUT
+                            - TRACE
+                      execute:
+                        description: The pipeline mechanisms to execute
+                        type: array
+                        items:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                      on_error:
+                        description: The error pipeline mechanisms.
+                        type: array
+                        items:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
 {{- end }}
 
