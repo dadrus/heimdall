@@ -31,10 +31,10 @@ $ cat ruleset.yaml | heimdall convert ruleset --desired-version 1beta1 > convert
 		RunE:                  convertRuleSet,
 	}
 
-	cmd.Flags().String(convertRuleSetFlagDesiredVersion, "",
+	cmd.Flags().StringP(convertRuleSetFlagDesiredVersion, "v", "",
 		"Target version (1alpha4 or 1beta1) of the resulting RuleSet (required)")
 	_ = cmd.MarkFlagRequired(convertRuleSetFlagDesiredVersion)
-	cmd.Flags().String(convertRuleSetFlagOutputFile, "",
+	cmd.Flags().StringP(convertRuleSetFlagOutputFile, "o", "",
 		"File to write the conversion result to. If not used, the converted"+
 			" ruleset is written to the standard output")
 
