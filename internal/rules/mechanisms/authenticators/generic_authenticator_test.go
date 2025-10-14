@@ -17,6 +17,7 @@
 package authenticators
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net/http"
@@ -1428,4 +1429,39 @@ func TestGenericAuthenticatorIsInsecure(t *testing.T) {
 
 	// WHEN & THEN
 	require.False(t, auth.IsInsecure())
+}
+
+func TestGenericAuthenticatorReadResponse(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		status int
+		err    error
+	}{
+		{http.StatusOK, nil},
+		{http.StatusUnauthorized, heimdall.ErrAuthentication},
+		{http.StatusForbidden, heimdall.ErrAuthentication},
+		{http.StatusBadGateway, heimdall.ErrCommunication},
+	}
+
+	for _, tc := range tests {
+		t.Run(http.StatusText(tc.status), func(t *testing.T) {
+			// GIVEN
+			auth := &genericAuthenticator{}
+			resp := &http.Response{
+				StatusCode: tc.status,
+				Body:       io.NopCloser(bytes.NewBufferString("{}")),
+			}
+
+			// WHEN
+			_, err := auth.readResponse(resp)
+
+			// THEN
+			if tc.err != nil {
+				require.ErrorIs(t, err, tc.err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
