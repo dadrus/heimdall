@@ -430,7 +430,7 @@ jobs:
       - name: Prepare image version
         id: image-version
         run: |
-          export version=$(echo {{ github.ref_name }} |  sed 's/v//g')
+          export version=$(echo ${{ github.ref_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
       - name: Update used image tags to the released version
         uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
