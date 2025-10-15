@@ -182,22 +182,8 @@ spec:
                             type: array
                             items:
                               description: Expression to match a host
-                              type: object
-                              required:
-                                - type
-                                - value
-                              properties:
-                                type:
-                                  description: The type of the host matching expression
-                                  type: string
-                                  maxLength: 10
-                                  enum:
-                                    - "exact"
-                                    - "wildcard"
-                                value:
-                                  description: The actual host matching expression
-                                  type: string
-                                  maxLength: 256
+                              type: string
+                              maxLength: 256
                       forward_to:
                         description: Where to forward the request to. Required only if heimdall is used in proxy operation mode.
                         type: object
