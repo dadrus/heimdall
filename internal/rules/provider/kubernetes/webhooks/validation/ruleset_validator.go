@@ -83,7 +83,7 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 	var errs []metav1.StatusCause
 
 	for idx, rc := range ruleSet.Rules {
-		_, err = rv.f.CreateRule(ruleSet.Version, ruleSet.Source, rc)
+		_, err = rv.f.CreateRule(ruleSet.Source, rc)
 		if err != nil {
 			errs = append(errs, metav1.StatusCause{
 				Type:    metav1.CauseTypeFieldValueInvalid,

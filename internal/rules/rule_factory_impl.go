@@ -71,7 +71,7 @@ func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
 // nolint:cyclop,funlen
-func (f *ruleFactory) CreateRule(version, srcID string, rul v1beta1.Rule) (rule.Rule, error) {
+func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, error) {
 	if f.mode == config.ProxyMode && rul.Backend == nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
@@ -86,7 +86,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, rul v1beta1.Rule) (rule.
 		return nil, err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(version, rul.ErrorHandler)
+	errorHandlers, err := f.createOnErrorPipeline(rul.ErrorHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -255,10 +255,7 @@ func (f *ruleFactory) createExecutePipeline(
 	return authenticatorSteps, subjectHandlerSteps, finalizerSteps, nil
 }
 
-func (f *ruleFactory) createOnErrorPipeline(
-	version string,
-	ehConfigs []config.MechanismConfig,
-) (compositeErrorHandler, error) {
+func (f *ruleFactory) createOnErrorPipeline(ehConfigs []config.MechanismConfig) (compositeErrorHandler, error) {
 	var (
 		errorHandlers compositeErrorHandler
 		stepIDs       []string
@@ -319,10 +316,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(
-		v1beta1.Version,
-		ruleConfig.ErrorHandler,
-	)
+	errorHandlers, err := f.createOnErrorPipeline(ruleConfig.ErrorHandler)
 	if err != nil {
 		return err
 	}

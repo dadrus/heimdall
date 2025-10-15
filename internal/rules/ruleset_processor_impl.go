@@ -114,7 +114,7 @@ func (p *ruleSetProcessor) loadRules(ruleSet *v1beta1.RuleSet) ([]rule.Rule, err
 	rules := make([]rule.Rule, len(ruleSet.Rules))
 
 	for idx, rc := range ruleSet.Rules {
-		rul, err := p.f.CreateRule(ruleSet.Version, ruleSet.Source, rc)
+		rul, err := p.f.CreateRule(ruleSet.Source, rc)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"loading rule ID='%s' failed", rc.ID).CausedBy(err)

@@ -52,7 +52,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -66,7 +66,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(v1beta1.Version, mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
 				repo.EXPECT().AddRuleSet(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
@@ -88,7 +88,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				rul := &mocks.RuleMock{}
 
-				mhf.EXPECT().CreateRule(v1beta1.Version, mock.Anything, mock.Anything).Return(rul, nil)
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(rul, nil)
 				repo.EXPECT().AddRuleSet(mock.Anything, "test", mock.MatchedBy(func(rules []rule.Rule) bool {
 					return len(rules) == 1 && rules[0] == rul
 				})).Return(nil)
@@ -143,7 +143,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -157,7 +157,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
 				repo.EXPECT().UpdateRuleSet(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
@@ -179,7 +179,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				rul := &mocks.RuleMock{}
 
-				mhf.EXPECT().CreateRule(v1beta1.Version, mock.Anything, mock.Anything).Return(rul, nil)
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(rul, nil)
 				repo.EXPECT().UpdateRuleSet(mock.Anything, "test", mock.MatchedBy(func(rules []rule.Rule) bool {
 					return len(rules) == 1 && rules[0] == rul
 				})).Return(nil)

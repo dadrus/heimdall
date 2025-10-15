@@ -1060,7 +1060,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			}
 
 			// WHEN
-			rul, err := factory.CreateRule("test", "test", tc.config)
+			rul, err := factory.CreateRule("test", tc.config)
 
 			// THEN
 			var (

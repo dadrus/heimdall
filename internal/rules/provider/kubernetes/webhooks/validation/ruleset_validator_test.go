@@ -205,7 +205,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 			configureMocks: func(t *testing.T, fm *mocks.FactoryMock) {
 				t.Helper()
 
-				fm.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).
+				fm.EXPECT().CreateRule(mock.Anything, mock.Anything).
 					Times(2).Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, resp *response) {
@@ -283,7 +283,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 			configureMocks: func(t *testing.T, fm *mocks.FactoryMock) {
 				t.Helper()
 
-				fm.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).
+				fm.EXPECT().CreateRule(mock.Anything, mock.Anything).
 					Once().Return(nil, nil)
 			},
 			assert: func(t *testing.T, resp *response) {
