@@ -130,7 +130,7 @@ This chart expects a link:{{< relref "/docs/operations/configuration.adoc#_confi
 
 If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
 
-By default, heimdall requires custom resource definitions (CRDs) installed in the cluster. The Helm client will install it for you.
+By default, heimdall requires custom resource definitions (CRDs) installed in the cluster. On first installations, these will be installed automatically.
 
 To install the chart with the release name `my-release` (`my-release` is the name that you choose) and configure heimdall to operate in decision mode:
 
