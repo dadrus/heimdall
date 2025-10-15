@@ -316,15 +316,12 @@ endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`
-foo: bar
-`),
-			assert: func(t *testing.T, err error, _ *remoteAuthorizer, _ *remoteAuthorizer) {
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 		"with overridden empty payload": {

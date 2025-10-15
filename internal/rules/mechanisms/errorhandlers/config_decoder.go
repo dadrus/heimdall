@@ -26,7 +26,6 @@ func decodeConfig(validator validation.Validator, input map[string]any, output a
 	dec := encoding.NewDecoder(
 		encoding.WithTagName("mapstructure"),
 		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
-		encoding.WithErrorOnUnused(true),
 		encoding.WithDecodeHooks(
 			template.DecodeTemplateHookFunc(),
 		),

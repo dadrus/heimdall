@@ -68,12 +68,16 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 		},
 		"unsupported attributes": {
 			config: []byte("foo: bar"),
-			assert: func(t *testing.T, err error, _ *anonymousAuthenticator) {
+			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+
+				assert.Equal(t, "anonymous", auth.subject.ID)
+				assert.Equal(t, "unsupported attributes", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Empty(t, auth.subject.Attributes)
+				assert.NotNil(t, auth.subject.Attributes)
 			},
 		},
 	} {

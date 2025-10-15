@@ -98,10 +98,9 @@ foo: bar`),
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.NoError(t, err)
 
-				assert.Nil(t, auth)
+				assert.NotNil(t, auth)
 			},
 		},
 	} {
@@ -272,19 +271,6 @@ password: bar`),
 				require.Equal(t, prototype.ads, configured.ads)
 				require.Equal(t, prototype.app, configured.app)
 				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-			},
-		},
-		"decoding error": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator, _ *basicAuthAuthenticator) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding config")
 			},
 		},
 	} {

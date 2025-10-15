@@ -49,12 +49,11 @@ values:
   url: http://foo.bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *mapContextualizer) {
+			assert: func(t *testing.T, err error, contextualizer *mapContextualizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.NotNil(t, contextualizer)
 			},
 		},
 		"with invalid configuration": {
@@ -181,12 +180,11 @@ values:
   foo: http://foo.bar
 `),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *mapContextualizer, _ *mapContextualizer) {
+			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 		"with only values reconfigured": {

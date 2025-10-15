@@ -30,7 +30,6 @@ func decodeConfig(app app.Context, input map[string]any, output any) error {
 	dec := encoding.NewDecoder(
 		encoding.WithTagName("mapstructure"),
 		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
-		encoding.WithErrorOnUnused(true),
 		encoding.WithDecodeHooks(
 			authstrategy.DecodeAuthenticationStrategyHookFunc(app),
 			endpoint.DecodeEndpointHookFunc(),

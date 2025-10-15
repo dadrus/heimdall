@@ -64,12 +64,11 @@ cookies:
   foo: bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *cookieFinalizer) {
+			assert: func(t *testing.T, err error, finalizer *cookieFinalizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				require.NotNil(t, finalizer)
 			},
 		},
 		"with bad template": {
