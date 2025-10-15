@@ -108,7 +108,7 @@ func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) 
 	}
 
 	type Config struct {
-		Items  map[string]template.Template `mapstructure:"items" validate:"not_allowed"`
+		Items  map[string]template.Template `mapstructure:"items"  validate:"not_allowed"`
 		Values values.Values                `mapstructure:"values"`
 	}
 
