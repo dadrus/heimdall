@@ -31,7 +31,9 @@ NOTE: The following upgrade and migration steps are described in an imperative w
 
 == Upgrade of heimdall in Kubernetes
 
-The following procedures assume you have enabled the link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[`kubernetes`] provider in your configuration and are using the CRD shipped with Heimdall. If you're running heimdall in Kubernetes without relying on the `kubernetes` provider, head over to the link:{{< relref "#_upgrade_of_heimdall_configured_to_use_ruleset_files" >}}[Upgrade of heimdall configured to use RuleSet files] section,
+The following procedures assume you have enabled the link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[`kubernetes`] provider in your configuration and are using the CRD shipped with Heimdall. If you're running heimdall in Kubernetes without relying on the `kubernetes` provider, head over to the link:{{< relref "#_upgrade_of_heimdall_configured_to_use_ruleset_files" >}}[Upgrade of heimdall configured to use RuleSet files] section.
+
+CAUTION: The Kubernetes API server requires the communication to any webhooks over TLS. Therefore, the `kubernetes` provider must have the TLS related settings configured.
 
 === Multiple heimdall deployments in a cluster
 

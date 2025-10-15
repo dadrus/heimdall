@@ -74,6 +74,11 @@ rules:
 
 If you operate heimdall in kubernetes, most probably, you would like to make use of the `RuleSet` custom resource, which can be loaded by the link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[kubernetes provider].
 
+[NOTE]
+====
+To be able to deploy `RuleSet` resources and make heimdall use of them, the corresponding CRD (shipped with heimdall's https://github.com/dadrus/heimdall/blob/main/charts/heimdall/README.adoc[Helm chart]) must be installed. Otherwise, heimdall will not be able to monitor corresponding resources and emit error messages to the log.
+====
+
 === Configuration
 
 * *`apiVersion`*: _string_ (mandatory)
@@ -99,18 +104,6 @@ References the heimdall instance, which should use this `RuleSet`.
 ** *`rules`*: _link:{{< relref "regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
 The list of the actual rules.
-
-[NOTE]
-====
-To be able to deploy and make heimdall use the `RuleSet` custom resources, the corresponding CRD must be deployed. Otherwise, heimdall will not be able to monitor corresponding resources and emit error messages to the log.
-
-If you have used the link:{{< relref "/docs/getting_started/installation.adoc#_helm_chart" >}}[Helm Chart] to install heimdall, this CRD is already installed. You can however install it also like this:
-
-[source, bash]
-----
-$ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts/heimdall/crds/ruleset.yaml
-----
-====
 
 .Simple Example
 ====
