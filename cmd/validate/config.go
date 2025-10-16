@@ -38,11 +38,11 @@ import (
 // NewValidateConfigCommand represents the "validate config" command.
 func NewValidateConfigCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:          "config",
-		Short:        "Validates heimdall's configuration",
-		Example:      "heimdall validate config -c myconfig.yaml",
-		SilenceUsage: true,
-		RunE:         validateConfig,
+		Use:           "config",
+		Short:         "Validates heimdall's configuration",
+		Example:       "heimdall validate config -c myconfig.yaml",
+		RunE:          validateConfig,
+		SilenceErrors: true,
 	}
 }
 
@@ -54,6 +54,8 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 	if len(configPath) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no config file provided")
 	}
+
+	cmd.SilenceUsage = true
 
 	es := flags.EnforcementSettings(cmd)
 
