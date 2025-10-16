@@ -41,7 +41,7 @@ const validationForProxyMode = "proxy-mode"
 
 var errFunctionNotSupported = errors.New("function not supported")
 
-// NewValidateRulesCommand represents the "validate rules" command.
+// NewValidateRulesCommand represents the "validate ruleset" command.
 func NewValidateRulesCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "ruleset [flags] [/path/to/ruleset.yaml]",
