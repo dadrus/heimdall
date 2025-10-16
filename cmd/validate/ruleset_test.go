@@ -64,7 +64,7 @@ func TestValidateRuleset(t *testing.T) {
 		expError string
 	}{
 		"no config provided": {
-			expError: "no config file provided",
+			expError: "accepts 1 arg(s), received 0",
 		},
 		"invalid config file": {
 			args: []string{
