@@ -357,7 +357,7 @@ tests:
               name: http-management
               protocol: TCP
             - containerPort: 4458
-              name: https-webhook
+              name: http-webhooks
               protocol: TCP
 
   - it: should configure all possible ports if requested
@@ -387,5 +387,5 @@ tests:
               name: http-profiling
               protocol: TCP
             - containerPort: 4458
-              name: https-webhook
+              name: http-webhooks
               protocol: TCP

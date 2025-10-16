@@ -17,41 +17,23 @@
 package v1beta1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
 
-const (
-	GroupName    = "heimdall.dadrus.github.com"
-	GroupVersion = "v1beta1"
+type (
+	Client interface {
+		Repository(namespace string) Repository
+	}
+
+	client struct {
+		cl rest.Interface
+	}
 )
 
-func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {
-	return func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(gv, &RuleSet{}, &RuleSetList{})
-		metav1.AddToGroupVersion(scheme, gv)
-
-		return nil
-	}
-}
-
-type Client interface {
-	RuleSetRepository(namespace string) RuleSetRepository
-}
-
 func NewClient(conf *rest.Config) (Client, error) {
-	gv := schema.GroupVersion{Group: GroupName, Version: GroupVersion}
-
-	schemeBuilder := runtime.NewSchemeBuilder(addKnownTypes(gv))
-	if err := schemeBuilder.AddToScheme(scheme.Scheme); err != nil {
-		return nil, err
-	}
-
 	config := *conf
-	config.GroupVersion = &gv
+	config.GroupVersion = &GroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
@@ -64,12 +46,8 @@ func NewClient(conf *rest.Config) (Client, error) {
 	return &client{cl: cl}, nil
 }
 
-type client struct {
-	cl rest.Interface
-}
-
-func (c *client) RuleSetRepository(namespace string) RuleSetRepository {
-	return &ruleSetRepositoryImpl{
+func (c *client) Repository(namespace string) Repository {
+	return &ruleSetRepository{
 		cl: c.cl,
 		ns: namespace,
 	}

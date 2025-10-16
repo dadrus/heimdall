@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	config2 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"

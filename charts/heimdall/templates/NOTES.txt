@@ -1,13 +1,12 @@
 {{- if eq .Values.operationMode "decision" }}
-Heimdall is installed and configured to operate in decision mode.
+Heimdall is installed and configured to operate in decision mode, and is available
+in the cluster under the
 
-To integrate heimdall with your Ingress Controller, you have to annotate the corresponding
-Ingress resources to use it as authentication middleware and forward the requests to
+http{{ if .Values.serve.tls }}s{{ end }}://{{ include "heimdall.fullname" . }}.{{ include "heimdall.namespace" . }}.svc.cluster.local:{{ .Values.service.default.mainPort }}
 
-"http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.main.port }}".
-
-as well as forward the HTTP headers and/or cookies from heimdall responses to the upstream
-services. Consult the Ingress Controller documentation of your choice on how to achieve this.
+address. To integrate it with your infrastructure components, please follow the existing
+guides: https://dadrus.github.io/heimdall/v{{ .Chart.AppVersion }}/guides/, or consult the documentation of
+your infrastructure components on how to achieve this.
 
 {{- else }}
 Heimdall is installed and configured to operate in proxy mode.

@@ -19,25 +19,43 @@ package v1beta1
 //go:generate controller-gen object paths=$GOFILE
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"fmt"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
-type ConditionReason string
+// nolint: gochecknoinits
+func init() {
+	schemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(GroupVersion, &RuleSet{}, &RuleSetList{})
+		metav1.AddToGroupVersion(scheme, GroupVersion)
+
+		return nil
+	})
+	utilruntime.Must(schemeBuilder.AddToScheme(scheme.Scheme))
+}
+
+// nolint: gochecknoglobals
+var GroupVersion = schema.GroupVersion{
+	Group:   "heimdall.dadrus.github.com",
+	Version: "v1beta1",
+}
 
 const (
-	ConditionRuleSetActive           ConditionReason = "RuleSetActive"
-	ConditionRuleSetActivationFailed ConditionReason = "RuleSetActivationFailed"
-	ConditionRuleSetUnloaded         ConditionReason = "RuleSetUnloaded"
-	ConditionRuleSetUnloadingFailed  ConditionReason = "RuleSetUnloadingFailed"
-	ConditionControllerStopped       ConditionReason = "ControllerStopped"
+	ResourceName     = "RuleSet"
+	ResourceListName = "RuleSets"
 )
 
 // +kubebuilder:object:generate=true
 type RuleSetSpec struct {
-	AuthClassName string        `json:"authClassName"` //nolint:tagliatelle
-	Rules         []config.Rule `json:"rules"`
+	AuthClassName string         `json:"authClassName"` //nolint:tagliatelle
+	Rules         []v1beta1.Rule `json:"rules"`
 }
 
 // +kubebuilder:object:generate=true
@@ -54,6 +72,18 @@ type RuleSet struct {
 
 	Spec   RuleSetSpec   `json:"spec"`
 	Status RuleSetStatus `json:"status"`
+}
+
+func (rs *RuleSet) AsConfig() *v1beta1.RuleSet {
+	return &v1beta1.RuleSet{
+		MetaData: v1beta1.MetaData{
+			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
+			ModTime: rs.CreationTimestamp.Time,
+		},
+		Version: "1beta1",
+		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
+	}
 }
 
 // +kubebuilder:object:generate=true

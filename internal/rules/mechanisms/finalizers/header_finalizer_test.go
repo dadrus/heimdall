@@ -64,12 +64,11 @@ headers:
   foo: bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *headerFinalizer) {
+			assert: func(t *testing.T, err error, finalizer *headerFinalizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				require.NotNil(t, finalizer)
 			},
 		},
 		"with bad template": {
@@ -233,19 +232,12 @@ headers:
 headers:
   foo: bar
 `),
-			config: []byte(`
-headers:
-  bar: foo
-foo: bar
-`),
-			assert: func(t *testing.T, err error, prototype *headerFinalizer, _ *headerFinalizer) {
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
 				t.Helper()
 
-				assert.NotNil(t, prototype)
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 	} {

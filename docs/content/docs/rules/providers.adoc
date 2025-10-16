@@ -52,8 +52,7 @@ rules:
     routes:
       - path: /**
     hosts:
-      - type: exact
-        value: my-service1.local
+      - my-service1.local
     methods: [ "GET" ]
   forward_to:
     host: ${UPSTREAM_HOST:="default-backend:8080"}
@@ -235,6 +234,11 @@ The last one instructs heimdall to load rule set from a specific blob, namely a 
 
 This provider is only supported if heimdall is running within Kubernetes and allows usage (validation and loading) of link:{{< relref "rule_sets.adoc#_kubernetes_rule_set" >}}[`RuleSet` custom resources] deployed to the same Kubernetes environment.
 
+[NOTE]
+====
+This provider requires a RuleSet CRD (shipped with heimdall's https://github.com/dadrus/heimdall/blob/main/charts/heimdall/README.adoc[Helm chart]) being installed in the cluster, otherwise heimdall will not be able to monitor corresponding resources and emit error messages to the log.
+====
+
 === Configuration
 
 The configuration of this provider goes into the `kubernetes` property and supports the following configuration options:
@@ -242,18 +246,34 @@ The configuration of this provider goes into the `kubernetes` property and suppo
 * *`auth_class`*: _string_ (optional)
 +
 By making use of this property, you can specify which rule sets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each `RuleSet` resource deployed to the cluster and validate, respectively load only those rules, which `authClassName` values matching the value of `auth_class`. If not set all `RuleSet` resources will be used.
-
-* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
-If configured, heimdall will start and expose a validating admission controller service on port `4458` listening on all interfaces. This service allows integration with the Kubernetes API server enabling validation of the applied `RuleSet` resources before these are made available to heimdall for loading. This way you will get a direct feedback about issues without the need to look into heimdall logs if a `RuleSet` resource could not be loaded (See also link:{{< relref "/openapi/#tag/Validating-Admission-Controller" >}}[API] documentation for more details).
-+
-To let the Kubernetes API server use the admission controller, there is a need for a properly configured https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#deploy-the-admission-webhook-service[`ValidatingWebhookConfiguration`]. The https://github.com/dadrus/heimdall/tree/main/charts/heimdall[Helm Chart] shipped with heimdall does this automatically as soon as this property is configured. It does however need a `caBundle` to be set or injected. Otherwise, the Kubernetes API server won't trust the configured TLS certificate and won't use the endpoint.
-
 [CAUTION]
 ====
 Since multiple heimdall deployments with different configured `auth_class` names can coexist, `RuleSet` resources with mismatching `authClassName` will be ignored by a particular deployment. In addition, Kubernetes API server validation requests for mismatching rule sets result in a successful response. This behavior is required as otherwise, as soon as the API server receives even a single failed validation response, the affected `RuleSet` resource will be discarded and not made available for loading to any of the available heimdall deployments.
 
 That also means, if there is no heimdall deployment feeling responsible for the given `RuleSet` resource (due to `authClassName` - `auth_class` mismatch), the affected `RuleSet` resource will be silently ignored.
+====
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+If configured, heimdall will start and expose a validation as well as a conversion controller services on port `4458` listening on all interfaces. The former allows integration with the Kubernetes API server enabling validation of the applied `RuleSet` resources before these are made available to heimdall for loading, giving a direct feedback about issues without the need to look into heimdall logs if a `RuleSet` resource could not be loaded (see also link:{{< relref "/openapi/#tag/Validating-Admission-Controller" >}}[API] documentation for more details). The latter allows conversion between supported `RuleSet` schema versions (see also link:{{< relref "/docs/operations/migration.adoc" >}}[Upgrade & Migration]).
++
+[CAUTION]
+====
+To let the Kubernetes API server use these controller, the https://github.com/dadrus/heimdall/blob/main/charts/heimdall/README.adoc#configuration[`webhooks.caBundle`] value **must** be set or injected. Otherwise, the API server will not trust the configured TLS certificate and will refuse to call the corresponding webhook endpoints.
+
+Although both controllers are implemented by the same heimdall service and exposed on the same port, the Helm chart shipped with heimdall creates separate `Service` resources for each of them. This is required by the conversion webhook configuration defined in the CRD. Therefore, the X.509 certificate for these controllers **must** include two DNS entries in the SAN extension corresponding to the names of the created `Service` resources.
+
+For example, if you've installed heimdall via Helm using `helm upgrade --install myrelease ...`, and did not override any settings related to the release or chart name, the name for the validation webhook service would be `myrelease-heimdall-validation`, and for the conversion webhook service, it would be `myrelease-heimdall-conversion-v1beta1`.
+
+If you’re using https://cert-manager.io/[cert-manager] to issue certificates for heimdall, ensure your `Certificate` resource for the services used as webhooks includes a `dnsNames` section similar to the one shown below.
+
+[source,yaml]
+----
+dnsNames:
+- myrelease-heimdall-validation.mynamspace.svc.cluster.local
+- myrelease-heimdall-conversion-v1beta1.mynamspace.svc.cluster.local
+----
 ====
 
 === Examples
@@ -294,17 +314,5 @@ kubernetes:
     # below is the minimal required configuration
     key_store:
       path: /path/to/file.pem
-----
-====
-
-[NOTE]
-====
-This provider requires a RuleSet CRD being deployed, otherwise heimdall will not be able to monitor corresponding resources and emit error messages to the log.
-
-If you have used the link:{{< relref "/docs/getting_started/installation.adoc#_helm_chart" >}}[Helm Chart] to install heimdall, this CRD is already installed. You can however install it also like this:
-
-[source, bash]
-----
-$ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts/heimdall/crds/ruleset.yaml
 ----
 ====

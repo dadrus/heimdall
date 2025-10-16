@@ -20,10 +20,10 @@ import (
 	"context"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
 type RuleSetFetcher interface {
-	FetchRuleSet(ctx context.Context, app app.Context) (*config.RuleSet, error)
+	FetchRuleSet(ctx context.Context, app app.Context) (*v1beta1.RuleSet, error)
 	ID() string
 }

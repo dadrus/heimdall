@@ -135,9 +135,13 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig m
 	}
 
 	type Config struct {
-		Scopes []string       `mapstructure:"scopes"`
-		TTL    *time.Duration `mapstructure:"cache_ttl"`
-		Header *HeaderConfig  `mapstructure:"header"`
+		TokenURL     *string                       `mapstructure:"token_url"     validate:"not_allowed"`
+		ClientID     *string                       `mapstructure:"client_id"     validate:"not_allowed"`
+		ClientSecret *string                       `mapstructure:"client_secret" validate:"not_allowed"`
+		AuthMethod   *clientcredentials.AuthMethod `mapstructure:"auth_method"   validate:"not_allowed"`
+		Scopes       []string                      `mapstructure:"scopes"`
+		TTL          *time.Duration                `mapstructure:"cache_ttl"`
+		Header       *HeaderConfig                 `mapstructure:"header"`
 	}
 
 	var conf Config

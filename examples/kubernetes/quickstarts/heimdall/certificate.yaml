@@ -22,9 +22,9 @@ spec:
     - "digital signature"
   dnsNames:
     - heimdall
-    - heimdall.heimdall
-    - heimdall.heimdall.svc
-    - heimdall.heimdall.svc.cluster.local
+    - "*.heimdall"
+    - "*.heimdall.svc"
+    - "*.heimdall.svc.cluster.local"
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

@@ -1,0 +1,470 @@
+---
+title: "Upgrade & Migration"
+date: 2025-10-11T11:53:52+01:00
+draft: false
+weight: 37
+menu:
+  docs:
+    weight: 7
+    parent: "Operations"
+description: Describes the upgrade and migration process for heimdall releases introducing breaking changes.
+---
+
+:toc:
+
+Over time, heimdall’s configuration and `RuleSet` schemas evolve to introduce new capabilities or simplify existing structures. Whenever breaking changes are introduced, they are both announced in the corresponding release notes and described in detail.
+
+If a breaking change affects the configuration schema, migration must be performed manually before starting the new heimdall version. The required steps are outlined in the pull requests introducing the change, which are also linked in the release notes.
+
+NOTE: If migration is skipped, Heimdall will fail to start and display errors indicating unknown or invalid configuration properties.
+
+If breaking changes affect the `RuleSet` schema, versions prior to v0.18.0 required the same manual migration procedure. Depending on the setup and number of rules, this could become cumbersome — particularly for Kubernetes deployments (See also  link:{{< relref "#_migration_process_for_releases_prior_to_v0_18_0" >}}[Migration process for releases prior to v0.18.0] for details).
+
+Starting with v0.18.0, this issue is addressed through:
+
+* A new `convert` CLI command that allows conversion of existing `RuleSet` definitions.
+* A conversion controller for Kubernetes, registered with the API server through the `RuleSet` CRD.
+
+The following sections describe both the legacy and the new automated upgrade and migration procedures for heimdall releases introducing breaking changes to existing `RuleSets`, for installations inside and outside Kubernetes.
+
+NOTE: The following upgrade and migration steps are described in an imperative way for the sake of clarity and to remain product-neutral. However, all steps can be easily adapted to declarative, GitOps-based workflows using tools such as Flux, ArgoCD, or similar.
+
+== Upgrade of heimdall in Kubernetes
+
+The following procedures assume you have enabled the link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[`kubernetes`] provider in your configuration and are using the CRD shipped with Heimdall. If you're running heimdall in Kubernetes without relying on the `kubernetes` provider, head over to the link:{{< relref "#_upgrade_of_heimdall_configured_to_use_ruleset_files" >}}[Upgrade of heimdall configured to use RuleSet files] section.
+
+CAUTION: The Kubernetes API server requires the communication to any webhooks over TLS. Therefore, the `kubernetes` provider must have the TLS related settings configured.
+
+=== Multiple heimdall deployments in a cluster
+
+If you have multiple heimdall deployments in your cluster, each responsible for a different set of `RuleSet` resources:
+
+. Install a new heimdall deployment in a new namespace, which will act as a conversion controller for the already deployed `RuleSet` resources in the cluster, and configure it to listen for some random `auth_class`. This way, this new instance will not load any `RuleSets`, only convert them to the required schema version:
++
+NOTE: If you already did an upgrade by following these steps in the past, upgrade the existing conversion controller, instead of installing a new one. The procedure is the same in both cases.
++
+[source,bash]
+----
+$ helm upgrade --install ruleset-upgrade <chart-reference>  \
+    --set crds.updateEnabled=true \
+    --set crds.storageVersion=<old-crd-schema> \
+    -n <namespace-controller-heimdall-should-be-installed-into> \
+    -f <path/to/your/values.yaml> \
+    -f <path/to/your/heimdall/config.yaml> \
+    --take-ownership
+----
++
+The above snippet sets the release name for this new installation to `ruleset-upgrade`. You can use configuration from any of the existing heimdall deployments. The most important settings are:
++
+* `crds.updateEnabled=true`, which instructs the Helm chart to render a new `RuleSet` CRD that includes both the new and the old `RuleSet` schema versions, and
+* `crds.storageVersion=<old-crd-schema>`, which configures the old CRD schema (e.g., `v1alpha1`) — currently used by the heimdall deployments in the cluster — to be the storage schema. This ensures that the existing heimdall pods can still use the old schema version without requiring conversion.
+* `--take-ownership`, which ensures Helm takes control of the CRD, which is necessary as it was not managed by Helm in the past.
+
+. Upgrade each of your heimdall deployments with
++
+[source,bash]
+----
+$ helm upgrade --install <your-release-name> <chart-reference>  \
+    -n <namespace-heimdall-is-installed-into> \
+    -f <path/to/your/values.yaml> \
+    -f <path/to/your/heimdall/config.yaml>
+----
++
+Once the new heimdall pods come up, they will start listing and watching for the new `RuleSet` schema (e.g., `v1beta1`). Thanks to the controller installed in step 1, the API server will ask it for the conversion and provide the converted versions to the new instances.
+
+. Once the upgrade is complete and no old heimdall pods are running, execute `helm upgrade` again for the deployment created to act as the conversion controller, but this time without specifying `crds.storageVersion`. This will reconfigure the CRD to use the new `RuleSet` schema version (e.g., `v1beta1`) as the new storage version:
++
+[source,bash]
+----
+$ helm upgrade --install ruleset-upgrade <chart-reference>  \
+    --set crds.updateEnabled=true \
+    -n <namespace-controller-heimdall-is-installed-into> \
+    -f <path/to/your/values.yaml> \
+    -f <path/to/your/heimdall/config.yaml>
+----
++
+With the CRD reconfigured, any update to existing `RuleSet` resources or any new `RuleSet` resource added to the cluster will be converted and stored using the new schema version in etcd.
+
+=== Single heimdall deployment in a cluster
+
+If you have a single heimdall deployment in your cluster:
+
+. Upgrade it using the following settings:
++
+[source,bash]
+----
+$ helm upgrade --install <your-release-name> <chart-reference>  \
+    --set crds.updateEnabled=true \
+    --set crds.storageVersion=<old-crd-schema> \
+    -n <namespace-heimdall-is-installed-into> \
+    -f <path/to/your/values.yaml> \
+    -f <path/to/your/heimdall/config.yaml> \
+    --take-ownership
+----
++
+The most important settings are:
++
+* `crds.updateEnabled=true`, which instructs the Helm chart to render a new `RuleSet` CRD that includes both the new and old `RuleSet` schema versions, and
+* `crds.storageVersion=<old-crd-schema>`, which configures the old CRD schema (e.g., `v1alpha1`) — currently used by the heimdall deployment in the cluster — to be the storage schema. This ensures that existing pods can still use the old schema version without conversion, even if the deployment scales up.
+* `--take-ownership`, which ensures Helm takes control of the CRD, which is necessary as it was not managed by Helm in the past.
+
+. Once the upgrade is complete and no old heimdall pods are running, execute `helm upgrade` again without specifying the `crds.storageVersion`. This reconfigures the CRD to use the new `RuleSet` schema version (e.g., `v1beta1`) as the new storage version:
++
+[source,bash]
+----
+$ helm upgrade --install <your-release-name> <chart-reference>  \
+    --set crds.updateEnabled=true \
+    -n <namespace-heimdall-is-installed-into> \
+    -f <path/to/your/values.yaml> \
+    -f <path/to/your/heimdall/config.yaml>
+----
++
+With the CRD reconfigured, any update to existing `RuleSet` resources, or any new ones added, will now be stored in etcd using the new schema version.
+
+=== Ensuring all RuleSets are stored in etcd using the new schema
+
+This step ensures that all `RuleSets` can still be converted and loaded by future heimdall versions, even if intermediate schema versions are deprecated.
+
+The API server only uses the new storage version for resources in etcd on **write** operations — meaning when `RuleSets` are updated or new ones are added. Therefore,  after upgrading to the newer heimdall version, it is required:
+
+* to convert the `RuleSets` already stored in etcd to use the new schema version, and
+* to store the converted `RuleSets` alongside the particular services to ensure frictionless upgrades in the future — especially when conversion between older versions (e.g., `v1alpha4` → `v1beta1`) is no longer supported.
+
+The latter can be achieved by reading the existing `RuleSets` from the cluster — the conversion happens automatically thanks to the conversion webhook.
+
+To achieve the former, you can do the following:
+
+. Export all existing RuleSets with:
++
+[source,bash]
+----
+$ kubectl get -A rulesets.heimdall.dadrus.github.com -o yaml > allrulesets.yaml
+----
++
+This returns a `List` resource containing all `RuleSets` across all namespaces. The API server will provide them in the converted version.
+
+. Re-apply them with:
++
+[source,bash]
+----
+$ kubectl apply -f allrulesets.yaml
+----
++
+Since this is a write operation, the `RuleSets` will now be stored in the new schema format.
+
+=== Migration process for releases prior to v0.18.0
+
+For heimdall releases older than v0.18.0, conversion between different `RuleSet` schema versions must be performed manually. The following procedure describes how to migrate to a newer version.
+
+. Export all existing `RuleSets` from the cluster
++
+[source,bash]
+----
+$ kubectl get -A rulesets.heimdall.dadrus.github.com -o yaml > allrulesets.yaml
+----
++
+This returns a `List` resource containing all rule sets across all namespaces.
+
+. Migrate each `RuleSet` manually as described in each PR linked to the release notes.
+
+. Convert the migrated rule sets into file-based `RuleSets` and store them in a separate directory. The following script can help with that:
++
+[source,bash]
+----
+#!/usr/bin/env bash
+
+# Converts all RuleSets from a Kubernetes export (a List resource) into individual file-based RuleSets.
+#
+# The output files will be written to the specified directory, one file per RuleSet.
+#
+# Usage:
+#   ./convert-k8s-rulesets.sh --ruleset-list <path-to-exported-rulesets.yaml> --out-dir <output-directory>
+#
+# Example:
+#   ./convert-k8s-rulesets.sh --ruleset-list allrulesets.yaml --out-dir ./converted-rulesets
+#
+# Options:
+#   --ruleset-list   Path to the YAML file containing the exported RuleSets (required)
+#   --out-dir        Directory to write the converted RuleSets to (required)
+#   -h, --help       Show this help message and exit
+#
+# Requirements:
+#   - yq (https://github.com/kislyuk/yq) must be available in PATH. If not installed, you can install it with e.g. sudo apt install yq on Debian based Linux distributions.
+#
+
+set -euo pipefail
+
+# Print help text (only the leading comment block after the optional shebang)
+usage() {
+  awk '
+    # skip shebang on line 1 if present
+    NR==1 { if ($0 ~ /^#!/) { next } }
+    # while lines start with "#", strip the "# " (or "#") and print
+    /^#/ {
+      sub(/^#\s?/, "")
+      print
+      started=1
+      next
+    }
+    # once we have printed at least one comment block line, stop at first non-# line
+    started==1 { exit }
+  ' "$0"
+  exit 0
+}
+
+# Default values
+RULESET_LIST=""
+OUT_DIR=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ruleset-list)
+      RULESET_LIST="$2"
+      shift 2
+      ;;
+    --out-dir)
+      OUT_DIR="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      echo "Use --help for usage information."
+      exit 1
+      ;;
+  esac
+done
+
+# Validate required arguments
+if [[ -z "${RULESET_LIST}" || -z "${OUT_DIR}" ]]; then
+  echo "Error: both --ruleset-list and --out-dir must be provided."
+  echo "Use --help for usage information."
+  exit 1
+fi
+
+if [[ ! -f "${RULESET_LIST}" ]]; then
+  echo "Error: file '${RULESET_LIST}' not found."
+  exit 1
+fi
+
+mkdir -p "${OUT_DIR}"
+
+echo "Converting RuleSets from '${RULESET_LIST}' into '${OUT_DIR}'..."
+echo
+
+# Extract each RuleSet and convert
+yq -r '.items[].metadata.name' "${RULESET_LIST}" | while IFS= read -r name; do
+  file_name=$(echo "${name}" | tr '[:space:]' '_')
+
+  version=$(yq -r '.items[] | select(.metadata.name == "'${name}'") | .apiVersion' "${RULESET_LIST}" | sed 's/.*v//')
+
+  echo "→ Converting RuleSet: ${name} (schema ${version})"
+
+  # Extract matching object and format as YAML
+  yq -r '.items[] | select(.metadata.name == "'${name}'")' "${RULESET_LIST}" \
+    | jq -r --arg version "${version}" '
+      {
+        version: $version,
+        name: .metadata.name,
+        rules: .spec.rules
+      }
+    ' \
+    | yq -y '.' > "${OUT_DIR}/${file_name}.yaml"
+done
+
+echo
+echo "Conversion complete. All RuleSets written to '${OUT_DIR}'."
+----
+
+. Disable the usage of the `kubernetes` provider in your heimdall configuration and configure the `file_system` provider instead, e.g.
++
+[source,yaml]
+----
+providers:
+  file_system:
+    src: /rules
+----
+
+. Create a `ConfigMap` listing the converted rulesets.
++
+[source,bash]
+----
+$ kubectl create configmap heimdall-rules \
+   --from-file=<converted-rulesets-directory> \
+   -n <namespace-heimdall-is-installed-into>
+----
+
+. Configure the chart to include a volume mount for the above `ConfigMap`:
++
+[source,yaml]
+----
+# your values file
+deployment:
+  # other settings
+  volumes:
+    # other volumes
+    - name: rules
+      configMap:
+        name: heimdall-rules
+  volumeMounts:
+    # other volume mounts
+    - name: rules
+      readOnly: true
+      mountPath: "/rules"
+----
+
+. Perform the upgrade of heimdall in the cluster
++
+[source,bash]
+----
+$ helm upgrade --install <your-release-name> <chart-reference>  \
+    -n <namespace-heimdall-is-installed-into> \
+    -f <path/to/your/values.yaml> \
+    -f <path/to/your/heimdall/config.yaml>
+----
+
+. When the new pods are up and running and all pods from the previous version are terminated, delete the old `RuleSet` CRD from the cluster and install the CRD from the new release.
+
+. Install the `RuleSets` exported in step 1 and migrated in step 2 into the cluster
++
+[source,bash]
+----
+$ kubectl apply -f allrulesets.yaml
+----
+
+. Update your heimdall configuration to use the `kubernetes` provider again and remove the volume and the volume mount added to your chart values file in step 6. Then, update the heimdall installation to use it:
++
+[source,bash]
+----
+$ helm upgrade --install <your-release-name> <chart-reference>  \
+    -n <namespace-heimdall-is-installed-into> \
+    -f <path/to/your/values.yaml> \
+    -f <path/to/your/heimdall/config.yaml>
+----
+
+. Finally, delete the `ConfigMap` from step 5 from the cluster.
++
+[source,bash]
+----
+$ kubectl delete configmap heimdall-rules -n <namespace-heimdall-is-installed-into>
+----
+
+== Upgrade of heimdall configured to use RuleSet files
+
+To convert existing `RuleSet` files for use with the `cloudblob`, `http_endpoint`, or `file_system` providers, use the `convert` command to migrate existing rule sets to the new schema version before deploying them to your target environment.
+
+Here’s an example script to automate this process:
+
+[source,bash]
+----
+#!/usr/bin/env bash
+
+# Convert all existing heimdall RuleSets in a directory to a new schema version.
+# The converted RuleSets are written to the same directory with a configurable prefix.
+# If the prefix is not set, it defaults to converted_.
+#
+# Usage:
+#   ./convert-rulesets.sh --dir <ruleset-dir> --desired-version <new-schema-version> [--prefix <prefix>]
+#
+# Example:
+#   ./convert-rulesets.sh --dir ./rulesets --desired-version 1beta1 --prefix upgraded_
+#
+# Requirements:
+#   - Heimdall must be available in PATH.
+#
+
+set -euo pipefail
+
+# Default values
+PREFIX="converted_"
+
+# Print help text (only the leading comment block after the optional shebang)
+usage() {
+  awk '
+    # skip shebang on line 1 if present
+    NR==1 { if ($0 ~ /^#!/) { next } }
+    # while lines start with "#", strip the "# " (or "#") and print
+    /^#/ {
+      sub(/^#\s?/, "")
+      print
+      started=1
+      next
+    }
+    # once we have printed at least one comment block line, stop at first non-# line
+    started==1 { exit }
+  ' "$0"
+  exit 0
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dir)
+      DIR="$2"
+      shift 2
+      ;;
+    --desired-version)
+      NEW_VERSION="$2"
+      shift 2
+      ;;
+    --prefix)
+      PREFIX="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      echo "Use --help for usage information."
+      exit 1
+      ;;
+  esac
+done
+
+# Validate required arguments
+if [[ -z "${DIR:-}" || -z "${NEW_VERSION:-}" ]]; then
+  echo "Error: --dir and --desired-version are required."
+  echo "Usage: $0 --dir <ruleset-dir> --desired-version <new-schema-version> [--prefix <prefix>]"
+  exit 1
+fi
+
+if [[ ! -d "${DIR}" ]]; then
+  echo "Error: Directory '${DIR}' does not exist."
+  exit 1
+fi
+
+echo "Converting RuleSets in '${DIR}' to schema version '${NEW_VERSION}'..."
+echo "Converted files will be written to the same directory with prefix '${PREFIX}'."
+echo
+
+for file in "${DIR}"/*; do
+  if [[ -f "${file}" ]]; then
+    filename=$(basename "${file}")
+    output_file="${DIR}/${PREFIX}${filename}"
+
+    echo "→ Converting ${filename} ..."
+    heimdall convert ruleset -d "${NEW_VERSION}" -o "${output_file}" "${file}"
+  fi
+done
+
+echo
+echo "Conversion complete."
+----
+The general procedure is as follows:
+
+. Convert the existing rule sets by using the `convert` command.
+
+. If you’re using the `cloudblob` or `http_endpoint` providers, deploy the converted rule sets to your cloud storage or to the server that delivers the `RuleSets` to the currently running Heimdall instances.
++
+NOTE: Don’t overwrite the existing rule sets. Make sure you add a prefix to the converted `RuleSet` files. This ensures that old `RuleSets` can still be loaded by the existing heimdall instances, while the converted ones are ignored. The script above already handles this.
+
+. Configure the new heimdall deployment to use the converted rule sets.
+
+. Deploy the new heimdall version.
+
+This approach ensures zero downtime by letting old heimdall instances continue using their existing rule sets while new instances switch to the converted versions.
+

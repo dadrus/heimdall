@@ -31,8 +31,9 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -57,6 +58,12 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		return &Provider{}, nil
 	}
 
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+	)
+
 	type Config struct {
 		Src            string `mapstructure:"src"`
 		Watch          bool   `mapstructure:"watch"`
@@ -64,7 +71,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 	}
 
 	var providerConf Config
-	if err := decodeConfig(rawConf, &providerConf); err != nil {
+	if err := dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode file_system rule provider config").
 			CausedBy(err)
@@ -207,7 +214,7 @@ func (p *Provider) ruleSetsChanged(ctx context.Context, evt fsnotify.Event) erro
 func (p *Provider) ruleSetCreatedOrUpdated(ctx context.Context, fileName string) error {
 	ruleSet, err := p.loadRuleSet(fileName)
 	if err != nil {
-		if errors.Is(err, config2.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrNotExist) {
 			return p.ruleSetDeleted(ctx, fileName)
 		}
 
@@ -244,8 +251,8 @@ func (p *Provider) ruleSetDeleted(ctx context.Context, fileName string) error {
 		return nil
 	}
 
-	conf := &config2.RuleSet{
-		MetaData: config2.MetaData{
+	conf := &v1beta1.RuleSet{
+		MetaData: v1beta1.MetaData{
 			Source:  "file_system:" + fileName,
 			ModTime: time.Now(),
 		},
@@ -260,7 +267,7 @@ func (p *Provider) ruleSetDeleted(ctx context.Context, fileName string) error {
 	return nil
 }
 
-func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
+func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
@@ -269,8 +276,16 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 
 	md := sha256.New()
 
-	ruleSet, err := config2.ParseRules(p.app, "application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
-	if err != nil {
+	dec := encoding.NewDecoder(
+		encoding.WithSourceContentType("application/yaml"),
+		encoding.WithValidator(encoding.ValidatorFunc(p.app.Validator().ValidateStruct)),
+		encoding.WithEnvVarsSubstitution(p.envVarsEnabled),
+		encoding.WithErrorOnUnused(true),
+	)
+
+	var ruleSet v1beta1.RuleSet
+
+	if err = dec.Decode(&ruleSet, io.TeeReader(file, md)); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "failed to parse rule set %s", fileName).
 			CausedBy(err)
 	}
@@ -281,7 +296,7 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 	ruleSet.Source = "file_system:" + fileName
 	ruleSet.ModTime = stat.ModTime()
 
-	return ruleSet, nil
+	return &ruleSet, nil
 }
 
 func (p *Provider) loadInitialRuleSet(ctx context.Context) error {

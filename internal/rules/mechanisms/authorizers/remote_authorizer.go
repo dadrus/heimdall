@@ -217,11 +217,12 @@ func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (
 	}
 
 	type Config struct {
-		Payload                  template.Template `mapstructure:"payload"`
-		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
-		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
-		Values                   values.Values     `mapstructure:"values"`
+		Endpoint                 *endpoint.Endpoint `mapstructure:"endpoint"                             validate:"not_allowed"` //nolint:lll
+		Payload                  template.Template  `mapstructure:"payload"`
+		Expressions              []Expression       `mapstructure:"expressions"                          validate:"dive"`
+		ResponseHeadersToForward []string           `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration      `mapstructure:"cache_ttl"`
+		Values                   values.Values      `mapstructure:"values"`
 	}
 
 	var conf Config

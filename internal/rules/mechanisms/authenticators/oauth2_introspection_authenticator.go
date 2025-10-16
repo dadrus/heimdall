@@ -224,8 +224,12 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig m
 	}
 
 	type Config struct {
-		Assertions oauth2.Expectation `mapstructure:"assertions"`
-		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
+		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint" validate:"not_allowed"` //nolint:lll
+		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"      validate:"not_allowed"` //nolint:lll
+		SubjectInfo           *SubjectInfo                        `mapstructure:"subject"                validate:"not_allowed"` //nolint:lll
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"           validate:"not_allowed"` //nolint:lll
+		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config

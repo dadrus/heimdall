@@ -92,12 +92,11 @@ expressions:
     message: bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *celAuthorizer) {
+			assert: func(t *testing.T, err error, auth *celAuthorizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.NotNil(t, auth)
 			},
 		},
 		"with expression list without expression value": {

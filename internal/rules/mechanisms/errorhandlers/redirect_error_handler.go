@@ -65,8 +65,10 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), ErrorHandlerRedirect, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for %s error handler '%s'", ErrorHandlerRedirect, name).
+			CausedBy(err)
 	}
 
 	if strings.HasPrefix(conf.To.String(), "http://") {

@@ -27,8 +27,7 @@ spec:
           - path: /api/**
         scheme: http
         hosts:
-          - type: exact
-            value: 127.0.0.1:9090
+          - 127.0.0.1:9090
       execute:
         - authenticator: keycloak
         - authorizer: opa

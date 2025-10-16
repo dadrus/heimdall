@@ -26,8 +26,9 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -38,7 +39,7 @@ type ruleSetEndpoint struct {
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*config.RuleSet, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v1beta1.RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
 		return nil, errorchain.
@@ -71,8 +72,14 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*c
 
 	md := sha256.New()
 
-	ruleSet, err := config.ParseRules(app, resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md), false)
-	if err != nil {
+	dec := encoding.NewDecoder(
+		encoding.WithSourceContentType(resp.Header.Get("Content-Type")),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+		encoding.WithErrorOnUnused(true),
+	)
+
+	var ruleSet v1beta1.RuleSet
+	if err = dec.Decode(&ruleSet, io.TeeReader(resp.Body, md)); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
 	}
@@ -81,7 +88,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*c
 	ruleSet.Source = "http_endpoint:" + e.ID()
 	ruleSet.ModTime = time.Now()
 
-	return ruleSet, nil
+	return &ruleSet, nil
 }
 
 func (e *ruleSetEndpoint) init() {

@@ -71,6 +71,15 @@ func NewValidator(opts ...Option) (Validator, error) {
 		return "'" + strings.SplitN(name, ",", 2)[0] + "'" // nolint: mnd
 	})
 
+	for _, buildIn := range []interface {
+		TagValidator
+		ErrorTranslator
+	}{
+		notAllowed{},
+	} {
+		opts = append(opts, WithTagValidator(buildIn), WithErrorTranslator(buildIn))
+	}
+
 	for _, opt := range opts {
 		if err := opt.apply(validate, translate); err != nil {
 			return nil, err

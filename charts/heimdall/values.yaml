@@ -96,47 +96,79 @@ deployment:
 
 # Configures k8s services (decision, proxy, management)
 service:
-  # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: { }
-  # Remove the curly braces after 'annotations:' if you want to specify annotations
-  annotations: { }
-
   # Main service
-  main:
-    # Service port
-    port: 4456
-    # Service port name
-    name: main
-  # Management service
-  management:
-    # Service port
-    port: 4457
-    # Service port name
-    name: management
-  # Only used if rules.providers.kubernetes.tls is configured
-  admissionController:
+  default:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    annotations: { }
+
+    # Main service port
+    mainPort: 4456
+    # The name of the main port
+    mainPortName: main
+    # Management port
+    managementPort: 4457
+    # Management port name
+    managementPortName: management
+
+  # The following two services are only used if rules.providers.kubernetes.tls is configured
+  # Validating admission controller
+  validation:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    annotations: { }
     # Service port
     port: 4458
     # Service port name
-    name: admission-controller
+    portName: validation-webhook
 
-# Only used if rules.providers.kubernetes.tls is configured
-admissionController:
-  # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: { }
+  # Conversion admission controller
+  conversion:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    annotations: { }
+    # Service port
+    port: 4459
+    # Service port name
+    portName: conversion-webhook
 
-  # Remove the curly braces after 'annotations:' if you want to specify annotations
-  # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
-  annotations: { }
-
-  # Remove the curly braces after 'namespaceSelector:' if you want to specify a namespaceSelector
-  namespaceSelector: {}
-
-  # Set to the required value if you want to specify the caBundle by yourself (see annotations for alternative)
+# Configures kubernetes webhook resources to let the api server use the conversion and validation services
+# from above. Only used if rules.providers.kubernetes.tls is configured
+webhooks:
+  # Set to the required value if you want to specify the caBundle by yourself (see webhook specific
+  # annotations below for alternative options). It should contain CA certificates trusted by the
+  # kubernetes API server.
   caBundle: ""
 
-  # Set to another value if required
-  timeoutSeconds: 5
+  conversion:
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
+    annotations: { }
+
+  validation:
+    # Remove the curly braces after 'labels:' if you do want to specify additional labels
+    labels: { }
+
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
+    annotations: { }
+
+    # Remove the curly braces after 'namespaceSelector:' if you want to specify a namespaceSelector
+    namespaceSelector: {}
+
+    # Set to another value if required
+    timeoutSeconds: 5
+
+# CRD specific configuration. CRDs are automatically installed only on first heimdall installation
+# if these are not already present in the cluster.
+crds:
+  # Whether the CRDs should be installed during upgrades.
+  updateEnabled: false
+  # Sets the storage flag to true for a particular CRD version (e.g., v1alpha4, v1beta1).
+  storageVersion: v1beta1
 
 # Configures arbitrary environment variables for the deployment
 # The value can be either a string (propagated to value) or an object (propagated to valueFrom)

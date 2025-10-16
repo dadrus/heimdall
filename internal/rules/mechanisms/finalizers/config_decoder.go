@@ -19,31 +19,20 @@ package finalizers
 import (
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
-func decodeConfig(validator validation.Validator, input, output any) error {
-	dec, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeDurationHookFunc(),
-				template.DecodeTemplateHookFunc(),
-			),
-			Result:      output,
-			ErrorUnused: true,
-		})
-	if err != nil {
-		return err
-	}
+func decodeConfig(validator validation.Validator, input map[string]any, output any) error {
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
+		encoding.WithDecodeHooks(
+			mapstructure.StringToTimeDurationHookFunc(),
+			template.DecodeTemplateHookFunc(),
+		),
+	)
 
-	if err = dec.Decode(input); err != nil {
-		return err
-	}
-
-	if err = validator.ValidateStruct(output); err != nil {
-		return err
-	}
-
-	return nil
+	return dec.DecodeMap(output, input)
 }

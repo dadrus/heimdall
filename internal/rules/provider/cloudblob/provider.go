@@ -26,11 +26,13 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	rule_config "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -48,7 +50,7 @@ type Provider struct {
 	configured bool
 }
 
-func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
+func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) { //nolint: funlen
 	conf := app.Config()
 	logger := app.Logger()
 	rawConf := conf.Providers.CloudBlob
@@ -57,13 +59,23 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		return &Provider{}, nil
 	}
 
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
+		encoding.WithDecodeHooks(
+			mapstructure.StringToTimeDurationHookFunc(),
+			urlDecodeHookFunc(),
+		),
+	)
+
 	type Config struct {
 		Buckets       []*ruleSetEndpoint `mapstructure:"buckets"`
 		WatchInterval *time.Duration     `mapstructure:"watch_interval"`
 	}
 
 	var providerConf Config
-	if err := decodeConfig(rawConf, &providerConf); err != nil {
+	if err := dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to decode cloud_blob rule provider config").CausedBy(err)
 	}
@@ -194,7 +206,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 func (p *Provider) ruleSetsUpdated(
 	ctx context.Context,
-	ruleSets []*rule_config.RuleSet,
+	ruleSets []*v1beta1.RuleSet,
 	state BucketState,
 	buketID string,
 ) error {
@@ -209,8 +221,8 @@ func (p *Provider) ruleSetsUpdated(
 	newIDs := slicex.Subtract(currentIDs, oldIDs)
 
 	for _, ID := range removedIDs {
-		conf := &rule_config.RuleSet{
-			MetaData: rule_config.MetaData{
+		conf := &v1beta1.RuleSet{
+			MetaData: v1beta1.MetaData{
 				Source:  "blob:" + ID,
 				ModTime: time.Now(),
 			},
@@ -261,7 +273,7 @@ func (p *Provider) getBucketState(key string) BucketState {
 	return value.(BucketState) // nolint: forcetypeassert
 }
 
-func toRuleSetIDs(ruleSets []*rule_config.RuleSet) []string {
+func toRuleSetIDs(ruleSets []*v1beta1.RuleSet) []string {
 	currentIDs := make([]string, len(ruleSets))
 
 	for idx, ruleSet := range ruleSets {

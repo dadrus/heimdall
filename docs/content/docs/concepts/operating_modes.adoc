@@ -80,8 +80,7 @@ match:
     - path: /my-service/api
   scheme: http
   hosts:
-    - type: exact
-      value: my-backend-service
+    - my-backend-service
   methods:
     - GET
 execute:

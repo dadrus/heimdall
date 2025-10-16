@@ -249,8 +249,14 @@ func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (
 	}
 
 	type Config struct {
-		Assertions oauth2.Expectation `mapstructure:"assertions" validate:"-"`
-		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
+		JWKSEndpoint     *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"     validate:"not_allowed"`
+		MetadataEndpoint *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint" validate:"not_allowed"`
+		SubjectInfo      *SubjectInfo                        `mapstructure:"subject"           validate:"not_allowed"`
+		AuthDataSource   extractors.CompositeExtractStrategy `mapstructure:"jwt_source"        validate:"not_allowed"`
+		ValidateJWK      *bool                               `mapstructure:"validate_jwk"      validate:"not_allowed"`
+		TrustStore       truststore.TrustStore               `mapstructure:"trust_store"       validate:"not_allowed"`
+		Assertions       oauth2.Expectation                  `mapstructure:"assertions"        validate:"-"`
+		CacheTTL         *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config

@@ -36,37 +36,37 @@ func (_m *ClientMock) EXPECT() *ClientMock_Expecter {
 	return &ClientMock_Expecter{mock: &_m.Mock}
 }
 
-// RuleSetRepository provides a mock function for the type ClientMock
-func (_mock *ClientMock) RuleSetRepository(namespace string) v1beta1.RuleSetRepository {
+// Repository provides a mock function for the type ClientMock
+func (_mock *ClientMock) Repository(namespace string) v1beta1.Repository {
 	ret := _mock.Called(namespace)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RuleSetRepository")
+		panic("no return value specified for Repository")
 	}
 
-	var r0 v1beta1.RuleSetRepository
-	if returnFunc, ok := ret.Get(0).(func(string) v1beta1.RuleSetRepository); ok {
+	var r0 v1beta1.Repository
+	if returnFunc, ok := ret.Get(0).(func(string) v1beta1.Repository); ok {
 		r0 = returnFunc(namespace)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v1beta1.RuleSetRepository)
+			r0 = ret.Get(0).(v1beta1.Repository)
 		}
 	}
 	return r0
 }
 
-// ClientMock_RuleSetRepository_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RuleSetRepository'
-type ClientMock_RuleSetRepository_Call struct {
+// ClientMock_Repository_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Repository'
+type ClientMock_Repository_Call struct {
 	*mock.Call
 }
 
-// RuleSetRepository is a helper method to define mock.On call
+// Repository is a helper method to define mock.On call
 //   - namespace string
-func (_e *ClientMock_Expecter) RuleSetRepository(namespace interface{}) *ClientMock_RuleSetRepository_Call {
-	return &ClientMock_RuleSetRepository_Call{Call: _e.mock.On("RuleSetRepository", namespace)}
+func (_e *ClientMock_Expecter) Repository(namespace interface{}) *ClientMock_Repository_Call {
+	return &ClientMock_Repository_Call{Call: _e.mock.On("Repository", namespace)}
 }
 
-func (_c *ClientMock_RuleSetRepository_Call) Run(run func(namespace string)) *ClientMock_RuleSetRepository_Call {
+func (_c *ClientMock_Repository_Call) Run(run func(namespace string)) *ClientMock_Repository_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -79,12 +79,12 @@ func (_c *ClientMock_RuleSetRepository_Call) Run(run func(namespace string)) *Cl
 	return _c
 }
 
-func (_c *ClientMock_RuleSetRepository_Call) Return(ruleSetRepository v1beta1.RuleSetRepository) *ClientMock_RuleSetRepository_Call {
-	_c.Call.Return(ruleSetRepository)
+func (_c *ClientMock_Repository_Call) Return(repository v1beta1.Repository) *ClientMock_Repository_Call {
+	_c.Call.Return(repository)
 	return _c
 }
 
-func (_c *ClientMock_RuleSetRepository_Call) RunAndReturn(run func(namespace string) v1beta1.RuleSetRepository) *ClientMock_RuleSetRepository_Call {
+func (_c *ClientMock_Repository_Call) RunAndReturn(run func(namespace string) v1beta1.Repository) *ClientMock_Repository_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -690,16 +690,12 @@ signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`
-ttl: 5s
-foo: bar
-`),
-			assert: func(t *testing.T, err error, _ *jwtFinalizer, _ *jwtFinalizer) {
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 	} {

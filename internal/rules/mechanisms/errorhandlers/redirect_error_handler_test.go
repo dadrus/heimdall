@@ -57,12 +57,11 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 to: http://foo.bar
 if: true == false
 `),
-			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.NotNil(t, redEH)
 			},
 		},
 		"with minimal valid configuration, enforced and used TLS": {

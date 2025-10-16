@@ -2,9 +2,9 @@
 
 == Introduction
 
-This chart helps you to deploy heimdall in your Kubernetes cluster using Helm.
+This chart helps you deploy heimdall into your Kubernetes cluster using Helm.
 
-**Note:** Heimdall follows the https://kubernetes.io/releases/version-skew-policy/#supported-versions[Kubernetes support policy], and supports at least the latest three minor versions of Kubernetes. General functionality cannot be guaranteed for versions older than that.
+NOTE: Heimdall follows the https://kubernetes.io/releases/version-skew-policy/#supported-versions[Kubernetes support policy] and supports at least the three latest minor Kubernetes versions. General functionality cannot be guaranteed for versions older than that.
 
 == Prerequisites
 
@@ -12,92 +12,71 @@ This chart helps you to deploy heimdall in your Kubernetes cluster using Helm.
 * https://helm.sh/docs/intro/install/[Helm] 3.10+
 * https://git-scm.com/downloads[Git] (optional)
 
-== Getting the Chart Sources
+== Installing The Chart
 
-This step is required if you want installing the chart using its sources. Additionally, the step may also be required for managing the custom resource definitions (CRDs), which heimdall requires, or for upgrading/deleting the CRDs.
+This chart supports setting of environment variables for the deployment, e.g. to provide OTEL configuration, which can be configured using either the `env` or `envFrom` keys. The latter allows pulling the corresponding values from referenced configmaps or secrets.
+
+If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
+
+If you want to have detailed CPU & memory profiling information, you can enable the profiling service and let your APM scrape the corresponding pprof data. If the profiling service is enabled, the required annotations for https://grafana.com/docs/phlare[Phlare] are automatically set.
+
+=== Installing A Release
+
+Since you can obtain the chart from heimdall’s git repository, its Helm repository hosted on GitHub Pages, or as an OCI image, the following examples don’t differentiate between these sources. Instead, the code fragments are using a `<chart-reference>` placeholder.
+
+If you want to install a release from its sources, perform the following steps first. The actual value for abovesaid `<chart-reference>` would then be `./charts/heimdall`.
 
 1. Clone the heimdall repo:
 +
 [source,bash]
 ----
-git clone https://github.com/dadrus/heimdall
+$ git clone https://github.com/dadrus/heimdall
 ----
 
 2. Change your working directory to the root directory of the cloned repository:
 +
 [source,bash]
 ----
-cd heimdall
+$ cd heimdall
 ----
 
-== Installing the Chart
+If you want to install the release from the Helm repository hosted on GitHub Pages, perform the following steps. The actual value for abovesaid `<chart-reference>` would then be `dadrus/heimdall`.
 
-This chart supports setting of any environment variables for the deployment, e.g. to provide OTEL configuration. All environment variables must be configured under an `env` key. E.g. `helm install my-release --set env.MY_ENV=env-value dadrus/heimdall`
-
-If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
-
-If you want to have detailed CPU & memory profiling information, you can enable the profiling service and let your APM scrape the corresponding pprof data. For https://grafana.com/docs/phlare[Phlare], the corresponding annotations are set if the profiling service is enabled.
-
-=== Installing the CRD
-
-By default, heimdall requires a custom resource definition (CRD) installed in the cluster. The Helm client will install it for you. If the CRD is not installed, you'll neither be able to deploy the corresponding rule sets, nor will heimdall be able to communicate with the api server.
-
-=== Installing via Helm Repository
-
-Add the Helm repository hosted on GitHub Pages.
-
+1. Make the chart repository known to Helm
++
 [source,bash]
 ----
 $ helm repo add dadrus https://dadrus.github.io/heimdall/charts
+----
+
+2. Update information of available charts
++
+[source,bash]
+----
 $ helm repo update
 ----
 
-To install the chart with the release name "my-release" ("my-release" is the name that you choose) and configure heimdall to operate in decision mode:
+Alternatively, you can use the OCI image (`oci://ghcr.io/dadrus/heimdall/chart`) published to GHCR, which provides enhanced security. The OCI image is signed and includes SLSA provenance, which can be verified for authenticity and integrity as described in https://dadrus.github.io/heimdall/dev/docs/operations/security/#_verification_of_heimdall_artifacts[Verification of Heimdall Artifacts].
+
+To install the chart with the release name "my-release" ("my-release" is the name that you choose), perform
 
 [source,bash]
 ----
-$ helm install my-release -f heimdall.yaml dadrus/heimdall
+$ helm install my-release <chart-reference> \
+  -n <namespace-to-install-heimdall-into> \
+  -f <path/to/your/values.yaml> \
+  -f <path/to/your/heimdall/config.yaml>
 ----
 
-If you need proxy mode, install it with:
+A list of supported chart values can be found at the end of this README. For heimdall specific configuration, please refer to heimdall's https://dadrus.github.io/heimdall/dev/docs/getting_started/discover_heimdall/[documentation].
 
-[source,bash]
-----
-$ helm install my-release -f heimdall.yaml --set operationMode=proxy dadrus/heimdall
-----
-
-=== Installing via OCI Image
-
-The chart is also published as an OCI image to GHCR, offering an alternative with enhanced security. The OCI image is signed and includes SLSA provenance, which can be verified for authenticity and integrity as described in https://dadrus.github.io/heimdall/dev/docs/operations/security/#_verification_of_heimdall_artifacts[Verification of Heimdall Artifacts].
-
-To install with the release name "my-release" ("my-release" is the name that you choose) and configure heimdall to operate in decision mode:
-
-[source,bash]
-----
-helm install my-release -f heimdall.yaml oci://ghcr.io/dadrus/heimdall/chart
-----
-
-=== Installing Using Chart Sources
-
-To install the chart with the release name "my-release" ("my-release" is the name that you choose) and configure heimdall to operate in decision mode:
-
-[source,bash]
-----
-$ helm install my-release -f heimdall.yaml ./charts/heimdall
-----
-
-If you need proxy mode, install it with:
-
-[source,bash]
-----
-$ helm install my-release -f heimdall.yaml --set operationMode=proxy ./charts/heimdall
-----
+If you have configured heimdall to use the kubernetes provider, heimdall will require the `RuleSet` CRD being installed in the cluster. The Helm chart is configured to install it automatically on first heimdall installation and if this CRD is not already present in the cluster.
 
 === Post-Install Steps
 
-==== Integration with Ingress/Gateway API
+==== Integration With Ingress/Gateway API
 
-No matter which installation approach you choose, if Heimdall is running in decision mode, you need to connect it to your ingress controller or Gateway API implementation afterward. This ensures traffic is validated by Heimdall prior to being routed to upstream services. Check the existing https://dadrus.github.io/heimdall/dev/guides/[Guides] for more information.
+Regardless of the installation method, if heimdall is running in decision mode, you need to connect it to your Ingress Controller or Gateway API implementation. This ensures traffic is validated by heimdall prior to being routed to the downstream services. Check the existing https://dadrus.github.io/heimdall/dev/guides/[Guides] for more information.
 
 ==== Metrics Collection
 
@@ -132,71 +111,73 @@ spec:
       - default
 ----
 
-The definition of the `PodMonitor` above assumes, you've installed heimdall in the default namespace as shown in the above. If this is not the case, you need to adjust the `metadata` property by adding the corresponding `namespace` information, as well as the `namespaceSelector`.
+The `PodMonitor` definition above assumes heimdall is installed in the default namespace. If that’s not the case, adjust the `metadata.namespace` and `spec.namespaceSelector` fields accordingly.
 
 If your Prometheus deployment is not done through the operator, you don't need to do anything, as the chart already sets the relevant annotations: `prometheus.io/scrape`, `prometheus.io/path` and `prometheus.io/port`.
 
-== Upgrading the Chart
+== Upgrading An Existing Release
 
-=== Upgrading the CRD
+=== Upgrading The CRD
 
-Helm does not upgrade the CRDs during a release upgrade. Before you upgrade a release, run the following command to upgrade the CRDs:
+The Helm chart upgrades the `RuleSet` CRD alongside heimdall’s resources **only when explicitly enabled** by setting the `crds.updateEnabled` property to `true`.
 
-[source,bash]
-----
-$ kubectl apply -f ./charts/heimdall/crds/
-----
-
-=== Upgrading the Release
-
-To upgrade the release "my-release" using Chart Sources:
+If you prefer to manage CRD upgrades manually, you can render and apply the new CRD yourself using the following command:
 
 [source,bash]
 ----
-$ helm upgrade my-release ./charts/heimdall
+helm template <release-name> ./charts/heimdall \
+  --show-only templates/crds/ruleset.yaml \
+  --set crds.updateEnabled=true \
+  -n <namespace-heimdall-is-installed-into> \
+  -f <path/to/your/values.yaml> \
+  -f <path/to/your/heimdall/config.yaml> | \
+  kubectl apply -f -
 ----
 
-To upgrade the release "my-release" using Helm Repository:
+[NOTE]
+====
+Starting with v0.18.0, Heimdall implements a conversion service that is registered as a webhook in the `RuleSet` CRD. This allows the Kubernetes API server to convert between different `RuleSet` resource versions.
+
+Please note that the API server requires the conversion service to be accessible via TLS. Therefore, it will only be exposed and configured in the CRD **if, and only if**, heimdall’s kubernetes provider is configured to expose the corresponding controller service endpoints via TLS.
+
+For more information about the migration process and also how to migrate between `RuleSet` versions, please refer to the https://dadrus.github.io/heimdall/dev/docs/operations/migration/[Migration] section in heimdall's documentation.
+====
+
+=== Upgrading The Release
+
+To upgrade the release named "my-release" perform:
 
 [source,bash]
 ----
-$ helm upgrade my-release dadrus/heimdall
+$ helm upgrade my-release <chart-reference> \
+  -n <namespace-heimdall-was-installed-into> \
+  -f <path/to/your/values.yaml> \
+  -f <path/to/your/heimdall/config.yaml>
 ----
 
-To upgrade the release "my-release" using the OCI image:
 
-[source,bash]
-----
-$ helm upgrade my-release oci://ghcr.io/dadrus/heimdall/chart
-----
+== Uninstalling The Chart
+=== Uninstalling The Release
 
-== Uninstalling the Chart
-=== Uninstalling the Release
-
-To uninstall/delete the release "my-release":
+To uninstall/delete the release "my-release", execute
 
 [source,bash]
 ----
 $ helm uninstall my-release
 ----
 
-The command removes all the Kubernetes components associated with the release and deletes the release.
+This command removes all Kubernetes components associated with the release.
 
-=== Uninstalling the CRDs
+=== Uninstalling The CRDs
 
-Uninstalling the release does not remove the CRDs. To remove the CRDs, run:
+Uninstalling the release does not remove the CRDs. To remove them, run:
 
 [source, bash]
 ----
 $ kubectl delete rulesets.heimdall.dadrus.github.com
 ----
 
-or if you have cloned the sources
-
-[source,bash]
-----
-$ kubectl delete -f ./charts/heimdall/crds/
-----
+WARNING: This will also remove all `RuleSet` resources deployed to the cluster.
 
 == Configuration
 
@@ -282,7 +263,8 @@ Specifies resource requests and limits for the deployment.
 **Note:** Memory usage depends on the cache backend and its configuration. By default, heimdall uses an in-memory cache limited to 128Mi. With Redis (with client-side caching), the limit is also 128Mi. The heimdall process itself requires ~64Mi.
 
 Example:
-```yaml
+[source,yaml]
+----
 deployment:
   resources:
     limits:
@@ -291,7 +273,7 @@ deployment:
     requests:
       cpu: 125m
       memory: 256Mi
-```
+----
 a| `{}` (empty map)
 
 a| `deployment.replicaCount`
@@ -355,57 +337,105 @@ a| `deployment.volumeMounts`
 Optional volumeMounts to use
 a| `[]` (empty array)
 
-a| `service.labels`
+a| `service.default.labels`
 
-Enables you to set additional labels for the created services
+Labels for the `Service` resource created for heimdall's main and management ports.
 a| `{}` (empty map)
 
-a| `service.annotations`
+a| `service.default.annotations`
 
-Enables you to set additional annotations for the created services
+Annotations for the `Service` resource created for heimdall's main and management ports.
 a| `{}` (empty map)
 
-a| `service.main.port`
+a| `service.default.mainPort`
 
-The main port exposed by the k8s Service created for heimdall.
+The main port configured in the `Service` resource created for heimdall's main and management ports.
 a| `4456`
 
-a| `service.main.name`
+a| `service.default.mainPortName`
 
-The name of the port exposed by the k8s Service created for heimdall.
+The name of the main port configured in the `Service` resource created for heimdall's main and management ports.
 a| `main`
 
-a| `service.management.port`
+a| `service.default.managementPort`
 
-The port exposed by the k8s Service created for heimdall's management endpoint.
+The management port configured in the `Service` resource created for heimdall's main and management ports.
 a| `4457`
 
-a| `service.management.name`
+a| `service.default.managementPortName`
 
-The name of the port exposed by the k8s Service created for heimdall's management endpoint.
+The name of the port configured in the `Service` resource created for heimdall's main and management ports.
 a| `management`
 
-a| `admissionController.labels`
+a| `service.validation.labels`
+
+Labels for the `Service` resource created for heimdall's validation controller endpoint.
+a| `{}` (empty map)
+
+a| `service.validation.annotations`
+
+Annotations for the `Service` resource created for heimdall's validation controller endpoint.
+a| `{}` (empty map)
+
+a| `service.validation.port`
+
+The port configured in the `Service` resource created for heimdall's validation controller endpoint.
+a| `4458`
+
+a| `service.validation.portName`
+
+The name of the port configured in the `Service` resource created for heimdall's validation controller endpoint.
+a| `validation-webhook`
+
+a| `service.conversion.labels`
+
+Labels for the `Service` resource created for heimdall's conversion controller endpoint.
+a| `{}` (empty map)
+
+a| `service.conversion.annotations`
+
+Annotations for the `Service` resource created for heimdall's conversion controller endpoint.
+a| `{}` (empty map)
+
+a| `service.conversion.port`
+
+The port configured in the `Service` resource created for heimdall's conversion controller endpoint.
+a| `4459`
+
+a| `service.conversion.portName`
+
+The name of the port configured in the `Service` resource created for heimdall's conversion controller endpoint.
+a| `conversion-webhook`
+
+a| `webhooks.caBundle`
+
+Allows setting the `caBundle` used by the Kubernetes API server to verify the TLS certificates of all heimdall controllers configured as webhooks. Alternatively, you can  configure annotations for a particular webhook to inject the required values (see below).
+
+a| `""`
+
+a| `webhooks.conversion.annotations`
+
+Can be used to specify required annotations for the `RuleSet` CRD, like e.g. `cert-manager.io/inject-ca-from: <secret name>`, `service.beta.openshift.io/inject-cabundle=true` and alike.
+a| `{}` (empty map)
+
+a| `webhooks.validation.labels`
 
 Allows setting additional labels for the `ValidatingWebhookConfiguration` resource used to let the API server communicate with heimdall to validate `RuleSet` resources, before these made available to heimdall for loading.
 a| `{}` (empty map)
 
-a| `admissionController.annotations`
+a| `webhooks.validation.annotations`
 
 Can be used to specify required annotations for the `ValidatingWebhookConfiguration` resource, like e.g. `cert-manager.io/inject-ca-from: <secret name>`, `service.beta.openshift.io/inject-cabundle=true` and alike.
 a| `{}` (empty map)
 
-a| `admissionController.namespaceSelector`
+a| `webhooks.validation.namespaceSelector`
 
 Allows specifying a namespaceSelector for the `ValidatingWebhookConfiguration` resource
 a| `{}` (empty map)
 
-a| `admissionController.caBundle`
 
-Allows configuration of the `caBundle` in the `ValidatingWebhookConfiguration` resource. Either this one, or a corresponding annotation (see annotations examples above) must be specified if the usage of the validating admission controller is desired. Otherwise, the API server won't be able to communicate with heimdall.
-a| `""`
 
-a| `admissionController.timeoutSeconds`
+a| `webhooks.validation.timeoutSeconds`
 
 How long the webhook implemented by the admission controller is allowed to run while validating `RuleSet` resources. After the timeout passes, the webhook call will be ignored by the API server resulting in discarding the affected `RuleSet` ressource.
 a| `5`
@@ -414,7 +444,8 @@ a| `env`
 
 Environment variables, which should be made available to the heimdall deployment. Variables can be specified as key-value pairs with string values or as an object referencing a ConfigMap or Secret key. E.g.
 
-```.yaml
+[source,.yaml]
+----
 env:
   OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.tempo.svc.cluster.local:4317
@@ -422,7 +453,7 @@ env:
     configMapKeyRef:
       name: example-configmap
       key: EXAMPLE_KEY
-```
+----
 
 a| `{}` (empty map)
 
@@ -430,11 +461,12 @@ a| `envFrom`
 
 Environment variables, which should be made available to the heimdall deployment, but are pulled from a ConfigMap or Secret resource instead of specified directly.
 
-```.yaml
+[source,.yaml]
+----
 envFrom:
 - configMapRef:
     name: example-configmap
-```
+----
 
 a| `[]` (empty array)
 
@@ -444,10 +476,24 @@ Optional extra arguments to pass to heimdall when starting.
 
 E.g. to start heimdall in decision mode for integration with envoy v3 ext_auth, set it to:
 
-```.yaml
+[source,.yaml]
+----
 extraArgs:
   - --envoy-grpc
-```
+----
 
 a| `[]` (empty array)
+
+a| `crds.updateEnabled`
+
+Controls whether the CRD should be updated.
+
+a| `false`
+
+a| `crds.storageVersion`
+
+Defines which `RuleSet` schema is used as storage version in etcd.
+
+a| `v1beta1`
+
 |===

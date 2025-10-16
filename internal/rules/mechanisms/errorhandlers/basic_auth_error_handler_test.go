@@ -44,12 +44,11 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 realm: FooBar
 if: type(Error) == authentication_error
 `),
-			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				require.NotNil(t, errorHandler)
 			},
 		},
 		"without configuration (minimal configuration)": {

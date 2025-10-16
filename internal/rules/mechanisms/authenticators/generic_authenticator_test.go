@@ -345,14 +345,13 @@ authentication_data_source:
 subject:
   id: some_template`),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
 			) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 		"prototype config without cache, config with cache": {

@@ -13,8 +13,7 @@ rules:
       - GET
       - POST
     hosts:
-      - type: exact
-        value: foo.bar
+      - foo.bar
     scheme: http
   forward_to:
     host: bar.foo

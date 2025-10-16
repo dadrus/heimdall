@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -61,8 +62,9 @@ func newWWWAuthenticateErrorHandler(
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
-		return nil, err
+	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, name).CausedBy(err)
 	}
 
 	return &wwwAuthenticateErrorHandler{
@@ -109,9 +111,11 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(stepID string, rawConfig map[s
 
 	var conf Config
 
-	err := decodeConfig(eh.app.Validator(), ErrorHandlerWWWAuthenticate, rawConfig, &conf)
+	err := decodeConfig(eh.app.Validator(), rawConfig, &conf)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, eh.name).
+			CausedBy(err)
 	}
 
 	return &wwwAuthenticateErrorHandler{
