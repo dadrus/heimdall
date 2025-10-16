@@ -31,11 +31,12 @@ const serveDecisionFlagEnvoyGRPC = "envoy-grpc"
 // NewDecisionCommand represents the "serve decision" command.
 func NewDecisionCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "decision",
-		Short:        "Starts heimdall in Decision operation mode",
-		Example:      "heimdall serve decision",
-		SilenceUsage: true,
+		Use:           "decision",
+		Short:         "Starts heimdall in Decision operation mode",
+		Example:       "heimdall serve decision",
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
 			useEnvoyExtAuth, _ := cmd.Flags().GetBool(serveDecisionFlagEnvoyGRPC)
 
 			app, err := createApp(
@@ -55,7 +56,7 @@ func NewDecisionCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().Bool(serveDecisionFlagEnvoyGRPC, false,
+	cmd.Flags().Bool(serveDecisionFlagEnvoyGRPC, false,
 		"If specified, decision mode is started for integration with envoy extauth gRPC service")
 
 	return cmd
