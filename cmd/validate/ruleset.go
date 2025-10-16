@@ -44,15 +44,16 @@ var errFunctionNotSupported = errors.New("function not supported")
 // NewValidateRulesCommand represents the "validate rules" command.
 func NewValidateRulesCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "rules [path to ruleset]",
-		Short:        "Validates heimdall's ruleset",
-		Args:         cobra.ExactArgs(1),
-		Example:      "heimdall validate rules -c myconfig.yaml",
-		SilenceUsage: true,
-		RunE:         validateRuleSet,
+		Use:                   "ruleset [flags] [/path/to/ruleset.yaml]",
+		Short:                 "Validates heimdall's ruleset",
+		Args:                  cobra.ExactArgs(1),
+		Example:               "heimdall validate ruleset -c myconfig.yaml myruleset.yaml",
+		DisableFlagsInUseLine: true,
+		SilenceErrors:         true,
+		RunE:                  validateRuleSet,
 	}
 
-	cmd.PersistentFlags().Bool(validationForProxyMode, false,
+	cmd.Flags().Bool(validationForProxyMode, false,
 		"If specified, validation considers usage in proxy operation mode")
 
 	return cmd
@@ -66,6 +67,8 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	if len(configPath) == 0 {
 		return ErrNoConfigFile
 	}
+
+	cmd.SilenceUsage = true
 
 	opMode := config.DecisionMode
 	if proxyMode, _ := cmd.Flags().GetBool(validationForProxyMode); proxyMode {
