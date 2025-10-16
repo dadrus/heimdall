@@ -27,11 +27,13 @@ import (
 // NewProxyCommand represents the proxy command.
 func NewProxyCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:          "proxy",
-		Short:        "Starts heimdall in Reverse Proxy operation mode",
-		Example:      "heimdall serve proxy",
-		SilenceUsage: true,
+		Use:           "proxy",
+		Short:         "Starts heimdall in Reverse Proxy operation mode",
+		Example:       "heimdall serve proxy",
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
+
 			app, err := createApp(
 				cmd,
 				fx.Options(
