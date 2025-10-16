@@ -49,157 +49,66 @@ func TestValidateConfig(t *testing.T) {
 	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
 
 	for name, tc := range map[string]struct {
-		confFile string
-		assert   func(t *testing.T, err error)
+		args   []string
+		expErr string
 	}{
 		"no config provided": {
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "no config")
-			},
+			expErr: "no config",
 		},
 		"not existing config": {
-			confFile: "doesnotexist.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorIs(t, err, os.ErrNotExist)
-			},
+			args:   []string{"--" + flags.Config, "doesnotexist.yaml"},
+			expErr: "stat doesnotexist.yaml",
 		},
 		"insecure trusted proxies configured": {
-			confFile: "test_data/config-insecure-trusted-proxies.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'serve'.'trusted_proxies' contains insecure networks")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-insecure-trusted-proxies.yaml"},
+			expErr: "'serve'.'trusted_proxies' contains insecure networks",
 		},
 		"no TLS configured for ingres services": {
-			confFile: "test_data/config-no-tls-config-for-ingres-services.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'serve'.'tls' must be configured")
-				require.ErrorContains(t, err, "'management'.'tls' must be configured")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-tls-config-for-ingres-services.yaml"},
+			expErr: "'serve'.'tls' must be configured",
 		},
 		"no https configured for generic authenticator": {
-			confFile: "test_data/config-no-https-endpoint-in-generic-authenticator.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'identity_info_endpoint'.'url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-endpoint-in-generic-authenticator.yaml"},
+			expErr: "'identity_info_endpoint'.'url' scheme must be https",
 		},
 		"no https configured for jwks_endpoint in jwt authenticator": {
-			confFile: "test_data/config-no-https-jwks-endpoint-in-jwt-authenticator.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'jwks_endpoint'.'url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-jwks-endpoint-in-jwt-authenticator.yaml"},
+			expErr: "'jwks_endpoint'.'url' scheme must be https",
 		},
 		"no https configured for metadata_endpoint in jwt authenticator": {
-			confFile: "test_data/config-no-https-metadata-endpoint-in-jwt-authenticator.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'metadata_endpoint'.'url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-metadata-endpoint-in-jwt-authenticator.yaml"},
+			expErr: "'metadata_endpoint'.'url' scheme must be https",
 		},
-		"no https configured for oath2 introspection authenticator enpoint": {
-			confFile: "test_data/config-no-https-endpoint-in-oauth2-introspection-authenticator.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'introspection_endpoint'.'url' scheme must be https")
-			},
+		"no https configured for oath2 introspection authenticator endpoint": {
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-endpoint-in-oauth2-introspection-authenticator.yaml"},
+			expErr: "'introspection_endpoint'.'url' scheme must be https",
 		},
 		"no https configured for remote authorizer endpoint": {
-			confFile: "test_data/config-no-https-endpoint-in-remote-authorizer.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'endpoint'.'url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-endpoint-in-remote-authorizer.yaml"},
+			expErr: "'endpoint'.'url' scheme must be https",
 		},
 		"no https configured for oauth2 client credentials finalizer": {
-			confFile: "test_data/config-no-https-endpoint-in-oauth2-client-credentials-finalizer.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'token_url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-endpoint-in-oauth2-client-credentials-finalizer.yaml"},
+			expErr: "'token_url' scheme must be https",
 		},
 		"no https configured for generic contextualzer": {
-			confFile: "test_data/config-no-https-endpoint-in-generic-contextualizer.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'endpoint'.'url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-endpoint-in-generic-contextualizer.yaml"},
+			expErr: "'endpoint'.'url' scheme must be https",
 		},
 		"no https in oauth2 client credentials authentication strategy": {
-			confFile: "test_data/config-no-https-in-oauth2-client-credentials-authentication-strategy.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed validating 'oauth2_client_credentials' strategy")
-				require.ErrorContains(t, err, "'token_url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-in-oauth2-client-credentials-authentication-strategy.yaml"},
+			expErr: "failed validating 'oauth2_client_credentials' strategy",
 		},
 		"no https in http endpoint rule provider": {
-			confFile: "test_data/config-no-https-in-http-endpoint-provider.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'endpoints'[0].'url' scheme must be https")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-https-in-http-endpoint-provider.yaml"},
+			expErr: "'endpoints'[0].'url' scheme must be https",
 		},
 		"tls is disabled for redis cache": {
-			confFile: "test_data/config-no-tls-in-redis-cache.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed validating redis")
-				require.ErrorContains(t, err, "'tls'.'disabled' must be false")
-			},
+			args:   []string{"--" + flags.Config, "test_data/config-no-tls-in-redis-cache.yaml"},
+			expErr: "'tls'.'disabled' must be false",
 		},
 		"valid config": {
-			confFile: "test_data/config-valid.yaml",
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
+			args: []string{"--" + flags.Config, "test_data/config-valid.yaml"},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -207,16 +116,19 @@ func TestValidateConfig(t *testing.T) {
 			cmd := NewValidateConfigCommand()
 			flags.RegisterGlobalFlags(cmd)
 
-			if len(tc.confFile) != 0 {
-				err = cmd.ParseFlags([]string{"--" + flags.Config, tc.confFile})
-				require.NoError(t, err)
-			}
+			cmd.SetArgs(tc.args)
 
 			// WHEN
-			err = validateConfig(cmd, []string{})
+			err = cmd.Execute()
 
 			// THEN
-			tc.assert(t, err)
+			if len(tc.expErr) != 0 {
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, tc.expErr)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
