@@ -9,10 +9,10 @@ global:
 meshConfig:
   defaultConfig:
     discoveryAddress: istiod.istio-system.svc:15012
-  defaultProviders:
-    metrics:
-      - prometheus
-  enablePrometheusMerge: true
+#  defaultProviders:
+#    metrics:
+#      - prometheus
+#  enablePrometheusMerge: true
   rootNamespace: istio-system
   trustDomain: cluster.local
   extensionProviders:
