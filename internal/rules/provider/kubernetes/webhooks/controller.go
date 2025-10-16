@@ -52,7 +52,7 @@ func New(
 	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Kubernetes Webhooks",
+		ServiceName:    "Kubernetes Admission Controller",
 		ServiceAddress: listeningAddress,
 		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
 		Logger:         logger,
