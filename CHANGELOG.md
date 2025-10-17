@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.18.0](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.18.0) (2025-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* `validate rules` command renamed to `validate ruleset` ([#2812](https://github.com/dadrus/heimdall/issues/2812))
+* Support for `glob` and `regex` host type expressions removed ([#2666](https://github.com/dadrus/heimdall/issues/2666))
+* `allow_fallback_on_error` property removed from authenticators ([#2665](https://github.com/dadrus/heimdall/issues/2665))
+* `backtracking_enabled` removed from the regular rule definition ([#2662](https://github.com/dadrus/heimdall/issues/2662))
+
+### Features
+
+* Better error responses for `validate config` command ([#2813](https://github.com/dadrus/heimdall/issues/2813)) ([7968008](https://github.com/dadrus/heimdall/commit/796800836e55705c3b4ce6c6c28d1bef724b4502))
+* Better error responses for the serve subcommands ([#2814](https://github.com/dadrus/heimdall/issues/2814)) ([5aec9df](https://github.com/dadrus/heimdall/commit/5aec9df3eacbb3c42bd7ef0b6aca9d3ae1f90428))
+
+
+### Code Refactorings
+
+* `allow_fallback_on_error` property removed from authenticators ([#2665](https://github.com/dadrus/heimdall/issues/2665)) ([73496bf](https://github.com/dadrus/heimdall/commit/73496bf743c6497aafde5c03c9736399ccee4205))
+* `backtracking_enabled` removed from the regular rule definition ([#2662](https://github.com/dadrus/heimdall/issues/2662)) ([7775046](https://github.com/dadrus/heimdall/commit/77750469e8f97b2e86cd182ba06fce4d3c70a7bf))
+* `validate rules` command renamed to `validate ruleset` ([#2812](https://github.com/dadrus/heimdall/issues/2812)) ([172908f](https://github.com/dadrus/heimdall/commit/172908fb2d00e5433964b8f9c464442489dd8d5b))
+* Support for `glob` and `regex` host type expressions removed ([#2666](https://github.com/dadrus/heimdall/issues/2666)) ([d0f7bdb](https://github.com/dadrus/heimdall/commit/d0f7bdb827d3b769e3fdb6cec8ef1e137f261671))
+
+
+### Documentation
+
+* Integration guide for KGateway ([#2760](https://github.com/dadrus/heimdall/issues/2760)) ([81c8a44](https://github.com/dadrus/heimdall/commit/81c8a442ed5ad4d0e934302c9bb5e76bbebe6814))
+
 ## [0.17.3](https://github.com/dadrus/heimdall/compare/v0.17.2...v0.17.3) (2025-10-17)
 
 
