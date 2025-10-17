@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.17.3](https://github.com/dadrus/heimdall/compare/v0.17.2...v0.17.3) (2025-10-17)
+
+
+### Bug Fixes
+
+* `generic` authenticator updated to raise authentication errors on 401 and 403 responses returned from the `identity_info_endpoint` ([#2807](https://github.com/dadrus/heimdall/issues/2807)) ([ee4b977](https://github.com/dadrus/heimdall/commit/ee4b977ee49138cb01125e3c9ecec6b9e66eef3c))
+* Verbose errors always contain high level detail message ([#2809](https://github.com/dadrus/heimdall/issues/2809)) ([68e9a5c](https://github.com/dadrus/heimdall/commit/68e9a5cbbb9785cae90849380392d024b7f11b1a))
+
+
+### Documentation
+
+* Heimdall image version set in documentation generated during release builds fixed ([#2811](https://github.com/dadrus/heimdall/issues/2811)) ([002fef2](https://github.com/dadrus/heimdall/commit/002fef2a8c4f6568f6098f99ff76651d475525e8))
+* OTEL disabled in Kubernetes examples (used bitnami images are not available anymore) ([#2815](https://github.com/dadrus/heimdall/issues/2815)) ([68684a6](https://github.com/dadrus/heimdall/commit/68684a6ac252875c4ae8ba0c431f90fb3be11967))
+
+
+### Dependencies
+
+* update golang to v1.25.3 ([#2802](https://github.com/dadrus/heimdall/issues/2802)) ([5634ac8](https://github.com/dadrus/heimdall/commit/5634ac8a4baad16c65cdab53b9d2f639256bb6b8))
+* update google.golang.org/genproto/googleapis/rpc digest to 4626949 ([#2808](https://github.com/dadrus/heimdall/issues/2808)) ([b023955](https://github.com/dadrus/heimdall/commit/b0239557e7361b66281d17109e4591f6c1e8d7c0))
+* update google.golang.org/genproto/googleapis/rpc digest to 49b9836 ([#2792](https://github.com/dadrus/heimdall/issues/2792)) ([6742ed6](https://github.com/dadrus/heimdall/commit/6742ed629b09dcd27d2c2e2671f9ac8fe121c864))
+* update module github.com/ccoveille/go-safecast to v1.7.0 ([#2810](https://github.com/dadrus/heimdall/issues/2810)) ([c66ff1b](https://github.com/dadrus/heimdall/commit/c66ff1b418cd957ac471faa405a3953c782ff619))
+* update module github.com/envoyproxy/go-control-plane/envoy to v1.35.0 ([#2783](https://github.com/dadrus/heimdall/issues/2783)) ([eaa3695](https://github.com/dadrus/heimdall/commit/eaa3695c91299c24dc116dff64b8646812ca4ef6))
+* update module github.com/go-co-op/gocron/v2 to v2.17.0 ([#2798](https://github.com/dadrus/heimdall/issues/2798)) ([07ee22f](https://github.com/dadrus/heimdall/commit/07ee22f6fac165bdf5cc1f2c679ae1d3f3c344fe))
+* update module github.com/go-jose/go-jose/v4 to v4.1.3 ([#2790](https://github.com/dadrus/heimdall/issues/2790)) ([1d1e649](https://github.com/dadrus/heimdall/commit/1d1e6496c467393e398deab298eea8964fef6c7e))
+* update module github.com/go-playground/validator/v10 to v10.28.0 ([#2791](https://github.com/dadrus/heimdall/issues/2791)) ([1bff5cf](https://github.com/dadrus/heimdall/commit/1bff5cf39c6979587a56fc403984c648bbaff67f))
+* update module github.com/redis/rueidis to v1.0.67 [#2801](https://github.com/dadrus/heimdall/issues/2801) ([3c146b3](https://github.com/dadrus/heimdall/commit/3c146b365ba14f751ee72e0f36449f672e28643e))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.67 ([#2801](https://github.com/dadrus/heimdall/issues/2801)) ([3c146b3](https://github.com/dadrus/heimdall/commit/3c146b365ba14f751ee72e0f36449f672e28643e))
+* update module google.golang.org/grpc to v1.76.0 ([#2793](https://github.com/dadrus/heimdall/issues/2793)) ([c8a57b1](https://github.com/dadrus/heimdall/commit/c8a57b10a9c1001d32d509b1956c0650fa720f70))
+* update module google.golang.org/protobuf to v1.36.10 ([#2787](https://github.com/dadrus/heimdall/issues/2787)) ([1e4b5df](https://github.com/dadrus/heimdall/commit/1e4b5dfd10e9ee84329210069ba09b537ae25883))
+
 ## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-09-21)
 
 
