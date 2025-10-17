@@ -208,32 +208,177 @@ func TestErrorChainAsUsedWithNotAssignableInterface(t *testing.T) {
 func TestErrorChainString(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	testErr := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
+	for uc, tc := range map[string]struct {
+		err  *errorchain.ErrorChain
+		want string
+	}{
+		"short error stack with top level error message": {
+			err: errorchain.NewWithMessage(errors.New("resulting error"), "top level error message").
+				CausedBy(errors.New("cause error")),
+			want: `resulting error: top level error message`,
+		},
+		"short error stack without top level error message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errors.New("cause error")),
+			want: `resulting error: cause error`,
+		},
+		"longer error stack with top level error message": {
+			err: errorchain.NewWithMessage(errors.New("resulting error"), "top level error message").
+				CausedBy(errors.New("cause error")).
+				CausedBy(errors.New("deeper cause error")),
+			want: `resulting error: top level error message`,
+		},
+		"longer error stack with mid-level error with message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.NewWithMessage(errors.New("cause error"), "mid level error message")).
+				CausedBy(errors.New("deeper cause error")),
+			want: `resulting error: mid level error message`,
+		},
+		"longer error stack with mid-level error cause message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.New(errors.New("cause error")).
+					CausedBy(errors.New("some error"))).
+				CausedBy(errors.New("deeper cause error")),
+			want: `resulting error: some error`,
+		},
+		"longer error stack with tail-level error with message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.New(errors.New("cause error"))).
+				CausedBy(errors.New("deeper cause error")),
+			want: `resulting error: deeper cause error`,
+		},
+		"error without detail message": {
+			err:  errorchain.New(errors.New("resulting error")),
+			want: `resulting error: resulting error`,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			// data from the test case
+			value := tc.err.String()
 
-	// WHEN
-	value := testErr.String()
-
-	// THEN
-	assert.Equal(t, "test error 1: foo", value)
+			// THEN
+			assert.Equal(t, tc.want, value)
+		})
+	}
 }
 
 func TestErrorChainJSONMarshal(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	testErr := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
+	for uc, tc := range map[string]struct {
+		err  error
+		want string
+	}{
+		"short error stack with top level error message": {
+			err: errorchain.NewWithMessage(errors.New("resulting error"), "top level error message").
+				CausedBy(errors.New("cause error")),
+			want: `{"code":"resultingError","message":"top level error message"}`,
+		},
+		"short error stack without top level error message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errors.New("cause error")),
+			want: `{"code":"resultingError","message":"cause error"}`,
+		},
+		"longer error stack with top level error message": {
+			err: errorchain.NewWithMessage(errors.New("resulting error"), "top level error message").
+				CausedBy(errors.New("cause error")).
+				CausedBy(errors.New("deeper cause error")),
+			want: `{"code":"resultingError","message":"top level error message"}`,
+		},
+		"longer error stack with mid-level error with message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.NewWithMessage(errors.New("cause error"), "mid level error message")).
+				CausedBy(errors.New("deeper cause error")),
+			want: `{"code":"resultingError","message":"mid level error message"}`,
+		},
+		"longer error stack with mid-level error cause message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.New(errors.New("cause error")).
+					CausedBy(errors.New("some error"))).
+				CausedBy(errors.New("deeper cause error")),
+			want: `{"code":"resultingError","message":"some error"}`,
+		},
+		"longer error stack with tail-level error with message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.New(errors.New("cause error"))).
+				CausedBy(errors.New("deeper cause error")),
+			want: `{"code":"resultingError","message":"deeper cause error"}`,
+		},
+		"error without detail message": {
+			err:  errorchain.New(errors.New("resulting error")),
+			want: `{"code":"resultingError","message":"resulting error"}`,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			// data from the test case
+			res, err := json.Marshal(tc.err)
 
-	// WHEN
-	res, err := json.Marshal(testErr)
-
-	// THEN
-	require.NoError(t, err)
-	assert.JSONEq(t, `{"code":"testError1","message":"foo"}`, string(res))
+			// THEN
+			require.NoError(t, err)
+			assert.JSONEq(t, tc.want, string(res))
+		})
+	}
 }
 
 func TestErrorChainXMLMarshal(t *testing.T) {
 	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		err  error
+		want string
+	}{
+		"short error stack with top level error message": {
+			err: errorchain.NewWithMessage(errors.New("resulting error"), "top level error message").
+				CausedBy(errors.New("cause error")),
+			want: `<error><code>resultingError</code><message>top level error message</message></error>`,
+		},
+		"short error stack without top level error message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errors.New("cause error")),
+			want: `<error><code>resultingError</code><message>cause error</message></error>`,
+		},
+		"longer error stack with top level error message": {
+			err: errorchain.NewWithMessage(errors.New("resulting error"), "top level error message").
+				CausedBy(errors.New("cause error")).
+				CausedBy(errors.New("deeper cause error")),
+			want: `<error><code>resultingError</code><message>top level error message</message></error>`,
+		},
+		"longer error stack with mid-level error with message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.NewWithMessage(errors.New("cause error"), "mid level error message")).
+				CausedBy(errors.New("deeper cause error")),
+			want: `<error><code>resultingError</code><message>mid level error message</message></error>`,
+		},
+		"longer error stack with mid-level error cause message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.New(errors.New("cause error")).
+					CausedBy(errors.New("some error"))).
+				CausedBy(errors.New("deeper cause error")),
+			want: `<error><code>resultingError</code><message>some error</message></error>`,
+		},
+		"longer error stack with tail-level error with message": {
+			err: errorchain.New(errors.New("resulting error")).
+				CausedBy(errorchain.New(errors.New("cause error"))).
+				CausedBy(errors.New("deeper cause error")),
+			want: `<error><code>resultingError</code><message>deeper cause error</message></error>`,
+		},
+		"error without detail message": {
+			err:  errorchain.New(errors.New("resulting error")),
+			want: `<error><code>resultingError</code><message>resulting error</message></error>`,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			// data from the test case
+			res, err := xml.Marshal(tc.err)
+
+			// THEN
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, string(res))
+		})
+	}
 
 	// GIVEN
 	testErr := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)

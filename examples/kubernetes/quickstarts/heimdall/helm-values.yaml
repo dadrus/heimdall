@@ -30,9 +30,6 @@ admissionController:
   annotations:
     cert-manager.io/inject-ca-from: heimdall/heimdall-tls
 
-profiling:
-  enabled: true
-
 env:
   OTEL_METRICS_EXPORTER: "prometheus"
   OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
