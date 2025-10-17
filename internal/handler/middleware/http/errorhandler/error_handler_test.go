@@ -68,7 +68,7 @@ func TestHandlerHandle(t *testing.T) {
 			err:     errorchain.New(heimdall.ErrAuthorization),
 			expCode: http.StatusForbidden,
 			accept:  "text/plain",
-			expBody: "authorization error",
+			expBody: "authorization error: authorization error",
 		},
 		"communication timeout error default": {
 			handler: New(),
@@ -85,7 +85,7 @@ func TestHandlerHandle(t *testing.T) {
 			err:     errorchain.New(heimdall.ErrCommunicationTimeout),
 			expCode: http.StatusBadGateway,
 			accept:  "application/xml",
-			expBody: "<error><code>communicationTimeoutError</code></error>",
+			expBody: "<error><code>communicationTimeoutError</code><message>communication timeout error</message></error>",
 		},
 		"communication error default": {
 			handler: New(),
@@ -102,7 +102,7 @@ func TestHandlerHandle(t *testing.T) {
 			err:     errorchain.New(heimdall.ErrCommunication),
 			expCode: http.StatusBadGateway,
 			accept:  "application/json",
-			expBody: "{\"code\":\"communicationError\"}",
+			expBody: `{"code":"communicationError","message":"communication error"}`,
 		},
 		"precondition error default": {
 			handler: New(),
