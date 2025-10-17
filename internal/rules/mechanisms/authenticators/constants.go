@@ -17,10 +17,11 @@
 package authenticators
 
 const (
-	AuthenticatorUnauthorized        = "unauthorized"
-	AuthenticatorBasicAuth           = "basic_auth"
-	AuthenticatorAnonymous           = "anonymous"
-	AuthenticatorOAuth2Introspection = "oauth2_introspection"
-	AuthenticatorJWT                 = "jwt"
-	AuthenticatorGeneric             = "generic"
+	AuthenticatorUnauthorized          = "unauthorized"
+	AuthenticatorBasicAuth             = "basic_auth"
+	AuthenticatorAnonymous             = "anonymous"
+	AuthenticatorOAuth2Introspection   = "oauth2_introspection"
+	AuthenticatorJWT                   = "jwt"
+	AuthenticatorGeneric               = "generic"
+	AuthenticatorHTTPMessageSignatures = "http_message_signatures"
 )
