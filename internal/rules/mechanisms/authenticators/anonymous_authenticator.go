@@ -52,7 +52,7 @@ func newAnonymousAuthenticator(
 		Msg("Creating authenticator")
 
 	type Config struct {
-		Subject string `mapstructure:"subject"`
+		Principal string `mapstructure:"principal"`
 	}
 
 	var conf Config
@@ -62,14 +62,14 @@ func newAnonymousAuthenticator(
 			"failed decoding config for anonymous authenticator '%s'", name).CausedBy(err)
 	}
 
-	if len(conf.Subject) == 0 {
-		conf.Subject = "anonymous"
+	if len(conf.Principal) == 0 {
+		conf.Principal = "anonymous"
 	}
 
 	return &anonymousAuthenticator{
 		name:    name,
 		id:      name,
-		subject: &subject.Subject{ID: conf.Subject, Attributes: make(map[string]any)},
+		subject: &subject.Subject{ID: conf.Principal, Attributes: make(map[string]any)},
 		app:     app,
 	}, nil
 }
@@ -105,7 +105,7 @@ func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]
 	}
 
 	type Config struct {
-		Subject string `mapstructure:"subject" validate:"required"`
+		Principal string `mapstructure:"principal" validate:"required"`
 	}
 
 	var conf Config
@@ -118,7 +118,7 @@ func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]
 	return &anonymousAuthenticator{
 		name:    a.name,
 		id:      x.IfThenElse(len(stepID) == 0, a.id, stepID),
-		subject: &subject.Subject{ID: conf.Subject, Attributes: a.subject.Attributes},
+		subject: &subject.Subject{ID: conf.Principal, Attributes: a.subject.Attributes},
 		app:     a.app,
 	}, nil
 }

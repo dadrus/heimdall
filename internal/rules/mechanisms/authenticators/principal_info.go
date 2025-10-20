@@ -24,12 +24,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type SubjectInfo struct {
+type PrincipalInfo struct {
 	IDFrom         string `mapstructure:"id"         validate:"required"`
 	AttributesFrom string `mapstructure:"attributes"`
 }
 
-func (s *SubjectInfo) CreateSubject(rawData []byte) (*subject.Subject, error) {
+func (s *PrincipalInfo) CreatePrincipal(rawData []byte) (*subject.Subject, error) {
 	attributesFrom := "@this"
 	if len(s.AttributesFrom) != 0 {
 		attributesFrom = s.AttributesFrom
@@ -38,7 +38,7 @@ func (s *SubjectInfo) CreateSubject(rawData []byte) (*subject.Subject, error) {
 	subjectID := gjson.GetBytes(rawData, s.IDFrom).String()
 	if len(subjectID) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"could not extract subject identifier using '%s' template", s.IDFrom)
+			"could not extract principal identifier using '%s' template", s.IDFrom)
 	}
 
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
