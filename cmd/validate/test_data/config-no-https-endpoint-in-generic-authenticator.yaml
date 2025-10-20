@@ -18,7 +18,7 @@ mechanisms:
           url: http://example.com/whoami
         authentication_data_source:
           - cookie: SESSION-ID
-        subject:
+        principal:
           id: id
 
   finalizers:
