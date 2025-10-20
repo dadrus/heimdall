@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 17 Oct 2025 10:42:28 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 20 Oct 2025 10:43:12 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_assertions"&gt;Assertions&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
@@ -163,7 +163,7 @@
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;cookie&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;ory_kratos_session&lt;/span&gt;
  &lt;span class="na"&gt;forward_cookies&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;ory_kratos_session&lt;/span&gt;
- &lt;span class="na"&gt;subject&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;principal&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;identity.id&amp;#34;&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;hydra_authenticator&lt;/span&gt;
@@ -193,7 +193,7 @@
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
  &lt;span class="na"&gt;audience&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;bla&lt;/span&gt;
- &lt;span class="na"&gt;subject&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;principal&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;sub&amp;#34;&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt_authenticator&lt;/span&gt;
@@ -231,7 +231,7 @@
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
  &lt;span class="na"&gt;allowed_algorithms&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;RS256&lt;/span&gt;
- &lt;span class="na"&gt;subject&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;principal&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;identity.id&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;cache_ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5m&lt;/span&gt;
