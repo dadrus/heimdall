@@ -67,7 +67,7 @@ type oauth2IntrospectionAuthenticator struct {
 	app  app.Context
 	r    oauth2.ServerMetadataResolver
 	a    oauth2.Expectation
-	sf   SubjectFactory
+	sf   PrincipalFactory
 	ads  extractors.AuthDataExtractStrategy
 	ttl  *time.Duration
 }
@@ -88,7 +88,7 @@ func newOAuth2IntrospectionAuthenticator(
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
 		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`                                                                                                    //nolint:lll,tagalign
-		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
+		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"                 validate:"-"`                                                                        //nolint:lll,tagalign
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
 	}
@@ -121,8 +121,8 @@ func newOAuth2IntrospectionAuthenticator(
 		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
-	if len(conf.SubjectInfo.IDFrom) == 0 {
-		conf.SubjectInfo.IDFrom = "sub"
+	if len(conf.PrincipalInfo.IDFrom) == 0 {
+		conf.PrincipalInfo.IDFrom = "sub"
 	}
 
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
@@ -172,7 +172,7 @@ func newOAuth2IntrospectionAuthenticator(
 		ads:  ads,
 		r:    resolver,
 		a:    conf.Assertions,
-		sf:   &conf.SubjectInfo,
+		sf:   &conf.PrincipalInfo,
 		ttl:  conf.CacheTTL,
 	}, nil
 }
@@ -193,16 +193,16 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) 
 			CausedBy(err)
 	}
 
-	rawResp, err := a.getSubjectInformation(ctx, accessToken)
+	rawResp, err := a.getPrincipalInformation(ctx, accessToken)
 	if err != nil {
 		return nil, err
 	}
 
-	sub, err := a.sf.CreateSubject(rawResp)
+	sub, err := a.sf.CreatePrincipal(rawResp)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal,
-				"failed to extract subject information from introspection response").
+				"failed to extract principal information from introspection response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -292,7 +292,7 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
-func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
+func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	ctx heimdall.RequestContext,
 	token string,
 ) ([]byte, error) {

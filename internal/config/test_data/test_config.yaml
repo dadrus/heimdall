@@ -153,7 +153,7 @@ mechanisms:
           - cookie: ory_kratos_session
         forward_cookies:
           - ory_kratos_session
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 10m
@@ -171,7 +171,7 @@ mechanisms:
           url: http://127.0.0.1:4433/sessions/whoami
         authentication_data_source:
           - header: X-My-Token
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
         payload: |
@@ -185,7 +185,7 @@ mechanisms:
           - header: X-My-Header
         forward_headers:
           - X-My-Header
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
     - id: authenticator_with_query_and_header_template
@@ -197,7 +197,7 @@ mechanisms:
             X-My-Token: "{{ .AuthenticationData }}"
         authentication_data_source:
           - cookie: ory_kratos_session
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
     - id: oauth2_introspection_using_introspection_endpoint
@@ -226,7 +226,7 @@ mechanisms:
             - bar
           audience:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: sub
     - id: oauth2_introspection_using_metadata_endpoint
@@ -257,7 +257,7 @@ mechanisms:
             - bar
           audience:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: sub
     - id: jwt_authenticator_using_jwks_endpoint
@@ -280,7 +280,7 @@ mechanisms:
             - RSA
           issuers:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 5m

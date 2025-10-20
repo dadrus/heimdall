@@ -17,6 +17,7 @@
 package authenticators
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net/http"
@@ -59,7 +60,7 @@ func TestGenericAuthenticatorCreate(t *testing.T) {
 foo: bar
 identity_info_endpoint:
   url: http://test.com
-subject:
+principal:
   id: some_template`),
 			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
@@ -73,7 +74,7 @@ subject:
 			config: []byte(`
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
@@ -89,7 +90,7 @@ identity_info_endpoint:
   url: test.com
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
@@ -99,7 +100,7 @@ subject:
 				require.ErrorContains(t, err, "'identity_info_endpoint'.'url' must be a valid URL")
 			},
 		},
-		"missing subject config": {
+		"missing principal config": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -110,14 +111,14 @@ authentication_data_source:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'subject' is a required field")
+				require.ErrorContains(t, err, "'principal' is a required field")
 			},
 		},
 		"missing authentication data source config": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
-subject:
+principal:
   id: some_template`),
 			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
@@ -127,11 +128,11 @@ subject:
 				require.ErrorContains(t, err, "'authentication_data_source' is a required field")
 			},
 		},
-		"missing subject id config": {
+		"missing principal id config": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
-subject:
+principal:
   attributes: some_template
 authentication_data_source:
   - header: foo-header`),
@@ -140,7 +141,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'subject'.'id' is a required field")
+				require.ErrorContains(t, err, "'principal'.'id' is a required field")
 			},
 		},
 		"with valid configuration but disabled cache": {
@@ -152,7 +153,7 @@ authentication_data_source:
   - header: foo-header
 payload: |
   { "foo": {{ quote .AuthenticationData }} }
-subject:
+principal:
   id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -169,7 +170,7 @@ subject:
 				assert.NotNil(t, auth.payload)
 				assert.Empty(t, auth.fwdCookies)
 				assert.Empty(t, auth.fwdHeaders)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &PrincipalInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
@@ -184,7 +185,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
-subject:
+principal:
   id: some_template
 cache_ttl: 5s`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
@@ -202,7 +203,7 @@ cache_ttl: 5s`),
 				assert.Nil(t, auth.payload)
 				assert.Empty(t, auth.fwdCookies)
 				assert.Empty(t, auth.fwdHeaders)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &PrincipalInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
@@ -218,7 +219,7 @@ authentication_data_source:
   - cookie: foo-cookie
 forward_headers:
   - X-My-Header
-subject:
+principal:
   id: some_template
 session_lifespan:
   active: foo
@@ -243,7 +244,7 @@ session_lifespan:
 				assert.Len(t, auth.fwdHeaders, 1)
 				assert.Contains(t, auth.fwdHeaders, "X-My-Header")
 				assert.Empty(t, auth.fwdCookies)
-				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &PrincipalInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.NotNil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "foo", auth.sessionLifespanConf.ActiveField)
@@ -265,7 +266,7 @@ authentication_data_source:
   - header: foo-header
 payload: |
   { "foo": {{ quote .AuthenticationData }} }
-subject:
+principal:
   id: some_template`),
 			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
@@ -324,7 +325,7 @@ forward_cookies:
   - foo-cookie
 payload: |
   foo=bar
-subject:
+principal:
   id: some_template`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -342,7 +343,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -367,7 +368,7 @@ forward_cookies:
   - foo-cookie
 payload: |
   foo=bar
-subject:
+principal:
   id: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -403,7 +404,7 @@ forward_headers:
   - X-My-Header
 payload: |
   foo=bar
-subject:
+principal:
   id: some_template
 cache_ttl: 5s`),
 			config: []byte(`
@@ -441,7 +442,7 @@ forward_cookies:
   - foo-cookie
 payload: |
   foo=bar
-subject:
+principal:
   id: some_template
 cache_ttl: 5s
 session_lifespan:
@@ -485,7 +486,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
 identity_info_endpoint:
@@ -508,7 +509,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
 authentication_data_source:
@@ -524,17 +525,17 @@ authentication_data_source:
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
-		"reconfiguration of subject not possible": {
+		"reconfiguration of principal not possible": {
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
-subject:
+principal:
   id: new_template
 `),
 			assert: func(t *testing.T, err error, _ *genericAuthenticator,
@@ -554,7 +555,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
 session_lifespan:
@@ -577,7 +578,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
 payload: |
@@ -600,7 +601,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
 forward_headers:
@@ -623,7 +624,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
 forward_cookies:
@@ -647,7 +648,7 @@ authentication_data_source:
   - header: foo-header
 forward_headers:
   - X-My-Header
-subject:
+principal:
   id: some_template`),
 			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -913,7 +914,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		"with error while extracting subject information": {
+		"with error while extracting principal information": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e: endpoint.Endpoint{
@@ -924,7 +925,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"X-User-Data": "{{ .AuthenticationData }}",
 					},
 				},
-				sf: &SubjectInfo{IDFrom: "barfoo"},
+				sf: &PrincipalInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
@@ -958,7 +959,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.ErrorContains(t, err, "failed to extract subject")
+				require.ErrorContains(t, err, "failed to extract principal")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -975,7 +976,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
-				sf: &SubjectInfo{IDFrom: "user_id"},
+				sf: &PrincipalInfo{IDFrom: "user_id"},
 				payload: func() template.Template {
 					tpl, err := template.New("foo={{ .AuthenticationData }}")
 					require.NoError(t, err)
@@ -1036,7 +1037,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
-				sf:  &SubjectInfo{IDFrom: "user_id"},
+				sf:  &PrincipalInfo{IDFrom: "user_id"},
 				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
@@ -1071,7 +1072,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:         &SubjectInfo{IDFrom: "user_id"},
+				sf:         &PrincipalInfo{IDFrom: "user_id"},
 				fwdHeaders: []string{"X-Original-Auth"},
 				ttl:        5 * time.Second,
 			},
@@ -1129,7 +1130,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				fwdCookies:          []string{"original-auth"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
@@ -1192,7 +1193,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
 			},
@@ -1251,7 +1252,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 30 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
 			},
@@ -1425,4 +1426,39 @@ func TestGenericAuthenticatorIsInsecure(t *testing.T) {
 
 	// WHEN & THEN
 	require.False(t, auth.IsInsecure())
+}
+
+func TestGenericAuthenticatorReadResponse(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		status int
+		err    error
+	}{
+		{http.StatusOK, nil},
+		{http.StatusUnauthorized, heimdall.ErrAuthentication},
+		{http.StatusForbidden, heimdall.ErrAuthentication},
+		{http.StatusBadGateway, heimdall.ErrCommunication},
+	}
+
+	for _, tc := range tests {
+		t.Run(http.StatusText(tc.status), func(t *testing.T) {
+			// GIVEN
+			auth := &genericAuthenticator{}
+			resp := &http.Response{
+				StatusCode: tc.status,
+				Body:       io.NopCloser(bytes.NewBufferString("{}")),
+			}
+
+			// WHEN
+			_, err := auth.readResponse(resp)
+
+			// THEN
+			if tc.err != nil {
+				require.ErrorIs(t, err, tc.err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

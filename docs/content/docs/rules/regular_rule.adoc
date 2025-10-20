@@ -354,7 +354,7 @@ All steps can optionally define a step `id`. If not configured, its value is set
 - authenticator: foo
 - authenticator: bar
   config:
-    subject: anon
+    principal: anon
   # ... any further required authenticator
 # list of authorizers and contextualizers in any order
 # defining the authentication stage

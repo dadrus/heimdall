@@ -7,7 +7,7 @@ menu:
   docs:
     weight: 3
     parent: "Mechanisms"
-description: Authenticators verify the authentication status of requests and create subjects. This page  describes the available authenticator types in detail.
+description: Authenticators verify the authentication data transferred by requests and create principals out of that data. This page describes the available authenticator types in detail.
 ---
 
 :toc:
@@ -31,15 +31,15 @@ type: unauthorized
 
 == Anonymous
 
-This authenticator just creates a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
+This authenticator just creates a principal and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of principal's id by using the optional `config` property.
 
 To enable the usage of this authenticator, you have to set the `type` property to `anonymous`.
 
 Configuration using the `config` property is optional. Following properties are available:
 
-* *`subject`*: _string_ (optional, overridable)
+* *`principal`*: _string_ (optional, overridable)
 +
-Enables setting the `ID` of the created link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object to a custom value.
+Enables setting the `ID` of the created link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[`principal`] object to a custom value.
 
 .Configuration of Anonymous authenticator
 ====
@@ -48,13 +48,13 @@ Enables setting the `ID` of the created link:{{< relref "/docs/mechanisms/evalua
 id: foo
 type: anonymous
 config:
-  subject: anon
+  principal: anon
 ----
 ====
 
 == Basic Auth
 
-This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and sets the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] `ID` to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
+This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and creates a principal object with its `ID` set to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
 
 To enable the usage of this authenticator, you have to set the `type` property to `basic_auth`.
 
@@ -62,11 +62,11 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`user_id`*: _string_ (mandatory, overridable)
 +
-The identifier of the subject to be verified.
+The identifier of the principal to be verified.
 
 * *`password`*: _string_ (mandatory, overridable)
 +
-The password of the subject to be verified.
+The password of the principal to be verified.
 
 .Configuration of Basic Auth authenticator
 ====
@@ -82,7 +82,14 @@ config:
 
 == Generic
 
-This authenticator is kind of a Swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of the subject by making use of values available in cookies, headers, or query parameters of the HTTP request and communicating with the actual authentication system to perform the verification of the subject authentication status on the one hand, and to get the information about the subject on the other hand. There is however one limitation: it can only deal with JSON responses.
+This authenticator is kind of a Swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of a principal by making use of values available in cookies, headers, query parameters, or even body of the HTTP request and by communicating with the actual authentication system to perform the verification of the principal authentication status on the one hand, and to get the information about the principal on the other hand. There is however one limitation: it can only deal with JSON responses.
+
+This authenticator raises an `authentication_error` on following conditions:
+
+* no authentication data is present in the request,
+* the response received from the `identity_info_endpoint` is either `401 Unauthorized`, or `403 Forbidden`,
+* the `session_lifespan.active` property evaluates to `false`,
+* the session associated with the authentication data is not yet valid or already expired.
 
 To enable the usage of this authenticator, you have to set the `type` property to `generic`.
 
@@ -90,7 +97,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`identity_info_endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The endpoint to communicate to for the actual subject authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting if required. Query and header definitions can be templated and can make use of the `AuthenticationData` object (see below). Don't forget - this authenticator supports only JSON responses.
+The endpoint to communicate to for the actual principal authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting if required. Query and header definitions can be templated and can make use of the `AuthenticationData` object (see below). Don't forget - this authenticator supports only JSON responses.
 
 * *`authentication_data_source`*: _link:{{< relref "/docs/configuration/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (mandatory, not overridable)
 +
@@ -110,9 +117,9 @@ If the `identity_info_endpoint` API requires any cookies from the request to hei
 +
 Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with definitions required to send the extracted authentication data. The template has access to the `AuthenticationData` object only.
 
-* *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (mandatory, not overridable)
+* *`principal`*: _link:{{< relref "/docs/configuration/types.adoc#_principal" >}}[Principal]_ (mandatory, not overridable)
 +
-Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] information from the identity info endpoint response.
+Where to extract the principal information from the identity info endpoint response.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -139,7 +146,7 @@ config:
     - cookie: ory_kratos_session
   forward_cookies:
     - ory_kratos_session
-  subject:
+  principal:
     id: "identity.id"
   cache_ttl: 5m
   session_lifespan:
@@ -183,7 +190,7 @@ config:
       scheme: Bearer
   payload: |
     token={{ urlenc .AuthenticationData }}&token_type_hint=access_token
-  subject:
+  principal:
     id: sub
   cache_ttl: 5m
   session_lifespan:
@@ -220,7 +227,7 @@ config:
       scheme: Bearer
   payload: |
    { "idToken": {{ quote .AuthenticationData }} }
-  subject:
+  principal:
    id: users.0.localId
    attributes: users.0
   cache_ttl: 5m
@@ -279,9 +286,9 @@ Where to get the access token from. Defaults to retrieve it from the `Authorizat
 +
 Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.
 
-* *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
+* *`principal`*: _link:{{< relref "/docs/configuration/types.adoc#_principal" >}}[Principal]_ (optional, not overridable)
 +
-Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] information from the introspection endpoint response. If not configured `sub` is used to extract the subject `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
+Where to extract the principal information from the introspection endpoint response. If not configured `sub` is used to extract the principal `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -304,7 +311,7 @@ config:
 [source, yaml]
 ----
 id: keycloak
-type: metadata_endpoint
+type: oauth2_introspection
 config:
   metadata_endpoint:
     url: https://keycloak:8080/realms/{{ trimPrefix "https://my-auth-server/realms/" .TokenIssuer }}/.well-known/openid-configuration
@@ -377,9 +384,9 @@ Where to get the access token from. Defaults to retrieve it from the `Authorizat
 +
 Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration. If `metadata_endpoint` is used, the list of issuers is optional, as the issuer will be resolved via the auth server metadata document. Otherwise, the list of issuers is mandatory.
 
-* *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
+* *`principal`*: _link:{{< relref "/docs/configuration/types.adoc#_principal" >}}[Principal]_ (optional, not overridable)
 +
-Where to extract the subject id from the JWT, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the JWT payload are made available as attributes of the subject.
+Where to extract the principal id from the JWT, as well as which attributes to use. If not configured `sub` is used to extract the principal id and all attributes from the JWT payload are made available as attributes.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +

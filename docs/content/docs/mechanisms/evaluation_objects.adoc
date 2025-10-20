@@ -20,15 +20,19 @@ Objects represent state in the execution of a particular rule. These are the ent
 
 === Subject
 
-This object is created by an authenticator which was able to verify the authentication claim available in the request, and contains the information about the authenticated subject. It has the following properties:
+The subject represents the authenticated entity for the current request — such as a user, service, or machine. It is heimdall’s normalized form of the principal produced by a successful authenticator.
+
+Subjects are immutable objects passed between mechanisms. They are also ephemeral — they exist only for the lifetime of a single request.
+
+Each subject has the following properties:
 
 * *`ID`*: _string_
 +
-The identifier of the subject.
+The unique identifier of the subject. Its value is taken from the principal id created by an authenticator.
 
 * *`Attributes`*: _map_
 +
-Contains all attributes, which are known about the subject.
+A key-value map containing all known attributes about the subject. Its value is taken from the principal attributes created by an authenticator.
 
 Each object of this type can be thought as a JSON object. Here some examples:
 

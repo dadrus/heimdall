@@ -63,7 +63,7 @@ func TestOAuth2IntrospectionAuthenticatorCreate(t *testing.T) {
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template
 foo: bar
 `),
@@ -80,7 +80,7 @@ foo: bar
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template
 `),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
@@ -148,10 +148,10 @@ introspection_endpoint:
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
-				// assert subject factory
+				// assert principal factory
 				assert.NotNil(t, auth.sf)
-				assert.IsType(t, &SubjectInfo{}, auth.sf)
-				sess, ok := auth.sf.(*SubjectInfo)
+				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+				sess, ok := auth.sf.(*PrincipalInfo)
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
@@ -194,7 +194,7 @@ assertions:
     - foobar
   allowed_algorithms:
     - ES256
-subject:
+principal:
   id: some_claim
 cache_ttl: 5s
 `),
@@ -237,10 +237,10 @@ cache_ttl: 5s
 				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
 				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
 
-				// assert subject factory
+				// assert principal factory
 				assert.NotNil(t, auth.sf)
-				assert.IsType(t, &SubjectInfo{}, auth.sf)
-				sess, ok := auth.sf.(*SubjectInfo)
+				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+				sess, ok := auth.sf.(*PrincipalInfo)
 				assert.True(t, ok)
 				assert.Equal(t, "some_claim", sess.IDFrom)
 
@@ -294,10 +294,10 @@ metadata_endpoint:
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
-				// assert subject factory
+				// assert principal factory
 				assert.NotNil(t, auth.sf)
-				assert.IsType(t, &SubjectInfo{}, auth.sf)
-				sess, ok := auth.sf.(*SubjectInfo)
+				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+				sess, ok := auth.sf.(*PrincipalInfo)
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
@@ -371,10 +371,10 @@ metadata_endpoint:
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
-				// assert subject factory
+				// assert principal factory
 				assert.NotNil(t, auth.sf)
-				assert.IsType(t, &SubjectInfo{}, auth.sf)
-				sess, ok := auth.sf.(*SubjectInfo)
+				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+				sess, ok := auth.sf.(*PrincipalInfo)
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
@@ -425,7 +425,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 				configured *oauth2IntrospectionAuthenticator,
@@ -445,7 +445,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template`),
 			stepID: "foo",
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
@@ -467,7 +467,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template`),
 			config: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator,
@@ -487,7 +487,7 @@ assertions:
     - foobar
   audience:
     - baz
-subject:
+principal:
   id: some_template`),
 			config: []byte(`
 assertions:
@@ -525,7 +525,7 @@ metadata_endpoint:
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
@@ -592,7 +592,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template
 cache_ttl: 5s`),
 			config: []byte(`
@@ -1154,7 +1154,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
 				ttl: &zeroTTL,
 			},
@@ -1247,7 +1247,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
 				ttl: &zeroTTL,
 			},
@@ -1332,7 +1332,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes["exp"])
 			},
 		},
-		"with error while creating subject from introspection response": {
+		"with error while creating principal from introspection response": {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
 				r: &oauth2.MetadataEndpoint{
@@ -1342,7 +1342,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &SubjectInfo{IDFrom: "foo"},
+				sf:  &PrincipalInfo{IDFrom: "foo"},
 				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
 				ttl: &zeroTTL,
 			},
@@ -1413,7 +1413,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.ErrorContains(t, err, "failed to extract subject")
+				require.ErrorContains(t, err, "failed to extract principal")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1430,7 +1430,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &SubjectInfo{IDFrom: "foo"},
+				sf:  &PrincipalInfo{IDFrom: "foo"},
 				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
 				ttl: &zeroTTL,
 			},
@@ -1496,7 +1496,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1537,7 +1537,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1610,7 +1610,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .TokenIssuer }}"}},
 				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1717,7 +1717,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &SubjectInfo{IDFrom: "sub"},
+				sf: &PrincipalInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
@@ -1803,7 +1803,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				a: oauth2.Expectation{
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &SubjectInfo{IDFrom: "sub"},
+				sf: &PrincipalInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
@@ -1894,7 +1894,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &SubjectInfo{IDFrom: "sub"},
+				sf: &PrincipalInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,

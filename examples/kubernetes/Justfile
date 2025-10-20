@@ -319,7 +319,7 @@ install-heimdall router=default_router:
 create-cluster:
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
 
-setup-cluster: create-cluster setup-charts install-lb install-cert-manager install-minio-operator install-observability-stack
+setup-cluster: create-cluster setup-charts install-lb install-cert-manager # install-minio-operator install-observability-stack
 
 install-ngnix-demo: setup-cluster (install-nginx-ingress-controller "false") (install-heimdall "nginx") (install-echo-service "nginx-route-based")
 

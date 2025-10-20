@@ -12,20 +12,22 @@ description: Rules defines what should happen to particular requests and under w
 
 :toc:
 
-You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behavior. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs.
+You can compare the relation between mechanisms and rules to the relation between a car catalog at a car dealer and an actual real car you receive. Mechanisms are what you can see and select from the catalog (though, in heimdall, you first define that catalog yourself). The rule is your finished car, built from real components with defined behavior.
+
+In that sense, when you define a rule, you specify which mechanisms it should be built from, and optionally apply some "tuning" to better fit your needs.
 
 == Rule Types
 
 Heimdall supports two types of rules:
 
-* The link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream specific rule], also called the regular rule. You can define as many regular rules, as required. These rules are dynamic by nature and can come and go together with the upstream service defining these.
+* The link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream specific rule], also called the regular rule. You can define as many regular rules as needed. These rules are dynamic by nature and can appear or disappear together with the upstream services that defines them.
 * The link:{{< relref "/docs/rules/regular_rule.adoc" >}}[default rule], which, if defined, is used by the regular rules to inherit their behavior and is also executed if no other rule matches.
 
 == Memory Footprint
 
-Even the first paragraphs compare mechanisms and the rules with a catalogue of car parts and a real car, things are a bit more complex in reality.
+Although the first paragraphs compare mechanisms and rules to car parts and a finished car, in reality things are a bit more complex.
 
-To minimize the memory footprint, heimdall instantiates all defined mechanisms on start up. And since all mechanisms are stateless, the following is happening at runtime, when the rule is loaded:
+To minimize the memory footprint, heimdall instantiates all defined mechanisms at startup. And since all mechanisms are stateless, the following is happening at runtime, when the rule is loaded:
 
 * If a rule, respectively its pipeline just references a mechanism without providing additional configuration, the already instantiated mechanism is used.
 * Otherwise, if the pipeline overrides any parts of the default mechanism configuration, a shallow copy of the referenced mechanism instance (created at start up) is created, and only those parts, which differ are replaced with new objects, representing the pipeline specific configuration.
@@ -82,7 +84,7 @@ The diagram below sketches the logic executed by heimdall for each and every inc
 
 As written above, an link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream-specific rule] is only executed if it matches an incoming request.
 
-The actual matching is primarily based on the request’s host and path, which are evaluated against the expressions defined in the loaded rules. This matching process is optimized for performance and guaranteed to run with O(log n) time complexity. Host expressions can use exact values, wildcards, globs, or regular expressions. For paths, both static segments and wildcards are supported. Wildcards may span a single segment or the remainder of the path and can be named, allowing their captured values to be reused — for example, to apply additional pattern constraints or to reference them later in the rule's pipeline. HTTP scheme and method can also be taken into account during matching.
+The actual matching is primarily based on the request’s host and path, which are evaluated against expressions defined in the loaded rules. This matching process is optimized for performance and guaranteed to run with O(log n) time complexity. Host expressions can use exact values, or wildcards. For paths, both static segments and wildcards are supported. Wildcards may span a single segment or the remainder of the path/host and, if used in path expressions, can also be named. The latter allows their captured values to be reused — for example, to apply additional pattern constraints or to reference them later in the rule's pipeline. HTTP scheme and method can also be taken into account during matching.
 
 The values used for matching — host, path, scheme, and method — are typically extracted directly from the incoming HTTP request. If link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configured to do so], heimdall can instead rely on values from standard `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri`, and `X-Forwarded-Method` headers.
 
@@ -98,7 +100,7 @@ In principle, there is a need to differentiate two things:
 
 This is comparable to the polymorphism concept in programming languages. So, how does it work?
 
-Imagine, the concept of a rule is e.g. an interface written in Java defining the following methods:
+Imagine the concept of a rule as a Java interface defining the following methods:
 
 [source, java]
 ----
@@ -128,7 +130,7 @@ try {
   // further logic related to response creation
 } catch(Exception e) {
   // execution of the error pipeline
-  rule.handleError(req)
+  rule.handleError(req, e)
 
   // further logic related to response creation
 }
@@ -136,7 +138,7 @@ try {
 
 with `findMatchingRule` returning a specific instance of a class implementing our `Rule` interface matching the request.
 
-Since there is some default behavior in place, like error handling, if the error pipeline is empty, and some stages of the authentication & authorization pipeline is optional, internally, there is some kind of base rule in place, all other rules inherit from. So something like shown in the snippet below.
+Since default behavior is available for cases such as empty error pipelines or optional authentication & authorization pipeline stages, internally, there is some kind of base rule in place, all other rules inherit from. So something like shown in the snippet below
 
 [source, java]
 ----
@@ -144,7 +146,9 @@ public abstract class BaseRule implements Rule {
   public abstract void executeAuthenticationStage(req Request)
   public void executeAuthorizationStage(req Request) {}
   public void executeFinalizationStage(req Request) {}
-  public void handleError(req Request) { handlerErrorDefault(req) }
+  public void handleError(req Request, e Exception) {
+    handlerErrorDefault(req, e)
+  }
 }
 ----
 
@@ -165,7 +169,7 @@ public class DefaultRule extends BaseRule {
   public void executeAuthenticationStage(req Request) { ... }
   public void executeAuthorizationStage(req Request) { ... }
   public void executeFinalizationStage(req Request) { ... }
-  public void handleError(req Request) { ... }
+  public void handleError(req Request, e Exception) { ... }
 }
 ----
 
@@ -189,4 +193,4 @@ public class SpecificRule extends DefaultRule {
 }
 ----
 
-NOTE: You cannot override a single mechanism of a particular stage. As soon as you define a single mechanism in a pipeline, belonging to the one or the other stage, the entire stage is overridden.
+NOTE: You cannot override individual mechanisms within a stage. Once you define any mechanism for a given stage in a pipeline, the entire stage definition replaces the inherited one.
