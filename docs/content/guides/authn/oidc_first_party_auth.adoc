@@ -70,7 +70,7 @@ mechanisms: # <2>
         - cookie: SESSION
       forward_cookies:
         - SESSION
-      subject:
+      principal:
         id: "user"
 
   authorizers:

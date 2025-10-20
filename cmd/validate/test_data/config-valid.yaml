@@ -56,7 +56,7 @@ mechanisms:
             give_up_after: 2s
         authentication_data_source:
           - cookie: ory_kratos_session
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 10m
@@ -91,7 +91,7 @@ mechanisms:
             - bar
           audience:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: sub
     - id: introspection_authenticator2
@@ -131,7 +131,7 @@ mechanisms:
             - bar
           audience:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: sub
     - id: jwt_authenticator1
@@ -168,7 +168,7 @@ mechanisms:
             - RSA
           issuers:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 5m

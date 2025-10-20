@@ -585,18 +585,18 @@
         }
       }
     },
-    "subjectConfiguration": {
-      "description": "Configuration of where to get subject information/attributes from",
+    "principalConfiguration": {
+      "description": "Configuration of where to get principal information/attributes from",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "attributes": {
-          "description": "The `attributes` field in the Heimdall's subject object is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
+          "description": "The `attributes` field in the Heimdall's principal object is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string",
           "default": "@this"
         },
         "id": {
-          "description": "The `id` field in the Heimdall's subject object is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
+          "description": "The `id` field in the Heimdall's principal object is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string"
         }
       }
@@ -1256,8 +1256,8 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "subject": {
-              "description": "Sets the name/id of the anonymous subject.",
+            "principal": {
+              "description": "Sets the name/id of the anonymous principal.",
               "type": "string",
               "examples": [
                 "guest",
@@ -1303,7 +1303,7 @@
           "required": [
             "identity_info_endpoint",
             "authentication_data_source",
-            "subject"
+            "principal"
           ],
           "properties": {
             "identity_info_endpoint": {
@@ -1332,8 +1332,8 @@
               "description": "The Go template with access to heimdall. Request and Subject used for request's HTTP body generation",
               "type": "string"
             },
-            "subject": {
-              "$ref": "#/definitions/subjectConfiguration"
+            "principal": {
+              "$ref": "#/definitions/principalConfiguration"
             },
             "cache_ttl": {
               "type": "string",
@@ -1394,8 +1394,8 @@
             "assertions": {
               "$ref": "#/definitions/assertionRequirements"
             },
-            "subject": {
-              "$ref": "#/definitions/subjectConfiguration"
+            "principal": {
+              "$ref": "#/definitions/principalConfiguration"
             },
             "cache_ttl": {
               "type": "string",
@@ -1453,8 +1453,8 @@
             "assertions": {
               "$ref": "#/definitions/assertionRequirements"
             },
-            "subject": {
-              "$ref": "#/definitions/subjectConfiguration"
+            "principal": {
+              "$ref": "#/definitions/principalConfiguration"
             },
             "cache_ttl": {
               "type": "string",
@@ -1753,7 +1753,7 @@
       }
     },
     "finalizerJwt": {
-      "description": "Creates a JWT Token from the available subject and request information to be passed to the upstream service",
+      "description": "Creates a JWT Token from the available Subject and request information to be passed to the upstream service",
       "type": "object",
       "additionalProperties": false,
       "required": [

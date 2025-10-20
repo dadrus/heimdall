@@ -157,7 +157,7 @@ mechanisms:
         - cookie: ory_kratos_session
       forward_cookies:
         - ory_kratos_session
-      subject:
+      principal:
         attributes: "@this"
         id: "identity.id"
   - id: hydra_authenticator
@@ -187,7 +187,7 @@ mechanisms:
           - bar
         audience:
           - bla
-      subject:
+      principal:
         attributes: "@this"
         id: "sub"
   - id: jwt_authenticator
@@ -225,7 +225,7 @@ mechanisms:
           - foo
         allowed_algorithms:
           - RS256
-      subject:
+      principal:
         attributes: "@this"
         id: "identity.id"
       cache_ttl: 5m

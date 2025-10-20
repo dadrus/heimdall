@@ -61,11 +61,11 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		configure func(t *testing.T, s *SubjectInfo)
+		configure func(t *testing.T, s *PrincipalInfo)
 		assert    func(t *testing.T, err error, sub *subject.Subject)
 	}{
-		"subject is extracted and attributes are the whole object": {
-			configure: func(t *testing.T, s *SubjectInfo) {
+		"principal is extracted and attributes are the whole object": {
+			configure: func(t *testing.T, s *PrincipalInfo) {
 				t.Helper()
 
 				s.IDFrom = "subject"
@@ -81,8 +81,8 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				assert.Equal(t, attrs, sub.Attributes)
 			},
 		},
-		"subject is extracted and attributes are the nested object": {
-			configure: func(t *testing.T, s *SubjectInfo) {
+		"principal is extracted and attributes are the nested object": {
+			configure: func(t *testing.T, s *PrincipalInfo) {
 				t.Helper()
 
 				s.IDFrom = "string_slice.1"
@@ -103,7 +103,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			},
 		},
 		"attributes could no be extracted": {
-			configure: func(t *testing.T, s *SubjectInfo) {
+			configure: func(t *testing.T, s *PrincipalInfo) {
 				t.Helper()
 
 				s.IDFrom = "subject"
@@ -115,8 +115,8 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				require.ErrorContains(t, err, "could not extract attributes")
 			},
 		},
-		"subject could not be extracted": {
-			configure: func(t *testing.T, s *SubjectInfo) {
+		"principal could not be extracted": {
+			configure: func(t *testing.T, s *PrincipalInfo) {
 				t.Helper()
 
 				s.IDFrom = "foo"
@@ -124,17 +124,17 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 				require.Error(t, err)
-				require.ErrorContains(t, err, "could not extract subject")
+				require.ErrorContains(t, err, "could not extract principal")
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			s := SubjectInfo{}
+			s := PrincipalInfo{}
 			tc.configure(t, &s)
 
 			// WHEN
-			sub, err := s.CreateSubject(raw)
+			sub, err := s.CreatePrincipal(raw)
 
 			// THEN
 			tc.assert(t, err, sub)
