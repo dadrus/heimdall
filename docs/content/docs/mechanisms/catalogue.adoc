@@ -56,14 +56,14 @@ mechanisms:
   - id: anon3
     type: anonymous
     config:
-      subject: anon
+      principal: anon
   - id: anon4
     type: anonymous
     config:
-      subject: bla
+      principal: bla
 ----
 
-The above snippet configures four different instances of the anonymous authenticator mechanism, with `anon1` and `anon2` being configured identically (as no configuration is provided), and `anon3` and `anon4` being different in their configuration. Since the first two mentioned behave the same way (both will set the Subject ID to `anonymous`), there is actually no need to define two instances of them.
+The above snippet configures four different instances of the anonymous authenticator mechanism, with `anon1` and `anon2` being configured identically (as no configuration is provided), and `anon3` and `anon4` being different in their configuration. Since the first two mentioned behave the same way (both will set the principal ID to `anonymous`), there is actually no need to define two instances of them.
 
 == Example
 

@@ -108,14 +108,14 @@ providers:
 <2> This configuration instructs heimdall to trust `X-Forwarded-*` headers from any source. We need this for integration with Traefik, which uses these headers while forwarding requests to heimdall. The IP address used depends on your local Docker configuration.
 +
 WARNING: Never use this in production - always restrict trusted IPs instead! Refer to the documentation on the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies] property and link:{{< relref "/docs/operations/security.adoc#_http_header_security_considerations" >}}[Security Considerations] for more details.
-<3> Here, we define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] to be used in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules]. In this case, we define authenticators, an authorizer, and finalizers.
+<3> Here, we define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] — reusable building blocks — to be used in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules]. In this case, we define authenticators, an authorizer, and finalizers.
 <4> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_unauthorized" >}}[unauthorized]` authenticator named `deny_all`, which rejects all requests.
-<5> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous]` authenticator named `anon`, which allows any request and creates a subject with the ID set to `anonymous`. You can find more information about the subject and other objects link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].
-<6> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With this configuration, it will check if a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint. It will reject requests without a valid JWT or create a subject with the `sub` claim set to the token's `sub` value. All other claims will also be added to the subject’s attributes.
+<5> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous]` authenticator named `anon`, which allows any request and creates a link:{{< relref "/docs/configuration/types/#_principal">}}[`principal`] with its `id` set to `anonymous`.
+<6> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With this configuration, it will check if a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint. It will reject requests without a valid JWT or create a link:{{< relref "/docs/configuration/types/#_principal">}}[`principal`] with its `id` set to the token's `sub` value and its `attribute` property containing all the available claims.
 <7> Here, we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `opa`. Note how we allow for the overriding of particular settings, which will be specified below when we define the rules.
-<8> The following lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. This configuration will generate a JWT from the subject object with standard claims, setting the `sub` claim to the subject's ID. The key material used for signing is pulled from the referenced key store.
+<8> The following lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. This configuration will generate a JWT from the link:{{< relref "/docs/mechanisms/evaluation_objects/#_subject">}}[`Subject`] object with the standard claims and the `sub` claim set to the ID of the default principal from the created `Subject` object. The key material used for signing is pulled from the referenced key store.
 <9> These two lines conclude the definition of our mechanisms catalogue and define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_noop" >}}[noop]` finalizer, which, as the name implies, does nothing.
-<10> With the mechanisms catalogue in place, we can now define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule]. This rule will be triggered if no other rule matches the request. It also acts as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for defining regular (upstream service-specific) rules. This rule defines a secure default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline], which denies any request using the `deny_all` authenticator. If overridden by a regular rule, it will create a JWT using the `jwt` finalizer.
+<10> With the mechanisms catalogue in place, we can now define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule]. This rule will be used if no other rule matches the request. It also acts as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for defining regular (upstream service-specific) rules. This rule defines a secure default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline], which denies any request using the `deny_all` authenticator. If overridden by a regular rule, it will create a JWT using the `jwt` finalizer.
 <11> The last few lines configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which allows loading regular rules from the file system. The provider is also configured to watch for changes, so you can modify the rules in real time.
 
 . Create a file named `signer.pem` with the following content. This file is our key store with a private key, which you’ll see referenced in the configuration above.
@@ -240,7 +240,7 @@ In addition, create a file named `jwks.json` containing the public key needed to
 +
 We will place it in the `/var/www/nginx` folder, as mentioned earlier, when we set up our environment.
 
-. Now, let's configure the environment. To run **heimdall as a proxy**, create or modify a `docker-compose.yaml` file. Be sure to update it with the correct paths to your `heimdall-config.yaml`, `upstream-rules.yaml`, `policy.rego`, `idp.nginx`, and `jwks.json` files created earlier.
+. Now, let's configure the environment. To run **heimdall as a proxy**, create a `docker-compose.yaml` file. Be sure to update it with the correct paths to your `heimdall-config.yaml`, `upstream-rules.yaml`, `policy.rego`, `idp.nginx`, and `jwks.json` files created earlier.
 +
 [source, yaml]
 ----
@@ -279,7 +279,7 @@ NOTE: We're using the `--insecure` flag here to simplify our setup, which disabl
 <3> This section configures our NGINX service, which mimics an IDP system and exposes a JWKS endpoint with our key material.
 <4> These lines configure our OPA instance to use the authorization policy.
 
-. Alternatively, if you prefer to implement **EAA with heimdall**, create or modify the following `docker-compose-eaa.yaml` file. Be sure to update it with the correct paths to the `heimdall-config.yaml`, `upstream-rules.yaml`, `policy.rego`, `idp.nginx`, and `jwks.json` files from above.
+. Alternatively, if you prefer to implement **EAA with heimdall**, create the following `docker-compose-eaa.yaml` file. Be sure to update it with the correct paths to the `heimdall-config.yaml`, `upstream-rules.yaml`, `policy.rego`, `idp.nginx`, and `jwks.json` files from above.
 +
 [source, yaml]
 ----
@@ -333,7 +333,7 @@ services:
     - ./policy.rego:/etc/opa/policies/policy.rego:ro
 ----
 +
-<1> These lines configure Traefik, which is responsible for dispatching incoming requests and forwarding them to heimdall before routing to the target service. We use the ForwardAuth middleware here, which requires additional configuration at the route level.
+<1> These lines configure Traefik, which is responsible for dispatching incoming requests and forwarding them to heimdall before routing to the target service. We use the `ForwardAuth` middleware here, which requires additional configuration at the route level.
 <2> Here we configure Traefik to forward requests to heimdall.
 <3> These lines configure heimdall to use our configuration, key store, and rule file, and to run in decision operation mode.
 +

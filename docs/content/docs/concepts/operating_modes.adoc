@@ -70,7 +70,7 @@ X-Forwarded-Host: my-backend-service
 Some payload
 ----
 
-And there is a rule, which allows anonymous requests and sets a header with subject id set to `anonymous` like this
+And there is a rule, which allows anonymous requests and sets a `X-User-ID` header set to `anonymous` like this
 
 [source, yaml]
 ----
@@ -143,7 +143,7 @@ Host: heimdall:4456
 Some payload
 ----
 
-And there is a rule, which allows anonymous requests and sets a header with subject id set to `anonymous` like this
+And there is a rule, which allows anonymous requests and sets a `X-User-ID` header to `anonymous` like this
 
 [source, yaml]
 ----
