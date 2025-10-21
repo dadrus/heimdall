@@ -62,7 +62,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		configure func(t *testing.T, s *PrincipalInfo)
-		assert    func(t *testing.T, err error, sub *subject.Subject)
+		assert    func(t *testing.T, err error, sub *subject.Principal)
 	}{
 		"principal is extracted and attributes are the whole object": {
 			configure: func(t *testing.T, s *PrincipalInfo) {
@@ -70,7 +70,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 				s.IDFrom = "subject"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub *subject.Principal) {
 				t.Helper()
 				require.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
@@ -88,7 +88,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				s.IDFrom = "string_slice.1"
 				s.AttributesFrom = "complex.nested"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub *subject.Principal) {
 				t.Helper()
 				require.NoError(t, err)
 				assert.Equal(t, "val2", sub.ID)
@@ -109,7 +109,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				s.IDFrom = "subject"
 				s.AttributesFrom = "foobar"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Principal) {
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "could not extract attributes")
@@ -121,7 +121,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 				s.IDFrom = "foo"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Principal) {
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "could not extract principal")
@@ -134,10 +134,10 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			tc.configure(t, &s)
 
 			// WHEN
-			sub, err := s.CreatePrincipal(raw)
+			principal, err := s.CreatePrincipal(raw)
 
 			// THEN
-			tc.assert(t, err, sub)
+			tc.assert(t, err, principal)
 		})
 	}
 }

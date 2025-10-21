@@ -21,5 +21,5 @@ import (
 )
 
 type PrincipalFactory interface {
-	CreatePrincipal(rawData []byte) (*subject.Subject, error)
+	CreatePrincipal(rawData []byte) (*subject.Principal, error)
 }
