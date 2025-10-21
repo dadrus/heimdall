@@ -357,7 +357,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "no required header present", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"base64 decoding error": {
@@ -381,7 +381,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "base64 decoding error", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"malformed encoding": {
@@ -406,7 +406,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "malformed encoding", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"invalid user id": {
@@ -431,7 +431,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "invalid user id", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"invalid password": {
@@ -456,7 +456,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "invalid password", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"valid credentials": {
@@ -473,7 +473,6 @@ password: bar`))
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, sub)
 
 				require.Equal(t, "foo", sub.ID)
 				assert.NotNil(t, sub.Attributes)
@@ -496,11 +495,13 @@ password: bar`))
 			ctx.EXPECT().Context().Return(t.Context())
 			tc.configureContext(t, ctx)
 
+			var sub subject.Subject
+
 			// WHEN
-			sub, err := auth.Execute(ctx)
+			err = auth.Execute(ctx, &sub)
 
 			// THEN
-			tc.assert(t, err, sub)
+			tc.assert(t, err, &sub)
 		})
 	}
 }

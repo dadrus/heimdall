@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -71,19 +72,20 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 		captures[k] = unescape(v, r.slashesHandling)
 	}
 
+	sub := &subject.Subject{}
+
 	// authenticators
-	sub, err := r.sc.Execute(ctx)
-	if err != nil {
+	if err := r.sc.Execute(ctx, sub); err != nil {
 		return nil, r.eh.Execute(ctx, err)
 	}
 
 	// authorizers & contextualizer
-	if err = r.sh.Execute(ctx, sub); err != nil {
+	if err := r.sh.Execute(ctx, sub); err != nil {
 		return nil, r.eh.Execute(ctx, err)
 	}
 
 	// finalizers
-	if err = r.fi.Execute(ctx, sub); err != nil {
+	if err := r.fi.Execute(ctx, sub); err != nil {
 		return nil, r.eh.Execute(ctx, err)
 	}
 

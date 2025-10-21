@@ -81,7 +81,7 @@ type anonymousAuthenticator struct {
 	subject *subject.Subject
 }
 
-func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorAnonymous).
@@ -89,7 +89,10 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	return a.subject, nil
+	sub.ID = a.subject.ID
+	sub.Attributes = a.subject.Attributes
+
+	return nil
 }
 
 func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {

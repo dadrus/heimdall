@@ -29,16 +29,13 @@ import (
 
 type compositeSubjectCreator []subjectCreator
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
-	var (
-		sub *subject.Subject
-		err error
-	)
+	var err error
 
 	for idx, a := range ca {
-		sub, err = a.Execute(ctx)
+		err = a.Execute(ctx, sub)
 		if err != nil {
 			logger.Warn().Err(err).Msg("Pipeline step execution failed")
 
@@ -59,8 +56,8 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject
 
 		accesscontext.SetSubject(ctx.Context(), sub.ID)
 
-		return sub, nil
+		return nil
 	}
 
-	return nil, err
+	return err
 }

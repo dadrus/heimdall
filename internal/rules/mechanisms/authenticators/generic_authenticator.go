@@ -118,7 +118,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorGeneric).
@@ -128,7 +128,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Su
 
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to get authentication data from request").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -136,18 +136,21 @@ func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Su
 
 	payload, err := a.getPrincipalInformation(ctx, authData)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreatePrincipal(payload)
+	principal, err := a.sf.CreatePrincipal(payload)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract principal information from response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub.ID = principal.ID
+	sub.Attributes = principal.Attributes
+
+	return nil
 }
 
 func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {

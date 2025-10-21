@@ -20,7 +20,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -43,8 +42,8 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 				auth1 := rulemocks.NewSubjectCreatorMock(t)
 				auth2 := rulemocks.NewSubjectCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(nil, errors.New("test error"))
-				auth2.EXPECT().Execute(ctx).Return(sub, nil)
+				auth1.EXPECT().Execute(ctx, sub).Return(errors.New("test error"))
+				auth2.EXPECT().Execute(ctx, sub).Return(nil)
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -55,13 +54,13 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			},
 		},
 		"no fallback due to tls error": {
-			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, _ *subject.Subject) compositeSubjectCreator {
+			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, sub *subject.Subject) compositeSubjectCreator {
 				t.Helper()
 
 				auth1 := rulemocks.NewSubjectCreatorMock(t)
 				auth2 := rulemocks.NewSubjectCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(nil, errors.New("test error: tls: some error"))
+				auth1.EXPECT().Execute(ctx, sub).Return(errors.New("test error: tls: some error"))
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -73,14 +72,14 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			},
 		},
 		"with fallback but both authenticators returning errors": {
-			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, _ *subject.Subject) compositeSubjectCreator {
+			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, sub *subject.Subject) compositeSubjectCreator {
 				t.Helper()
 
 				auth1 := rulemocks.NewSubjectCreatorMock(t)
 				auth2 := rulemocks.NewSubjectCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(nil, errors.New("test error 1"))
-				auth2.EXPECT().Execute(ctx).Return(nil, errors.New("test error 2"))
+				auth1.EXPECT().Execute(ctx, sub).Return(errors.New("test error 1"))
+				auth2.EXPECT().Execute(ctx, sub).Return(errors.New("test error 2"))
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -98,7 +97,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 				auth1 := rulemocks.NewSubjectCreatorMock(t)
 				auth2 := rulemocks.NewSubjectCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(sub, nil)
+				auth1.EXPECT().Execute(ctx, sub).Return(nil)
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -119,14 +118,10 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			auth := tc.subjectCreator(t, ctx, sub)
 
 			// WHEN
-			rSub, err := auth.Execute(ctx)
+			err := auth.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err)
-
-			if err == nil {
-				assert.Equal(t, sub, rSub)
-			}
 		})
 	}
 }

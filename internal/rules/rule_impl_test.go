@@ -22,12 +22,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -63,7 +63,7 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				authenticator.EXPECT().Execute(ctx).Return(nil, testErr)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
@@ -84,7 +84,7 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				authenticator.EXPECT().Execute(ctx).Return(nil, testErr)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
@@ -104,12 +104,10 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
-				sub := &subject.Subject{ID: "Foo"}
-
 				testErr := errors.New("test error")
 
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(testErr)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(testErr)
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
@@ -129,12 +127,10 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
-				sub := &subject.Subject{ID: "Foo"}
-
 				testErr := errors.New("test error")
 
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(testErr)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(testErr)
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
@@ -155,13 +151,11 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
-				sub := &subject.Subject{ID: "Foo"}
-
 				testErr := errors.New("test error")
 
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(testErr)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(testErr)
 				finalizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
@@ -181,13 +175,11 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
-				sub := &subject.Subject{ID: "Foo"}
-
 				testErr := errors.New("test error")
 
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(testErr)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(testErr)
 				finalizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
@@ -236,11 +228,9 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{
@@ -275,11 +265,9 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{
@@ -313,11 +301,9 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{
@@ -351,11 +337,9 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
@@ -381,11 +365,9 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
@@ -411,11 +393,9 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				sub := &subject.Subject{ID: "Foo"}
-
-				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
-				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
-				finalizer.EXPECT().Execute(ctx, sub).Return(nil)
+				authenticator.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.Anything).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})

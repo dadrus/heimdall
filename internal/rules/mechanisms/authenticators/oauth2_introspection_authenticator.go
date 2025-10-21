@@ -177,7 +177,7 @@ func newOAuth2IntrospectionAuthenticator(
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorOAuth2Introspection).
@@ -187,7 +187,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) 
 
 	accessToken, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "no access token present").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -195,19 +195,22 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) 
 
 	rawResp, err := a.getPrincipalInformation(ctx, accessToken)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreatePrincipal(rawResp)
+	principal, err := a.sf.CreatePrincipal(rawResp)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrInternal,
 				"failed to extract principal information from introspection response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub.ID = principal.ID
+	sub.Attributes = principal.Attributes
+
+	return nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {

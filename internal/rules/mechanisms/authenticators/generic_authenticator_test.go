@@ -1338,11 +1338,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
+			var sub subject.Subject
+
 			// WHEN
-			sub, err := tc.authenticator.Execute(ctx)
+			err := tc.authenticator.Execute(ctx, &sub)
 
 			// THEN
-			tc.assert(t, err, sub)
+			tc.assert(t, err, &sub)
 		})
 	}
 }

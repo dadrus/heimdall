@@ -57,7 +57,7 @@ func newUnauthorizedAuthenticator(app app.Context, name string) *unauthorizedAut
 	}
 }
 
-func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorUnauthorized).
@@ -65,7 +65,7 @@ func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext) (*subje
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	return nil, errorchain.
+	return errorchain.
 		NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator").
 		WithErrorContext(a)
 }

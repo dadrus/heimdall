@@ -211,18 +211,20 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	sub := &subject.Subject{ID: "anon"}
-	auth := anonymousAuthenticator{subject: sub, id: "anon_auth"}
+	exp := &subject.Subject{ID: "anon"}
+	auth := anonymousAuthenticator{subject: exp, id: "anon_auth"}
 
 	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
+	var sub subject.Subject
+
 	// WHEN
-	res, err := auth.Execute(ctx)
+	err := auth.Execute(ctx, &sub)
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, sub, res)
+	assert.Equal(t, exp, &sub)
 }
 
 func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {

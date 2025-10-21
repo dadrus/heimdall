@@ -194,7 +194,7 @@ func newJwtAuthenticator(
 	}, nil
 }
 
-func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorJWT).
@@ -204,7 +204,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "no JWT present").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -212,7 +212,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 
 	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").
 			WithErrorContext(a).
 			CausedBy(heimdall.ErrArgument).
@@ -221,18 +221,21 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 
 	rawClaims, err := a.verifyToken(ctx, token)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreatePrincipal(rawClaims)
+	principal, err := a.sf.CreatePrincipal(rawClaims)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract principal information from jwt").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub.ID = principal.ID
+	sub.Attributes = principal.Attributes
+
+	return nil
 }
 
 func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
