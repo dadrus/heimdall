@@ -21,7 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
-type subjectCreator interface {
+type principalCreator interface {
 	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error
 	IsInsecure() bool
 }

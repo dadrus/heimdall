@@ -27,7 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type compositeSubjectCreator []subjectCreator
+type compositeSubjectCreator []principalCreator
 
 func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
