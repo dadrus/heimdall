@@ -21,13 +21,15 @@ import (
 	"maps"
 	"reflect"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
+
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
+//nolint:gochecknoglobals
 var (
 	subjectType   = cel.ObjectType(reflect.TypeOf(CelSubject{}).String(), traits.ReceiverType|traits.IndexerType)
 	principalType = cel.ObjectType(reflect.TypeOf(celPrincipal{}).String(), traits.ReceiverType|traits.IndexerType)
@@ -149,12 +151,12 @@ func (c celPrincipal) ConvertToType(typeVal ref.Type) ref.Val {
 }
 
 func (c celPrincipal) Get(key ref.Val) ref.Val {
-	k, ok := key.(types.String)
+	field, ok := key.(types.String)
 	if !ok {
 		return types.NewErr("invalid field access: expected string")
 	}
 
-	switch string(k) {
+	switch string(field) {
 	case "ID":
 		return types.String(c.principal.ID)
 	case "Attributes":
@@ -162,7 +164,7 @@ func (c celPrincipal) Get(key ref.Val) ref.Val {
 	default:
 		// attributes nested access: principal.Attributes.foo
 		// if you want to allow Subject.foo.bar (not typical), handle here
-		return types.NewErr("unknown field: %s", k)
+		return types.NewErr("unknown field: %s", field)
 	}
 }
 
