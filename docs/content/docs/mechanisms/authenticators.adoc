@@ -39,7 +39,7 @@ Configuration using the `config` property is optional. Following properties are 
 
 * *`principal`*: _string_ (optional, overridable)
 +
-Enables setting the `ID` of the created link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[`principal`] object to a custom value.
+Enables setting the `ID` of the created link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[Principal] object to a custom value.
 
 .Configuration of Anonymous authenticator
 ====
@@ -54,7 +54,7 @@ config:
 
 == Basic Auth
 
-This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and creates a principal object with its `ID` set to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
+This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and creates a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[Principal] object with its `ID` set to the configured user identifier if the authentication succeeds. Otherwise, it raises an error. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
 
 To enable the usage of this authenticator, you have to set the `type` property to `basic_auth`.
 
@@ -119,7 +119,7 @@ Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[
 
 * *`principal`*: _link:{{< relref "/docs/configuration/types.adoc#_principal" >}}[Principal]_ (mandatory, not overridable)
 +
-Where to extract the principal information from the identity info endpoint response.
+Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[Principal] information from the identity info endpoint response.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -288,7 +288,7 @@ Configures the required claim assertions. Overriding on rule level is possible e
 
 * *`principal`*: _link:{{< relref "/docs/configuration/types.adoc#_principal" >}}[Principal]_ (optional, not overridable)
 +
-Where to extract the principal information from the introspection endpoint response. If not configured `sub` is used to extract the principal `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
+Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[Principal] information from the introspection endpoint response. If not configured `sub` is used to extract the principal `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -386,7 +386,7 @@ Configures the required claim assertions. Overriding on rule level is possible e
 
 * *`principal`*: _link:{{< relref "/docs/configuration/types.adoc#_principal" >}}[Principal]_ (optional, not overridable)
 +
-Where to extract the principal id from the JWT, as well as which attributes to use. If not configured `sub` is used to extract the principal id and all attributes from the JWT payload are made available as attributes.
+Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[Principal] `ID` from the JWT, as well as which attributes to use. If not configured `sub` is used to extract the principal id and all attributes from the JWT payload are made available as attributes.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +

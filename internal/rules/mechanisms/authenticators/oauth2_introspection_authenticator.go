@@ -37,8 +37,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -177,7 +177,7 @@ func newOAuth2IntrospectionAuthenticator(
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorOAuth2Introspection).
@@ -187,7 +187,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) 
 
 	accessToken, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "no access token present").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -195,19 +195,21 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext) 
 
 	rawResp, err := a.getPrincipalInformation(ctx, accessToken)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreatePrincipal(rawResp)
+	principal, err := a.sf.CreatePrincipal(rawResp)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrInternal,
 				"failed to extract principal information from introspection response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub["default"] = principal
+
+	return nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
@@ -226,7 +228,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig m
 	type Config struct {
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint" validate:"not_allowed"` //nolint:lll
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"      validate:"not_allowed"` //nolint:lll
-		SubjectInfo           *SubjectInfo                        `mapstructure:"subject"                validate:"not_allowed"` //nolint:lll
+		SubjectInfo           *PrincipalInfo                      `mapstructure:"principal"              validate:"not_allowed"` //nolint:lll
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"           validate:"not_allowed"` //nolint:lll
 		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`

@@ -52,7 +52,7 @@ packages:
     interfaces:
       errorHandler: {}
       executionCondition: {}
-      subjectCreator: {}
+      principalCreator: {}
       subjectHandler: {}
   github.com/dadrus/heimdall/internal/rules/endpoint:
     interfaces:

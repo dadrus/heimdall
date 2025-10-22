@@ -20,31 +20,30 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 )
 
-func TestCompositeSubjectCreatorExecution(t *testing.T) {
+func TestCompositePrincipalCreatorExecution(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		subjectCreator func(t *testing.T, ctx heimdall.RequestContext, sub *subject.Subject) compositeSubjectCreator
-		assert         func(t *testing.T, err error)
+		principalCreator func(t *testing.T, ctx heimdall.RequestContext, sub identity.Subject) compositeSubjectCreator
+		assert           func(t *testing.T, err error)
 	}{
 		"with fallback to second authenticator": {
-			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, sub *subject.Subject) compositeSubjectCreator {
+			principalCreator: func(t *testing.T, ctx heimdall.RequestContext, sub identity.Subject) compositeSubjectCreator {
 				t.Helper()
 
-				auth1 := rulemocks.NewSubjectCreatorMock(t)
-				auth2 := rulemocks.NewSubjectCreatorMock(t)
+				auth1 := rulemocks.NewPrincipalCreatorMock(t)
+				auth2 := rulemocks.NewPrincipalCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(nil, errors.New("test error"))
-				auth2.EXPECT().Execute(ctx).Return(sub, nil)
+				auth1.EXPECT().Execute(ctx, sub).Return(errors.New("test error"))
+				auth2.EXPECT().Execute(ctx, sub).Return(nil)
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -55,13 +54,13 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			},
 		},
 		"no fallback due to tls error": {
-			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, _ *subject.Subject) compositeSubjectCreator {
+			principalCreator: func(t *testing.T, ctx heimdall.RequestContext, sub identity.Subject) compositeSubjectCreator {
 				t.Helper()
 
-				auth1 := rulemocks.NewSubjectCreatorMock(t)
-				auth2 := rulemocks.NewSubjectCreatorMock(t)
+				auth1 := rulemocks.NewPrincipalCreatorMock(t)
+				auth2 := rulemocks.NewPrincipalCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(nil, errors.New("test error: tls: some error"))
+				auth1.EXPECT().Execute(ctx, sub).Return(errors.New("test error: tls: some error"))
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -73,14 +72,14 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			},
 		},
 		"with fallback but both authenticators returning errors": {
-			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, _ *subject.Subject) compositeSubjectCreator {
+			principalCreator: func(t *testing.T, ctx heimdall.RequestContext, sub identity.Subject) compositeSubjectCreator {
 				t.Helper()
 
-				auth1 := rulemocks.NewSubjectCreatorMock(t)
-				auth2 := rulemocks.NewSubjectCreatorMock(t)
+				auth1 := rulemocks.NewPrincipalCreatorMock(t)
+				auth2 := rulemocks.NewPrincipalCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(nil, errors.New("test error 1"))
-				auth2.EXPECT().Execute(ctx).Return(nil, errors.New("test error 2"))
+				auth1.EXPECT().Execute(ctx, sub).Return(errors.New("test error 1"))
+				auth2.EXPECT().Execute(ctx, sub).Return(errors.New("test error 2"))
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -92,13 +91,13 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			},
 		},
 		"only the first authenticator is executed": {
-			subjectCreator: func(t *testing.T, ctx heimdall.RequestContext, sub *subject.Subject) compositeSubjectCreator {
+			principalCreator: func(t *testing.T, ctx heimdall.RequestContext, sub identity.Subject) compositeSubjectCreator {
 				t.Helper()
 
-				auth1 := rulemocks.NewSubjectCreatorMock(t)
-				auth2 := rulemocks.NewSubjectCreatorMock(t)
+				auth1 := rulemocks.NewPrincipalCreatorMock(t)
+				auth2 := rulemocks.NewPrincipalCreatorMock(t)
 
-				auth1.EXPECT().Execute(ctx).Return(sub, nil)
+				auth1.EXPECT().Execute(ctx, sub).Return(nil)
 
 				return compositeSubjectCreator{auth1, auth2}
 			},
@@ -111,22 +110,18 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			sub := &subject.Subject{ID: "foo"}
+			sub := identity.Subject{"default": &identity.Principal{ID: "foo"}}
 
 			ctx := mocks.NewRequestContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
-			auth := tc.subjectCreator(t, ctx, sub)
+			auth := tc.principalCreator(t, ctx, sub)
 
 			// WHEN
-			rSub, err := auth.Execute(ctx)
+			err := auth.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err)
-
-			if err == nil {
-				assert.Equal(t, sub, rSub)
-			}
 		})
 	}
 }

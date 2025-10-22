@@ -21,7 +21,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
@@ -30,7 +30,7 @@ type conditionalSubjectHandler struct {
 	c executionCondition
 }
 
-func (h *conditionalSubjectHandler) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (h *conditionalSubjectHandler) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Debug().Str("_id", h.h.ID()).Msg("Checking execution condition")
@@ -38,7 +38,7 @@ func (h *conditionalSubjectHandler) Execute(ctx heimdall.RequestContext, sub *su
 	if logger.GetLevel() == zerolog.TraceLevel {
 		dump, err := json.Marshal(sub)
 		if err != nil {
-			logger.Trace().Err(err).Msg("Failed to dump subject")
+			logger.Trace().Err(err).Msg("Failed to dump identity")
 		} else {
 			logger.Trace().Msg("Subject: \n" + stringx.ToString(dump))
 		}

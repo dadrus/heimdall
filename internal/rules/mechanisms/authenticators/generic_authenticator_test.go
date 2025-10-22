@@ -40,7 +40,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -759,7 +759,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *genericAuthenticator)
-		assert func(t *testing.T, err error, sub *subject.Subject)
+		assert func(t *testing.T, err error, sub identity.Subject)
 	}{
 		"with failing auth data source": {
 			authenticator: &genericAuthenticator{id: "auth3"},
@@ -773,7 +773,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -808,7 +808,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -837,7 +837,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -866,7 +866,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -900,7 +900,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				responseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -952,7 +952,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1015,7 +1015,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1023,8 +1023,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 1)
 			},
 		},
 		"successful execution with positive cache hit": {
@@ -1051,7 +1051,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return([]byte(`{ "user_id": "barbar" }`), nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -1059,8 +1059,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 1)
 			},
 		},
 		"successful execution with negative cache hit and header forwarding": {
@@ -1108,7 +1108,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1116,8 +1116,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 1)
 			},
 		},
 		"execution with not active session and cookie forwarding": {
@@ -1169,7 +1169,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "active": false }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1223,7 +1223,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "iat": "2006-01-02T15:04:05.999999Z07" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1290,7 +1290,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "exp": ` + exp + ` }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1298,8 +1298,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 2)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 2)
 			},
 		},
 	} {
@@ -1337,8 +1337,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
+			sub := make(identity.Subject)
+
 			// WHEN
-			sub, err := tc.authenticator.Execute(ctx)
+			err := tc.authenticator.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, sub)

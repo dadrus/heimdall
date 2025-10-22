@@ -91,7 +91,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
-		"new factory with malformed default rule, where authenticator loading happens after subject handlers": {
+		"new factory with malformed default rule, where authenticator loading happens after identity handlers": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
@@ -643,7 +643,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
 				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
@@ -696,7 +696,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
 				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
@@ -784,7 +784,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
 				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},

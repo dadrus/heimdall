@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -378,7 +378,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.RequestContextMock, sub identity.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		"denied by expression without access to subject and request": {
@@ -386,7 +386,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ identity.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -412,7 +412,7 @@ values:
 expressions:
   - expression: "true == true"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ identity.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -458,14 +458,16 @@ expressions:
   - expression: Outputs.foo == "bar"
   - expression: Subject.ID == Values.a + Values.b
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub identity.Subject) {
 				t.Helper()
 
-				sub.ID = "barbar"
-				sub.Attributes = map[string]any{
-					"group1": []string{"admin@acme.co", "analyst@acme.co"},
-					"labels": []string{"metadata", "prod", "pii"},
-					"groupN": []string{"forever@acme.co"},
+				sub["default"] = &identity.Principal{
+					ID: "barbar",
+					Attributes: map[string]any{
+						"group1": []string{"admin@acme.co", "analyst@acme.co"},
+						"labels": []string{"metadata", "prod", "pii"},
+						"groupN": []string{"forever@acme.co"},
+					},
 				}
 
 				reqf := mocks.NewRequestFunctionsMock(t)
@@ -504,7 +506,7 @@ expressions:
 			ctx := mocks.NewRequestContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
-			sub := &subject.Subject{}
+			sub := make(identity.Subject)
 
 			tc.configureContextAndSubject(t, ctx, sub)
 

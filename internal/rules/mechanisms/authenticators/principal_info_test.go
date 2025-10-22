@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 func TestSubjectInfoCreateSubject(t *testing.T) {
@@ -39,7 +39,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 	}
 
 	type IDT struct {
-		Subject             string   `json:"subject"`
+		Subject             string   `json:"identity"`
 		SomeStringAttribute string   `json:"some_string_attribute"`
 		SomeInt64Attribute  int64    `json:"some_int_64_attribute"`
 		StringSlice         []string `json:"string_slice"`
@@ -62,15 +62,15 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		configure func(t *testing.T, s *PrincipalInfo)
-		assert    func(t *testing.T, err error, sub *subject.Subject)
+		assert    func(t *testing.T, err error, sub *identity.Principal)
 	}{
 		"principal is extracted and attributes are the whole object": {
 			configure: func(t *testing.T, s *PrincipalInfo) {
 				t.Helper()
 
-				s.IDFrom = "subject"
+				s.IDFrom = "identity"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub *identity.Principal) {
 				t.Helper()
 				require.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
@@ -88,7 +88,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				s.IDFrom = "string_slice.1"
 				s.AttributesFrom = "complex.nested"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub *identity.Principal) {
 				t.Helper()
 				require.NoError(t, err)
 				assert.Equal(t, "val2", sub.ID)
@@ -106,10 +106,10 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			configure: func(t *testing.T, s *PrincipalInfo) {
 				t.Helper()
 
-				s.IDFrom = "subject"
+				s.IDFrom = "identity"
 				s.AttributesFrom = "foobar"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *identity.Principal) {
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "could not extract attributes")
@@ -121,7 +121,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 				s.IDFrom = "foo"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *identity.Principal) {
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "could not extract principal")
@@ -134,10 +134,10 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			tc.configure(t, &s)
 
 			// WHEN
-			sub, err := s.CreatePrincipal(raw)
+			principal, err := s.CreatePrincipal(raw)
 
 			// THEN
-			tc.assert(t, err, sub)
+			tc.assert(t, err, principal)
 		})
 	}
 }

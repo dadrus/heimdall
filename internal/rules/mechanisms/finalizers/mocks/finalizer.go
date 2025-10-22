@@ -7,7 +7,7 @@ package mocks
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -83,7 +83,7 @@ func (_c *FinalizerMock_ContinueOnError_Call) RunAndReturn(run func() bool) *Fin
 }
 
 // Execute provides a mock function for the type FinalizerMock
-func (_mock *FinalizerMock) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (_mock *FinalizerMock) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	ret := _mock.Called(ctx, sub)
 
 	if len(ret) == 0 {
@@ -91,7 +91,7 @@ func (_mock *FinalizerMock) Execute(ctx heimdall.RequestContext, sub *subject.Su
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, *subject.Subject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, identity.Subject) error); ok {
 		r0 = returnFunc(ctx, sub)
 	} else {
 		r0 = ret.Error(0)
@@ -106,20 +106,20 @@ type FinalizerMock_Execute_Call struct {
 
 // Execute is a helper method to define mock.On call
 //   - ctx heimdall.RequestContext
-//   - sub *subject.Subject
+//   - sub identity.Subject
 func (_e *FinalizerMock_Expecter) Execute(ctx interface{}, sub interface{}) *FinalizerMock_Execute_Call {
 	return &FinalizerMock_Execute_Call{Call: _e.mock.On("Execute", ctx, sub)}
 }
 
-func (_c *FinalizerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, sub *subject.Subject)) *FinalizerMock_Execute_Call {
+func (_c *FinalizerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, sub identity.Subject)) *FinalizerMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 heimdall.RequestContext
 		if args[0] != nil {
 			arg0 = args[0].(heimdall.RequestContext)
 		}
-		var arg1 *subject.Subject
+		var arg1 identity.Subject
 		if args[1] != nil {
-			arg1 = args[1].(*subject.Subject)
+			arg1 = args[1].(identity.Subject)
 		}
 		run(
 			arg0,
@@ -134,7 +134,7 @@ func (_c *FinalizerMock_Execute_Call) Return(err error) *FinalizerMock_Execute_C
 	return _c
 }
 
-func (_c *FinalizerMock_Execute_Call) RunAndReturn(run func(ctx heimdall.RequestContext, sub *subject.Subject) error) *FinalizerMock_Execute_Call {
+func (_c *FinalizerMock_Execute_Call) RunAndReturn(run func(ctx heimdall.RequestContext, sub identity.Subject) error) *FinalizerMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

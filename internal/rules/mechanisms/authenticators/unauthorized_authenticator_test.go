@@ -45,12 +45,11 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	auth := newUnauthorizedAuthenticator(appCtx, "unauth")
 
 	// WHEN
-	sub, err := auth.Execute(ctx)
+	err := auth.Execute(ctx, nil)
 
 	// THEN
 	require.ErrorIs(t, err, heimdall.ErrAuthentication)
 	require.ErrorContains(t, err, "denied by authenticator")
-	assert.Nil(t, sub)
 
 	require.ErrorAs(t, err, &identifier)
 	assert.Equal(t, "unauth", identifier.ID())
