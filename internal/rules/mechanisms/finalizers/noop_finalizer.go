@@ -21,7 +21,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -57,7 +57,7 @@ type noopFinalizer struct {
 	id   string
 }
 
-func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ subject.Subject) error {
+func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerNoop).

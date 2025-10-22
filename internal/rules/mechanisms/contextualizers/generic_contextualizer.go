@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
@@ -136,19 +136,13 @@ func newGenericContextualizer(
 }
 
 //nolint:cyclop
-func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
+func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerGeneric).
 		Str("_name", c.name).
 		Str("_id", c.id).
 		Msg("Executing contextualizer")
-
-	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute generic contextualizer due to 'nil' subject").
-			WithErrorContext(c)
-	}
 
 	cch := cache.Ctx(ctx.Context())
 
@@ -250,7 +244,7 @@ func (c *genericContextualizer) ContinueOnError() bool { return c.continueOnErro
 
 func (c *genericContextualizer) callEndpoint(
 	ctx heimdall.RequestContext,
-	sub subject.Subject,
+	sub identity.Subject,
 	values map[string]string,
 	payload string,
 ) (*contextualizerData, error) {
@@ -290,7 +284,7 @@ func (c *genericContextualizer) callEndpoint(
 
 func (c *genericContextualizer) createRequest(
 	ctx heimdall.RequestContext,
-	sub subject.Subject,
+	sub identity.Subject,
 	values map[string]string,
 	payload string,
 ) (*http.Request, error) {
@@ -386,7 +380,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *
 }
 
 func (c *genericContextualizer) calculateCacheKey(
-	sub subject.Subject,
+	sub identity.Subject,
 	values map[string]string,
 	payload string,
 ) string {
@@ -416,7 +410,7 @@ func (c *genericContextualizer) calculateCacheKey(
 
 func (c *genericContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
-	sub subject.Subject,
+	sub identity.Subject,
 ) (map[string]string, string, error) {
 	var payload string
 

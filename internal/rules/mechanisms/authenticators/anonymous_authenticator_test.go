@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -211,13 +211,13 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	exp := &subject.Principal{ID: "anon"}
+	exp := &identity.Principal{ID: "anon"}
 	auth := anonymousAuthenticator{principal: exp, id: "anon_auth"}
 
 	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
-	sub := make(subject.Subject)
+	sub := make(identity.Subject)
 
 	// WHEN
 	err := auth.Execute(ctx, sub)

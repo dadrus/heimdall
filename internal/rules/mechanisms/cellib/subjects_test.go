@@ -6,7 +6,7 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 func TestSubjects(t *testing.T) {
@@ -38,12 +38,12 @@ func TestSubjects(t *testing.T) {
 			prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 			require.NoError(t, err)
 
-			sub := subject.Subject{
-				"default": &subject.Principal{
+			sub := identity.Subject{
+				"default": &identity.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "foo"},
 				},
-				"other": &subject.Principal{
+				"other": &identity.Principal{
 					ID:         "bar",
 					Attributes: map[string]any{"foo": "bar"},
 				},

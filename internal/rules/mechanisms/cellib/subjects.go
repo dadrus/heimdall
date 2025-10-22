@@ -21,7 +21,7 @@ import (
 	"maps"
 	"reflect"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
@@ -34,10 +34,10 @@ var (
 )
 
 type CelSubject struct {
-	sub subject.Subject
+	sub identity.Subject
 }
 
-func WrapSubject(sub subject.Subject) CelSubject {
+func WrapSubject(sub identity.Subject) CelSubject {
 	return CelSubject{sub: sub}
 }
 
@@ -52,7 +52,7 @@ func (c CelSubject) Value() any {
 func (c CelSubject) Equal(other ref.Val) ref.Val {
 	if otherSub, ok := other.(CelSubject); ok {
 		return types.Bool(maps.EqualFunc(c.sub, otherSub.sub,
-			func(first *subject.Principal, second *subject.Principal) bool {
+			func(first *identity.Principal, second *identity.Principal) bool {
 				return first.ID == second.ID && reflect.DeepEqual(first.Attributes, second.Attributes)
 			},
 		))
@@ -105,7 +105,7 @@ func (c CelSubject) Get(key ref.Val) ref.Val {
 }
 
 type celPrincipal struct {
-	principal *subject.Principal
+	principal *identity.Principal
 }
 
 func (c celPrincipal) Type() ref.Type {
@@ -172,7 +172,7 @@ func Subjects() cel.EnvOption {
 
 type subjectLib struct{}
 
-func (subjectLib) LibraryName() string { return "dadrus.heimdall.subject" }
+func (subjectLib) LibraryName() string { return "dadrus.heimdall.subjects" }
 
 func (subjectLib) ProgramOptions() []cel.ProgramOption { return []cel.ProgramOption{} }
 

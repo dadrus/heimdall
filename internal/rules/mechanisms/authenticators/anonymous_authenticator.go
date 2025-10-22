@@ -21,7 +21,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -69,7 +69,7 @@ func newAnonymousAuthenticator(
 	return &anonymousAuthenticator{
 		name: name,
 		id:   name,
-		principal: &subject.Principal{
+		principal: &identity.Principal{
 			ID:         conf.Principal,
 			Attributes: make(map[string]any),
 		},
@@ -81,10 +81,10 @@ type anonymousAuthenticator struct {
 	name      string
 	id        string
 	app       app.Context
-	principal *subject.Principal
+	principal *identity.Principal
 }
 
-func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
+func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorAnonymous).
@@ -123,7 +123,7 @@ func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]
 	return &anonymousAuthenticator{
 		name:      a.name,
 		id:        x.IfThenElse(len(stepID) == 0, a.id, stepID),
-		principal: &subject.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
+		principal: &identity.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
 		app:       a.app,
 	}, nil
 }

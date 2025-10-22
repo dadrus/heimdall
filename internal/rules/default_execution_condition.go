@@ -18,12 +18,12 @@ package rules
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 type defaultExecutionCondition struct{}
 
-func (c defaultExecutionCondition) CanExecuteOnSubject(_ heimdall.RequestContext, _ subject.Subject) (bool, error) {
+func (c defaultExecutionCondition) CanExecuteOnSubject(_ heimdall.RequestContext, _ identity.Subject) (bool, error) {
 	return true, nil
 }
 

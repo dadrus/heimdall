@@ -91,7 +91,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
-		"new factory with malformed default rule, where authenticator loading happens after subject handlers": {
+		"new factory with malformed default rule, where authenticator loading happens after identity handlers": {
 			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{

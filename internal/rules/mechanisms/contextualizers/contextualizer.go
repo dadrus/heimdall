@@ -18,12 +18,12 @@ package contextualizers
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 type Contextualizer interface {
 	ID() string
-	Execute(ctx heimdall.RequestContext, sub subject.Subject) error
+	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
 	WithConfig(stepID string, config map[string]any) (Contextualizer, error)
 	ContinueOnError() bool
 }

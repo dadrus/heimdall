@@ -27,7 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -107,7 +107,7 @@ func newBasicAuthAuthenticator(
 	return &auth, nil
 }
 
-func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
+func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorBasicAuth).
@@ -154,7 +154,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub subjec
 			WithErrorContext(a)
 	}
 
-	sub["default"] = &subject.Principal{
+	sub["default"] = &identity.Principal{
 		ID:         userIDAndPassword[0],
 		Attributes: a.emptyAttributes,
 	}

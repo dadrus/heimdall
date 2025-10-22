@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,37 +14,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package subject
+package identity
 
-import (
-	"crypto/sha256"
-
-	"github.com/goccy/go-json"
-)
-
-type Subject map[string]*Principal
-
-func (s Subject) ID() string {
-	if principal, ok := s["default"]; ok {
-		return principal.ID
-	}
-
-	return ""
-}
-
-func (s Subject) Attributes() map[string]any {
-	if principal, ok := s["default"]; ok {
-		return principal.Attributes
-	}
-
-	return map[string]any{}
-}
-
-func (s Subject) Hash() []byte {
-	hash := sha256.New()
-	rawSub, _ := json.Marshal(s)
-
-	hash.Write(rawSub)
-
-	return hash.Sum(nil)
+type Principal struct {
+	ID         string
+	Attributes map[string]any
 }
