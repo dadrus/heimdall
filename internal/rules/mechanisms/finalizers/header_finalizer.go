@@ -77,7 +77,7 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}, nil
 }
 
-func (f *headerFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (f *headerFinalizer) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerHeader).

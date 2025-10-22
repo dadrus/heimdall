@@ -16,22 +16,7 @@
 
 package subject
 
-import (
-	"crypto/sha256"
-
-	"github.com/goccy/go-json"
-)
-
 type Principal struct {
 	ID         string
 	Attributes map[string]any
-}
-
-func (s *Principal) Hash() []byte {
-	hash := sha256.New()
-	rawSub, _ := json.Marshal(s)
-
-	hash.Write(rawSub)
-
-	return hash.Sum(nil)
 }

@@ -164,7 +164,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig m
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerOAuth2ClientCredentials).

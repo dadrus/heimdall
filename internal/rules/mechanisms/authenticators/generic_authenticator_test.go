@@ -1024,8 +1024,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 1)
 			},
 		},
 		"successful execution with positive cache hit": {
@@ -1060,8 +1060,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 1)
 			},
 		},
 		"successful execution with negative cache hit and header forwarding": {
@@ -1117,8 +1117,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 1)
 			},
 		},
 		"execution with not active session and cookie forwarding": {
@@ -1299,8 +1299,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 2)
+				assert.Equal(t, "barbar", sub.ID())
+				assert.Len(t, sub.Attributes(), 2)
 			},
 		},
 	} {
@@ -1338,10 +1338,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
-			var sub subject.Subject
+			sub := make(subject.Subject)
 
 			// WHEN
-			err := tc.authenticator.Execute(ctx, &sub)
+			err := tc.authenticator.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, &sub)

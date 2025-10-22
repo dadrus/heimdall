@@ -29,7 +29,7 @@ import (
 
 type compositeSubjectCreator []principalCreator
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	var err error
@@ -54,7 +54,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub *subj
 			break
 		}
 
-		accesscontext.SetSubject(ctx.Context(), sub.ID)
+		accesscontext.SetSubject(ctx.Context(), sub.ID())
 
 		return nil
 	}

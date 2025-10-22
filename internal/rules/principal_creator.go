@@ -22,6 +22,6 @@ import (
 )
 
 type principalCreator interface {
-	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error
+	Execute(ctx heimdall.RequestContext, sub subject.Subject) error
 	IsInsecure() bool
 }

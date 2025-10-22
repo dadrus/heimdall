@@ -61,12 +61,14 @@ func TestNewCelExecutionCondition(t *testing.T) {
 func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 	t.Parallel()
 
-	sub := &subject.Subject{
-		ID: "foobar",
-		Attributes: map[string]any{
-			"group1": []string{"admin@acme.co", "analyst@acme.co"},
-			"labels": []string{"metadata", "prod", "pii"},
-			"groupN": []string{"forever@acme.co"},
+	sub := subject.Subject{
+		"default": &subject.Principal{
+			ID: "foobar",
+			Attributes: map[string]any{
+				"group1": []string{"admin@acme.co", "analyst@acme.co"},
+				"labels": []string{"metadata", "prod", "pii"},
+				"groupN": []string{"forever@acme.co"},
+			},
 		},
 	}
 

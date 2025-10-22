@@ -22,6 +22,6 @@ import (
 )
 
 type executionCondition interface {
-	CanExecuteOnSubject(ctx heimdall.RequestContext, sub *subject.Subject) (bool, error)
+	CanExecuteOnSubject(ctx heimdall.RequestContext, sub subject.Subject) (bool, error)
 	CanExecuteOnError(ctx heimdall.RequestContext, err error) (bool, error)
 }

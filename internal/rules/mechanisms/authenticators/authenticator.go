@@ -23,7 +23,7 @@ import (
 
 type Authenticator interface {
 	ID() string
-	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error
+	Execute(ctx heimdall.RequestContext, sub subject.Subject) error
 	WithConfig(stepID string, config map[string]any) (Authenticator, error)
 	IsInsecure() bool
 }

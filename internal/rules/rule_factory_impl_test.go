@@ -643,7 +643,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: config2.Matcher{Routes: []config2.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
 				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
@@ -696,7 +696,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
 				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
@@ -784,7 +784,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
 				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
 				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},

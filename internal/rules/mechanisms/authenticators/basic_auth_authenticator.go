@@ -107,7 +107,7 @@ func newBasicAuthAuthenticator(
 	return &auth, nil
 }
 
-func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorBasicAuth).
@@ -154,8 +154,10 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub *subje
 			WithErrorContext(a)
 	}
 
-	sub.ID = userIDAndPassword[0]
-	sub.Attributes = a.emptyAttributes
+	sub["default"] = &subject.Principal{
+		ID:         userIDAndPassword[0],
+		Attributes: a.emptyAttributes,
+	}
 
 	return nil
 }

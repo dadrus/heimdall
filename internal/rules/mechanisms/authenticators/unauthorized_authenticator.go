@@ -57,7 +57,7 @@ func newUnauthorizedAuthenticator(app app.Context, name string) *unauthorizedAut
 	}
 }
 
-func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorUnauthorized).

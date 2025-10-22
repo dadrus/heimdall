@@ -245,7 +245,7 @@ claims:
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				require.NotNil(t, finalizer.claims)
 				val, err := finalizer.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -294,7 +294,7 @@ claims: '{ "sub": {{ quote .Subject.ID }} }'
 				assert.Equal(t, expectedTTL, finalizer.ttl)
 				require.NotNil(t, finalizer.claims)
 				val, err := finalizer.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -580,7 +580,7 @@ claims:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				val, err := configured.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -643,7 +643,7 @@ claims:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				val, err := configured.claims.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -772,12 +772,12 @@ func TestJWTFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config         []byte
-		subject        *subject.Subject
+		subject        subject.Subject
 		configureMocks func(t *testing.T,
 			fin *jwtFinalizer,
 			ctx *heimdallmocks.RequestContextMock,
 			cch *mocks.CacheMock,
-			sub *subject.Subject)
+			sub subject.Subject)
 		assert func(t *testing.T, err error)
 	}{
 		"with 'nil' subject": {
@@ -804,9 +804,14 @@ signer:
   key_store:
     path: ` + pemFile + `
 `),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
 			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
-				cch *mocks.CacheMock, sub *subject.Subject,
+				cch *mocks.CacheMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -829,9 +834,14 @@ signer:
     path: ` + pemFile + `
 ttl: 1m
 `),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -862,9 +872,14 @@ claims: '{
   {{ quote $val }}: "baz",
   "foo": {{ .Outputs.foo | quote }}
 }'`),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -891,9 +906,14 @@ values:
   foo: '{{ .Subject.ID | quote }}'
   bar: '{{ .Outputs.bar | quote }}'
 `),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -917,9 +937,14 @@ signer:
     path: ` + pemFile + `
 claims: "foo: bar"
 `),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -946,9 +971,14 @@ signer:
     path: ` + pemFile + `
 claims: "{{ len .foobar }}"
 `),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -977,9 +1007,14 @@ claims: "{{ quote .Values.foo }}"
 values:
   foo: '{{ len .fooo }}'
 `),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
-				cch *mocks.CacheMock, _ *subject.Subject,
+				cch *mocks.CacheMock, _ subject.Subject,
 			) {
 				t.Helper()
 
@@ -1004,7 +1039,7 @@ values:
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.RequestContextMock, _ *mocks.CacheMock, _ *subject.Subject) {
+				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.RequestContextMock, _ *mocks.CacheMock, _ subject.Subject) {
 					t.Helper()
 				})
 

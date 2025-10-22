@@ -177,7 +177,7 @@ func newOAuth2IntrospectionAuthenticator(
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorOAuth2Introspection).
@@ -207,8 +207,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, 
 			CausedBy(err)
 	}
 
-	sub.ID = principal.ID
-	sub.Attributes = principal.Attributes
+	sub["default"] = principal
 
 	return nil
 }

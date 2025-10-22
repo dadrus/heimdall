@@ -100,7 +100,7 @@ values:
 
 				val, err := contextualizer.items["url"].Render(map[string]any{
 					"Values":  vals,
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://foo.bar", val)
@@ -213,12 +213,12 @@ values:
 				assert.NotEqual(t, prototype.values, configured.values)
 				require.NotNil(t, configured.values)
 				val, err := configured.values.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				resp, err := configured.items["url"].Render(map[string]any{
 					"Values":  val,
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://bar.foo", resp)
@@ -270,9 +270,9 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		contextualizer   *mapContextualizer
-		subject          *subject.Subject
+		subject          subject.Subject
 		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
-		assert           func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any)
+		assert           func(t *testing.T, err error, sub subject.Subject, outputs map[string]any)
 	}{
 		"with error in values rendering": {
 			contextualizer: &mapContextualizer{
@@ -284,13 +284,18 @@ func TestMapContextualizerExecute(t *testing.T) {
 					return values.Values{"foo": tpl}
 				}(),
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ subject.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -320,13 +325,18 @@ func TestMapContextualizerExecute(t *testing.T) {
 					}(),
 				},
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ subject.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -368,13 +378,18 @@ func TestMapContextualizerExecute(t *testing.T) {
 					}(),
 				},
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, _ subject.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)

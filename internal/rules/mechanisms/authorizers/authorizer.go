@@ -23,7 +23,7 @@ import (
 
 type Authorizer interface {
 	ID() string
-	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error
+	Execute(ctx heimdall.RequestContext, sub subject.Subject) error
 	WithConfig(stepID string, config map[string]any) (Authorizer, error)
 	ContinueOnError() bool
 }

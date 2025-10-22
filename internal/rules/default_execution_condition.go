@@ -23,7 +23,7 @@ import (
 
 type defaultExecutionCondition struct{}
 
-func (c defaultExecutionCondition) CanExecuteOnSubject(_ heimdall.RequestContext, _ *subject.Subject) (bool, error) {
+func (c defaultExecutionCondition) CanExecuteOnSubject(_ heimdall.RequestContext, _ subject.Subject) (bool, error) {
 	return true, nil
 }
 

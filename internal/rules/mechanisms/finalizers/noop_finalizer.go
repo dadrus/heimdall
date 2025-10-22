@@ -57,7 +57,7 @@ type noopFinalizer struct {
 	id   string
 }
 
-func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerNoop).

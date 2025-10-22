@@ -82,7 +82,7 @@ func (_c *SubjectHandlerMock_ContinueOnError_Call) RunAndReturn(run func() bool)
 }
 
 // Execute provides a mock function for the type SubjectHandlerMock
-func (_mock *SubjectHandlerMock) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (_mock *SubjectHandlerMock) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
 	ret := _mock.Called(ctx, sub)
 
 	if len(ret) == 0 {
@@ -90,7 +90,7 @@ func (_mock *SubjectHandlerMock) Execute(ctx heimdall.RequestContext, sub *subje
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, *subject.Subject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, subject.Subject) error); ok {
 		r0 = returnFunc(ctx, sub)
 	} else {
 		r0 = ret.Error(0)
@@ -105,20 +105,20 @@ type SubjectHandlerMock_Execute_Call struct {
 
 // Execute is a helper method to define mock.On call
 //   - ctx heimdall.RequestContext
-//   - sub *subject.Subject
+//   - sub subject.Subject
 func (_e *SubjectHandlerMock_Expecter) Execute(ctx interface{}, sub interface{}) *SubjectHandlerMock_Execute_Call {
 	return &SubjectHandlerMock_Execute_Call{Call: _e.mock.On("Execute", ctx, sub)}
 }
 
-func (_c *SubjectHandlerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, sub *subject.Subject)) *SubjectHandlerMock_Execute_Call {
+func (_c *SubjectHandlerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, sub subject.Subject)) *SubjectHandlerMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 heimdall.RequestContext
 		if args[0] != nil {
 			arg0 = args[0].(heimdall.RequestContext)
 		}
-		var arg1 *subject.Subject
+		var arg1 subject.Subject
 		if args[1] != nil {
-			arg1 = args[1].(*subject.Subject)
+			arg1 = args[1].(subject.Subject)
 		}
 		run(
 			arg0,
@@ -133,7 +133,7 @@ func (_c *SubjectHandlerMock_Execute_Call) Return(err error) *SubjectHandlerMock
 	return _c
 }
 
-func (_c *SubjectHandlerMock_Execute_Call) RunAndReturn(run func(ctx heimdall.RequestContext, sub *subject.Subject) error) *SubjectHandlerMock_Execute_Call {
+func (_c *SubjectHandlerMock_Execute_Call) RunAndReturn(run func(ctx heimdall.RequestContext, sub subject.Subject) error) *SubjectHandlerMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

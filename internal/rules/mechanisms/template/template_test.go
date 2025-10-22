@@ -48,12 +48,14 @@ func TestTemplateRender(t *testing.T) {
 		ClientIPAddresses: []string{"192.168.1.1"},
 	})
 
-	sub := &subject.Subject{
-		ID: "foo",
-		Attributes: map[string]any{
-			"name":    "bar",
-			"email":   "foo@bar.baz",
-			"complex": []string{"test1", "test2"},
+	sub := subject.Subject{
+		"default": &subject.Principal{
+			ID: "foo",
+			Attributes: map[string]any{
+				"name":    "bar",
+				"email":   "foo@bar.baz",
+				"complex": []string{"test1", "test2"},
+			},
 		},
 	}
 

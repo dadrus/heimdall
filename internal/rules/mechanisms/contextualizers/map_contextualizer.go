@@ -69,7 +69,7 @@ func (c *mapContextualizer) ContinueOnError() bool {
 	return false
 }
 
-func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerMap).
@@ -128,7 +128,7 @@ func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) 
 
 func (c *mapContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub subject.Subject,
 ) (map[string]string, error) {
 	var rendered string
 

@@ -57,7 +57,7 @@ func newAllowAuthorizer(app app.Context, name string) *allowAuthorizer {
 	}
 }
 
-func (a *allowAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (a *allowAuthorizer) Execute(ctx heimdall.RequestContext, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerAllow).

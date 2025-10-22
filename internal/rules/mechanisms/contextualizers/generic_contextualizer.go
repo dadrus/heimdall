@@ -136,7 +136,7 @@ func newGenericContextualizer(
 }
 
 //nolint:cyclop
-func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerGeneric).
@@ -250,7 +250,7 @@ func (c *genericContextualizer) ContinueOnError() bool { return c.continueOnErro
 
 func (c *genericContextualizer) callEndpoint(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*contextualizerData, error) {
@@ -290,7 +290,7 @@ func (c *genericContextualizer) callEndpoint(
 
 func (c *genericContextualizer) createRequest(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub subject.Subject,
 	values map[string]string,
 	payload string,
 ) (*http.Request, error) {
@@ -386,7 +386,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *
 }
 
 func (c *genericContextualizer) calculateCacheKey(
-	sub *subject.Subject,
+	sub subject.Subject,
 	values map[string]string,
 	payload string,
 ) string {
@@ -416,7 +416,7 @@ func (c *genericContextualizer) calculateCacheKey(
 
 func (c *genericContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub subject.Subject,
 ) (map[string]string, string, error) {
 	var payload string
 

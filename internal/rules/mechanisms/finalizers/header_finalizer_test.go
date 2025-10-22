@@ -103,7 +103,7 @@ headers:
 				assert.Equal(t, "bar", val)
 
 				val, err = finalizer.headers["bar"].Render(map[string]any{
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": subject.Subject{"default": &subject.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
@@ -291,7 +291,7 @@ func TestHeaderFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config           []byte
-		subject          *subject.Subject
+		subject          subject.Subject
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
@@ -308,7 +308,7 @@ headers:
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			subject: &subject.Subject{ID: "FooBar", Attributes: map[string]any{}},
+			subject: subject.Subject{"default": &subject.Principal{ID: "FooBar", Attributes: map[string]any{}}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -344,7 +344,7 @@ headers:
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			subject: &subject.Subject{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}},
+			subject: subject.Subject{"default": &subject.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -369,7 +369,12 @@ headers:
 				ctx.EXPECT().Request().Return(&heimdall.Request{})
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 			},
-			subject: &subject.Subject{Attributes: map[string]any{"groups": []string{"group1", "group2", "group3"}}},
+			subject: subject.Subject{
+				"default": &subject.Principal{
+					ID:         "FooBar",
+					Attributes: map[string]any{"groups": []string{"group1", "group2", "group3"}},
+				},
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 

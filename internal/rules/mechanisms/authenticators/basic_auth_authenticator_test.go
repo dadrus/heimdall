@@ -334,7 +334,7 @@ password: bar`))
 
 	for uc, tc := range map[string]struct {
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
-		assert           func(t *testing.T, err error, sub *subject.Subject)
+		assert           func(t *testing.T, err error, sub subject.Subject)
 	}{
 		"no required header present": {
 			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
@@ -345,7 +345,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -369,7 +369,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -394,7 +394,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -419,7 +419,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -444,7 +444,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -469,13 +469,14 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub subject.Subject) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.Equal(t, "foo", sub.ID)
-				assert.NotNil(t, sub.Attributes)
+				require.Equal(t, "foo", sub.ID())
+				assert.NotNil(t, sub.Attributes())
+				assert.Empty(t, sub.Attributes())
 			},
 		},
 	} {
@@ -495,13 +496,13 @@ password: bar`))
 			ctx.EXPECT().Context().Return(t.Context())
 			tc.configureContext(t, ctx)
 
-			var sub subject.Subject
+			sub := make(subject.Subject)
 
 			// WHEN
-			err = auth.Execute(ctx, &sub)
+			err = auth.Execute(ctx, sub)
 
 			// THEN
-			tc.assert(t, err, &sub)
+			tc.assert(t, err, sub)
 		})
 	}
 }

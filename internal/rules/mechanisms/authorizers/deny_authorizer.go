@@ -57,7 +57,7 @@ func newDenyAuthorizer(app app.Context, name string) *denyAuthorizer {
 	}
 }
 
-func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerDeny).

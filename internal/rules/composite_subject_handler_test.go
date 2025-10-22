@@ -34,12 +34,12 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		configureMocks func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-			second *rulemocks.SubjectHandlerMock, sub *subject.Subject)
+			second *rulemocks.SubjectHandlerMock, sub subject.Subject)
 		assert func(t *testing.T, err error)
 	}{
 		"all succeeded": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				second *rulemocks.SubjectHandlerMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -54,7 +54,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		},
 		"first fails without pipeline continuation": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				_ *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				_ *rulemocks.SubjectHandlerMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -70,7 +70,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		},
 		"first fails with pipeline continuation, second succeeds": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				second *rulemocks.SubjectHandlerMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -86,7 +86,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		},
 		"second fails without pipeline continuation": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				second *rulemocks.SubjectHandlerMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -103,7 +103,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		},
 		"second fails with pipeline continuation": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				second *rulemocks.SubjectHandlerMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -119,7 +119,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		},
 		"tls related error stops pipeline execution": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				_ *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				_ *rulemocks.SubjectHandlerMock, sub subject.Subject,
 			) {
 				t.Helper()
 
@@ -135,7 +135,11 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			sub := &subject.Subject{ID: "foo"}
+			sub := subject.Subject{
+				"default": &subject.Principal{
+					ID: "foo",
+				},
+			}
 
 			ctx := mocks.NewRequestContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
