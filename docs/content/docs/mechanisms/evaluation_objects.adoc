@@ -324,9 +324,9 @@ Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`,
 }
 ----
 
-Please note that `.Subject.ID` and `.Subject.Attribute` is a syntactic sugar for `.Subject.default.ID`, respectively `.Subject.default.Attributes`.
+NOTE: Please note that `.Subject.ID` and `.Subject.Attribute` is a syntactic sugar for `.Subject.default.ID`, respectively `.Subject.default.Attributes`.
 
-Please also note how the access to the `foo` query parameter is done. Since `.Request.URL.Query.foo` returns an array of strings, the first element is taken to render the value for the `foo_value` key.
+NOTE: Please also note how the access to the `foo` query parameter is done. Since `.Request.URL.Query.foo` returns an array of strings, the first element is taken to render the value for the `foo_value` key.
 
 This will result in the following JSON object:
 
