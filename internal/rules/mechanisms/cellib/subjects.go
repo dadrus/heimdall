@@ -85,6 +85,8 @@ func (c CelSubject) ConvertToType(typeVal ref.Type) ref.Val {
 }
 
 func (c CelSubject) Get(key ref.Val) ref.Val {
+	// CEL engine ensures it is a string
+	// nolint: forcetypeassert
 	fieldName := key.Value().(string)
 
 	switch fieldName {
@@ -146,6 +148,8 @@ func (c celPrincipal) ConvertToType(typeVal ref.Type) ref.Val {
 }
 
 func (c celPrincipal) Get(key ref.Val) ref.Val {
+	// CEL engine ensures it is a string
+	// nolint: forcetypeassert
 	fieldName := key.Value().(string)
 
 	switch fieldName {
