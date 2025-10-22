@@ -14,14 +14,37 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package identity
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"crypto/sha256"
+
+	"github.com/goccy/go-json"
 )
 
-type subjectCreator interface {
-	Execute(ctx heimdall.RequestContext) (*subject.Subject, error)
-	IsInsecure() bool
+type Subject map[string]*Principal
+
+func (s Subject) ID() string {
+	if principal, ok := s["default"]; ok {
+		return principal.ID
+	}
+
+	return ""
+}
+
+func (s Subject) Attributes() map[string]any {
+	if principal, ok := s["default"]; ok {
+		return principal.Attributes
+	}
+
+	return map[string]any{}
+}
+
+func (s Subject) Hash() []byte {
+	hash := sha256.New()
+	rawSub, _ := json.Marshal(s)
+
+	hash.Write(rawSub)
+
+	return hash.Sum(nil)
 }

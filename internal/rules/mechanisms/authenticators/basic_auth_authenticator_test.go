@@ -29,7 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -334,7 +334,7 @@ password: bar`))
 
 	for uc, tc := range map[string]struct {
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
-		assert           func(t *testing.T, err error, sub *subject.Subject)
+		assert           func(t *testing.T, err error, sub identity.Subject)
 	}{
 		"no required header present": {
 			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
@@ -345,7 +345,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -357,7 +357,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "no required header present", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"base64 decoding error": {
@@ -369,7 +369,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -381,7 +381,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "base64 decoding error", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"malformed encoding": {
@@ -394,7 +394,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -406,7 +406,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "malformed encoding", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"invalid user id": {
@@ -419,7 +419,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -431,7 +431,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "invalid user id", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"invalid password": {
@@ -444,7 +444,7 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -456,7 +456,7 @@ password: bar`))
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "invalid password", identifier.ID())
 
-				assert.Nil(t, sub)
+				assert.Empty(t, sub)
 			},
 		},
 		"valid credentials": {
@@ -469,14 +469,14 @@ password: bar`))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, sub)
 
-				require.Equal(t, "foo", sub.ID)
-				assert.NotNil(t, sub.Attributes)
+				require.Equal(t, "foo", sub.ID())
+				assert.NotNil(t, sub.Attributes())
+				assert.Empty(t, sub.Attributes())
 			},
 		},
 	} {
@@ -496,8 +496,10 @@ password: bar`))
 			ctx.EXPECT().Context().Return(t.Context())
 			tc.configureContext(t, ctx)
 
+			sub := make(identity.Subject)
+
 			// WHEN
-			sub, err := auth.Execute(ctx)
+			err = auth.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, sub)

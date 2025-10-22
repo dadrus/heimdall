@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
-type executionCondition interface {
-	CanExecuteOnSubject(ctx heimdall.RequestContext, sub identity.Subject) (bool, error)
-	CanExecuteOnError(ctx heimdall.RequestContext, err error) (bool, error)
+type principalCreator interface {
+	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
+	IsInsecure() bool
 }

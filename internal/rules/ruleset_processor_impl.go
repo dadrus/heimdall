@@ -74,7 +74,7 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *config.RuleSe
 
 func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Update of a rule set received")
+	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Update of a ruleset received")
 
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)

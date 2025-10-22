@@ -30,7 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
@@ -127,7 +127,7 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (*j
 	return fin, nil
 }
 
-func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerJwt).
@@ -137,7 +137,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt finalizer due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt finalizer due to 'nil' identity").
 			WithErrorContext(f)
 	}
 
@@ -220,7 +220,7 @@ func (f *jwtFinalizer) ID() string { return f.id }
 
 func (f *jwtFinalizer) ContinueOnError() bool { return false }
 
-func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.Subject) (string, error) {
+func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub identity.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")
 
@@ -260,7 +260,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 		}
 	}
 
-	token, err := f.signer.Sign(sub.ID, f.ttl, result)
+	token, err := f.signer.Sign(sub.ID(), f.ttl, result)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to sign token").
@@ -271,7 +271,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 	return token, nil
 }
 
-func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub *subject.Subject) string {
+func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub identity.Subject) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)

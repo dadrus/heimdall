@@ -23,22 +23,19 @@ import (
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type compositeSubjectCreator []subjectCreator
+type compositeSubjectCreator []principalCreator
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
-	var (
-		sub *subject.Subject
-		err error
-	)
+	var err error
 
 	for idx, a := range ca {
-		sub, err = a.Execute(ctx)
+		err = a.Execute(ctx, sub)
 		if err != nil {
 			logger.Warn().Err(err).Msg("Pipeline step execution failed")
 
@@ -57,10 +54,10 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext) (*subject
 			break
 		}
 
-		accesscontext.SetSubject(ctx.Context(), sub.ID)
+		accesscontext.SetSubject(ctx.Context(), sub.ID())
 
-		return sub, nil
+		return nil
 	}
 
-	return nil, err
+	return err
 }

@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -104,7 +104,7 @@ cookies:
 				assert.Equal(t, "bar", val)
 
 				val, err = finalizer.cookies["bar"].Render(map[string]any{
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
@@ -281,7 +281,7 @@ func TestCookieFinalizerExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config           []byte
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
-		createSubject    func(t *testing.T) *subject.Subject
+		createSubject    func(t *testing.T) identity.Subject
 		assert           func(t *testing.T, err error)
 	}{
 		"rendering error": {
@@ -326,10 +326,10 @@ cookies:
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			createSubject: func(t *testing.T) *subject.Subject {
+			createSubject: func(t *testing.T) identity.Subject {
 				t.Helper()
 
-				return &subject.Subject{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}
+				return identity.Subject{"default": &identity.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}}
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -342,10 +342,10 @@ cookies:
 			// GIVEN
 			createSubject := x.IfThenElse(tc.createSubject != nil,
 				tc.createSubject,
-				func(t *testing.T) *subject.Subject {
+				func(t *testing.T) identity.Subject {
 					t.Helper()
 
-					return &subject.Subject{ID: "foo", Attributes: map[string]any{}}
+					return identity.Subject{"default": &identity.Principal{ID: "foo", Attributes: map[string]any{}}}
 				})
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
