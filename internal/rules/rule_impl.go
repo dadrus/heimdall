@@ -72,7 +72,7 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 		captures[k] = unescape(v, r.slashesHandling)
 	}
 
-	sub := identity.Subject{}
+	sub := make(identity.Subject)
 
 	// authenticators
 	if err := r.sc.Execute(ctx, sub); err != nil {
