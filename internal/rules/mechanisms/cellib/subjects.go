@@ -35,12 +35,10 @@ var (
 	principalType = cel.ObjectType(reflect.TypeOf(celPrincipal{}).String(), traits.ReceiverType|traits.IndexerType)
 )
 
-type CelSubject struct {
-	sub identity.Subject
-}
+type CelSubject identity.Subject
 
 func WrapSubject(sub identity.Subject) CelSubject {
-	return CelSubject{sub: sub}
+	return CelSubject(sub)
 }
 
 func (c CelSubject) Type() ref.Type {
@@ -48,12 +46,12 @@ func (c CelSubject) Type() ref.Type {
 }
 
 func (c CelSubject) Value() any {
-	return c.sub
+	return identity.Subject(c)
 }
 
 func (c CelSubject) Equal(other ref.Val) ref.Val {
 	if otherSub, ok := other.(CelSubject); ok {
-		return types.Bool(maps.EqualFunc(c.sub, otherSub.sub,
+		return types.Bool(maps.EqualFunc(c, otherSub,
 			func(first *identity.Principal, second *identity.Principal) bool {
 				return first.ID == second.ID && reflect.DeepEqual(first.Attributes, second.Attributes)
 			},
@@ -64,8 +62,8 @@ func (c CelSubject) Equal(other ref.Val) ref.Val {
 }
 
 func (c CelSubject) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	if reflect.TypeOf(c.sub).AssignableTo(typeDesc) {
-		return c.sub, nil
+	if reflect.TypeOf(identity.Subject(c)).AssignableTo(typeDesc) {
+		return identity.Subject(c), nil
 	}
 
 	if reflect.TypeOf(c).AssignableTo(typeDesc) {
@@ -87,22 +85,19 @@ func (c CelSubject) ConvertToType(typeVal ref.Type) ref.Val {
 }
 
 func (c CelSubject) Get(key ref.Val) ref.Val {
-	keyStr, ok := key.(types.String)
-	if !ok {
-		return types.NewErr("invalid field access: expected string")
-	}
+	fieldName := key.Value().(string)
 
-	switch string(keyStr) {
+	switch fieldName {
 	case "ID":
-		return types.String(c.sub.ID())
+		return types.String(identity.Subject(c).ID())
 	case "Attributes":
-		return types.NewStringInterfaceMap(types.DefaultTypeAdapter, c.sub.Attributes())
+		return types.NewStringInterfaceMap(types.DefaultTypeAdapter, identity.Subject(c).Attributes())
 	default:
-		if p, ok := c.sub[string(keyStr)]; ok {
+		if p, ok := identity.Subject(c)[fieldName]; ok {
 			return celPrincipal{principal: p}
 		}
 
-		return types.NewErr("unknown field: %s", keyStr)
+		return types.NewErr("unknown field: %s", fieldName)
 	}
 }
 
@@ -151,12 +146,9 @@ func (c celPrincipal) ConvertToType(typeVal ref.Type) ref.Val {
 }
 
 func (c celPrincipal) Get(key ref.Val) ref.Val {
-	field, ok := key.(types.String)
-	if !ok {
-		return types.NewErr("invalid field access: expected string")
-	}
+	fieldName := key.Value().(string)
 
-	switch string(field) {
+	switch fieldName {
 	case "ID":
 		return types.String(c.principal.ID)
 	case "Attributes":
@@ -164,7 +156,7 @@ func (c celPrincipal) Get(key ref.Val) ref.Val {
 	default:
 		// attributes nested access: principal.Attributes.foo
 		// if you want to allow Subject.foo.bar (not typical), handle here
-		return types.NewErr("unknown field: %s", field)
+		return types.NewErr("unknown field: %s", fieldName)
 	}
 }
 
