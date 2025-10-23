@@ -93,7 +93,7 @@ func newGenericContextualizer(
 		Msg("Creating contextualizer")
 
 	type Config struct {
-		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
+		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"        validate:"required"`
 		ForwardHeaders []string          `mapstructure:"forward_headers"`
 		ForwardCookies []string          `mapstructure:"forward_cookies"`
 		Payload        template.Template `mapstructure:"payload"`
@@ -201,11 +201,11 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 	}
 
 	type Config struct {
-		ForwardHeaders  []string          `mapstructure:"forward_headers"`
-		ForwardCookies  []string          `mapstructure:"forward_cookies"`
-		Payload         template.Template `mapstructure:"payload"`
-		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
-		Values          values.Values     `mapstructure:"values"`
+		ForwardHeaders []string          `mapstructure:"forward_headers"`
+		ForwardCookies []string          `mapstructure:"forward_cookies"`
+		Payload        template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
+		Values         values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
