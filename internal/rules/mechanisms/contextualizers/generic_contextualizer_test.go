@@ -106,11 +106,9 @@ payload: bar
 				assert.Empty(t, contextualizer.fwdCookies)
 				assert.Empty(t, contextualizer.fwdHeaders)
 				assert.Equal(t, defaultTTL, contextualizer.ttl)
-				assert.False(t, contextualizer.ContinueOnError())
 
 				assert.Equal(t, "with minimal valid configuration and enforced and used TLS", contextualizer.ID())
 				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
-				assert.False(t, contextualizer.ContinueOnError())
 			},
 		},
 		"with minimal valid configuration and enforced but not used TLS": {
@@ -141,7 +139,6 @@ payload: "{{ .Subject.ID }}"
 cache_ttl: 5s
 values:
   foo: "{{ .Subject.ID }}"
-continue_pipeline_on_error: true
 `),
 			assert: func(t *testing.T, err error, contextualizer *genericContextualizer) {
 				t.Helper()
@@ -171,7 +168,6 @@ continue_pipeline_on_error: true
 
 				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
 				assert.Equal(t, "with all fields configured", contextualizer.ID())
-				assert.True(t, contextualizer.ContinueOnError())
 			},
 		},
 	} {
@@ -290,8 +286,6 @@ payload: foo
 				assert.Equal(t, "with only payload reconfigured", configured.ID())
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with payload and forward_headers reconfigured": {
@@ -334,8 +328,6 @@ forward_headers:
 				assert.Equal(t, "with payload and forward_headers reconfigured", configured.ID())
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with payload, forward_headers and forward_cookies reconfigured": {
@@ -349,7 +341,6 @@ forward_headers:
 forward_cookies:
   - My-Foo-Session
 cache_ttl: 5s
-continue_pipeline_on_error: true
 `),
 			config: []byte(`
 payload: foo
@@ -383,8 +374,6 @@ forward_cookies:
 				assert.Equal(t, "with payload, forward_headers and forward_cookies reconfigured", configured.ID())
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
-				assert.True(t, prototype.ContinueOnError())
-				assert.True(t, configured.ContinueOnError())
 			},
 		},
 		"with everything possible, but values reconfigured": {
@@ -400,7 +389,6 @@ forward_cookies:
 cache_ttl: 5s
 values:
   foo: bar
-continue_pipeline_on_error: true
 `),
 			config: []byte(`
 payload: foo
@@ -409,7 +397,6 @@ forward_headers:
 forward_cookies:
   - Foo-Session
 cache_ttl: 15s
-continue_pipeline_on_error: false
 `),
 			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
@@ -438,8 +425,6 @@ continue_pipeline_on_error: false
 				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
-				assert.True(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with everything possible reconfigured and a step id": {
@@ -455,7 +440,6 @@ forward_cookies:
 cache_ttl: 5s
 values:
   foo: bar
-continue_pipeline_on_error: true
 `),
 			config: []byte(`
 payload: foo
@@ -466,7 +450,6 @@ forward_cookies:
 cache_ttl: 15s
 values:
   bar: foo
-continue_pipeline_on_error: false
 `),
 			stepID: "bar",
 			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
@@ -499,8 +482,6 @@ continue_pipeline_on_error: false
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "with everything possible reconfigured and a step id", prototype.ID())
 				assert.Equal(t, "bar", configured.ID())
-				assert.True(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {

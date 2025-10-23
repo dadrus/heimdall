@@ -37,50 +37,6 @@ func (_m *SubjectHandlerMock) EXPECT() *SubjectHandlerMock_Expecter {
 	return &SubjectHandlerMock_Expecter{mock: &_m.Mock}
 }
 
-// ContinueOnError provides a mock function for the type SubjectHandlerMock
-func (_mock *SubjectHandlerMock) ContinueOnError() bool {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for ContinueOnError")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func() bool); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// SubjectHandlerMock_ContinueOnError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContinueOnError'
-type SubjectHandlerMock_ContinueOnError_Call struct {
-	*mock.Call
-}
-
-// ContinueOnError is a helper method to define mock.On call
-func (_e *SubjectHandlerMock_Expecter) ContinueOnError() *SubjectHandlerMock_ContinueOnError_Call {
-	return &SubjectHandlerMock_ContinueOnError_Call{Call: _e.mock.On("ContinueOnError")}
-}
-
-func (_c *SubjectHandlerMock_ContinueOnError_Call) Run(run func()) *SubjectHandlerMock_ContinueOnError_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *SubjectHandlerMock_ContinueOnError_Call) Return(b bool) *SubjectHandlerMock_ContinueOnError_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *SubjectHandlerMock_ContinueOnError_Call) RunAndReturn(run func() bool) *SubjectHandlerMock_ContinueOnError_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Execute provides a mock function for the type SubjectHandlerMock
 func (_mock *SubjectHandlerMock) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	ret := _mock.Called(ctx, sub)

@@ -162,5 +162,3 @@ func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Aut
 func (a *celAuthorizer) Name() string { return a.name }
 
 func (a *celAuthorizer) ID() string { return a.id }
-
-func (a *celAuthorizer) ContinueOnError() bool { return false }

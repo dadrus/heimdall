@@ -117,7 +117,6 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub identity.Subject) bool { return sub != nil },
 				)).Return(testErr)
-				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
@@ -144,7 +143,6 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub identity.Subject) bool { return sub != nil },
 				)).Return(testErr)
-				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
@@ -175,7 +173,6 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub identity.Subject) bool { return sub != nil },
 				)).Return(testErr)
-				finalizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
@@ -205,7 +202,6 @@ func TestRuleExecute(t *testing.T) {
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub identity.Subject) bool { return sub != nil },
 				)).Return(testErr)
-				finalizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testErr).Return(errors.New("some error"))
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {

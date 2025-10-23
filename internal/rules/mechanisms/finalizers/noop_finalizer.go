@@ -88,5 +88,3 @@ func (f *noopFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fin
 func (f *noopFinalizer) Name() string { return f.name }
 
 func (f *noopFinalizer) ID() string { return f.id }
-
-func (f *noopFinalizer) ContinueOnError() bool { return false }

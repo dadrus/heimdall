@@ -52,14 +52,13 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		"first fails without pipeline continuation": {
+		"first fails": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
 				_ *rulemocks.SubjectHandlerMock, sub identity.Subject,
 			) {
 				t.Helper()
 
 				first.EXPECT().Execute(ctx, sub).Return(errors.New("first fails"))
-				first.EXPECT().ContinueOnError().Return(false)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -68,23 +67,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				assert.Equal(t, "first fails", err.Error())
 			},
 		},
-		"first fails with pipeline continuation, second succeeds": {
-			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub identity.Subject,
-			) {
-				t.Helper()
-
-				first.EXPECT().Execute(ctx, sub).Return(errors.New("first fails"))
-				first.EXPECT().ContinueOnError().Return(true)
-				second.EXPECT().Execute(ctx, sub).Return(nil)
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
-		},
-		"second fails without pipeline continuation": {
+		"second fails": {
 			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
 				second *rulemocks.SubjectHandlerMock, sub identity.Subject,
 			) {
@@ -92,29 +75,12 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 
 				first.EXPECT().Execute(ctx, sub).Return(nil)
 				second.EXPECT().Execute(ctx, sub).Return(errors.New("second fails"))
-				second.EXPECT().ContinueOnError().Return(false)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.Equal(t, "second fails", err.Error())
-			},
-		},
-		"second fails with pipeline continuation": {
-			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub identity.Subject,
-			) {
-				t.Helper()
-
-				first.EXPECT().Execute(ctx, sub).Return(nil)
-				second.EXPECT().Execute(ctx, sub).Return(errors.New("second fails"))
-				second.EXPECT().ContinueOnError().Return(true)
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
 			},
 		},
 		"tls related error stops pipeline execution": {

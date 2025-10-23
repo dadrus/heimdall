@@ -56,5 +56,3 @@ func (h *conditionalSubjectHandler) Execute(ctx heimdall.RequestContext, sub ide
 }
 
 func (h *conditionalSubjectHandler) ID() string { return h.h.ID() }
-
-func (h *conditionalSubjectHandler) ContinueOnError() bool { return h.h.ContinueOnError() }

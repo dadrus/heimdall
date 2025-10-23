@@ -108,8 +108,6 @@ cookies:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
-
-				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
 	} {
@@ -194,9 +192,6 @@ cookies:
 				val, err := configured.cookies["bar"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
-
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"new cookies and step ID provided": {
@@ -223,9 +218,6 @@ cookies:
 				val, err := configured.cookies["bar"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
-
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"empty cookies provided": {

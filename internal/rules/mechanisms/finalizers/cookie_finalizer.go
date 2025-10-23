@@ -137,5 +137,3 @@ func (f *cookieFinalizer) WithConfig(stepID string, rawConfig map[string]any) (F
 func (f *cookieFinalizer) Name() string { return f.name }
 
 func (f *cookieFinalizer) ID() string { return f.id }
-
-func (f *cookieFinalizer) ContinueOnError() bool { return false }

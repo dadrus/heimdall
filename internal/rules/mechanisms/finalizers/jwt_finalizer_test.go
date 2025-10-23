@@ -253,7 +253,6 @@ claims:
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
-				assert.False(t, finalizer.ContinueOnError())
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "foo", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
@@ -302,7 +301,6 @@ claims: '{ "sub": {{ quote .Subject.ID }} }'
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
-				assert.False(t, finalizer.ContinueOnError())
 				require.NotNil(t, finalizer.signer)
 				assert.Equal(t, "heimdall", finalizer.signer.iss)
 				assert.Equal(t, pemFile, finalizer.signer.path)
@@ -490,7 +488,6 @@ signer:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"no new configuration but with step ID": {
@@ -513,8 +510,6 @@ signer:
 				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, defaultJWTTTL, configured.ttl)
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -539,8 +534,6 @@ signer:
 				assert.Equal(t, "configuration with ttl and step ID", prototype.ID())
 				assert.Equal(t, "bar", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -585,8 +578,6 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with claims only provided", configured.ID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -615,8 +606,6 @@ values:
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with claims and values", configured.ID())
 				assert.NotEmpty(t, configured.v)
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -648,8 +637,6 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with both ttl and claims provided", configured.ID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -679,8 +666,6 @@ values:
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with values", configured.ID())
 				assert.NotEmpty(t, configured.v)
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},

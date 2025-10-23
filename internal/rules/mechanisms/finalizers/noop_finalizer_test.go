@@ -46,7 +46,6 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	assert.Equal(t, "foo", finalizer.ID())
-	assert.False(t, finalizer.ContinueOnError())
 }
 
 func TestCreateNoopFinalizerFromPrototype(t *testing.T) {

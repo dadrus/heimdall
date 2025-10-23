@@ -128,7 +128,6 @@ expressions:
 				assert.NotNil(t, auth.celEnv)
 				assert.NotEmpty(t, auth.expressions)
 				assert.Empty(t, auth.v)
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 		"with full configuration": {
@@ -148,7 +147,6 @@ expressions:
 				assert.NotNil(t, auth.celEnv)
 				assert.NotEmpty(t, auth.expressions)
 				assert.Len(t, auth.v, 1)
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 	} {
@@ -217,7 +215,6 @@ expressions:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "foo", configured.ID())
-				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 			},
 		},
 		"new values provided": {
@@ -242,8 +239,6 @@ values:
 				assert.NotEqual(t, prototype.v, configured.v)
 				assert.Len(t, configured.v, 1)
 				assert.Equal(t, "new values provided", configured.ID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"new expressions provided": {
@@ -267,8 +262,6 @@ expressions:
 				assert.Equal(t, prototype.celEnv, configured.celEnv)
 				assert.Equal(t, prototype.v, configured.v)
 				assert.Equal(t, "new expressions provided", configured.ID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"new expressions and step id provided": {
@@ -295,7 +288,6 @@ expressions:
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
-				assert.Equal(t, prototype.ContinueOnError(), configured.ContinueOnError())
 			},
 		},
 		"malformed values": {

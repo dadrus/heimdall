@@ -107,8 +107,6 @@ headers:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
-
-				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
 	} {
@@ -194,9 +192,6 @@ headers:
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
-
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"new headers and step id": {
@@ -223,9 +218,6 @@ headers:
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
-
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with unsupported attributes": {
