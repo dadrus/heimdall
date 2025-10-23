@@ -188,12 +188,7 @@ assertions:
 				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// principal settings
@@ -251,12 +246,7 @@ cache_ttl: 5s`),
 				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// principal settings
@@ -427,11 +417,7 @@ cache_ttl: 5s`),
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
 				assert.Empty(t, auth.a.TrustedIssuers)
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// principal settings
@@ -513,11 +499,7 @@ cache_ttl: 5s`),
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
 				assert.Empty(t, auth.a.TrustedIssuers)
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// principal settings

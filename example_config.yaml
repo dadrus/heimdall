@@ -96,7 +96,7 @@ mechanisms:
           scopes:
             - foo
           allowed_algorithms:
-            - RSA
+            - ES256
           issuers:
             - bla
         principal:
