@@ -90,5 +90,3 @@ func (a *denyAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Au
 func (a *denyAuthorizer) Name() string { return a.name }
 
 func (a *denyAuthorizer) ID() string { return a.id }
-
-func (a *denyAuthorizer) ContinueOnError() bool { return false }

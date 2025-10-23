@@ -70,16 +70,15 @@ type contextualizerData struct {
 }
 
 type genericContextualizer struct {
-	name            string
-	id              string
-	app             app.Context
-	e               endpoint.Endpoint
-	ttl             time.Duration
-	payload         template.Template
-	fwdHeaders      []string
-	fwdCookies      []string
-	continueOnError bool
-	v               values.Values
+	name       string
+	id         string
+	app        app.Context
+	e          endpoint.Endpoint
+	ttl        time.Duration
+	payload    template.Template
+	fwdHeaders []string
+	fwdCookies []string
+	v          values.Values
 }
 
 func newGenericContextualizer(
@@ -94,13 +93,12 @@ func newGenericContextualizer(
 		Msg("Creating contextualizer")
 
 	type Config struct {
-		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
-		ForwardHeaders  []string          `mapstructure:"forward_headers"`
-		ForwardCookies  []string          `mapstructure:"forward_cookies"`
-		Payload         template.Template `mapstructure:"payload"`
-		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
-		ContinueOnError bool              `mapstructure:"continue_pipeline_on_error"`
-		Values          values.Values     `mapstructure:"values"`
+		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"        validate:"required"`
+		ForwardHeaders []string          `mapstructure:"forward_headers"`
+		ForwardCookies []string          `mapstructure:"forward_cookies"`
+		Payload        template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
+		Values         values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -122,16 +120,15 @@ func newGenericContextualizer(
 	}
 
 	return &genericContextualizer{
-		name:            name,
-		id:              name,
-		app:             app,
-		e:               conf.Endpoint,
-		payload:         conf.Payload,
-		fwdHeaders:      conf.ForwardHeaders,
-		fwdCookies:      conf.ForwardCookies,
-		ttl:             ttl,
-		continueOnError: conf.ContinueOnError,
-		v:               conf.Values,
+		name:       name,
+		id:         name,
+		app:        app,
+		e:          conf.Endpoint,
+		payload:    conf.Payload,
+		fwdHeaders: conf.ForwardHeaders,
+		fwdCookies: conf.ForwardCookies,
+		ttl:        ttl,
+		v:          conf.Values,
 	}, nil
 }
 
@@ -204,12 +201,11 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 	}
 
 	type Config struct {
-		ForwardHeaders  []string          `mapstructure:"forward_headers"`
-		ForwardCookies  []string          `mapstructure:"forward_cookies"`
-		Payload         template.Template `mapstructure:"payload"`
-		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
-		ContinueOnError *bool             `mapstructure:"continue_pipeline_on_error"`
-		Values          values.Values     `mapstructure:"values"`
+		ForwardHeaders []string          `mapstructure:"forward_headers"`
+		ForwardCookies []string          `mapstructure:"forward_cookies"`
+		Payload        template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
+		Values         values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -229,9 +225,6 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return c.ttl }),
-		continueOnError: x.IfThenElseExec(conf.ContinueOnError != nil,
-			func() bool { return *conf.ContinueOnError },
-			func() bool { return c.continueOnError }),
 		v: c.v.Merge(conf.Values),
 	}, nil
 }
@@ -239,8 +232,6 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 func (c *genericContextualizer) Name() string { return c.name }
 
 func (c *genericContextualizer) ID() string { return c.id }
-
-func (c *genericContextualizer) ContinueOnError() bool { return c.continueOnError }
 
 func (c *genericContextualizer) callEndpoint(
 	ctx heimdall.RequestContext,

@@ -24,5 +24,4 @@ import (
 type subjectHandler interface {
 	ID() string
 	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
-	ContinueOnError() bool
 }

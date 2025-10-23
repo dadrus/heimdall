@@ -254,8 +254,6 @@ func (a *remoteAuthorizer) Name() string { return a.name }
 
 func (a *remoteAuthorizer) ID() string { return a.id }
 
-func (a *remoteAuthorizer) ContinueOnError() bool { return false }
-
 func (a *remoteAuthorizer) doAuthorize(
 	ctx heimdall.RequestContext,
 	sub identity.Subject,

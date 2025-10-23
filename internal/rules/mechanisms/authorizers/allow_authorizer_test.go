@@ -74,7 +74,6 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			prototype := newAllowAuthorizer(appCtx, uc)
-			assert.False(t, prototype.ContinueOnError())
 
 			// WHEN
 			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)

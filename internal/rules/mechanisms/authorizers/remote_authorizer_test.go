@@ -123,7 +123,6 @@ payload: "{{ .Subject.ID }}"
 
 				assert.Equal(t, "minimal valid configuration with enforced and used TLS", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 		"minimal configuration with enforced but not used TLS": {
@@ -161,7 +160,6 @@ endpoint:
 
 				assert.Equal(t, "configuration with endpoint and endpoint header", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 		"configuration with invalid expression": {
@@ -234,7 +232,6 @@ values:
 
 				assert.Equal(t, "full configuration", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 	} {
@@ -307,7 +304,6 @@ payload: bar
 				assert.Equal(t, prototype.expressions, configured.expressions)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with unknown properties": {
@@ -351,7 +347,6 @@ cache_ttl: 1s
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "with overridden empty payload", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with new config and step id": {
@@ -377,7 +372,6 @@ payload: bar
 				assert.Equal(t, "foo", configured.ID())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with invalid new expression": {
@@ -445,7 +439,6 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with everything possible": {
@@ -503,7 +496,6 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {
