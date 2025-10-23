@@ -38,50 +38,6 @@ func (_m *FinalizerMock) EXPECT() *FinalizerMock_Expecter {
 	return &FinalizerMock_Expecter{mock: &_m.Mock}
 }
 
-// ContinueOnError provides a mock function for the type FinalizerMock
-func (_mock *FinalizerMock) ContinueOnError() bool {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for ContinueOnError")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func() bool); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// FinalizerMock_ContinueOnError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContinueOnError'
-type FinalizerMock_ContinueOnError_Call struct {
-	*mock.Call
-}
-
-// ContinueOnError is a helper method to define mock.On call
-func (_e *FinalizerMock_Expecter) ContinueOnError() *FinalizerMock_ContinueOnError_Call {
-	return &FinalizerMock_ContinueOnError_Call{Call: _e.mock.On("ContinueOnError")}
-}
-
-func (_c *FinalizerMock_ContinueOnError_Call) Run(run func()) *FinalizerMock_ContinueOnError_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *FinalizerMock_ContinueOnError_Call) Return(b bool) *FinalizerMock_ContinueOnError_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *FinalizerMock_ContinueOnError_Call) RunAndReturn(run func() bool) *FinalizerMock_ContinueOnError_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Execute provides a mock function for the type FinalizerMock
 func (_mock *FinalizerMock) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	ret := _mock.Called(ctx, sub)

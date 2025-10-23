@@ -126,7 +126,6 @@ client_secret: bar
 				assert.Equal(t, clientcredentials.AuthMethodBasicAuth, finalizer.cfg.AuthMethod)
 				assert.Nil(t, finalizer.cfg.TTL)
 				assert.Empty(t, finalizer.cfg.Scopes)
-				assert.False(t, finalizer.ContinueOnError())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 			},
 		},
@@ -177,7 +176,6 @@ header:
 				assert.Len(t, finalizer.cfg.Scopes, 2)
 				assert.Contains(t, finalizer.cfg.Scopes, "foo")
 				assert.Contains(t, finalizer.cfg.Scopes, "baz")
-				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
 	} {

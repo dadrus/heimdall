@@ -225,8 +225,6 @@ func (f *jwtFinalizer) Name() string { return f.name }
 
 func (f *jwtFinalizer) ID() string { return f.id }
 
-func (f *jwtFinalizer) ContinueOnError() bool { return false }
-
 func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub identity.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")

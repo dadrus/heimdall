@@ -220,8 +220,6 @@ values:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://bar.foo", resp)
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {

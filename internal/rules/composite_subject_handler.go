@@ -40,11 +40,7 @@ func (cm compositeSubjectHandler) Execute(ctx heimdall.RequestContext, sub ident
 				return errorchain.New(heimdall.ErrInternal).CausedBy(err)
 			}
 
-			if handler.ContinueOnError() {
-				logger.Info().Msg("Error ignored. Continuing pipeline execution")
-			} else {
-				return err
-			}
+			return err
 		}
 	}
 

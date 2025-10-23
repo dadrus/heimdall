@@ -65,10 +65,6 @@ type mapContextualizer struct {
 	values values.Values
 }
 
-func (c *mapContextualizer) ContinueOnError() bool {
-	return false
-}
-
 func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().

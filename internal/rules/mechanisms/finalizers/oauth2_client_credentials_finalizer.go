@@ -111,8 +111,6 @@ func newOAuth2ClientCredentialsFinalizer(
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) ContinueOnError() bool { return false }
-
 func (f *oauth2ClientCredentialsFinalizer) Name() string { return f.name }
 
 func (f *oauth2ClientCredentialsFinalizer) ID() string { return f.id }

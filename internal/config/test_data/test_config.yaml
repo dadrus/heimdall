@@ -361,8 +361,7 @@ mechanisms:
           method: GET
           headers:
             bla: bla
-        payload: http://foo
-        continue_pipeline_on_error: true
+        payload: foo
     - id: mapping
       type: map
       config:

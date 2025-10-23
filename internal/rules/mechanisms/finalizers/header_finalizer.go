@@ -145,5 +145,3 @@ func (f *headerFinalizer) WithConfig(stepID string, rawConfig map[string]any) (F
 func (f *headerFinalizer) Name() string { return f.name }
 
 func (f *headerFinalizer) ID() string { return f.id }
-
-func (f *headerFinalizer) ContinueOnError() bool { return false }

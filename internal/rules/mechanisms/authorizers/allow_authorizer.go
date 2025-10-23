@@ -88,5 +88,3 @@ func (a *allowAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (A
 func (a *allowAuthorizer) Name() string { return a.name }
 
 func (a *allowAuthorizer) ID() string { return a.id }
-
-func (a *allowAuthorizer) ContinueOnError() bool { return false }

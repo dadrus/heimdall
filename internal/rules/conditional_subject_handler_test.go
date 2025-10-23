@@ -98,22 +98,6 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 	}
 }
 
-func TestConditionalSubjectHandlerContinueOnError(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	handler := rulemocks.NewSubjectHandlerMock(t)
-	decorator := conditionalSubjectHandler{c: nil, h: handler}
-
-	handler.EXPECT().ContinueOnError().Return(true)
-
-	// WHEN
-	ok := decorator.ContinueOnError()
-
-	// THEN
-	assert.True(t, ok)
-}
-
 func TestConditionalSubjectHandlerID(t *testing.T) {
 	t.Parallel()
 
