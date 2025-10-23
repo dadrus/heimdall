@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 22 Oct 2025 17:17:21 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 23 Oct 2025 08:19:53 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_what_is_heimdall"&gt;What is heimdall?&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
@@ -934,7 +934,6 @@ heimdall &lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="nt"&gt;--flag&lt;/s
  &lt;span class="na"&gt;url&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://profile&lt;/span&gt;
  &lt;span class="na"&gt;headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;foo&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
- &lt;span class="na"&gt;continue_pipeline_on_error&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
 
  &lt;span class="na"&gt;finalizers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt&lt;/span&gt;
