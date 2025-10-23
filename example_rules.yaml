@@ -24,7 +24,7 @@ rules:
       config:
         assertions:
           allowed_algorithms:
-            - RS256
+            - PS386
           issuers:
             - http://127.0.0.1:4444/
           scopes:
