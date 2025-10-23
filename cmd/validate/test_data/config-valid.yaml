@@ -165,7 +165,7 @@ mechanisms:
           scopes:
             - foo
           allowed_algorithms:
-            - RSA
+            - ES256
           issuers:
             - bla
         principal:
@@ -182,7 +182,7 @@ mechanisms:
           scopes:
             - foo
           allowed_algorithms:
-            - RSA
+            - ES386
           issuers:
             - bla
         validate_jwk: true
