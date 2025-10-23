@@ -29,7 +29,7 @@ Issuers to trust.
 
 * *`allowed_algorithms`*: _string array_ (optional)
 +
-Algorithms, which are trusted (according to https://datatracker.ietf.org/doc/html/rfc7518[RFC 7518]). Defaults to the following list: ES256, ES384, ES512, PS256, PS384, PS512.
+Algorithms, which are trusted (according to https://datatracker.ietf.org/doc/html/rfc7518[RFC 7518]). Defaults to the following list: ES256, ES384, ES512, PS384, PS512.
 
 * *`validity_leeway`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
