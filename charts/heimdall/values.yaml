@@ -188,23 +188,45 @@ envFrom: []
 # Optional flags for heimdall to use
 extraArgs: []
 
+# Configuration for the PodMonitor resource.
+# Even though, the podPmonitor.enabled is set to true by default, the corresponding
+# resource is only configured and deployed to the cluster if the following conditions
+# are satisfied:
+# - metrics are not disabled in heimdall's configuration. Heimdall emits metrics by default
+# - podMonitor.enabled is set to true
+# - OTEL_METRICS_EXPORTER environment variable is set to "prometheus"
+# - The CRD defining the PodMonitor schema is deployed to the cluster
 podMonitor:
-  # -- Whether to create a PodMonitor
-  enabled: false
-  # -- Set of labels to transfer from the Kubernetes Service onto the target
-  additionalLabels: {}
-  # -- Set how frequently Prometheus should scrape
+  # Whether to create a PodMonitor.
+  enabled: true
+
+  # Remove the curly braces after 'labels:' if you do want to specify additional labels
+  labels: {}
+
+  # The label to use to retrieve the job name from. Defaults to the namespace and name
+  # of the PodMonitor object (<namespace>/<name>)
+  jobLabel: ""
+
+  # Labels which are transferred from heimdall's Pod object onto the ingested metrics
+  targetLabels: [ ]
+
+  #
+  # The following settings are applied to the configured podMetricsEndpoints entry
+  #
+
+  # How frequently Prometheus should scrape
   interval: 30s
-  # -- Set timeout for scrape
+
+  # Timeout for scrape
   scrapeTimeout: 30s
-  # -- Set of labels to transfer from the Kubernetes Service onto the target
-  targetLabels: []
-  # -- MetricRelabelConfigs to apply to samples before ingestion
+
+  # MetricRelabelConfigs to apply to samples before ingestion
   metricRelabelings: []
   # - action: replace
   #   replacement: my-cluster
   #   targetLabel: cluster
-  # -- Set relabel_configs as per https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+
+  # relabel_configs as per https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
   relabelings: []
   # - action: replace
   #   replacement: my-cluster
