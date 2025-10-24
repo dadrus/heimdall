@@ -181,7 +181,11 @@ WARNING: This will also remove all `RuleSet` resources deployed to the cluster.
 
 == Configuration
 
-The following table lists the configurable parameters of the chart and their default values.
+The configuration of heimdall itself is simply added to the root of the helm values. It is **not** included in the list
+below, please refer to the [general documentation](https://dadrus.github.io/heimdall/dev/docs/operations/configuration/).
+
+
+The following table lists the other configurable parameters of the chart and their default values.
 
 [cols=".<2, .<1"]
 |===
