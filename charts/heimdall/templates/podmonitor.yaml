@@ -34,7 +34,4 @@ spec:
       {{- toYaml .Values.podMonitor.relabelings | nindent 8 }}
       {{- end }}
   jobLabel: {{ .Release.Name }}
-  namespaceSelector:
-    matchNames:
-      - {{ .Release.Namespace }}
 {{- end }}
