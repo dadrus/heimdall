@@ -184,6 +184,18 @@ WARNING: This will also remove all `RuleSet` resources deployed to the cluster.
 The configuration of heimdall itself is simply added to the root of the helm values. It is **not** included in the list
 below, please refer to the [general documentation](https://dadrus.github.io/heimdall/dev/docs/operations/configuration/).
 
+[NOTE]
+====
+It is recommended to keep heimdall-specific configuration and chart-specific configuration in separate files and supply both as value files to Helm. This is, however, not strictly required.
+
+Example:
+
+[source, bash]
+----
+helm install -f /path/to/chart-values.yaml -f /path/to/heimdall-config.yaml ...
+----
+====
+
 
 The following table lists the other configurable parameters of the chart and their default values.
 
