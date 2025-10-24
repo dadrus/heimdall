@@ -16,7 +16,7 @@ spec:
     matchLabels:
       {{- include "heimdall.selectorLabels" $data | nindent 6 }}
   podMetricsEndpoints:
-    - path: {{ .Values.podMonitor.telemetryPath }}
+    - path: "/metrics"
       port: http-metrics
       scheme: http
       {{- with .Values.podMonitor.interval }}

@@ -176,8 +176,6 @@ podMonitor:
   interval: 30s
   # -- Set timeout for scrape
   scrapeTimeout: 30s
-  # -- Set path to metrics path
-  telemetryPath: /metrics
   # -- Set of labels to transfer from the Kubernetes Service onto the target
   targetLabels: []
   # -- MetricRelabelConfigs to apply to samples before ingestion
