@@ -201,7 +201,7 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 	}
 
 	type Config struct {
-		Endpoint       *endpoint.Endpoint `mapstructure:"endpoint"                   validate:"not_allowed"`
+		Endpoint       *endpoint.Endpoint `mapstructure:"endpoint"        validate:"not_allowed"`
 		ForwardHeaders []string           `mapstructure:"forward_headers"`
 		ForwardCookies []string           `mapstructure:"forward_cookies"`
 		Payload        template.Template  `mapstructure:"payload"`
