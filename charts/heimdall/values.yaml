@@ -188,17 +188,6 @@ envFrom: []
 # Optional flags for heimdall to use
 extraArgs: []
 
-# heimdall config defaults
-# DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
-serve:
-  port: 4456
-management:
-  port: 4457
-profiling:
-  enabled: false
-  port: 10251
-  host: 0.0.0.0 # to enable scraping of profiling information by corresponding agents.
-
 podMonitor:
   # -- Whether to create a PodMonitor
   enabled: false
@@ -220,3 +209,16 @@ podMonitor:
   # - action: replace
   #   replacement: my-cluster
   #   targetLabel: cluster
+
+# heimdall config defaults
+#
+# DO NOT OVERRIDE the values here. Use heimdall config yaml file instead
+# and pass it as an additional value file to helm!
+serve:
+  port: 4456
+management:
+  port: 4457
+profiling:
+  enabled: false
+  port: 10251
+  host: 0.0.0.0 # to enable scraping of profiling information by corresponding agents.
