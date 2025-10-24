@@ -42,7 +42,7 @@ import (
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -114,7 +114,7 @@ payload: "{{ .Subject.ID }}"
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
 				val, err := auth.payload.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
@@ -123,7 +123,6 @@ payload: "{{ .Subject.ID }}"
 
 				assert.Equal(t, "minimal valid configuration with enforced and used TLS", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 		"minimal configuration with enforced but not used TLS": {
@@ -161,7 +160,6 @@ endpoint:
 
 				assert.Equal(t, "configuration with endpoint and endpoint header", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 		"configuration with invalid expression": {
@@ -207,7 +205,7 @@ values:
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
 				val, err := auth.payload.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
 					"Request": &heimdall.Request{
 						RequestFunctions: rfunc,
 						URL:              &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo/bar"}},
@@ -227,14 +225,13 @@ values:
 				assert.Equal(t, 5*time.Second, auth.ttl)
 
 				res, err := auth.v.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "bar"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, res)
 
 				assert.Equal(t, "full configuration", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
-				assert.False(t, auth.ContinueOnError())
 			},
 		},
 	} {
@@ -307,7 +304,6 @@ payload: bar
 				assert.Equal(t, prototype.expressions, configured.expressions)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with unknown properties": {
@@ -316,15 +312,12 @@ endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`
-foo: bar
-`),
-			assert: func(t *testing.T, err error, _ *remoteAuthorizer, _ *remoteAuthorizer) {
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 		"with overridden empty payload": {
@@ -351,7 +344,6 @@ cache_ttl: 1s
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "with overridden empty payload", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with new config and step id": {
@@ -377,7 +369,6 @@ payload: bar
 				assert.Equal(t, "foo", configured.ID())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with invalid new expression": {
@@ -445,7 +436,6 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with everything possible": {
@@ -503,7 +493,6 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {
@@ -584,11 +573,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		authorizer       *remoteAuthorizer
-		subject          *subject.Subject
+		subject          identity.Subject
 		instructServer   func(t *testing.T)
 		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
-		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub *subject.Subject)
-		assert           func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any)
+		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub identity.Subject)
+		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
 	}{
 		"successful with payload and with header, without payload from server and without header " +
 			"forwarding and with disabled cache": {
@@ -608,9 +597,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			subject: &subject.Subject{
-				ID:         "my-id",
-				Attributes: map[string]any{"bar": "baz"},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "my-id",
+					Attributes: map[string]any{"bar": "baz"},
+				},
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -636,14 +627,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.True(t, authorizationEndpointCalled)
-				assert.Len(t, sub.Attributes, 1)
-				assert.Equal(t, "baz", sub.Attributes["bar"])
+				assert.Len(t, sub.Attributes(), 1)
+				assert.Equal(t, "baz", sub.Attributes()["bar"])
 				assert.Len(t, outputs, 1)
 				assert.Equal(t, "bar", outputs["foo"])
 			},
@@ -667,9 +658,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}(),
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 			},
-			subject: &subject.Subject{
-				ID:         "my-id",
-				Attributes: map[string]any{"bar": "baz"},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "my-id",
+					Attributes: map[string]any{"bar": "baz"},
+				},
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -711,14 +704,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.True(t, authorizationEndpointCalled)
-				assert.Len(t, sub.Attributes, 1)
-				assert.Equal(t, "baz", sub.Attributes["bar"])
+				assert.Len(t, sub.Attributes(), 1)
+				assert.Equal(t, "baz", sub.Attributes()["bar"])
 
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "bar", outputs["foo"])
@@ -758,9 +751,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 				ttl:                20 * time.Second,
 			},
-			subject: &subject.Subject{
-				ID:         "my id",
-				Attributes: map[string]any{"bar": "baz"},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "my id",
+					Attributes: map[string]any{"bar": "baz"},
+				},
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -792,7 +787,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ identity.Subject) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -804,14 +799,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						return err == nil && ai.Payload == nil && len(ai.Headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.True(t, authorizationEndpointCalled)
-				assert.Len(t, sub.Attributes, 1)
-				assert.Equal(t, "baz", sub.Attributes["bar"])
+				assert.Len(t, sub.Attributes(), 1)
+				assert.Equal(t, "baz", sub.Attributes()["bar"])
 
 				assert.Empty(t, outputs["authorizer"])
 			},
@@ -825,9 +820,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				},
 				ttl: 10 * time.Second,
 			},
-			subject: &subject.Subject{
-				ID:         "foobar",
-				Attributes: map[string]any{"bar": "baz"},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "foobar",
+					Attributes: map[string]any{"bar": "baz"},
+				},
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -847,7 +844,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub identity.Subject) {
 				t.Helper()
 
 				cacheKey := auth.calculateCacheKey(sub, nil, "")
@@ -855,14 +852,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, cacheKey, mock.Anything, auth.ttl).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.True(t, authorizationEndpointCalled)
-				assert.Len(t, sub.Attributes, 1)
-				assert.Equal(t, "baz", sub.Attributes["bar"])
+				assert.Len(t, sub.Attributes(), 1)
+				assert.Equal(t, "baz", sub.Attributes()["bar"])
 
 				assert.Len(t, outputs, 1)
 				assert.Equal(t, "bar", outputs["foo"])
@@ -886,9 +883,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 				ttl:                20 * time.Second,
 			},
-			subject: &subject.Subject{
-				ID:         "my id",
-				Attributes: map[string]any{"bar": "baz"},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "my id",
+					Attributes: map[string]any{"bar": "baz"},
+				},
 			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
@@ -897,7 +896,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ctx.EXPECT().AddHeaderForUpstream("X-Bar-Foo", "HeyBar")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *remoteAuthorizer, _ *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *remoteAuthorizer, _ identity.Subject) {
 				t.Helper()
 
 				rawInfo, err := json.Marshal(authorizationInformation{
@@ -911,14 +910,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawInfo, nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.False(t, authorizationEndpointCalled)
-				assert.Len(t, sub.Attributes, 1)
-				assert.Equal(t, "baz", sub.Attributes["bar"])
+				assert.Len(t, sub.Attributes(), 1)
+				assert.Equal(t, "baz", sub.Attributes()["bar"])
 
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "bar", outputs["foo"])
@@ -938,7 +937,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
 				},
 			},
-			subject: &subject.Subject{ID: "foo"},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID: "foo",
+				},
+			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
@@ -953,7 +956,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -974,7 +977,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
 				},
 			},
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{}},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{},
+				},
+			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
@@ -987,13 +995,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.True(t, authorizationEndpointCalled)
-				assert.Empty(t, sub.Attributes)
+				assert.Empty(t, sub.Attributes())
 				assert.Len(t, outputs, 1)
 				assert.Equal(t, "Hi Foo", outputs["foo"])
 			},
@@ -1008,13 +1016,17 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			subject: &subject.Subject{ID: "foo"},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID: "foo",
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1050,9 +1062,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return []*cellib.CompiledExpression{exp}
 				}(),
 			},
-			subject: &subject.Subject{
-				ID:         "my-id",
-				Attributes: map[string]any{},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "my-id",
+					Attributes: map[string]any{},
+				},
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1091,7 +1105,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
 				t.Helper()
 
 				assert.True(t, authorizationEndpointCalled)
@@ -1127,9 +1141,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return []*cellib.CompiledExpression{exp}
 				}(),
 			},
-			subject: &subject.Subject{
-				ID:         "my-id",
-				Attributes: map[string]any{},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "my-id",
+					Attributes: map[string]any{},
+				},
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1168,14 +1184,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				assert.True(t, authorizationEndpointCalled)
 
 				require.NoError(t, err)
 
-				require.Empty(t, sub.Attributes)
+				require.Empty(t, sub.Attributes())
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "bar", outputs["foo"])
 				attrs := outputs["authorizer"]
@@ -1202,13 +1218,18 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
@@ -1233,13 +1254,18 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return values.Values{"foo": tpl}
 				}(),
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
@@ -1273,7 +1299,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(t *testing.T, _ *mocks.CacheMock, _ *remoteAuthorizer, _ *subject.Subject) {
+				func(t *testing.T, _ *mocks.CacheMock, _ *remoteAuthorizer, _ identity.Subject) {
 					t.Helper()
 				})
 

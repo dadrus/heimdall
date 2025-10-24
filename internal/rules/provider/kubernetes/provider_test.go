@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
@@ -48,7 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
@@ -203,8 +202,8 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 
 	rs := v1beta1.RuleSet{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s", v1beta1.GroupName, v1beta1.GroupVersion),
-			Kind:       "RuleSet",
+			APIVersion: v1beta1.GroupVersion.String(),
+			Kind:       v1beta1.ResourceName,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "test-rule",
@@ -216,18 +215,18 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 		},
 		Spec: v1beta1.RuleSetSpec{
 			AuthClassName: "bar",
-			Rules: []config2.Rule{
+			Rules: []cfgv1beta1.Rule{
 				{
 					ID: "test",
-					Matcher: config2.Matcher{
-						Routes:  []config2.Route{{Path: "/"}},
+					Matcher: cfgv1beta1.Matcher{
+						Routes:  []cfgv1beta1.Route{{Path: "/"}},
 						Scheme:  "http",
 						Methods: []string{http.MethodGet},
-						Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "exact"}},
+						Hosts:   []string{"foo.bar"},
 					},
-					Backend: &config2.Backend{
+					Backend: &cfgv1beta1.Backend{
 						Host: "baz",
-						URLRewriter: &config2.URLRewriter{
+						URLRewriter: &cfgv1beta1.URLRewriter{
 							Scheme:              "http",
 							PathPrefixToCut:     "/foo",
 							PathPrefixToAdd:     "/bar",
@@ -245,7 +244,7 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 
 	rsl := v1beta1.RuleSetList{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s", v1beta1.GroupName, v1beta1.GroupVersion),
+			APIVersion: v1beta1.GroupVersion.String(),
 			Kind:       "RuleSetList",
 		},
 		ListMeta: metav1.ListMeta{ResourceVersion: "735820"},
@@ -359,7 +358,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -367,7 +366,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -377,8 +376,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http", rule.Matcher.Scheme)
 				assert.Len(t, rule.Matcher.Hosts, 1)
-				assert.Equal(t, "foo.bar", rule.Matcher.Hosts[0].Value)
-				assert.Equal(t, "exact", rule.Matcher.Hosts[0].Type)
+				assert.Equal(t, "foo.bar", rule.Matcher.Hosts[0])
 				assert.Len(t, rule.Matcher.Routes, 1)
 				assert.Equal(t, "/", rule.Matcher.Routes[0].Path)
 				assert.Len(t, rule.Matcher.Methods, 1)
@@ -395,7 +393,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"adding rule set fails": {
@@ -419,7 +417,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionFalse, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActivationFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActivationFailed, ConditionReason(condition.Reason))
 			},
 		},
 		"adding rule set, resulting in a very long error message": {
@@ -455,7 +453,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionFalse, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActivationFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActivationFailed, ConditionReason(condition.Reason))
 			},
 		},
 		"adding unprocessable rule set": {
@@ -470,7 +468,7 @@ func TestProviderLifecycle(t *testing.T) {
 			},
 			updateStatus: func(rs v1beta1.RuleSet, _ int) (*metav1.Status, error) {
 				return &errors2.NewInvalid(
-					schema.GroupKind{Group: v1beta1.GroupName, Kind: "ruleset"},
+					schema.GroupKind{Group: v1beta1.GroupVersion.Group, Kind: v1beta1.ResourceName},
 					rs.Name,
 					field.ErrorList{
 						field.TooLong(
@@ -505,7 +503,7 @@ func TestProviderLifecycle(t *testing.T) {
 				switch callIdx {
 				case 2:
 					return &errors2.NewNotFound(
-						schema.GroupResource{Group: v1beta1.GroupName, Resource: "ruleset"},
+						schema.GroupResource{Group: v1beta1.GroupVersion.Group, Resource: v1beta1.ResourceName},
 						rs.Name,
 					).ErrStatus, nil
 				default:
@@ -516,11 +514,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -528,7 +526,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -538,8 +536,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -550,7 +547,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -561,7 +558,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"a ruleset is added with failing status update": {
@@ -586,7 +583,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -594,7 +591,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -604,8 +601,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -638,7 +634,7 @@ func TestProviderLifecycle(t *testing.T) {
 				switch callIdx {
 				case 1:
 					return &errors2.NewConflict(
-						schema.GroupResource{Group: v1beta1.GroupName, Resource: "ruleset"},
+						schema.GroupResource{Group: v1beta1.GroupVersion.Group, Resource: v1beta1.ResourceName},
 						rs.Name,
 						errors.New("RuleSet conflict"),
 					).ErrStatus, nil
@@ -650,7 +646,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -658,7 +654,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -668,8 +664,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -686,7 +681,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"removing rule set fails": {
@@ -718,13 +713,13 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 
 				assert.Equal(t, "1/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetUnloadingFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetUnloadingFailed, ConditionReason(condition.Reason))
 			},
 		},
 		"a ruleset is added and then updated": {
@@ -741,18 +736,18 @@ func TestProviderLifecycle(t *testing.T) {
 					rs.Generation++
 					rs.Spec = v1beta1.RuleSetSpec{
 						AuthClassName: "bar",
-						Rules: []config2.Rule{
+						Rules: []cfgv1beta1.Rule{
 							{
 								ID: "test",
-								Matcher: config2.Matcher{
-									Routes:  []config2.Route{{Path: "/"}},
+								Matcher: cfgv1beta1.Matcher{
+									Routes:  []cfgv1beta1.Route{{Path: "/"}},
 									Scheme:  "http",
 									Methods: []string{http.MethodGet},
-									Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "exact"}},
+									Hosts:   []string{"foo.bar"},
 								},
-								Backend: &config2.Backend{
+								Backend: &cfgv1beta1.Backend{
 									Host: "bar",
-									URLRewriter: &config2.URLRewriter{
+									URLRewriter: &cfgv1beta1.URLRewriter{
 										Scheme:              "http",
 										PathPrefixToCut:     "/foo",
 										PathPrefixToAdd:     "/bar",
@@ -777,11 +772,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -789,7 +784,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -799,8 +794,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -811,7 +805,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -821,8 +815,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", updatedRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -838,13 +831,13 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 
 				assert.Equal(t, "1/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"a ruleset is added and then updated with a mismatching authClassName": {
@@ -873,11 +866,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -885,7 +878,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor1").Value()
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -895,8 +888,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -907,7 +899,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *config2.RuleSet](&processor.Mock, "captor2").Value()
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
@@ -917,8 +909,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test", deleteRule.ID)
 				assert.Equal(t, "http", createdRule.Matcher.Scheme)
 				assert.Len(t, createdRule.Matcher.Hosts, 1)
-				assert.Equal(t, "exact", createdRule.Matcher.Hosts[0].Type)
-				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0].Value)
+				assert.Equal(t, "foo.bar", createdRule.Matcher.Hosts[0])
 				assert.Len(t, createdRule.Matcher.Routes, 1)
 				assert.Equal(t, "/", createdRule.Matcher.Routes[0].Path)
 				assert.Len(t, createdRule.Matcher.Methods, 1)
@@ -934,7 +925,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 			},
 		},
 		"failed updating rule set": {
@@ -951,18 +942,18 @@ func TestProviderLifecycle(t *testing.T) {
 					rs.Generation++
 					rs.Spec = v1beta1.RuleSetSpec{
 						AuthClassName: "bar",
-						Rules: []config2.Rule{
+						Rules: []cfgv1beta1.Rule{
 							{
 								ID: "test",
-								Matcher: config2.Matcher{
-									Routes:  []config2.Route{{Path: "/"}},
+								Matcher: cfgv1beta1.Matcher{
+									Routes:  []cfgv1beta1.Route{{Path: "/"}},
 									Scheme:  "http",
 									Methods: []string{http.MethodGet},
-									Hosts:   []config2.HostMatcher{{Value: "foo.bar", Type: "exact"}},
+									Hosts:   []string{"foo.bar"},
 								},
-								Backend: &config2.Backend{
+								Backend: &cfgv1beta1.Backend{
 									Host: "bar",
-									URLRewriter: &config2.URLRewriter{
+									URLRewriter: &cfgv1beta1.URLRewriter{
 										Scheme:              "http",
 										PathPrefixToCut:     "/foo",
 										PathPrefixToAdd:     "/bar",
@@ -999,13 +990,13 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActive, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActive, ConditionReason(condition.Reason))
 
 				assert.Equal(t, "0/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionFalse, condition.Status)
-				assert.Equal(t, v1beta1.ConditionRuleSetActivationFailed, v1beta1.ConditionReason(condition.Reason))
+				assert.Equal(t, ConditionRuleSetActivationFailed, ConditionReason(condition.Reason))
 			},
 		},
 	} {
@@ -1121,12 +1112,12 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setupMocks func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock)
+		setupMocks func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock)
 		useRuleSet func(t *testing.T, provider *Provider, rs *v1beta1.RuleSet)
-		assert     func(t *testing.T, repository *mocks2.RuleSetRepositoryMock)
+		assert     func(t *testing.T, repository *mocks2.RepositoryMock)
 	}{
 		"error on creating new rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
@@ -1145,7 +1136,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 
 				provider.addRuleSet(t.Context(), rs)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1163,7 +1154,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"unrecoverable error on updating status": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
@@ -1180,14 +1171,14 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 
 				provider.addRuleSet(t.Context(), rs)
 			},
-			assert: func(t *testing.T, _ *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, _ *mocks2.RepositoryMock) {
 				t.Helper()
 
 				// expectation is that repository.PatchStatus is called once
 			},
 		},
 		"error on creating new rule set followed by multiple successful updates": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
@@ -1221,7 +1212,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1257,14 +1248,14 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error on creating new rule set followed by a successful update, followed by multiple failed updates": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name != "error"
 				})).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
 				})).Return(errors.New("test error"))
 
@@ -1306,7 +1297,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1351,7 +1342,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error on updating previously successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1376,7 +1367,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1404,7 +1395,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"successive errors on updating previously successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1437,7 +1428,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1473,14 +1464,14 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"successive errors on updating previously loaded and once successfully updated rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name != "error"
 				})).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *config2.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
 				})).Return(errors.New("test error"))
 
@@ -1520,7 +1511,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				newRS.Generation = oldRS.Generation + 1
 				provider.updateRuleSet(t.Context(), oldRS, newRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1564,7 +1555,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error deleting a successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1589,7 +1580,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				oldRS.Generation++
 				provider.deleteRuleSet(t.Context(), oldRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1616,7 +1607,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"successful deleting a successfully loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
@@ -1641,7 +1632,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				oldRS.Generation++
 				provider.deleteRuleSet(t.Context(), oldRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1669,7 +1660,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			},
 		},
 		"error deleting a not loaded rule set": {
-			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
@@ -1694,7 +1685,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				oldRS.Generation++
 				provider.deleteRuleSet(t.Context(), oldRS)
 			},
-			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+			assert: func(t *testing.T, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
 				var patch jsondiff.Patch
@@ -1724,8 +1715,8 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			rs := &v1beta1.RuleSet{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: fmt.Sprintf("%s/%s", v1beta1.GroupName, v1beta1.GroupVersion),
-					Kind:       "RuleSet",
+					APIVersion: v1beta1.GroupVersion.String(),
+					Kind:       v1beta1.ResourceName,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "test-rule",
@@ -1739,9 +1730,9 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			}
 
 			processor := mocks.NewRuleSetProcessorMock(t)
-			repository := mocks2.NewRuleSetRepositoryMock(t)
+			repository := mocks2.NewRepositoryMock(t)
 			client := mocks2.NewClientMock(t)
-			client.EXPECT().RuleSetRepository(mock.Anything).Return(repository)
+			client.EXPECT().Repository(mock.Anything).Return(repository)
 
 			tc.setupMocks(t, processor, repository)
 

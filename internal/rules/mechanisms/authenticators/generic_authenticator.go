@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -65,7 +65,7 @@ type genericAuthenticator struct {
 	payload             template.Template
 	fwdHeaders          []string
 	fwdCookies          []string
-	sf                  SubjectFactory
+	sf                  PrincipalFactory
 	ttl                 time.Duration
 	sessionLifespanConf *SessionLifespanConfig
 }
@@ -79,7 +79,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 
 	type Config struct {
 		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"required"` //nolint:lll
-		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                    validate:"required"` //nolint:lll
+		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"                  validate:"required"` //nolint:lll
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source" validate:"required"` //nolint:lll
 		ForwardHeaders        []string                            `mapstructure:"forward_headers"`
 		ForwardCookies        []string                            `mapstructure:"forward_cookies"`
@@ -110,7 +110,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 		payload:    conf.Payload,
 		fwdHeaders: conf.ForwardHeaders,
 		fwdCookies: conf.ForwardCookies,
-		sf:         &conf.SubjectInfo,
+		sf:         &conf.PrincipalInfo,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),
@@ -118,7 +118,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorGeneric).
@@ -128,26 +128,28 @@ func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Su
 
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to get authentication data from request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	payload, err := a.getSubjectInformation(ctx, authData)
+	payload, err := a.getPrincipalInformation(ctx, authData)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreateSubject(payload)
+	principal, err := a.sf.CreatePrincipal(payload)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to extract principal information from response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub["default"] = principal
+
+	return nil
 }
 
 func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
@@ -163,8 +165,16 @@ func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]an
 		return &auth, nil
 	}
 
+	// fields marked with "not_allowed" are not allowed to be configured
 	type Config struct {
-		CacheTTL *time.Duration `mapstructure:"cache_ttl"`
+		Endpoint              *endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"not_allowed"` //nolint:lll
+		SubjectInfo           *PrincipalInfo                       `mapstructure:"principal"                  validate:"not_allowed"` //nolint:lll
+		AuthDataSource        *extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source" validate:"not_allowed"` //nolint:lll
+		ForwardHeaders        []string                             `mapstructure:"forward_headers"            validate:"not_allowed"` //nolint:lll
+		ForwardCookies        []string                             `mapstructure:"forward_cookies"            validate:"not_allowed"` //nolint:lll
+		Payload               *template.Template                   `mapstructure:"payload"                    validate:"not_allowed"` //nolint:lll
+		SessionLifespanConfig *SessionLifespanConfig               `mapstructure:"session_lifespan"           validate:"not_allowed"` //nolint:lll
+		CacheTTL              *time.Duration                       `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
@@ -196,7 +206,7 @@ func (a *genericAuthenticator) ID() string { return a.id }
 
 func (a *genericAuthenticator) IsInsecure() bool { return false }
 
-func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	cch := cache.Ctx(ctx.Context())
 
@@ -208,13 +218,13 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(authData)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			logger.Debug().Msg("Reusing subject information from cache")
+			logger.Debug().Msg("Reusing principal information from cache")
 
 			return entry, nil
 		}
 	}
 
-	payload, err := a.fetchSubjectInformation(ctx, authData)
+	payload, err := a.fetchPrincipalInformation(ctx, authData)
 	if err != nil {
 		return nil, err
 	}
@@ -234,14 +244,14 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext
 
 	if cacheTTL := a.getCacheTTL(session); cacheTTL > 0 {
 		if err = cch.Set(ctx.Context(), cacheKey, payload, cacheTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to cache subject information")
+			logger.Warn().Err(err).Msg("Failed to cache principal information")
 		}
 	}
 
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
 	req, err := a.createRequest(ctx, authData)
 	if err != nil {
 		return nil, err
@@ -334,7 +344,11 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authDa
 }
 
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+	switch {
+	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"received authentication data rejected").WithErrorContext(a)
+	case resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices:
 		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).WithErrorContext(a)
 	}

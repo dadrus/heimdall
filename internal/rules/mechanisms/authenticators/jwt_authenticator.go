@@ -37,8 +37,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
@@ -72,7 +72,7 @@ type jwtAuthenticator struct {
 	r               oauth2.ServerMetadataResolver
 	a               oauth2.Expectation
 	ttl             *time.Duration
-	sf              SubjectFactory
+	sf              PrincipalFactory
 	ads             extractors.AuthDataExtractStrategy
 	trustStore      truststore.TrustStore
 	validateJWKCert bool
@@ -94,7 +94,7 @@ func newJwtAuthenticator(
 		JWKSEndpoint     *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
 		MetadataEndpoint *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
 		Assertions       oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
-		SubjectInfo      SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
+		PrincipalInfo    PrincipalInfo                       `mapstructure:"principal"            validate:"-"`                                                                //nolint:lll,tagalign
 		AuthDataSource   extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		CacheTTL         *time.Duration                      `mapstructure:"cache_ttl"`
 		ValidateJWK      *bool                               `mapstructure:"validate_jwk"`
@@ -136,8 +136,8 @@ func newJwtAuthenticator(
 		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
-	if len(conf.SubjectInfo.IDFrom) == 0 {
-		conf.SubjectInfo.IDFrom = "sub"
+	if len(conf.PrincipalInfo.IDFrom) == 0 {
+		conf.PrincipalInfo.IDFrom = "sub"
 	}
 
 	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
@@ -187,14 +187,14 @@ func newJwtAuthenticator(
 		r:               resolver,
 		a:               conf.Assertions,
 		ttl:             conf.CacheTTL,
-		sf:              &conf.SubjectInfo,
+		sf:              &conf.PrincipalInfo,
 		ads:             ads,
 		validateJWKCert: validateJWKCert,
 		trustStore:      conf.TrustStore,
 	}, nil
 }
 
-func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subject, error) {
+func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorJWT).
@@ -204,7 +204,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "no JWT present").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -212,7 +212,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 
 	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
 	if err != nil {
-		return nil, errorchain.
+		return errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").
 			WithErrorContext(a).
 			CausedBy(heimdall.ErrArgument).
@@ -221,18 +221,20 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext) (*subject.Subjec
 
 	rawClaims, err := a.verifyToken(ctx, token)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sub, err := a.sf.CreateSubject(rawClaims)
+	principal, err := a.sf.CreatePrincipal(rawClaims)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to extract principal information from jwt").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return sub, nil
+	sub["default"] = principal
+
+	return nil
 }
 
 func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
@@ -249,8 +251,14 @@ func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (
 	}
 
 	type Config struct {
-		Assertions oauth2.Expectation `mapstructure:"assertions" validate:"-"`
-		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
+		JWKSEndpoint     *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"     validate:"not_allowed"`
+		MetadataEndpoint *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint" validate:"not_allowed"`
+		SubjectInfo      *PrincipalInfo                      `mapstructure:"principal"         validate:"not_allowed"`
+		AuthDataSource   extractors.CompositeExtractStrategy `mapstructure:"jwt_source"        validate:"not_allowed"`
+		ValidateJWK      *bool                               `mapstructure:"validate_jwk"      validate:"not_allowed"`
+		TrustStore       truststore.TrustStore               `mapstructure:"trust_store"       validate:"not_allowed"`
+		Assertions       oauth2.Expectation                  `mapstructure:"assertions"        validate:"-"`
+		CacheTTL         *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config

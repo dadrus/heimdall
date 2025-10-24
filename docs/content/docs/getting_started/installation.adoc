@@ -91,8 +91,8 @@ Following tag patterns exist:
 +
 [source, bash]
 ----
-$ docker pull dadrus/heimdall:0.17.2 && docker run dadrus/heimdall:0.17.2 --version
-heimdall version v0.17.2
+$ docker pull dadrus/heimdall:0.17.3 && docker run dadrus/heimdall:0.17.3 --version
+heimdall version v0.17.3
 ----
 
 * `latest` - will pull the most recent tagged release.
@@ -100,7 +100,7 @@ heimdall version v0.17.2
 [source, bash]
 ----
 $ docker pull dadrus/heimdall:latest && docker run dadrus/heimdall:latest --version
-heimdall version 0.17.2
+heimdall version 0.17.3
 ----
 
 == Helm Chart
@@ -130,7 +130,7 @@ This chart expects a link:{{< relref "/docs/operations/configuration.adoc#_confi
 
 If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
 
-By default, heimdall requires custom resource definitions (CRDs) installed in the cluster. The Helm client will install it for you.
+By default, heimdall requires custom resource definitions (CRDs) installed in the cluster. On first installations, these will be installed automatically.
 
 To install the chart with the release name `my-release` (`my-release` is the name that you choose) and configure heimdall to operate in decision mode:
 

@@ -25,7 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -111,8 +111,6 @@ func newOAuth2ClientCredentialsFinalizer(
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) ContinueOnError() bool { return false }
-
 func (f *oauth2ClientCredentialsFinalizer) Name() string { return f.name }
 
 func (f *oauth2ClientCredentialsFinalizer) ID() string { return f.id }
@@ -135,9 +133,13 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig m
 	}
 
 	type Config struct {
-		Scopes []string       `mapstructure:"scopes"`
-		TTL    *time.Duration `mapstructure:"cache_ttl"`
-		Header *HeaderConfig  `mapstructure:"header"`
+		TokenURL     *string                       `mapstructure:"token_url"     validate:"not_allowed"`
+		ClientID     *string                       `mapstructure:"client_id"     validate:"not_allowed"`
+		ClientSecret *string                       `mapstructure:"client_secret" validate:"not_allowed"`
+		AuthMethod   *clientcredentials.AuthMethod `mapstructure:"auth_method"   validate:"not_allowed"`
+		Scopes       []string                      `mapstructure:"scopes"`
+		TTL          *time.Duration                `mapstructure:"cache_ttl"`
+		Header       *HeaderConfig                 `mapstructure:"header"`
 	}
 
 	var conf Config
@@ -164,7 +166,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig m
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerOAuth2ClientCredentials).

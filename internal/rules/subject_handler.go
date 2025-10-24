@@ -18,11 +18,10 @@ package rules
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 type subjectHandler interface {
 	ID() string
-	Execute(ctx heimdall.RequestContext, sub *subject.Subject) error
-	ContinueOnError() bool
+	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
 }

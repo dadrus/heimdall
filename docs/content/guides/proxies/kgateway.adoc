@@ -2,7 +2,7 @@
 title: "KGateway Integration"
 date: 2025-09-17T10:17:23+02:00
 draft: false
-weight: 20
+weight: 18
 menu:
   guides:
     parent: "API Gateways & Proxies"
@@ -91,16 +91,16 @@ metadata:
   name: allow-example-access
   namespace: auth
 spec:
-  from: # <3>
+  from: # <1>
     - group: gateway.kgateway.dev
       kind: GatewayExtension
       namespace: example
-  to: # <4>
+  to: # <2>
     - group: ""
       kind: Service
 ----
-<3> The `from` section specifies which resources are allowed to create a reference. Here, we allow `GatewayExtension` resources from the `example` namespace.
-<4> The `to` section specifies what can be referenced. Here, we allow references to all `Service` resources.
+<1> The `from` section specifies which resources are allowed to create a reference. Here, we allow `GatewayExtension` resources from the `example` namespace.
+<2> The `to` section specifies what can be referenced. Here, we allow references to all `Service` resources.
 
 == Additional Resources
 

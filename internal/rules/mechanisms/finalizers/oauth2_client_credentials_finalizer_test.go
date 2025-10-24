@@ -78,15 +78,16 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 		},
 		"with unsupported attributes": {
 			config: []byte(`
+client_id: foo
+client_secret: foobar
 token_url: https://foo.bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "invalid keys")
+				require.NoError(t, err)
+				require.NotNil(t, finalizer)
 			},
 		},
 		"with bad auth method attributes": {
@@ -125,7 +126,6 @@ client_secret: bar
 				assert.Equal(t, clientcredentials.AuthMethodBasicAuth, finalizer.cfg.AuthMethod)
 				assert.Nil(t, finalizer.cfg.TTL)
 				assert.Empty(t, finalizer.cfg.Scopes)
-				assert.False(t, finalizer.ContinueOnError())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 			},
 		},
@@ -176,7 +176,6 @@ header:
 				assert.Len(t, finalizer.cfg.Scopes, 2)
 				assert.Contains(t, finalizer.cfg.Scopes, "foo")
 				assert.Contains(t, finalizer.cfg.Scopes, "baz")
-				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
 	} {
@@ -339,18 +338,12 @@ client_id: foo
 client_secret: bar
 cache_ttl: 11s
 `),
-			config: []byte(`
-foo: 10s
-`),
+			config: []byte(`foo: 10s`),
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
-
-				require.NotNil(t, prototype)
-				require.Nil(t, configured)
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 		"header name reconfigured": {

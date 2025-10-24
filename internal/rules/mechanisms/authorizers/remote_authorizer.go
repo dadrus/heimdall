@@ -37,7 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
@@ -150,7 +150,7 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
-func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerRemote).
@@ -217,11 +217,12 @@ func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (
 	}
 
 	type Config struct {
-		Payload                  template.Template `mapstructure:"payload"`
-		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
-		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
-		Values                   values.Values     `mapstructure:"values"`
+		Endpoint                 *endpoint.Endpoint `mapstructure:"endpoint"                             validate:"not_allowed"` //nolint:lll
+		Payload                  template.Template  `mapstructure:"payload"`
+		Expressions              []Expression       `mapstructure:"expressions"                          validate:"dive"`
+		ResponseHeadersToForward []string           `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration      `mapstructure:"cache_ttl"`
+		Values                   values.Values      `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -254,11 +255,9 @@ func (a *remoteAuthorizer) Name() string { return a.name }
 
 func (a *remoteAuthorizer) ID() string { return a.id }
 
-func (a *remoteAuthorizer) ContinueOnError() bool { return false }
-
 func (a *remoteAuthorizer) doAuthorize(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub identity.Subject,
 	values map[string]string,
 	payload string,
 ) (*authorizationInformation, error) {
@@ -360,7 +359,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.RequestContext, resp *http.
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[string]string, payload string) string {
+func (a *remoteAuthorizer) calculateCacheKey(sub identity.Subject, values map[string]string, payload string) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
@@ -394,7 +393,7 @@ func (a *remoteAuthorizer) verify(ctx heimdall.RequestContext, result any) error
 
 func (a *remoteAuthorizer) renderTemplates(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub identity.Subject,
 ) (map[string]string, string, error) {
 	var payload string
 

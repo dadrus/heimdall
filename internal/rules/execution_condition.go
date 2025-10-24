@@ -18,10 +18,10 @@ package rules
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 type executionCondition interface {
-	CanExecuteOnSubject(ctx heimdall.RequestContext, sub *subject.Subject) (bool, error)
+	CanExecuteOnSubject(ctx heimdall.RequestContext, sub identity.Subject) (bool, error)
 	CanExecuteOnError(ctx heimdall.RequestContext, err error) (bool, error)
 }

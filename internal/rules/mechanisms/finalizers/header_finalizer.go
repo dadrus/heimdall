@@ -23,7 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -77,7 +77,7 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}, nil
 }
 
-func (f *headerFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (f *headerFinalizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerHeader).
@@ -125,7 +125,7 @@ func (f *headerFinalizer) WithConfig(stepID string, rawConfig map[string]any) (F
 	}
 
 	type Config struct {
-		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`
+		Headers map[string]template.Template `mapstructure:"headers" validate:"dive,required"`
 	}
 
 	var conf Config
@@ -138,12 +138,10 @@ func (f *headerFinalizer) WithConfig(stepID string, rawConfig map[string]any) (F
 		name:    f.name,
 		id:      x.IfThenElse(len(stepID) == 0, f.id, stepID),
 		app:     f.app,
-		headers: conf.Headers,
+		headers: x.IfThenElse(len(conf.Headers) == 0, f.headers, conf.Headers),
 	}, nil
 }
 
 func (f *headerFinalizer) Name() string { return f.name }
 
 func (f *headerFinalizer) ID() string { return f.id }
-
-func (f *headerFinalizer) ContinueOnError() bool { return false }

@@ -60,62 +60,64 @@ func TestValidateRuleset(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		confFile  string
-		rulesFile string
-		proxyMode bool
-		expError  string
+		args     []string
+		expError string
 	}{
 		"no config provided": {
-			expError: "no config file provided",
+			expError: "accepts 1 arg(s), received 0",
 		},
-		"invalid configconfig file": {
-			confFile: "doesnotexist.yaml",
+		"invalid config file": {
+			args: []string{
+				"--" + flags.Config, "doesnotexist.yaml",
+				"test_data/ruleset-valid.yaml",
+			},
 			expError: "no such file or directory",
 		},
 		"invalid rule set file": {
-			confFile:  configFile,
-			rulesFile: "doesnotexist.yaml",
-			expError:  "no such file or directory",
+			args: []string{
+				"--" + flags.Config, configFile,
+				"doesnotexist.yaml",
+			},
+			expError: "no such file or directory",
 		},
 		"everything is valid for decision mode usage": {
-			confFile:  configFile,
-			rulesFile: "test_data/ruleset-valid.yaml",
+			args: []string{
+				"--" + flags.Config, configFile,
+				"test_data/ruleset-valid.yaml",
+			},
 		},
 		"invalid for proxy usage": {
-			proxyMode: true,
-			confFile:  configFile,
-			rulesFile: "test_data/ruleset-invalid-for-proxy-usage.yaml",
-			expError:  "requires forward_to",
+			args: []string{
+				"--" + validationForProxyMode,
+				"--" + flags.Config, configFile,
+				"test_data/ruleset-invalid-for-proxy-usage.yaml",
+			},
+			expError: "requires forward_to",
 		},
 		"everything is valid for proxy mode usage": {
-			proxyMode: true,
-			confFile:  configFile,
-			rulesFile: "test_data/ruleset-valid.yaml",
+			args: []string{
+				"--" + validationForProxyMode,
+				"--" + flags.Config, configFile,
+				"test_data/ruleset-valid.yaml",
+			},
 		},
 		"using http scheme for upstream communication": {
-			proxyMode: true,
-			confFile:  configFile,
-			rulesFile: "test_data/ruleset-no-https-for-upstream.yaml",
-			expError:  "'rules'[0].'forward_to'.'rewrite'.'scheme' must be https",
+			args: []string{
+				"--" + validationForProxyMode,
+				"--" + flags.Config, configFile,
+				"test_data/ruleset-no-https-for-upstream.yaml",
+			},
+			expError: "'rules'[0].'forward_to'.'rewrite'.'scheme' must be https",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			cmd := NewValidateRulesCommand()
 			flags.RegisterGlobalFlags(cmd)
-
-			if len(tc.confFile) != 0 {
-				err = cmd.ParseFlags([]string{"--" + flags.Config, tc.confFile})
-				require.NoError(t, err)
-			}
-
-			if tc.proxyMode {
-				err = cmd.ParseFlags([]string{"--" + validationForProxyMode})
-				require.NoError(t, err)
-			}
+			cmd.SetArgs(tc.args)
 
 			// WHEN
-			err = validateRuleSet(cmd, []string{tc.rulesFile})
+			err := cmd.Execute()
 
 			// THEN
 			if len(tc.expError) != 0 {

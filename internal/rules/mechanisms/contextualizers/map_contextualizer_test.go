@@ -27,7 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -49,12 +49,11 @@ values:
   url: http://foo.bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *mapContextualizer) {
+			assert: func(t *testing.T, err error, contextualizer *mapContextualizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.NotNil(t, contextualizer)
 			},
 		},
 		"with invalid configuration": {
@@ -100,7 +99,7 @@ values:
 
 				val, err := contextualizer.items["url"].Render(map[string]any{
 					"Values":  vals,
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://foo.bar", val)
@@ -181,12 +180,11 @@ values:
   foo: http://foo.bar
 `),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *mapContextualizer, _ *mapContextualizer) {
+			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 		"with only values reconfigured": {
@@ -213,17 +211,15 @@ values:
 				assert.NotEqual(t, prototype.values, configured.values)
 				require.NotNil(t, configured.values)
 				val, err := configured.values.Render(map[string]any{
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				resp, err := configured.items["url"].Render(map[string]any{
 					"Values":  val,
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://bar.foo", resp)
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {
@@ -270,9 +266,9 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		contextualizer   *mapContextualizer
-		subject          *subject.Subject
+		subject          identity.Subject
 		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
-		assert           func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any)
+		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
 	}{
 		"with error in values rendering": {
 			contextualizer: &mapContextualizer{
@@ -284,13 +280,18 @@ func TestMapContextualizerExecute(t *testing.T) {
 					return values.Values{"foo": tpl}
 				}(),
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -320,13 +321,18 @@ func TestMapContextualizerExecute(t *testing.T) {
 					}(),
 				},
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -354,7 +360,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 						return tpl
 					}(),
-					"subject": func() template.Template {
+					"identity": func() template.Template {
 						tpl, err := template.New("{{ .Subject.ID }}")
 						require.NoError(t, err)
 
@@ -368,20 +374,25 @@ func TestMapContextualizerExecute(t *testing.T) {
 					}(),
 				},
 			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, _ identity.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.NotNil(t, outputs["contextualizer1"])
 				assert.Equal(t, "http://foo.bar", outputs["contextualizer1"].(map[string]string)["urlValues"])
-				assert.Equal(t, "Foo", outputs["contextualizer1"].(map[string]string)["subject"])
+				assert.Equal(t, "Foo", outputs["contextualizer1"].(map[string]string)["identity"])
 				assert.Equal(t, "bar", outputs["contextualizer1"].(map[string]string)["outputs"])
 			},
 		},

@@ -21,7 +21,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -57,7 +57,7 @@ func newDenyAuthorizer(app app.Context, name string) *denyAuthorizer {
 	}
 }
 
-func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerDeny).
@@ -90,5 +90,3 @@ func (a *denyAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Au
 func (a *denyAuthorizer) Name() string { return a.name }
 
 func (a *denyAuthorizer) ID() string { return a.id }
-
-func (a *denyAuthorizer) ContinueOnError() bool { return false }

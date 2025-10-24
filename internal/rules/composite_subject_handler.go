@@ -22,13 +22,13 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type compositeSubjectHandler []subjectHandler
 
-func (cm compositeSubjectHandler) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (cm compositeSubjectHandler) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	for _, handler := range cm {
@@ -40,11 +40,7 @@ func (cm compositeSubjectHandler) Execute(ctx heimdall.RequestContext, sub *subj
 				return errorchain.New(heimdall.ErrInternal).CausedBy(err)
 			}
 
-			if handler.ContinueOnError() {
-				logger.Info().Msg("Error ignored. Continuing pipeline execution")
-			} else {
-				return err
-			}
+			return err
 		}
 	}
 

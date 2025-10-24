@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -38,42 +38,46 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 		config []byte
 		assert func(t *testing.T, err error, auth *anonymousAuthenticator)
 	}{
-		"subject is set to anon": {
-			config: []byte("subject: anon"),
+		"principal is set to anon": {
+			config: []byte("principal: anon"),
 			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "anon", auth.subject.ID)
-				assert.Equal(t, "subject is set to anon", auth.ID())
+				assert.Equal(t, "anon", auth.principal.ID)
+				assert.Equal(t, "principal is set to anon", auth.ID())
 				assert.Equal(t, auth.Name(), auth.ID())
-				assert.Empty(t, auth.subject.Attributes)
-				assert.NotNil(t, auth.subject.Attributes)
+				assert.Empty(t, auth.principal.Attributes)
+				assert.NotNil(t, auth.principal.Attributes)
 			},
 		},
-		"default subject": {
+		"default principal": {
 			config: nil,
 			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "anonymous", auth.subject.ID)
-				assert.Equal(t, "default subject", auth.ID())
+				assert.Equal(t, "anonymous", auth.principal.ID)
+				assert.Equal(t, "default principal", auth.ID())
 				assert.Equal(t, auth.Name(), auth.ID())
-				assert.Empty(t, auth.subject.Attributes)
-				assert.NotNil(t, auth.subject.Attributes)
+				assert.Empty(t, auth.principal.Attributes)
+				assert.NotNil(t, auth.principal.Attributes)
 			},
 		},
 		"unsupported attributes": {
 			config: []byte("foo: bar"),
-			assert: func(t *testing.T, err error, _ *anonymousAuthenticator) {
+			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+
+				assert.Equal(t, "anonymous", auth.principal.ID)
+				assert.Equal(t, "unsupported attributes", auth.ID())
+				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Empty(t, auth.principal.Attributes)
+				assert.NotNil(t, auth.principal.Attributes)
 			},
 		},
 	} {
@@ -117,9 +121,9 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 				assert.Equal(t, "no new configuration for the configured authenticator", configured.ID())
 			},
 		},
-		"new subject for the configured authenticator": {
-			prototypeConfig: []byte("subject: anon"),
-			config:          []byte("subject: foo"),
+		"new principal for the configured authenticator": {
+			prototypeConfig: []byte("principal: anon"),
+			config:          []byte("principal: foo"),
 			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
 				t.Helper()
 
@@ -128,17 +132,17 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.Empty(t, prototype.subject.Attributes)
-				assert.NotNil(t, prototype.subject.Attributes)
-				assert.Equal(t, prototype.subject.Attributes, configured.subject.Attributes)
-				assert.Equal(t, "new subject for the configured authenticator", configured.ID())
-				assert.NotEqual(t, prototype.subject, configured.subject)
-				assert.Equal(t, "anon", prototype.subject.ID)
-				assert.Equal(t, "foo", configured.subject.ID)
+				assert.Empty(t, prototype.principal.Attributes)
+				assert.NotNil(t, prototype.principal.Attributes)
+				assert.Equal(t, prototype.principal.Attributes, configured.principal.Attributes)
+				assert.Equal(t, "new principal for the configured authenticator", configured.ID())
+				assert.NotEqual(t, prototype.principal, configured.principal)
+				assert.Equal(t, "anon", prototype.principal.ID)
+				assert.Equal(t, "foo", configured.principal.ID)
 			},
 		},
 		"step id is configured": {
-			prototypeConfig: []byte("subject: anon"),
+			prototypeConfig: []byte("principal: anon"),
 			stepID:          "foo",
 			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
 				t.Helper()
@@ -149,13 +153,13 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 				assert.Equal(t, "step id is configured", prototype.ID())
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.Equal(t, prototype.subject, configured.subject)
-				assert.NotNil(t, prototype.subject.Attributes)
+				assert.Equal(t, prototype.principal, configured.principal)
+				assert.NotNil(t, prototype.principal.Attributes)
 			},
 		},
-		"empty subject for the configured authenticator": {
-			prototypeConfig: []byte("subject: anon"),
-			config:          []byte("subject: ''"),
+		"empty principal for the configured authenticator": {
+			prototypeConfig: []byte("principal: anon"),
+			config:          []byte("principal: ''"),
 			assert: func(t *testing.T, err error, _ *anonymousAuthenticator, _ *anonymousAuthenticator) {
 				t.Helper()
 
@@ -211,18 +215,20 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	sub := &subject.Subject{ID: "anon"}
-	auth := anonymousAuthenticator{subject: sub, id: "anon_auth"}
+	exp := &identity.Principal{ID: "anon"}
+	auth := anonymousAuthenticator{principal: exp, id: "anon_auth"}
 
 	ctx := mocks.NewRequestContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
+	sub := make(identity.Subject)
+
 	// WHEN
-	res, err := auth.Execute(ctx)
+	err := auth.Execute(ctx, sub)
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, sub, res)
+	assert.Equal(t, exp, sub["default"])
 }
 
 func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {

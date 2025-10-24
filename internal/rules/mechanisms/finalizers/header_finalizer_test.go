@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -64,12 +64,11 @@ headers:
   foo: bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *headerFinalizer) {
+			assert: func(t *testing.T, err error, finalizer *headerFinalizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				require.NotNil(t, finalizer)
 			},
 		},
 		"with bad template": {
@@ -103,12 +102,10 @@ headers:
 				assert.Equal(t, "bar", val)
 
 				val, err = finalizer.headers["bar"].Render(map[string]any{
-					"Subject": &subject.Subject{ID: "baz"},
+					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
-
-				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
 	} {
@@ -194,9 +191,6 @@ headers:
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
-
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"new headers and step id": {
@@ -223,9 +217,6 @@ headers:
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
-
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		"with unsupported attributes": {
@@ -233,19 +224,12 @@ headers:
 headers:
   foo: bar
 `),
-			config: []byte(`
-headers:
-  bar: foo
-foo: bar
-`),
-			assert: func(t *testing.T, err error, prototype *headerFinalizer, _ *headerFinalizer) {
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
 				t.Helper()
 
-				assert.NotNil(t, prototype)
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 	} {
@@ -291,7 +275,7 @@ func TestHeaderFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config           []byte
-		subject          *subject.Subject
+		subject          identity.Subject
 		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
 		assert           func(t *testing.T, err error)
 	}{
@@ -308,7 +292,7 @@ headers:
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			subject: &subject.Subject{ID: "FooBar", Attributes: map[string]any{}},
+			subject: identity.Subject{"default": &identity.Principal{ID: "FooBar", Attributes: map[string]any{}}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -344,7 +328,7 @@ headers:
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			subject: &subject.Subject{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}},
+			subject: identity.Subject{"default": &identity.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -369,7 +353,12 @@ headers:
 				ctx.EXPECT().Request().Return(&heimdall.Request{})
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 			},
-			subject: &subject.Subject{Attributes: map[string]any{"groups": []string{"group1", "group2", "group3"}}},
+			subject: identity.Subject{
+				"default": &identity.Principal{
+					ID:         "FooBar",
+					Attributes: map[string]any{"groups": []string{"group1", "group2", "group3"}},
+				},
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 

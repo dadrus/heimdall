@@ -7,7 +7,7 @@ menu:
   docs:
     weight: 2
     parent: "Mechanisms"
-description: The dynamic nature of mechanisms is given by the ability to work on different objects and making use of templates and expressions to implement different use cases.
+description: The dynamic nature of mechanisms is given by the ability to work on different objects and by using templates and expressions to implement various use cases.
 ---
 
 :toc:
@@ -16,38 +16,40 @@ E.g. in one case, you want to have access to a particular request header. In ano
 
 == Objects
 
-Objects represent state in the execution of a particular rule. These are the entities, either created or used by particular mechanisms and can represent things, like the actual request, the authenticated subject of the request and many more.
+Objects represent state during the execution of a particular rule. These are entities either created or used by specific mechanisms, and can represent things like the actual request, the authenticated subject of the request, and many others.
 
-=== Subject
+=== Principal
 
-This object is created by an authenticator which was able to verify the authentication claim available in the request, and contains the information about the authenticated subject. It has the following properties:
+A Principal represents an identity of an entity associated with the current request — such as a user, service, or machine — and verified by a particular link:{{< relref "/docs/mechanisms/authenticators.adoc">}}[authenticator]. Principals are immutable and ephemeral — they exist only for the lifetime of a single request.
+
+Each principal has the following properties:
 
 * *`ID`*: _string_
 +
-The identifier of the subject.
+The unique identifier of the principal.
 
 * *`Attributes`*: _map_
 +
-Contains all attributes, which are known about the subject.
+A key-value map containing all known attributes about the principal.
 
-Each object of this type can be thought as a JSON object. Here some examples:
+Each object of this type can be represented as a JSON object. Here are some examples:
 
-.Subject created by an Anonymous Authenticator
+.Principal created by an Anonymous Authenticator
 ====
 [source, javascript]
 ----
-Subject = {
+Principal = {
   ID: "anonymous",
   Attributes: {}
 }
 ----
 ====
 
-.Possible Subject created by an OAuth2 Authenticator
+.Principal created by an OAuth2 Introspection Authenticator
 ====
 [source, javascript]
 ----
-Subject = {
+Principal = {
   ID: "foobar",
   Attributes: {
     "sub": "foobar",
@@ -58,6 +60,45 @@ Subject = {
     "nbf": "1670600305",
     "extra": {
         "foo": ["bar", "baz"]
+    }
+  }
+}
+----
+====
+
+=== Subject
+
+A Subject is a higher-order concept — a key-value collection of link:{{< relref "#_principal" >}}[Principals] verified by all successfully executed link:{{< relref "/docs/mechanisms/authenticators.adoc">}}[authenticators], where the keys represent principal names and the values are the corresponding Principal objects.
+
+Like Principals, Subjects are immutable and ephemeral, existing only for the lifetime of a single request.
+
+In addition to its Principal collection, each Subject exposes the following virtual properties:
+
+* *`ID`*: _string_
++
+The unique identifier of the Subject. Its value is taken from the Principal named "default".
+
+* *`Attributes`*: _map_
++
+A key-value map containing all attributes of the Principal named "default".
+
+Each object of this type can be thought as a JSON object. Here an example:
+
+.Subject created by two authenticators — one authenticating the user and one the device being used
+====
+[source, javascript]
+----
+Subject = {
+  "default": Principal {
+    ID: "62302d83-da01-4ba6-9440-119728757455",
+    Attributes: {
+      "email": "john.doe@example.com"
+    }
+  },
+  "device": Principal {
+    ID: "597ef6b5-64fc-49e3-ad1e-7599046908d9",
+    Attributes: {
+      "os": "Ubuntu 25.04"
     }
   }
 }
@@ -251,7 +292,7 @@ Values = {
 
 == Templating
 
-Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_principal" >}}[Principal], link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
 To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
@@ -268,7 +309,7 @@ Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` 
 
 .Rendering a JSON object
 ====
-Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
+Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject consisting of a single "default" principal with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
 
 [source, gotemplate]
 ----
@@ -283,7 +324,9 @@ Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`,
 }
 ----
 
-Please note how the access to the `foo` query parameter is done. Since `.Request.URL.Query.foo` returns an array of strings, the first element is taken to render the value for the `foo_value` key.
+NOTE: Please note that `.Subject.ID` and `.Subject.Attribute` is a syntactic sugar for `.Subject.default.ID`, respectively `.Subject.default.Attributes`.
+
+NOTE: Please also note how the access to the `foo` query parameter is done. Since `.Request.URL.Query.foo` returns an array of strings, the first element is taken to render the value for the `foo_value` key.
 
 This will result in the following JSON object:
 
@@ -388,13 +431,16 @@ Payload.result == true
 ----
 ====
 
-.Check whether the user is member of the admin group
+.Check whether the user represented by the "default" Principal is member of the admin group
 ====
 [source, cel]
 ----
 has(Subject.Attributes.groups) &&
    Subject.Attributes.groups.exists(g, g == "admin")
 ----
+
+As with templates `Subject.ID` and `Subject.Attributes` is a syntactic sugar for `Subject.default.ID`, respectively `Subject.default.Attributes`
+
 ====
 
 .Access the last path part of the matched URL

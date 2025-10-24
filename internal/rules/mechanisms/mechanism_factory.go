@@ -38,11 +38,11 @@ var (
 )
 
 type MechanismFactory interface {
-	CreateAuthenticator(version, refID, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error)
-	CreateAuthorizer(version, refID, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error)
-	CreateContextualizer(version, refID, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) //nolint: lll
-	CreateFinalizer(version, refID, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error)
-	CreateErrorHandler(version, refID, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
+	CreateAuthenticator(refID, stepID string, conf config.MechanismConfig) (authenticators.Authenticator, error)
+	CreateAuthorizer(refID, stepID string, conf config.MechanismConfig) (authorizers.Authorizer, error)
+	CreateContextualizer(refID, stepID string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) //nolint: lll
+	CreateFinalizer(refID, stepID string, conf config.MechanismConfig) (finalizers.Finalizer, error)
+	CreateErrorHandler(refID, stepID string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
 
 func NewMechanismFactory(app app.Context) (MechanismFactory, error) {
@@ -63,7 +63,7 @@ type mechanismsFactory struct {
 	r *mechanismRepository
 }
 
-func (hf *mechanismsFactory) CreateAuthenticator(_, refID, stepID string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateAuthenticator(refID, stepID string, conf config.MechanismConfig) (
 	authenticators.Authenticator, error,
 ) {
 	prototype, err := hf.r.Authenticator(refID)
@@ -83,7 +83,7 @@ func (hf *mechanismsFactory) CreateAuthenticator(_, refID, stepID string, conf c
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateAuthorizer(_, refID, stepID string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateAuthorizer(refID, stepID string, conf config.MechanismConfig) (
 	authorizers.Authorizer, error,
 ) {
 	prototype, err := hf.r.Authorizer(refID)
@@ -103,7 +103,7 @@ func (hf *mechanismsFactory) CreateAuthorizer(_, refID, stepID string, conf conf
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateContextualizer(_, refID, stepID string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateContextualizer(refID, stepID string, conf config.MechanismConfig) (
 	contextualizers.Contextualizer, error,
 ) {
 	prototype, err := hf.r.Contextualizer(refID)
@@ -123,7 +123,7 @@ func (hf *mechanismsFactory) CreateContextualizer(_, refID, stepID string, conf 
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateFinalizer(_, refID, stepID string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateFinalizer(refID, stepID string, conf config.MechanismConfig) (
 	finalizers.Finalizer, error,
 ) {
 	prototype, err := hf.r.Finalizer(refID)
@@ -143,7 +143,7 @@ func (hf *mechanismsFactory) CreateFinalizer(_, refID, stepID string, conf confi
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateErrorHandler(_, refID, stepID string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateErrorHandler(refID, stepID string, conf config.MechanismConfig) (
 	errorhandlers.ErrorHandler, error,
 ) {
 	prototype, err := hf.r.ErrorHandler(refID)

@@ -13,8 +13,7 @@ rules:
       - GET
       - POST
     hosts:
-      - type: exact
-        value: foo.bar
+      - foo.bar
     scheme: http
   forward_to:
     host: bar.foo
@@ -24,7 +23,7 @@ rules:
       config:
         assertions:
           allowed_algorithms:
-            - RS256
+            - PS386
           issuers:
             - http://127.0.0.1:4444/
           scopes:

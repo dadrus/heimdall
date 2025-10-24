@@ -56,7 +56,7 @@ mechanisms:
             give_up_after: 2s
         authentication_data_source:
           - cookie: ory_kratos_session
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 10m
@@ -91,7 +91,7 @@ mechanisms:
             - bar
           audience:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: sub
     - id: introspection_authenticator2
@@ -131,7 +131,7 @@ mechanisms:
             - bar
           audience:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: sub
     - id: jwt_authenticator1
@@ -165,10 +165,10 @@ mechanisms:
           scopes:
             - foo
           allowed_algorithms:
-            - RSA
+            - ES256
           issuers:
             - bla
-        subject:
+        principal:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 5m
@@ -182,7 +182,7 @@ mechanisms:
           scopes:
             - foo
           allowed_algorithms:
-            - RSA
+            - ES386
           issuers:
             - bla
         validate_jwk: true
@@ -226,7 +226,6 @@ mechanisms:
           headers:
             bla: bla
         payload: foo
-        continue_pipeline_on_error: true
     - id: mapping
       type: map
       config:

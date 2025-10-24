@@ -24,9 +24,7 @@ metadata:
     {{- include "heimdall.labels" $data | nindent 4 }}
   annotations:
     checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-    {{- with .Values.deployment.annotations }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- include "heimdall.annotations" $data | nindent 4 }}
 spec:
   {{- if not .Values.deployment.autoscaling.enabled }}
   replicas: {{ .Values.deployment.replicaCount }}
@@ -97,7 +95,7 @@ spec:
             {{- $providers := .Values.providers | default dict }}
             {{- $kubernetes := $providers.kubernetes | default dict}}
             {{- if $kubernetes.tls }}
-            - name: https-webhook
+            - name: http-webhooks
               protocol: TCP
               containerPort: 4458
             {{- end }}

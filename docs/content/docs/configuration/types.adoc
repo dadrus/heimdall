@@ -29,7 +29,7 @@ Issuers to trust.
 
 * *`allowed_algorithms`*: _string array_ (optional)
 +
-Algorithms, which are trusted (according to https://datatracker.ietf.org/doc/html/rfc7518[RFC 7518]). Defaults to the following list: ES256, ES384, ES512, PS256, PS384, PS512.
+Algorithms, which are trusted (according to https://datatracker.ietf.org/doc/html/rfc7518[RFC 7518]). Defaults to the following list: ES256, ES384, ES512, PS384, PS512.
 
 * *`validity_leeway`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
@@ -58,7 +58,7 @@ Here we say, the token must have been issued either by the issuer `foo`, or the 
 
 == Authentication Data Source
 
-An authentication data source is actually a list of possible strategies for subject authentication data retrieval. The entries following the first one are fallbacks and are only executed if the previous strategy could not retrieve the required authentication data from the request.
+An authentication data source is actually a list of possible strategies for principal authentication data retrieval. The entries following the first one are fallbacks and are only executed if the previous strategy could not retrieve the required authentication data from the request.
 
 This fallback mechanism can become handy, if different clients of your application send the authentication data using different methods. https://datatracker.ietf.org/doc/html/rfc6750[RFC 6750] describes for example how to use bearer tokens in HTTP requests to access OAuth 2.0 protected resources. This RFC says, a token can either be sent in the `Authorization` header, or in a query parameter, or even as part of the HTTP body. So you can define the following list to let Heimdall try to extract the access token from all three places:
 
@@ -618,7 +618,7 @@ Following types are available:
 
 * `accepted` - this is the only state type in this list and is used to signal, the matched decision pipeline has been executed successfully, so the request can be forwarded to the upstream service. The response of that type results by default in a `200 OK` response.
 * `authentication_error` (*) - used if an authenticator failed to verify authentication data available in the request. E.g. an authenticator was configured to verify a JWT and the signature of it was invalid. If none of the authenticators used in a pipeline were able to authenticate the user, and the default error handler was used to handle such error, it will by default result in a `401 Unauthorized` response.
-* `authorization_error` (*) - used if an authorizer failed to authorize the subject. E.g. an authorizer is configured to use an expression on the given subject and request context, but that expression returned with an error. Error of this type results by default in `403 Forbidden` response if the default error handler was used to handle such error.
+* `authorization_error` (*) - used if an authorizer failed to authorize the principal. E.g. an authorizer is configured to use an expression on the given principal and request context, but that expression returned with an error. Error of this type results by default in `403 Forbidden` response if the default error handler was used to handle such error.
 * `communication_error` (*) - this error is used to signal a communication error while communicating to a remote system during the execution of the pipeline of the matched rule. Timeouts of DNSs errors result in such an error. Error of this type results by default in `502 Bad Gateway` HTTP code if handled by the default error handler.
 * `internal_error` - used if heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc. Results by default in `500 Internal Server Error` response to the caller.
 * `no_rule_error` - this error is used to signal, there is no matching rule to handle the given request. Error of this type results by default in `404 Not Found` HTTP code.
@@ -828,7 +828,7 @@ This configuration type enables the configuration of session lifespans, used for
 
 * *`active`*: _string_ (optional)
 +
-A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field describing the "active" status of the session in the corresponding JSON object. The actual value in that field should be convertable to a `bool` type. If not provided, or not found in the session object, the session is considered to be "active". "active" means it can be used and represent a valid session between the authentication system and the subject, the session has been issued to.
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field describing the "active" status of the session in the corresponding JSON object. The actual value in that field should be convertable to a `bool` type. If not set, the session is considered to be "active". "active" means it can be used and represent a valid session between the authentication system and the principal, the session has been issued to.
 
 * *`issued_at`*: _string_ (optional)
 +
@@ -988,22 +988,22 @@ signer:
 ----
 ====
 
-== Subject
+== Principal
 
-This configuration type enables extraction of subject information from responses received by Heimdall from authentication services. Following properties are available.
+This configuration type enables extraction of principal information from responses received by Heimdall from authentication services. Following properties are available.
 
 * *`id`*: _string_ (mandatory)
 +
-A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the id of the subject in the JSON object.
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the id of the principal in the JSON object.
 
 * *`attributes`*: _string_ (optional)
 +
-A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the subject in the JSON object. Defaults to `@this`.
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the principal in the JSON object. Defaults to `@this`.
 
-.Extracting subject id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response.
+.Extracting principal id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response.
 ====
 
-This example shows how to extract the subject id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response and set the subject attributes to the entire response
+This example shows how to extract the principal id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response and set the principal attributes to the entire response
 
 [source, yaml]
 ----
@@ -1014,10 +1014,10 @@ attributes: @this
 Setting `attributes` was actually not required, as `@this` would be set by default anyway.
 ====
 
-.Extracting subject id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
+.Extracting principal id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
 ====
 
-This example shows how to extract the subject id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response and set the subject attributes to the entire response. `attributes` is not configured, so default is used.
+This example shows how to extract the principal id from the https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response and set the principal attributes to the entire response. `attributes` is not configured, so default is used.
 
 [source, yaml]
 ----

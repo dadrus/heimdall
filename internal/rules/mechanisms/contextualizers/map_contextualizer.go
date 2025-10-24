@@ -7,7 +7,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
@@ -65,11 +65,7 @@ type mapContextualizer struct {
 	values values.Values
 }
 
-func (c *mapContextualizer) ContinueOnError() bool {
-	return false
-}
-
-func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerMap).
@@ -108,7 +104,8 @@ func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) 
 	}
 
 	type Config struct {
-		Values values.Values `mapstructure:"values"`
+		Items  map[string]template.Template `mapstructure:"items"  validate:"not_allowed"`
+		Values values.Values                `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -128,7 +125,7 @@ func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) 
 
 func (c *mapContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub identity.Subject,
 ) (map[string]string, error) {
 	var rendered string
 

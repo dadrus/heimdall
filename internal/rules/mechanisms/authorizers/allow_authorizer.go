@@ -21,7 +21,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -57,7 +57,7 @@ func newAllowAuthorizer(app app.Context, name string) *allowAuthorizer {
 	}
 }
 
-func (a *allowAuthorizer) Execute(ctx heimdall.RequestContext, _ *subject.Subject) error {
+func (a *allowAuthorizer) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerAllow).
@@ -88,5 +88,3 @@ func (a *allowAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (A
 func (a *allowAuthorizer) Name() string { return a.name }
 
 func (a *allowAuthorizer) ID() string { return a.id }
-
-func (a *allowAuthorizer) ContinueOnError() bool { return false }

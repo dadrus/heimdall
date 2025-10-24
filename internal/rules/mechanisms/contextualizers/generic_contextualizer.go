@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
@@ -70,16 +70,15 @@ type contextualizerData struct {
 }
 
 type genericContextualizer struct {
-	name            string
-	id              string
-	app             app.Context
-	e               endpoint.Endpoint
-	ttl             time.Duration
-	payload         template.Template
-	fwdHeaders      []string
-	fwdCookies      []string
-	continueOnError bool
-	v               values.Values
+	name       string
+	id         string
+	app        app.Context
+	e          endpoint.Endpoint
+	ttl        time.Duration
+	payload    template.Template
+	fwdHeaders []string
+	fwdCookies []string
+	v          values.Values
 }
 
 func newGenericContextualizer(
@@ -94,13 +93,12 @@ func newGenericContextualizer(
 		Msg("Creating contextualizer")
 
 	type Config struct {
-		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
-		ForwardHeaders  []string          `mapstructure:"forward_headers"`
-		ForwardCookies  []string          `mapstructure:"forward_cookies"`
-		Payload         template.Template `mapstructure:"payload"`
-		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
-		ContinueOnError bool              `mapstructure:"continue_pipeline_on_error"`
-		Values          values.Values     `mapstructure:"values"`
+		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"        validate:"required"`
+		ForwardHeaders []string          `mapstructure:"forward_headers"`
+		ForwardCookies []string          `mapstructure:"forward_cookies"`
+		Payload        template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
+		Values         values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -122,33 +120,26 @@ func newGenericContextualizer(
 	}
 
 	return &genericContextualizer{
-		name:            name,
-		id:              name,
-		app:             app,
-		e:               conf.Endpoint,
-		payload:         conf.Payload,
-		fwdHeaders:      conf.ForwardHeaders,
-		fwdCookies:      conf.ForwardCookies,
-		ttl:             ttl,
-		continueOnError: conf.ContinueOnError,
-		v:               conf.Values,
+		name:       name,
+		id:         name,
+		app:        app,
+		e:          conf.Endpoint,
+		payload:    conf.Payload,
+		fwdHeaders: conf.ForwardHeaders,
+		fwdCookies: conf.ForwardCookies,
+		ttl:        ttl,
+		v:          conf.Values,
 	}, nil
 }
 
 //nolint:cyclop
-func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerGeneric).
 		Str("_name", c.name).
 		Str("_id", c.id).
 		Msg("Executing contextualizer")
-
-	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute generic contextualizer due to 'nil' subject").
-			WithErrorContext(c)
-	}
 
 	cch := cache.Ctx(ctx.Context())
 
@@ -210,12 +201,12 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 	}
 
 	type Config struct {
-		ForwardHeaders  []string          `mapstructure:"forward_headers"`
-		ForwardCookies  []string          `mapstructure:"forward_cookies"`
-		Payload         template.Template `mapstructure:"payload"`
-		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
-		ContinueOnError *bool             `mapstructure:"continue_pipeline_on_error"`
-		Values          values.Values     `mapstructure:"values"`
+		Endpoint       *endpoint.Endpoint `mapstructure:"endpoint"        validate:"not_allowed"`
+		ForwardHeaders []string           `mapstructure:"forward_headers"`
+		ForwardCookies []string           `mapstructure:"forward_cookies"`
+		Payload        template.Template  `mapstructure:"payload"`
+		CacheTTL       *time.Duration     `mapstructure:"cache_ttl"`
+		Values         values.Values      `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -235,9 +226,6 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return c.ttl }),
-		continueOnError: x.IfThenElseExec(conf.ContinueOnError != nil,
-			func() bool { return *conf.ContinueOnError },
-			func() bool { return c.continueOnError }),
 		v: c.v.Merge(conf.Values),
 	}, nil
 }
@@ -246,11 +234,9 @@ func (c *genericContextualizer) Name() string { return c.name }
 
 func (c *genericContextualizer) ID() string { return c.id }
 
-func (c *genericContextualizer) ContinueOnError() bool { return c.continueOnError }
-
 func (c *genericContextualizer) callEndpoint(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub identity.Subject,
 	values map[string]string,
 	payload string,
 ) (*contextualizerData, error) {
@@ -290,7 +276,7 @@ func (c *genericContextualizer) callEndpoint(
 
 func (c *genericContextualizer) createRequest(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub identity.Subject,
 	values map[string]string,
 	payload string,
 ) (*http.Request, error) {
@@ -386,7 +372,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *
 }
 
 func (c *genericContextualizer) calculateCacheKey(
-	sub *subject.Subject,
+	sub identity.Subject,
 	values map[string]string,
 	payload string,
 ) string {
@@ -416,7 +402,7 @@ func (c *genericContextualizer) calculateCacheKey(
 
 func (c *genericContextualizer) renderTemplates(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
+	sub identity.Subject,
 ) (map[string]string, string, error) {
 	var payload string
 

@@ -4,18 +4,18 @@ logs:
   access:
     enabled: true
 
-tracing:
-  otlp:
-    enabled: true
-    grpc:
-      enabled: true
-      endpoint: alloy.monitoring:4317
-      insecure: true
+#tracing:
+#  otlp:
+#    enabled: true
+#    grpc:
+#      enabled: true
+#      endpoint: alloy.monitoring:4317
+#      insecure: true
 
-metrics:
-  prometheus:
-    serviceMonitor:
-      enabled: true
+#metrics:
+#  prometheus:
+#    serviceMonitor:
+#      enabled: true
 
 experimental:
   kubernetesGateway:

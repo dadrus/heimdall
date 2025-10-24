@@ -7,7 +7,7 @@ package mocks
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,52 +38,8 @@ func (_m *AuthorizerMock) EXPECT() *AuthorizerMock_Expecter {
 	return &AuthorizerMock_Expecter{mock: &_m.Mock}
 }
 
-// ContinueOnError provides a mock function for the type AuthorizerMock
-func (_mock *AuthorizerMock) ContinueOnError() bool {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for ContinueOnError")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func() bool); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// AuthorizerMock_ContinueOnError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContinueOnError'
-type AuthorizerMock_ContinueOnError_Call struct {
-	*mock.Call
-}
-
-// ContinueOnError is a helper method to define mock.On call
-func (_e *AuthorizerMock_Expecter) ContinueOnError() *AuthorizerMock_ContinueOnError_Call {
-	return &AuthorizerMock_ContinueOnError_Call{Call: _e.mock.On("ContinueOnError")}
-}
-
-func (_c *AuthorizerMock_ContinueOnError_Call) Run(run func()) *AuthorizerMock_ContinueOnError_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *AuthorizerMock_ContinueOnError_Call) Return(b bool) *AuthorizerMock_ContinueOnError_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *AuthorizerMock_ContinueOnError_Call) RunAndReturn(run func() bool) *AuthorizerMock_ContinueOnError_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Execute provides a mock function for the type AuthorizerMock
-func (_mock *AuthorizerMock) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (_mock *AuthorizerMock) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	ret := _mock.Called(ctx, sub)
 
 	if len(ret) == 0 {
@@ -91,7 +47,7 @@ func (_mock *AuthorizerMock) Execute(ctx heimdall.RequestContext, sub *subject.S
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, *subject.Subject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, identity.Subject) error); ok {
 		r0 = returnFunc(ctx, sub)
 	} else {
 		r0 = ret.Error(0)
@@ -106,20 +62,20 @@ type AuthorizerMock_Execute_Call struct {
 
 // Execute is a helper method to define mock.On call
 //   - ctx heimdall.RequestContext
-//   - sub *subject.Subject
+//   - sub identity.Subject
 func (_e *AuthorizerMock_Expecter) Execute(ctx interface{}, sub interface{}) *AuthorizerMock_Execute_Call {
 	return &AuthorizerMock_Execute_Call{Call: _e.mock.On("Execute", ctx, sub)}
 }
 
-func (_c *AuthorizerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, sub *subject.Subject)) *AuthorizerMock_Execute_Call {
+func (_c *AuthorizerMock_Execute_Call) Run(run func(ctx heimdall.RequestContext, sub identity.Subject)) *AuthorizerMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 heimdall.RequestContext
 		if args[0] != nil {
 			arg0 = args[0].(heimdall.RequestContext)
 		}
-		var arg1 *subject.Subject
+		var arg1 identity.Subject
 		if args[1] != nil {
-			arg1 = args[1].(*subject.Subject)
+			arg1 = args[1].(identity.Subject)
 		}
 		run(
 			arg0,
@@ -134,7 +90,7 @@ func (_c *AuthorizerMock_Execute_Call) Return(err error) *AuthorizerMock_Execute
 	return _c
 }
 
-func (_c *AuthorizerMock_Execute_Call) RunAndReturn(run func(ctx heimdall.RequestContext, sub *subject.Subject) error) *AuthorizerMock_Execute_Call {
+func (_c *AuthorizerMock_Execute_Call) RunAndReturn(run func(ctx heimdall.RequestContext, sub identity.Subject) error) *AuthorizerMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

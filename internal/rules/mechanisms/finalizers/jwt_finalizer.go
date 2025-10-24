@@ -30,7 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
@@ -127,7 +127,7 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (*j
 	return fin, nil
 }
 
-func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
+func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerJwt).
@@ -137,7 +137,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt finalizer due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt finalizer due to 'nil' identity").
 			WithErrorContext(f)
 	}
 
@@ -185,7 +185,14 @@ func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fina
 		return &fin, nil
 	}
 
+	type HeaderConfig struct {
+		Name   string `mapstructure:"name"`
+		Scheme string `mapstructure:"scheme"`
+	}
+
 	type Config struct {
+		Signer *SignerConfig     `mapstructure:"signer" validate:"not_allowed"`
+		Header *HeaderConfig     `mapstructure:"header" validate:"not_allowed"`
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
 		Claims template.Template `mapstructure:"claims"`
 		Values values.Values     `mapstructure:"values"`
@@ -218,9 +225,7 @@ func (f *jwtFinalizer) Name() string { return f.name }
 
 func (f *jwtFinalizer) ID() string { return f.id }
 
-func (f *jwtFinalizer) ContinueOnError() bool { return false }
-
-func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.Subject) (string, error) {
+func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub identity.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")
 
@@ -260,7 +265,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 		}
 	}
 
-	token, err := f.signer.Sign(sub.ID, f.ttl, result)
+	token, err := f.signer.Sign(sub.ID(), f.ttl, result)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to sign token").
@@ -271,7 +276,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 	return token, nil
 }
 
-func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub *subject.Subject) string {
+func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub identity.Subject) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)

@@ -51,8 +51,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -111,7 +111,7 @@ jwt_source:
 assertions:
   issuers:
     - foobar
-subject:
+principal:
   id: some_template`),
 			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
@@ -128,7 +128,7 @@ jwks_endpoint:
 assertions:
   audience:
     - foobar
-subject:
+principal:
   id: some_template`),
 			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
@@ -188,16 +188,11 @@ assertions:
 				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// subject settings
-				sess, ok := auth.sf.(*SubjectInfo)
+				// principal settings
+				sess, ok := auth.sf.(*PrincipalInfo)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -251,16 +246,11 @@ cache_ttl: 5s`),
 				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// subject settings
-				sess, ok := auth.sf.(*SubjectInfo)
+				// principal settings
+				sess, ok := auth.sf.(*PrincipalInfo)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -315,7 +305,7 @@ assertions:
     - foobar
   allowed_algorithms:
     - ES256
-subject:
+principal:
   id: some_claim
 validate_jwk: false
 trust_store: ` + trustStorePath),
@@ -355,8 +345,8 @@ trust_store: ` + trustStorePath),
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{string(jose.ES256)})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// subject settings
-				sess, ok := auth.sf.(*SubjectInfo)
+				// principal settings
+				sess, ok := auth.sf.(*PrincipalInfo)
 				require.True(t, ok)
 				assert.Equal(t, "some_claim", sess.IDFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -427,15 +417,11 @@ cache_ttl: 5s`),
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
 				assert.Empty(t, auth.a.TrustedIssuers)
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// subject settings
-				sess, ok := auth.sf.(*SubjectInfo)
+				// principal settings
+				sess, ok := auth.sf.(*PrincipalInfo)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -513,15 +499,11 @@ cache_ttl: 5s`),
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
 				assert.Empty(t, auth.a.TrustedIssuers)
-				assert.Len(t, auth.a.AllowedAlgorithms, 6)
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
-					string(jose.ES256), string(jose.ES384), string(jose.ES512),
-					string(jose.PS256), string(jose.PS384), string(jose.PS512),
-				})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// subject settings
-				sess, ok := auth.sf.(*SubjectInfo)
+				// principal settings
+				sess, ok := auth.sf.(*PrincipalInfo)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -647,9 +629,7 @@ cache_ttl: 5s`),
 				t.Helper()
 
 				// THEN
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
 			},
 		},
 		"prototype config without cache, target config with overwrites, but without cache": {
@@ -848,13 +828,13 @@ assertions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "has invalid keys: trust_store")
+				require.ErrorContains(t, err, "'trust_store' is not allowed")
 			},
 		},
 		"prototype with defaults, configured does not allow jwk validation override": {
 			prototypeConfig: []byte(`
 metadata_endpoint:
-  url: http://test.com
+  url: https://test.com
 `),
 			config: []byte(`validate_jwk: false`),
 			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
@@ -862,7 +842,7 @@ metadata_endpoint:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "has invalid keys: validate_jwk")
+				require.ErrorContains(t, err, "'validate_jwk' is not allowed")
 			},
 		},
 	} {
@@ -956,14 +936,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	subjectID := "foo"
+	principalID := "foo"
 	issuer := "foobar"
 	audience := "bar"
 
-	jwtSignedWithKeyOnlyJWK := createJWT(t, keyOnlyEntry, subjectID, issuer, audience, true)
+	jwtSignedWithKeyOnlyJWK := createJWT(t, keyOnlyEntry, principalID, issuer, audience, true)
 
-	jwtSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, true)
-	jwtWithoutKIDSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, false)
+	jwtSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, principalID, issuer, audience, true)
+	jwtWithoutKIDSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, principalID, issuer, audience, false)
 
 	jwksSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		jwksEndpointCalled = true
@@ -1004,7 +984,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *jwtAuthenticator)
-		assert func(t *testing.T, err error, sub *subject.Subject)
+		assert func(t *testing.T, err error, sub identity.Subject)
 	}{
 		"with failing auth data source": {
 			authenticator: &jwtAuthenticator{id: "auth3"},
@@ -1018,7 +998,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1046,7 +1026,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz.bam", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1074,7 +1054,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz", nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1108,7 +1088,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1142,7 +1122,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1181,7 +1161,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				jwksResponseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1231,7 +1211,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = []byte(`Hello Foo`)
 				jwksResponseContentType = "text/text"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1281,7 +1261,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithDuplicateEntries
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1323,7 +1303,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusBadRequest
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1370,7 +1350,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1425,7 +1405,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1481,7 +1461,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1537,7 +1517,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1553,7 +1533,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		"with positive cache hit, but subject creation error": {
+		"with positive cache hit, but principal creation error": {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -1569,7 +1549,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &SubjectInfo{IDFrom: "foobar"},
+				sf:  &PrincipalInfo{IDFrom: "foobar"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1598,7 +1578,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1607,7 +1587,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				require.ErrorContains(t, err, "failed to extract subject")
+				require.ErrorContains(t, err, "failed to extract principal")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1629,7 +1609,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1658,7 +1638,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1667,17 +1647,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, subjectID, sub.ID)
-				assert.Len(t, sub.Attributes, 8)
-				assert.Len(t, sub.Attributes["aud"], 1)
-				assert.Contains(t, sub.Attributes["aud"], audience)
-				assert.Contains(t, sub.Attributes, "exp")
-				assert.Contains(t, sub.Attributes, "iat")
-				assert.Contains(t, sub.Attributes, "nbf")
-				assert.Equal(t, issuer, sub.Attributes["iss"])
-				assert.Contains(t, sub.Attributes["scp"], "foo")
-				assert.Contains(t, sub.Attributes["scp"], "bar")
-				assert.Equal(t, subjectID, sub.Attributes["sub"])
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
 			},
 		},
 		"successful without cache hit using key only": {
@@ -1695,7 +1675,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1737,7 +1717,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneKeyOnlyEntry
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1746,17 +1726,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, subjectID, sub.ID)
-				assert.Len(t, sub.Attributes, 8)
-				assert.Len(t, sub.Attributes["aud"], 1)
-				assert.Contains(t, sub.Attributes["aud"], audience)
-				assert.Contains(t, sub.Attributes, "exp")
-				assert.Contains(t, sub.Attributes, "iat")
-				assert.Contains(t, sub.Attributes, "nbf")
-				assert.Equal(t, issuer, sub.Attributes["iss"])
-				assert.Contains(t, sub.Attributes["scp"], "foo")
-				assert.Contains(t, sub.Attributes["scp"], "bar")
-				assert.Equal(t, subjectID, sub.Attributes["sub"])
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
 			},
 		},
 		"successful without cache hit using key & cert with disabled jwk validation": {
@@ -1774,7 +1754,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1815,7 +1795,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1824,17 +1804,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, subjectID, sub.ID)
-				assert.Len(t, sub.Attributes, 8)
-				assert.Len(t, sub.Attributes["aud"], 1)
-				assert.Contains(t, sub.Attributes["aud"], audience)
-				assert.Contains(t, sub.Attributes, "exp")
-				assert.Contains(t, sub.Attributes, "iat")
-				assert.Contains(t, sub.Attributes, "nbf")
-				assert.Equal(t, issuer, sub.Attributes["iss"])
-				assert.Contains(t, sub.Attributes["scp"], "foo")
-				assert.Contains(t, sub.Attributes["scp"], "bar")
-				assert.Equal(t, subjectID, sub.Attributes["sub"])
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
 			},
 		},
 		"successful without cache hit using key & cert with disabled jwk validation using metadata discovery": {
@@ -1847,7 +1827,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					AllowedAlgorithms: []string{"ES384"},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1905,7 +1885,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1914,17 +1894,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, subjectID, sub.ID)
-				assert.Len(t, sub.Attributes, 8)
-				assert.Len(t, sub.Attributes["aud"], 1)
-				assert.Contains(t, sub.Attributes["aud"], audience)
-				assert.Contains(t, sub.Attributes, "exp")
-				assert.Contains(t, sub.Attributes, "iat")
-				assert.Contains(t, sub.Attributes, "nbf")
-				assert.Equal(t, issuer, sub.Attributes["iss"])
-				assert.Contains(t, sub.Attributes["scp"], "foo")
-				assert.Contains(t, sub.Attributes["scp"], "bar")
-				assert.Equal(t, subjectID, sub.Attributes["sub"])
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
 			},
 		},
 		"successful without cache hit using key & cert with enabled jwk validation using system trust store": {
@@ -1943,7 +1923,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:              &SubjectInfo{IDFrom: "sub"},
+				sf:              &PrincipalInfo{IDFrom: "sub"},
 				ttl:             &tenSecondsTTL,
 				validateJWKCert: true,
 			},
@@ -1979,7 +1959,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2010,7 +1990,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:              &SubjectInfo{IDFrom: "sub"},
+				sf:              &PrincipalInfo{IDFrom: "sub"},
 				ttl:             &tenSecondsTTL,
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
@@ -2053,7 +2033,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2062,17 +2042,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, subjectID, sub.ID)
-				assert.Len(t, sub.Attributes, 8)
-				assert.Len(t, sub.Attributes["aud"], 1)
-				assert.Contains(t, sub.Attributes["aud"], audience)
-				assert.Contains(t, sub.Attributes, "exp")
-				assert.Contains(t, sub.Attributes, "iat")
-				assert.Contains(t, sub.Attributes, "nbf")
-				assert.Equal(t, issuer, sub.Attributes["iss"])
-				assert.Contains(t, sub.Attributes["scp"], "foo")
-				assert.Contains(t, sub.Attributes["scp"], "bar")
-				assert.Equal(t, subjectID, sub.Attributes["sub"])
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
 			},
 		},
 		"successful validation of token without kid": {
@@ -2090,7 +2070,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:              &SubjectInfo{IDFrom: "sub"},
+				sf:              &PrincipalInfo{IDFrom: "sub"},
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
 			},
@@ -2115,7 +2095,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2124,17 +2104,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, sub)
-				assert.Equal(t, subjectID, sub.ID)
-				assert.Len(t, sub.Attributes, 8)
-				assert.Len(t, sub.Attributes["aud"], 1)
-				assert.Contains(t, sub.Attributes["aud"], audience)
-				assert.Contains(t, sub.Attributes, "exp")
-				assert.Contains(t, sub.Attributes, "iat")
-				assert.Contains(t, sub.Attributes, "nbf")
-				assert.Equal(t, issuer, sub.Attributes["iss"])
-				assert.Contains(t, sub.Attributes["scp"], "foo")
-				assert.Contains(t, sub.Attributes["scp"], "bar")
-				assert.Equal(t, subjectID, sub.Attributes["sub"])
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
 			},
 		},
 		"validation of token without kid fails because of jwks response unmarshalling error": {
@@ -2170,7 +2150,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = []byte(`Hello Foo`)
 				jwksResponseContentType = "text/text"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2218,7 +2198,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithRSAKey
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2267,7 +2247,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2293,7 +2273,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{"barfoo"},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -2334,7 +2314,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject) {
+			assert: func(t *testing.T, err error, _ identity.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -2364,7 +2344,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 					AllowedAlgorithms: []string{"ES384"},
 				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
+				sf:  &PrincipalInfo{IDFrom: "sub"},
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -2406,7 +2386,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, sub identity.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -2458,8 +2438,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
+			sub := make(identity.Subject)
+
 			// WHEN
-			sub, err := tc.authenticator.Execute(ctx)
+			err = tc.authenticator.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, sub)
