@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 23 Oct 2025 11:13:17 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 24 Oct 2025 12:59:14 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_what_is_heimdall"&gt;What is heimdall?&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
@@ -423,6 +423,12 @@ heimdall &lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="nt"&gt;--flag&lt;/s
 &lt;div class="ulist"&gt;
 &lt;ul&gt;
 &lt;li&gt;
+&lt;p&gt;&lt;code&gt;convert&lt;/code&gt;&lt;/p&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Commands for converting heimdall’s resources between versions.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/li&gt;
+&lt;li&gt;
 &lt;p&gt;&lt;code&gt;completion&lt;/code&gt;&lt;/p&gt;
 &lt;div class="paragraph"&gt;
 &lt;p&gt;Generates the autocompletion script for the specified shell.&lt;/p&gt;
@@ -480,6 +486,11 @@ heimdall &lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="nt"&gt;--flag&lt;/s
 &lt;p&gt;The authentication stage of the &lt;a href="./docs/rules/default_rule/"&gt;default rule&lt;/a&gt; cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). This enforcement can be disabled (not recommended) by starting heimdall with the &lt;code&gt;--insecure-skip-secure-default-rule-enforcement&lt;/code&gt; flag.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
+&lt;/div&gt;</description></item><item><title>Upgrade &amp; Migration</title><link>https://dadrus.github.io/docs/operations/migration/</link><pubDate>Sat, 11 Oct 2025 11:53:52 +0100</pubDate><guid>https://dadrus.github.io/docs/operations/migration/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;Over time, heimdall’s configuration and &lt;code&gt;RuleSet&lt;/code&gt; schemas evolve to introduce new capabilities or simplify existing structures. Whenever breaking changes are introduced, they are both announced in the corresponding release notes and described in detail.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;If a breaking change affects the configuration schema, migration must be performed manually before starting the new heimdall version. The required steps are outlined in the pull requests introducing the change, which are also linked in the release notes.&lt;/p&gt;
 &lt;/div&gt;</description></item><item><title>Main Service</title><link>https://dadrus.github.io/docs/services/main/</link><pubDate>Thu, 09 Jun 2022 18:55:45 +0200</pubDate><guid>https://dadrus.github.io/docs/services/main/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;To make use of this service you have to start heimdall with either &lt;code&gt;heimdall serve proxy&lt;/code&gt; or &lt;code&gt;heimdall serve decision&lt;/code&gt;. By default, heimdall listens on &lt;code&gt;0.0.0.0:4456&lt;/code&gt; endpoint for incoming requests and also configures useful defaults. You can, and should however adjust the configuration for your needs.&lt;/p&gt;
 &lt;/div&gt;
