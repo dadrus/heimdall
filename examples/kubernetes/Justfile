@@ -297,6 +297,8 @@ install-heimdall router=default_router:
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
     --set "${extraArgs}" \
+    --set crds.updateEnabled=true \
+    --take-ownership \
     --wait
 
   if [[ "{{router}}" == "contour" ]]; then
@@ -345,4 +347,3 @@ install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
-

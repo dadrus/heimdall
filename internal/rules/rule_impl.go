@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -36,8 +36,8 @@ type ruleImpl struct {
 	isDefault       bool
 	hash            []byte
 	routes          []rule.Route
-	slashesHandling config.EncodedSlashesHandling
-	backend         *config.Backend
+	slashesHandling v1beta1.EncodedSlashesHandling
+	backend         *v1beta1.Backend
 	sc              compositeSubjectCreator
 	sh              compositeSubjectHandler
 	fi              compositeSubjectHandler
@@ -56,10 +56,10 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 	request := ctx.Request()
 
 	switch r.slashesHandling { //nolint:exhaustive
-	case config.EncodedSlashesOn:
+	case v1beta1.EncodedSlashesOn:
 		// unescape path
 		request.URL.RawPath = ""
-	case config.EncodedSlashesOff:
+	case v1beta1.EncodedSlashesOff:
 		if strings.Contains(request.URL.RawPath, "%2F") {
 			return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
 				"path contains encoded slash, which is not allowed")
@@ -164,8 +164,8 @@ func (b backend) URL() *url.URL { return b.targetURL }
 
 func (b backend) ForwardHostHeader() bool { return b.forwardHostHeader }
 
-func unescape(value string, handling config.EncodedSlashesHandling) string {
-	if handling == config.EncodedSlashesOn {
+func unescape(value string, handling v1beta1.EncodedSlashesHandling) string {
+	if handling == v1beta1.EncodedSlashesOn {
 		unescaped, _ := url.PathUnescape(value)
 
 		return unescaped

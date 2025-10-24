@@ -43,13 +43,17 @@ tags:
       
       This information is only available on heimdall's **metrics port**.
 
-  - name: Validating Admission Controller
+  - name: Kubernetes Admission Controller
     description: |
-      Implements a [validating admission controller webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
-      for integration purposes with the Kubernetes API server. If used, allows a direct feedback for `RuleSet` resources upon deployment of these
-      into a Kubernetes cluster without the need to look into the logs, if a RuleSet could not be loaded for any reasons.
-
-      This functionality is only available on heimdall's **validating admission controller** port, supported in Kubernetes deployments only.
+      Implements a [validating admission controller](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
+      as well as a [conversion controller](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#webhook-conversion) 
+      for integration purposes with the Kubernetes API server. 
+      
+      The former allows direct feedback for `RuleSet` resources upon deployment of these into a Kubernetes cluster without the need
+      to look into the logs, if a `RuleSet` could not be loaded for any reasons. The second allows conversion of `RuleSet` resources
+      on CRD schema version changes.
+      
+      This functionality is only available in Kubernetes environments only.
 x-tagGroups:
   - name: Management
     tags:
@@ -63,9 +67,9 @@ x-tagGroups:
   - name: Metrics
     tags:
       - Metrics
-  - name: Validating Admission Controller
+  - name: Kubernetes Admission Controller
     tags:
-      - Validating Admission Controller
+      - Kubernetes Admission Controller
 
 components:
   schemas:
@@ -385,18 +389,18 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /validate-ruleset:
+  /validate:
     servers:
       - url: https://heimdall.decision.kuberetes.svc
-        description: RuleSet Validation Admission Controller
+        description: Kubernetes Admission Controller
     post:
-      summary: Validate RuleSet
+      summary: Validate `RuleSet` resources
       description: |
         Validates RuleSets enveloped into the [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview) object as defined by the 
         [Kubernetes Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers)
         specification.
       tags:
-        - Validating Admission Controller
+        - Kubernetes Admission Controller
       operationId: admission_controller_validate_ruleset
       parameters:
         - name: timeout
@@ -508,7 +512,9 @@ paths:
                         },
                         "id": "public-access",
                         "match": {
-                          "path": "/pub/**"
+                          "routes": [
+                            { "path": "/pub/**" }
+                          ]
                         }
                       },
                       {
@@ -522,7 +528,9 @@ paths:
                         },
                         "id": "anonymous-access",
                         "match": {
-                          "path": "/anon/**"
+                          "routes": [
+                            { "path": "/anon/**" }
+                          ]
                         }
                       },
                       {
@@ -572,6 +580,254 @@ paths:
                     "message":"RuleSet valid",
                     "code":200
                   }
+                }
+              }
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /convert:
+    servers:
+      - url: https://heimdall.decision.kuberetes.svc
+        description: Kubernetes Admission Controller
+    post:
+      summary: Convert `RuleSet` resources
+      description: |
+        Converts `RuleSet` resources deployed to the Kubernetes cluster between supported schema versions. The corresponding
+        object is enveloped into the [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-request-0) object as defined by the 
+        [Kubernetes Conversion Controller](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers) specification.
+      tags:
+        - Kubernetes Admission Controller
+      operationId: admission_controller_convert_ruleset
+      parameters:
+        - name: timeout
+          description: |
+            How long the conversion is allowed to take. Adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
+          in: query
+          required: false
+          schema:
+            type: string
+          example: 5s
+      requestBody:
+        description: |
+          The [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-request-0)
+          request object as specified by Kubernetes API enveloping a `RuleSet` to be validated.
+        required: true
+        content:
+          application/json:
+            example: {
+              "kind": "ConversionReview",
+              "apiVersion": "apiextensions.k8s.io/v1",
+              "request": {
+                "uid": "705ab4f5-6393-11e8-b7cc-42010a800002",
+                "desiredAPIVersion": "heimdall.dadrus.github.com/v1beta1",
+                "objects": [
+                  {
+                    "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
+                    "kind": "RuleSet",
+                    "metadata": {
+                      "annotations": {
+                        "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1beta1\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
+                      },
+                      "creationTimestamp": "2025-08-12T09:15:29Z",
+                      "generation": 1,
+                      "labels": {
+                        "app.kubernetes.io/name": "echo-app"
+                      },
+                      "managedFields": [
+                        {
+                          "apiVersion": "heimdall.dadrus.github.com/v1beta1",
+                          "fieldsType": "FieldsV1",
+                          "fieldsV1": {
+                            "f:metadata": {
+                              "f:annotations": {
+                                ".": { },
+                                "f:kubectl.kubernetes.io/last-applied-configuration": { }
+                              },
+                              "f:labels": {
+                                ".": { },
+                                "f:app.kubernetes.io/name": { }
+                              }
+                            },
+                            "f:spec": {
+                              ".": { },
+                              "f:authClassName": { },
+                              "f:rules": { }
+                            }
+                          },
+                          "manager": "kubectl-client-side-apply",
+                          "operation": "Update",
+                          "time": "2025-08-12T09:15:29Z"
+                        }
+                      ],
+                      "name": "echo-app-rules",
+                      "namespace": "quickstarts",
+                      "uid": "28703aca-bb5a-4355-8542-4b37b1146553"
+                    },
+                    "spec": {
+                      "authClassName": "default",
+                      "rules": [
+                        {
+                          "execute": [
+                            {
+                              "authorizer": "allow_all_requests"
+                            },
+                            {
+                              "finalizer": "noop_finalizer"
+                            }
+                          ],
+                          "id": "public-access",
+                          "match": {
+                            "routes": [
+                              { "path": "/public" }
+                            ]
+                          }
+                        },
+                        {
+                          "execute": [
+                            {
+                              "authorizer": "allow_all_requests"
+                            }
+                          ],
+                          "id": "anonymous-access",
+                          "match": {
+                            "routes": [
+                              { "path": "/anon/**" }
+                            ]
+                          }
+                        },
+                        {
+                          "execute": [
+                            {
+                              "authenticator": "deny_authenticator"
+                            }
+                          ],
+                          "forward_to": {
+                            "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                          },
+                          "id": "redirect",
+                          "match": {
+                            "routes": [
+                              { "path": "/redir/**" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+
+      responses:
+        '200':
+          description: |
+            The [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-response-success-0)
+            response object as specified by Kubernetes API.
+          content:
+            application/json:
+              example: {
+                "kind": "ConversionReview",
+                "apiVersion": "apiextensions.k8s.io/v1",
+                "response": {
+                  "uid": "705ab4f5-6393-11e8-b7cc-42010a800002",
+                  "result": {
+                    "status": "Success"
+                  },
+                  "convertedObjects": [
+                    {
+                      "apiVersion": "heimdall.dadrus.github.com/v1beta1",
+                      "kind": "RuleSet",
+                      "metadata": {
+                        "annotations": {
+                          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1beta1\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
+                        },
+                        "creationTimestamp": "2025-08-12T09:15:29Z",
+                        "generation": 1,
+                        "labels": {
+                          "app.kubernetes.io/name": "echo-app"
+                        },
+                        "managedFields": [
+                          {
+                            "apiVersion": "heimdall.dadrus.github.com/v1beta1",
+                            "fieldsType": "FieldsV1",
+                            "fieldsV1": {
+                              "f:metadata": {
+                                "f:annotations": {
+                                  ".": { },
+                                  "f:kubectl.kubernetes.io/last-applied-configuration": { }
+                                },
+                                "f:labels": {
+                                  ".": { },
+                                  "f:app.kubernetes.io/name": { }
+                                }
+                              },
+                              "f:spec": {
+                                ".": { },
+                                "f:authClassName": { },
+                                "f:rules": { }
+                              }
+                            },
+                            "manager": "kubectl-client-side-apply",
+                            "operation": "Update",
+                            "time": "2025-08-12T09:15:29Z"
+                          }
+                        ],
+                        "name": "echo-app-rules",
+                        "namespace": "quickstarts",
+                        "uid": "28703aca-bb5a-4355-8542-4b37b1146553"
+                      },
+                      "spec": {
+                        "authClassName": "default",
+                        "rules": [
+                          {
+                            "execute": [
+                              {
+                                "authorizer": "allow_all_requests"
+                              },
+                              {
+                                "finalizer": "noop_finalizer"
+                              }
+                            ],
+                            "id": "public-access",
+                            "match": {
+                              "routes": [
+                                { "path": "/public" }
+                              ]
+                            }
+                          },
+                          {
+                            "execute": [
+                              {
+                                "authorizer": "allow_all_requests"
+                              }
+                            ],
+                            "id": "anonymous-access",
+                            "match": {
+                              "routes": [
+                                { "path": "/anon/**" }
+                              ]
+                            }
+                          },
+                          {
+                            "execute": [
+                              {
+                                "authenticator": "deny_authenticator"
+                              }
+                            ],
+                            "forward_to": {
+                              "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                            },
+                            "id": "redirect",
+                            "match": {
+                              "routes": [
+                                { "path": "/redir/**" }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
                 }
               }
         '500':

@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,7 +39,7 @@ func (_m *RuleSetProcessorMock) EXPECT() *RuleSetProcessorMock_Expecter {
 }
 
 // OnCreated provides a mock function for the type RuleSetProcessorMock
-func (_mock *RuleSetProcessorMock) OnCreated(ctx context.Context, ruleSet *config.RuleSet) error {
+func (_mock *RuleSetProcessorMock) OnCreated(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
 	ret := _mock.Called(ctx, ruleSet)
 
 	if len(ret) == 0 {
@@ -47,7 +47,7 @@ func (_mock *RuleSetProcessorMock) OnCreated(ctx context.Context, ruleSet *confi
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *config.RuleSet) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *v1beta1.RuleSet) error); ok {
 		r0 = returnFunc(ctx, ruleSet)
 	} else {
 		r0 = ret.Error(0)
@@ -62,20 +62,20 @@ type RuleSetProcessorMock_OnCreated_Call struct {
 
 // OnCreated is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ruleSet *config.RuleSet
+//   - ruleSet *v1beta1.RuleSet
 func (_e *RuleSetProcessorMock_Expecter) OnCreated(ctx interface{}, ruleSet interface{}) *RuleSetProcessorMock_OnCreated_Call {
 	return &RuleSetProcessorMock_OnCreated_Call{Call: _e.mock.On("OnCreated", ctx, ruleSet)}
 }
 
-func (_c *RuleSetProcessorMock_OnCreated_Call) Run(run func(ctx context.Context, ruleSet *config.RuleSet)) *RuleSetProcessorMock_OnCreated_Call {
+func (_c *RuleSetProcessorMock_OnCreated_Call) Run(run func(ctx context.Context, ruleSet *v1beta1.RuleSet)) *RuleSetProcessorMock_OnCreated_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *config.RuleSet
+		var arg1 *v1beta1.RuleSet
 		if args[1] != nil {
-			arg1 = args[1].(*config.RuleSet)
+			arg1 = args[1].(*v1beta1.RuleSet)
 		}
 		run(
 			arg0,
@@ -90,13 +90,13 @@ func (_c *RuleSetProcessorMock_OnCreated_Call) Return(err error) *RuleSetProcess
 	return _c
 }
 
-func (_c *RuleSetProcessorMock_OnCreated_Call) RunAndReturn(run func(ctx context.Context, ruleSet *config.RuleSet) error) *RuleSetProcessorMock_OnCreated_Call {
+func (_c *RuleSetProcessorMock_OnCreated_Call) RunAndReturn(run func(ctx context.Context, ruleSet *v1beta1.RuleSet) error) *RuleSetProcessorMock_OnCreated_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // OnDeleted provides a mock function for the type RuleSetProcessorMock
-func (_mock *RuleSetProcessorMock) OnDeleted(ctx context.Context, ruleSet *config.RuleSet) error {
+func (_mock *RuleSetProcessorMock) OnDeleted(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
 	ret := _mock.Called(ctx, ruleSet)
 
 	if len(ret) == 0 {
@@ -104,7 +104,7 @@ func (_mock *RuleSetProcessorMock) OnDeleted(ctx context.Context, ruleSet *confi
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *config.RuleSet) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *v1beta1.RuleSet) error); ok {
 		r0 = returnFunc(ctx, ruleSet)
 	} else {
 		r0 = ret.Error(0)
@@ -119,20 +119,20 @@ type RuleSetProcessorMock_OnDeleted_Call struct {
 
 // OnDeleted is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ruleSet *config.RuleSet
+//   - ruleSet *v1beta1.RuleSet
 func (_e *RuleSetProcessorMock_Expecter) OnDeleted(ctx interface{}, ruleSet interface{}) *RuleSetProcessorMock_OnDeleted_Call {
 	return &RuleSetProcessorMock_OnDeleted_Call{Call: _e.mock.On("OnDeleted", ctx, ruleSet)}
 }
 
-func (_c *RuleSetProcessorMock_OnDeleted_Call) Run(run func(ctx context.Context, ruleSet *config.RuleSet)) *RuleSetProcessorMock_OnDeleted_Call {
+func (_c *RuleSetProcessorMock_OnDeleted_Call) Run(run func(ctx context.Context, ruleSet *v1beta1.RuleSet)) *RuleSetProcessorMock_OnDeleted_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *config.RuleSet
+		var arg1 *v1beta1.RuleSet
 		if args[1] != nil {
-			arg1 = args[1].(*config.RuleSet)
+			arg1 = args[1].(*v1beta1.RuleSet)
 		}
 		run(
 			arg0,
@@ -147,13 +147,13 @@ func (_c *RuleSetProcessorMock_OnDeleted_Call) Return(err error) *RuleSetProcess
 	return _c
 }
 
-func (_c *RuleSetProcessorMock_OnDeleted_Call) RunAndReturn(run func(ctx context.Context, ruleSet *config.RuleSet) error) *RuleSetProcessorMock_OnDeleted_Call {
+func (_c *RuleSetProcessorMock_OnDeleted_Call) RunAndReturn(run func(ctx context.Context, ruleSet *v1beta1.RuleSet) error) *RuleSetProcessorMock_OnDeleted_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // OnUpdated provides a mock function for the type RuleSetProcessorMock
-func (_mock *RuleSetProcessorMock) OnUpdated(ctx context.Context, ruleSet *config.RuleSet) error {
+func (_mock *RuleSetProcessorMock) OnUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
 	ret := _mock.Called(ctx, ruleSet)
 
 	if len(ret) == 0 {
@@ -161,7 +161,7 @@ func (_mock *RuleSetProcessorMock) OnUpdated(ctx context.Context, ruleSet *confi
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *config.RuleSet) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *v1beta1.RuleSet) error); ok {
 		r0 = returnFunc(ctx, ruleSet)
 	} else {
 		r0 = ret.Error(0)
@@ -176,20 +176,20 @@ type RuleSetProcessorMock_OnUpdated_Call struct {
 
 // OnUpdated is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ruleSet *config.RuleSet
+//   - ruleSet *v1beta1.RuleSet
 func (_e *RuleSetProcessorMock_Expecter) OnUpdated(ctx interface{}, ruleSet interface{}) *RuleSetProcessorMock_OnUpdated_Call {
 	return &RuleSetProcessorMock_OnUpdated_Call{Call: _e.mock.On("OnUpdated", ctx, ruleSet)}
 }
 
-func (_c *RuleSetProcessorMock_OnUpdated_Call) Run(run func(ctx context.Context, ruleSet *config.RuleSet)) *RuleSetProcessorMock_OnUpdated_Call {
+func (_c *RuleSetProcessorMock_OnUpdated_Call) Run(run func(ctx context.Context, ruleSet *v1beta1.RuleSet)) *RuleSetProcessorMock_OnUpdated_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *config.RuleSet
+		var arg1 *v1beta1.RuleSet
 		if args[1] != nil {
-			arg1 = args[1].(*config.RuleSet)
+			arg1 = args[1].(*v1beta1.RuleSet)
 		}
 		run(
 			arg0,
@@ -204,7 +204,7 @@ func (_c *RuleSetProcessorMock_OnUpdated_Call) Return(err error) *RuleSetProcess
 	return _c
 }
 
-func (_c *RuleSetProcessorMock_OnUpdated_Call) RunAndReturn(run func(ctx context.Context, ruleSet *config.RuleSet) error) *RuleSetProcessorMock_OnUpdated_Call {
+func (_c *RuleSetProcessorMock_OnUpdated_Call) RunAndReturn(run func(ctx context.Context, ruleSet *v1beta1.RuleSet) error) *RuleSetProcessorMock_OnUpdated_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -629,9 +629,7 @@ cache_ttl: 5s`),
 				t.Helper()
 
 				// THEN
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
 			},
 		},
 		"prototype config without cache, target config with overwrites, but without cache": {
@@ -830,13 +828,13 @@ assertions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "has invalid keys: trust_store")
+				require.ErrorContains(t, err, "'trust_store' is not allowed")
 			},
 		},
 		"prototype with defaults, configured does not allow jwk validation override": {
 			prototypeConfig: []byte(`
 metadata_endpoint:
-  url: http://test.com
+  url: https://test.com
 `),
 			config: []byte(`validate_jwk: false`),
 			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
@@ -844,7 +842,7 @@ metadata_endpoint:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "has invalid keys: validate_jwk")
+				require.ErrorContains(t, err, "'validate_jwk' is not allowed")
 			},
 		},
 	} {

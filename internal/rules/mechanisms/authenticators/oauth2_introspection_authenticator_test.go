@@ -463,7 +463,7 @@ principal:
 		"with unsupported fields": {
 			prototypeConfig: []byte(`
 introspection_endpoint:
-  url: http://foobar.local
+  url: https://foobar.local
 assertions:
   issuers:
     - foobar
@@ -475,9 +475,7 @@ principal:
 			) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
 			},
 		},
 		"with overwrites without cache": {

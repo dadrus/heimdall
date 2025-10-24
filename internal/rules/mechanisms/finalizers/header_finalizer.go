@@ -125,7 +125,7 @@ func (f *headerFinalizer) WithConfig(stepID string, rawConfig map[string]any) (F
 	}
 
 	type Config struct {
-		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`
+		Headers map[string]template.Template `mapstructure:"headers" validate:"dive,required"`
 	}
 
 	var conf Config
@@ -138,7 +138,7 @@ func (f *headerFinalizer) WithConfig(stepID string, rawConfig map[string]any) (F
 		name:    f.name,
 		id:      x.IfThenElse(len(stepID) == 0, f.id, stepID),
 		app:     f.app,
-		headers: conf.Headers,
+		headers: x.IfThenElse(len(conf.Headers) == 0, f.headers, conf.Headers),
 	}, nil
 }
 

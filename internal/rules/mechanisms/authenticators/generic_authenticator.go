@@ -165,8 +165,16 @@ func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]an
 		return &auth, nil
 	}
 
+	// fields marked with "not_allowed" are not allowed to be configured
 	type Config struct {
-		CacheTTL *time.Duration `mapstructure:"cache_ttl"`
+		Endpoint              *endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"not_allowed"` //nolint:lll
+		SubjectInfo           *PrincipalInfo                       `mapstructure:"principal"                  validate:"not_allowed"` //nolint:lll
+		AuthDataSource        *extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source" validate:"not_allowed"` //nolint:lll
+		ForwardHeaders        []string                             `mapstructure:"forward_headers"            validate:"not_allowed"` //nolint:lll
+		ForwardCookies        []string                             `mapstructure:"forward_cookies"            validate:"not_allowed"` //nolint:lll
+		Payload               *template.Template                   `mapstructure:"payload"                    validate:"not_allowed"` //nolint:lll
+		SessionLifespanConfig *SessionLifespanConfig               `mapstructure:"session_lifespan"           validate:"not_allowed"` //nolint:lll
+		CacheTTL              *time.Duration                       `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config

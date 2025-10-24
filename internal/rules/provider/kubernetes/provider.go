@@ -33,6 +33,7 @@ import (
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -40,10 +41,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/patch"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -52,11 +54,26 @@ import (
 
 type ConfigFactory func() (*rest.Config, error)
 
+type ConditionReason string
+
+const (
+	ConditionRuleSetActive           ConditionReason = "RuleSetActive"
+	ConditionRuleSetActivationFailed ConditionReason = "RuleSetActivationFailed"
+	ConditionRuleSetUnloaded         ConditionReason = "RuleSetUnloaded"
+	ConditionRuleSetUnloadingFailed  ConditionReason = "RuleSetUnloadingFailed"
+	ConditionControllerStopped       ConditionReason = "ControllerStopped"
+)
+
+const (
+	DefaultClass = "default"
+	ProviderType = "kubernetes"
+)
+
 type Provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	cl         v1beta1.Client
-	adc        admissioncontroller.AdmissionController
+	adc        webhooks.AdmissionController
 	cancel     context.CancelFunc
 	configured bool
 	stopped    bool
@@ -81,26 +98,35 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 			"failed to create kubernetes provider").CausedBy(err)
 	}
 
-	type Config struct {
-		AuthClass string      `mapstructure:"auth_class"`
-		TLS       *config.TLS `mapstructure:"tls"`
-	}
-
 	client, err := v1beta1.NewClient(k8sConf)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed creating client for connecting to kubernetes cluster").CausedBy(err)
 	}
 
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithErrorOnUnused(true),
+		encoding.WithDecodeHooks(
+			config.DecodeTLSMinVersionHookFunc,
+			config.DecodeTLSCipherSuiteHookFunc,
+		),
+	)
+
+	type Config struct {
+		AuthClass string      `mapstructure:"auth_class"`
+		TLS       *config.TLS `mapstructure:"tls"`
+	}
+
 	var providerConf Config
-	if err = decodeConfig(rawConf, &providerConf); err != nil {
+	if err = dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to decode kubernetes rule provider config").CausedBy(err)
 	}
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
-	adc := admissioncontroller.New(providerConf.TLS, logger, authClass, factory)
+	adc := webhooks.New(providerConf.TLS, logger, authClass, factory)
 	instanceID, _ := os.Hostname()
 
 	logger.Info().Msg("Rule provider configured.")
@@ -176,11 +202,13 @@ func (p *Provider) Stop(ctx context.Context) error {
 }
 
 func (p *Provider) newController(ctx context.Context, namespace string) (cache.Store, cache.Controller) {
-	repository := p.cl.RuleSetRepository(namespace)
+	repository := p.cl.Repository(namespace)
 
 	return cache.NewInformerWithOptions(cache.InformerOptions{
 		ListerWatcher: &cache.ListWatch{
-			ListWithContextFunc:  repository.List,
+			ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
+				return repository.List(ctx, options)
+			},
 			WatchFuncWithContext: repository.Watch,
 		},
 		ObjectType: &v1beta1.RuleSet{},
@@ -192,6 +220,7 @@ func (p *Provider) newController(ctx context.Context, namespace string) (cache.S
 				UpdateFunc: func(oldObj, newObj any) { p.updateRuleSet(ctx, oldObj, newObj) },
 			},
 		},
+		ResyncPeriod: 10 * time.Minute, //nolint: mnd
 	})
 }
 
@@ -209,7 +238,7 @@ func (p *Provider) addRuleSet(ctx context.Context, obj any) {
 
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1beta1.RuleSet) // nolint: forcetypeassert
-	conf := p.toRuleSetConfiguration(rs)
+	conf := rs.AsConfig()
 	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
 	ctx = logger.WithContext(ctx)
 
@@ -224,7 +253,7 @@ func (p *Provider) addRuleSet(ctx context.Context, obj any) {
 			ctx,
 			rs,
 			metav1.ConditionFalse,
-			v1beta1.ConditionRuleSetActivationFailed,
+			ConditionRuleSetActivationFailed,
 			1,
 			0,
 			p.id+" instance failed loading RuleSet, reason: "+err.Error(),
@@ -238,7 +267,7 @@ func (p *Provider) addRuleSet(ctx context.Context, obj any) {
 			ctx,
 			rs,
 			metav1.ConditionTrue,
-			v1beta1.ConditionRuleSetActive,
+			ConditionRuleSetActive,
 			1,
 			1,
 			p.id+" instance successfully loaded RuleSet",
@@ -260,7 +289,7 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 		return
 	}
 
-	conf := p.toRuleSetConfiguration(newRS)
+	conf := newRS.AsConfig()
 	inUse, known := p.rsInUse[newRS.UID]
 	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
 	ctx = logger.WithContext(ctx)
@@ -280,7 +309,7 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 			ctx,
 			newRS,
 			metav1.ConditionFalse,
-			v1beta1.ConditionRuleSetActivationFailed,
+			ConditionRuleSetActivationFailed,
 			0,
 			statusIncrement,
 			p.id+" instance failed updating RuleSet, reason: "+err.Error(),
@@ -298,7 +327,7 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 			ctx,
 			newRS,
 			metav1.ConditionTrue,
-			v1beta1.ConditionRuleSetActive,
+			ConditionRuleSetActive,
 			0,
 			statusIncrement,
 			p.id+" instance successfully reloaded RuleSet",
@@ -313,7 +342,7 @@ func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1beta1.RuleSet) // nolint: forcetypeassert
-	conf := p.toRuleSetConfiguration(rs)
+	conf := rs.AsConfig()
 	inUse, known := p.rsInUse[rs.UID]
 	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
 	ctx = logger.WithContext(ctx)
@@ -327,7 +356,7 @@ func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 			ctx,
 			rs,
 			metav1.ConditionTrue,
-			v1beta1.ConditionRuleSetUnloadingFailed,
+			ConditionRuleSetUnloadingFailed,
 			0,
 			0,
 			p.id+" instance failed unloading RuleSet, reason: "+err.Error(),
@@ -341,7 +370,7 @@ func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 			ctx,
 			rs,
 			metav1.ConditionFalse,
-			v1beta1.ConditionRuleSetUnloaded,
+			ConditionRuleSetUnloaded,
 			-1,
 			x.IfThenElse(known && inUse, -1, 0),
 			p.id+" instance dropped RuleSet",
@@ -349,40 +378,23 @@ func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 	}
 }
 
-func (p *Provider) toRuleSetConfiguration(rs *v1beta1.RuleSet) *config2.RuleSet {
-	return &config2.RuleSet{
-		MetaData: config2.MetaData{
-			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
-			ModTime: rs.CreationTimestamp.Time,
-		},
-		Version: p.mapVersion(rs.APIVersion),
-		Name:    rs.Name,
-		Rules:   rs.Spec.Rules,
-	}
-}
-
-func (p *Provider) mapVersion(_ string) string {
-	// currently the only possible version is v1beta1, which is mapped to the version "1beta1" used internally
-	return "1beta1"
-}
-
 func (p *Provider) updateStatus(
 	ctx context.Context,
 	rs *v1beta1.RuleSet,
 	status metav1.ConditionStatus,
-	reason v1beta1.ConditionReason,
+	reason ConditionReason,
 	matchIncrement int,
 	usageIncrement int,
 	msg string,
 ) {
 	logger := zerolog.Ctx(ctx)
 	modRS := rs.DeepCopy()
-	repository := p.cl.RuleSetRepository(modRS.Namespace)
+	repository := p.cl.Repository(modRS.Namespace)
 	conditionType := p.id + "/Reconciliation"
 
 	logger.Debug().Msg("Updating RuleSet status")
 
-	if reason == v1beta1.ConditionControllerStopped || reason == v1beta1.ConditionRuleSetUnloaded {
+	if reason == ConditionControllerStopped || reason == ConditionRuleSetUnloaded {
 		meta.RemoveStatusCondition(&modRS.Status.Conditions, conditionType)
 	} else {
 		// 1024 is currently the length constraint configured in the ruleset CRD for the status message
@@ -410,7 +422,7 @@ func (p *Provider) updateStatus(
 	matchedBy, _ := strconv.Atoi(usedBy[1])
 	modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
 
-	_, err := repository.PatchStatus(ctx, v1beta1.NewJSONPatch(rs, modRS, true), metav1.PatchOptions{})
+	_, err := repository.PatchStatus(ctx, patch.NewJSONPatch(rs, modRS, true), metav1.PatchOptions{})
 	if err == nil {
 		logger.Debug().Msgf("RuleSet status updated")
 
@@ -458,7 +470,7 @@ func (p *Provider) finalize(ctx context.Context) {
 		slicex.Map(p.store.List(), func(s any) *v1beta1.RuleSet { return s.(*v1beta1.RuleSet) }),
 		func(set *v1beta1.RuleSet) bool { return set.Spec.AuthClassName == p.ac },
 	) {
-		p.updateStatus(ctx, rs, metav1.ConditionFalse, v1beta1.ConditionControllerStopped, -1, -1,
+		p.updateStatus(ctx, rs, metav1.ConditionFalse, ConditionControllerStopped, -1, -1,
 			p.id+" instance stopped")
 	}
 }

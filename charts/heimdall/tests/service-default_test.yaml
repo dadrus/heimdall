@@ -1,0 +1,231 @@
+suite: test suite for default service configuration
+templates:
+  - service-default.yaml
+tests:
+  - it: should be configured by default
+    asserts:
+      - isKind:
+          of: Service
+      - isAPIVersion:
+          of: v1
+
+  - it: name should be set with default name
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-heimdall
+
+  - it: name should be set with overwritten name
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-foo
+
+  - it: namespace should be set
+    release:
+      namespace: test-namespace
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: test-namespace
+
+  - it: should set default labels with default values
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set custom labels in addition to default ones if provided
+    set:
+      service.default.labels:
+        foo: bar
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: heimdall
+            app.kubernetes.io/version: latest
+            foo: bar
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: heimdall-*
+
+  - it: should set default labels with overwrites
+    chart:
+      appVersion: 1.0.0
+      version: 2.0.0
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: foo
+            app.kubernetes.io/version: 1.0.0
+            helm.sh/chart: heimdall-2.0.0
+
+  - it: should not set any annotations by default
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: should not set custom annotations if provided
+    set:
+      service.default.annotations:
+        foo: bar
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            foo: bar
+
+  - it: should set service type to ClusterIP
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should configure selector with the required labels and values
+    release:
+      name: test-release
+    set:
+      nameOverride: foo
+    asserts:
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/name: foo
+
+  - it: should expose management and main ports by default
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: main
+              port: 4456
+              protocol: TCP
+              targetPort: http-main
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+
+  - it: should expose management and main ports if operated in proxy mode
+    set:
+      operationMode: proxy
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: main
+              port: 4456
+              protocol: TCP
+              targetPort: http-main
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+
+  - it: should use provided port and name values for each exposed port in decision mode
+    set:
+      providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+      service.default:
+        mainPort: 1111
+        mainPortName: dec
+        managementPort: 2222
+        managementPortName: man
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: dec
+              port: 1111
+              protocol: TCP
+              targetPort: http-main
+            - name: man
+              port: 2222
+              protocol: TCP
+              targetPort: http-management
+
+  - it: should use provided port and name values for each exposed service port in proxy mode
+    set:
+      operationMode: proxy
+      providers.kubernetes:
+        tls:
+          key_store:
+            path: /path/to/file.pem
+      service.default:
+        mainPort: 1111
+        mainPortName: proxy
+        managementPort: 2222
+        managementPortName: man
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: proxy
+              port: 1111
+              protocol: TCP
+              targetPort: http-main
+            - name: man
+              port: 2222
+              protocol: TCP
+              targetPort: http-management
+
+  - it: should configure kubernetes.io/h2c as appProtocol if --envoy-grpc flag is used in decision operation mode
+    set:
+      operationMode: "decision"
+      extraArgs:
+        - "--envoy-grpc"
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: main
+              port: 4456
+              protocol: TCP
+              appProtocol: kubernetes.io/h2c
+              targetPort: http-main
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management
+
+  - it: --envoy-grpc flag should be ignored in proxy operation mode
+    set:
+      operationMode: "proxy"
+      extraArgs:
+        - "--envoy-grpc"
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: main
+              port: 4456
+              protocol: TCP
+              targetPort: http-main
+            - name: management
+              port: 4457
+              protocol: TCP
+              targetPort: http-management

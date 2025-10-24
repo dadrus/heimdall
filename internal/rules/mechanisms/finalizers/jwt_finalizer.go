@@ -185,7 +185,14 @@ func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fina
 		return &fin, nil
 	}
 
+	type HeaderConfig struct {
+		Name   string `mapstructure:"name"`
+		Scheme string `mapstructure:"scheme"`
+	}
+
 	type Config struct {
+		Signer *SignerConfig     `mapstructure:"signer" validate:"not_allowed"`
+		Header *HeaderConfig     `mapstructure:"header" validate:"not_allowed"`
 		TTL    *time.Duration    `mapstructure:"ttl"    validate:"omitempty,gt=1s"`
 		Claims template.Template `mapstructure:"claims"`
 		Values values.Values     `mapstructure:"values"`

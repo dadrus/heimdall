@@ -61,12 +61,11 @@ endpoint:
   url: http://foo.bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *genericContextualizer) {
+			assert: func(t *testing.T, err error, contextualizer *genericContextualizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.NotNil(t, contextualizer)
 			},
 		},
 		"with invalid endpoint configuration": {
@@ -242,12 +241,11 @@ endpoint:
 payload: bar
 `),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *genericContextualizer, _ *genericContextualizer) {
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
+				require.NoError(t, err)
+				assert.Equal(t, prototype, configured)
 			},
 		},
 		"with only payload reconfigured": {
