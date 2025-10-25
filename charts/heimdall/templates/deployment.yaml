@@ -41,7 +41,7 @@ spec:
         {{- if and
           (ne $metrics.enabled false)
           (eq "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
-          (or (empty $podmonitorsCRD) (not .Values.podMonitor.enabled))
+          (or (not $podmonitorsCRD) (not .Values.podMonitor.enabled))
         }}
         prometheus.io/scrape: "true"
         prometheus.io/path: "/metrics"

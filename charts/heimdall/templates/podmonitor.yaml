@@ -3,7 +3,7 @@
 {{- if and
   (ne $metrics.enabled false)
   (eq "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
-  (not (empty $podmonitorsCRD))
+  $podmonitorsCRD
   .Values.podMonitor.enabled
 }}
 {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "podMonitor" }}
