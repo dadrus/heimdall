@@ -2,7 +2,7 @@
 {{- $metrics := default dict .Values.metrics }}
 {{- if and
   (ne $metrics.enabled false)
-  (contains "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
+  (eq "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
   (not (empty $podmonitorsCRD))
   .Values.podMonitor.enabled
 }}
