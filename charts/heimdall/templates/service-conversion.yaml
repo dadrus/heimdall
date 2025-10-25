@@ -14,7 +14,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{- $ruleSetCRD := (lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" "rulesets.heimdall.dadrus.github.com") }}
+{{- $ruleSetCRD := (or
+  ( .Capabilities.APIVersions.Has "heimdall.dadrus.github.com/v1alpha1" )
+  ( .Capabilities.APIVersions.Has "heimdall.dadrus.github.com/v1alpha2" )
+  ( .Capabilities.APIVersions.Has "heimdall.dadrus.github.com/v1alpha3" )
+  ( .Capabilities.APIVersions.Has "heimdall.dadrus.github.com/v1alpha4" )
+  ( .Capabilities.APIVersions.Has "heimdall.dadrus.github.com/v1beta1" )
+) }}
 {{- $providers := default dict .Values.providers }}
 {{- $kubernetes := default dict $providers.kubernetes }}
 {{- if and (or (and .Release.IsInstall (not $ruleSetCRD)) .Values.crds.updateEnabled) $kubernetes.tls }}
