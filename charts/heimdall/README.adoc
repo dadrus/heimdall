@@ -508,6 +508,11 @@ Controls, whether a `PodMonitor` resource should be deployed. It will only be de
 - The CRD defining the `PodMonitor` resource is deployed to the cluster
 a| `true`
 
+a| `podMonitor.namespace`
+
+Namespace to deploy the `PodMonitor` resource into. If not set, defaults to the release namespace.
+a| `""`
+
 a| `podMonitor.labels`
 
 Enables you to set additional labels for the `PodMonitor` resource
