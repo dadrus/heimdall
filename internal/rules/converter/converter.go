@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/goccy/go-json"
 
 	"github.com/dadrus/heimdall/internal/encoding"
@@ -134,6 +135,18 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 			hosts[idx] = v1alpha4.HostMatcher{Value: host, Type: "wildcard"}
 		}
 
+		executePipeline, err := convertObject[[]v1beta1.Step, []config.MechanismConfig](rul.Execute)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(ErrConversion,
+				"failed converting execute for rule %s", rul.ID).CausedBy(err)
+		}
+
+		errorPipeline, err := convertObject[[]v1beta1.Step, []config.MechanismConfig](rul.ErrorHandler)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(ErrConversion,
+				"failed converting on_error for rule %s", rul.ID).CausedBy(err)
+		}
+
 		convertedRules[idx] = v1alpha4.Rule{
 			ID:                     rul.ID,
 			EncodedSlashesHandling: v1alpha4.EncodedSlashesHandling(rul.EncodedSlashesHandling),
@@ -144,8 +157,8 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 				Hosts:   hosts,
 			},
 			Backend:      &backend,
-			Execute:      rul.Execute,
-			ErrorHandler: rul.ErrorHandler,
+			Execute:      executePipeline,
+			ErrorHandler: errorPipeline,
 		}
 	}
 
@@ -177,6 +190,18 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 			hosts[idx] = host.Value
 		}
 
+		executePipeline, err := convertObject[[]config.MechanismConfig, []v1beta1.Step](rul.Execute)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(ErrConversion,
+				"failed converting execute for rule %s", rul.ID).CausedBy(err)
+		}
+
+		errorPipeline, err := convertObject[[]config.MechanismConfig, []v1beta1.Step](rul.ErrorHandler)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(ErrConversion,
+				"failed converting on_error for rule %s", rul.ID).CausedBy(err)
+		}
+
 		convertedRules[idx] = v1beta1.Rule{
 			ID:                     rul.ID,
 			EncodedSlashesHandling: v1beta1.EncodedSlashesHandling(rul.EncodedSlashesHandling),
@@ -187,8 +212,8 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 				Hosts:   hosts,
 			},
 			Backend:      &backend,
-			Execute:      rul.Execute,
-			ErrorHandler: rul.ErrorHandler,
+			Execute:      executePipeline,
+			ErrorHandler: errorPipeline,
 		}
 	}
 

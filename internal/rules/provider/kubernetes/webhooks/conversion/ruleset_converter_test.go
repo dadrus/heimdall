@@ -324,11 +324,11 @@ func TestRulSetConverterHandle(t *testing.T) {
 							Backend: &cfgv1beta1.Backend{
 								Host: "foo-app.local:8080",
 							},
-							Execute: []config.MechanismConfig{
-								{"authorizer": "allow_all_requests"},
+							Execute: []cfgv1beta1.Step{
+								{AuthorizerRef: "allow_all_requests"},
 							},
-							ErrorHandler: []config.MechanismConfig{
-								{"error_handler": "default"},
+							ErrorHandler: []cfgv1beta1.Step{
+								{ErrorHandlerRef: "default"},
 							},
 						},
 					},
