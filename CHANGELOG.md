@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.4](https://github.com/dadrus/heimdall/compare/v0.17.3...v0.17.4) (2025-10-25)
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to a4e2c1d ([#2824](https://github.com/dadrus/heimdall/issues/2824)) ([8ccfacb](https://github.com/dadrus/heimdall/commit/8ccfacb8d016dd4187e9ae6da724a8e5afba7c0f))
+* update google.golang.org/genproto/googleapis/rpc digest to 3a174f9 ([#2826](https://github.com/dadrus/heimdall/issues/2826)) ([be0957b](https://github.com/dadrus/heimdall/commit/be0957b805ea05ee4edaf5d5af38cd522583a6fa))
+
 ## [0.17.3](https://github.com/dadrus/heimdall/compare/v0.17.2...v0.17.3) (2025-10-17)
 
 
