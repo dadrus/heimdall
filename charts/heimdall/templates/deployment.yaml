@@ -40,7 +40,7 @@ spec:
       annotations:
         {{- if and
           (ne $metrics.enabled false)
-          (contains "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
+          (eq "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
           (or (empty $podmonitorsCRD) (not .Values.podMonitor.enabled))
         }}
         prometheus.io/scrape: "true"
@@ -89,7 +89,7 @@ spec:
               containerPort: {{ .Values.management.port }}
             {{- if and
               (ne $metrics.enabled false)
-              (contains "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
+              (eq "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
             }}
             - name: http-metrics
               protocol: TCP
