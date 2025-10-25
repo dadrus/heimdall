@@ -19,7 +19,7 @@ tests:
   - it: should not be configured if everything is set up, but the OTEL exporter not set to prometheus
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       metrics.enabled: true
       podMonitor.enabled: true
@@ -30,7 +30,7 @@ tests:
   - it: should not be configured if everything is set up, but metrics disabled
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       metrics.enabled: false
       podMonitor.enabled: true
@@ -42,7 +42,7 @@ tests:
   - it: should not be configured if everything is set up, but podMonitor disabled
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       metrics.enabled: true
       podMonitor.enabled: false
@@ -54,7 +54,7 @@ tests:
   - it: should be configured if all prerequisites are satisfied
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       metrics.enabled: true
       podMonitor.enabled: true
@@ -70,7 +70,7 @@ tests:
   - it: should be configured with default settings, metrics exporter set to prometheus and podmonitors CRD present
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -84,7 +84,7 @@ tests:
   - it: name should be set with default name
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -95,7 +95,7 @@ tests:
   - it: name should be set with overwritten name
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     release:
       name: test-release
     set:
@@ -109,7 +109,7 @@ tests:
   - it: namespace should be set
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     release:
       namespace: test-namespace
     set:
@@ -122,7 +122,7 @@ tests:
   - it: should set default labels with default values
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -140,7 +140,7 @@ tests:
   - it: should set custom labels in addition to default ones if provided
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.labels:
@@ -161,7 +161,7 @@ tests:
   - it: should set default labels with overwrites
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     chart:
       appVersion: 1.0.0
       version: 2.0.0
@@ -183,7 +183,7 @@ tests:
   - it: should configure selector with the required labels and values
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     release:
       name: test-release
     set:
@@ -199,7 +199,7 @@ tests:
   - it: jobName should not be set by default
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -209,7 +209,7 @@ tests:
   - it: jobLabel can be configured
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.jobLabel: "foo"
@@ -221,7 +221,7 @@ tests:
   - it: podTargetLabels should not be set by default
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -231,7 +231,7 @@ tests:
   - it: podTargetLabels can be configured with custom values
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.targetLabels:
@@ -247,7 +247,7 @@ tests:
   - it: podMetricsEndpoints should be configured by default with one entry and default values
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -263,7 +263,7 @@ tests:
   - it: scrape interval can be reconfigured to custom value for the podMetricsEndpoints entry
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.interval: 1m
@@ -280,7 +280,7 @@ tests:
   - it: scrape interval can omitted from the podMetricsEndpoints entry
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.interval: ""
@@ -296,7 +296,7 @@ tests:
   - it: scrape timeout can be reconfigured to custom value for the podMetricsEndpoints entry
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.scrapeTimeout: 1m
@@ -313,7 +313,7 @@ tests:
   - it: scrape timeout can omitted from the podMetricsEndpoints entry
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.scrapeTimeout: ""
@@ -329,7 +329,7 @@ tests:
   - it: metricRelabelings should be configurable for the podMetricsEndpoints entry
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.metricRelabelings:
@@ -349,7 +349,7 @@ tests:
   - it: relabelings should be configurable for the podMetricsEndpoints entry
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.relabelings:

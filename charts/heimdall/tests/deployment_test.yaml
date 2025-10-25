@@ -207,7 +207,7 @@ tests:
     template: deployment.yaml
     capabilities:
       apiVersions:
-        - monitoring.coreos.com/v1/PodMonitor
+        - monitoring.coreos.com/v1
     set:
       env.OTEL_METRICS_EXPORTER: prometheus
       podMonitor.enabled: false

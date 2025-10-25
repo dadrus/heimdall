@@ -1,4 +1,4 @@
-{{- $podmonitorsCRD := ( .Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor" ) }}
+{{- $podmonitorsCRD := ( .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" ) }}
 {{- $metrics := default dict .Values.metrics }}
 {{- if and
   (ne $metrics.enabled false)
