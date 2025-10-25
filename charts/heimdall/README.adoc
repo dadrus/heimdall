@@ -78,43 +78,6 @@ If you have configured heimdall to use the kubernetes provider, heimdall will re
 
 Regardless of the installation method, if heimdall is running in decision mode, you need to connect it to your Ingress Controller or Gateway API implementation. This ensures traffic is validated by heimdall prior to being routed to the downstream services. Check the existing https://dadrus.github.io/heimdall/dev/guides/[Guides] for more information.
 
-==== Metrics Collection
-
-===== Prometheus Style Metrics
-
-If you have configured heimdall to expose a pull based (prometheus style) metrics endpoint, you can, assuming you are running a https://github.com/prometheus-operator/prometheus-operator[Prometheus Operator] in your cluster, create the following `PodMonitor` resource to enable metrics collection.
-
-[source, yaml]
-----
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-  name: heimdall-pod-monitor
-  labels:
-    release: prometheus
-    app.kubernetes.io/instance: my-release
-    app.kubernetes.io/name: heimdall
-    app.kubernetes.io/part-of: heimdall
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/instance: my-release
-      app.kubernetes.io/name: heimdall
-  podMetricsEndpoints:
-    - path: /metrics
-      port: http-metrics
-      scheme: http
-      interval: 30s
-  jobLabel: heimdall-pod-monitor
-  namespaceSelector:
-    matchNames:
-      - default
-----
-
-The `PodMonitor` definition above assumes heimdall is installed in the default namespace. If that’s not the case, adjust the `metadata.namespace` and `spec.namespaceSelector` fields accordingly.
-
-If your Prometheus deployment is not done through the operator, you don't need to do anything, as the chart already sets the relevant annotations: `prometheus.io/scrape`, `prometheus.io/path` and `prometheus.io/port`.
-
 == Upgrading An Existing Release
 
 === Upgrading The CRD
@@ -250,7 +213,31 @@ a| `{}` (empty map)
 
 a| `deployment.pod.annotations`
 
-Enables you to set additional annotations for the pod
+Enables you to set additional annotations for the pod.
+
+If metrics are not disabled, the `OTEL_METRICS_EXPORTER` environment variable is set to `"prometheus"` and
+either `podMonitor.enabled` (see below) is set to `false`, or the CRD defining the `PodMonitor` schema is not
+deployed to the cluster, the following Prometheus scraping annotations are added:
+
+[source, yaml]
+----
+prometheus.io/scrape: "true"
+prometheus.io/path: "/metrics"
+prometheus.io/port: 9464
+----
+
+The used port can be adjusted via the `OTEL_EXPORTER_PROMETHEUS_PORT` environment variable
+
+If profiling is enabled, following annotations are added as well
+
+[source, yaml]
+----
+phlare.grafana.com/scrape: "true"
+phlare.grafana.com/port: 10251
+----
+
+The port value in the above annotation depends on the settings for the profiling service.
+
 a| `{}` (empty map)
 
 a| `deployment.pod.securityContext`
@@ -509,7 +496,57 @@ a| `false`
 a| `crds.storageVersion`
 
 Defines which `RuleSet` schema is used as storage version in etcd.
-
 a| `v1beta1`
 
+a| `podMonitor.enabled`
+
+Controls, whether a `PodMonitor` resource should be deployed. It will only be deployed if following conditions are satisfied:
+
+- Metrics are not disabled (Heimdall emits metrics by default).
+- The deployment of the `PodMonitor` resource (this setting) is not disabled
+- The OTEL_METRICS_EXPORTER environment variable is set to "prometheus"
+- The CRD defining the `PodMonitor` resource is deployed to the cluster
+a| `true`
+
+a| `podMonitor.namespace`
+
+Namespace to deploy the `PodMonitor` resource into. If not set, defaults to the release namespace.
+a| `""`
+
+a| `podMonitor.labels`
+
+Enables you to set additional labels for the `PodMonitor` resource
+a| `{}` (empty map)
+
+a| `podMonitor.jobLabel`
+
+The label to use from heimdall's Pod to retrieve the job name from.
+a| `<namespace>/<name>`
+
+a| `podMonitor.targetLabels`
+
+Labels which are transferred from heimdall's Pod object onto the ingested metrics.
+a| `[]` (empty array)
+
+a| `podMonitor.interval`
+
+Interval at which Prometheus scrapes the metrics from the target. If set to `""` Prometheus will use the global scrape interval.
+a| `30s`
+
+a| `podMonitor.scrapeTimeout`
+
+Defines the timeout after which Prometheus considers the scrape to be failed. Must be bigger then the scrape interval (`podMonitor.interval`). If set to `""` Prometheus will use the global scrape timeout unless it is less than the scrape interval value in which the latter is used.
+a| `30s`
+
+a| `podMonitor.metricRelabelings`
+
+Relabeling rules to apply to the samples before ingestion.
+a| `[]` (empty array)
+
+a| `podMonitor.relabelings`
+
+Defines the relabeling rules to apply the target’s metadata labels. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config[relabel_config] for more details.
+a| `[]` (empty array)
+
 |===
+

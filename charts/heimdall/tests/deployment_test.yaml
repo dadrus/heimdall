@@ -181,7 +181,11 @@ tests:
       - isNullOrEmpty:
           path: spec.template.metadata.annotations
 
-  - it: should set prometheus scraping annotations on template metadata if metrics exporter is set to prometheus
+  - it: |
+      should set prometheus scraping annotations on template metadata if 
+       - metrics exporter is set to prometheus
+       - PodMonitor CRD is not present
+       - metrics and podMonitor settings are set to defaults
     template: deployment.yaml
     set:
       env:
@@ -193,6 +197,36 @@ tests:
             prometheus.io/scrape: "true"
             prometheus.io/path: "/metrics"
             prometheus.io/port: "9464"
+
+  - it: |
+      should set prometheus scraping annotations on template metadata if 
+       - metrics exporter is set to prometheus
+       - PodMonitor CRD is present
+       - metrics config is set to defaults
+       - podMonitor is disabled
+    template: deployment.yaml
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    set:
+      env.OTEL_METRICS_EXPORTER: prometheus
+      podMonitor.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            prometheus.io/scrape: "true"
+            prometheus.io/path: "/metrics"
+            prometheus.io/port: "9464"
+
+  - it: should not set prometheus scraping annotations if all conditions are satisfied, but metrics are disabled
+    template: deployment.yaml
+    set:
+      env.OTEL_METRICS_EXPORTER: prometheus
+      metrics.enabled: false
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.metadata.annotations
 
   - it: prometheus exporter port can be customized
     template: deployment.yaml
@@ -414,6 +448,77 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].name
           value: heimdall
+
+  - it: should configure only the main and the management port by default
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: http-main
+              containerPort: 4456
+              protocol: TCP
+            - name: http-management
+              protocol: TCP
+              containerPort: 4457
+
+  - it: should allow containerPort configuration for the main and the management port
+    template: deployment.yaml
+    set:
+      serve.port: 4444
+      management.port: 5555
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: http-main
+              containerPort: 4444
+              protocol: TCP
+            - name: http-management
+              protocol: TCP
+              containerPort: 5555
+
+  - it: should configure metrics port if metrics are not disabled and the OTEL exporter is set to prometheus
+    template: deployment.yaml
+    set:
+      env.OTEL_METRICS_EXPORTER: prometheus
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[2]
+          value:
+            name: http-metrics
+            containerPort: 9464
+            protocol: TCP
+
+  - it: should not configure metrics port if the OTEL exporter is set to prometheus, but metrics are disabled
+    template: deployment.yaml
+    set:
+      env.OTEL_METRICS_EXPORTER: prometheus
+      metrics.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: http-main
+              containerPort: 4456
+              protocol: TCP
+            - name: http-management
+              protocol: TCP
+              containerPort: 4457
+
+  - it: should allow configuration of a custom containerPort for the metrics port
+    template: deployment.yaml
+    set:
+      env:
+        OTEL_METRICS_EXPORTER: prometheus
+        OTEL_EXPORTER_PROMETHEUS_PORT: 1111
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[2]
+          value:
+            name: http-metrics
+            containerPort: 1111
+            protocol: TCP
 
   - it: should configure probes
     template: deployment.yaml

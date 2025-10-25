@@ -1,0 +1,49 @@
+{{- $podmonitorsCRD := ( .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" ) }}
+{{- $metrics := default dict .Values.metrics }}
+{{- if and
+  (ne $metrics.enabled false)
+  (eq "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))
+  $podmonitorsCRD
+  .Values.podMonitor.enabled
+}}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "podMonitor" }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "heimdall.fullname" $data }}
+  namespace: {{ .Values.podMonitor.namespace | default (include "heimdall.namespace" $data) }}
+  labels:
+    {{- include "heimdall.labels" $data | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "heimdall.selectorLabels" $data | nindent 6 }}
+  {{- with .Values.podMonitor.jobLabel }}
+  jobLabel: {{ . }}
+  {{- end }}
+  {{- with .Values.podMonitor.targetLabels}}
+  podTargetLabels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "heimdall.namespace" $data }}
+  podMetricsEndpoints:
+    - path: "/metrics"
+      port: http-metrics
+      scheme: http
+      {{- with .Values.podMonitor.interval }}
+      interval: {{ . }}
+      {{- end }}
+      {{- with .Values.podMonitor.scrapeTimeout  }}
+      scrapeTimeout: {{ . }}
+      {{- end }}
+      {{- with .Values.podMonitor.metricRelabelings }}
+      metricRelabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podMonitor.relabelings }}
+      relabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

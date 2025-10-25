@@ -188,8 +188,57 @@ envFrom: []
 # Optional flags for heimdall to use
 extraArgs: []
 
+# Configuration for the PodMonitor resource.
+# Even though, the podPmonitor.enabled is set to true by default, the corresponding
+# resource is only configured and deployed to the cluster if the following conditions
+# are satisfied:
+# - metrics are not disabled in heimdall's configuration. Heimdall emits metrics by default
+# - podMonitor.enabled is set to true
+# - OTEL_METRICS_EXPORTER environment variable is set to "prometheus"
+# - The CRD defining the PodMonitor schema is deployed to the cluster
+podMonitor:
+  # Whether to create a PodMonitor.
+  enabled: true
+
+  # Namespace to deploy the PodMonitor resource into
+  namespace: ""
+
+  # Remove the curly braces after 'labels:' if you do want to specify additional labels
+  labels: {}
+
+  # The label to use to retrieve the job name from. Defaults to the namespace and name
+  # of the PodMonitor object (<namespace>/<name>)
+  jobLabel: ""
+
+  # Labels which are transferred from heimdall's Pod object onto the ingested metrics
+  targetLabels: [ ]
+
+  #
+  # The following settings are applied to the configured podMetricsEndpoints entry
+  #
+
+  # How frequently Prometheus should scrape
+  interval: 30s
+
+  # Timeout for scrape
+  scrapeTimeout: 30s
+
+  # MetricRelabelConfigs to apply to samples before ingestion
+  metricRelabelings: []
+  # - action: replace
+  #   replacement: my-cluster
+  #   targetLabel: cluster
+
+  # relabel_configs as per https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+  relabelings: []
+  # - action: replace
+  #   replacement: my-cluster
+  #   targetLabel: cluster
+
 # heimdall config defaults
-# DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
+#
+# DO NOT OVERRIDE the values here. Use heimdall config yaml file instead
+# and pass it as an additional value file to helm!
 serve:
   port: 4456
 management:
@@ -198,6 +247,3 @@ profiling:
   enabled: false
   port: 10251
   host: 0.0.0.0 # to enable scraping of profiling information by corresponding agents.
-
-
-
