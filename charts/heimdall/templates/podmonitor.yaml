@@ -11,7 +11,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   name: {{ include "heimdall.fullname" $data }}
-  namespace: {{ include "heimdall.namespace" $data }}
+  namespace: {{ .Values.podMonitor.namespace | default (include "heimdall.namespace" $data) }}
   labels:
     {{- include "heimdall.labels" $data | nindent 4 }}
 spec:
@@ -25,6 +25,9 @@ spec:
   podTargetLabels:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "heimdall.namespace" $data }}
   podMetricsEndpoints:
     - path: "/metrics"
       port: http-metrics

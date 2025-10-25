@@ -106,7 +106,7 @@ tests:
           path: metadata.name
           value: test-release-foo
 
-  - it: namespace should be set
+  - it: namespace should be set to the release namespace value if not configured
     capabilities:
       apiVersions:
         - monitoring.coreos.com/v1
@@ -118,6 +118,20 @@ tests:
       - equal:
           path: metadata.namespace
           value: test-namespace
+
+  - it: namespace should be set to the podMonitor.namespace if provided
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    release:
+      namespace: test-namespace
+    set:
+      env.OTEL_METRICS_EXPORTER: "prometheus"
+      podMonitor.namespace: foo
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: foo
 
   - it: should set default labels with default values
     capabilities:
@@ -243,6 +257,20 @@ tests:
           value:
             - foo
             - bar
+
+  - it: namespace selector should be configured to the namespace heimdall is deployed into
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    release:
+      namespace: test
+    set:
+      env.OTEL_METRICS_EXPORTER: "prometheus"
+    asserts:
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value:
+            - test
 
   - it: podMetricsEndpoints should be configured by default with one entry and default values
     capabilities:

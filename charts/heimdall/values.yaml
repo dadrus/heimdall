@@ -200,6 +200,9 @@ podMonitor:
   # Whether to create a PodMonitor.
   enabled: true
 
+  # Namespace to deploy the PodMonitor resource into
+  namespace: ""
+
   # Remove the curly braces after 'labels:' if you do want to specify additional labels
   labels: {}
 
