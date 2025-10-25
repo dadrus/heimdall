@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 # SPDX-License-Identifier: Apache-2.0
-{{- $podmonitorsCRD := (lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" "podmonitors.monitoring.coreos.com") }}
+{{- $podmonitorsCRD := ( .Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor" ) }}
 {{- $metrics := default dict .Values.metrics }}
 {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" }}
 apiVersion: apps/v1

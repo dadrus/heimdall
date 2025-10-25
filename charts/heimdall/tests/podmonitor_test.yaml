@@ -17,19 +17,9 @@ tests:
           count: 0
 
   - it: should not be configured if everything is set up, but the OTEL exporter not set to prometheus
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       metrics.enabled: true
       podMonitor.enabled: true
@@ -38,19 +28,9 @@ tests:
           count: 0
 
   - it: should not be configured if everything is set up, but metrics disabled
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       metrics.enabled: false
       podMonitor.enabled: true
@@ -60,19 +40,9 @@ tests:
           count: 0
 
   - it: should not be configured if everything is set up, but podMonitor disabled
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       metrics.enabled: true
       podMonitor.enabled: false
@@ -82,19 +52,9 @@ tests:
           count: 0
 
   - it: should be configured if all prerequisites are satisfied
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       metrics.enabled: true
       podMonitor.enabled: true
@@ -108,19 +68,9 @@ tests:
           of: monitoring.coreos.com/v1
 
   - it: should be configured with default settings, metrics exporter set to prometheus and podmonitors CRD present
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -132,19 +82,9 @@ tests:
           of: monitoring.coreos.com/v1
 
   - it: name should be set with default name
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -153,19 +93,9 @@ tests:
           value: RELEASE-NAME-heimdall
 
   - it: name should be set with overwritten name
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     release:
       name: test-release
     set:
@@ -177,19 +107,9 @@ tests:
           value: test-release-foo
 
   - it: namespace should be set
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     release:
       namespace: test-namespace
     set:
@@ -200,19 +120,9 @@ tests:
           value: test-namespace
 
   - it: should set default labels with default values
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -228,19 +138,9 @@ tests:
           pattern: heimdall-*
 
   - it: should set custom labels in addition to default ones if provided
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.labels:
@@ -259,19 +159,9 @@ tests:
           pattern: heimdall-*
 
   - it: should set default labels with overwrites
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     chart:
       appVersion: 1.0.0
       version: 2.0.0
@@ -291,19 +181,9 @@ tests:
             helm.sh/chart: heimdall-2.0.0
 
   - it: should configure selector with the required labels and values
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     release:
       name: test-release
     set:
@@ -317,19 +197,9 @@ tests:
             app.kubernetes.io/name: foo
 
   - it: jobName should not be set by default
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -337,19 +207,9 @@ tests:
           path: spec.jobLabel
 
   - it: jobLabel can be configured
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.jobLabel: "foo"
@@ -359,19 +219,9 @@ tests:
           value: foo
 
   - it: podTargetLabels should not be set by default
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -379,19 +229,9 @@ tests:
           path: spec.podTargetLabels
 
   - it: podTargetLabels can be configured with custom values
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.targetLabels:
@@ -405,19 +245,9 @@ tests:
             - bar
 
   - it: podMetricsEndpoints should be configured by default with one entry and default values
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
     asserts:
@@ -431,19 +261,9 @@ tests:
               scrapeTimeout: 30s
 
   - it: scrape interval can be reconfigured to custom value for the podMetricsEndpoints entry
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.interval: 1m
@@ -458,19 +278,9 @@ tests:
               scrapeTimeout: 30s
 
   - it: scrape interval can omitted from the podMetricsEndpoints entry
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.interval: ""
@@ -484,19 +294,9 @@ tests:
               scrapeTimeout: 30s
 
   - it: scrape timeout can be reconfigured to custom value for the podMetricsEndpoints entry
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.scrapeTimeout: 1m
@@ -511,19 +311,9 @@ tests:
               scrapeTimeout: 1m
 
   - it: scrape timeout can omitted from the podMetricsEndpoints entry
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.scrapeTimeout: ""
@@ -537,19 +327,9 @@ tests:
               interval: 30s
 
   - it: metricRelabelings should be configurable for the podMetricsEndpoints entry
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.metricRelabelings:
@@ -567,19 +347,9 @@ tests:
                 - separator: "-"
 
   - it: relabelings should be configurable for the podMetricsEndpoints entry
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: podmonitors.monitoring.coreos.com
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
     set:
       env.OTEL_METRICS_EXPORTER: "prometheus"
       podMonitor.relabelings:
