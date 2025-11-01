@@ -53,7 +53,7 @@ func newRepository(ruleFactory rule.Factory) rule.Repository {
 	}
 }
 
-func (r *repository) FindRule(ctx heimdall.RequestContext) (rule.Rule, error) {
+func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	request := ctx.Request()
 
 	r.rulesTrieMutex.RLock()

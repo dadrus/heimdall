@@ -23,28 +23,28 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	testErr := errors.New("test error")
+	sub := identity.Subject(nil)
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
-	eh1 := rulemocks.NewErrorHandlerMock(t)
-	eh1.EXPECT().Execute(ctx, testErr).Return(errErrorHandlerNotApplicable)
+	eh1 := mocks.NewStepMock(t)
+	eh1.EXPECT().Execute(ctx, sub).Return(errErrorHandlerNotApplicable)
 
-	eh2 := rulemocks.NewErrorHandlerMock(t)
-	eh2.EXPECT().Execute(ctx, testErr).Return(nil)
+	eh2 := mocks.NewStepMock(t)
+	eh2.EXPECT().Execute(ctx, sub).Return(nil)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	err := eh.Execute(ctx, testErr)
+	err := eh.Execute(ctx, sub)
 
 	// THEN
 	require.NoError(t, err)
@@ -54,20 +54,20 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	testErr := errors.New("test error")
+	sub := identity.Subject(nil)
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
-	eh1 := rulemocks.NewErrorHandlerMock(t)
-	eh1.EXPECT().Execute(ctx, testErr).Return(nil)
+	eh1 := mocks.NewStepMock(t)
+	eh1.EXPECT().Execute(ctx, sub).Return(nil)
 
-	eh2 := rulemocks.NewErrorHandlerMock(t)
+	eh2 := mocks.NewStepMock(t)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	err := eh.Execute(ctx, testErr)
+	err := eh.Execute(ctx, sub)
 
 	// THEN
 	require.NoError(t, err)
@@ -77,21 +77,22 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	t.Parallel()
 
 	// GIVEN
-	testErr := errors.New("test error")
+	sub := identity.Subject(nil)
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
+	ctx.EXPECT().Error().Return(errors.New("test error"))
 
-	eh1 := rulemocks.NewErrorHandlerMock(t)
-	eh1.EXPECT().Execute(ctx, testErr).Return(errErrorHandlerNotApplicable)
+	eh1 := mocks.NewStepMock(t)
+	eh1.EXPECT().Execute(ctx, sub).Return(errErrorHandlerNotApplicable)
 
-	eh2 := rulemocks.NewErrorHandlerMock(t)
-	eh2.EXPECT().Execute(ctx, testErr).Return(errErrorHandlerNotApplicable)
+	eh2 := mocks.NewStepMock(t)
+	eh2.EXPECT().Execute(ctx, sub).Return(errErrorHandlerNotApplicable)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	err := eh.Execute(ctx, testErr)
+	err := eh.Execute(ctx, sub)
 
 	// THEN
 	require.Error(t, err)

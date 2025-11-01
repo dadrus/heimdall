@@ -25,15 +25,15 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type conditionalSubjectHandler struct {
-	h subjectHandler
+type conditionalStep struct {
+	h heimdall.Step
 	c executionCondition
 }
 
-func (h *conditionalSubjectHandler) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
-	logger.Debug().Str("_id", h.h.ID()).Msg("Checking execution condition")
+	logger.Debug().Str("_id", s.h.ID()).Msg("Checking execution condition")
 
 	if logger.GetLevel() == zerolog.TraceLevel {
 		dump, err := json.Marshal(sub)
@@ -44,15 +44,17 @@ func (h *conditionalSubjectHandler) Execute(ctx heimdall.RequestContext, sub ide
 		}
 	}
 
-	if canExecute, err := h.c.CanExecuteOnSubject(ctx, sub); err != nil {
+	if canExecute, err := s.c.CanExecuteOnSubject(ctx, sub); err != nil {
 		return err
 	} else if canExecute {
-		return h.h.Execute(ctx, sub)
+		return s.h.Execute(ctx, sub)
 	}
 
-	logger.Debug().Str("_id", h.h.ID()).Msg("Execution skipped")
+	logger.Debug().Str("_id", s.h.ID()).Msg("Execution skipped")
 
 	return nil
 }
 
-func (h *conditionalSubjectHandler) ID() string { return h.h.ID() }
+func (s *conditionalStep) ID() string { return s.h.ID() }
+
+func (s *conditionalStep) IsInsecure() bool { return s.h.IsInsecure() }

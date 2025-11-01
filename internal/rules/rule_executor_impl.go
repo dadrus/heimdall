@@ -31,7 +31,7 @@ func newRuleExecutor(repository rule.Repository) rule.Executor {
 	return &ruleExecutor{r: repository}
 }
 
-func (e *ruleExecutor) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
+func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	request := ctx.Request()
 
 	zerolog.Ctx(ctx.Context()).Debug().

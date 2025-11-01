@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateMapContextualizer(t *testing.T) {
+func TestNewMapContextualizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -122,15 +122,20 @@ values:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			contextualizer, err := newMapContextualizer(appCtx, uc, conf)
+			mech, err := newMapContextualizer(appCtx, uc, conf)
 
 			// THEN
+			contextualizer, ok := mech.(*mapContextualizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, contextualizer)
 		})
 	}
 }
 
-func TestCreateMapContextualizerFromPrototype(t *testing.T) {
+func TestMapContextualizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -239,24 +244,22 @@ values:
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newMapContextualizer(appCtx, uc, pc)
+			mech, err := newMapContextualizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*mapContextualizer)
+			require.True(t, ok)
+
 			// WHEN
-			concrete, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				locContextualizer *mapContextualizer
-				ok                bool
-			)
-
+			contextualizer, ok := step.(*mapContextualizer)
 			if err == nil {
-				locContextualizer, ok = concrete.(*mapContextualizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, locContextualizer)
+			tc.assert(t, err, configured, contextualizer)
 		})
 	}
 }
@@ -267,7 +270,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		contextualizer   *mapContextualizer
 		subject          identity.Subject
-		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
 		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
 	}{
 		"with error in values rendering": {
@@ -286,7 +289,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -327,7 +330,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -380,7 +383,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -400,9 +403,9 @@ func TestMapContextualizerExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.RequestContextMock) { t.Helper() })
+				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
 
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			ctx.EXPECT().Context().Return(t.Context())
 

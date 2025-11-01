@@ -31,12 +31,12 @@ func TestExtractHeaderValue(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		strategy       HeaderValueExtractStrategy
-		configureMocks func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
 		assert         func(t *testing.T, err error, authData string)
 	}{
 		"header is present, scheme is irrelevant": {
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header"},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -53,7 +53,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		"scheme is required, header is present, but without any scheme": {
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -71,7 +71,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		"scheme is required, header is present, but with different scheme": {
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -89,7 +89,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		"header with required scheme is present": {
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -106,7 +106,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		"header is not present at all": {
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -125,7 +125,7 @@ func TestExtractHeaderValue(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 			tc.configureMocks(t, ctx)
 
 			// WHEN

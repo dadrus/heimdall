@@ -39,7 +39,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -49,16 +51,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorOAuth2Introspection {
-				return false, nil, nil
-			}
-
-			auth, err := newOAuth2IntrospectionAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorOAuth2Introspection,
+		registry.FactoryFunc(newOAuth2IntrospectionAuthenticator),
+	)
 }
 
 type oauth2IntrospectionAuthenticator struct {
@@ -77,7 +74,7 @@ func newOAuth2IntrospectionAuthenticator(
 	app app.Context,
 	name string,
 	rawConfig map[string]any,
-) (*oauth2IntrospectionAuthenticator, error) {
+) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorOAuth2Introspection).
@@ -177,7 +174,7 @@ func newOAuth2IntrospectionAuthenticator(
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorOAuth2Introspection).
@@ -212,7 +209,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, 
 	return nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
@@ -252,6 +249,8 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig m
 	}, nil
 }
 
+func (a *oauth2IntrospectionAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
+
 func (a *oauth2IntrospectionAuthenticator) Name() string { return a.name }
 
 func (a *oauth2IntrospectionAuthenticator) ID() string { return a.id }
@@ -259,7 +258,7 @@ func (a *oauth2IntrospectionAuthenticator) ID() string { return a.id }
 func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
 
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
-	ctx heimdall.RequestContext, claims map[string]any,
+	ctx heimdall.Context, claims map[string]any,
 ) (oauth2.ServerMetadata, error) {
 	args := map[string]any{}
 
@@ -295,7 +294,7 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 }
 
 func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	token string,
 ) ([]byte, error) {
 	cch := cache.Ctx(ctx.Context())
@@ -397,7 +396,7 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 }
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx heimdall.RequestContext, client *http.Client, req *http.Request,
+	ctx heimdall.Context, client *http.Client, req *http.Request,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 

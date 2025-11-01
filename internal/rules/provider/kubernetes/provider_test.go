@@ -43,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
@@ -53,6 +52,7 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/pointer"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
@@ -238,12 +238,12 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 						{
 							ID:               "1",
 							AuthenticatorRef: "authn",
-							Principal:        ptr.To("foo"),
+							Principal:        pointer.To("foo"),
 						},
 						{
 							ID:            "2",
 							AuthorizerRef: "authz",
-							Condition:     ptr.To("true"),
+							Condition:     pointer.To("true"),
 							Config:        map[string]any{"bla": "bla"},
 						},
 					},
@@ -398,12 +398,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep := rule.Execute[0]
 				assert.Equal(t, "authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "1", authnStep.ID)
-				assert.Equal(t, ptr.To("foo"), authnStep.Principal)
+				assert.Equal(t, pointer.To("foo"), authnStep.Principal)
 
 				authzStep := rule.Execute[1]
 				assert.Equal(t, "authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "2", authzStep.ID)
-				assert.Equal(t, ptr.To("true"), authzStep.Condition)
+				assert.Equal(t, pointer.To("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
 				assert.Len(t, *statusList, 1)
@@ -567,12 +567,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep := createdRule.Execute[0]
 				assert.Equal(t, "authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "1", authnStep.ID)
-				assert.Equal(t, ptr.To("foo"), authnStep.Principal)
+				assert.Equal(t, pointer.To("foo"), authnStep.Principal)
 
 				authzStep := createdRule.Execute[1]
 				assert.Equal(t, "authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "2", authzStep.ID)
-				assert.Equal(t, ptr.To("true"), authzStep.Condition)
+				assert.Equal(t, pointer.To("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
 				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
@@ -641,12 +641,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep := createdRule.Execute[0]
 				assert.Equal(t, "authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "1", authnStep.ID)
-				assert.Equal(t, ptr.To("foo"), authnStep.Principal)
+				assert.Equal(t, pointer.To("foo"), authnStep.Principal)
 
 				authzStep := createdRule.Execute[1]
 				assert.Equal(t, "authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "2", authzStep.ID)
-				assert.Equal(t, ptr.To("true"), authzStep.Condition)
+				assert.Equal(t, pointer.To("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
 				assert.Empty(t, *statusList)
@@ -713,12 +713,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep := createdRule.Execute[0]
 				assert.Equal(t, "authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "1", authnStep.ID)
-				assert.Equal(t, ptr.To("foo"), authnStep.Principal)
+				assert.Equal(t, pointer.To("foo"), authnStep.Principal)
 
 				authzStep := createdRule.Execute[1]
 				assert.Equal(t, "authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "2", authzStep.ID)
-				assert.Equal(t, ptr.To("true"), authzStep.Condition)
+				assert.Equal(t, pointer.To("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
 				assert.Len(t, *statusList, 1)
@@ -805,12 +805,12 @@ func TestProviderLifecycle(t *testing.T) {
 									{
 										ID:               "3",
 										AuthenticatorRef: "test_authn",
-										Principal:        ptr.To("bla"),
+										Principal:        pointer.To("bla"),
 									},
 									{
 										ID:            "4",
 										AuthorizerRef: "test_authz",
-										Condition:     ptr.To("false"),
+										Condition:     pointer.To("false"),
 										Config:        map[string]any{"foo": "bar"},
 									},
 								},
@@ -862,12 +862,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep := createdRule.Execute[0]
 				assert.Equal(t, "authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "1", authnStep.ID)
-				assert.Equal(t, ptr.To("foo"), authnStep.Principal)
+				assert.Equal(t, pointer.To("foo"), authnStep.Principal)
 
 				authzStep := createdRule.Execute[1]
 				assert.Equal(t, "authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "2", authzStep.ID)
-				assert.Equal(t, ptr.To("true"), authzStep.Condition)
+				assert.Equal(t, pointer.To("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
 				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
@@ -892,12 +892,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep = updatedRule.Execute[0]
 				assert.Equal(t, "test_authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "3", authnStep.ID)
-				assert.Equal(t, ptr.To("bla"), authnStep.Principal)
+				assert.Equal(t, pointer.To("bla"), authnStep.Principal)
 
 				authzStep = updatedRule.Execute[1]
 				assert.Equal(t, "test_authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "4", authzStep.ID)
-				assert.Equal(t, ptr.To("false"), authzStep.Condition)
+				assert.Equal(t, pointer.To("false"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"foo": "bar"}, authzStep.Config)
 
 				assert.Len(t, *statusList, 2)
@@ -974,12 +974,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep := createdRule.Execute[0]
 				assert.Equal(t, "authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "1", authnStep.ID)
-				assert.Equal(t, ptr.To("foo"), authnStep.Principal)
+				assert.Equal(t, pointer.To("foo"), authnStep.Principal)
 
 				authzStep := createdRule.Execute[1]
 				assert.Equal(t, "authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "2", authzStep.ID)
-				assert.Equal(t, ptr.To("true"), authzStep.Condition)
+				assert.Equal(t, pointer.To("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
 				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
@@ -1004,12 +1004,12 @@ func TestProviderLifecycle(t *testing.T) {
 				authnStep = deleteRule.Execute[0]
 				assert.Equal(t, "authn", authnStep.AuthenticatorRef)
 				assert.Equal(t, "1", authnStep.ID)
-				assert.Equal(t, ptr.To("foo"), authnStep.Principal)
+				assert.Equal(t, pointer.To("foo"), authnStep.Principal)
 
 				authzStep = deleteRule.Execute[1]
 				assert.Equal(t, "authz", authzStep.AuthorizerRef)
 				assert.Equal(t, "2", authzStep.ID)
-				assert.Equal(t, ptr.To("true"), authzStep.Condition)
+				assert.Equal(t, pointer.To("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
 				assert.NotEmpty(t, *statusList)

@@ -47,7 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateGenericContextualizer(t *testing.T) {
+func TestNewGenericContextualizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -186,15 +186,20 @@ values:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			contextualizer, err := newGenericContextualizer(appCtx, uc, conf)
+			mech, err := newGenericContextualizer(appCtx, uc, conf)
 
 			// THEN
+			contextualizer, ok := mech.(*genericContextualizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, contextualizer)
 		})
 	}
 }
 
-func TestCreateGenericContextualizerFromPrototype(t *testing.T) {
+func TestGenericContextualizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -499,24 +504,22 @@ values:
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newGenericContextualizer(appCtx, uc, pc)
+			mech, err := newGenericContextualizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*genericContextualizer)
+			require.True(t, ok)
+
 			// WHEN
-			concrete, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				locContextualizer *genericContextualizer
-				ok                bool
-			)
-
+			contextualizer, ok := step.(*genericContextualizer)
 			if err == nil {
-				locContextualizer, ok = concrete.(*genericContextualizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, locContextualizer)
+			tc.assert(t, err, configured, contextualizer)
 		})
 	}
 }
@@ -553,7 +556,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		contextualizer   *genericContextualizer
 		subject          identity.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
 			sub identity.Subject)
 		assert func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
@@ -575,7 +578,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -621,7 +624,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -657,7 +660,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -687,7 +690,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -722,7 +725,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				responseCode = http.StatusInternalServerError
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -770,7 +773,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				responseCode = http.StatusAccepted
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -819,7 +822,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					return err == nil && val.Payload == "Hi from endpoint"
 				}), contextualizer.ttl).Return(nil)
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -912,7 +915,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				responseContent = []byte(`{ "baz": "foo" }`)
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				reqf := heimdallmocks.NewRequestFunctionsMock(t)
@@ -956,7 +959,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.RequestContextMock) { t.Helper() })
+				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
@@ -966,7 +969,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 

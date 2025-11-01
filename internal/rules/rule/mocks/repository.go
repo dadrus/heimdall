@@ -160,7 +160,7 @@ func (_c *RepositoryMock_DeleteRuleSet_Call) RunAndReturn(run func(ctx context.C
 }
 
 // FindRule provides a mock function for the type RepositoryMock
-func (_mock *RepositoryMock) FindRule(ctx heimdall.RequestContext) (rule.Rule, error) {
+func (_mock *RepositoryMock) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -169,17 +169,17 @@ func (_mock *RepositoryMock) FindRule(ctx heimdall.RequestContext) (rule.Rule, e
 
 	var r0 rule.Rule
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext) (rule.Rule, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) (rule.Rule, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext) rule.Rule); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) rule.Rule); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(rule.Rule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(heimdall.RequestContext) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(heimdall.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -193,16 +193,16 @@ type RepositoryMock_FindRule_Call struct {
 }
 
 // FindRule is a helper method to define mock.On call
-//   - ctx heimdall.RequestContext
+//   - ctx heimdall.Context
 func (_e *RepositoryMock_Expecter) FindRule(ctx interface{}) *RepositoryMock_FindRule_Call {
 	return &RepositoryMock_FindRule_Call{Call: _e.mock.On("FindRule", ctx)}
 }
 
-func (_c *RepositoryMock_FindRule_Call) Run(run func(ctx heimdall.RequestContext)) *RepositoryMock_FindRule_Call {
+func (_c *RepositoryMock_FindRule_Call) Run(run func(ctx heimdall.Context)) *RepositoryMock_FindRule_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.RequestContext
+		var arg0 heimdall.Context
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.RequestContext)
+			arg0 = args[0].(heimdall.Context)
 		}
 		run(
 			arg0,
@@ -216,7 +216,7 @@ func (_c *RepositoryMock_FindRule_Call) Return(rule1 rule.Rule, err error) *Repo
 	return _c
 }
 
-func (_c *RepositoryMock_FindRule_Call) RunAndReturn(run func(ctx heimdall.RequestContext) (rule.Rule, error)) *RepositoryMock_FindRule_Call {
+func (_c *RepositoryMock_FindRule_Call) RunAndReturn(run func(ctx heimdall.Context) (rule.Rule, error)) *RepositoryMock_FindRule_Call {
 	_c.Call.Return(run)
 	return _c
 }

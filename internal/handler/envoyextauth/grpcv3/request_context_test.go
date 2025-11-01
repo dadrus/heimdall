@@ -101,11 +101,11 @@ func TestFinalizeRequestContext(t *testing.T) {
 	}
 
 	for uc, tc := range map[string]struct {
-		updateContext func(t *testing.T, ctx heimdall.RequestContext)
+		updateContext func(t *testing.T, ctx heimdall.Context)
 		assert        func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		"successful with some different header": {
-			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
+			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
@@ -134,7 +134,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"successful with multiple header with same name but different values": {
-			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
+			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
@@ -160,7 +160,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"successful with some cookies": {
-			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
+			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
 				ctx.AddCookieForUpstream("some-cookie", "value-1")
@@ -186,7 +186,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"successful with multiple header and cookie": {
-			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
+			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream", "some-value")
@@ -213,10 +213,10 @@ func TestFinalizeRequestContext(t *testing.T) {
 			},
 		},
 		"erroneous with header and cookie": {
-			updateContext: func(t *testing.T, ctx heimdall.RequestContext) {
+			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
-				ctx.SetPipelineError(errors.New("test error"))
+				ctx.SetError(errors.New("test error"))
 				ctx.AddHeaderForUpstream("x-for-upstream", "some-value")
 				ctx.AddCookieForUpstream("some-cookie", "value-1")
 				ctx.AddCookieForUpstream("some-other-cookie", "value-2")

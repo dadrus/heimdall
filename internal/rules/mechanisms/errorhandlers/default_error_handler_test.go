@@ -28,24 +28,27 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestDefaultErrorHandlerExecution(t *testing.T) {
+func TestDefaultErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
-	ctx.EXPECT().SetPipelineError(heimdall.ErrConfiguration)
 
-	errorHandler := newDefaultErrorHandler(appCtx, "foo")
+	mech, err := newDefaultErrorHandler(appCtx, "foo", nil)
+	require.NoError(t, err)
+
+	step, err := mech.CreateStep("", nil)
+	require.NoError(t, err)
 
 	// WHEN & THEN
-	require.NoError(t, errorHandler.Execute(ctx, heimdall.ErrConfiguration))
+	require.NoError(t, step.Execute(ctx, nil))
 }
 
-func TestDefaultErrorHandlerPrototype(t *testing.T) {
+func TestDefaultErrorHandlerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -90,18 +93,22 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newDefaultErrorHandler(appCtx, uc)
+			mech, err := newDefaultErrorHandler(appCtx, uc, nil)
+			require.NoError(t, err)
+
+			configured, ok := mech.(*defaultErrorHandler)
+			require.True(t, ok)
 
 			// WHEN
-			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
-			authz, ok := conf.(*defaultErrorHandler)
+			step, err := mech.CreateStep(tc.stepID, tc.newConf)
 
 			// THEN
+			eh, ok := step.(*defaultErrorHandler)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, authz)
+			tc.assert(t, err, configured, eh)
 		})
 	}
 }

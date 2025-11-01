@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
+func TestAllowAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -73,18 +73,22 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newAllowAuthorizer(appCtx, uc)
+			mech, err := newAllowAuthorizer(appCtx, uc, nil)
+			require.NoError(t, err)
+
+			configured, ok := mech.(*allowAuthorizer)
+			require.True(t, ok)
 
 			// WHEN
-			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
-			authz, ok := conf.(*allowAuthorizer)
+			conf, err := mech.CreateStep(tc.stepID, tc.newConf)
 
 			// THEN
+			authz, ok := conf.(*allowAuthorizer)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, authz)
+			tc.assert(t, err, configured, authz)
 		})
 	}
 }
@@ -93,16 +97,19 @@ func TestAllowAuthorizerExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	auth := newAllowAuthorizer(appCtx, "baz")
+	mech, err := newAllowAuthorizer(appCtx, "baz", nil)
+	require.NoError(t, err)
+	step, err := mech.CreateStep("", nil)
+	require.NoError(t, err)
 
 	// WHEN
-	err := auth.Execute(ctx, nil)
+	err = step.Execute(ctx, nil)
 
 	// THEN
 	require.NoError(t, err)

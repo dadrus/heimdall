@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/goccy/go-json"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"

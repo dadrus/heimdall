@@ -40,7 +40,8 @@ packages:
       ContextFactory: {}
   github.com/dadrus/heimdall/internal/heimdall:
     interfaces:
-      RequestContext: {}
+      Context: {}
+      Step: {}
       RequestFunctions: {}
   github.com/dadrus/heimdall/internal/keyholder:
     interfaces:
@@ -50,34 +51,14 @@ packages:
       Observer: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
-      errorHandler: {}
       executionCondition: {}
-      principalCreator: {}
-      subjectHandler: {}
   github.com/dadrus/heimdall/internal/rules/endpoint:
     interfaces:
       AuthenticationStrategy: {}
   github.com/dadrus/heimdall/internal/rules/mechanisms:
     interfaces:
-      MechanismFactory: {}
-  github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators:
-    interfaces:
-      Authenticator: {}
-  github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors:
-    interfaces:
-      AuthDataExtractStrategy: {}
-  github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers:
-    interfaces:
-      Authorizer: {}
-  github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers:
-    interfaces:
-      Contextualizer: {}
-  github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers:
-    interfaces:
-      ErrorHandler: {}
-  github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers:
-    interfaces:
-      Finalizer: {}
+      Mechanism: {}
+      Repository: {}
   github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/webhook:
     config:
       dir: "{{ .InterfaceDir }}"

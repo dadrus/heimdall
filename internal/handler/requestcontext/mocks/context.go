@@ -177,6 +177,50 @@ func (_c *ContextMock_Context_Call) RunAndReturn(run func() context.Context) *Co
 	return _c
 }
 
+// Error provides a mock function for the type ContextMock
+func (_mock *ContextMock) Error() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Error")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ContextMock_Error_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Error'
+type ContextMock_Error_Call struct {
+	*mock.Call
+}
+
+// Error is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) Error() *ContextMock_Error_Call {
+	return &ContextMock_Error_Call{Call: _e.mock.On("Error")}
+}
+
+func (_c *ContextMock_Error_Call) Run(run func()) *ContextMock_Error_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_Error_Call) Return(err error) *ContextMock_Error_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ContextMock_Error_Call) RunAndReturn(run func() error) *ContextMock_Error_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Finalize provides a mock function for the type ContextMock
 func (_mock *ContextMock) Finalize(backend rule.Backend) error {
 	ret := _mock.Called(backend)
@@ -320,24 +364,24 @@ func (_c *ContextMock_Request_Call) RunAndReturn(run func() *heimdall.Request) *
 	return _c
 }
 
-// SetPipelineError provides a mock function for the type ContextMock
-func (_mock *ContextMock) SetPipelineError(err error) {
+// SetError provides a mock function for the type ContextMock
+func (_mock *ContextMock) SetError(err error) {
 	_mock.Called(err)
 	return
 }
 
-// ContextMock_SetPipelineError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetPipelineError'
-type ContextMock_SetPipelineError_Call struct {
+// ContextMock_SetError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetError'
+type ContextMock_SetError_Call struct {
 	*mock.Call
 }
 
-// SetPipelineError is a helper method to define mock.On call
+// SetError is a helper method to define mock.On call
 //   - err error
-func (_e *ContextMock_Expecter) SetPipelineError(err interface{}) *ContextMock_SetPipelineError_Call {
-	return &ContextMock_SetPipelineError_Call{Call: _e.mock.On("SetPipelineError", err)}
+func (_e *ContextMock_Expecter) SetError(err interface{}) *ContextMock_SetError_Call {
+	return &ContextMock_SetError_Call{Call: _e.mock.On("SetError", err)}
 }
 
-func (_c *ContextMock_SetPipelineError_Call) Run(run func(err error)) *ContextMock_SetPipelineError_Call {
+func (_c *ContextMock_SetError_Call) Run(run func(err error)) *ContextMock_SetError_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 error
 		if args[0] != nil {
@@ -350,12 +394,12 @@ func (_c *ContextMock_SetPipelineError_Call) Run(run func(err error)) *ContextMo
 	return _c
 }
 
-func (_c *ContextMock_SetPipelineError_Call) Return() *ContextMock_SetPipelineError_Call {
+func (_c *ContextMock_SetError_Call) Return() *ContextMock_SetError_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *ContextMock_SetPipelineError_Call) RunAndReturn(run func(err error)) *ContextMock_SetPipelineError_Call {
+func (_c *ContextMock_SetError_Call) RunAndReturn(run func(err error)) *ContextMock_SetError_Call {
 	_c.Run(run)
 	return _c
 }

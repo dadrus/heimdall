@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,22 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package mechanisms
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 )
 
-type errorHandler interface {
-	ID() string
-	Execute(ctx heimdall.RequestContext, causeErr error) error
-}
+const (
+	KindAuthenticator  = types.KindAuthenticator
+	KindAuthorizer     = types.KindAuthorizer
+	KindContextualizer = types.KindContextualizer
+	KindFinalizer      = types.KindFinalizer
+	KindErrorHandler   = types.KindErrorHandler
+)
+
+type (
+	Kind       = types.Kind
+	Mechanism  = types.Mechanism
+	Repository = types.Repository
+)

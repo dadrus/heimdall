@@ -22,16 +22,17 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
-type compositeErrorHandler []errorHandler
+type compositeErrorHandler []heimdall.Step
 
-func (eh compositeErrorHandler) Execute(ctx heimdall.RequestContext, exErr error) error {
+func (eh compositeErrorHandler) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Handling pipeline error")
 
 	for _, handler := range eh {
-		if err := handler.Execute(ctx, exErr); err != nil {
+		if err := handler.Execute(ctx, sub); err != nil {
 			if errors.Is(err, errErrorHandlerNotApplicable) {
 				continue
 			}
@@ -46,5 +47,5 @@ func (eh compositeErrorHandler) Execute(ctx heimdall.RequestContext, exErr error
 
 	logger.Debug().Msg("No applicable error handler found")
 
-	return exErr
+	return ctx.Error()
 }

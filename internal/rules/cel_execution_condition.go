@@ -31,7 +31,7 @@ type celExecutionCondition struct {
 	e *cellib.CompiledExpression
 }
 
-func (c *celExecutionCondition) CanExecuteOnSubject(ctx heimdall.RequestContext, sub identity.Subject) (bool, error) {
+func (c *celExecutionCondition) CanExecuteOnSubject(ctx heimdall.Context, sub identity.Subject) (bool, error) {
 	if err := c.e.Eval(map[string]any{"Request": ctx.Request(), "Subject": cellib.WrapSubject(sub)}); err != nil {
 		if errors.Is(err, &cellib.EvalError{}) {
 			return false, nil
@@ -43,7 +43,7 @@ func (c *celExecutionCondition) CanExecuteOnSubject(ctx heimdall.RequestContext,
 	return true, nil
 }
 
-func (c *celExecutionCondition) CanExecuteOnError(ctx heimdall.RequestContext, cause error) (bool, error) {
+func (c *celExecutionCondition) CanExecuteOnError(ctx heimdall.Context, cause error) (bool, error) {
 	if err := c.e.Eval(map[string]any{"Request": ctx.Request(), "Error": cellib.WrapError(cause)}); err != nil {
 		if errors.Is(err, &cellib.EvalError{}) {
 			return false, nil

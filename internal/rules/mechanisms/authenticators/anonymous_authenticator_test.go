@@ -31,7 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateAnonymousAuthenticator(t *testing.T) {
+func TestNewAnonymousAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -94,22 +94,27 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			auth, err := newAnonymousAuthenticator(appCtx, uc, conf)
+			mechanism, err := newAnonymousAuthenticator(appCtx, uc, conf)
 
 			// THEN
+			auth, ok := mechanism.(*anonymousAuthenticator)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, auth)
 		})
 	}
 }
 
-func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
+func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator)
+		stepConfig []byte
+		config     []byte
+		stepID     string
+		assert     func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator)
 	}{
 		"no new configuration for the configured authenticator": {
 			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
@@ -122,8 +127,8 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			},
 		},
 		"new principal for the configured authenticator": {
-			prototypeConfig: []byte("principal: anon"),
-			config:          []byte("principal: foo"),
+			stepConfig: []byte("principal: anon"),
+			config:     []byte("principal: foo"),
 			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
 				t.Helper()
 
@@ -142,8 +147,8 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			},
 		},
 		"step id is configured": {
-			prototypeConfig: []byte("principal: anon"),
-			stepID:          "foo",
+			stepConfig: []byte("principal: anon"),
+			stepID:     "foo",
 			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
 				t.Helper()
 
@@ -158,8 +163,8 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			},
 		},
 		"empty principal for the configured authenticator": {
-			prototypeConfig: []byte("principal: anon"),
-			config:          []byte("principal: ''"),
+			stepConfig: []byte("principal: anon"),
+			config:     []byte("principal: ''"),
 			assert: func(t *testing.T, err error, _ *anonymousAuthenticator, _ *anonymousAuthenticator) {
 				t.Helper()
 
@@ -181,7 +186,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
+			pc, err := testsupport.DecodeTestConfig(tc.stepConfig)
 			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
@@ -194,19 +199,19 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newAnonymousAuthenticator(appCtx, uc, pc)
+			mechanism, err := newAnonymousAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mechanism.CreateStep(tc.stepID, conf)
 
 			// THEN
-			baa, ok := auth.(*anonymousAuthenticator)
+			configured, ok := step.(*anonymousAuthenticator)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, baa)
+			tc.assert(t, err, mechanism.(*anonymousAuthenticator), configured)
 		})
 	}
 }
@@ -218,7 +223,7 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	exp := &identity.Principal{ID: "anon"}
 	auth := anonymousAuthenticator{principal: exp, id: "anon_auth"}
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
 	sub := make(identity.Subject)

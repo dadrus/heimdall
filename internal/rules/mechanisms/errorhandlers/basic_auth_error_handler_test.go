@@ -32,7 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
+func TestNewWWWAuthenticateErrorHandler(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -88,15 +88,20 @@ if: type(Error) == authentication_error
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, uc, conf)
+			mech, err := newWWWAuthenticateErrorHandler(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, errorHandler)
+			eh, ok := mech.(*wwwAuthenticateErrorHandler)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, eh)
 		})
 	}
 }
 
-func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
+func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -190,24 +195,22 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newWWWAuthenticateErrorHandler(appCtx, uc, pc)
+			mech, err := newWWWAuthenticateErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*wwwAuthenticateErrorHandler)
+			require.True(t, ok)
+
 			// WHEN
-			errorHandler, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				wwwAuthEH *wwwAuthenticateErrorHandler
-				ok        bool
-			)
-
+			eh, ok := step.(*wwwAuthenticateErrorHandler)
 			if err == nil {
-				wwwAuthEH, ok = errorHandler.(*wwwAuthenticateErrorHandler)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, wwwAuthEH)
+			tc.assert(t, err, configured, eh)
 		})
 	}
 }
@@ -217,16 +220,14 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config           []byte
-		error            error
-		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error)
 	}{
 		"with default realm": {
-			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
+				ctx.EXPECT().SetError(heimdall.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
@@ -244,11 +245,10 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 		},
 		"with custom realm": {
 			config: []byte(`realm: "Your password please"`),
-			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
+				ctx.EXPECT().SetError(heimdall.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
@@ -270,7 +270,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewRequestContextMock(t)
+			mctx := mocks.NewContextMock(t)
 			mctx.EXPECT().Context().Return(t.Context())
 
 			tc.configureContext(t, mctx)
@@ -282,14 +282,17 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			errorHandler, err := newWWWAuthenticateErrorHandler(appCtx, "foo", conf)
+			mech, err := newWWWAuthenticateErrorHandler(appCtx, "foo", conf)
+			require.NoError(t, err)
+
+			step, err := mech.CreateStep("", nil)
 			require.NoError(t, err)
 
 			// WHEN
-			execErr := errorHandler.Execute(mctx, tc.error)
+			err = step.Execute(mctx, nil)
 
 			// THEN
-			tc.assert(t, execErr)
+			tc.assert(t, err)
 		})
 	}
 }

@@ -21,6 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRuleConfigDeepCopyInto(t *testing.T) {
@@ -61,31 +63,22 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 			{
 				ID:               "baz",
 				AuthenticatorRef: "bar",
-				Principal: func() *string {
-					val := "baz"
-					return &val
-				}(),
-				Config: map[string]any{"foo": "bar"},
+				Principal:        pointer.To("baz"),
+				Config:           map[string]any{"foo": "bar"},
 			},
 			{
 				ID:            "foo",
 				AuthorizerRef: "baz",
-				Condition: func() *string {
-					val := "baz"
-					return &val
-				}(),
-				Config: map[string]any{"bla": "bla"},
+				Condition:     pointer.To("baz"),
+				Config:        map[string]any{"bla": "bla"},
 			},
 		},
 		ErrorHandler: []Step{
 			{
 				ID:              "foo",
 				ErrorHandlerRef: "foo",
-				Condition: func() *string {
-					val := "baz"
-					return &val
-				}(),
-				Config: map[string]any{"bla": "bla"},
+				Condition:       pointer.To("baz"),
+				Config:          map[string]any{"bla": "bla"},
 			},
 		},
 	}
@@ -133,31 +126,22 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 			{
 				ID:               "baz",
 				AuthenticatorRef: "bar",
-				Principal: func() *string {
-					val := "baz"
-					return &val
-				}(),
-				Config: map[string]any{"foo": "bar"},
+				Principal:        pointer.To("baz"),
+				Config:           map[string]any{"foo": "bar"},
 			},
 			{
 				ID:            "foo",
 				AuthorizerRef: "baz",
-				Condition: func() *string {
-					val := "baz"
-					return &val
-				}(),
-				Config: map[string]any{"bla": "bla"},
+				Condition:     pointer.To("baz"),
+				Config:        map[string]any{"bla": "bla"},
 			},
 		},
 		ErrorHandler: []Step{
 			{
 				ID:              "foo",
 				ErrorHandlerRef: "foo",
-				Condition: func() *string {
-					val := "baz"
-					return &val
-				}(),
-				Config: map[string]any{"bla": "bla"},
+				Condition:       pointer.To("baz"),
+				Config:          map[string]any{"bla": "bla"},
 			},
 		},
 	}

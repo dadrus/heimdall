@@ -26,17 +26,17 @@ import (
 )
 
 type Configuration struct { //nolint:musttag
-	Serve                ServeConfig          `koanf:"serve"`
-	Management           ManagementConfig     `koanf:"management"`
-	Log                  LoggingConfig        `koanf:"log"`
-	Tracing              TracingConfig        `koanf:"tracing"`
-	Metrics              MetricsConfig        `koanf:"metrics"`
-	Profiling            ProfilingConfig      `koanf:"profiling"`
-	Cache                CacheConfig          `koanf:"cache"`
-	Prototypes           *MechanismPrototypes `koanf:"mechanisms,omitempty"`
-	Default              *DefaultRule         `koanf:"default_rule,omitempty"`
-	Providers            RuleProviders        `koanf:"providers,omitempty"`
-	SecretsReloadEnabled bool                 `koanf:"secrets_reload_enabled"`
+	Serve                ServeConfig         `koanf:"serve"`
+	Management           ManagementConfig    `koanf:"management"`
+	Log                  LoggingConfig       `koanf:"log"`
+	Tracing              TracingConfig       `koanf:"tracing"`
+	Metrics              MetricsConfig       `koanf:"metrics"`
+	Profiling            ProfilingConfig     `koanf:"profiling"`
+	Cache                CacheConfig         `koanf:"cache"`
+	Catalogue            *MechanismCatalogue `koanf:"mechanisms,omitempty"`
+	Default              *DefaultRule        `koanf:"default_rule,omitempty"`
+	Providers            RuleProviders       `koanf:"providers,omitempty"`
+	SecretsReloadEnabled bool                `koanf:"secrets_reload_enabled"`
 }
 
 func NewConfiguration(

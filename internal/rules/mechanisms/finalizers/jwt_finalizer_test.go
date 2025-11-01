@@ -47,7 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateJWTFinalizer(t *testing.T) {
+func TestNewJWTFinalizer(t *testing.T) {
 	t.Parallel()
 
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -444,15 +444,20 @@ values:
 			tc.configureAppContext(t, appCtx)
 
 			// WHEN
-			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
+			mech, err := newJWTFinalizer(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, finalizer)
+			fin, ok := mech.(*jwtFinalizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, fin)
 		})
 	}
 }
 
-func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
+func TestJWTFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -710,24 +715,22 @@ signer:
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newJWTFinalizer(appCtx, uc, protoConf)
+			mech, err := newJWTFinalizer(appCtx, uc, protoConf)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*jwtFinalizer)
+			require.True(t, ok)
+
 			// WHEN
-			finalizer, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				jwtFin *jwtFinalizer
-				ok     bool
-			)
-
+			fin, ok := step.(*jwtFinalizer)
 			if err == nil {
-				jwtFin, ok = finalizer.(*jwtFinalizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, jwtFin)
+			tc.assert(t, err, configured, fin)
 		})
 	}
 }
@@ -756,7 +759,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 		subject        identity.Subject
 		configureMocks func(t *testing.T,
 			fin *jwtFinalizer,
-			ctx *heimdallmocks.RequestContextMock,
+			ctx *heimdallmocks.ContextMock,
 			cch *mocks.CacheMock,
 			sub identity.Subject)
 		assert func(t *testing.T, err error)
@@ -791,7 +794,7 @@ signer:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, sub identity.Subject,
 			) {
 				t.Helper()
@@ -821,7 +824,7 @@ ttl: 1m
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -859,7 +862,7 @@ claims: '{
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -893,7 +896,7 @@ values:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -924,7 +927,7 @@ claims: "foo: bar"
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -958,7 +961,7 @@ claims: "{{ len .foobar }}"
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -994,7 +997,7 @@ values:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -1020,7 +1023,7 @@ values:
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.RequestContextMock, _ *mocks.CacheMock, _ identity.Subject) {
+				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock, _ *mocks.CacheMock, _ identity.Subject) {
 					t.Helper()
 				})
 
@@ -1028,7 +1031,7 @@ values:
 			require.NoError(t, err)
 
 			cch := mocks.NewCacheMock(t)
-			mctx := heimdallmocks.NewRequestContextMock(t)
+			mctx := heimdallmocks.NewContextMock(t)
 
 			wm := mocks2.NewWatcherMock(t)
 			wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
@@ -1051,13 +1054,19 @@ values:
 
 			mctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
-			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
+			mech, err := newJWTFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			configureMocks(t, finalizer, mctx, cch, tc.subject)
+			configured, ok := mech.(*jwtFinalizer)
+			require.True(t, ok)
+
+			step, err := mech.CreateStep("", nil)
+			require.NoError(t, err)
+
+			configureMocks(t, configured, mctx, cch, tc.subject)
 
 			// WHEN
-			err = finalizer.Execute(mctx, tc.subject)
+			err = step.Execute(mctx, tc.subject)
 
 			// THEN
 			tc.assert(t, err)

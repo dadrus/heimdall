@@ -144,8 +144,8 @@ func (r *RequestContext) UpstreamHeaders() http.Header            { return r.ups
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
 func (r *RequestContext) Context() context.Context                { return r.req.Context() }
-func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
-func (r *RequestContext) PipelineError() error                    { return r.err }
+func (r *RequestContext) SetError(err error)                      { r.err = err }
+func (r *RequestContext) Error() error                            { return r.err }
 func (r *RequestContext) Outputs() map[string]any {
 	if r.outputs == nil {
 		r.outputs = make(map[string]any)

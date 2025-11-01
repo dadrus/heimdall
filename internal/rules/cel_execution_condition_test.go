@@ -97,7 +97,7 @@ func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 
 			ctx.EXPECT().Request().Return(&heimdall.Request{
 				Method: http.MethodGet,
@@ -152,7 +152,7 @@ func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 
 			ctx.EXPECT().Request().Return(&heimdall.Request{
 				Method: http.MethodGet,

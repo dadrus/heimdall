@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package heimdall
 
-type MechanismPrototypes struct {
-	Authenticators  []Mechanism `koanf:"authenticators"`
-	Authorizers     []Mechanism `koanf:"authorizers"`
-	Contextualizers []Mechanism `koanf:"contextualizers"`
-	Finalizers      []Mechanism `koanf:"finalizers"`
-	ErrorHandlers   []Mechanism `koanf:"error_handlers"`
+import "github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+
+type Step interface {
+	ID() string
+	Execute(ctx Context, sub identity.Subject) error
+	IsInsecure() bool
 }

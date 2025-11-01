@@ -26,20 +26,19 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
-	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 )
 
 func TestCompositeSubjectHandlerExecution(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureMocks func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-			second *rulemocks.SubjectHandlerMock, sub identity.Subject)
+		configureMocks func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
+			second *mocks.StepMock, sub identity.Subject)
 		assert func(t *testing.T, err error)
 	}{
 		"all succeeded": {
-			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
+				second *mocks.StepMock, sub identity.Subject,
 			) {
 				t.Helper()
 
@@ -53,8 +52,8 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 			},
 		},
 		"first fails": {
-			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				_ *rulemocks.SubjectHandlerMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
+				_ *mocks.StepMock, sub identity.Subject,
 			) {
 				t.Helper()
 
@@ -68,8 +67,8 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 			},
 		},
 		"second fails": {
-			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
+				second *mocks.StepMock, sub identity.Subject,
 			) {
 				t.Helper()
 
@@ -84,8 +83,8 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 			},
 		},
 		"tls related error stops pipeline execution": {
-			configureMocks: func(t *testing.T, ctx heimdall.RequestContext, first *rulemocks.SubjectHandlerMock,
-				_ *rulemocks.SubjectHandlerMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
+				_ *mocks.StepMock, sub identity.Subject,
 			) {
 				t.Helper()
 
@@ -107,14 +106,14 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				},
 			}
 
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
-			handler1 := rulemocks.NewSubjectHandlerMock(t)
-			handler2 := rulemocks.NewSubjectHandlerMock(t)
-			tc.configureMocks(t, ctx, handler1, handler2, sub)
+			step1 := mocks.NewStepMock(t)
+			step2 := mocks.NewStepMock(t)
+			tc.configureMocks(t, ctx, step1, step2, sub)
 
-			handler := compositeSubjectHandler{handler1, handler2}
+			handler := pipeline{step1, step2}
 
 			// WHEN
 			err := handler.Execute(ctx, sub)

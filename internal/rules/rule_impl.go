@@ -38,13 +38,13 @@ type ruleImpl struct {
 	routes          []rule.Route
 	slashesHandling v1beta1.EncodedSlashesHandling
 	backend         *v1beta1.Backend
-	sc              compositeSubjectCreator
-	sh              compositeSubjectHandler
-	fi              compositeSubjectHandler
-	eh              compositeErrorHandler
+	sc              pipeline
+	sh              pipeline
+	fi              pipeline
+	eh              pipeline
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
+func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	if r.isDefault {
@@ -76,17 +76,23 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 
 	// authenticators
 	if err := r.sc.Execute(ctx, sub); err != nil {
-		return nil, r.eh.Execute(ctx, err)
+		ctx.SetError(err)
+
+		return nil, r.eh.Execute(ctx, sub)
 	}
 
 	// authorizers & contextualizer
 	if err := r.sh.Execute(ctx, sub); err != nil {
-		return nil, r.eh.Execute(ctx, err)
+		ctx.SetError(err)
+
+		return nil, r.eh.Execute(ctx, sub)
 	}
 
 	// finalizers
 	if err := r.fi.Execute(ctx, sub); err != nil {
-		return nil, r.eh.Execute(ctx, err)
+		ctx.SetError(err)
+
+		return nil, r.eh.Execute(ctx, sub)
 	}
 
 	return r.createBackend(request), nil
@@ -129,7 +135,7 @@ type routeImpl struct {
 	matcher RouteMatcher
 }
 
-func (r *routeImpl) Matches(ctx heimdall.RequestContext, keys, values []string) bool {
+func (r *routeImpl) Matches(ctx heimdall.Context, keys, values []string) bool {
 	logger := zerolog.Ctx(ctx.Context()).With().
 		Str("_source", r.rule.srcID).
 		Str("_id", r.rule.id).

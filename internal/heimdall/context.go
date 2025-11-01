@@ -14,15 +14,44 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package contextualizers
+package heimdall
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"context"
+	"net/url"
 )
 
-type Contextualizer interface {
-	ID() string
-	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
-	WithConfig(stepID string, config map[string]any) (Contextualizer, error)
+type Context interface {
+	Request() *Request
+
+	AddHeaderForUpstream(name, value string)
+	AddCookieForUpstream(name, value string)
+
+	Context() context.Context
+
+	SetError(err error)
+	Error() error
+
+	Outputs() map[string]any
+}
+
+type RequestFunctions interface {
+	Header(name string) string
+	Cookie(name string) string
+	Headers() map[string]string
+	Body() any
+}
+
+type URL struct {
+	url.URL
+
+	Captures map[string]string
+}
+
+type Request struct {
+	RequestFunctions
+
+	Method            string
+	URL               *URL
+	ClientIPAddresses []string
 }

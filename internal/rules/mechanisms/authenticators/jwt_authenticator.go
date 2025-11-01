@@ -39,7 +39,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -53,16 +55,11 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorJWT {
-				return false, nil, nil
-			}
-
-			auth, err := newJwtAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorJWT,
+		registry.FactoryFunc(newJwtAuthenticator),
+	)
 }
 
 type jwtAuthenticator struct {
@@ -79,11 +76,7 @@ type jwtAuthenticator struct {
 }
 
 // nolint: funlen, cyclop
-func newJwtAuthenticator(
-	app app.Context,
-	name string,
-	rawConfig map[string]any,
-) (*jwtAuthenticator, error) { // nolint: funlen
+func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorJWT).
@@ -194,7 +187,7 @@ func newJwtAuthenticator(
 	}, nil
 }
 
-func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorJWT).
@@ -237,7 +230,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Sub
 	return nil
 }
 
-func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *jwtAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
@@ -281,11 +274,11 @@ func (a *jwtAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (
 	}, nil
 }
 
+func (a *jwtAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
+
 func (a *jwtAuthenticator) Name() string { return a.name }
 
-func (a *jwtAuthenticator) ID() string {
-	return a.id
-}
+func (a *jwtAuthenticator) ID() string { return a.id }
 
 func (a *jwtAuthenticator) IsInsecure() bool { return false }
 
@@ -333,7 +326,7 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 }
 
 func (a *jwtAuthenticator) serverMetadata(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	claims map[string]any,
 ) (oauth2.ServerMetadata, error) {
 	metadata, err := a.r.Get(ctx.Context(), map[string]any{"TokenIssuer": claims["iss"]})
@@ -351,7 +344,7 @@ func (a *jwtAuthenticator) serverMetadata(
 	return metadata, nil
 }
 
-func (a *jwtAuthenticator) verifyToken(ctx heimdall.RequestContext, token *jwt.JSONWebToken) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
 	claims := map[string]any{}
 	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to deserialize JWT").
@@ -382,7 +375,7 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.RequestContext, token *jwt.J
 }
 
 func (a *jwtAuthenticator) verifyTokenWithoutKID(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	token *jwt.JSONWebToken,
 	tokenClaims map[string]any,
 	ep *endpoint.Endpoint,
@@ -430,7 +423,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 }
 
 func (a *jwtAuthenticator) getKey(
-	ctx heimdall.RequestContext, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
+	ctx heimdall.Context, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
 ) (*jose.JSONWebKey, error) {
 	cch := cache.Ctx(ctx.Context())
 	logger := zerolog.Ctx(ctx.Context())

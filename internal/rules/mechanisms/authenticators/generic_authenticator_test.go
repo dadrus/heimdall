@@ -47,7 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestGenericAuthenticatorCreate(t *testing.T) {
+func TestNewGenericAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -294,15 +294,20 @@ principal:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newGenericAuthenticator(appCtx, "auth1", conf)
+			mech, err := newGenericAuthenticator(appCtx, "auth1", conf)
 
 			// THEN
+			auth, ok := mech.(*genericAuthenticator)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assertError(t, err, auth)
 		})
 	}
 }
 
-func TestGenericAuthenticatorWithConfig(t *testing.T) {
+func TestGenericAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -692,24 +697,22 @@ principal:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newGenericAuthenticator(appCtx, uc, pc)
+			mech, err := newGenericAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*genericAuthenticator)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				genAuth *genericAuthenticator
-				ok      bool
-			)
-
+			auth, ok := step.(*genericAuthenticator)
 			if err == nil {
-				genAuth, ok = auth.(*genericAuthenticator)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, genAuth)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -755,7 +758,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		authenticator  *genericAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.RequestContextMock,
+			ctx *heimdallmocks.ContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *genericAuthenticator)
@@ -764,7 +767,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"with failing auth data source": {
 			authenticator: &genericAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -799,7 +802,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				}(),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -828,7 +831,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -857,7 +860,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -886,7 +889,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: srv.URL},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -928,7 +931,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf: &PrincipalInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -985,7 +988,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				}(),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1041,7 +1044,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1077,7 +1080,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ttl:        5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *genericAuthenticator,
@@ -1136,7 +1139,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1198,7 +1201,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1257,7 +1260,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1319,7 +1322,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.RequestContextMock,
+					_ *heimdallmocks.ContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *genericAuthenticator,
@@ -1331,7 +1334,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			tc.authenticator.ads = ads
 
 			cch := mocks.NewCacheMock(t)
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)

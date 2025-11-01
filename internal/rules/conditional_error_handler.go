@@ -22,24 +22,25 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
 var errErrorHandlerNotApplicable = errors.New("error handler not applicable")
 
 type conditionalErrorHandler struct {
-	h errorHandler
+	h heimdall.Step
 	c executionCondition
 }
 
-func (h *conditionalErrorHandler) Execute(ctx heimdall.RequestContext, causeErr error) error {
+func (h *conditionalErrorHandler) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
-	logger.Debug().Str("_id", h.h.ID()).Msg("Checking error handler execution condition")
+	logger.Debug().Str("_id", h.h.ID()).Msg("Checking execution condition")
 
-	if canExecute, err := h.c.CanExecuteOnError(ctx, causeErr); err != nil {
+	if canExecute, err := h.c.CanExecuteOnError(ctx, ctx.Error()); err != nil {
 		return err
 	} else if canExecute {
-		return h.h.Execute(ctx, causeErr)
+		return h.h.Execute(ctx, sub)
 	}
 
 	logger.Debug().Str("_id", h.h.ID()).Msg("Error handler not applicable")
