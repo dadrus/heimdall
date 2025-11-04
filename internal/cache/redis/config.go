@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ccoveille/go-safecast"
+	"github.com/ccoveille/go-safecast/v2"
 	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
 	"github.com/rs/zerolog"
