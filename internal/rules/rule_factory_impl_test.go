@@ -109,7 +109,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "an authenticator")
+				require.ErrorContains(t, err, "zab authenticator is defined after")
 			},
 		},
 		"new factory with malformed default rule, where authenticator loading happens after finalizers": {
@@ -134,7 +134,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "an authenticator")
+				require.ErrorContains(t, err, "zab authenticator is defined after")
 			},
 		},
 		"new factory with default rule, where authenticator loading results in an error": {
@@ -180,7 +180,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "before an authorizer")
+				require.ErrorContains(t, err, "authorizer is defined after")
 			},
 		},
 		"new factory with default rule, where authorizer loading results in an error": {
@@ -226,7 +226,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "before a contextualizer")
+				require.ErrorContains(t, err, "contextualizer is defined after")
 			},
 		},
 		"new factory with default rule, where contextualizer loading results in an error": {
@@ -684,10 +684,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
-				sc: pipeline{mocks.NewStepMock(t)},
-				sh: pipeline{mocks.NewStepMock(t)},
-				fi: pipeline{mocks.NewStepMock(t)},
-				eh: pipeline{mocks.NewStepMock(t)},
+				sc: stage{mocks.NewStepMock(t)},
+				sh: stage{mocks.NewStepMock(t)},
+				fi: stage{mocks.NewStepMock(t)},
+				eh: stage{mocks.NewStepMock(t)},
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -737,10 +737,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: pipeline{mocks.NewStepMock(t)},
-				sh: pipeline{mocks.NewStepMock(t)},
-				fi: pipeline{mocks.NewStepMock(t)},
-				eh: pipeline{mocks.NewStepMock(t)},
+				sc: stage{mocks.NewStepMock(t)},
+				sh: stage{mocks.NewStepMock(t)},
+				fi: stage{mocks.NewStepMock(t)},
+				eh: stage{mocks.NewStepMock(t)},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
@@ -835,10 +835,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: pipeline{mocks.NewStepMock(t)},
-				sh: pipeline{mocks.NewStepMock(t)},
-				fi: pipeline{mocks.NewStepMock(t)},
-				eh: pipeline{mocks.NewStepMock(t)},
+				sc: stage{mocks.NewStepMock(t)},
+				sh: stage{mocks.NewStepMock(t)},
+				fi: stage{mocks.NewStepMock(t)},
+				eh: stage{mocks.NewStepMock(t)},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
@@ -900,7 +900,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.backend)
 			},
 		},
-		"with empty conditional execution configuration": {
+		"with malformed conditional execution configuration": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
@@ -926,7 +926,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "empty execution condition")
+				require.ErrorContains(t, err, "empty cel expression")
 			},
 		},
 		"with conditional execution for some mechanisms": {

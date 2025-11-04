@@ -37,7 +37,7 @@ var ErrStepCreation = errors.New("failed to create pipeline step")
 type StepDefinition struct {
 	ID        string
 	Condition *string
-	Principal *string
+	Principal string
 	Config    config.MechanismConfig
 }
 
@@ -162,114 +162,93 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 }
 
 //nolint:funlen,gocognit,cyclop
-func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (pipeline, pipeline, pipeline, error) {
+func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage, stage, error) {
 	var (
-		authenticatorSteps  pipeline
-		subjectHandlerSteps pipeline
-		finalizerSteps      pipeline
-		err                 error
+		authenticatorStage  stage
+		subjectHandlerStage stage
+		finalizerStage      stage
 	)
 
 	stepIDs := make([]string, len(steps))
 
-	authenticatorCheck := func() error {
-		if len(subjectHandlerSteps) != 0 || len(finalizerSteps) != 0 {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"an authenticator is defined after some other non authenticator type")
+	authenticatorCheck := func(id string) error {
+		if len(subjectHandlerStage) != 0 || len(finalizerStage) != 0 {
+			return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"%s authenticator is defined after some other non authenticator type", id)
 		}
 
 		return nil
 	}
 
-	contextualizersCheck := func() error {
-		if len(finalizerSteps) != 0 {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"at least one finalizer is defined before a contextualizer")
+	subjectHandlerCheck := func(id string, kind mechanisms.Kind) error {
+		if len(finalizerStage) != 0 {
+			return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"%s %s is defined after a finalizer", id, kind)
 		}
 
 		return nil
 	}
 
-	authorizersCheck := func() error {
-		if len(finalizerSteps) != 0 {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"at least one finalizer is defined before an authorizer")
-		}
-
-		return nil
-	}
-
-	finalizersCheck := func() error { return nil }
+	authn := make(map[string]compositePrincipalCreator)
 
 	for idx, step := range steps {
+		stepIDs[idx] = step.ID
 		ref := step.MechanismReference()
 		def := StepDefinition{
 			ID:        step.ID,
 			Condition: step.Condition,
-			Principal: step.Principal,
-			Config:    step.Config,
+			Principal: x.IfThenElseExec(step.Principal != nil,
+				func() string { return *step.Principal },
+				func() string { return "default" },
+			),
+			Config: step.Config,
 		}
 
-		stepIDs[idx] = def.ID
+		switch mechanisms.Kind(ref.Kind) {
+		case mechanisms.KindAuthenticator:
+			if err := authenticatorCheck(def.ID); err != nil {
+				return nil, nil, nil, err
+			}
 
-		authenticatorSteps, err = buildStage(
-			mechanisms.KindAuthenticator,
-			ref,
-			def,
-			authenticatorCheck,
-			authenticatorSteps,
-			f.createStep,
-		)
-		if err == nil {
-			continue
-		} else if !errors.Is(err, errHandlerNotFound) {
-			return nil, nil, nil, err
+			step, err := f.createStep(ref, def)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			authn[def.Principal] = append(authn[def.Principal], step)
+		case mechanisms.KindAuthorizer:
+			if err := subjectHandlerCheck(def.ID, mechanisms.KindAuthorizer); err != nil {
+				return nil, nil, nil, err
+			}
+
+			step, err := f.createStep(ref, def)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			subjectHandlerStage = append(subjectHandlerStage, step)
+		case mechanisms.KindContextualizer:
+			if err := subjectHandlerCheck(def.ID, mechanisms.KindContextualizer); err != nil {
+				return nil, nil, nil, err
+			}
+
+			step, err := f.createStep(ref, def)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			subjectHandlerStage = append(subjectHandlerStage, step)
+		case mechanisms.KindFinalizer:
+			step, err := f.createStep(ref, def)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			finalizerStage = append(finalizerStage, step)
+		default:
+			return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"unsupported configuration in execute pipeline")
 		}
-
-		subjectHandlerSteps, err = buildStage(
-			mechanisms.KindAuthorizer,
-			ref,
-			def,
-			authorizersCheck,
-			subjectHandlerSteps,
-			f.createStep,
-		)
-		if err == nil {
-			continue
-		} else if !errors.Is(err, errHandlerNotFound) {
-			return nil, nil, nil, err
-		}
-
-		subjectHandlerSteps, err = buildStage(
-			mechanisms.KindContextualizer,
-			ref,
-			def,
-			contextualizersCheck,
-			subjectHandlerSteps,
-			f.createStep,
-		)
-		if err == nil {
-			continue
-		} else if !errors.Is(err, errHandlerNotFound) {
-			return nil, nil, nil, err
-		}
-
-		finalizerSteps, err = buildStage(
-			mechanisms.KindFinalizer,
-			ref,
-			def,
-			finalizersCheck,
-			finalizerSteps,
-			f.createStep,
-		)
-		if err == nil {
-			continue
-		} else if !errors.Is(err, errHandlerNotFound) {
-			return nil, nil, nil, err
-		}
-
-		return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"unsupported configuration in execute")
 	}
 
 	stepIDs = slices.DeleteFunc(stepIDs, func(s string) bool { return len(s) == 0 })
@@ -279,41 +258,37 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (pipeline, pip
 			"IDs used for execute pipeline steps must be unique")
 	}
 
-	return authenticatorSteps, subjectHandlerSteps, finalizerSteps, nil
+	for _, step := range authn {
+		authenticatorStage = append(authenticatorStage, step)
+	}
+
+	return authenticatorStage, subjectHandlerStage, finalizerStage, nil
 }
 
-func (f *ruleFactory) createErrorPipeline(steps []v1beta1.Step) (pipeline, error) {
-	var (
-		errorHandlers pipeline
-		noop          = func() error { return nil }
-		err           error
-	)
-
+func (f *ruleFactory) createErrorPipeline(steps []v1beta1.Step) (stage, error) {
 	stepIDs := make([]string, len(steps))
+	errorHandlers := make(stage, len(steps))
 
 	for idx, step := range steps {
+		stepIDs[idx] = step.ID
 		ref := step.MechanismReference()
 		def := StepDefinition{
 			ID:        step.ID,
 			Condition: step.Condition,
-			Principal: step.Principal,
 			Config:    step.Config,
 		}
 
-		stepIDs[idx] = def.ID
+		switch mechanisms.Kind(ref.Kind) {
+		case mechanisms.KindErrorHandler:
+			step, err := f.createStep(ref, def)
+			if err != nil {
+				return nil, err
+			}
 
-		errorHandlers, err = buildStage(
-			mechanisms.KindErrorHandler,
-			ref,
-			def,
-			noop,
-			errorHandlers,
-			f.createStep,
-		)
-		if err == nil {
-			continue
-		} else if !errors.Is(err, errHandlerNotFound) {
-			return nil, err
+			errorHandlers[idx] = step
+		default:
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"unsupported configuration in error pipeline")
 		}
 	}
 
@@ -442,51 +417,14 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 		return nil, errorchain.New(ErrStepCreation).CausedBy(err)
 	}
 
-	return step, nil
-}
-
-type CheckFunc func() error
-
-var errHandlerNotFound = errors.New("handler not found")
-
-func buildStage(
-	expectedKind mechanisms.Kind,
-	ref v1beta1.MechanismReference,
-	def StepDefinition,
-	check CheckFunc,
-	stage pipeline,
-	createHandler func(ref v1beta1.MechanismReference, def StepDefinition) (heimdall.Step, error),
-) (pipeline, error) {
-	if mechanisms.Kind(ref.Kind) != expectedKind {
-		return stage, errHandlerNotFound
-	}
-
-	if err := check(); err != nil {
-		return stage, err
-	}
-
-	handler, err := createHandler(ref, def)
-	if err != nil {
-		return stage, err
-	}
-
 	if def.Condition != nil {
-		condition, err := getExecutionCondition(def.Condition)
+		condition, err := newCelExecutionCondition(*def.Condition)
 		if err != nil {
-			return stage, err
+			return nil, err
 		}
 
-		return append(stage, &conditionalStep{h: handler, c: condition}), nil
+		return &conditionalStep{h: step, c: condition}, nil
 	}
 
-	return append(stage, handler), nil
-}
-
-func getExecutionCondition(condition *string) (executionCondition, error) {
-	if len(*condition) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"empty execution condition")
-	}
-
-	return newCelExecutionCondition(*condition)
+	return step, nil
 }

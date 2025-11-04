@@ -38,6 +38,7 @@ func TestNewCelExecutionCondition(t *testing.T) {
 		err        string
 	}{
 		"malformed expression":     {expression: "foobar", err: "failed compiling"},
+		"empty expression":         {expression: "", err: "empty cel expression"},
 		"is not a bool expression": {expression: "1", err: "result type error"},
 		"valid expression":         {expression: "true"},
 	} {

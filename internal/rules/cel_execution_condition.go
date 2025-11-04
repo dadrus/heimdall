@@ -56,6 +56,10 @@ func (c *celExecutionCondition) CanExecuteOnError(ctx heimdall.Context, cause er
 }
 
 func newCelExecutionCondition(expression string) (*celExecutionCondition, error) {
+	if len(expression) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "empty cel expression")
+	}
+
 	env, err := cel.NewEnv(cellib.Library())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,

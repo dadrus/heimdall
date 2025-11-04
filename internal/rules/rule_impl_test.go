@@ -498,10 +498,10 @@ func TestRuleExecute(t *testing.T) {
 			rul := &ruleImpl{
 				backend:         tc.backend,
 				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, v1beta1.EncodedSlashesOff),
-				sc:              pipeline{authenticator},
-				sh:              pipeline{authorizer},
-				fi:              pipeline{finalizer},
-				eh:              pipeline{errHandler},
+				sc:              stage{authenticator},
+				sh:              stage{authorizer},
+				fi:              stage{finalizer},
+				eh:              stage{errHandler},
 			}
 
 			tc.configureMocks(t, ctx, authenticator, authorizer, finalizer, errHandler)

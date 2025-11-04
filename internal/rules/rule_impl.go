@@ -38,10 +38,10 @@ type ruleImpl struct {
 	routes          []rule.Route
 	slashesHandling v1beta1.EncodedSlashesHandling
 	backend         *v1beta1.Backend
-	sc              pipeline
-	sh              pipeline
-	fi              pipeline
-	eh              pipeline
+	sc              stage
+	sh              stage
+	fi              stage
+	eh              stage
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {

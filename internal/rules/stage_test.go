@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 )
 
-func TestCompositeSubjectHandlerExecution(t *testing.T) {
+func TestStageExecution(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -113,7 +113,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 			step2 := mocks.NewStepMock(t)
 			tc.configureMocks(t, ctx, step1, step2, sub)
 
-			handler := pipeline{step1, step2}
+			handler := stage{step1, step2}
 
 			// WHEN
 			err := handler.Execute(ctx, sub)
