@@ -91,7 +91,7 @@ func TestFxlogger(t *testing.T) {
 				ModuleName:  "testModule",
 				Err:         errors.New("test error"),
 			},
-			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "_type":"testType", "error":"test error", "level":"error", "message":"Error encountered while supplying fx"}`,
+			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "_type":"testType", "error":"test error", "level":"error", "message":"Error encountered while supplying module"}`,
 		},
 		"Supplied without error": {
 			evt: &fxevent.Supplied{
@@ -111,7 +111,7 @@ func TestFxlogger(t *testing.T) {
 				Err:             errors.New("test error"),
 				Private:         false,
 			},
-			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "error":"test error", "level":"error", "message":"Error encountered while providing fx"}`,
+			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "error":"test error", "level":"error", "message":"Error encountered while providing module"}`,
 		},
 		"Provided without error": {
 			evt: &fxevent.Provided{
@@ -131,7 +131,7 @@ func TestFxlogger(t *testing.T) {
 				ModuleName:      "testModule",
 				Err:             errors.New("test error"),
 			},
-			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "error":"test error", "level":"error", "message":"Error encountered while replacing fx"}`,
+			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "error":"test error", "level":"error", "message":"Error encountered while replacing module"}`,
 		},
 		"Replaced without error": {
 			evt: &fxevent.Replaced{
@@ -150,7 +150,7 @@ func TestFxlogger(t *testing.T) {
 				ModuleName:      "testModule",
 				Err:             errors.New("test error"),
 			},
-			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "error":"test error", "level":"error", "message":"Error encountered while decorating fx"}`,
+			expMsg: `{"_module":"testModule", "_moduleTrace":["TestModuleTrace"], "_stacktrace":["TestStackTrace"], "error":"test error", "level":"error", "message":"Error encountered while decorating module"}`,
 		},
 		"Decorated without error": {
 			evt: &fxevent.Decorated{
@@ -185,7 +185,7 @@ func TestFxlogger(t *testing.T) {
 				FunctionName: "testFunction",
 				ModuleName:   "testModule",
 			},
-			expMsg: `{"_function":"testFunction", "_module":"testModule", "level":"trace", "message":"Invoking fx"}`,
+			expMsg: `{"_function":"testFunction", "_module":"testModule", "level":"trace", "message":"Invoking module"}`,
 		},
 		"Invoked with error": {
 			evt: &fxevent.Invoked{
@@ -202,7 +202,7 @@ func TestFxlogger(t *testing.T) {
 				ModuleName:   "testModule",
 				Trace:        "TestTrace",
 			},
-			expMsg: `{"_function":"testFunction", "_module":"testModule", "_stack":"TestTrace", "level":"trace", "message":"Invoked fx"}`,
+			expMsg: `{"_function":"testFunction", "_module":"testModule", "_stack":"TestTrace", "level":"trace", "message":"Invoked module"}`,
 		},
 		"Stopping": {
 			evt: &fxevent.Stopping{
