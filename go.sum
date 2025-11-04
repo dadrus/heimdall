@@ -108,6 +108,8 @@ github.com/ccoveille/go-safecast v1.7.0 h1:i+0eldPFBeXCTARGyocNS6BNRomquA/GhTZVN
 github.com/ccoveille/go-safecast v1.7.0/go.mod h1:QqwNjxQ7DAqY0C721OIO9InMk9zCwcsO7tnRuHytad8=
 github.com/ccoveille/go-safecast v1.8.1 h1:RoucjfYKKcx2lFmIjRjuo8AeX9k/GaZn5SUMHlA3kMw=
 github.com/ccoveille/go-safecast v1.8.1/go.mod h1:QqwNjxQ7DAqY0C721OIO9InMk9zCwcsO7tnRuHytad8=
+github.com/ccoveille/go-safecast v1.8.2 h1:+d+s5UGQiCVJX9oYc8XvYcB2zCMBlax6lIP7YdxXLHA=
+github.com/ccoveille/go-safecast v1.8.2/go.mod h1:M0Ubpl11x63fE7iOfk5MtngQFXsntcRzOoSsFDqQYDY=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
 github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
