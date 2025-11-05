@@ -38,8 +38,8 @@ func (_m *MechanismMock) EXPECT() *MechanismMock_Expecter {
 }
 
 // CreateStep provides a mock function for the type MechanismMock
-func (_mock *MechanismMock) CreateStep(stepID string, config map[string]any) (heimdall.Step, error) {
-	ret := _mock.Called(stepID, config)
+func (_mock *MechanismMock) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	ret := _mock.Called(def)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateStep")
@@ -47,18 +47,18 @@ func (_mock *MechanismMock) CreateStep(stepID string, config map[string]any) (he
 
 	var r0 heimdall.Step
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, map[string]any) (heimdall.Step, error)); ok {
-		return returnFunc(stepID, config)
+	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) (heimdall.Step, error)); ok {
+		return returnFunc(def)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, map[string]any) heimdall.Step); ok {
-		r0 = returnFunc(stepID, config)
+	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) heimdall.Step); ok {
+		r0 = returnFunc(def)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(heimdall.Step)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, map[string]any) error); ok {
-		r1 = returnFunc(stepID, config)
+	if returnFunc, ok := ret.Get(1).(func(types.StepDefinition) error); ok {
+		r1 = returnFunc(def)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,25 +71,19 @@ type MechanismMock_CreateStep_Call struct {
 }
 
 // CreateStep is a helper method to define mock.On call
-//   - stepID string
-//   - config map[string]any
-func (_e *MechanismMock_Expecter) CreateStep(stepID interface{}, config interface{}) *MechanismMock_CreateStep_Call {
-	return &MechanismMock_CreateStep_Call{Call: _e.mock.On("CreateStep", stepID, config)}
+//   - def types.StepDefinition
+func (_e *MechanismMock_Expecter) CreateStep(def interface{}) *MechanismMock_CreateStep_Call {
+	return &MechanismMock_CreateStep_Call{Call: _e.mock.On("CreateStep", def)}
 }
 
-func (_c *MechanismMock_CreateStep_Call) Run(run func(stepID string, config map[string]any)) *MechanismMock_CreateStep_Call {
+func (_c *MechanismMock_CreateStep_Call) Run(run func(def types.StepDefinition)) *MechanismMock_CreateStep_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 types.StepDefinition
 		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 map[string]any
-		if args[1] != nil {
-			arg1 = args[1].(map[string]any)
+			arg0 = args[0].(types.StepDefinition)
 		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -100,7 +94,7 @@ func (_c *MechanismMock_CreateStep_Call) Return(step heimdall.Step, err error) *
 	return _c
 }
 
-func (_c *MechanismMock_CreateStep_Call) RunAndReturn(run func(stepID string, config map[string]any) (heimdall.Step, error)) *MechanismMock_CreateStep_Call {
+func (_c *MechanismMock_CreateStep_Call) RunAndReturn(run func(def types.StepDefinition) (heimdall.Step, error)) *MechanismMock_CreateStep_Call {
 	_c.Call.Return(run)
 	return _c
 }

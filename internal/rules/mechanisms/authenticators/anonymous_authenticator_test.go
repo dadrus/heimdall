@@ -19,6 +19,7 @@ package authenticators
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -203,7 +204,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			step, err := mechanism.CreateStep(tc.stepID, conf)
+			step, err := mechanism.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
 
 			// THEN
 			configured, ok := step.(*anonymousAuthenticator)

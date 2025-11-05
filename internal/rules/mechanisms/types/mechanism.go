@@ -17,7 +17,10 @@
 // nolint: revive
 package types
 
-import "github.com/dadrus/heimdall/internal/heimdall"
+import (
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
+)
 
 type Kind string
 
@@ -29,8 +32,14 @@ const (
 	KindErrorHandler   Kind = "error_handler"
 )
 
+type StepDefinition struct {
+	ID        string
+	Principal string
+	Config    config.MechanismConfig
+}
+
 type Mechanism interface {
 	Name() string
 	Kind() Kind
-	CreateStep(stepID string, config map[string]any) (heimdall.Step, error)
+	CreateStep(def StepDefinition) (heimdall.Step, error)
 }

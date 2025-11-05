@@ -109,14 +109,14 @@ func (f *headerFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) er
 	return nil
 }
 
-func (f *headerFinalizer) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (f *headerFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		fin := *f
-		fin.id = stepID
+		fin.id = def.ID
 
 		return &fin, nil
 	}
@@ -126,14 +126,14 @@ func (f *headerFinalizer) CreateStep(stepID string, rawConfig map[string]any) (h
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for header finalizer '%s'", f.name).CausedBy(err)
 	}
 
 	return &headerFinalizer{
 		name:    f.name,
-		id:      x.IfThenElse(len(stepID) == 0, f.id, stepID),
+		id:      x.IfThenElse(len(def.ID) == 0, f.id, def.ID),
 		app:     f.app,
 		headers: x.IfThenElse(len(conf.Headers) == 0, f.headers, conf.Headers),
 	}, nil

@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -409,7 +410,7 @@ header:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepID, conf)
+			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
 
 			// THEN
 			fin, ok := step.(*oauth2ClientCredentialsFinalizer)

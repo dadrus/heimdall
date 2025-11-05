@@ -32,6 +32,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/goccy/go-json"
@@ -874,7 +875,7 @@ metadata_endpoint:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepID, conf)
+			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
 
 			// THEN
 			auth, ok := step.(*jwtAuthenticator)

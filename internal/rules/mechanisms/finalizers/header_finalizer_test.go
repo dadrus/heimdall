@@ -19,6 +19,7 @@ package finalizers
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -260,7 +261,7 @@ headers:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepID, conf)
+			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
 
 			// THEN
 			fin, ok := step.(*headerFinalizer)
@@ -393,7 +394,7 @@ headers:
 			mech, err := newHeaderFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep("", nil)
+			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

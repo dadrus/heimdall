@@ -93,14 +93,14 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ identity.
 	return nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		erh := *eh
-		erh.id = stepID
+		erh.id = def.ID
 
 		return &erh, nil
 	}
@@ -111,7 +111,7 @@ func (eh *wwwAuthenticateErrorHandler) CreateStep(stepID string, rawConfig map[s
 
 	var conf Config
 
-	err := decodeConfig(eh.app.Validator(), rawConfig, &conf)
+	err := decodeConfig(eh.app.Validator(), def.Config, &conf)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, eh.name).
@@ -120,7 +120,7 @@ func (eh *wwwAuthenticateErrorHandler) CreateStep(stepID string, rawConfig map[s
 
 	return &wwwAuthenticateErrorHandler{
 		name:  eh.name,
-		id:    x.IfThenElse(len(stepID) == 0, eh.id, stepID),
+		id:    x.IfThenElse(len(def.ID) == 0, eh.id, def.ID),
 		app:   eh.app,
 		realm: conf.Realm,
 	}, nil

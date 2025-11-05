@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -722,7 +723,7 @@ signer:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepID, conf)
+			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
 
 			// THEN
 			fin, ok := step.(*jwtFinalizer)
@@ -1060,7 +1061,7 @@ values:
 			configured, ok := mech.(*jwtFinalizer)
 			require.True(t, ok)
 
-			step, err := mech.CreateStep("", nil)
+			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			configureMocks(t, configured, mctx, cch, tc.subject)

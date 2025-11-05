@@ -29,7 +29,8 @@ const (
 )
 
 type (
-	Kind       = types.Kind
-	Mechanism  = types.Mechanism
-	Repository = types.Repository
+	Kind           = types.Kind
+	Mechanism      = types.Mechanism
+	StepDefinition = types.StepDefinition
+	Repository     = types.Repository
 )

@@ -19,6 +19,7 @@ package authorizers
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -80,7 +81,7 @@ func TestDenyAuthorizerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			conf, err := mech.CreateStep(tc.stepID, tc.newConf)
+			conf, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: tc.newConf})
 
 			// THEN
 			auth, ok := conf.(*denyAuthorizer)
@@ -107,7 +108,7 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 
 	mech, err := newDenyAuthorizer(appCtx, "bar", nil)
 	require.NoError(t, err)
-	step, err := mech.CreateStep("", nil)
+	step, err := mech.CreateStep(types.StepDefinition{ID: ""})
 	require.NoError(t, err)
 
 	// WHEN

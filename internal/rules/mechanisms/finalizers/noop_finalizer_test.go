@@ -19,6 +19,7 @@ package finalizers
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestNoopFinalizerExecution(t *testing.T) {
 
 	mech, err := newNoopFinalizer(appCtx, "foo", nil)
 	require.NoError(t, err)
-	step, err := mech.CreateStep("", nil)
+	step, err := mech.CreateStep(types.StepDefinition{ID: ""})
 	require.NoError(t, err)
 
 	// WHEN
@@ -103,7 +104,7 @@ func TestNoopFinalizerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepID, tc.newConf)
+			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: tc.newConf})
 
 			// THEN
 			fin, ok := step.(*noopFinalizer)

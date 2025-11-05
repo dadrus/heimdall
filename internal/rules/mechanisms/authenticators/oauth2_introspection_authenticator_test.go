@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
@@ -649,7 +650,7 @@ cache_ttl: 15s
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepID, conf)
+			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
 
 			// THEN
 			auth, ok := step.(*oauth2IntrospectionAuthenticator)

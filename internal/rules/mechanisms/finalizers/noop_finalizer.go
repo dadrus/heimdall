@@ -67,19 +67,19 @@ func (f *noopFinalizer) Execute(ctx heimdall.Context, _ identity.Subject) error 
 	return nil
 }
 
-func (f *noopFinalizer) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (f *noopFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
 
-	if len(rawConfig) != 0 {
+	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "noop finalizer cannot be reconfigured").
 			WithErrorContext(f)
 	}
 
 	fin := *f
-	fin.id = stepID
+	fin.id = def.ID
 
 	return &fin, nil
 }

@@ -201,14 +201,14 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) e
 	return nil
 }
 
-func (a *remoteAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = def.ID
 
 		return &auth, nil
 	}
@@ -223,7 +223,7 @@ func (a *remoteAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
 	}
@@ -235,7 +235,7 @@ func (a *remoteAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (
 
 	return &remoteAuthorizer{
 		name:        a.name,
-		id:          x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		id:          x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		app:         a.app,
 		e:           a.e,
 		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),

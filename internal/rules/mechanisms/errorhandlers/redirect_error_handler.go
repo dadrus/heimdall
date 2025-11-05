@@ -117,14 +117,14 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject
 	return nil
 }
 
-func (eh *redirectErrorHandler) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (eh *redirectErrorHandler) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		erh := *eh
-		erh.id = stepID
+		erh.id = def.ID
 
 		return &erh, nil
 	}

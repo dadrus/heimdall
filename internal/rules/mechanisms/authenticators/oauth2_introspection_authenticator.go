@@ -209,15 +209,15 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context, sub ide
 	return nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
+func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = def.ID
 
 		return &auth, nil
 	}
@@ -232,14 +232,14 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(stepID string, rawConfig m
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for oauth2_introspection authenticator '%s'", a.name).CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{
 		name: a.name,
-		id:   x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		id:   x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		app:  a.app,
 		r:    a.r,
 		a:    conf.Assertions.Merge(a.a),

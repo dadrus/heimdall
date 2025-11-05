@@ -118,14 +118,14 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) erro
 	}, a)
 }
 
-func (a *celAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (a *celAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = def.ID
 
 		return &auth, nil
 	}
@@ -136,7 +136,7 @@ func (a *celAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (hei
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for cel authorizer '%s'", a.name).CausedBy(err)
 	}
@@ -148,7 +148,7 @@ func (a *celAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (hei
 
 	return &celAuthorizer{
 		name:        a.name,
-		id:          x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		id:          x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		app:         a.app,
 		celEnv:      a.celEnv,
 		expressions: x.IfThenElse(len(expressions) != 0, expressions, a.expressions),

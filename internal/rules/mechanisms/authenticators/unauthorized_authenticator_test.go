@@ -19,6 +19,7 @@ package authenticators
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ func TestUnauthorizedAuthenticatorExecute(t *testing.T) {
 
 	mechanisms, err := newUnauthorizedAuthenticator(appCtx, "unauth", nil)
 	require.NoError(t, err)
-	step, err := mechanisms.CreateStep("", nil)
+	step, err := mechanisms.CreateStep(types.StepDefinition{ID: ""})
 	require.NoError(t, err)
 
 	// WHEN
@@ -110,7 +111,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mechanism.CreateStep(tc.stepID, tc.newConf)
+			step, err := mechanism.CreateStep(types.StepDefinition{ID: tc.stepID, Config: tc.newConf})
 
 			// THEN
 			auth, ok := step.(*unauthorizedAuthenticator)

@@ -92,14 +92,14 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 	return nil
 }
 
-func (a *anonymousAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = def.ID
 
 		return &auth, nil
 	}
@@ -110,14 +110,14 @@ func (a *anonymousAuthenticator) CreateStep(stepID string, rawConfig map[string]
 
 	var conf Config
 
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for anonymous authenticator '%s'", a.name).CausedBy(err)
 	}
 
 	return &anonymousAuthenticator{
 		name:      a.name,
-		id:        x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		id:        x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		principal: &identity.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
 		app:       a.app,
 	}, nil

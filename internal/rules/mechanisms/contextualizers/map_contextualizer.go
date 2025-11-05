@@ -92,14 +92,14 @@ func (c *mapContextualizer) ID() string { return c.id }
 
 func (c *mapContextualizer) IsInsecure() bool { return false }
 
-func (c *mapContextualizer) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (c *mapContextualizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return c, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		cont := *c
-		cont.id = stepID
+		cont.id = def.ID
 
 		return &cont, nil
 	}
@@ -110,14 +110,14 @@ func (c *mapContextualizer) CreateStep(stepID string, rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(c.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(c.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for map contextualizer '%s'", c.name).CausedBy(err)
 	}
 
 	return &mapContextualizer{
 		name:   c.name,
-		id:     x.IfThenElse(len(stepID) == 0, c.id, stepID),
+		id:     x.IfThenElse(len(def.ID) == 0, c.id, def.ID),
 		app:    c.app,
 		items:  c.items,
 		values: c.values.Merge(conf.Values),

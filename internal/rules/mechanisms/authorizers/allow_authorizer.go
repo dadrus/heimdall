@@ -67,19 +67,19 @@ func (a *allowAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) erro
 	return nil
 }
 
-func (a *allowAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (a *allowAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) != 0 {
+	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "allow authorizer cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
 	auth := *a
-	auth.id = stepID
+	auth.id = def.ID
 
 	return &auth, nil
 }

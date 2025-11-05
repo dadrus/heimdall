@@ -69,20 +69,20 @@ func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context, _ identity.Sub
 		WithErrorContext(a)
 }
 
-func (a *unauthorizedAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
+func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// nothing can be reconfigured
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) != 0 {
+	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "unauthorized authenticator cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
 	auth := *a
-	auth.id = stepID
+	auth.id = def.ID
 
 	return &auth, nil
 }

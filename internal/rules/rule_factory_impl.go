@@ -335,7 +335,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	if len(prinCreators) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"no authenticator defined for default rule")
+			"no authenticators defined for default rule")
 	}
 
 	if prinCreators[0].IsInsecure() {
@@ -405,6 +405,7 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 	case "error_handler":
 		mechanism, err = f.r.ErrorHandler(ref.Name)
 	default:
+		// can actually never happen
 		err = errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unknown mechanism kind: %s", ref.Kind)
 	}
 
@@ -412,7 +413,13 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 		return nil, errorchain.New(ErrStepCreation).CausedBy(err)
 	}
 
-	step, err := mechanism.CreateStep(def.ID, def.Config)
+	step, err := mechanism.CreateStep(
+		mechanisms.StepDefinition{
+			ID:        def.ID,
+			Config:    def.Config,
+			Principal: def.Principal,
+		},
+	)
 	if err != nil {
 		return nil, errorchain.New(ErrStepCreation).CausedBy(err)
 	}
