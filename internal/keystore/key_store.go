@@ -151,6 +151,11 @@ func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
 		}
 	}
 
+	if len(entries) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"no key material present in the keystore")
+	}
+
 	return verifyAndBuildKeyStore(entries, certs)
 }
 
