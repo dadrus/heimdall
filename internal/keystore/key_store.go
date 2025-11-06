@@ -151,15 +151,15 @@ func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
 		}
 	}
 
+	return verifyAndBuildKeyStore(entries, certs)
+}
+
+func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keyStore, error) {
 	if len(entries) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"no key material present in the keystore")
 	}
 
-	return verifyAndBuildKeyStore(entries, certs)
-}
-
-func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keyStore, error) {
 	known := make(map[string]bool)
 
 	for idx, entry := range entries {

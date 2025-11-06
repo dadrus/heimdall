@@ -184,6 +184,7 @@ r31pyBUcAO9GOL56rDXzHQk=
 
 `)
 
+// nolint: gochecknoglobals
 var pemWithSingleCertificate = []byte(`
 -----BEGIN CERTIFICATE-----
 MIIDYTCCAkmgAwIBAgIURtXjJtmBH6JNhf4v0pgSQkcvoFowDQYJKoZIhvcNAQEL
