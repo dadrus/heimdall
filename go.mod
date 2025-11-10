@@ -1,21 +1,21 @@
 module github.com/dadrus/heimdall
 
-go 1.25.3
+go 1.25.4
 
 require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alicebob/miniredis/v2 v2.35.0
-	github.com/ccoveille/go-safecast v1.7.0
-	github.com/dadrus/httpsig v0.0.0-20250913110742-1b6f37c312e9
+	github.com/ccoveille/go-safecast/v2 v2.0.0
+	github.com/dadrus/httpsig v0.0.0-20251018080721-a4e2c1dc0ab6
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
-	github.com/envoyproxy/go-control-plane/envoy v1.35.0
+	github.com/envoyproxy/go-control-plane/envoy v1.36.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-co-op/gocron/v2 v2.17.0
+	github.com/go-co-op/gocron/v2 v2.18.0
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
 	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/go-logr/zerologr v1.2.3
@@ -28,7 +28,7 @@ require (
 	github.com/google/cel-go v0.26.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
 	github.com/instana/go-otel-exporter v1.0.0
@@ -80,7 +80,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0
 	go.uber.org/fx v1.24.0
 	gocloud.dev v0.43.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251014184007-4626949a642f
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251110190251-83f479183930
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1

@@ -87,7 +87,7 @@ func TestNewRequestContext(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
 }
 
-func TestFinalizeRequestContext(t *testing.T) {
+func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
 
 	findHeader := func(headers []*corev3.HeaderValueOption, name string) *corev3.HeaderValue {
@@ -333,4 +333,29 @@ func TestRequestContextBody(t *testing.T) {
 			assert.Equal(t, tc.expect, data)
 		})
 	}
+}
+
+func TestRequestContextRequestURLCaptures(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := NewRequestContext(
+		t.Context(),
+		&envoy_auth.CheckRequest{
+			Attributes: &envoy_auth.AttributeContext{
+				Request: &envoy_auth.AttributeContext_Request{
+					Http: &envoy_auth.AttributeContext_HttpRequest{
+						RawBody: []byte("foo"), Headers: map[string]string{"content-type": "application/json"},
+					},
+				},
+			},
+		},
+	)
+
+	ctx.Request().URL.Captures = map[string]string{"a": "b"}
+
+	// WHEN
+	captures := ctx.Request().URL.Captures
+	require.Len(t, captures, 1)
+	assert.Equal(t, "b", captures["a"])
 }

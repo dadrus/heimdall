@@ -184,6 +184,31 @@ r31pyBUcAO9GOL56rDXzHQk=
 
 `)
 
+// nolint: gochecknoglobals
+var pemWithSingleCertificate = []byte(`
+-----BEGIN CERTIFICATE-----
+MIIDYTCCAkmgAwIBAgIURtXjJtmBH6JNhf4v0pgSQkcvoFowDQYJKoZIhvcNAQEL
+BQAwHDEaMBgGA1UEAxMRaGVpbWRhbGwuaGVpbWRhbGwwHhcNMjUxMDI0MDc1NTMz
+WhcNMjUxMDMxMDc1NTMzWjAcMRowGAYDVQQDExFoZWltZGFsbC5oZWltZGFsbDCC
+ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO3qItb59vRnvgOsVSQfd/da
+6fCYUYqCe6zCEfeO35blFohK/OeajcCCgT4Fc04QgFNez9dN0YvvIQsC7diLlftZ
+4by37IJHfQM+uyGMKo+8jG/N1wbFC8bfHJl8A3+iC04b5ACqlvIZQo9VePeaUzqf
++1UTlJLKiD0mz7qNeM7rKCfqFkxqfeDMZRfMX4p5mkBU5pOEoXQnVv0oW/MnUoed
+mK2EOsQadJ0pCRaGDGzxka/G2WAhaRRVPg5IJYMJhacs6TvKX7TCtL44yRpQv9vF
+fxC43T20rHZBjEvBm2GDmB7u2PGAk+GypbxW3mau9a2jlwi8IWayFiY2IODC76MC
+AwEAAaOBmjCBlzAOBgNVHQ8BAf8EBAMCBaAwEwYDVR0lBAwwCgYIKwYBBQUHAwEw
+DAYDVR0TAQH/BAIwADBiBgNVHREEWzBZgghoZWltZGFsbIIRaGVpbWRhbGwuaGVp
+bWRhbGyCFWhlaW1kYWxsLmhlaW1kYWxsLnN2Y4IjaGVpbWRhbGwuaGVpbWRhbGwu
+c3ZjLmNsdXN0ZXIubG9jYWwwDQYJKoZIhvcNAQELBQADggEBAEAMCvVkjoSg4emt
+FqxlfzSFWVIBuMlTWr+aYYkRGf8lJFut2xSM+y3bPtZ4ncVKTSO+sElBINeOv+lk
+0huyX/NQ7kk7lCg1SshxRT1az1sfclkGEbw5IhSIeQaCa0wW6JMfSd7EP2yPtmjN
+CsdgzBDzgr08l90GDHPfFkeHqMainSOqq6DrEFgObEqhac9ksG+XsGMLWc8tCUjv
+xVw4PPKPEy180xMB5ZmilnkoSHCemlIVNepcCnQsvQz9H3IhGCoqCahUblDz3MAd
+RwZrakj8mAe4KE7yKBe010dHIHNGm9i0WsSNOlj1tbMHaPDHOqhNhs/O0+Dk8nMT
+udb/TVw=
+-----END CERTIFICATE-----
+`)
+
 func findKeyType(entries []*keystore.Entry, alg string) *keystore.Entry {
 	for _, entry := range entries {
 		if entry.Alg == alg {
@@ -315,6 +340,28 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "duplicate entry")
+			},
+		},
+		"file contains only certificates": {
+			keyStoreFile: func(t *testing.T) string {
+				t.Helper()
+
+				file, err := os.CreateTemp(t.TempDir(), "test_ks.*")
+				require.NoError(t, err)
+
+				buf := bytes.NewBuffer(pemWithSingleCertificate)
+
+				err = os.WriteFile(file.Name(), buf.Bytes(), 0o600)
+				require.NoError(t, err)
+
+				return file.Name()
+			},
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no key material present")
 			},
 		},
 	} {
