@@ -4,16 +4,15 @@ metadata:
   name: ext-auth-heimdall
   namespace: heimdall
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
-    namespace: heimdall
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   extAuth:
     grpc:
-      backendRef:
-        name: heimdall
-        port: 4456
-        namespace: heimdall
+      backendRefs:
+        - name: heimdall
+          port: 4456
+          namespace: heimdall
 ---
 
