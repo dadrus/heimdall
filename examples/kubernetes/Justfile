@@ -4,7 +4,7 @@ loki_version := '6.24.0'
 tempo_version := '1.16.0'
 pyroscope_version := '1.10.0'
 nginx_version := '4.13.2'
-contour_version := '21.1.4'
+contour_version := '0.1.0'
 emissary_version := '8.12.2'
 haproxy_version := '0.14.9'
 envoy_gw_version := 'v1.0.1'
@@ -21,7 +21,7 @@ cluster_name := 'heimdall-demo'
 default_router := "contour"
 
 setup-charts:
-  helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo add contour https://projectcontour.github.io/helm-charts/
   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
   helm repo add grafana https://grafana.github.io/helm-charts
@@ -126,7 +126,7 @@ install-nginx-ingress-controller global_ext_auth="true":
     --wait
 
 install-contour-ingress-controller:
-  helm upgrade --install contour-controller bitnami/contour \
+  helm upgrade --install contour-controller contour/contour \
     -n contour-controller --create-namespace \
     --version {{contour_version}} \
     -f contour/helm-values.yaml # used only to configure a global auth server
