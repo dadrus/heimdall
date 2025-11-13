@@ -1,17 +1,15 @@
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy
 metadata:
   name: heimdall-btls
   namespace: heimdall
 spec:
-  targetRef:
-    group: ''
-    kind: Service
-    namespace: heimdall
-    name: heimdall
-    sectionName: "4456"
-  tls:
-    caCertRefs:
+  targetRefs:
+    - group: ''
+      kind: Service
+      name: heimdall
+  validation:
+    caCertificateRefs:
       - name: cacerts
         group: ''
         kind: ConfigMap
