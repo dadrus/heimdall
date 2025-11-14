@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateCELAuthorizer(t *testing.T) {
+func TestNewCELAuthorizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -162,15 +162,20 @@ expressions:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			a, err := newCELAuthorizer(appCtx, uc, conf)
+			mech, err := newCELAuthorizer(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, a)
+			auth, ok := mech.(*celAuthorizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, auth)
 		})
 	}
 }
 
-func TestCreateCELAuthorizerFromPrototype(t *testing.T) {
+func TestCELAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -343,24 +348,22 @@ expressions:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newCELAuthorizer(appCtx, uc, pc)
+			mech, err := newCELAuthorizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*celAuthorizer)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				locAuth *celAuthorizer
-				ok      bool
-			)
-
+			auth, ok := step.(*celAuthorizer)
 			if err == nil {
-				locAuth, ok = auth.(*celAuthorizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, locAuth)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -370,7 +373,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *mocks.RequestContextMock, sub identity.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub identity.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		"denied by expression without access to subject and request": {
@@ -378,7 +381,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ identity.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ identity.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -404,7 +407,7 @@ values:
 expressions:
   - expression: "true == true"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, _ identity.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ identity.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -450,7 +453,7 @@ expressions:
   - expression: Outputs.foo == "bar"
   - expression: Subject.ID == Values.a + Values.b
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub identity.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub identity.Subject) {
 				t.Helper()
 
 				sub["default"] = &identity.Principal{
@@ -495,7 +498,7 @@ expressions:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
 			sub := make(identity.Subject)
@@ -509,11 +512,14 @@ expressions:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			auth, err := newCELAuthorizer(appCtx, uc, conf)
+			mech, err := newCELAuthorizer(appCtx, uc, conf)
+			require.NoError(t, err)
+
+			step, err := mech.CreateStep("", nil)
 			require.NoError(t, err)
 
 			// WHEN
-			err = auth.Execute(ctx, sub)
+			err = step.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err)

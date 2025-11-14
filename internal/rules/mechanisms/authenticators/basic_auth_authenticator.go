@@ -28,6 +28,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -41,16 +43,11 @@ const (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorBasicAuth {
-				return false, nil, nil
-			}
-
-			auth, err := newBasicAuthAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorBasicAuth,
+		registry.FactoryFunc(newBasicAuthAuthenticator),
+	)
 }
 
 type basicAuthAuthenticator struct {
@@ -64,11 +61,7 @@ type basicAuthAuthenticator struct {
 	ads             extractors.HeaderValueExtractStrategy
 }
 
-func newBasicAuthAuthenticator(
-	app app.Context,
-	name string,
-	rawConfig map[string]any,
-) (*basicAuthAuthenticator, error) {
+func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorBasicAuth).
@@ -107,7 +100,7 @@ func newBasicAuthAuthenticator(
 	return &auth, nil
 }
 
-func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorBasicAuth).
@@ -162,7 +155,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.RequestContext, sub identi
 	return nil
 }
 
-func (a *basicAuthAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *basicAuthAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
 	}
@@ -211,6 +204,8 @@ func (a *basicAuthAuthenticator) WithConfig(stepID string, rawConfig map[string]
 			}),
 	}, nil
 }
+
+func (a *basicAuthAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
 
 func (a *basicAuthAuthenticator) Name() string { return a.name }
 

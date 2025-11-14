@@ -21,6 +21,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -29,16 +32,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
-			if typ != ErrorHandlerWWWAuthenticate {
-				return false, nil, nil
-			}
-
-			eh, err := newWWWAuthenticateErrorHandler(app, name, conf)
-
-			return true, eh, err
-		})
+	registry.Register(
+		types.KindErrorHandler,
+		ErrorHandlerWWWAuthenticate,
+		registry.FactoryFunc(newWWWAuthenticateErrorHandler),
+	)
 }
 
 type wwwAuthenticateErrorHandler struct {
@@ -48,9 +46,7 @@ type wwwAuthenticateErrorHandler struct {
 	realm string
 }
 
-func newWWWAuthenticateErrorHandler(
-	app app.Context, name string, rawConfig map[string]any,
-) (*wwwAuthenticateErrorHandler, error) {
+func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", ErrorHandlerWWWAuthenticate).
@@ -75,11 +71,15 @@ func newWWWAuthenticateErrorHandler(
 	}, nil
 }
 
+func (eh *wwwAuthenticateErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
+
 func (eh *wwwAuthenticateErrorHandler) Name() string { return eh.name }
 
 func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }
 
-func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
+func (eh *wwwAuthenticateErrorHandler) IsInsecure() bool { return false }
+
+func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ErrorHandlerWWWAuthenticate).
@@ -88,12 +88,12 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.RequestContext, _ er
 		Msg("Executing error handler")
 
 	ctx.AddHeaderForUpstream("WWW-Authenticate", "Basic realm="+eh.realm)
-	ctx.SetPipelineError(heimdall.ErrAuthentication)
+	ctx.SetError(heimdall.ErrAuthentication)
 
 	return nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) WithConfig(stepID string, rawConfig map[string]any) (ErrorHandler, error) {
+func (eh *wwwAuthenticateErrorHandler) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return eh, nil
 	}

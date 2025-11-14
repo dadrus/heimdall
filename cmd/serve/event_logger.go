@@ -75,7 +75,7 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Str("_module", evt.ModuleName).
 				Strs("_stacktrace", evt.StackTrace).
 				Strs("_moduleTrace", evt.ModuleTrace).
-				Msg("Error encountered while supplying module")
+				Msg("Error encountered while supplying fx")
 		} else {
 			l.l.Trace().
 				Str("_type", evt.TypeName).
@@ -101,7 +101,7 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Str("_module", evt.ModuleName).
 				Strs("_stacktrace", evt.StackTrace).
 				Strs("_moduleTrace", evt.ModuleTrace).
-				Msg("Error encountered while providing module")
+				Msg("Error encountered while providing fx")
 		}
 	case *fxevent.Replaced:
 		if evt.Err == nil {
@@ -119,7 +119,7 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Str("_module", evt.ModuleName).
 				Strs("_stacktrace", evt.StackTrace).
 				Strs("_moduleTrace", evt.ModuleTrace).
-				Msg("Error encountered while replacing module")
+				Msg("Error encountered while replacing fx")
 		}
 	case *fxevent.Decorated:
 		if evt.Err == nil {
@@ -138,7 +138,7 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Str("_module", evt.ModuleName).
 				Strs("_stacktrace", evt.StackTrace).
 				Strs("_moduleTrace", evt.ModuleTrace).
-				Msg("Error encountered while decorating module")
+				Msg("Error encountered while decorating fx")
 		}
 	case *fxevent.Run:
 		if evt.Err != nil {
@@ -160,7 +160,7 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 		l.l.Trace().
 			Str("_module", evt.ModuleName).
 			Str("_function", evt.FunctionName).
-			Msg("Invoking module")
+			Msg("Invoking fx")
 	case *fxevent.Invoked:
 		if evt.Err != nil {
 			l.l.Error().
@@ -174,7 +174,7 @@ func (l *eventLogger) LogEvent(event fxevent.Event) { //nolint:gocognit, gocyclo
 				Str("_module", evt.ModuleName).
 				Str("_function", evt.FunctionName).
 				Str("_stack", evt.Trace).
-				Msg("Invoked module")
+				Msg("Invoked fx")
 		}
 	case *fxevent.Stopping:
 		l.l.Trace().

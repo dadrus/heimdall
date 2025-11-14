@@ -27,14 +27,18 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type compositeSubjectCreator []principalCreator
+type compositePrincipalCreator []heimdall.Step
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (cp compositePrincipalCreator) IsInsecure() bool {
+	return len(cp) == 0 || cp[0].IsInsecure()
+}
+
+func (cp compositePrincipalCreator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	var err error
 
-	for idx, a := range ca {
+	for idx, a := range cp {
 		err = a.Execute(ctx, sub)
 		if err != nil {
 			logger.Warn().Err(err).Msg("Pipeline step execution failed")
@@ -45,7 +49,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.RequestContext, sub ident
 				break
 			}
 
-			if idx < len(ca)-1 {
+			if idx < len(cp)-1 {
 				logger.Info().Msg("Falling back to next configured one.")
 
 				continue

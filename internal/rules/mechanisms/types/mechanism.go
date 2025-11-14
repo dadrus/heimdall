@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +14,23 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+// nolint: revive
+package types
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+import "github.com/dadrus/heimdall/internal/heimdall"
+
+type Kind string
+
+const (
+	KindAuthenticator  Kind = "authenticator"
+	KindAuthorizer     Kind = "authorizer"
+	KindContextualizer Kind = "contextualizer"
+	KindFinalizer      Kind = "finalizer"
+	KindErrorHandler   Kind = "error_handler"
 )
 
-type subjectHandler interface {
-	ID() string
-	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
+type Mechanism interface {
+	Name() string
+	Kind() Kind
+	CreateStep(stepID string, config map[string]any) (heimdall.Step, error)
 }

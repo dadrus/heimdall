@@ -34,7 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateBasicAuthAuthenticator(t *testing.T) {
+func TestNewBasicAuthAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -117,15 +117,20 @@ foo: bar`),
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			auth, err := newBasicAuthAuthenticator(appCtx, uc, conf)
+			mech, err := newBasicAuthAuthenticator(appCtx, uc, conf)
 
 			// THEN
+			auth, ok := mech.(*basicAuthAuthenticator)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, auth)
 		})
 	}
 }
 
-func TestCreateBasicAuthAuthenticatorFromPrototype(t *testing.T) {
+func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -289,19 +294,22 @@ password: bar`),
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newBasicAuthAuthenticator(appCtx, uc, pc)
+			mech, err := newBasicAuthAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*basicAuthAuthenticator)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			baa, ok := auth.(*basicAuthAuthenticator)
+			auth, ok := step.(*basicAuthAuthenticator)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, baa)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -319,11 +327,11 @@ password: bar`))
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error, sub identity.Subject)
 	}{
 		"no required header present": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -347,7 +355,7 @@ password: bar`))
 			},
 		},
 		"base64 decoding error": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -371,7 +379,7 @@ password: bar`))
 			},
 		},
 		"malformed encoding": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -396,7 +404,7 @@ password: bar`))
 			},
 		},
 		"invalid user id": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -421,7 +429,7 @@ password: bar`))
 			},
 		},
 		"invalid password": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -446,7 +454,7 @@ password: bar`))
 			},
 		},
 		"valid credentials": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -475,17 +483,20 @@ password: bar`))
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			auth, err := newBasicAuthAuthenticator(appCtx, uc, conf)
+			mech, err := newBasicAuthAuthenticator(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			ctx := mocks.NewRequestContextMock(t)
+			step, ok := mech.(*basicAuthAuthenticator)
+			require.True(t, ok)
+
+			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 			tc.configureContext(t, ctx)
 
 			sub := make(identity.Subject)
 
 			// WHEN
-			err = auth.Execute(ctx, sub)
+			err = step.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, sub)

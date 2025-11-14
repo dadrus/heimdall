@@ -196,15 +196,20 @@ header:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			finalizer, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
+			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, finalizer)
+			fin, ok := mech.(*oauth2ClientCredentialsFinalizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, fin)
 		})
 	}
 }
 
-func TestCreateClientCredentialsFinalizerFromPrototype(t *testing.T) {
+func TestClientCredentialsFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -397,24 +402,22 @@ header:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, pc)
+			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*oauth2ClientCredentialsFinalizer)
+			require.True(t, ok)
+
 			// WHEN
-			finalizer, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				ok            bool
-				realFinalizer *oauth2ClientCredentialsFinalizer
-			)
-
+			fin, ok := step.(*oauth2ClientCredentialsFinalizer)
 			if err == nil {
-				realFinalizer, ok = finalizer.(*oauth2ClientCredentialsFinalizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, realFinalizer)
+			tc.assert(t, err, configured, fin)
 		})
 	}
 }
@@ -477,7 +480,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		finalizer      *oauth2ClientCredentialsFinalizer
-		configureMocks func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock)
+		configureMocks func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool)
@@ -487,7 +490,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				id:         "test",
 				headerName: "Authorization",
 			},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				rawData, err := json.Marshal(clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
@@ -512,7 +515,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					ClientSecret: "foo",
 				},
 			},
-			configureMocks: func(t *testing.T, _ *mocks.RequestContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, _ *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -548,7 +551,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					Scopes: []string{"baz", "zab"},
 				},
 			},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -593,11 +596,11 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			endpointCalled = false
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks.RequestContextMock, _ *mocks2.CacheMock) { t.Helper() },
+				func(t *testing.T, _ *mocks.ContextMock, _ *mocks2.CacheMock) { t.Helper() },
 			)
 
 			cch := mocks2.NewCacheMock(t)
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			configureMocks(t, ctx, cch)

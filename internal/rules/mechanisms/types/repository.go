@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+// nolint: revive
+package types
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-)
-
-type errorHandler interface {
-	ID() string
-	Execute(ctx heimdall.RequestContext, causeErr error) error
+type Repository interface {
+	Authenticator(name string) (Mechanism, error)
+	Authorizer(name string) (Mechanism, error)
+	Contextualizer(name string) (Mechanism, error)
+	Finalizer(name string) (Mechanism, error)
+	ErrorHandler(name string) (Mechanism, error)
 }

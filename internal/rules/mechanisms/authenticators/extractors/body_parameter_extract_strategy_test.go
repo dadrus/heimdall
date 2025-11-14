@@ -31,12 +31,12 @@ func TestExtractBodyParameter(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		parameterName  string
-		configureMocks func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
 		assert         func(t *testing.T, err error, authData string)
 	}{
 		"body is a string": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -54,7 +54,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"json body does not contain required parameter": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -72,7 +72,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"form url encoded body does not contain required parameter": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -90,7 +90,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"body contains required parameter multiple times #1": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -108,7 +108,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"body contains required parameter multiple times #2": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -126,7 +126,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"body contains required parameter in wrong format #1": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -144,7 +144,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"body contains required parameter in wrong format #2": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -162,7 +162,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"body contains required parameter #1": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -179,7 +179,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		},
 		"form url encoded body contains required parameter": {
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -197,7 +197,7 @@ func TestExtractBodyParameter(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 			tc.configureMocks(t, ctx)
 
 			strategy := BodyParameterExtractStrategy{Name: tc.parameterName}

@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,22 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package authenticators
+package mechanisms
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 )
 
-type Authenticator interface {
-	ID() string
-	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
-	WithConfig(stepID string, config map[string]any) (Authenticator, error)
-	IsInsecure() bool
-}
+const (
+	KindAuthenticator  = types.KindAuthenticator
+	KindAuthorizer     = types.KindAuthorizer
+	KindContextualizer = types.KindContextualizer
+	KindFinalizer      = types.KindFinalizer
+	KindErrorHandler   = types.KindErrorHandler
+)
+
+type (
+	Kind       = types.Kind
+	Mechanism  = types.Mechanism
+	Repository = types.Repository
+)

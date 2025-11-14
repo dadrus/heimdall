@@ -22,29 +22,24 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-// by intention. Used only during application bootstrap.
-func init() { // nolint: gochecknoinits
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorAnonymous {
-				return false, nil, nil
-			}
-
-			auth, err := newAnonymousAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+// by intention. Used only during application bootstrap
+//
+//nolint:gochecknoinits
+func init() {
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorAnonymous,
+		registry.FactoryFunc(newAnonymousAuthenticator),
+	)
 }
 
-func newAnonymousAuthenticator(
-	app app.Context,
-	name string,
-	rawConfig map[string]any,
-) (*anonymousAuthenticator, error) {
+func newAnonymousAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorAnonymous).
@@ -84,7 +79,7 @@ type anonymousAuthenticator struct {
 	principal *identity.Principal
 }
 
-func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorAnonymous).
@@ -97,7 +92,7 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext, sub identi
 	return nil
 }
 
-func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *anonymousAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
 	}
@@ -127,6 +122,8 @@ func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]
 		app:       a.app,
 	}, nil
 }
+
+func (a *anonymousAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
 
 func (a *anonymousAuthenticator) Name() string { return a.name }
 

@@ -32,16 +32,16 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureMocks func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock)
+		configureMocks func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock)
 		assert         func(t *testing.T, err error)
 	}{
 		"executes if can": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock) {
+			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
 				t.Helper()
 
 				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(true, nil)
-				h.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
-				h.EXPECT().ID().Return("test")
+				s.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
+				s.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -50,11 +50,11 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			},
 		},
 		"does not execute if can not": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock) {
+			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
 				t.Helper()
 
 				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(false, nil)
-				h.EXPECT().ID().Return("test")
+				s.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -63,12 +63,12 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			},
 		},
 		"does not execute if can check fails": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock) {
+			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
 				t.Helper()
 
 				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).
 					Return(true, errors.New("test error"))
-				h.EXPECT().ID().Return("test")
+				s.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -81,13 +81,13 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			condition := rulemocks.NewExecutionConditionMock(t)
-			handler := rulemocks.NewSubjectHandlerMock(t)
-			decorator := conditionalSubjectHandler{c: condition, h: handler}
+			step := mocks.NewStepMock(t)
+			decorator := conditionalStep{c: condition, h: step}
 
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
-			tc.configureMocks(t, condition, handler)
+			tc.configureMocks(t, condition, step)
 
 			// WHEN
 			err := decorator.Execute(ctx, nil)
@@ -102,10 +102,10 @@ func TestConditionalSubjectHandlerID(t *testing.T) {
 	t.Parallel()
 
 	condition := rulemocks.NewExecutionConditionMock(t)
-	handler := rulemocks.NewSubjectHandlerMock(t)
-	handler.EXPECT().ID().Return("test")
+	step := mocks.NewStepMock(t)
+	step.EXPECT().ID().Return("test")
 
-	eh := conditionalSubjectHandler{c: condition, h: handler}
+	eh := conditionalStep{c: condition, h: step}
 
 	id := eh.ID()
 	assert.Equal(t, "test", id)

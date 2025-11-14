@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
+func TestUnauthorizedAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 	// GIVEN
 	appCtx := app.NewContextMock(t)
@@ -39,13 +39,16 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 		Name() string
 	}
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
-	auth := newUnauthorizedAuthenticator(appCtx, "unauth")
+	mechanisms, err := newUnauthorizedAuthenticator(appCtx, "unauth", nil)
+	require.NoError(t, err)
+	step, err := mechanisms.CreateStep("", nil)
+	require.NoError(t, err)
 
 	// WHEN
-	err := auth.Execute(ctx, nil)
+	err = step.Execute(ctx, nil)
 
 	// THEN
 	require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -56,7 +59,7 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	assert.Equal(t, identifier.Name(), identifier.ID())
 }
 
-func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
+func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -100,16 +103,22 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newUnauthorizedAuthenticator(appCtx, uc)
+			mechanism, err := newUnauthorizedAuthenticator(appCtx, uc, nil)
+			require.NoError(t, err)
 
-			auth, err := prototype.WithConfig(tc.stepID, tc.newConf)
+			configured, ok := mechanism.(*unauthorizedAuthenticator)
+			require.True(t, ok)
 
-			uaa, ok := auth.(*unauthorizedAuthenticator)
+			// WHEN
+			step, err := mechanism.CreateStep(tc.stepID, tc.newConf)
+
+			// THEN
+			auth, ok := step.(*unauthorizedAuthenticator)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, uaa)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }

@@ -24,7 +24,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -33,16 +36,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
-			if typ != ErrorHandlerRedirect {
-				return false, nil, nil
-			}
-
-			eh, err := newRedirectErrorHandler(app, name, conf)
-
-			return true, eh, err
-		})
+	registry.Register(
+		types.KindErrorHandler,
+		ErrorHandlerRedirect,
+		registry.FactoryFunc(newRedirectErrorHandler),
+	)
 }
 
 type redirectErrorHandler struct {
@@ -52,7 +50,7 @@ type redirectErrorHandler struct {
 	code int
 }
 
-func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]any) (*redirectErrorHandler, error) {
+func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", ErrorHandlerRedirect).
@@ -86,11 +84,15 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
+func (eh *redirectErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
+
 func (eh *redirectErrorHandler) Name() string { return eh.name }
 
 func (eh *redirectErrorHandler) ID() string { return eh.id }
 
-func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) error {
+func (eh *redirectErrorHandler) IsInsecure() bool { return false }
+
+func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ErrorHandlerRedirect).
@@ -106,7 +108,7 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) er
 			CausedBy(err)
 	}
 
-	ctx.SetPipelineError(&heimdall.RedirectError{
+	ctx.SetError(&heimdall.RedirectError{
 		Message:    "redirect",
 		Code:       eh.code,
 		RedirectTo: toURL,
@@ -115,7 +117,7 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.RequestContext, _ error) er
 	return nil
 }
 
-func (eh *redirectErrorHandler) WithConfig(stepID string, rawConfig map[string]any) (ErrorHandler, error) {
+func (eh *redirectErrorHandler) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return eh, nil
 	}

@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,19 +14,44 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package heimdall
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"context"
+	"net/url"
 )
 
-type defaultExecutionCondition struct{}
+type Context interface {
+	Request() *Request
 
-func (c defaultExecutionCondition) CanExecuteOnSubject(_ heimdall.RequestContext, _ identity.Subject) (bool, error) {
-	return true, nil
+	AddHeaderForUpstream(name, value string)
+	AddCookieForUpstream(name, value string)
+
+	Context() context.Context
+
+	SetError(err error)
+	Error() error
+
+	Outputs() map[string]any
 }
 
-func (c defaultExecutionCondition) CanExecuteOnError(_ heimdall.RequestContext, _ error) (bool, error) {
-	return true, nil
+type RequestFunctions interface {
+	Header(name string) string
+	Cookie(name string) string
+	Headers() map[string]string
+	Body() any
+}
+
+type URL struct {
+	url.URL
+
+	Captures map[string]string
+}
+
+type Request struct {
+	RequestFunctions
+
+	Method            string
+	URL               *URL
+	ClientIPAddresses []string
 }

@@ -34,7 +34,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -44,16 +46,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorGeneric {
-				return false, nil, nil
-			}
-
-			auth, err := newGenericAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorGeneric,
+		registry.FactoryFunc(newGenericAuthenticator),
+	)
 }
 
 type genericAuthenticator struct {
@@ -70,7 +67,7 @@ type genericAuthenticator struct {
 	sessionLifespanConf *SessionLifespanConfig
 }
 
-func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]any) (*genericAuthenticator, error) {
+func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorGeneric).
@@ -118,7 +115,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorGeneric).
@@ -152,7 +149,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext, sub identity
 	return nil
 }
 
-func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *genericAuthenticator) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
@@ -200,13 +197,15 @@ func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]an
 	}, nil
 }
 
+func (a *genericAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
+
 func (a *genericAuthenticator) Name() string { return a.name }
 
 func (a *genericAuthenticator) ID() string { return a.id }
 
 func (a *genericAuthenticator) IsInsecure() bool { return false }
 
-func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	cch := cache.Ctx(ctx.Context())
 
@@ -251,7 +250,7 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.RequestConte
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.Context, authData string) ([]byte, error) {
 	req, err := a.createRequest(ctx, authData)
 	if err != nil {
 		return nil, err
@@ -280,7 +279,7 @@ func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.RequestCon
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authData string) (*http.Request, error) {
+func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData string) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	var body io.Reader

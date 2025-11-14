@@ -67,7 +67,7 @@ const (
 	kidRSAKey         = "key_rsa"
 )
 
-func TestJwtAuthenticatorCreate(t *testing.T) {
+func TestNewJwtAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
@@ -539,15 +539,20 @@ cache_ttl: 5s`),
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			a, err := newJwtAuthenticator(appCtx, uc, conf)
+			mech, err := newJwtAuthenticator(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, a)
+			auth, ok := mech.(*jwtAuthenticator)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, auth)
 		})
 	}
 }
 
-func TestJwtAuthenticatorWithConfig(t *testing.T) {
+func TestJwtAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
@@ -862,24 +867,22 @@ metadata_endpoint:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newJwtAuthenticator(appCtx, uc, pc)
+			mech, err := newJwtAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*jwtAuthenticator)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				jwta *jwtAuthenticator
-				ok   bool
-			)
-
+			auth, ok := step.(*jwtAuthenticator)
 			if err == nil {
-				jwta, ok = auth.(*jwtAuthenticator)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, jwta)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -980,7 +983,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		authenticator  *jwtAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.RequestContextMock,
+			ctx *heimdallmocks.ContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *jwtAuthenticator)
@@ -989,7 +992,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"with failing auth data source": {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1017,7 +1020,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"with unsupported JWT format": {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1045,7 +1048,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"with JWT parsing error": {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1079,7 +1082,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1113,7 +1116,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1147,7 +1150,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1191,7 +1194,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1241,7 +1244,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1284,7 +1287,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1325,7 +1328,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1380,7 +1383,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1436,7 +1439,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1492,7 +1495,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1553,7 +1556,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1613,7 +1616,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1679,7 +1682,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1758,7 +1761,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1831,7 +1834,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1928,7 +1931,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				validateJWKCert: true,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1996,7 +1999,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -2075,7 +2078,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2130,7 +2133,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				}),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2178,7 +2181,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				}),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2227,7 +2230,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				validateJWKCert: true,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2277,7 +2280,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2348,7 +2351,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2419,7 +2422,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.RequestContextMock,
+					_ *heimdallmocks.ContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *jwtAuthenticator,
@@ -2432,7 +2435,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)

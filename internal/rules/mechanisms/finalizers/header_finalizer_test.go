@@ -32,7 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateHeaderFinalizer(t *testing.T) {
+func TestNewHeaderFinalizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -122,15 +122,20 @@ headers:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			finalizer, err := newHeaderFinalizer(appCtx, uc, conf)
+			mech, err := newHeaderFinalizer(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, finalizer)
+			fin, ok := mech.(*headerFinalizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, fin)
 		})
 	}
 }
 
-func TestCreateHeaderFinalizerFromPrototype(t *testing.T) {
+func TestHeaderFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -248,24 +253,22 @@ headers:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newHeaderFinalizer(appCtx, uc, pc)
+			mech, err := newHeaderFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*headerFinalizer)
+			require.True(t, ok)
+
 			// WHEN
-			finalizer, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				realFinalizer *headerFinalizer
-				ok            bool
-			)
-
+			fin, ok := step.(*headerFinalizer)
 			if err == nil {
-				realFinalizer, ok = finalizer.(*headerFinalizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, realFinalizer)
+			tc.assert(t, err, configured, fin)
 		})
 	}
 }
@@ -276,7 +279,7 @@ func TestHeaderFinalizerExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config           []byte
 		subject          identity.Subject
-		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error)
 	}{
 		"template rendering error": {
@@ -284,7 +287,7 @@ func TestHeaderFinalizerExecute(t *testing.T) {
 headers:
   X-Baz: '{{ .Request.Foo "X-Foo" }}'
 `),
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				reqf := mocks.NewRequestFunctionsMock(t)
@@ -314,7 +317,7 @@ headers:
   X-Baz: '{{ .Request.Header "X-Foo" }}'
   X-Foo: '{{ .Outputs.foo }}'
 `),
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				reqf := mocks.NewRequestFunctionsMock(t)
@@ -343,7 +346,7 @@ headers:
     {{ . }}
     {{- end }}
 `),
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group1")
@@ -370,12 +373,12 @@ headers:
 			// GIVEN
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *mocks.RequestContextMock) { t.Helper() })
+				func(t *testing.T, _ *mocks.ContextMock) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context()).Maybe()
 
 			configureContext(t, ctx)
@@ -387,11 +390,14 @@ headers:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			finalizer, err := newHeaderFinalizer(appCtx, uc, conf)
+			mech, err := newHeaderFinalizer(appCtx, uc, conf)
+			require.NoError(t, err)
+
+			step, err := mech.CreateStep("", nil)
 			require.NoError(t, err)
 
 			// WHEN
-			err = finalizer.Execute(ctx, tc.subject)
+			err = step.Execute(ctx, tc.subject)
 
 			// THEN
 			tc.assert(t, err)

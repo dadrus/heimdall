@@ -28,15 +28,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
-	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/mocks"
-	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
-	mocks6 "github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/mocks"
-	mocks7 "github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers/mocks"
-	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mocks"
+	mocks1 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRuleFactoryNew(t *testing.T) {
@@ -45,8 +41,8 @@ func TestRuleFactoryNew(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config                   *config.Configuration
 		enforceSecureDefaultRule bool
-		configureMocks           func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
-		assert                   func(t *testing.T, err error, ruleFactory *ruleFactory)
+		configureMocks           func(t *testing.T, repo *mocks1.RepositoryMock)
+		assert                   func(t *testing.T, err error, f *ruleFactory)
 	}{
 		"new factory without default rule": {
 			config: &config.Configuration{},
@@ -72,7 +68,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "unsupported configuration")
+				require.ErrorContains(t, err, "unknown mechanism kind")
 			},
 		},
 		"new factory with default rule with unsupported object in error handler definition": {
@@ -88,7 +84,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "unsupported configuration")
+				require.ErrorContains(t, err, "unknown mechanism kind")
 			},
 		},
 		"new factory with malformed default rule, where authenticator loading happens after identity handlers": {
@@ -100,18 +96,20 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateContextualizer("bar", "baz", mock.Anything).
-					Return(nil, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("baz", mock.Anything).Return(nil, nil)
+
+				repo.EXPECT().Contextualizer("bar").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "an authenticator")
+				require.ErrorContains(t, err, "zab authenticator is defined after")
 			},
 		},
 		"new factory with malformed default rule, where authenticator loading happens after finalizers": {
@@ -123,18 +121,20 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateFinalizer("bar", "baz", mock.Anything).
-					Return(nil, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("baz", mock.Anything).Return(nil, nil)
+
+				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "an authenticator")
+				require.ErrorContains(t, err, "zab authenticator is defined after")
 			},
 		},
 		"new factory with default rule, where authenticator loading results in an error": {
@@ -143,11 +143,13 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(nil, errors.New("test error"))
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, errors.New("test error"))
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
@@ -165,17 +167,20 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateFinalizer("bar", "", mock.Anything).Return(nil, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, nil)
+
+				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "before an authorizer")
+				require.ErrorContains(t, err, "authorizer is defined after")
 			},
 		},
 		"new factory with default rule, where authorizer loading results in an error": {
@@ -184,11 +189,13 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthorizer("foo", "", mock.Anything).
-					Return(nil, errors.New("test error"))
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, errors.New("test error"))
+
+				repo.EXPECT().Authorizer("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
@@ -206,18 +213,20 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateFinalizer("bar", "", mock.Anything).
-					Return(nil, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, nil)
+
+				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "before a contextualizer")
+				require.ErrorContains(t, err, "contextualizer is defined after")
 			},
 		},
 		"new factory with default rule, where contextualizer loading results in an error": {
@@ -226,11 +235,13 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateContextualizer("foo", "", mock.Anything).
-					Return(nil, errors.New("test error"))
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, errors.New("test error"))
+
+				repo.EXPECT().Contextualizer("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
@@ -245,11 +256,13 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []config.MechanismConfig{{"finalizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateFinalizer("foo", "", mock.Anything).
-					Return(nil, errors.New("test error"))
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, errors.New("test error"))
+
+				repo.EXPECT().Finalizer("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
@@ -264,11 +277,13 @@ func TestRuleFactoryNew(t *testing.T) {
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateErrorHandler("foo", "", mock.Anything).
-					Return(nil, errors.New("test error"))
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, errors.New("test error"))
+
+				repo.EXPECT().ErrorHandler("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
@@ -300,14 +315,16 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				am := mocks2.NewAuthenticatorMock(t)
-				am.EXPECT().IsInsecure().Return(true)
+				step := mocks.NewStepMock(t)
+				step.EXPECT().IsInsecure().Return(true)
 
-				mhf.EXPECT().CreateAuthenticator("bar", "", mock.Anything).
-					Return(am, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(step, nil)
+
+				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
@@ -325,13 +342,16 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				auth := mocks2.NewAuthenticatorMock(t)
-				auth.EXPECT().IsInsecure().Return(true)
-				mhf.EXPECT().CreateAuthenticator("bar", "foo", mock.Anything).
-					Return(auth, nil)
+				step := mocks.NewStepMock(t)
+				step.EXPECT().IsInsecure().Return(true)
+
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("foo", mock.Anything).Return(step, nil)
+
+				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -367,23 +387,36 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				auth := mocks2.NewAuthenticatorMock(t)
-				auth.EXPECT().IsInsecure().Return(false)
-				mhf.EXPECT().CreateAuthenticator("bar", "1", mock.Anything).
-					Return(auth, nil)
-				mhf.EXPECT().CreateFinalizer("baz", "4", mock.Anything).
-					Return(nil, nil)
-				mhf.EXPECT().CreateAuthorizer("zab", "3", mock.Anything).
-					Return(nil, nil)
-				mhf.EXPECT().CreateContextualizer("foo", "2", mock.Anything).
-					Return(nil, nil)
-				mhf.EXPECT().CreateErrorHandler("foobar", "1", mock.Anything).
-					Return(nil, nil)
-				mhf.EXPECT().CreateErrorHandler("barfoo", "2", mock.Anything).
-					Return(nil, nil)
+				step := mocks.NewStepMock(t)
+				step.EXPECT().IsInsecure().Return(false)
+
+				authn := mocks1.NewMechanismMock(t)
+				authn.EXPECT().CreateStep("1", mock.Anything).Return(step, nil)
+
+				cont := mocks1.NewMechanismMock(t)
+				cont.EXPECT().CreateStep("2", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				authz := mocks1.NewMechanismMock(t)
+				authz.EXPECT().CreateStep("3", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				fin := mocks1.NewMechanismMock(t)
+				fin.EXPECT().CreateStep("4", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				eh1 := mocks1.NewMechanismMock(t)
+				eh1.EXPECT().CreateStep("1", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				eh2 := mocks1.NewMechanismMock(t)
+				eh2.EXPECT().CreateStep("2", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				repo.EXPECT().Authenticator("bar").Return(authn, nil)
+				repo.EXPECT().Finalizer("baz").Return(fin, nil)
+				repo.EXPECT().Authorizer("zab").Return(authz, nil)
+				repo.EXPECT().Contextualizer("foo").Return(cont, nil)
+				repo.EXPECT().ErrorHandler("foobar").Return(eh1, nil)
+				repo.EXPECT().ErrorHandler("barfoo").Return(eh2, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -409,14 +442,14 @@ func TestRuleFactoryNew(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks3.MechanismFactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks1.RepositoryMock) { t.Helper() })
 
-			handlerFactory := mocks3.NewMechanismFactoryMock(t)
-			configureMocks(t, handlerFactory)
+			repo := mocks1.NewRepositoryMock(t)
+			configureMocks(t, repo)
 
 			// WHEN
 			factory, err := NewRuleFactory(
-				handlerFactory,
+				repo,
 				tc.config,
 				config.DecisionMode,
 				log.Logger,
@@ -424,13 +457,8 @@ func TestRuleFactoryNew(t *testing.T) {
 			)
 
 			// THEN
-			var (
-				impl *ruleFactory
-				ok   bool
-			)
-
+			impl, ok := factory.(*ruleFactory)
 			if err == nil {
-				impl, ok = factory.(*ruleFactory)
 				require.True(t, ok)
 			}
 
@@ -447,7 +475,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		opMode         config.OperationMode
 		config         v1beta1.Rule
 		defaultRule    *ruleImpl
-		configureMocks func(t *testing.T, mhf *mocks3.MechanismFactoryMock)
+		configureMocks func(t *testing.T, repo *mocks1.RepositoryMock)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		"in proxy mode without forward_to definition": {
@@ -471,14 +499,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Routes:  []v1beta1.Route{{Path: "/foo/bar"}},
 					Methods: []string{""},
 				},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -499,15 +530,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 						},
 					},
 				},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo", "id": "1"},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo", ID: "1"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "1", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("1", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -521,13 +554,15 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
+				Execute: []v1beta1.Step{{AuthenticatorRef: "foo"}},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(nil, errors.New("test error"))
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(nil, errors.New("test error"))
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -540,13 +575,15 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID:           "foobar",
 				Matcher:      v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				ErrorHandler: []config.MechanismConfig{{"error_handler": "foo", "id": "bar"}},
+				ErrorHandler: []v1beta1.Step{{ErrorHandlerRef: "foo", ID: "bar"}},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateErrorHandler("foo", "bar", mock.Anything).
-					Return(nil, errors.New("test error"))
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("bar", mock.Anything).Return(nil, errors.New("test error"))
+
+				repo.EXPECT().ErrorHandler("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -572,15 +609,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -607,15 +646,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				ID:      "foobar",
 				Backend: &v1beta1.Backend{Host: "foo.bar"},
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -643,10 +684,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
-				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
+				sc: stage{mocks.NewStepMock(t)},
+				sh: stage{mocks.NewStepMock(t)},
+				fi: stage{mocks.NewStepMock(t)},
+				eh: stage{mocks.NewStepMock(t)},
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -685,35 +726,45 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Hosts:   []string{"*.example.com"},
 				},
 				EncodedSlashesHandling: v1beta1.EncodedSlashesOnNoDecode,
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo", "id": "1"},
-					{"contextualizer": "bar", "id": "2"},
-					{"authorizer": "zab", "id": "3"},
-					{"finalizer": "baz", "id": "4"},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo", ID: "1"},
+					{ContextualizerRef: "bar", ID: "2"},
+					{AuthorizerRef: "zab", ID: "3"},
+					{FinalizerRef: "baz", ID: "4"},
 				},
-				ErrorHandler: []config.MechanismConfig{
-					{"error_handler": "foo", "id": "5"},
+				ErrorHandler: []v1beta1.Step{
+					{ErrorHandlerRef: "foo", ID: "5"},
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
-				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
+				sc: stage{mocks.NewStepMock(t)},
+				sh: stage{mocks.NewStepMock(t)},
+				fi: stage{mocks.NewStepMock(t)},
+				eh: stage{mocks.NewStepMock(t)},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "1", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateContextualizer("bar", "2", mock.Anything).
-					Return(&mocks5.ContextualizerMock{}, nil)
-				mhf.EXPECT().CreateAuthorizer("zab", "3", mock.Anything).
-					Return(&mocks4.AuthorizerMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("baz", "4", mock.Anything).
-					Return(&mocks7.FinalizerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("foo", "5", mock.Anything).
-					Return(&mocks6.ErrorHandlerMock{}, nil)
+				authn := mocks1.NewMechanismMock(t)
+				authn.EXPECT().CreateStep("1", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				cont := mocks1.NewMechanismMock(t)
+				cont.EXPECT().CreateStep("2", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				authz := mocks1.NewMechanismMock(t)
+				authz.EXPECT().CreateStep("3", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				fin := mocks1.NewMechanismMock(t)
+				fin.EXPECT().CreateStep("4", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				eh := mocks1.NewMechanismMock(t)
+				eh.EXPECT().CreateStep("5", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
+				mhf.EXPECT().Contextualizer("bar").Return(cont, nil)
+				mhf.EXPECT().Authorizer("zab").Return(authz, nil)
+				mhf.EXPECT().Finalizer("baz").Return(fin, nil)
+				mhf.EXPECT().ErrorHandler("foo").Return(eh, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -773,35 +824,45 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 						QueryParamsToRemove: []string{"bar"},
 					},
 				},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo", "id": 1},
-					{"contextualizer": "bar", "id": 2},
-					{"authorizer": "zab", "id": 3},
-					{"finalizer": "baz", "id": false},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo", ID: "1"},
+					{ContextualizerRef: "bar", ID: "2"},
+					{AuthorizerRef: "zab", ID: "3"},
+					{FinalizerRef: "baz", ID: "false"},
 				},
-				ErrorHandler: []config.MechanismConfig{
-					{"error_handler": "foo", "id": true},
+				ErrorHandler: []v1beta1.Step{
+					{ErrorHandlerRef: "foo", ID: "true"},
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: compositeSubjectCreator{&mocks.PrincipalCreatorMock{}},
-				sh: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				fi: compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
-				eh: compositeErrorHandler{&mocks.ErrorHandlerMock{}},
+				sc: stage{mocks.NewStepMock(t)},
+				sh: stage{mocks.NewStepMock(t)},
+				fi: stage{mocks.NewStepMock(t)},
+				eh: stage{mocks.NewStepMock(t)},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "1", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateContextualizer("bar", "2", mock.Anything).
-					Return(&mocks5.ContextualizerMock{}, nil)
-				mhf.EXPECT().CreateAuthorizer("zab", "3", mock.Anything).
-					Return(&mocks4.AuthorizerMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("baz", "false", mock.Anything).
-					Return(&mocks7.FinalizerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("foo", "true", mock.Anything).
-					Return(&mocks6.ErrorHandlerMock{}, nil)
+				authn := mocks1.NewMechanismMock(t)
+				authn.EXPECT().CreateStep("1", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				cont := mocks1.NewMechanismMock(t)
+				cont.EXPECT().CreateStep("2", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				authz := mocks1.NewMechanismMock(t)
+				authz.EXPECT().CreateStep("3", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				fin := mocks1.NewMechanismMock(t)
+				fin.EXPECT().CreateStep("false", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				eh := mocks1.NewMechanismMock(t)
+				eh.EXPECT().CreateStep("true", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
+				mhf.EXPECT().Contextualizer("bar").Return(cont, nil)
+				mhf.EXPECT().Authorizer("zab").Return(authz, nil)
+				mhf.EXPECT().Finalizer("baz").Return(fin, nil)
+				mhf.EXPECT().ErrorHandler("foo").Return(eh, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -839,75 +900,66 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.backend)
 			},
 		},
-		"with conditional execution configuration type error in the regular pipeline": {
+		"with malformed conditional execution configuration": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"finalizer": "bar", "if": 1},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
+					{FinalizerRef: "bar", Condition: pointer.To("")},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
+				authn := mocks1.NewMechanismMock(t)
+				authn.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				fin := mocks1.NewMechanismMock(t)
+				fin.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
+				mhf.EXPECT().Finalizer("bar").Return(fin, nil)
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "unexpected type")
-			},
-		},
-		"with empty conditional execution configuration": {
-			config: v1beta1.Rule{
-				ID:      "foobar",
-				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"finalizer": "bar", "if": ""},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "empty execution condition")
+				require.ErrorContains(t, err, "empty cel expression")
 			},
 		},
 		"with conditional execution for some mechanisms": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"authorizer": "bar", "if": "false"},
-					{"contextualizer": "bar", "if": "true"},
-					{"authorizer": "baz"},
-					{"finalizer": "bar", "if": "true"},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
+					{AuthorizerRef: "bar", Condition: pointer.To("false")},
+					{ContextualizerRef: "bar", Condition: pointer.To("true")},
+					{AuthorizerRef: "baz"},
+					{FinalizerRef: "bar", Condition: pointer.To("true")},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateAuthorizer(mock.Anything, "", mock.Anything).
-					Return(&mocks4.AuthorizerMock{}, nil).Times(2)
-				mhf.EXPECT().CreateContextualizer("bar", "", mock.Anything).
-					Return(&mocks5.ContextualizerMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("bar", "", mock.Anything).
-					Return(&mocks7.FinalizerMock{}, nil)
+				authn := mocks1.NewMechanismMock(t)
+				authn.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				authz := mocks1.NewMechanismMock(t)
+				authz.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				cont := mocks1.NewMechanismMock(t)
+				cont.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				fin := mocks1.NewMechanismMock(t)
+				fin.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
+				mhf.EXPECT().Authorizer(mock.Anything).Return(authz, nil).Times(2)
+				mhf.EXPECT().Contextualizer("bar").Return(cont, nil)
+				mhf.EXPECT().Finalizer("bar").Return(fin, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -928,87 +980,72 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Len(t, rul.sh, 3)
 
 				assert.NotNil(t, rul.sh[0])
-				sh, ok := rul.sh[0].(*conditionalSubjectHandler)
+				sh, ok := rul.sh[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, sh.c)
 
 				assert.NotNil(t, rul.sh[1])
-				sh, ok = rul.sh[1].(*conditionalSubjectHandler)
+				sh, ok = rul.sh[1].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, sh.c)
 
 				assert.NotNil(t, rul.sh[2])
-				sh, ok = rul.sh[2].(*conditionalSubjectHandler)
-				require.True(t, ok)
-				assert.IsType(t, defaultExecutionCondition{}, sh.c)
+				_, ok = rul.sh[2].(*conditionalStep)
+				require.False(t, ok)
 
 				require.Len(t, rul.fi, 1)
-				un, ok := rul.fi[0].(*conditionalSubjectHandler)
+				un, ok := rul.fi[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, un.c)
 
 				require.Empty(t, rul.eh)
 			},
 		},
-		"with bad conditional expression in the error pipeline": {
-			config: v1beta1.Rule{
-				ID:      "foobar",
-				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo", "id": 1},
-					{"authorizer": "bar", "id": 2},
-					{"finalizer": "baz", "id": 3},
-				},
-				ErrorHandler: []config.MechanismConfig{
-					{"error_handler": "foo", "id": 4, "if": "true", "config": map[string]any{}},
-					{"error_handler": "bar", "id": 5, "if": 1, "config": map[string]any{}},
-				},
-			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
-				t.Helper()
-
-				mhf.EXPECT().CreateAuthenticator("foo", "1", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateAuthorizer("bar", "2", mock.Anything).
-					Return(&mocks4.AuthorizerMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("baz", "3", mock.Anything).
-					Return(&mocks7.FinalizerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("foo", "4", config.MechanismConfig{}).
-					Return(&mocks6.ErrorHandlerMock{}, nil)
-			},
-			assert: func(t *testing.T, err error, _ *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "unexpected type")
-			},
-		},
 		"with conditional execution for error handler": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
-				Execute: []config.MechanismConfig{
-					{"authenticator": "foo"},
-					{"authorizer": "bar"},
-					{"finalizer": "baz"},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
+					{AuthorizerRef: "bar"},
+					{FinalizerRef: "baz"},
 				},
-				ErrorHandler: []config.MechanismConfig{
-					{"error_handler": "foo", "if": "true", "config": map[string]any{}},
-					{"error_handler": "bar", "if": "false", "config": map[string]any{}},
+				ErrorHandler: []v1beta1.Step{
+					{
+						ErrorHandlerRef: "foo",
+						Condition:       pointer.To("true"),
+						Config:          map[string]any{},
+					},
+					{
+						ErrorHandlerRef: "bar",
+						Condition:       pointer.To("false"),
+						Config:          map[string]any{},
+					},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", "", mock.Anything).
-					Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateAuthorizer("bar", "", mock.Anything).
-					Return(&mocks4.AuthorizerMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("baz", "", mock.Anything).
-					Return(&mocks7.FinalizerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("foo", "", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
-				mhf.EXPECT().CreateErrorHandler("bar", "", config.MechanismConfig{}).Return(&mocks6.ErrorHandlerMock{}, nil)
+				authn := mocks1.NewMechanismMock(t)
+				authn.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				authz := mocks1.NewMechanismMock(t)
+				authz.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				fin := mocks1.NewMechanismMock(t)
+				fin.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				eh1 := mocks1.NewMechanismMock(t)
+				eh1.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				eh2 := mocks1.NewMechanismMock(t)
+				eh2.EXPECT().CreateStep("", mock.Anything).Return(mocks.NewStepMock(t), nil)
+
+				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
+				mhf.EXPECT().Authorizer("bar").Return(authz, nil)
+				mhf.EXPECT().Finalizer("baz").Return(fin, nil)
+				mhf.EXPECT().ErrorHandler("foo").Return(eh1, nil)
+				mhf.EXPECT().ErrorHandler("bar").Return(eh2, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -1029,16 +1066,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Len(t, rul.sh, 1)
 
 				assert.NotNil(t, rul.sh[0])
-				sh, ok := rul.sh[0].(*conditionalSubjectHandler)
-				require.True(t, ok)
-				assert.IsType(t, defaultExecutionCondition{}, sh.c)
+				_, ok := rul.sh[0].(*conditionalStep)
+				require.False(t, ok)
 
 				require.Len(t, rul.fi, 1)
-				un, ok := rul.fi[0].(*conditionalSubjectHandler)
-				require.True(t, ok)
-				assert.IsType(t, defaultExecutionCondition{}, un.c)
+				_, ok = rul.fi[0].(*conditionalStep)
+				require.False(t, ok)
 
 				require.Len(t, rul.eh, 2)
+				_, ok = rul.eh[0].(*conditionalStep)
+				require.True(t, ok)
+				_, ok = rul.eh[1].(*conditionalStep)
+				require.True(t, ok)
 			},
 		},
 	} {
@@ -1046,16 +1085,16 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks3.MechanismFactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks1.RepositoryMock) { t.Helper() })
 
-			handlerFactory := mocks3.NewMechanismFactoryMock(t)
-			configureMocks(t, handlerFactory)
+			repo := mocks1.NewRepositoryMock(t)
+			configureMocks(t, repo)
 
 			factory := &ruleFactory{
-				hf:             handlerFactory,
+				r:              repo,
 				defaultRule:    tc.defaultRule,
 				mode:           tc.opMode,
-				logger:         log.Logger,
+				l:              log.Logger,
 				hasDefaultRule: x.IfThenElse(tc.defaultRule != nil, true, false),
 			}
 
@@ -1063,95 +1102,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			rul, err := factory.CreateRule("test", tc.config)
 
 			// THEN
-			var (
-				impl *ruleImpl
-				ok   bool
-			)
-
+			impl, ok := rul.(*ruleImpl)
 			if err == nil {
-				impl, ok = rul.(*ruleImpl)
 				require.True(t, ok)
 			}
 
 			// THEN
 			tc.assert(t, err, impl)
-		})
-	}
-}
-
-func TestRuleFactoryConfigExtraction(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		config any
-		assert func(t *testing.T, conf map[string]any)
-	}{
-		"nil config": {
-			assert: func(t *testing.T, conf map[string]any) {
-				t.Helper()
-
-				require.Nil(t, conf)
-			},
-		},
-		"map[string]any": {
-			config: map[string]any{"foo": "bar", "baz": []string{"zab"}},
-			assert: func(t *testing.T, conf map[string]any) {
-				t.Helper()
-
-				require.NotEmpty(t, conf)
-				assert.Equal(t, "bar", conf["foo"])
-				assert.Equal(t, []string{"zab"}, conf["baz"])
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// WHEN
-			conf := getConfig(tc.config)
-
-			// THEN
-			tc.assert(t, conf)
-		})
-	}
-}
-
-func TestRuleFactoryStepIDExtraction(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		stepID any
-		assert func(t *testing.T, value string)
-	}{
-		"nil value": {
-			assert: func(t *testing.T, value string) {
-				t.Helper()
-
-				require.NotNil(t, value)
-				require.Empty(t, value)
-			},
-		},
-		"string": {
-			stepID: "foo",
-			assert: func(t *testing.T, value string) {
-				t.Helper()
-
-				require.Equal(t, "foo", value)
-			},
-		},
-		"int": {
-			stepID: 1,
-			assert: func(t *testing.T, value string) {
-				t.Helper()
-
-				require.Equal(t, "1", value)
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// WHEN
-			conf := getStepID(tc.stepID)
-
-			// THEN
-			tc.assert(t, conf)
 		})
 	}
 }

@@ -24,6 +24,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -33,16 +35,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authorizer, error) {
-			if typ != AuthorizerCEL {
-				return false, nil, nil
-			}
-
-			auth, err := newCELAuthorizer(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthorizer,
+		AuthorizerCEL,
+		registry.FactoryFunc(newCELAuthorizer),
+	)
 }
 
 type celAuthorizer struct {
@@ -54,7 +51,7 @@ type celAuthorizer struct {
 	v           values.Values
 }
 
-func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (*celAuthorizer, error) {
+func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthorizerCEL).
@@ -93,7 +90,7 @@ func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (*
 	}, nil
 }
 
-func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *celAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerCEL).
@@ -121,7 +118,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub identity.Subjec
 	}, a)
 }
 
-func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Authorizer, error) {
+func (a *celAuthorizer) CreateStep(stepID string, rawConfig map[string]any) (heimdall.Step, error) {
 	if len(stepID) == 0 && len(rawConfig) == 0 {
 		return a, nil
 	}
@@ -159,6 +156,10 @@ func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Aut
 	}, nil
 }
 
+func (a *celAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
+
 func (a *celAuthorizer) Name() string { return a.name }
 
 func (a *celAuthorizer) ID() string { return a.id }
+
+func (a *celAuthorizer) IsInsecure() bool { return false }

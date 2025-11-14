@@ -35,20 +35,23 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
-	finalizer := newNoopFinalizer(appCtx, "foo")
+	mech, err := newNoopFinalizer(appCtx, "foo", nil)
+	require.NoError(t, err)
+	step, err := mech.CreateStep("", nil)
+	require.NoError(t, err)
 
 	// WHEN
-	err := finalizer.Execute(ctx, nil)
+	err = step.Execute(ctx, nil)
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, "foo", finalizer.ID())
+	assert.Equal(t, "foo", step.ID())
 }
 
-func TestCreateNoopFinalizerFromPrototype(t *testing.T) {
+func TestNoopFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -93,18 +96,22 @@ func TestCreateNoopFinalizerFromPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newNoopFinalizer(appCtx, uc)
+			mech, err := newNoopFinalizer(appCtx, uc, nil)
+			require.NoError(t, err)
+
+			configured, ok := mech.(*noopFinalizer)
+			require.True(t, ok)
 
 			// WHEN
-			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
-			authz, ok := conf.(*noopFinalizer)
+			step, err := mech.CreateStep(tc.stepID, tc.newConf)
 
 			// THEN
+			fin, ok := step.(*noopFinalizer)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, authz)
+			tc.assert(t, err, configured, fin)
 		})
 	}
 }

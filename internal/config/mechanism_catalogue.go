@@ -14,43 +14,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package heimdall
+package config
 
-import (
-	"context"
-	"net/url"
-)
-
-type RequestContext interface {
-	Request() *Request
-
-	AddHeaderForUpstream(name, value string)
-	AddCookieForUpstream(name, value string)
-
-	Context() context.Context
-
-	SetPipelineError(err error)
-
-	Outputs() map[string]any
-}
-
-type RequestFunctions interface {
-	Header(name string) string
-	Cookie(name string) string
-	Headers() map[string]string
-	Body() any
-}
-
-type URL struct {
-	url.URL
-
-	Captures map[string]string
-}
-
-type Request struct {
-	RequestFunctions
-
-	Method            string
-	URL               *URL
-	ClientIPAddresses []string
+type MechanismCatalogue struct {
+	Authenticators  []Mechanism `koanf:"authenticators"`
+	Authorizers     []Mechanism `koanf:"authorizers"`
+	Contextualizers []Mechanism `koanf:"contextualizers"`
+	Finalizers      []Mechanism `koanf:"finalizers"`
+	ErrorHandlers   []Mechanism `koanf:"error_handlers"`
 }

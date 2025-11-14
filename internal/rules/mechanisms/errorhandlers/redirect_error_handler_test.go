@@ -34,7 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateRedirectErrorHandler(t *testing.T) {
+func TestNewRedirectErrorHandler(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -106,7 +106,7 @@ code: 301
 				assert.Equal(t, "with full valid configuration", redEH.ID())
 				assert.Equal(t, redEH.Name(), redEH.ID())
 
-				ctx := mocks.NewRequestContextMock(t)
+				ctx := mocks.NewContextMock(t)
 				ctx.EXPECT().Request().
 					Return(&heimdall.Request{
 						URL: &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
@@ -139,15 +139,20 @@ code: 301
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			errorHandler, err := newRedirectErrorHandler(appCtx, uc, conf)
+			mech, err := newRedirectErrorHandler(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, errorHandler)
+			eh, ok := mech.(*redirectErrorHandler)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, eh)
 		})
 	}
 }
 
-func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
+func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -208,24 +213,22 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newRedirectErrorHandler(appCtx, uc, pc)
+			mech, err := newRedirectErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*redirectErrorHandler)
+			require.True(t, ok)
+
 			// WHEN
-			errorHandler, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				redirEH *redirectErrorHandler
-				ok      bool
-			)
-
+			eh, ok := step.(*redirectErrorHandler)
 			if err == nil {
-				redirEH, ok = errorHandler.(*redirectErrorHandler)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, redirEH)
+			tc.assert(t, err, configured, eh)
 		})
 	}
 }
@@ -235,14 +238,12 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config           []byte
-		error            error
-		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error)
 	}{
 		"with template rendering error": {
 			config: []byte(`to: http://foo.bar={{ len .foobar }}`),
-			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -257,12 +258,11 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 		},
 		"without return to url templating": {
 			config: []byte(`to: http://foo.bar`),
-			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
 					assert.Equal(t, "http://foo.bar", redirErr.RedirectTo)
@@ -283,15 +283,14 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 300
 `),
-			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				requestURL, err := url.Parse("http://test.org")
 				require.NoError(t, err)
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *requestURL}})
-				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
 					redirectURL, err := url.Parse(redirErr.RedirectTo)
@@ -319,7 +318,7 @@ code: 300
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewRequestContextMock(t)
+			mctx := mocks.NewContextMock(t)
 			mctx.EXPECT().Context().Return(t.Context())
 
 			tc.configureContext(t, mctx)
@@ -333,14 +332,16 @@ code: 300
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			errorHandler, err := newRedirectErrorHandler(appCtx, "foo", conf)
+			mech, err := newRedirectErrorHandler(appCtx, "foo", conf)
+			require.NoError(t, err)
+			step, err := mech.CreateStep("", nil)
 			require.NoError(t, err)
 
 			// WHEN
-			execErr := errorHandler.Execute(mctx, tc.error)
+			err = step.Execute(mctx, nil)
 
 			// THEN
-			tc.assert(t, execErr)
+			tc.assert(t, err)
 		})
 	}
 }

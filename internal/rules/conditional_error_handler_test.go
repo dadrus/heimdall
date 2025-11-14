@@ -32,16 +32,16 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureMocks func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock)
+		configureMocks func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock)
 		assert         func(t *testing.T, err error)
 	}{
 		"executes if can": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock) {
+			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
 				t.Helper()
 
 				c.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).Return(true, nil)
-				h.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
-				h.EXPECT().ID().Return("test")
+				s.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
+				s.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -50,11 +50,11 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 			},
 		},
 		"does not execute if can not": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock) {
+			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
 				t.Helper()
 
 				c.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).Return(false, nil)
-				h.EXPECT().ID().Return("test")
+				s.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -64,12 +64,12 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 			},
 		},
 		"does not execute if can check fails": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.ErrorHandlerMock) {
+			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
 				t.Helper()
 
 				c.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).
 					Return(true, errors.New("some error"))
-				h.EXPECT().ID().Return("test")
+				s.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -82,16 +82,17 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			condition := rulemocks.NewExecutionConditionMock(t)
-			handler := rulemocks.NewErrorHandlerMock(t)
+			handler := mocks.NewStepMock(t)
 			decorator := conditionalErrorHandler{c: condition, h: handler}
 
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
+			ctx.EXPECT().Error().Return(errors.New("test error"))
 
 			tc.configureMocks(t, condition, handler)
 
 			// WHEN
-			err := decorator.Execute(ctx, errors.New("test error"))
+			err := decorator.Execute(ctx, nil)
 
 			// THEN
 			tc.assert(t, err)
@@ -103,7 +104,7 @@ func TestConditionalErrorHandlerID(t *testing.T) {
 	t.Parallel()
 
 	condition := rulemocks.NewExecutionConditionMock(t)
-	handler := rulemocks.NewErrorHandlerMock(t)
+	handler := mocks.NewStepMock(t)
 	handler.EXPECT().ID().Return("test")
 
 	eh := conditionalErrorHandler{c: condition, h: handler}

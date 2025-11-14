@@ -23,7 +23,7 @@ import (
 )
 
 type Repository interface {
-	FindRule(ctx heimdall.RequestContext) (Rule, error)
+	FindRule(ctx heimdall.Context) (Rule, error)
 
 	AddRuleSet(ctx context.Context, srcID string, rules []Rule) error
 	UpdateRuleSet(ctx context.Context, srcID string, rules []Rule) error

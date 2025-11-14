@@ -50,7 +50,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateRemoteAuthorizer(t *testing.T) {
+func TestNewRemoteAuthorizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -197,7 +197,7 @@ values:
 
 				require.NoError(t, err)
 
-				ctx := heimdallmocks.NewRequestContextMock(t)
+				ctx := heimdallmocks.NewContextMock(t)
 				ctx.EXPECT().Context().Return(t.Context()).Maybe()
 
 				rfunc := heimdallmocks.NewRequestFunctionsMock(t)
@@ -252,15 +252,20 @@ values:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			auth, err := newRemoteAuthorizer(appCtx, uc, conf)
+			mech, err := newRemoteAuthorizer(appCtx, uc, conf)
 
 			// THEN
+			auth, ok := mech.(*remoteAuthorizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, auth)
 		})
 	}
 }
 
-func TestCreateRemoteAuthorizerFromPrototype(t *testing.T) {
+func TestRemoteAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -513,24 +518,22 @@ cache_ttl: 15s
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newRemoteAuthorizer(appCtx, uc, pc)
+			mech, err := newRemoteAuthorizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*remoteAuthorizer)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepID, conf)
 
 			// THEN
-			var (
-				locAuth *remoteAuthorizer
-				ok      bool
-			)
-
+			auth, ok := step.(*remoteAuthorizer)
 			if err == nil {
-				locAuth, ok = auth.(*remoteAuthorizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, locAuth)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -575,7 +578,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		authorizer       *remoteAuthorizer
 		subject          identity.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub identity.Subject)
 		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
 	}{
@@ -622,7 +625,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "my-id-bar-bar", string(data))
 				}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -698,7 +701,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "application/json"
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -781,7 +784,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseCode = http.StatusOK
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -839,7 +842,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -889,7 +892,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -951,7 +954,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusUnauthorized
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -990,7 +993,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "text/text"
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1021,7 +1024,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					ID: "foo",
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1100,7 +1103,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1179,7 +1182,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1224,7 +1227,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1260,7 +1263,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1295,7 +1298,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.RequestContextMock) { t.Helper() })
+				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
@@ -1305,7 +1308,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 

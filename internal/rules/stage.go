@@ -14,15 +14,40 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package contextualizers
+package rules
 
 import (
+	"strings"
+
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type Contextualizer interface {
-	ID() string
-	Execute(ctx heimdall.RequestContext, sub identity.Subject) error
-	WithConfig(stepID string, config map[string]any) (Contextualizer, error)
+type executor interface {
+	IsInsecure() bool
+	Execute(ctx heimdall.Context, sub identity.Subject) error
+}
+
+type stage []executor
+
+func (s stage) Execute(ctx heimdall.Context, sub identity.Subject) error {
+	logger := zerolog.Ctx(ctx.Context())
+
+	for _, step := range s {
+		err := step.Execute(ctx, sub)
+		if err != nil {
+			logger.Info().Err(err).Msg("Pipeline step execution failed")
+
+			if strings.Contains(err.Error(), "tls:") {
+				return errorchain.New(heimdall.ErrInternal).CausedBy(err)
+			}
+
+			return err
+		}
+	}
+
+	return nil
 }

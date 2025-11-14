@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
+func TestDenyAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -73,18 +73,22 @@ func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newDenyAuthorizer(appCtx, uc)
+			mech, err := newDenyAuthorizer(appCtx, uc, nil)
+			require.NoError(t, err)
+
+			configured, ok := mech.(*denyAuthorizer)
+			require.True(t, ok)
 
 			// WHEN
-			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
-			authz, ok := conf.(*denyAuthorizer)
+			conf, err := mech.CreateStep(tc.stepID, tc.newConf)
 
 			// THEN
+			auth, ok := conf.(*denyAuthorizer)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, authz)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -95,16 +99,19 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 	// GIVEN
 	var identifier interface{ ID() string }
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	auth := newDenyAuthorizer(appCtx, "bar")
+	mech, err := newDenyAuthorizer(appCtx, "bar", nil)
+	require.NoError(t, err)
+	step, err := mech.CreateStep("", nil)
+	require.NoError(t, err)
 
 	// WHEN
-	err := auth.Execute(ctx, nil)
+	err = step.Execute(ctx, nil)
 
 	// THEN
 	require.Error(t, err)
