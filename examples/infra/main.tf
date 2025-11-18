@@ -47,4 +47,7 @@ module "ingress_controller" {
   source = "./modules/ingress"
 
   depends_on = [module.cert_manager]
+
+  namespace = "ingress"
+  ingress_controller = "contour"
 }

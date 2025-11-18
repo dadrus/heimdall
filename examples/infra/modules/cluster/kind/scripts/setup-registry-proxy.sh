@@ -18,8 +18,14 @@ docker volume create "$CERTS_VOL" 2>/dev/null || echo "Certs volume exists"
 # 3. Start container if required
 if docker ps --filter "name=^/$NAME$" --format '{{.Names}}' | grep -q "^$NAME$"; then
   echo "Proxy already running"
+  exit 0
+fi
+
+if docker ps -a --filter "name=^/$NAME$" --format '{{.Names}}' | grep -q "^$NAME$"; then
+  echo "Container exists but is not running → starting it..."
+  docker start "$NAME"
 else
-  echo "Starting proxy container..."
+  echo "Container does not exist → creating and starting new one..."
   docker run -d \
     --name "$NAME" \
     --hostname "$NAME" \
@@ -28,19 +34,18 @@ else
     -v "$CERTS_VOL:/ca" \
     -e ENABLE_MANIFEST_CACHE=true \
     "$IMAGE"
-
-  # Wait for 15 secs until container is started
-  echo "Waiting for the proxy to start..."
-  for i in {1..15}; do
-    if docker inspect "$NAME" --format='{{.State.Running}}' | grep -q "true"; then
-      echo "Proxy started!"
-      break
-    fi
-    if [ $i -eq 15 ]; then
-      echo "ERROR: Proxy failed to start!"
-      docker logs "$NAME" || true
-      exit 1
-    fi
-    sleep 1
-  done
 fi
+
+# 4. Warten bis wirklich läuft (max 30 Sekunden)
+echo "Waiting for proxy to be healthy..."
+for i in {1..15}; do
+  if docker inspect "$NAME" --format='{{.State.Running}}' | grep -q "true"; then
+    echo "Proxy is up and running!"
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "ERROR: Proxy failed to start within 15s"
+docker logs "$NAME"
+exit 1

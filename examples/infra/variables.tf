@@ -20,5 +20,5 @@ variable "ingress_controller" {
 
 variable "observability_stack_enabled" {
   type    = bool
-  default = true
+  default = false
 }
