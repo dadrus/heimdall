@@ -1,0 +1,15 @@
+tempo:
+  retention: 5h
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: ${bucket_name}
+        endpoint: ${replace(s3_endpoint, "https://", "")}
+        access_key: ${s3_access_key}
+        secret_key: ${s3_secret_key}
+        tls_insecure_skip_verify: true
+        forcepathstyle: true
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "${prometheus_url}/api/v1/write"
