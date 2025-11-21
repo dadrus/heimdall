@@ -1,5 +1,5 @@
 resource "helm_release" "trust_manager" {
-  depends_on = [null_resource.wait_for_root_ca]
+  depends_on = [kubectl_manifest.root_ca]
 
   name       = "trust-manager"
   repository = "https://charts.jetstack.io"

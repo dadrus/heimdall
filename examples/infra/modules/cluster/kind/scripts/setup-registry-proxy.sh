@@ -8,14 +8,9 @@ CERTS_VOL="${certs_volume}"
 
 echo "Setting up global Container Image Registry Proxy..."
 
-# 1. Image
-docker pull "$IMAGE" || true
-
-# 2. Volumes
 docker volume create "$CACHE_VOL" 2>/dev/null || echo "Cache volume exists"
 docker volume create "$CERTS_VOL" 2>/dev/null || echo "Certs volume exists"
 
-# 3. Start container if required
 if docker ps --filter "name=^/$NAME$" --format '{{.Names}}' | grep -q "^$NAME$"; then
   echo "Proxy already running"
   exit 0
@@ -36,7 +31,6 @@ else
     "$IMAGE"
 fi
 
-# 4. Warten bis wirklich läuft (max 30 Sekunden)
 echo "Waiting for proxy to be healthy..."
 for i in {1..15}; do
   if docker inspect "$NAME" --format='{{.State.Running}}' | grep -q "true"; then

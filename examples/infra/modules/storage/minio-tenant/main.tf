@@ -19,6 +19,7 @@ resource "null_resource" "wait_for_minio_pod" {
 
   provisioner "local-exec" {
     command = templatefile("${path.module}/scripts/wait-for-resource.sh", {
+      kubeconfig_path = var.kubeconfig_path
       namespace       = var.namespace
       resource_type   = "pod"
       resource_name   = "minio-pool-0-0"
@@ -35,6 +36,7 @@ resource "null_resource" "wait_for_minio_pod_ready" {
 
   provisioner "local-exec" {
     command = templatefile("${path.module}/scripts/wait-for-condition.sh", {
+      kubeconfig_path = var.kubeconfig_path
       namespace       = var.namespace
       condition       = "ready pod -l statefulset.kubernetes.io/pod-name=minio-pool-0-0"
       timeout_seconds = 90

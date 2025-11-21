@@ -29,6 +29,7 @@ module "storage" {
 
   depends_on = [null_resource.storage_deps]
 
+  kubeconfig_path  = module.cluster.kubeconfig_path
   storage_provider = var.storage_provider
 }
 
@@ -48,6 +49,7 @@ module "ingress_controller" {
 
   depends_on = [module.cert_manager]
 
-  namespace = "ingress"
-  ingress_controller = "contour"
+  namespace          = "ingress"
+  ingress_controller = "traefik"
+  kubeconfig_path    = module.cluster.kubeconfig_path
 }

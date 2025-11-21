@@ -11,7 +11,7 @@ echo "Waiting for $RESOURCE_TYPE named '$RESOURCE_NAME' in Namespace '$NAMESPACE
 
 elapsed=0
 while [ "$elapsed" -lt "$TIMEOUT_SECONDS" ]; do
-  if kubectl -n "$NAMESPACE" get $RESOURCE_TYPE "$RESOURCE_NAME" >/dev/null 2>&1; then
+  if kubectl --kubeconfig=${kubeconfig_path} -n "$NAMESPACE" get $RESOURCE_TYPE "$RESOURCE_NAME" >/dev/null 2>&1; then
     echo "$RESOURCE_TYPE '$RESOURCE_NAME' has been created!"
     exit 0
   fi

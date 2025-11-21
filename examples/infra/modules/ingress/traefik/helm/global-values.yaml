@@ -1,0 +1,52 @@
+logs:
+  general:
+    level: DEBUG
+  access:
+    enabled: true
+
+#tracing:
+#  otlp:
+#    enabled: true
+#    grpc:
+#      enabled: true
+#      endpoint: alloy.monitoring:4317
+#      insecure: true
+
+#metrics:
+#  prometheus:
+#    serviceMonitor:
+#      enabled: true
+
+experimental:
+  kubernetesGateway:
+    enabled: true
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    # without that the middleware must be deployed into the same namespace as the resource
+    # referencing it (IngressRoute)
+    allowCrossNamespace: true
+  kubernetesGateway:
+    enabled: true
+
+gateway:
+  listeners:
+    websecure:
+      port: 8443
+      hostname: echo-app.local
+      protocol: HTTPS
+      namespacePolicy:
+        from: All
+      mode: Terminate
+      certificateRefs:
+        - name: traefik-tls
+          kind: Secret
+
+ports:
+  web:
+    middlewares:
+      - heimdall-heimdall@kubernetescrd
+  websecure:
+    middlewares:
+      - heimdall-heimdall@kubernetescrd
