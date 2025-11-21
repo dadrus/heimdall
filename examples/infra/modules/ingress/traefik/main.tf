@@ -16,7 +16,10 @@ resource "helm_release" "traefik" {
   create_namespace = true
 
   values = [
-    file("${path.module}/helm/values.yaml")
+    templatefile("${path.module}/helm/values.yaml", {
+      global_integration_enabled = var.global_integration_enabled
+      gateway_api_enabled = var.gateway_api_enabled
+    })
   ]
 
   upgrade_install = true

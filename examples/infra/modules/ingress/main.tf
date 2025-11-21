@@ -30,7 +30,8 @@ module "haproxy" {
   source = "./haproxy"
   count  = var.ingress_controller == "haproxy" ? 1 : 0
 
-  namespace = var.namespace
+  namespace                  = var.namespace
+  global_integration_enabled = var.global_integration_enabled
 }
 
 module "istio" {
@@ -42,12 +43,15 @@ module "nginx" {
   source = "./nginx"
   count  = var.ingress_controller == "nginx" ? 1 : 0
 
-  namespace = var.namespace
+  namespace                  = var.namespace
+  global_integration_enabled = var.global_integration_enabled
 }
 
 module "traefik" {
   source = "./traefik"
   count  = var.ingress_controller == "traefik" ? 1 : 0
 
-  namespace = var.namespace
+  namespace                  = var.namespace
+  global_integration_enabled = var.global_integration_enabled
+  gateway_api_enabled        = var.gateway_api_enabled
 }

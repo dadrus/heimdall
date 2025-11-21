@@ -49,9 +49,11 @@ module "ingress_controller" {
 
   depends_on = [module.cert_manager]
 
-  namespace          = "ingress"
-  ingress_controller = var.ingress_controller
-  kubeconfig_path    = module.cluster.kubeconfig_path
+  namespace                  = "ingress"
+  ingress_controller         = var.ingress_controller
+  kubeconfig_path            = module.cluster.kubeconfig_path
+  global_integration_enabled = var.global_integration_enabled
+  gateway_api_enabled        = var.gateway_api_enabled
 }
 
 module "heimdall" {
@@ -81,4 +83,6 @@ module "demo_app" {
   namespace                   = "demo"
   ingress_controller          = var.ingress_controller
   observability_stack_enabled = var.observability_stack_enabled
+  global_integration_enabled  = var.global_integration_enabled
+  gateway_api_enabled         = var.gateway_api_enabled
 }

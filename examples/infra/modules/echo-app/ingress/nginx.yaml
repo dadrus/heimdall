@@ -5,6 +5,7 @@ metadata:
   namespace: ${namespace}
   labels:
     app.kubernetes.io/name: echo-app
+  %{ if !global_integration_enabled }
   annotations:
     nginx.ingress.kubernetes.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization"
@@ -13,6 +14,7 @@ metadata:
       proxy_set_header         X-Forwarded-Proto      $scheme;
       proxy_set_header         X-Forwarded-Host       $http_host;
       proxy_set_header         X-Forwarded-Uri        $request_uri;
+  %{ endif }
 spec:
   ingressClassName: "nginx"
   tls:

@@ -5,6 +5,7 @@ metadata:
   namespace: ${namespace}
   labels:
     app.kubernetes.io/name: echo-app
+  %{ if !global_integration_enabled }
   annotations:
     haproxy-ingress.github.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
     haproxy-ingress.github.io/auth-headers-succeed: "authorization"
@@ -12,6 +13,7 @@ metadata:
       X-Forwarded-Uri: %[pathq]
       X-Forwarded-Method: %[method]
       X-Forwarded-Host: %[req.hdr(host)]
+  %{ endif }
 spec:
   ingressClassName: "haproxy"
   tls:

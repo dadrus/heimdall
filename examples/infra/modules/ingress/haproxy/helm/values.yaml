@@ -1,6 +1,7 @@
 controller:
   ingressClassResource:
     enabled: true
+%{ if global_integration_enabled }
   config:
     auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
     auth-headers-succeed: "authorization"
@@ -8,3 +9,4 @@ controller:
       X-Forwarded-Uri: %[pathq]
       X-Forwarded-Method: %[method]
       X-Forwarded-Host: %[req.hdr(host)]
+%{ endif }

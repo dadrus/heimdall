@@ -10,9 +10,7 @@ spec:
     - echo-app.default.svc
     - echo-app.default.svc.cluster.local
     - echo-app.local
-  ipAddresses:
-    - 172.18.255.200
   secretName: traefik-tls
   issuerRef:
-    name: root-ca
+    name: root-ca-issuer
     kind: ClusterIssuer
