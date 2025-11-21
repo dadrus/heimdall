@@ -15,5 +15,5 @@ resource "helm_release" "contour" {
 
   # not waiting as heimdall is not yet installed
   # and contour will fail to start
-
+  wait = false
 }

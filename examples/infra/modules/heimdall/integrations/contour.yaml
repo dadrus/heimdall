@@ -1,0 +1,9 @@
+apiVersion: projectcontour.io/v1alpha1
+kind: ExtensionService
+metadata:
+  name: heimdall
+  namespace: ${namespace}
+spec:
+  services:
+    - name: heimdall
+      port: 4456
