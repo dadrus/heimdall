@@ -27,7 +27,7 @@ resource "null_resource" "storage_deps" {
 module "storage" {
   source = "./modules/storage"
 
-  depends_on = [null_resource.storage_deps]
+  depends_on = [module.cluster, null_resource.storage_deps]
 
   kubeconfig_path  = module.cluster.kubeconfig_path
   storage_provider = var.storage_provider
@@ -50,6 +50,35 @@ module "ingress_controller" {
   depends_on = [module.cert_manager]
 
   namespace          = "ingress"
-  ingress_controller = "traefik"
+  ingress_controller = var.ingress_controller
   kubeconfig_path    = module.cluster.kubeconfig_path
+}
+
+module "heimdall" {
+  source = "./modules/heimdall"
+
+  depends_on = [
+    module.cluster,
+    module.cert_manager,
+    module.ingress_controller,
+  ]
+
+  namespace                   = "heimdall"
+  ingress_controller          = var.ingress_controller
+  observability_stack_enabled = var.observability_stack_enabled
+}
+
+module "demo_app" {
+  source = "./modules/echo-app"
+
+  depends_on = [
+    module.cluster,
+    module.cert_manager,
+    module.ingress_controller,
+    module.heimdall,
+  ]
+
+  namespace                   = "demo"
+  ingress_controller          = var.ingress_controller
+  observability_stack_enabled = var.observability_stack_enabled
 }

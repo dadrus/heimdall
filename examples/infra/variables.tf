@@ -15,7 +15,7 @@ variable "storage_provider" {
 
 variable "ingress_controller" {
   type    = string
-  default = "contour"
+  default = "envoy-gateway"
 }
 
 variable "observability_stack_enabled" {

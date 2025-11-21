@@ -7,6 +7,10 @@ resource "helm_release" "envoy_gateway" {
   verify           = false
   create_namespace = true
 
+  values = [
+    file("${path.module}/helm/values.yaml")
+  ]
+
   wait            = true
   upgrade_install = true
   timeout         = 600

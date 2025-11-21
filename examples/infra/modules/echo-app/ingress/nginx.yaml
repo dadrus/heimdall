@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-app
+  namespace: ${namespace}
+  labels:
+    app.kubernetes.io/name: echo-app
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization"
+    nginx.ingress.kubernetes.io/auth-snippet: |
+      proxy_set_header         X-Forwarded-Method     $request_method;
+      proxy_set_header         X-Forwarded-Proto      $scheme;
+      proxy_set_header         X-Forwarded-Host       $http_host;
+      proxy_set_header         X-Forwarded-Uri        $request_uri;
+spec:
+  ingressClassName: "nginx"
+  tls:
+    - hosts:
+        - echo-app.local
+      secretName: echo-app
+  rules:
+    - host: echo-app.local
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: echo-app
+                port:
+                  number: 8080

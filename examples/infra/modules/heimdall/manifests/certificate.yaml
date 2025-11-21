@@ -2,13 +2,13 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: heimdall-tls
-  namespace: heimdall
+  namespace: ${namespace}
 spec:
   secretName: heimdall-tls
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: root-ca
+    name: root-ca-issuer
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
@@ -30,13 +30,13 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: heimdall-jwt
-  namespace: heimdall
+  namespace: ${namespace}
 spec:
   secretName: heimdall-jwt
   additionalOutputFormats:
     - type: CombinedPEM
   issuerRef:
-    name: root-ca
+    name: root-ca-issuer
     kind: ClusterIssuer
   duration: 720h # 30d
   renewBefore: 360h # 15d
