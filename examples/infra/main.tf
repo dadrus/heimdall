@@ -1,5 +1,5 @@
 module "cluster" {
-  source = "./modules/cluster"
+  source = "./cluster"
 
   cluster_provider = var.cluster_provider
 }
@@ -25,7 +25,7 @@ resource "null_resource" "storage_deps" {
 }
 
 module "storage" {
-  source = "./modules/storage"
+  source = "./storage"
 
   depends_on = [module.cluster, null_resource.storage_deps]
 
@@ -34,7 +34,7 @@ module "storage" {
 }
 
 module "observability" {
-  source = "./modules/observability"
+  source = "./observability"
   count  = var.observability_stack_enabled ? 1 : 0
 
   depends_on = [module.storage, module.cert_manager]
@@ -45,7 +45,7 @@ module "observability" {
 }
 
 module "ingress_controller" {
-  source = "./modules/ingress"
+  source = "./ingress"
 
   depends_on = [module.cert_manager]
 

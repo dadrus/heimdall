@@ -1,11 +1,11 @@
 module "prometheus" {
-  source = "./modules/prometheus"
+  source = "../modules/prometheus"
 
   namespace = "monitoring"
 }
 
 module "loki" {
-  source = "./modules/loki"
+  source = "../modules/loki"
 
   depends_on = [module.prometheus]
 
@@ -17,7 +17,7 @@ module "loki" {
 }
 
 module "tempo" {
-  source = "./modules/tempo"
+  source = "../modules/tempo"
 
   depends_on = [module.prometheus]
 
@@ -30,7 +30,7 @@ module "tempo" {
 }
 
 module "pyroscope" {
-  source = "./modules/pyroscope"
+  source = "../modules/pyroscope"
 
   depends_on = [module.prometheus]
 
@@ -38,7 +38,7 @@ module "pyroscope" {
 }
 
 module "alloy" {
-  source = "./modules/alloy"
+  source = "../modules/alloy"
 
   depends_on = [
     module.tempo,
@@ -54,7 +54,7 @@ module "alloy" {
 }
 
 module "grafana" {
-  source = "./modules/grafana"
+  source = "../modules/grafana"
 
   depends_on = [
     module.tempo,

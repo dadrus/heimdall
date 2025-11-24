@@ -15,7 +15,7 @@ variable "storage_provider" {
 
 variable "ingress_controller" {
   type    = string
-  default = "istio"
+  default = "contour"
 }
 
 variable "observability_stack_enabled" {

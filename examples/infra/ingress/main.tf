@@ -5,14 +5,14 @@ resource "kubernetes_namespace" "ingress" {
 }
 
 module "contour" {
-  source = "./contour"
+  source = "../modules/contour"
   count  = var.ingress_controller == "contour" ? 1 : 0
 
   namespace = var.namespace
 }
 
 module "emissary" {
-  source = "./emissary"
+  source = "../modules/emissary"
   count  = var.ingress_controller == "emissary" ? 1 : 0
 
   namespace       = var.namespace
@@ -20,14 +20,14 @@ module "emissary" {
 }
 
 module "envoy_gateway" {
-  source = "./envoy-gateway"
+  source = "../modules/envoy-gateway"
   count  = var.ingress_controller == "envoy-gateway" ? 1 : 0
 
   namespace = var.namespace
 }
 
 module "haproxy" {
-  source = "./haproxy"
+  source = "../modules/haproxy"
   count  = var.ingress_controller == "haproxy" ? 1 : 0
 
   namespace                  = var.namespace
@@ -35,7 +35,7 @@ module "haproxy" {
 }
 
 module "istio" {
-  source = "./istio"
+  source = "../modules/istio"
   count  = var.ingress_controller == "istio" ? 1 : 0
 
   namespace           = var.namespace
@@ -43,7 +43,7 @@ module "istio" {
 }
 
 module "nginx" {
-  source = "./nginx"
+  source = "../modules/nginx"
   count  = var.ingress_controller == "nginx" ? 1 : 0
 
   namespace                  = var.namespace
@@ -51,7 +51,7 @@ module "nginx" {
 }
 
 module "traefik" {
-  source = "./traefik"
+  source = "../modules/traefik"
   count  = var.ingress_controller == "traefik" ? 1 : 0
 
   namespace                  = var.namespace
