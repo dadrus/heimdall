@@ -1,8 +1,3 @@
-variable "environment" {
-  type    = string
-  default = "local"
-}
-
 variable "cluster_provider" {
   type    = string
   default = "kind"        # local → kind, aws → eks
