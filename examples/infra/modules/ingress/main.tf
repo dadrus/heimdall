@@ -37,6 +37,9 @@ module "haproxy" {
 module "istio" {
   source = "./istio"
   count  = var.ingress_controller == "istio" ? 1 : 0
+
+  namespace           = var.namespace
+  gateway_api_enabled = var.gateway_api_enabled
 }
 
 module "nginx" {

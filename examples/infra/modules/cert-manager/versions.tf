@@ -1,7 +1,7 @@
 variable "certmanager_version" {
-  default = "1.19.1"
+  default = "v1.19.1"
 }
 
 variable "trustmanager_version" {
-  default = "0.20.2"
+  default = "v0.20.2"
 }

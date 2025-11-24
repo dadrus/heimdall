@@ -1,6 +1,10 @@
 resource "kubernetes_namespace" "echo_app" {
   metadata {
     name = var.namespace
+
+    labels = {
+      "istio-injection": "enabled"
+    }
   }
 }
 
