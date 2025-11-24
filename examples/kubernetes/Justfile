@@ -37,3 +37,6 @@ install-istio-ingress-gw-demo: init
 
 install-istio-gw-demo: init
   terraform apply -auto-approve -var ingress_controller="istio" -var gateway_api_enabled=true -var global_integration_enabled=false
+
+delete-cluster:
+  terraform destroy -auto-approve
