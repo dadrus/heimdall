@@ -12,8 +12,8 @@ traefik_version := '37.3.0'
 metallb_version := '0.15.2'
 certmanager_version := '1.19.1'
 trustmanager_version := '0.20.2'
-certmanager_istio_csr_version := '0.12.0'
-istio_version := '1.23.2'
+certmanager_istio_csr_version := '0.14.3'
+istio_version := '1.28.0'
 minio_operator_version := '6.0.4'
 alloy_version := '0.10.1'
 
@@ -171,8 +171,6 @@ install-traefik global_mw="true":
 
   kubectl apply -f traefik/certificate.yaml
 
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
-
   helm upgrade --install traefik traefik/traefik \
       -n traefik \
       --version {{traefik_version}} \
@@ -203,15 +201,14 @@ install-istio with_ingress_gw="true":
 
   if [[ "{{with_ingress_gw}}" == "true" ]]; then
     echo "installing ingress gw"
-    helm install istio-ingressgateway istio/gateway \
+    helm upgrade --install istio-ingressgateway istio/gateway \
+      --skip-schema-validation \
       -n istio-gw --version {{istio_version}} \
       --wait
 
     kubectl apply -f istio/ingress-gateway.yaml
   else
     echo "installing k8s gateway"
-    kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
-      { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f -; }
     kubectl apply -f istio/sa.yaml
     kubectl apply -f istio/gateway.yaml
   fi
@@ -231,8 +228,6 @@ install-cert-manager:
   #!/usr/bin/env bash
 
   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v{{certmanager_version}}/cert-manager.crds.yaml
-
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
 
   helm upgrade --install cert-manager jetstack/cert-manager \
     -n cert-manager --create-namespace \
@@ -315,7 +310,12 @@ install-heimdall router=default_router:
   #kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
 
 create-cluster:
+  #!/usr/bin/env bash
+
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
+
+  # kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.4.0" | kubectl apply -f -
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml
 
 setup-cluster: create-cluster setup-charts install-lb install-cert-manager # install-minio-operator install-observability-stack
 
@@ -345,4 +345,5 @@ install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
+
 
