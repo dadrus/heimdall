@@ -1,348 +1,42 @@
-grafana_version := '4.9.0'
-prometheus_version := '10.2.3'
-loki_version := '6.24.0'
-tempo_version := '1.16.0'
-pyroscope_version := '1.10.0'
-nginx_version := '4.14.0'
-contour_version := '0.1.0'
-emissary_version := '8.12.2'
-haproxy_version := '0.15.0'
-envoy_gw_version := 'v1.6.0'
-traefik_version := '37.3.0'
-metallb_version := '0.15.2'
-certmanager_version := '1.19.1'
-trustmanager_version := '0.20.2'
-certmanager_istio_csr_version := '0.12.0'
-istio_version := '1.23.2'
-minio_operator_version := '6.0.4'
-alloy_version := '0.10.1'
+init:
+  terraform init -upgrade
 
-cluster_name := 'heimdall-demo'
-default_router := "contour"
+install-ngnix-demo: init
+  terraform apply -auto-approve -var ingress_controller="nginx" -var gateway_api_enabled=false -var global_integration_enabled=false
 
-setup-charts:
-  helm repo add contour https://projectcontour.github.io/helm-charts/
-  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-  helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-  helm repo add grafana https://grafana.github.io/helm-charts
-  helm repo add metallb https://metallb.github.io/metallb
-  helm repo add jetstack https://charts.jetstack.io
-  helm repo add dadrus https://dadrus.github.io/heimdall/charts
-  helm repo add datawire https://app.getambassador.io
-  helm repo add haproxy https://haproxy-ingress.github.io/charts
-  helm repo add traefik https://traefik.github.io/charts
-  helm repo add istio https://istio-release.storage.googleapis.com/charts
-  helm repo add minio-operator https://operator.min.io
-  helm repo update
+install-ngnix-global-demo: init
+  terraform apply -auto-approve -var ingress_controller="nginx" -var gateway_api_enabled=false -var global_integration_enabled=true
 
-## Installs Alloy
-install-alloy:
-  kubectl apply -f observability/namespace.yaml
+install-contour-demo: init
+  terraform apply -auto-approve -var ingress_controller="contour" -var gateway_api_enabled=false -var global_integration_enabled=true
 
-  kubectl create configmap --namespace monitoring alloy-config "--from-file=config.alloy=./observability/alloy/config.alloy"
+install-haproxy-demo: init
+  terraform apply -auto-approve -var ingress_controller="haproxy" -var gateway_api_enabled=false -var global_integration_enabled=false
 
-  helm upgrade --install alloy grafana/alloy \
-    -n monitoring --create-namespace \
-    --version {{alloy_version}} \
-    -f observability/alloy/values.yaml \
-    --wait
+install-haproxy-global-demo: init
+  terraform apply -auto-approve -var ingress_controller="haproxy" -var gateway_api_enabled=false -var global_integration_enabled=true
 
-## Installs Grafana
-install-grafana:
-  #!/usr/bin/env bash
-  lb_address=$(kubectl get svc -A -o json | jq -r '.items[] | select(.spec.type == "LoadBalancer").status.loadBalancer.ingress[0].ip')
+install-emissary-demo: init
+  terraform apply -auto-approve -var ingress_controller="emissary" -var gateway_api_enabled=false -var global_integration_enabled=true
 
-  kubectl apply -f observability/namespace.yaml
+install-envoygw-demo: init
+  terraform apply -auto-approve -var ingress_controller="envoy-gateway" -var gateway_api_enabled=true -var global_integration_enabled=true
 
-  helm upgrade --install grafana bitnami/grafana-operator \
-    -n monitoring --create-namespace \
-    --set grafana.config.server.root_url="https://grafana.${lb_address}.nip.io" \
-    --values observability/grafana/helm-values.yaml \
-    --version {{grafana_version}} \
-    --wait
+install-traefik-ingress-demo: init
+  terraform apply -auto-approve -var ingress_controller="traefik" -var gateway_api_enabled=false -var global_integration_enabled=true
 
-  kubectl apply -f observability/grafana/data-sources/prometheus.yaml
-  kubectl apply -f observability/grafana/data-sources/loki.yaml
-  kubectl apply -f observability/grafana/data-sources/tempo.yaml
-  kubectl apply -f observability/grafana/data-sources/pyroscope.yaml
+install-traefik-ingress-route-demo: init
+  terraform apply -auto-approve -var ingress_controller="traefik" -var gateway_api_enabled=false -var global_integration_enabled=false
 
-# Installs Prometheus
-install-prometheus:
-  kubectl apply -f observability/namespace.yaml
+install-traefik-gw-demo: init
+  terraform apply -auto-approve -var ingress_controller="traefik" -var gateway_api_enabled=true -var global_integration_enabled=true
 
-  helm upgrade --install prometheus bitnami/kube-prometheus \
-    -n monitoring --create-namespace \
-    --set prometheus.enableRemoteWriteReceiver=true \
-    --version {{prometheus_version}} \
-    --wait
+# this receipt doesn't work right now
+install-istio-ingress-gw-demo: init
+  terraform apply -auto-approve -var ingress_controller="istio" -var gateway_api_enabled=false -var global_integration_enabled=false
 
-install-monitoring-storage:
-  # install minio tenant and wait until the first pod of the statefulset is running
-  kubectl apply -f observability/namespace.yaml
-  kubectl apply -f observability/minio/tenant.yaml
-
-  sleep 10
-  kubectl wait --timeout=90s --for=create pod -l statefulset.kubernetes.io/pod-name=minio-pool-0-0 -n monitoring
-  kubectl wait --timeout=90s --for=condition=ready pod -l statefulset.kubernetes.io/pod-name=minio-pool-0-0 -n monitoring
-
-# Installs Loki
-install-loki:
-  kubectl apply -f observability/namespace.yaml
-
-  helm upgrade --install loki grafana/loki \
-    -n monitoring --create-namespace \
-    --version {{loki_version}} \
-    -f observability/loki/values.yaml
-
-# Installs Tempo
-install-tempo:
-  kubectl apply -f observability/namespace.yaml
-
-  helm upgrade --install tempo grafana/tempo \
-    -n monitoring --create-namespace \
-    --version {{tempo_version}} \
-    -f observability/tempo/values.yaml
-
-# Installs Pyroscope
-install-pyroscope:
-  kubectl apply -f observability/namespace.yaml
-
-  helm upgrade --install pyroscope grafana/pyroscope \
-   -n monitoring --create-namespace \
-   --set serviceMonitor.enabled=true \
-   --version {{pyroscope_version}}
-
-install-observability-stack: install-monitoring-storage install-prometheus install-loki install-tempo install-pyroscope install-grafana install-alloy
-
-install-nginx-ingress-controller global_ext_auth="true":
-  #!/usr/bin/env bash
-
-  valuesFile=$({{global_ext_auth}} && echo global-helm-values.yaml || echo helm-values.yaml)
-
-  helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-    -n nginx-controller --create-namespace \
-    --version {{nginx_version}} \
-    -f nginx/${valuesFile} \
-    --wait
-
-install-contour-ingress-controller:
-  helm upgrade --install contour-controller contour/contour \
-    -n contour-controller --create-namespace \
-    --version {{contour_version}} \
-    -f contour/helm-values.yaml # used only to configure a global auth server
-
-install-emissary-ingress-controller:
-  #!/usr/bin/env bash
-  app_version=$(helm search repo emissary --version {{emissary_version}} -o json | jq -r '.[0].app_version')
-  kubectl apply -f https://app.getambassador.io/yaml/emissary/${app_version}/emissary-crds.yaml
-  kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext -n emissary-system
-
-  helm upgrade --install emissary datawire/emissary-ingress \
-    -n emissary-controller --create-namespace \
-    --version {{emissary_version}}
-
-  kubectl -n emissary-controller wait --for condition=available --timeout=90s deploy -lapp.kubernetes.io/instance=emissary
-
-  kubectl apply -f emissary/listener.yaml
-
-
-install-haproxy-ingress-controller global_ext_auth="true":
-  #!/usr/bin/env bash
-
-  valuesFile=$({{global_ext_auth}} && echo global-helm-values.yaml || echo helm-values.yaml)
-
-  helm upgrade --install haproxy-controller haproxy/haproxy-ingress \
-    -n haproxy-controller --create-namespace \
-    --version {{haproxy_version}} \
-    -f haproxy/${valuesFile} \
-    --wait
-
-install-envoy-gateway:
-  helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version {{envoy_gw_version}} \
-    -n envoy-gateway-system --create-namespace
-
-  kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-
-  kubectl apply -f envoygw/gateway.yaml
-
-install-traefik global_mw="true":
-  #!/usr/bin/env bash
-  valuesFile=$({{global_mw}} && echo global-mw-helm-values.yaml || echo helm-values.yaml)
-
-  kubectl apply -f traefik/certificate.yaml
-
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
-
-  helm upgrade --install traefik traefik/traefik \
-      -n traefik \
-      --version {{traefik_version}} \
-      -f traefik/${valuesFile} \
-      --wait
-
-install-istio with_ingress_gw="true":
-  #!/usr/bin/env bash
-  kubectl apply -f istio/namespace.yaml
-  kubectl apply -f istio/certificate.yaml
-
-  helm upgrade --install cert-manager-istio-csr jetstack/cert-manager-istio-csr \
-    -n istio-system --version {{certmanager_istio_csr_version}} \
-    -f istio/istio-csr-values.yaml \
-    --wait
-
-  helm upgrade --install istio-base istio/base \
-    -n istio-system --version {{istio_version}} \
-    --set defaultRevision=default
-
-  helm upgrade --install istiod istio/istiod \
-    -n istio-system --version {{istio_version}} \
-    -f istio/istio-values.yaml \
-    --wait
-
-  kubectl apply -f istio/destination-rule.yaml
-
-
-  if [[ "{{with_ingress_gw}}" == "true" ]]; then
-    echo "installing ingress gw"
-    helm install istio-ingressgateway istio/gateway \
-      -n istio-gw --version {{istio_version}} \
-      --wait
-
-    kubectl apply -f istio/ingress-gateway.yaml
-  else
-    echo "installing k8s gateway"
-    kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
-      { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f -; }
-    kubectl apply -f istio/sa.yaml
-    kubectl apply -f istio/gateway.yaml
-  fi
-
-install-lb:
-  #!/usr/bin/env bash
-  kubectl apply -f metallb/namespace.yaml
-
-  helm upgrade --install metallb metallb/metallb \
-    -n metallb-system \
-    --version {{metallb_version}} \
-    --wait
-
-  ./metallb/configure.sh
-
-install-cert-manager:
-  #!/usr/bin/env bash
-
-  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v{{certmanager_version}}/cert-manager.crds.yaml
-
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
-
-  helm upgrade --install cert-manager jetstack/cert-manager \
-    -n cert-manager --create-namespace \
-    --version {{certmanager_version}} \
-    --set installCRDs=false \
-    --set featureGates='AdditionalCertificateOutputFormats=true' \
-    --set webhook.featureGates='AdditionalCertificateOutputFormats=true' \
-    --set "extraArgs={--enable-gateway-api}" \
-    --wait
-
-  kubectl apply -n cert-manager -f cert-manager/ca.yaml
-
-  helm upgrade --install trust-manager jetstack/trust-manager \
-      -n cert-manager \
-      --version {{trustmanager_version}} \
-      --set app.trust.namespace=cert-manager \
-      --set secretTargets.enabled=true \
-      --set "secretTargets.authorizedSecrets={cacerts}" \
-      --wait
-
-  kubectl apply -n cert-manager -f cert-manager/cacerts_bundle.yaml
-
-install-minio-operator:
-  #!/usr/bin/env bash
-
-  kubectl apply -f minio-operator/namespace.yaml
-  kubectl apply -f minio-operator/tls-certificate.yaml
-
-  helm upgrade --install operator minio-operator/operator \
-    -n minio-operator \
-    --version {{minio_operator_version}} \
-    -f minio-operator/values.yaml \
-    --wait
-
-  kubectl -n minio-operator get secrets sts-tls -o=jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/ca.crt
-  kubectl -n minio-operator create secret generic operator-ca-tls-tenants --from-file=/tmp/ca.crt
-
-install-echo-service router=default_router:
-  kustomize build quickstarts/demo-app/overlays/{{router}} | kubectl apply -f -
-
-install-echo-service-with-proxy:
-  kustomize build quickstarts/proxy-demo/ | kubectl apply -f -
-
-install-heimdall router=default_router:
-  #!/usr/bin/env bash
-
-  kubectl apply -f quickstarts/heimdall/namespace.yaml
-  kubectl apply -f quickstarts/heimdall/certificate.yaml
-
-  # Don't use these flags in production. They disable secure defaults for simplicity reasons only.
-  extraArgs='extraArgs={--insecure-skip-secure-trusted-proxies-enforcement,--insecure-skip-secure-default-rule-enforcement}'
-
-  case "{{router}}" in
-    contour | emissary | envoygw | istio-*)
-    echo "will start heimdall for integration via envoy v3 grpc api"
-    extraArgs='extraArgs={--envoy-grpc,--insecure-skip-secure-trusted-proxies-enforcement,--insecure-skip-secure-default-rule-enforcement}'
-    ;;
-  esac
-
-  helm upgrade --install heimdall ../../charts/heimdall \
-    -n heimdall \
-    -f quickstarts/heimdall/config.yaml \
-    -f quickstarts/heimdall/helm-values.yaml \
-    --set "${extraArgs}" \
-    --wait
-
-  if [[ "{{router}}" == "contour" ]]; then
-      kubectl apply -f quickstarts/heimdall/contour-extension-service.yaml
-  elif [[ "{{router}}" == "emissary" ]]; then
-      kubectl apply -f quickstarts/heimdall/emissary-auth-service.yaml
-  elif [[ "{{router}}" == "envoygw" ]]; then
-      kubectl apply -f quickstarts/heimdall/backend-tls-policy.yaml
-      kubectl apply -f quickstarts/heimdall/envoygw-security-policy.yaml
-  elif [[ "{{router}}" == "traefik" ]]; then
-      kubectl apply -f quickstarts/heimdall/heimdall-middleware.yaml
-  elif [[ "{{router}}" == "istio-ingress-gw" || "{{router}}" == "istio-gw" ]]; then
-      kubectl apply -f quickstarts/heimdall/istio-authorization-policy.yaml
-  fi
-
-  #kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
-
-create-cluster:
-  kind create cluster --config kind/kind.yaml --name {{cluster_name}}
-
-setup-cluster: create-cluster setup-charts install-lb install-cert-manager # install-minio-operator install-observability-stack
-
-install-ngnix-demo: setup-cluster (install-nginx-ingress-controller "false") (install-heimdall "nginx") (install-echo-service "nginx-route-based")
-
-install-ngnix-global-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx-global")
-
-install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
-
-install-haproxy-demo: setup-cluster (install-haproxy-ingress-controller "false") (install-heimdall "haproxy") (install-echo-service "haproxy-route-based")
-
-install-haproxy-global-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy-global")
-
-install-emissary-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
-
-install-envoygw-demo: setup-cluster install-envoy-gateway (install-heimdall "envoygw") (install-echo-service "envoygw")
-
-install-traefik-ingress-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-ingress")
-
-install-traefik-ingress-route-demo: setup-cluster (install-traefik "false") (install-heimdall "traefik") (install-echo-service "traefik-ingress-route")
-
-install-traefik-gw-demo: setup-cluster install-traefik (install-heimdall "traefik") (install-echo-service "traefik-gw")
-
-install-istio-ingress-gw-demo: setup-cluster install-istio (install-heimdall "istio-ingress-gw") (install-echo-service "istio-ingress-gw")
-
-install-istio-gw-demo: setup-cluster (install-istio "false") (install-heimdall "istio-gw") (install-echo-service "istio-gw")
+install-istio-gw-demo: init
+  terraform apply -auto-approve -var ingress_controller="istio" -var gateway_api_enabled=true -var global_integration_enabled=false
 
 delete-cluster:
-  kind delete clusters {{cluster_name}}
-
+  terraform destroy -auto-approve

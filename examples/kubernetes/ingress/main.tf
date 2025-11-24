@@ -1,0 +1,60 @@
+resource "kubernetes_namespace" "ingress" {
+  metadata {
+    name = var.namespace
+  }
+}
+
+module "contour" {
+  source = "../modules/contour"
+  count  = var.ingress_controller == "contour" ? 1 : 0
+
+  namespace = var.namespace
+}
+
+module "emissary" {
+  source = "../modules/emissary"
+  count  = var.ingress_controller == "emissary" ? 1 : 0
+
+  namespace       = var.namespace
+  kubeconfig_path = var.kubeconfig_path
+}
+
+module "envoy_gateway" {
+  source = "../modules/envoy-gateway"
+  count  = var.ingress_controller == "envoy-gateway" ? 1 : 0
+
+  namespace = var.namespace
+}
+
+module "haproxy" {
+  source = "../modules/haproxy"
+  count  = var.ingress_controller == "haproxy" ? 1 : 0
+
+  namespace                  = var.namespace
+  global_integration_enabled = var.global_integration_enabled
+}
+
+module "istio" {
+  source = "../modules/istio"
+  count  = var.ingress_controller == "istio" ? 1 : 0
+
+  namespace           = var.namespace
+  gateway_api_enabled = var.gateway_api_enabled
+}
+
+module "nginx" {
+  source = "../modules/nginx"
+  count  = var.ingress_controller == "nginx" ? 1 : 0
+
+  namespace                  = var.namespace
+  global_integration_enabled = var.global_integration_enabled
+}
+
+module "traefik" {
+  source = "../modules/traefik"
+  count  = var.ingress_controller == "traefik" ? 1 : 0
+
+  namespace                  = var.namespace
+  global_integration_enabled = var.global_integration_enabled
+  gateway_api_enabled        = var.gateway_api_enabled
+}

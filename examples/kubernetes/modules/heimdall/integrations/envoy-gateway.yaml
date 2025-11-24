@@ -1,0 +1,32 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: heimdall
+  namespace: ${namespace}
+spec:
+  targetRefs:
+    - group: ''
+      kind: Service
+      name: heimdall
+      sectionName: main
+  validation:
+    caCertificateRefs:
+      - name: cacerts
+        group: ''
+        kind: ConfigMap
+    hostname: heimdall
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: heimdall-ref-grant
+  namespace: ${namespace}
+spec:
+  from:
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: demo
+  to:
+    - group: ""
+      kind: Service
+      name: heimdall
