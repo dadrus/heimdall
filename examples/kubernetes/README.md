@@ -21,7 +21,7 @@ Depending on the Ingress Controller/Gateway API you want to install the demo for
 
 ```bash
    just install-<setup-type>-demo
-   ```
+```
 
 with `<setup-type>` being one of the following options:
 

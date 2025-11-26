@@ -356,7 +356,7 @@ $ docker compose up
 Roll up your sleeves. We're going to play with our setup now. Open a new terminal window and put it nearby the terminal, you started the environment in. This way you'll see what is going on in the environment when you use it.
 
 . Let's try the `/public` endpoint first.
-
++
 [source, bash]
 ----
 $ curl 127.0.0.1:9090/public
@@ -381,7 +381,7 @@ Forwarded: for=172.19.0.1;host=127.0.0.1:9090;proto=http
 That was expected, as we sent a request to our public endpoint.
 
 . Now, let's try some other endpoints:
-
++
 [source, bash]
 ----
 $ curl -v 127.0.0.1:9090/admin
@@ -409,7 +409,7 @@ The `-v` flag is added to the curl command intentionally. Without it, we won't s
 That is, unauthorized. Requests to any endpoint other than `/public` will result in the same output.
 
 . Let's now use a valid JWT to access either the `/admin` or `/user` endpoint. Here's a new request to our `/admin` endpoint, which includes a bearer token in the `Authorization` header. This should grant us access:
-
++
 [source, bash]
 ----
 $ curl -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiI0NjExZDM5Yy00MzI1LTRhMWYtYjdkOC1iMmYxMTE3NDEyYzAiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJhZG1pbiIsInN1YiI6IjEifQ.mZZ_UqC8RVzEKBPZbPs4eP-MkXLK22Q27ZJ34UwJiioFdaYXqYJ4ZsatP0TbpKeNyF83mkrrCGL_pWLFTho7Gg" 127.0.0.1:9090/admin
@@ -435,7 +435,7 @@ Forwarded: for=172.19.0.1;host=127.0.0.1:9090;proto=http
 Take a closer look at the JWT echoed by our service, e.g. by making use of https://jwt.io[jwt.io]. This token has been issued by heimdall, not the one you sent with curl.
 
 . Now, try the same request to the `/user` endpoint. It will be refused due to the wrong role. Let's use a different JWT that should grant us access.
-
++
 [source, bash]
 ----
 $ curl -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJleHAiOjIwMjUxMDA3NTEsImlhdCI6MTcwOTc0MDc1MSwiaXNzIjoiZGVtb19pc3N1ZXIiLCJqdGkiOiIzZmFmNDkxOS0wZjUwLTQ3NGItOGExMy0yOTYzMjEzNThlOTMiLCJuYmYiOjE3MDk3NDA3NTEsInJvbGUiOiJ1c2VyIiwic3ViIjoiMiJ9.W5xCpwsFShS0RpOtrm9vrV2dN6K8pRr5gQnt0kluzLE6oNWFzf7Oot-0YLCPa64Z3XPd7cfGcBiSjrzKZSAj4g" 127.0.0.1:9090/user
