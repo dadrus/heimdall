@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
@@ -45,6 +44,7 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -2186,4 +2186,14 @@ func TestOauth2IntrospectionAuthenticatorIsInsecure(t *testing.T) {
 
 	// WHEN & THEN
 	require.False(t, auth.IsInsecure())
+}
+
+func TestOauth2IntrospectionAuthenticatorKind(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := oauth2IntrospectionAuthenticator{}
+
+	// WHEN & THEN
+	require.Equal(t, types.KindAuthenticator, auth.Kind())
 }

@@ -59,14 +59,15 @@ func init() {
 }
 
 type oauth2IntrospectionAuthenticator struct {
-	name string
-	id   string
-	app  app.Context
-	r    oauth2.ServerMetadataResolver
-	a    oauth2.Expectation
-	sf   PrincipalFactory
-	ads  extractors.AuthDataExtractStrategy
-	ttl  *time.Duration
+	name          string
+	id            string
+	principalName string
+	app           app.Context
+	r             oauth2.ServerMetadataResolver
+	a             oauth2.Expectation
+	sf            PrincipalFactory
+	ads           extractors.AuthDataExtractStrategy
+	ttl           *time.Duration
 }
 
 // nolint: funlen, cyclop
@@ -85,7 +86,7 @@ func newOAuth2IntrospectionAuthenticator(
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
 		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`                                                                                                    //nolint:lll,tagalign
-		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"                 validate:"-"`                                                                        //nolint:lll,tagalign
+		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"               validate:"-"`                                                                          //nolint:lll,tagalign
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
 	}
@@ -93,7 +94,8 @@ func newOAuth2IntrospectionAuthenticator(
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for oauth2_introspection authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, name).
+			CausedBy(err)
 	}
 
 	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
@@ -163,14 +165,15 @@ func newOAuth2IntrospectionAuthenticator(
 	)
 
 	return &oauth2IntrospectionAuthenticator{
-		name: name,
-		id:   name,
-		app:  app,
-		ads:  ads,
-		r:    resolver,
-		a:    conf.Assertions,
-		sf:   &conf.PrincipalInfo,
-		ttl:  conf.CacheTTL,
+		name:          name,
+		id:            name,
+		principalName: "default",
+		app:           app,
+		ads:           ads,
+		r:             resolver,
+		a:             conf.Assertions,
+		sf:            &conf.PrincipalInfo,
+		ttl:           conf.CacheTTL,
 	}, nil
 }
 
@@ -204,20 +207,21 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context, sub ide
 			CausedBy(err)
 	}
 
-	sub["default"] = principal
+	sub[a.principalName] = principal
 
 	return nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(def.ID) == 0 && len(def.Config) == 0 {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
 	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = def.ID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -234,18 +238,20 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for oauth2_introspection authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, a.name).
+			CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{
-		name: a.name,
-		id:   x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
-		app:  a.app,
-		r:    a.r,
-		a:    conf.Assertions.Merge(a.a),
-		sf:   a.sf,
-		ads:  a.ads,
-		ttl:  x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		name:          a.name,
+		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		app:           a.app,
+		r:             a.r,
+		a:             conf.Assertions.Merge(a.a),
+		sf:            a.sf,
+		ads:           a.ads,
+		ttl:           x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }
 
