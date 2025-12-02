@@ -68,7 +68,7 @@ type RuleSetStatus struct {
 // +kubebuilder:object:root=true
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitzero"`
 
 	Spec   RuleSetSpec   `json:"spec"`
 	Status RuleSetStatus `json:"status"`
@@ -90,7 +90,7 @@ func (rs *RuleSet) AsConfig() *v1beta1.RuleSet {
 // +kubebuilder:object:root=true
 type RuleSetList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitzero"`
 
 	Items []RuleSet `json:"items"`
 }
