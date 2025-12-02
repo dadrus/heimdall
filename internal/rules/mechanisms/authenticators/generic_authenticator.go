@@ -56,6 +56,7 @@ func init() {
 type genericAuthenticator struct {
 	name                string
 	id                  string
+	principalName       string
 	app                 app.Context
 	e                   endpoint.Endpoint
 	ads                 extractors.AuthDataExtractStrategy
@@ -88,7 +89,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for generic authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name).CausedBy(err)
 	}
 
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
@@ -99,15 +100,16 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}
 
 	return &genericAuthenticator{
-		name:       name,
-		id:         name,
-		app:        app,
-		e:          conf.Endpoint,
-		ads:        conf.AuthDataSource,
-		payload:    conf.Payload,
-		fwdHeaders: conf.ForwardHeaders,
-		fwdCookies: conf.ForwardCookies,
-		sf:         &conf.PrincipalInfo,
+		name:          name,
+		id:            name,
+		principalName: "default",
+		app:           app,
+		e:             conf.Endpoint,
+		ads:           conf.AuthDataSource,
+		payload:       conf.Payload,
+		fwdHeaders:    conf.ForwardHeaders,
+		fwdCookies:    conf.ForwardCookies,
+		sf:            &conf.PrincipalInfo,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),
@@ -144,20 +146,21 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subjec
 			CausedBy(err)
 	}
 
-	sub["default"] = principal
+	sub[a.principalName] = principal
 
 	return nil
 }
 
 func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// this authenticator allows ttl to be redefined on the rule level
-	if len(def.ID) == 0 && len(def.Config) == 0 {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
 	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = def.ID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -177,19 +180,20 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (heimdall.St
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for generic authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, a.name).CausedBy(err)
 	}
 
 	return &genericAuthenticator{
-		name:       a.name,
-		id:         x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
-		app:        a.app,
-		e:          a.e,
-		sf:         a.sf,
-		ads:        a.ads,
-		payload:    a.payload,
-		fwdHeaders: a.fwdHeaders,
-		fwdCookies: a.fwdCookies,
+		name:          a.name,
+		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		app:           a.app,
+		e:             a.e,
+		sf:            a.sf,
+		ads:           a.ads,
+		payload:       a.payload,
+		fwdHeaders:    a.fwdHeaders,
+		fwdCookies:    a.fwdCookies,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return a.ttl }),
