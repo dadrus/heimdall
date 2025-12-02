@@ -32,8 +32,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
-	"github.com/dadrus/heimdall/internal/x/pointer"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/goccy/go-json"
@@ -55,11 +53,13 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/pointer"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -2686,10 +2686,6 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 	t.Parallel()
 
-	disabledTTL := -1 * time.Second
-	veryLongTTL := time.Hour * 24 * 100
-	shortTTL := time.Hour * 2
-
 	// ROOT CAs
 	ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 	require.NoError(t, err)
@@ -2725,7 +2721,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk does not contain certificate and ttl configured": {
-			authenticator: &jwtAuthenticator{ttl: &shortTTL},
+			authenticator: &jwtAuthenticator{ttl: pointer.To(time.Hour * 2)},
 			jwk: &jose.JSONWebKey{
 				KeyID: "1",
 				Key:   ee1PrivKey.PublicKey,
@@ -2733,11 +2729,11 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, shortTTL, ttl)
+				assert.Equal(t, time.Hour*2, ttl)
 			},
 		},
 		"jwk does not contain certificate and ttl disabled": {
-			authenticator: &jwtAuthenticator{ttl: &disabledTTL},
+			authenticator: &jwtAuthenticator{ttl: pointer.To(-1 * time.Second)},
 			jwk: &jose.JSONWebKey{
 				KeyID: "1",
 				Key:   ee1PrivKey.PublicKey,
@@ -2762,7 +2758,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk contains certificate and ttl configured to a time point exceeding the ttl of certificate": {
-			authenticator: &jwtAuthenticator{ttl: &veryLongTTL},
+			authenticator: &jwtAuthenticator{ttl: pointer.To(time.Hour * 24 * 100)},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
 				Key:          ee1PrivKey.PublicKey,
@@ -2777,7 +2773,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk contains certificate and ttl configured to a time point before the certificate expires": {
-			authenticator: &jwtAuthenticator{ttl: &shortTTL},
+			authenticator: &jwtAuthenticator{ttl: pointer.To(time.Hour * 2)},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
 				Key:          ee1PrivKey.PublicKey,
@@ -2786,11 +2782,11 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, shortTTL, ttl)
+				assert.Equal(t, time.Hour*2, ttl)
 			},
 		},
 		"jwk contains certificate and ttl disabled": {
-			authenticator: &jwtAuthenticator{ttl: &disabledTTL},
+			authenticator: &jwtAuthenticator{ttl: pointer.To(-1 * time.Second)},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
 				Key:          ee1PrivKey.PublicKey,
