@@ -17,6 +17,7 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -71,18 +72,18 @@ func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context, _ identity.Sub
 
 func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// nothing can be reconfigured
-	if len(def.ID) == 0 && len(def.Config) == 0 {
-		return a, nil
-	}
-
 	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "unauthorized authenticator cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
+	if def.IsEmpty() {
+		return a, nil
+	}
+
 	auth := *a
-	auth.id = def.ID
+	auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
 
 	return &auth, nil
 }

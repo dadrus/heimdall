@@ -19,7 +19,7 @@ package authenticators
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 )
 
 func TestUnauthorizedAuthenticatorExecute(t *testing.T) {
@@ -45,7 +46,7 @@ func TestUnauthorizedAuthenticatorExecute(t *testing.T) {
 
 	mechanisms, err := newUnauthorizedAuthenticator(appCtx, "unauth", nil)
 	require.NoError(t, err)
-	step, err := mechanisms.CreateStep(types.StepDefinition{ID: ""})
+	step, err := mechanisms.CreateStep(types.StepDefinition{})
 	require.NoError(t, err)
 
 	// WHEN
@@ -64,12 +65,11 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		stepID  string
-		newConf map[string]any
-		assert  func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator)
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator)
 	}{
-		"without new config and step ID": {
-			assert: func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator) {
+		"without step definition": {
+			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -77,8 +77,8 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 			},
 		},
 		"with new config": {
-			newConf: map[string]any{"foo": "bar"},
-			assert: func(t *testing.T, err error, _ *unauthorizedAuthenticator, _ *unauthorizedAuthenticator) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *unauthorizedAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -87,8 +87,8 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 			},
 		},
 		"with new step ID": {
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mechanism.CreateStep(types.StepDefinition{ID: tc.stepID, Config: tc.newConf})
+			step, err := mechanism.CreateStep(tc.stepDef)
 
 			// THEN
 			auth, ok := step.(*unauthorizedAuthenticator)
@@ -132,4 +132,14 @@ func TestUnauthorizedAuthenticatorIsInsecure(t *testing.T) {
 
 	// WHEN & THEN
 	require.False(t, auth.IsInsecure())
+}
+
+func TestUnauthorizedAuthenticatorKind(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := unauthorizedAuthenticator{}
+
+	// WHEN & THEN
+	require.Equal(t, types.KindAuthenticator, auth.Kind())
 }
