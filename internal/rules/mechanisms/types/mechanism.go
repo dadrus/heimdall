@@ -38,6 +38,10 @@ type StepDefinition struct {
 	Config    config.MechanismConfig
 }
 
+func (sd *StepDefinition) IsEmpty() bool {
+	return len(sd.Config) == 0 && len(sd.ID) == 0 && len(sd.Principal) == 0
+}
+
 type Mechanism interface {
 	Name() string
 	Kind() Kind
