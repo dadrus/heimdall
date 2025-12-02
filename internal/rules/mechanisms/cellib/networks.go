@@ -31,7 +31,7 @@ import (
 )
 
 //nolint:gochecknoglobals
-var ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(), traits.ReceiverType|traits.ContainerType)
+var ipNetworksType = cel.ObjectType(reflect.TypeFor[IPNetworks]().String(), traits.ReceiverType|traits.ContainerType)
 
 func newIPNetworks(cidrs []string) (IPNetworks, error) {
 	ranger := cidranger.NewPCTrieRanger()
@@ -61,7 +61,7 @@ func (n IPNetworks) ConvertToNative(typeDesc reflect.Type) (any, error) {
 		return n.Ranger, nil
 	}
 
-	if reflect.TypeOf(n).AssignableTo(typeDesc) {
+	if reflect.TypeFor[IPNetworks]().AssignableTo(typeDesc) {
 		return n, nil
 	}
 
@@ -95,7 +95,7 @@ func (n IPNetworks) Contains(value ref.Val) ref.Val {
 	}
 
 	if lister, ok := value.(traits.Lister); ok {
-		ips, err := lister.ConvertToNative(reflect.TypeOf([]string{}))
+		ips, err := lister.ConvertToNative(reflect.TypeFor[[]string]())
 		if err != nil {
 			return types.WrapErr(err)
 		}
@@ -166,7 +166,7 @@ func (networksLib) CompileOptions() []cel.EnvOption {
 			cel.Overload("networks_from_cidr_array",
 				[]*cel.Type{cel.ListType(cel.StringType)}, ipNetworksType,
 				cel.UnaryBinding(func(netsVal ref.Val) ref.Val {
-					cidrs, err := netsVal.ConvertToNative(reflect.TypeOf([]string{}))
+					cidrs, err := netsVal.ConvertToNative(reflect.TypeFor[[]string]())
 					if err != nil {
 						return types.WrapErr(err)
 					}

@@ -54,7 +54,7 @@ func BenchmarkCache_Get_Empty(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for range b.N {
+	for b.Loop() {
 		_, _ = cch.Get(b.Context(), "missing-key")
 	}
 }

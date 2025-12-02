@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/goccy/go-json"
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog/log"
@@ -45,6 +44,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"

@@ -582,7 +582,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	}
 
 	var (
-		mapClaims map[string]interface{}
+		mapClaims map[string]any
 		claims    oauth2.Claims
 	)
 

@@ -276,7 +276,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 		"malformed step configuration": {
 			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz", "password": 1}},
-			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
+			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)

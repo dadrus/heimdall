@@ -49,8 +49,7 @@ func New(desiredVersion string) Converter {
 	}
 }
 
-// nolint: cyclop
-func (c *converter) Convert(rawObj []byte, format string) ([]byte, error) {
+func (c *converter) Convert(rawObj []byte, format string) ([]byte, error) { // nolint: cyclop
 	var (
 		urs       unstructuredRuleSet
 		err       error

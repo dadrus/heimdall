@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"

@@ -32,7 +32,7 @@ func BenchmarkTrieFindNodeOnEmptyTrie(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for range b.N {
+	for b.Loop() {
 		tree.findNode("*", "", nil, tm)
 	}
 }
@@ -66,7 +66,7 @@ func BenchmarkTrieFindNodeRootPath(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for range b.N {
+			for b.Loop() {
 				tree.findNode(host, "/", nil, tm)
 			}
 		})
@@ -100,7 +100,7 @@ func BenchmarkTrieFindNodeForPathUsingWildcardHost(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for range b.N {
+			for b.Loop() {
 				tree.findNode("*", path, nil, tm)
 			}
 		})
@@ -140,7 +140,7 @@ func BenchmarkTrieFindEntry(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for range b.N {
+			for b.Loop() {
 				entry, err := tree.FindEntry(tc.uri.Host, tc.uri.Path, tm)
 
 				b.StopTimer()

@@ -98,8 +98,7 @@ func (f *headerFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) er
 		logger.Debug().Str("_value", value).Msg("Rendered template")
 
 		// Split the rendered value into multiple values if newline-separated
-		values := strings.Split(value, "\n")
-		for _, v := range values {
+		for v := range strings.SplitSeq(value, "\n") {
 			if len(v) != 0 {
 				ctx.AddHeaderForUpstream(name, v)
 			}

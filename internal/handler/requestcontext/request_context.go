@@ -162,7 +162,7 @@ func (r *RequestContext) requestClientIPs() []string {
 		ips = make([]string, len(values))
 
 		for idx, val := range values {
-			for _, val := range strings.Split(strings.TrimSpace(val), ";") {
+			for val := range strings.SplitSeq(strings.TrimSpace(val), ";") {
 				if addr, found := strings.CutPrefix(strings.TrimSpace(val), "for="); found {
 					ips[idx] = addr
 				}

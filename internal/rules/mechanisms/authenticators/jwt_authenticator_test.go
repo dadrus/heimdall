@@ -2665,7 +2665,7 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 	require.NoError(t, err)
 
 	builder := jwt.Signed(signer)
-	builder = builder.Claims(map[string]interface{}{
+	builder = builder.Claims(map[string]any{
 		"sub": subject,
 		"iss": issuer,
 		"jti": "foo",

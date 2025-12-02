@@ -21,7 +21,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -31,6 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	mocks1 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pointer"
@@ -1303,7 +1303,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().Authenticator("bar").Return(authn1, nil)
 				mhf.EXPECT().Authenticator("baz").Return(authn2, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)

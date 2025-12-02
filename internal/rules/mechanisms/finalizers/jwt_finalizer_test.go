@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -41,6 +40,7 @@ import (
 	mocks3 "github.com/dadrus/heimdall/internal/keyholder/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	mocks2 "github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
