@@ -54,7 +54,7 @@ func newAnonymousAuthenticator(app app.Context, name string, rawConfig map[strin
 
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for anonymous authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorAnonymous, name).CausedBy(err)
 	}
 
 	if len(conf.Principal) == 0 {
@@ -62,21 +62,20 @@ func newAnonymousAuthenticator(app app.Context, name string, rawConfig map[strin
 	}
 
 	return &anonymousAuthenticator{
-		name: name,
-		id:   name,
-		principal: &identity.Principal{
-			ID:         conf.Principal,
-			Attributes: make(map[string]any),
-		},
-		app: app,
+		name:          name,
+		id:            name,
+		principalName: "default",
+		principal:     &identity.Principal{ID: conf.Principal, Attributes: make(map[string]any)},
+		app:           app,
 	}, nil
 }
 
 type anonymousAuthenticator struct {
-	name      string
-	id        string
-	app       app.Context
-	principal *identity.Principal
+	name          string
+	id            string
+	principalName string
+	app           app.Context
+	principal     *identity.Principal
 }
 
 func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
@@ -87,19 +86,20 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	sub["default"] = a.principal
+	sub[a.principalName] = a.principal
 
 	return nil
 }
 
 func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
-	if len(def.ID) == 0 && len(def.Config) == 0 {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
 	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = def.ID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -112,14 +112,15 @@ func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (heimdall.
 
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for anonymous authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorAnonymous, a.name).CausedBy(err)
 	}
 
 	return &anonymousAuthenticator{
-		name:      a.name,
-		id:        x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
-		principal: &identity.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
-		app:       a.app,
+		name:          a.name,
+		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		principal:     &identity.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
+		app:           a.app,
 	}, nil
 }
 

@@ -19,28 +19,28 @@ package authenticators
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestNewAnonymousAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		config []byte
+		config config.MechanismConfig
 		assert func(t *testing.T, err error, auth *anonymousAuthenticator)
 	}{
 		"principal is set to anon": {
-			config: []byte("principal: anon"),
+			config: config.MechanismConfig{"principal": "anon"},
 			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
 				t.Helper()
 
@@ -51,10 +51,10 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
+				assert.Equal(t, "default", auth.principalName)
 			},
 		},
 		"default principal": {
-			config: nil,
 			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
 				t.Helper()
 
@@ -65,28 +65,37 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
+				assert.Equal(t, "default", auth.principalName)
 			},
 		},
-		"unsupported attributes": {
-			config: []byte("foo: bar"),
+		"unsupported attributes are ignored": {
+			config: config.MechanismConfig{"foo": "bar"},
 			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.Equal(t, "anonymous", auth.principal.ID)
-				assert.Equal(t, "unsupported attributes", auth.ID())
+				assert.Equal(t, "unsupported attributes are ignored", auth.ID())
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
+				assert.Equal(t, "default", auth.principalName)
+			},
+		},
+		"malformed configuration": {
+			config: config.MechanismConfig{"principal": 1},
+			assert: func(t *testing.T, err error, _ *anonymousAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding config for anonymous authenticator")
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			conf, err := testsupport.DecodeTestConfig(tc.config)
-			require.NoError(t, err)
-
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
@@ -95,7 +104,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			mechanism, err := newAnonymousAuthenticator(appCtx, uc, conf)
+			mechanism, err := newAnonymousAuthenticator(appCtx, uc, tc.config)
 
 			// THEN
 			auth, ok := mechanism.(*anonymousAuthenticator)
@@ -112,13 +121,12 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		stepConfig []byte
-		config     []byte
-		stepID     string
-		assert     func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator)
+		config  config.MechanismConfig
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *anonymousAuthenticator)
 	}{
 		"no new configuration for the configured authenticator": {
-			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
+			assert: func(t *testing.T, err error, prototype, configured *anonymousAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -127,10 +135,10 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, "no new configuration for the configured authenticator", configured.ID())
 			},
 		},
-		"new principal for the configured authenticator": {
-			stepConfig: []byte("principal: anon"),
-			config:     []byte("principal: foo"),
-			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
+		"new principal definition for the configured authenticator": {
+			config:  config.MechanismConfig{"principal": "anon"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"principal": "foo"}},
+			assert: func(t *testing.T, err error, prototype, configured *anonymousAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -141,32 +149,51 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Empty(t, prototype.principal.Attributes)
 				assert.NotNil(t, prototype.principal.Attributes)
 				assert.Equal(t, prototype.principal.Attributes, configured.principal.Attributes)
-				assert.Equal(t, "new principal for the configured authenticator", configured.ID())
+				assert.Equal(t, "new principal definition for the configured authenticator", configured.ID())
 				assert.NotEqual(t, prototype.principal, configured.principal)
 				assert.Equal(t, "anon", prototype.principal.ID)
 				assert.Equal(t, "foo", configured.principal.ID)
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
-		"step id is configured": {
-			stepConfig: []byte("principal: anon"),
-			stepID:     "foo",
-			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
+		"only step id is configured": {
+			config:  config.MechanismConfig{"principal": "anon"},
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *anonymousAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, "step id is configured", prototype.ID())
+				assert.Equal(t, "only step id is configured", prototype.ID())
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.principal, configured.principal)
 				assert.NotNil(t, prototype.principal.Attributes)
+				assert.Equal(t, prototype.principalName, configured.principalName)
+			},
+		},
+		"only principal name is configured": {
+			config:  config.MechanismConfig{"principal": "anon"},
+			stepDef: types.StepDefinition{Principal: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *anonymousAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, configured.ID(), prototype.ID())
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.principal, configured.principal)
+				assert.NotNil(t, prototype.principal.Attributes)
+				assert.NotEqual(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, "foo", configured.principalName)
 			},
 		},
 		"empty principal for the configured authenticator": {
-			stepConfig: []byte("principal: anon"),
-			config:     []byte("principal: ''"),
-			assert: func(t *testing.T, err error, _ *anonymousAuthenticator, _ *anonymousAuthenticator) {
+			config:  config.MechanismConfig{"principal": "anon"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"principal": ""}},
+			assert: func(t *testing.T, err error, _, _ *anonymousAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -175,8 +202,8 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 			},
 		},
 		"malformed configured authenticator config": {
-			config: []byte("foo: bar"),
-			assert: func(t *testing.T, err error, _ *anonymousAuthenticator, _ *anonymousAuthenticator) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *anonymousAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -187,12 +214,6 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.stepConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
-			require.NoError(t, err)
-
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
@@ -200,11 +221,11 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			mechanism, err := newAnonymousAuthenticator(appCtx, uc, pc)
+			mechanism, err := newAnonymousAuthenticator(appCtx, uc, tc.config)
 			require.NoError(t, err)
 
 			// WHEN
-			step, err := mechanism.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mechanism.CreateStep(tc.stepDef)
 
 			// THEN
 			configured, ok := step.(*anonymousAuthenticator)
@@ -221,16 +242,30 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	exp := &identity.Principal{ID: "anon"}
-	auth := anonymousAuthenticator{principal: exp, id: "anon_auth"}
+	es := config.EnforcementSettings{}
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	require.NoError(t, err)
+
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().Validator().Return(validator)
+	appCtx.EXPECT().Logger().Return(log.Logger)
+
+	mech, err := newAnonymousAuthenticator(appCtx, "anon_auth", map[string]any{"principal": "anon"})
+	require.NoError(t, err)
+
+	auth := mech.(*anonymousAuthenticator)
 
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
 	sub := make(identity.Subject)
+	exp := &identity.Principal{ID: "anon", Attributes: make(map[string]any)}
 
 	// WHEN
-	err := auth.Execute(ctx, sub)
+	err = auth.Execute(ctx, sub)
 
 	// THEN
 	require.NoError(t, err)
@@ -245,4 +280,14 @@ func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {
 
 	// WHEN & THEN
 	require.True(t, auth.IsInsecure())
+}
+
+func TestAnonymousAuthenticatorKind(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := anonymousAuthenticator{}
+
+	// WHEN & THEN
+	require.Equal(t, types.KindAuthenticator, auth.Kind())
 }
