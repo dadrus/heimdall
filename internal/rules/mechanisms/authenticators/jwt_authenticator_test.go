@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/x/pointer"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/goccy/go-json"
@@ -208,6 +209,8 @@ assertions:
 				// handler id
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with defaults, without cache and TLS enforcement", auth.ID())
+
+				assert.Equal(t, "default", auth.principalName)
 			},
 		},
 		"minimal jwks endpoint based configuration with cache and TLS enforcement": {
@@ -267,6 +270,8 @@ cache_ttl: 5s`),
 				// handler id
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with cache and TLS enforcement", auth.ID())
+
+				assert.Equal(t, "default", auth.principalName)
 			},
 		},
 		"minimal jwks endpoint based configuration with enforced but disabled TLS": {
@@ -362,6 +367,8 @@ trust_store: ` + trustStorePath),
 				// handler id
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "valid configuration with overwrites, without cache", auth.ID())
+
+				assert.Equal(t, "default", auth.principalName)
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -438,6 +445,8 @@ cache_ttl: 5s`),
 				// handler id
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint based configuration with cache and enabled TLS enforcement", auth.ID())
+
+				assert.Equal(t, "default", auth.principalName)
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -520,6 +529,8 @@ cache_ttl: 5s`),
 				// handler id
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
+
+				assert.Equal(t, "default", auth.principalName)
 			},
 		},
 	} {
@@ -573,9 +584,8 @@ func TestJwtAuthenticatorCreateStep(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator)
+		stepDef         types.StepDefinition
+		assert          func(t *testing.T, err error, prototype, configured *jwtAuthenticator)
 	}{
 		"using empty target config and step ID": {
 			prototypeConfig: []byte(`
@@ -585,7 +595,7 @@ assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -602,8 +612,8 @@ assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -620,6 +630,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
 		"using unsupported fields": {
@@ -630,8 +641,8 @@ assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -645,13 +656,13 @@ jwks_endpoint:
 assertions:
   issuers:
     - foobar`),
-			config: []byte(`
-assertions:
-  issuers:
-    - barfoo
-  allowed_algorithms:
-    - ES512`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"assertions": map[string]any{
+					"issuers":            []string{"barfoo"},
+					"allowed_algorithms": []string{"ES512"},
+				}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -672,6 +683,8 @@ assertions:
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
 				assert.Equal(t, "prototype config without cache, target config with overwrites, but without cache", configured.ID())
+
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
 		"prototype config without cache, config with overwrites incl cache": {
@@ -683,14 +696,16 @@ metadata_endpoint:
     default_ttl: 10m
   disable_issuer_identifier_verification: true
 `),
-			config: []byte(`
-assertions:
-  issuers:
-    - barfoo
-  allowed_algorithms:
-    - ES512
-cache_ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"assertions": map[string]any{
+						"issuers":            []string{"barfoo"},
+						"allowed_algorithms": []string{"ES512"},
+					},
+					"cache_ttl": "5s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -712,6 +727,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
 				assert.Equal(t, "prototype config without cache, config with overwrites incl cache", configured.ID())
+
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
 		"prototype config with cache, config without": {
@@ -722,13 +739,15 @@ assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
-			config: []byte(`
-assertions:
-  issuers:
-    - barfoo
-  allowed_algorithms:
-    - ES512`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"assertions": map[string]any{
+						"issuers":            []string{"barfoo"},
+						"allowed_algorithms": []string{"ES512"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -750,6 +769,8 @@ assertions:
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
 				assert.Equal(t, "prototype config with cache, config without", configured.ID())
+
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
 		"prototype config with cache, target config with cache only": {
@@ -760,8 +781,12 @@ assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
-			config: []byte(`cache_ttl: 15s`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"cache_ttl": "15s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -778,6 +803,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
 				assert.Equal(t, "prototype config with cache, target config with cache only", configured.ID())
+
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
 		"prototype without scopes configured, created authenticator configures them and merges other fields": {
@@ -788,13 +815,14 @@ assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
-			config: []byte(`
-assertions:
-  scopes:
-    - foo
-    - bar
-`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"assertions": map[string]any{
+						"scopes": []any{"foo", "bar"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -818,6 +846,8 @@ assertions:
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
 				assert.Equal(t, "prototype without scopes configured, created authenticator configures them and merges other fields", configured.ID())
+
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
 		"prototype with defaults, configured does not allow jwk trust store override": {
@@ -828,8 +858,12 @@ assertions:
   issuers:
     - foobar
 `),
-			config: []byte(`trust_store: ` + trustStorePath),
-			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"trust_store": trustStorePath,
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -842,8 +876,12 @@ assertions:
 metadata_endpoint:
   url: https://test.com
 `),
-			config: []byte(`validate_jwk: false`),
-			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"validate_jwk": false,
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -854,9 +892,6 @@ metadata_endpoint:
 	} {
 		t.Run(uc, func(t *testing.T) {
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -875,7 +910,7 @@ metadata_endpoint:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			auth, ok := step.(*jwtAuthenticator)
@@ -908,9 +943,6 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		metadataResponseContent     []byte
 		metadataResponseCode        int
 	)
-
-	tenSecondsTTL := 10 * time.Second
-	disabledTTL := 0 * time.Second
 
 	ks := createKS(t)
 	keyOnlyEntry, err := ks.GetKey(kidKeyWithoutCert)
@@ -1080,7 +1112,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL + "{{ Foo }}"}}, nil
 				}),
-				ttl: &disabledTTL,
+				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1114,7 +1146,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: "http://jwks.heimdall.test.local"}}, nil
 				}),
-				ttl: &disabledTTL,
+				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1148,7 +1180,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL}}, nil
 				}),
-				ttl: &disabledTTL,
+				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1192,7 +1224,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				ttl: &disabledTTL,
+				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1242,7 +1274,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				ttl: &disabledTTL,
+				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1285,7 +1317,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id:  "auth3",
 				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
-				ttl: &disabledTTL,
+				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1326,7 +1358,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id:  "auth3",
 				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
-				ttl: &disabledTTL,
+				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1381,7 +1413,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"foo"}},
-				ttl: &tenSecondsTTL,
+				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1437,7 +1469,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
-				ttl: &tenSecondsTTL,
+				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1493,7 +1525,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
-				ttl: &tenSecondsTTL,
+				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1554,7 +1586,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &PrincipalInfo{IDFrom: "foobar"},
-				ttl: &tenSecondsTTL,
+				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1613,8 +1645,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &tenSecondsTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           pointer.To(10 * time.Second),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1679,8 +1712,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &tenSecondsTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           pointer.To(10 * time.Second),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1758,8 +1792,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &tenSecondsTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           pointer.To(10 * time.Second),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1831,8 +1866,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					AllowedAlgorithms: []string{"ES384"},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &tenSecondsTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           pointer.To(10 * time.Second),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1928,8 +1964,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &PrincipalInfo{IDFrom: "sub"},
-				ttl:             &tenSecondsTTL,
+				ttl:             pointer.To(10 * time.Second),
 				validateJWKCert: true,
+				principalName:   "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1995,9 +2032,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &PrincipalInfo{IDFrom: "sub"},
-				ttl:             &tenSecondsTTL,
+				ttl:             pointer.To(10 * time.Second),
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
+				principalName:   "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2077,6 +2115,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				sf:              &PrincipalInfo{IDFrom: "sub"},
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
+				principalName:   "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2132,6 +2171,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2180,6 +2220,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2229,6 +2270,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				validateJWKCert: true,
+				principalName:   "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2277,8 +2319,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{"barfoo"},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &disabledTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           pointer.To(0 * time.Second),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2348,8 +2391,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 					AllowedAlgorithms: []string{"ES384"},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &disabledTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           pointer.To(0 * time.Second),
+				principalName: "default",
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2398,6 +2442,96 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, sub)
+
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
+			},
+		},
+		"custom principal created": {
+			authenticator: &jwtAuthenticator{
+				r: &oauth2.MetadataEndpoint{
+					Endpoint:                            endpoint.Endpoint{URL: oidcSrv.URL},
+					DisableIssuerIdentifierVerification: true,
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					AllowedAlgorithms: []string{"ES384"},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           pointer.To(0 * time.Second),
+				principalName: "baz",
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				// http cache
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
+				)).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+				checkMetadataRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "/", req.URL.Path)
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
+
+				metadataResponseCode = http.StatusOK
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"jwks_uri": jwksSrv.URL,
+					"issuer":   issuer,
+				})
+				require.NoError(t, err)
+				metadataResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub identity.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, jwksEndpointCalled)
+
+				require.NoError(t, err)
+				require.NotNil(t, sub)
+				assert.Empty(t, sub.ID())
+				assert.Empty(t, sub.Attributes())
+
+				principal := sub["baz"]
+				require.NotNil(t, principal)
+				assert.Equal(t, principalID, principal.ID)
+				assert.Len(t, principal.Attributes, 8)
+				assert.Len(t, principal.Attributes["aud"], 1)
+				assert.Contains(t, principal.Attributes["aud"], audience)
+				assert.Contains(t, principal.Attributes, "exp")
+				assert.Contains(t, principal.Attributes, "iat")
+				assert.Contains(t, principal.Attributes, "nbf")
+				assert.Equal(t, issuer, principal.Attributes["iss"])
+				assert.Contains(t, principal.Attributes["scp"], "foo")
+				assert.Contains(t, principal.Attributes["scp"], "bar")
+				assert.Equal(t, principalID, principal.Attributes["sub"])
 			},
 		},
 	} {
@@ -2687,4 +2821,14 @@ func TestJwtAuthenticatorIsInsecure(t *testing.T) {
 
 	// WHEN & THEN
 	require.False(t, auth.IsInsecure())
+}
+
+func TestJwtAuthenticatorKind(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := jwtAuthenticator{}
+
+	// WHEN & THEN
+	require.Equal(t, types.KindAuthenticator, auth.Kind())
 }

@@ -65,6 +65,7 @@ func init() {
 type jwtAuthenticator struct {
 	name            string
 	id              string
+	principalName   string
 	app             app.Context
 	r               oauth2.ServerMetadataResolver
 	a               oauth2.Expectation
@@ -97,7 +98,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for jwt authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, name).CausedBy(err)
 	}
 
 	if conf.JWKSEndpoint != nil {
@@ -176,6 +177,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	return &jwtAuthenticator{
 		name:            name,
 		id:              name,
+		principalName:   "default",
 		app:             app,
 		r:               resolver,
 		a:               conf.Assertions,
@@ -225,20 +227,21 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) e
 			CausedBy(err)
 	}
 
-	sub["default"] = principal
+	sub[a.principalName] = principal
 
 	return nil
 }
 
 func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(def.ID) == 0 && len(def.Config) == 0 {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
 	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = def.ID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -257,12 +260,13 @@ func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for jwt authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, a.name).CausedBy(err)
 	}
 
 	return &jwtAuthenticator{
 		name:            a.name,
 		id:              x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName:   x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
 		app:             a.app,
 		r:               a.r,
 		a:               conf.Assertions.Merge(a.a),
