@@ -51,12 +51,12 @@ func init() {
 }
 
 type basicAuthAuthenticator struct {
-	name     string
-	id       string
-	app      app.Context
-	userID   string
-	password string
-
+	name            string
+	id              string
+	principalName   string
+	app             app.Context
+	userID          string
+	password        string
 	emptyAttributes map[string]any
 	ads             extractors.HeaderValueExtractStrategy
 }
@@ -76,13 +76,14 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for basic_auth authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, name).CausedBy(err)
 	}
 
 	auth := basicAuthAuthenticator{
 		name:            name,
 		id:              name,
 		app:             app,
+		principalName:   "default",
 		emptyAttributes: make(map[string]any),
 		ads:             extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
 	}
@@ -147,7 +148,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 			WithErrorContext(a)
 	}
 
-	sub["default"] = &identity.Principal{
+	sub[a.principalName] = &identity.Principal{
 		ID:         userIDAndPassword[0],
 		Attributes: a.emptyAttributes,
 	}
@@ -156,13 +157,14 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 }
 
 func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
-	if len(def.ID) == 0 && len(def.Config) == 0 {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
 	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = def.ID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -175,15 +177,16 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (heimdall.
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for basic auth authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, a.name).CausedBy(err)
 	}
 
 	return &basicAuthAuthenticator{
 		app:             a.app,
 		name:            a.name,
+		id:              x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName:   x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
 		emptyAttributes: a.emptyAttributes,
 		ads:             a.ads,
-		id:              x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()
