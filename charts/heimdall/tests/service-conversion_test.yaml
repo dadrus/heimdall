@@ -8,19 +8,9 @@ tests:
           count: 0
 
   - it: should not be configured on first time install if tls is configured for the kubernetes provider, but the CRD is already present
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: rulesets.heimdall.dadrus.github.com
+    capabilities:
+      apiVersions:
+        - heimdall.dadrus.github.com/v1alpha4
     set:
       providers.kubernetes.tls.key_store.path: /path/to/file.pem
     asserts:
@@ -44,19 +34,9 @@ tests:
           count: 0
 
   - it: should be configured on upgrades if explicitly enabled and tls is configured for the kubernetes provider, even if the CRD is already present in the cluster
-    kubernetesProvider:
-      scheme:
-        "apiextensions.k8s.io/v1/CustomResourceDefinition":
-          gvr:
-            group: "apiextensions.k8s.io"
-            version: "v1"
-            resource: "customresourcedefinitions"
-          namespaced: false
-      objects:
-        - kind: CustomResourceDefinition
-          apiVersion: apiextensions.k8s.io/v1
-          metadata:
-            name: rulesets.heimdall.dadrus.github.com
+    capabilities:
+      apiVersions:
+        - heimdall.dadrus.github.com/v1alpha4
     release:
       upgrade: true
     set:

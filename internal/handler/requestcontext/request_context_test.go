@@ -227,3 +227,17 @@ func TestRequestContextBody(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestContextRequestURLCaptures(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := New(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
+
+	ctx.Request().URL.Captures = map[string]string{"a": "b"}
+
+	// WHEN
+	captures := ctx.Request().URL.Captures
+	require.Len(t, captures, 1)
+	assert.Equal(t, "b", captures["a"])
+}

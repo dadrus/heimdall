@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.17.4](https://github.com/dadrus/heimdall/compare/v0.17.3...v0.17.4) (2025-11-10)
+
+
+### Bug Fixes
+
+* Configured keystores must contain at least one key entry ([#2857](https://github.com/dadrus/heimdall/issues/2857)) ([e1a4c27](https://github.com/dadrus/heimdall/commit/e1a4c27d6d1ebe7be0bd4ecc5fc96bfa728cadfe))
+* Prevent loss of `Request.URL.Captures` with Envoy `ext_auth` integration ([#2859](https://github.com/dadrus/heimdall/issues/2859)) ([bedbed2](https://github.com/dadrus/heimdall/commit/bedbed2aa8091e1fe80b869e78847e8df5fce91e))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to a4e2c1d ([#2824](https://github.com/dadrus/heimdall/issues/2824)) ([8ccfacb](https://github.com/dadrus/heimdall/commit/8ccfacb8d016dd4187e9ae6da724a8e5afba7c0f))
+* update golang to v1.25.4 ([#2856](https://github.com/dadrus/heimdall/issues/2856)) ([5ba0506](https://github.com/dadrus/heimdall/commit/5ba050628ef7b7456d603cf760891482918b404f))
+* update google.golang.org/genproto/googleapis/rpc digest to 83f4791 ([#2860](https://github.com/dadrus/heimdall/issues/2860)) ([21aeec6](https://github.com/dadrus/heimdall/commit/21aeec68d36b54f7802eb21e393d85e796c0804e))
+* update module github.com/ccoveille/go-safecast to v2 ([#2845](https://github.com/dadrus/heimdall/issues/2845)) ([27e50c4](https://github.com/dadrus/heimdall/commit/27e50c4894c98b38f31d2e807bee0030072e7383))
+* update module github.com/envoyproxy/go-control-plane/envoy to v1.36.0 ([#2852](https://github.com/dadrus/heimdall/issues/2852)) ([47b200f](https://github.com/dadrus/heimdall/commit/47b200f757c499ce1039c61a4bf3e09dc24a50c3))
+* update module github.com/go-co-op/gocron/v2 to v2.18.0 ([#2855](https://github.com/dadrus/heimdall/issues/2855)) ([b68e414](https://github.com/dadrus/heimdall/commit/b68e414992dff534c923c881eb393dcd1ad3803e))
+* update module github.com/grpc-ecosystem/go-grpc-middleware/v2 to v2.3.3 ([#2850](https://github.com/dadrus/heimdall/issues/2850)) ([45c8885](https://github.com/dadrus/heimdall/commit/45c88852d5681bb0915024fcba6e7cdcd43884a8))
+
 ## [0.17.3](https://github.com/dadrus/heimdall/compare/v0.17.2...v0.17.3) (2025-10-17)
 
 

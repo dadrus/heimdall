@@ -40,12 +40,14 @@ type RequestContext struct {
 	ips             []string
 	reqMethod       string
 	reqHeaders      map[string]string
-	reqURL          *url.URL
+	reqURL          *heimdall.URL
 	reqBody         string
 	reqRawBody      []byte
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	err             error
+
+	// the following properties are created lazy and cached
 
 	savedBody any
 	outputs   map[string]any
@@ -66,12 +68,14 @@ func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest) *Reque
 		ips:        clientIPs,
 		reqMethod:  req.GetAttributes().GetRequest().GetHttp().GetMethod(),
 		reqHeaders: canonicalizeHeaders(req.GetAttributes().GetRequest().GetHttp().GetHeaders()),
-		reqURL: &url.URL{
-			Scheme:   req.GetAttributes().GetRequest().GetHttp().GetScheme(),
-			Host:     req.GetAttributes().GetRequest().GetHttp().GetHost(),
-			Path:     req.GetAttributes().GetRequest().GetHttp().GetPath(),
-			RawQuery: req.GetAttributes().GetRequest().GetHttp().GetQuery(),
-			Fragment: req.GetAttributes().GetRequest().GetHttp().GetFragment(),
+		reqURL: &heimdall.URL{
+			URL: url.URL{
+				Scheme:   req.GetAttributes().GetRequest().GetHttp().GetScheme(),
+				Host:     req.GetAttributes().GetRequest().GetHttp().GetHost(),
+				Path:     req.GetAttributes().GetRequest().GetHttp().GetPath(),
+				RawQuery: req.GetAttributes().GetRequest().GetHttp().GetQuery(),
+				Fragment: req.GetAttributes().GetRequest().GetHttp().GetFragment(),
+			},
 		},
 		reqBody:         req.GetAttributes().GetRequest().GetHttp().GetBody(),
 		reqRawBody:      req.GetAttributes().GetRequest().GetHttp().GetRawBody(),
@@ -94,7 +98,7 @@ func (r *RequestContext) Request() *heimdall.Request {
 	return &heimdall.Request{
 		RequestFunctions:  r,
 		Method:            r.reqMethod,
-		URL:               &heimdall.URL{URL: *r.reqURL},
+		URL:               r.reqURL,
 		ClientIPAddresses: r.ips,
 	}
 }
