@@ -64,7 +64,7 @@ func newAnonymousAuthenticator(app app.Context, name string, rawConfig map[strin
 	return &anonymousAuthenticator{
 		name:          name,
 		id:            name,
-		principalName: "default",
+		principalName: DefaultPrincipalName,
 		principal:     &identity.Principal{ID: conf.Principal, Attributes: make(map[string]any)},
 		app:           app,
 	}, nil

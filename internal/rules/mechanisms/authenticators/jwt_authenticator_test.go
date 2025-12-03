@@ -210,7 +210,7 @@ assertions:
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with defaults, without cache and TLS enforcement", auth.ID())
 
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"minimal jwks endpoint based configuration with cache and TLS enforcement": {
@@ -271,7 +271,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with cache and TLS enforcement", auth.ID())
 
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"minimal jwks endpoint based configuration with enforced but disabled TLS": {
@@ -368,7 +368,7 @@ trust_store: ` + trustStorePath),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "valid configuration with overwrites, without cache", auth.ID())
 
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -446,7 +446,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint based configuration with cache and enabled TLS enforcement", auth.ID())
 
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -530,7 +530,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
 
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 	} {
@@ -1647,7 +1647,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				ttl:           pointer.To(10 * time.Second),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1714,7 +1714,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				ttl:           pointer.To(10 * time.Second),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1794,7 +1794,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				ttl:           pointer.To(10 * time.Second),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1868,7 +1868,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				ttl:           pointer.To(10 * time.Second),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1966,7 +1966,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				sf:              &PrincipalInfo{IDFrom: "sub"},
 				ttl:             pointer.To(10 * time.Second),
 				validateJWKCert: true,
-				principalName:   "default",
+				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2035,7 +2035,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl:             pointer.To(10 * time.Second),
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
-				principalName:   "default",
+				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2115,7 +2115,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				sf:              &PrincipalInfo{IDFrom: "sub"},
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
-				principalName:   "default",
+				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2171,7 +2171,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2220,7 +2220,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2270,7 +2270,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				validateJWKCert: true,
-				principalName:   "default",
+				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2321,7 +2321,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				ttl:           pointer.To(0 * time.Second),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -2393,7 +2393,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				ttl:           pointer.To(0 * time.Second),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,

@@ -63,7 +63,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
 				assert.NotNil(t, auth.emptyAttributes)
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"without user_id": {

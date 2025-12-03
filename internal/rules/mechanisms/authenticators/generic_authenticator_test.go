@@ -176,7 +176,7 @@ principal:
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"with valid configuration and enabled cache and TLS enforcement": {
@@ -210,7 +210,7 @@ cache_ttl: 5s`),
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"with session lifespan config and forward header": {
@@ -258,7 +258,7 @@ session_lifespan:
 				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"with disabled, but enforced TLS of identity info endpoint url": {
@@ -987,7 +987,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1044,7 +1044,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				},
 				sf:            &PrincipalInfo{IDFrom: "user_id"},
 				ttl:           5 * time.Second,
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1081,7 +1081,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf:            &PrincipalInfo{IDFrom: "user_id"},
 				fwdHeaders:    []string{"X-Original-Auth"},
 				ttl:           5 * time.Second,
-				principalName: "default",
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1141,7 +1141,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				fwdCookies:          []string{"original-auth"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
-				principalName:       "default",
+				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1204,7 +1204,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
-				principalName:       "default",
+				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1264,7 +1264,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 30 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
-				principalName:       "default",
+				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,

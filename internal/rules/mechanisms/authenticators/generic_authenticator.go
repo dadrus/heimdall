@@ -102,7 +102,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	return &genericAuthenticator{
 		name:          name,
 		id:            name,
-		principalName: "default",
+		principalName: DefaultPrincipalName,
 		app:           app,
 		e:             conf.Endpoint,
 		ads:           conf.AuthDataSource,

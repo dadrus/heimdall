@@ -177,7 +177,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	return &jwtAuthenticator{
 		name:            name,
 		id:              name,
-		principalName:   "default",
+		principalName:   DefaultPrincipalName,
 		app:             app,
 		r:               resolver,
 		a:               conf.Assertions,

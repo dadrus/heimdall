@@ -83,7 +83,7 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		name:            name,
 		id:              name,
 		app:             app,
-		principalName:   "default",
+		principalName:   DefaultPrincipalName,
 		emptyAttributes: make(map[string]any),
 		ads:             extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
 	}

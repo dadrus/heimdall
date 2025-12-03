@@ -51,7 +51,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"default principal": {
@@ -65,7 +65,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"unsupported attributes are ignored": {
@@ -80,7 +80,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
-				assert.Equal(t, "default", auth.principalName)
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"malformed configuration": {
@@ -269,7 +269,7 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, exp, sub["default"])
+	assert.Equal(t, exp, sub[DefaultPrincipalName])
 }
 
 func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {
