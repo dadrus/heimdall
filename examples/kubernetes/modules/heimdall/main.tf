@@ -34,7 +34,7 @@ resource "helm_release" "heimdall" {
   name             = "heimdall"
   repository       = "../../charts"
   chart            = "heimdall"
-  version          = "0.16.4"
+  version          = var.heimdall_version
   namespace        = var.namespace
   create_namespace = true
   upgrade_install  = true
