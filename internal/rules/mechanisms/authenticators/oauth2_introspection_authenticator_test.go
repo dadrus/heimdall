@@ -158,6 +158,8 @@ introspection_endpoint:
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with minimal introspection endpoint based config with used enforced TLS", auth.ID())
+
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"with minimal introspection endpoint based config with enforced but disabled TLS": {
@@ -247,6 +249,8 @@ cache_ttl: 5s
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with valid introspection endpoint based config with overwrites", auth.ID())
+
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -304,6 +308,8 @@ metadata_endpoint:
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with metadata endpoint based config", auth.ID())
+
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -381,6 +387,8 @@ metadata_endpoint:
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
+
+				assert.Equal(t, DefaultPrincipalName, auth.principalName)
 			},
 		},
 	} {
@@ -418,14 +426,12 @@ func TestOAuth2IntrospectionAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-			configured *oauth2IntrospectionAuthenticator)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator)
 	}{
-		"without target config and step id": {
-			prototypeConfig: []byte(`
+		"without step config and step id": {
+			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
 assertions:
@@ -433,19 +439,17 @@ assertions:
     - foobar
 principal:
   id: some_template`),
-			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator,
-			) {
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "without target config and step id", configured.ID())
+				assert.Equal(t, "without step config and step id", configured.ID())
 			},
 		},
-		"without target config but with step id": {
-			prototypeConfig: []byte(`
+		"without step config but with step id": {
+			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
 assertions:
@@ -453,21 +457,19 @@ assertions:
     - foobar
 principal:
   id: some_template`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator,
-			) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, "without target config but with step id", prototype.ID())
+				assert.Equal(t, "without step config but with step id", prototype.ID())
 				assert.Equal(t, "foo", configured.ID())
 			},
 		},
 		"with unsupported fields": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 introspection_endpoint:
   url: https://foobar.local
 assertions:
@@ -475,17 +477,15 @@ assertions:
     - foobar
 principal:
   id: some_template`),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator,
-				_ *oauth2IntrospectionAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 			},
 		},
 		"with overwrites without cache": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
 assertions:
@@ -495,16 +495,15 @@ assertions:
     - baz
 principal:
   id: some_template`),
-			config: []byte(`
-assertions:
-  issuers:
-    - barfoo
-  allowed_algorithms:
-    - ES512
-`),
-			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator,
-			) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"assertions": map[string]any{
+						"issuers":            []string{"barfoo"},
+						"allowed_algorithms": []string{"ES512"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -522,10 +521,11 @@ assertions:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, "with overwrites without cache", configured.ID())
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
-		"prototype config without cache, target config with cache overwrite": {
-			prototypeConfig: []byte(`
+		"without cache, step config with cache overwrite": {
+			config: []byte(`
 metadata_endpoint:
   url: http://foobar.local
 assertions:
@@ -533,10 +533,10 @@ assertions:
     - foobar
 principal:
   id: some_template`),
-			config: []byte(`cache_ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator,
-			) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"cache_ttl": "5s"},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -548,11 +548,12 @@ principal:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-				assert.Equal(t, "prototype config without cache, target config with cache overwrite", configured.ID())
+				assert.Equal(t, "without cache, step config with cache overwrite", configured.ID())
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
-		"metadata endpoint based prototype config without cache, config with overwrites incl cache": {
-			prototypeConfig: []byte(`
+		"metadata endpoint based config without cache, step config with overwrites incl cache": {
+			config: []byte(`
 metadata_endpoint:
   url: http://test.com
   http_cache:
@@ -560,16 +561,16 @@ metadata_endpoint:
     default_ttl: 10m
   disable_issuer_identifier_verification: true
 `),
-			config: []byte(`
-assertions:
-  issuers:
-    - barfoo
-  allowed_algorithms:
-    - ES512
-cache_ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator,
-			) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"assertions": map[string]any{
+						"issuers":            []string{"barfoo"},
+						"allowed_algorithms": []string{"ES512"},
+					},
+					"cache_ttl": "5s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -588,11 +589,12 @@ cache_ttl: 5s`),
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 
-				assert.Equal(t, "metadata endpoint based prototype config without cache, config with overwrites incl cache", configured.ID())
+				assert.Equal(t, "metadata endpoint based config without cache, step config with overwrites incl cache", configured.ID())
+				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
-		"prototype config with cache, target config with overwrites including cache": {
-			prototypeConfig: []byte(`
+		"config with cache, step config with overwrites including cache": {
+			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
 assertions:
@@ -601,15 +603,15 @@ assertions:
 principal:
   id: some_template
 cache_ttl: 5s`),
-			config: []byte(`
-assertions:
-  issuers:
-    - barfoo
-cache_ttl: 15s
-`),
-			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator,
-			) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"assertions": map[string]any{
+						"issuers": []string{"barfoo"},
+					},
+					"cache_ttl": "15s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -622,16 +624,37 @@ cache_ttl: 15s
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
-				assert.Equal(t, "prototype config with cache, target config with overwrites including cache", configured.ID())
+				assert.Equal(t, "config with cache, step config with overwrites including cache", configured.ID())
+				assert.Equal(t, prototype.principalName, configured.principalName)
+			},
+		},
+		"step with custom principal name": {
+			config: []byte(`
+metadata_endpoint:
+  url: http://foobar.local
+assertions:
+  issuers:
+    - foobar`),
+			stepDef: types.StepDefinition{Principal: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.r, configured.r)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "step with custom principal name", configured.ID())
+				assert.NotEqual(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, "foo", configured.principalName)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -650,7 +673,7 @@ cache_ttl: 15s
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			auth, ok := step.(*oauth2IntrospectionAuthenticator)
@@ -760,7 +783,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{IntrospectionEndpoint: &endpoint.Endpoint{URL: "http://introspection.heimdall.test.local"}}, nil
 				}),
-				ttl: &zeroTTL,
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -792,7 +816,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{IntrospectionEndpoint: &endpoint.Endpoint{URL: srv.URL}}, nil
 				}),
-				ttl: &zeroTTL,
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -825,9 +850,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		},
 		"with disabled cache and unexpected response code from the metadata endpoint": {
 			authenticator: &oauth2IntrospectionAuthenticator{
-				id:  "auth3",
-				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
-				ttl: &zeroTTL,
+				id:            "auth3",
+				r:             &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -874,7 +900,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				ttl: &zeroTTL,
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -935,8 +962,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				a:   oauth2.Expectation{TrustedIssuers: []string{"foobar"}},
-				ttl: &zeroTTL,
+				a:             oauth2.Expectation{TrustedIssuers: []string{"foobar"}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1000,8 +1028,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				a:   oauth2.Expectation{TrustedIssuers: []string{"barfoo"}},
-				ttl: &zeroTTL,
+				a:             oauth2.Expectation{TrustedIssuers: []string{"barfoo"}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1071,8 +1100,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				a:   oauth2.Expectation{TrustedIssuers: []string{"barfoo"}},
-				ttl: &zeroTTL,
+				a:             oauth2.Expectation{TrustedIssuers: []string{"barfoo"}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1158,9 +1188,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
-				ttl: &zeroTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				a:             oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1251,9 +1282,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
-				ttl: &zeroTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				a:             oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1346,9 +1378,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &PrincipalInfo{IDFrom: "foo"},
-				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
-				ttl: &zeroTTL,
+				sf:            &PrincipalInfo{IDFrom: "foo"},
+				a:             oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1434,9 +1467,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					},
 					DisableIssuerIdentifierVerification: true,
 				},
-				sf:  &PrincipalInfo{IDFrom: "foo"},
-				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
-				ttl: &zeroTTL,
+				sf:            &PrincipalInfo{IDFrom: "foo"},
+				a:             oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1500,8 +1534,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &zeroTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1541,8 +1576,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &zeroTTL,
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1612,10 +1648,11 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		},
 		"with disabled cache and successful execution using templated metadata endpoint": {
 			authenticator: &oauth2IntrospectionAuthenticator{
-				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .TokenIssuer }}"}},
-				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
-				sf:  &PrincipalInfo{IDFrom: "sub"},
-				ttl: &zeroTTL,
+				r:             &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .TokenIssuer }}"}},
+				a:             oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1721,7 +1758,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &PrincipalInfo{IDFrom: "sub"},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1807,7 +1845,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				a: oauth2.Expectation{
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &PrincipalInfo{IDFrom: "sub"},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1898,7 +1937,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &PrincipalInfo{IDFrom: "sub"},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1945,6 +1985,79 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes()["nbf"])
 				assert.NotEmpty(t, sub.Attributes()["iat"])
 				assert.NotEmpty(t, sub.Attributes()["exp"])
+			},
+		},
+		"with custom principal name, cache hit and successful execution": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					TrustedIssuers: []string{"foobar"},
+					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				principalName: "bar",
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "Bearer",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+				})
+				require.NoError(t, err)
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawIntrospectResponse, nil)
+			},
+			assert: func(t *testing.T, err error, sub identity.Subject) {
+				t.Helper()
+
+				assert.False(t, introspectionEndpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Empty(t, sub.ID())
+				assert.Empty(t, sub.Attributes())
+
+				principal := sub["bar"]
+				require.NotNil(t, principal)
+				assert.Equal(t, "foo", principal.ID)
+				assert.Len(t, principal.Attributes, 10)
+				assert.Equal(t, "foo bar", principal.Attributes["scope"])
+				assert.Equal(t, true, principal.Attributes["active"]) //nolint:testifylint
+				assert.Equal(t, "unknown", principal.Attributes["username"])
+				assert.Equal(t, "foobar", principal.Attributes["iss"])
+				assert.Equal(t, "bar", principal.Attributes["aud"])
+				assert.Equal(t, "Bearer", principal.Attributes["token_type"])
+				assert.NotEmpty(t, principal.Attributes["nbf"])
+				assert.NotEmpty(t, principal.Attributes["iat"])
+				assert.NotEmpty(t, principal.Attributes["exp"])
 			},
 		},
 	} {

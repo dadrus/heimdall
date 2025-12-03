@@ -167,7 +167,7 @@ func newOAuth2IntrospectionAuthenticator(
 	return &oauth2IntrospectionAuthenticator{
 		name:          name,
 		id:            name,
-		principalName: "default",
+		principalName: DefaultPrincipalName,
 		app:           app,
 		ads:           ads,
 		r:             resolver,
