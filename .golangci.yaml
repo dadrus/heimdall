@@ -18,7 +18,7 @@ linters:
     - zerologlint
     - goconst
     - noinlineerr
-    - godoclint
+#    - godoclint
     # deprecated
     - wsl
   settings:
