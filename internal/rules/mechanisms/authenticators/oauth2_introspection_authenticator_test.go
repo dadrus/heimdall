@@ -552,6 +552,24 @@ principal:
 				assert.Equal(t, prototype.principalName, configured.principalName)
 			},
 		},
+		"malformed step config": {
+			config: []byte(`
+metadata_endpoint:
+  url: http://foobar.local
+assertions:
+  issuers:
+    - foobar`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"cache_ttl": true},
+			},
+			assert: func(t *testing.T, err error, _, _ *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
 		"metadata endpoint based config without cache, step config with overwrites incl cache": {
 			config: []byte(`
 metadata_endpoint:
