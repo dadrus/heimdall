@@ -18,7 +18,7 @@ WORKDIR /build
 
 COPY . .
 RUN go mod download && go mod verify &&\
-    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${VERSION}"
+    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -trimpath -buildvcs=false -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${VERSION}"
 
 # The actual image of the app
 FROM scratch
