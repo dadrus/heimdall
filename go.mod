@@ -232,4 +232,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace golang.org/x/crypto v0.43.0 => golang.org/x/crypto v0.45.0
+replace golang.org/x/crypto v0.44.0 => golang.org/x/crypto v0.45.0
