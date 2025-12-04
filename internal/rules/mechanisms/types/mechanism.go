@@ -14,8 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// nolint: revive
-package types
+package types //nolint: revive
 
 import (
 	"github.com/dadrus/heimdall/internal/config"

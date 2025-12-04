@@ -79,8 +79,7 @@ type ruleFactory struct {
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
-// nolint:cyclop,funlen
-func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, error) {
+func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, error) { //nolint:cyclop,funlen
 	if f.mode == config.ProxyMode && rul.Backend == nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}

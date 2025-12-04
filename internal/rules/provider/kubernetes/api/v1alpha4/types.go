@@ -30,8 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/api/v1alpha4"
 )
 
-// nolint: gochecknoinits
-func init() {
+func init() { //nolint: gochecknoinits
 	schemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
 		scheme.AddKnownTypes(GroupVersion, &RuleSet{}, &RuleSetList{})
 		metav1.AddToGroupVersion(scheme, GroupVersion)
@@ -41,8 +40,7 @@ func init() {
 	utilruntime.Must(schemeBuilder.AddToScheme(scheme.Scheme))
 }
 
-// nolint: gochecknoglobals
-var GroupVersion = schema.GroupVersion{
+var GroupVersion = schema.GroupVersion{ //nolint: gochecknoglobals
 	Group:   "heimdall.dadrus.github.com",
 	Version: "v1alpha4",
 }
@@ -52,18 +50,21 @@ const (
 	ResourceListName = "RuleSets"
 )
 
+// RuleSetSpec is the actual ruleset definition
 // +kubebuilder:object:generate=true
 type RuleSetSpec struct {
 	AuthClassName string          `json:"authClassName"` //nolint:tagliatelle
 	Rules         []v1alpha4.Rule `json:"rules"`
 }
 
+// RuleSetStatus describes the deployment status of a ruleset
 // +kubebuilder:object:generate=true
 type RuleSetStatus struct {
 	ActiveIn   string             `json:"activeIn"` // nolint: tagliatelle
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// RuleSet defines the kubernetes custom resource to describe rulesets
 // +kubebuilder:object:generate=true
 // +kubebuilder:object:root=true
 type RuleSet struct {
@@ -86,6 +87,7 @@ func (rs *RuleSet) AsConfig() *v1alpha4.RuleSet {
 	}
 }
 
+// RuleSetList defines the list of RuleSet resources
 // +kubebuilder:object:generate=true
 // +kubebuilder:object:root=true
 type RuleSetList struct {
