@@ -40,8 +40,9 @@ func init() {
 }
 
 type unauthorizedAuthenticator struct {
-	name string
-	id   string
+	name          string
+	id            string
+	principalName string
 }
 
 func newUnauthorizedAuthenticator(app app.Context, name string, _ map[string]any) (types.Mechanism, error) {
@@ -52,8 +53,9 @@ func newUnauthorizedAuthenticator(app app.Context, name string, _ map[string]any
 		Msg("Creating authenticator")
 
 	return &unauthorizedAuthenticator{
-		name: name,
-		id:   name,
+		name:          name,
+		id:            name,
+		principalName: DefaultPrincipalName,
 	}, nil
 }
 
@@ -88,6 +90,7 @@ func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (heimda
 
 	auth := *a
 	auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+	auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 	return &auth, nil
 }
@@ -100,4 +103,4 @@ func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }
 
-func (a *unauthorizedAuthenticator) PrincipalName() string { return DefaultPrincipalName }
+func (a *unauthorizedAuthenticator) PrincipalName() string { return a.principalName }
