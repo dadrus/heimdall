@@ -56,6 +56,8 @@ func newDenyAuthorizer(app app.Context, name string, _ map[string]any) (types.Me
 	}, nil
 }
 
+func (a *denyAuthorizer) Accept(_ heimdall.Visitor) {}
+
 func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -91,5 +93,3 @@ func (a *denyAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
 func (a *denyAuthorizer) Name() string { return a.name }
 
 func (a *denyAuthorizer) ID() string { return a.id }
-
-func (a *denyAuthorizer) IsInsecure() bool { return false }

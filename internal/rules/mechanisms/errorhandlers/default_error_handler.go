@@ -56,6 +56,8 @@ func newDefaultErrorHandler(app app.Context, name string, _ map[string]any) (typ
 	}, nil
 }
 
+func (eh *defaultErrorHandler) Accept(_ heimdall.Visitor) {}
+
 func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -88,5 +90,3 @@ func (eh *defaultErrorHandler) Kind() types.Kind { return types.KindErrorHandler
 func (eh *defaultErrorHandler) Name() string { return eh.name }
 
 func (eh *defaultErrorHandler) ID() string { return eh.id }
-
-func (eh *defaultErrorHandler) IsInsecure() bool { return false }

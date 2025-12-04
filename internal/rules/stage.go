@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -26,12 +27,50 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type executor interface {
-	IsInsecure() bool
+type stepVisitor struct {
+	insecure   []bool
+	principals []string
+}
+
+func (v *stepVisitor) VisitInsecure(obj heimdall.Insecure) {
+	v.insecure = append(v.insecure, obj.IsInsecure())
+}
+
+func (v *stepVisitor) VisitPrincipalNamer(obj heimdall.PrincipalNamer) {
+	v.principals = append(v.principals, obj.PrincipalName())
+}
+
+type step interface {
+	Accept(visitor heimdall.Visitor)
 	Execute(ctx heimdall.Context, sub identity.Subject) error
 }
 
-type stage []executor
+type stage []step
+
+func (s stage) HasDefaultPrincipal() bool {
+	sv := &stepVisitor{}
+
+	for _, step := range s {
+		step.Accept(sv)
+	}
+
+	return slices.Contains(sv.principals, "default")
+}
+
+func (s stage) IsInsecure() bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	sv := &stepVisitor{}
+	s[0].Accept(sv)
+
+	if len(sv.insecure) == 0 {
+		return false
+	}
+
+	return sv.insecure[0]
+}
 
 func (s stage) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())

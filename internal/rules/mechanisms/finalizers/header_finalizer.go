@@ -74,6 +74,8 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}, nil
 }
 
+func (f *headerFinalizer) Accept(_ heimdall.Visitor) {}
+
 func (f *headerFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -143,5 +145,3 @@ func (f *headerFinalizer) Kind() types.Kind { return types.KindFinalizer }
 func (f *headerFinalizer) Name() string { return f.name }
 
 func (f *headerFinalizer) ID() string { return f.id }
-
-func (f *headerFinalizer) IsInsecure() bool { return false }

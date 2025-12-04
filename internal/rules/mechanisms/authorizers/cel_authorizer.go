@@ -90,6 +90,8 @@ func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (t
 	}, nil
 }
 
+func (a *celAuthorizer) Accept(_ heimdall.Visitor) {}
+
 func (a *celAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -161,5 +163,3 @@ func (a *celAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
 func (a *celAuthorizer) Name() string { return a.name }
 
 func (a *celAuthorizer) ID() string { return a.id }
-
-func (a *celAuthorizer) IsInsecure() bool { return false }

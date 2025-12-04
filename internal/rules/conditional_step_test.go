@@ -82,7 +82,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			// GIVEN
 			condition := rulemocks.NewExecutionConditionMock(t)
 			step := mocks.NewStepMock(t)
-			decorator := conditionalStep{c: condition, h: step}
+			decorator := conditionalStep{c: condition, s: step}
 
 			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
@@ -105,7 +105,7 @@ func TestConditionalSubjectHandlerID(t *testing.T) {
 	step := mocks.NewStepMock(t)
 	step.EXPECT().ID().Return("test")
 
-	eh := conditionalStep{c: condition, h: step}
+	eh := conditionalStep{c: condition, s: step}
 
 	id := eh.ID()
 	assert.Equal(t, "test", id)

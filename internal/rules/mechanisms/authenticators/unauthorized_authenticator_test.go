@@ -124,16 +124,6 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 	}
 }
 
-func TestUnauthorizedAuthenticatorIsInsecure(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	auth := unauthorizedAuthenticator{}
-
-	// WHEN & THEN
-	require.False(t, auth.IsInsecure())
-}
-
 func TestUnauthorizedAuthenticatorKind(t *testing.T) {
 	t.Parallel()
 

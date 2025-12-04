@@ -101,6 +101,10 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 	return &auth, nil
 }
 
+func (a *basicAuthAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitPrincipalNamer(a)
+}
+
 func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -216,4 +220,4 @@ func (a *basicAuthAuthenticator) ID() string {
 	return a.id
 }
 
-func (a *basicAuthAuthenticator) IsInsecure() bool { return false }
+func (a *basicAuthAuthenticator) PrincipalName() string { return a.principalName }

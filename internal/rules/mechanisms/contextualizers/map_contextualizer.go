@@ -62,6 +62,8 @@ type mapContextualizer struct {
 	values values.Values
 }
 
+func (c *mapContextualizer) Accept(_ heimdall.Visitor) {}
+
 func (c *mapContextualizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -89,8 +91,6 @@ func (c *mapContextualizer) Kind() types.Kind { return types.KindContextualizer 
 func (c *mapContextualizer) Name() string { return c.name }
 
 func (c *mapContextualizer) ID() string { return c.id }
-
-func (c *mapContextualizer) IsInsecure() bool { return false }
 
 func (c *mapContextualizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

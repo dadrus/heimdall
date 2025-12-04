@@ -57,6 +57,10 @@ func newUnauthorizedAuthenticator(app app.Context, name string, _ map[string]any
 	}, nil
 }
 
+func (a *unauthorizedAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitPrincipalNamer(a)
+}
+
 func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -96,4 +100,4 @@ func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }
 
-func (a *unauthorizedAuthenticator) IsInsecure() bool { return false }
+func (a *unauthorizedAuthenticator) PrincipalName() string { return DefaultPrincipalName }

@@ -56,6 +56,8 @@ func newAllowAuthorizer(app app.Context, name string, _ map[string]any) (types.M
 	}, nil
 }
 
+func (a *allowAuthorizer) Accept(_ heimdall.Visitor) {}
+
 func (a *allowAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -89,5 +91,3 @@ func (a *allowAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
 func (a *allowAuthorizer) Name() string { return a.name }
 
 func (a *allowAuthorizer) ID() string { return a.id }
-
-func (a *allowAuthorizer) IsInsecure() bool { return true }

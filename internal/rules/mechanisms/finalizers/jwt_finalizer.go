@@ -124,6 +124,8 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 	return fin, nil
 }
 
+func (f *jwtFinalizer) Accept(_ heimdall.Visitor) {}
+
 func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -223,8 +225,6 @@ func (f *jwtFinalizer) Kind() types.Kind { return types.KindFinalizer }
 func (f *jwtFinalizer) Name() string { return f.name }
 
 func (f *jwtFinalizer) ID() string { return f.id }
-
-func (f *jwtFinalizer) IsInsecure() bool { return false }
 
 func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())

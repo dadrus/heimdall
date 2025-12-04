@@ -29,8 +29,10 @@ import (
 
 type compositePrincipalCreator []heimdall.Step
 
-func (cp compositePrincipalCreator) IsInsecure() bool {
-	return len(cp) == 0 || cp[0].IsInsecure()
+func (cp compositePrincipalCreator) Accept(visitor heimdall.Visitor) {
+	for _, step := range cp {
+		step.Accept(visitor)
+	}
 }
 
 func (cp compositePrincipalCreator) Execute(ctx heimdall.Context, sub identity.Subject) error {

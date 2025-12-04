@@ -27,6 +27,12 @@ import (
 
 type compositeErrorHandler []heimdall.Step
 
+func (eh compositeErrorHandler) Accept(visitor heimdall.Visitor) {
+	for _, step := range eh {
+		step.Accept(visitor)
+	}
+}
+
 func (eh compositeErrorHandler) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Handling pipeline error")

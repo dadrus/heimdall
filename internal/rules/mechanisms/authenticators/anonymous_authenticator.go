@@ -78,6 +78,11 @@ type anonymousAuthenticator struct {
 	principal     *identity.Principal
 }
 
+func (a *anonymousAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
+	visitor.VisitPrincipalNamer(a)
+}
+
 func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -131,3 +136,5 @@ func (a *anonymousAuthenticator) Name() string { return a.name }
 func (a *anonymousAuthenticator) ID() string { return a.id }
 
 func (a *anonymousAuthenticator) IsInsecure() bool { return true }
+
+func (a *anonymousAuthenticator) PrincipalName() string { return a.principalName }

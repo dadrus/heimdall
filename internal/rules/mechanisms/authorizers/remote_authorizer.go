@@ -147,6 +147,8 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
+func (a *remoteAuthorizer) Accept(_ heimdall.Visitor) {}
+
 func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -253,8 +255,6 @@ func (a *remoteAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
 func (a *remoteAuthorizer) Name() string { return a.name }
 
 func (a *remoteAuthorizer) ID() string { return a.id }
-
-func (a *remoteAuthorizer) IsInsecure() bool { return false }
 
 func (a *remoteAuthorizer) doAuthorize(
 	ctx heimdall.Context,

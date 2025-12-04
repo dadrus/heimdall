@@ -37,6 +37,46 @@ func (_m *StepMock) EXPECT() *StepMock_Expecter {
 	return &StepMock_Expecter{mock: &_m.Mock}
 }
 
+// Accept provides a mock function for the type StepMock
+func (_mock *StepMock) Accept(visitor heimdall.Visitor) {
+	_mock.Called(visitor)
+	return
+}
+
+// StepMock_Accept_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Accept'
+type StepMock_Accept_Call struct {
+	*mock.Call
+}
+
+// Accept is a helper method to define mock.On call
+//   - visitor heimdall.Visitor
+func (_e *StepMock_Expecter) Accept(visitor interface{}) *StepMock_Accept_Call {
+	return &StepMock_Accept_Call{Call: _e.mock.On("Accept", visitor)}
+}
+
+func (_c *StepMock_Accept_Call) Run(run func(visitor heimdall.Visitor)) *StepMock_Accept_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 heimdall.Visitor
+		if args[0] != nil {
+			arg0 = args[0].(heimdall.Visitor)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *StepMock_Accept_Call) Return() *StepMock_Accept_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *StepMock_Accept_Call) RunAndReturn(run func(visitor heimdall.Visitor)) *StepMock_Accept_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Execute provides a mock function for the type StepMock
 func (_mock *StepMock) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	ret := _mock.Called(ctx, sub)
@@ -134,50 +174,6 @@ func (_c *StepMock_ID_Call) Return(s string) *StepMock_ID_Call {
 }
 
 func (_c *StepMock_ID_Call) RunAndReturn(run func() string) *StepMock_ID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// IsInsecure provides a mock function for the type StepMock
-func (_mock *StepMock) IsInsecure() bool {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for IsInsecure")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func() bool); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// StepMock_IsInsecure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsInsecure'
-type StepMock_IsInsecure_Call struct {
-	*mock.Call
-}
-
-// IsInsecure is a helper method to define mock.On call
-func (_e *StepMock_Expecter) IsInsecure() *StepMock_IsInsecure_Call {
-	return &StepMock_IsInsecure_Call{Call: _e.mock.On("IsInsecure")}
-}
-
-func (_c *StepMock_IsInsecure_Call) Run(run func()) *StepMock_IsInsecure_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *StepMock_IsInsecure_Call) Return(b bool) *StepMock_IsInsecure_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *StepMock_IsInsecure_Call) RunAndReturn(run func() bool) *StepMock_IsInsecure_Call {
 	_c.Call.Return(run)
 	return _c
 }

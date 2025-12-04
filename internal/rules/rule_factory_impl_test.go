@@ -319,11 +319,22 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				step := mocks.NewStepMock(t)
-				step.EXPECT().IsInsecure().Return(true)
+				insecure := mocks.NewInsecureMock(t)
+				insecure.EXPECT().IsInsecure().Return(true)
+
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitInsecure(insecure)
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(step, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
@@ -333,6 +344,41 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "insecure default rule")
+			},
+		},
+		"new factory with default rule which does not define an authenticator for the default principal": {
+			enforceSecureDefaultRule: true,
+			config: &config.Configuration{
+				Default: &config.DefaultRule{
+					Execute: []config.MechanismConfig{
+						{"authenticator": "bar", "principal": "foo"},
+					},
+				},
+			},
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+				t.Helper()
+
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("foo")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "foo"}).Return(as, nil)
+
+				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
+			},
+			assert: func(t *testing.T, err error, _ *ruleFactory) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "default principal")
 			},
 		},
 		"new factory with not security enforced default rule, configured with all required elements": {
@@ -346,11 +392,18 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				step := mocks.NewStepMock(t)
-				step.EXPECT().IsInsecure().Return(true)
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "foo", Principal: "default"}).Return(step, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "foo", Principal: "default"}).Return(as, nil)
 
 				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
@@ -391,11 +444,18 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
-				step := mocks.NewStepMock(t)
-				step.EXPECT().IsInsecure().Return(false)
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
 
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(step, nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
 				cont.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "2", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
@@ -507,8 +567,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -538,8 +608,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -660,8 +740,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -695,8 +785,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -726,7 +826,19 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
-				sc: stage{mocks.NewStepMock(t)},
+				sc: stage{func() step {
+					as := &mocks.StepMock{}
+					as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+						pn := mocks.NewPrincipalNamerMock(t)
+						pn.EXPECT().PrincipalName().Return("default")
+
+						visitor.VisitPrincipalNamer(pn)
+
+						return true
+					}))
+
+					return as
+				}()},
 				sh: stage{mocks.NewStepMock(t)},
 				fi: stage{mocks.NewStepMock(t)},
 				eh: stage{mocks.NewStepMock(t)},
@@ -787,8 +899,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
 				cont.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "2", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
@@ -885,8 +1007,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
 				cont.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "2", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
@@ -1015,11 +1147,21 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				authz := mocks1.NewMechanismMock(t)
-				authz.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authz.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
 				cont.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
@@ -1089,8 +1231,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				authz := mocks1.NewMechanismMock(t)
 				authz.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
@@ -1212,8 +1364,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Authenticator("bar").Return(authn, nil)
@@ -1249,14 +1411,34 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn1 := mocks.NewPrincipalNamerMock(t)
+				pn1.EXPECT().PrincipalName().Return("default")
+
+				as1 := mocks.NewStepMock(t)
+				as1.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn1)
+
+					return true
+				}))
+
+				pn2 := mocks.NewPrincipalNamerMock(t)
+				pn2.EXPECT().PrincipalName().Return("custom")
+
+				as2 := mocks.NewStepMock(t)
+				as2.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn2)
+
+					return true
+				}))
+
 				authn1 := mocks1.NewMechanismMock(t)
-				authn1.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn1.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as1, nil)
 
 				authn2 := mocks1.NewMechanismMock(t)
-				authn2.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "custom"}).Return(mocks.NewStepMock(t), nil)
+				authn2.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "custom"}).Return(as2, nil)
 
 				authn3 := mocks1.NewMechanismMock(t)
-				authn3.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "custom"}).Return(mocks.NewStepMock(t), nil)
+				authn3.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "custom"}).Return(as2, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn1, nil)
 				mhf.EXPECT().Authenticator("bar").Return(authn2, nil)
@@ -1294,11 +1476,31 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				pn1 := mocks.NewPrincipalNamerMock(t)
+				pn1.EXPECT().PrincipalName().Return("a")
+
+				as1 := mocks.NewStepMock(t)
+				as1.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn1)
+
+					return true
+				}))
+
+				pn2 := mocks.NewPrincipalNamerMock(t)
+				pn2.EXPECT().PrincipalName().Return("b")
+
+				as2 := mocks.NewStepMock(t)
+				as2.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn2)
+
+					return true
+				}))
+
 				authn1 := mocks1.NewMechanismMock(t)
-				authn1.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "a"}).Return(mocks.NewStepMock(t), nil)
+				authn1.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "a"}).Return(as1, nil)
 
 				authn2 := mocks1.NewMechanismMock(t)
-				authn2.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "b"}).Return(mocks.NewStepMock(t), nil)
+				authn2.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "b"}).Return(as2, nil)
 
 				mhf.EXPECT().Authenticator("bar").Return(authn1, nil)
 				mhf.EXPECT().Authenticator("baz").Return(authn2, nil)

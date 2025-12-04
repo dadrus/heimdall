@@ -525,16 +525,6 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 	}
 }
 
-func TestBasicAuthAuthenticatorIsInsecure(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	auth := basicAuthAuthenticator{}
-
-	// WHEN & THEN
-	require.False(t, auth.IsInsecure())
-}
-
 func TestBasicAuthAuthenticatorKind(t *testing.T) {
 	t.Parallel()
 

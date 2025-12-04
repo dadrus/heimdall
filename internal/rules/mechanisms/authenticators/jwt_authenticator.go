@@ -189,6 +189,10 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
+func (a *jwtAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitPrincipalNamer(a)
+}
+
 func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -284,7 +288,7 @@ func (a *jwtAuthenticator) Name() string { return a.name }
 
 func (a *jwtAuthenticator) ID() string { return a.id }
 
-func (a *jwtAuthenticator) IsInsecure() bool { return false }
+func (a *jwtAuthenticator) PrincipalName() string { return a.principalName }
 
 func (a *jwtAuthenticator) isCacheEnabled() bool {
 	// cache is enabled if ttl is not configured (in that case the ttl value from either

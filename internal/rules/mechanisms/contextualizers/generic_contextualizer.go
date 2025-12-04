@@ -125,6 +125,8 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 	}, nil
 }
 
+func (c *genericContextualizer) Accept(_ heimdall.Visitor) {}
+
 //nolint:cyclop
 func (c *genericContextualizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -228,8 +230,6 @@ func (c *genericContextualizer) Kind() types.Kind { return types.KindContextuali
 func (c *genericContextualizer) Name() string { return c.name }
 
 func (c *genericContextualizer) ID() string { return c.id }
-
-func (c *genericContextualizer) IsInsecure() bool { return false }
 
 func (c *genericContextualizer) callEndpoint(
 	ctx heimdall.Context,

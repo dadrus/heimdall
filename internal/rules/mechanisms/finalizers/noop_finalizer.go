@@ -56,6 +56,8 @@ type noopFinalizer struct {
 	id   string
 }
 
+func (f *noopFinalizer) Accept(_ heimdall.Visitor) {}
+
 func (f *noopFinalizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -89,5 +91,3 @@ func (f *noopFinalizer) Kind() types.Kind { return types.KindFinalizer }
 func (f *noopFinalizer) Name() string { return f.name }
 
 func (f *noopFinalizer) ID() string { return f.id }
-
-func (f *noopFinalizer) IsInsecure() bool { return false }

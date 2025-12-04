@@ -72,6 +72,8 @@ func newCookieFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}, nil
 }
 
+func (f *cookieFinalizer) Accept(_ heimdall.Visitor) {}
+
 func (f *cookieFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -136,5 +138,3 @@ func (f *cookieFinalizer) Kind() types.Kind { return types.KindFinalizer }
 func (f *cookieFinalizer) Name() string { return f.name }
 
 func (f *cookieFinalizer) ID() string { return f.id }
-
-func (f *cookieFinalizer) IsInsecure() bool { return false }

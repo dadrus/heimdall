@@ -26,14 +26,16 @@ import (
 )
 
 type conditionalStep struct {
-	h heimdall.Step
+	s heimdall.Step
 	c executionCondition
 }
+
+func (s *conditionalStep) Accept(visitor heimdall.Visitor) { s.s.Accept(visitor) }
 
 func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
-	logger.Debug().Str("_id", s.h.ID()).Msg("Checking execution condition")
+	logger.Debug().Str("_id", s.s.ID()).Msg("Checking execution condition")
 
 	if logger.GetLevel() == zerolog.TraceLevel {
 		dump, err := json.Marshal(sub)
@@ -47,14 +49,12 @@ func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) er
 	if canExecute, err := s.c.CanExecuteOnSubject(ctx, sub); err != nil {
 		return err
 	} else if canExecute {
-		return s.h.Execute(ctx, sub)
+		return s.s.Execute(ctx, sub)
 	}
 
-	logger.Debug().Str("_id", s.h.ID()).Msg("Execution skipped")
+	logger.Debug().Str("_id", s.s.ID()).Msg("Execution skipped")
 
 	return nil
 }
 
-func (s *conditionalStep) ID() string { return s.h.ID() }
-
-func (s *conditionalStep) IsInsecure() bool { return s.h.IsInsecure() }
+func (s *conditionalStep) ID() string { return s.s.ID() }

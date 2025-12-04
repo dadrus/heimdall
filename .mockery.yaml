@@ -42,6 +42,8 @@ packages:
     interfaces:
       Context: {}
       Step: {}
+      Insecure: {}
+      PrincipalNamer: {}
       RequestFunctions: {}
   github.com/dadrus/heimdall/internal/keyholder:
     interfaces:

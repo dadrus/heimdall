@@ -18,8 +18,21 @@ package heimdall
 
 import "github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 
+type Insecure interface {
+	IsInsecure() bool
+}
+
+type PrincipalNamer interface {
+	PrincipalName() string
+}
+
+type Visitor interface {
+	VisitInsecure(obj Insecure)
+	VisitPrincipalNamer(obj PrincipalNamer)
+}
+
 type Step interface {
 	ID() string
 	Execute(ctx Context, sub identity.Subject) error
-	IsInsecure() bool
+	Accept(visitor Visitor)
 }

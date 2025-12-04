@@ -71,13 +71,13 @@ func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[
 	}, nil
 }
 
+func (eh *wwwAuthenticateErrorHandler) Accept(_ heimdall.Visitor) {}
+
 func (eh *wwwAuthenticateErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
 
 func (eh *wwwAuthenticateErrorHandler) Name() string { return eh.name }
 
 func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }
-
-func (eh *wwwAuthenticateErrorHandler) IsInsecure() bool { return false }
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())

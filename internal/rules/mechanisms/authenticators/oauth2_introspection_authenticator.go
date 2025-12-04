@@ -177,6 +177,10 @@ func newOAuth2IntrospectionAuthenticator(
 	}, nil
 }
 
+func (a *oauth2IntrospectionAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitPrincipalNamer(a)
+}
+
 func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -261,7 +265,7 @@ func (a *oauth2IntrospectionAuthenticator) Name() string { return a.name }
 
 func (a *oauth2IntrospectionAuthenticator) ID() string { return a.id }
 
-func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
+func (a *oauth2IntrospectionAuthenticator) PrincipalName() string { return a.principalName }
 
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 	ctx heimdall.Context, claims map[string]any,

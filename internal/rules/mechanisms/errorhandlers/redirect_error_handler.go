@@ -84,13 +84,13 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
+func (eh *redirectErrorHandler) Accept(_ heimdall.Visitor) {}
+
 func (eh *redirectErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
 
 func (eh *redirectErrorHandler) Name() string { return eh.name }
 
 func (eh *redirectErrorHandler) ID() string { return eh.id }
-
-func (eh *redirectErrorHandler) IsInsecure() bool { return false }
 
 func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())

@@ -83,7 +83,7 @@ func TestConditionalErrorHandlerExecute(t *testing.T) {
 			// GIVEN
 			condition := rulemocks.NewExecutionConditionMock(t)
 			handler := mocks.NewStepMock(t)
-			decorator := conditionalErrorHandler{c: condition, h: handler}
+			decorator := conditionalErrorHandler{c: condition, s: handler}
 
 			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
@@ -107,7 +107,7 @@ func TestConditionalErrorHandlerID(t *testing.T) {
 	handler := mocks.NewStepMock(t)
 	handler.EXPECT().ID().Return("test")
 
-	eh := conditionalErrorHandler{c: condition, h: handler}
+	eh := conditionalErrorHandler{c: condition, s: handler}
 
 	id := eh.ID()
 	assert.Equal(t, "test", id)

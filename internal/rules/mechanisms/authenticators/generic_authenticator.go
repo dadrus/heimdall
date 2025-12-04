@@ -117,6 +117,10 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
+func (a *genericAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitPrincipalNamer(a)
+}
+
 func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -207,7 +211,7 @@ func (a *genericAuthenticator) Name() string { return a.name }
 
 func (a *genericAuthenticator) ID() string { return a.id }
 
-func (a *genericAuthenticator) IsInsecure() bool { return false }
+func (a *genericAuthenticator) PrincipalName() string { return a.principalName }
 
 func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())

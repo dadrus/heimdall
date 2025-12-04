@@ -111,6 +111,11 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
 	}
 
+	if !authenticators.HasDefaultPrincipal() {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"no authenticator defined which would create a default principal")
+	}
+
 	hash, err := rul.Hash()
 	if err != nil {
 		return nil, err
@@ -323,7 +328,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return err
 	}
 
-	prinCreators, subHandlers, finalizers, err := f.createExecutePipeline(executeSteps)
+	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(executeSteps)
 	if err != nil {
 		return err
 	}
@@ -333,12 +338,17 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return err
 	}
 
-	if len(prinCreators) == 0 {
+	if len(authenticators) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"no authenticators defined for default rule")
 	}
 
-	if prinCreators[0].IsInsecure() {
+	if !authenticators.HasDefaultPrincipal() {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"no authenticator defined which would create a default principal")
+	}
+
+	if authenticators.IsInsecure() {
 		if f.secureDefaultRule {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"insecure default rule configured")
@@ -352,7 +362,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		slashesHandling: v1beta1.EncodedSlashesOff,
 		srcID:           "config",
 		isDefault:       true,
-		sc:              prinCreators,
+		sc:              authenticators,
 		sh:              subHandlers,
 		fi:              finalizers,
 		eh:              errorPipeline,
@@ -430,7 +440,7 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 			return nil, err
 		}
 
-		return &conditionalStep{h: step, c: condition}, nil
+		return &conditionalStep{s: step, c: condition}, nil
 	}
 
 	return step, nil
