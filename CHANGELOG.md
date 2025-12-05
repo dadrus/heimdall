@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.17.5](https://github.com/dadrus/heimdall/compare/v0.17.4...v0.17.5) (2025-12-05)
+
+
+### Documentation
+
+* cert-manager helm chart version used in kubernetes examples updated to v1.19.1 ([#2874](https://github.com/dadrus/heimdall/issues/2874)) ([1b12e5a](https://github.com/dadrus/heimdall/commit/1b12e5a6807e08da799e903c4e9b9f4bf6ba7de2))
+* envoy gateway helm chart version used in kubernetes examples updated to v1.6.0 ([#2876](https://github.com/dadrus/heimdall/issues/2876)) ([c319e7e](https://github.com/dadrus/heimdall/commit/c319e7efe3d6cda75d232095590886de98536ee7))
+* haproxy helm chart version used in kubernetes examples updated to v0.15.0 ([#2872](https://github.com/dadrus/heimdall/issues/2872)) ([c781fd3](https://github.com/dadrus/heimdall/commit/c781fd3fcfa68f9fe39770777dfe978d5d1eeaed))
+* istio helm chart version used in kubernetes examples updated to v1.28.0 ([#2886](https://github.com/dadrus/heimdall/issues/2886)) ([15a4cb1](https://github.com/dadrus/heimdall/commit/15a4cb1a063710351cf63b6988bd9fa1aac8825d))
+* Kubernetes examples migrated to terraform/opentofu ([#2886](https://github.com/dadrus/heimdall/issues/2886)) ([15a4cb1](https://github.com/dadrus/heimdall/commit/15a4cb1a063710351cf63b6988bd9fa1aac8825d))
+* metallb helm chart version used in kubernetes examples updated to v0.15.2 ([#2870](https://github.com/dadrus/heimdall/issues/2870)) ([e34e3c1](https://github.com/dadrus/heimdall/commit/e34e3c106b5f53a771c5641ee4ed7780674d6eb7))
+* nginx helm chart version used in kubernetes examples updated to v4.14.0 ([#2871](https://github.com/dadrus/heimdall/issues/2871)) ([d93c70b](https://github.com/dadrus/heimdall/commit/d93c70bb44eb3695a7260314e4d0f1f244025cdb))
+* traefik helm chart version used in kubernetes examples updated to v37.3.0 ([#2873](https://github.com/dadrus/heimdall/issues/2873)) ([d5a8675](https://github.com/dadrus/heimdall/commit/d5a8675d0293e1cb00aadfacff7e3d69e8e531f7))
+* trust-manager helm chart version used in kubernetes examples updated to v0.20.2 ([#2874](https://github.com/dadrus/heimdall/issues/2874)) ([1b12e5a](https://github.com/dadrus/heimdall/commit/1b12e5a6807e08da799e903c4e9b9f4bf6ba7de2))
+* Using the official helm chart from the contour project instead of the one from bitnami in examples ([#2869](https://github.com/dadrus/heimdall/issues/2869)) ([9260360](https://github.com/dadrus/heimdall/commit/9260360b03196dd92e114b582cacbd65699f2d1e))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 2baa34b ([#2902](https://github.com/dadrus/heimdall/issues/2902)) ([047833d](https://github.com/dadrus/heimdall/commit/047833d98795c72e9deda641d80698979ed01656))
+* update golang to v1.25.5 ([#2899](https://github.com/dadrus/heimdall/issues/2899)) ([23c8a92](https://github.com/dadrus/heimdall/commit/23c8a92e5197780ca60a730ed83c199d3ec76c8f))
+* update google.golang.org/genproto/googleapis/rpc digest to ff82c1b ([#2900](https://github.com/dadrus/heimdall/issues/2900)) ([87ac757](https://github.com/dadrus/heimdall/commit/87ac757ab9e7cf0893beb12de8d9abf394f49c53))
+* update kubernetes packages to v0.34.2 ([#2868](https://github.com/dadrus/heimdall/issues/2868)) ([9197d95](https://github.com/dadrus/heimdall/commit/9197d95db6827b522faf13d6460ad6b54ed3f367))
+* update module github.com/go-co-op/gocron/v2 to v2.18.2 ([#2890](https://github.com/dadrus/heimdall/issues/2890)) ([dd3e9b6](https://github.com/dadrus/heimdall/commit/dd3e9b6cfe557888e28cb4f868526c5405786cbd))
+* update module github.com/redis/rueidis to v1.0.68 ([#2865](https://github.com/dadrus/heimdall/issues/2865)) ([9119bbd](https://github.com/dadrus/heimdall/commit/9119bbda2a512832629d7e2a3a27dd33f97257da))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.68 ([#2865](https://github.com/dadrus/heimdall/issues/2865)) ([9119bbd](https://github.com/dadrus/heimdall/commit/9119bbda2a512832629d7e2a3a27dd33f97257da))
+* update module github.com/spf13/cobra to v1.10.2 ([#2906](https://github.com/dadrus/heimdall/issues/2906)) ([ee05617](https://github.com/dadrus/heimdall/commit/ee0561721cacff75316403b717d5e7d59dcee73c))
+* update module gocloud.dev to v0.44.0 ([#2896](https://github.com/dadrus/heimdall/issues/2896)) ([3533ca7](https://github.com/dadrus/heimdall/commit/3533ca72acb1483533cda60deb90bc94fff81b5b))
+* update module google.golang.org/grpc to v1.77.0 ([#2880](https://github.com/dadrus/heimdall/issues/2880)) ([805261d](https://github.com/dadrus/heimdall/commit/805261d2f25938409b2c9982bef21d609435155a))
+
 ## [0.17.4](https://github.com/dadrus/heimdall/compare/v0.17.3...v0.17.4) (2025-11-10)
 
 
