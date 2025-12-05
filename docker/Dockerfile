@@ -1,7 +1,7 @@
 # Builder image to build the app
 ARG USER=heimdall
 
-FROM --platform=$BUILDPLATFORM golang:1.25.4-bookworm@sha256:7419f544ffe9be4d7cbb5d2d2cef5bd6a77ec81996ae2ba15027656729445cc4 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.5-bookworm@sha256:5117d68695f57faa6c2b3a49a6f3187ec1f66c75d5b080e4360bfe4c1ada398c AS builder
 ARG USER
 ARG TARGETARCH
 ARG VERSION="unknown"
@@ -18,7 +18,7 @@ WORKDIR /build
 
 COPY . .
 RUN go mod download && go mod verify &&\
-    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${VERSION}"
+    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -trimpath -buildvcs=false -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${VERSION}"
 
 # The actual image of the app
 FROM scratch

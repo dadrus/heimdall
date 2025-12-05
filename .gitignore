@@ -36,3 +36,9 @@ docs/.hugo_build.lock
 
 # macOS
 .DS_Store
+
+# Terraform/OpenTofu
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
+
