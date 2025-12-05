@@ -30,7 +30,7 @@ linters:
       lines: 80
     gomoddirectives:
       replace-allow-list:
-        - github.com/ebitengine/purego
+        - golang.org/x/crypto
     mnd:
       ignored-functions:
         - ^make

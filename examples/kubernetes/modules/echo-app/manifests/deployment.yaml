@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-app
+  namespace: ${namespace}
+  labels:
+    app.kubernetes.io/name: echo-app
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: echo-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: echo-app
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: echo-app
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "ghcr.io/traefik/whoami:v1.10"
+          args: [ "--port", "8080", "--name", "echo-app" ]
+          ports:
+            - name: http-port
+              protocol: TCP
+              containerPort: 8080

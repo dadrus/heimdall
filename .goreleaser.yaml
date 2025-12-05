@@ -10,6 +10,7 @@ builds:
       - -X github.com/dadrus/heimdall/version.Version={{ .Tag }}
     flags:
       - -trimpath
+      - -buildvcs=false
     goos:
       - linux
       - darwin
