@@ -238,7 +238,7 @@ slsa-verifier verify-image "${IMAGE}@${DIGEST}" \
   --source-tag <heimdall release version>
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.16.0`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.16.5`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
 
 === Release Binary Verification
 
@@ -270,7 +270,7 @@ slsa-verifier verify-artifact \
   /path/to/the/downloaded/<archive>
 ----
 
-Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.4`) that corresponds to the archive.
+Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.5`) that corresponds to the archive.
 
 On success, `slsa-verifier` prints a success message and exits with `0`.
 

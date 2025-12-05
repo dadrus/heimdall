@@ -1,0 +1,21 @@
+apiVersion: getambassador.io/v3alpha1
+kind: Host
+metadata:
+  name: echo-app
+  namespace: ${namespace}
+spec:
+  hostname: echo-app.local
+  acmeProvider:
+    authority: none
+  tlsSecret:
+    name: echo-app
+---
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: echo-app-backend
+  namespace: ${namespace}
+spec:
+  hostname: echo-app.local
+  prefix: /
+  service: echo-app:8080
