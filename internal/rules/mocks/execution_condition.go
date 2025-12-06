@@ -38,7 +38,7 @@ func (_m *ExecutionConditionMock) EXPECT() *ExecutionConditionMock_Expecter {
 }
 
 // CanExecuteOnError provides a mock function for the type ExecutionConditionMock
-func (_mock *ExecutionConditionMock) CanExecuteOnError(ctx heimdall.RequestContext, err error) (bool, error) {
+func (_mock *ExecutionConditionMock) CanExecuteOnError(ctx heimdall.Context, err error) (bool, error) {
 	ret := _mock.Called(ctx, err)
 
 	if len(ret) == 0 {
@@ -47,15 +47,15 @@ func (_mock *ExecutionConditionMock) CanExecuteOnError(ctx heimdall.RequestConte
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, error) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.Context, error) (bool, error)); ok {
 		return returnFunc(ctx, err)
 	}
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, error) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.Context, error) bool); ok {
 		r0 = returnFunc(ctx, err)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(heimdall.RequestContext, error) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(heimdall.Context, error) error); ok {
 		r1 = returnFunc(ctx, err)
 	} else {
 		r1 = ret.Error(1)
@@ -69,17 +69,17 @@ type ExecutionConditionMock_CanExecuteOnError_Call struct {
 }
 
 // CanExecuteOnError is a helper method to define mock.On call
-//   - ctx heimdall.RequestContext
+//   - ctx heimdall.Context
 //   - err error
 func (_e *ExecutionConditionMock_Expecter) CanExecuteOnError(ctx interface{}, err interface{}) *ExecutionConditionMock_CanExecuteOnError_Call {
 	return &ExecutionConditionMock_CanExecuteOnError_Call{Call: _e.mock.On("CanExecuteOnError", ctx, err)}
 }
 
-func (_c *ExecutionConditionMock_CanExecuteOnError_Call) Run(run func(ctx heimdall.RequestContext, err error)) *ExecutionConditionMock_CanExecuteOnError_Call {
+func (_c *ExecutionConditionMock_CanExecuteOnError_Call) Run(run func(ctx heimdall.Context, err error)) *ExecutionConditionMock_CanExecuteOnError_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.RequestContext
+		var arg0 heimdall.Context
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.RequestContext)
+			arg0 = args[0].(heimdall.Context)
 		}
 		var arg1 error
 		if args[1] != nil {
@@ -98,13 +98,13 @@ func (_c *ExecutionConditionMock_CanExecuteOnError_Call) Return(b bool, err1 err
 	return _c
 }
 
-func (_c *ExecutionConditionMock_CanExecuteOnError_Call) RunAndReturn(run func(ctx heimdall.RequestContext, err error) (bool, error)) *ExecutionConditionMock_CanExecuteOnError_Call {
+func (_c *ExecutionConditionMock_CanExecuteOnError_Call) RunAndReturn(run func(ctx heimdall.Context, err error) (bool, error)) *ExecutionConditionMock_CanExecuteOnError_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CanExecuteOnSubject provides a mock function for the type ExecutionConditionMock
-func (_mock *ExecutionConditionMock) CanExecuteOnSubject(ctx heimdall.RequestContext, sub identity.Subject) (bool, error) {
+func (_mock *ExecutionConditionMock) CanExecuteOnSubject(ctx heimdall.Context, sub identity.Subject) (bool, error) {
 	ret := _mock.Called(ctx, sub)
 
 	if len(ret) == 0 {
@@ -113,15 +113,15 @@ func (_mock *ExecutionConditionMock) CanExecuteOnSubject(ctx heimdall.RequestCon
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, identity.Subject) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.Context, identity.Subject) (bool, error)); ok {
 		return returnFunc(ctx, sub)
 	}
-	if returnFunc, ok := ret.Get(0).(func(heimdall.RequestContext, identity.Subject) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(heimdall.Context, identity.Subject) bool); ok {
 		r0 = returnFunc(ctx, sub)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(heimdall.RequestContext, identity.Subject) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(heimdall.Context, identity.Subject) error); ok {
 		r1 = returnFunc(ctx, sub)
 	} else {
 		r1 = ret.Error(1)
@@ -135,17 +135,17 @@ type ExecutionConditionMock_CanExecuteOnSubject_Call struct {
 }
 
 // CanExecuteOnSubject is a helper method to define mock.On call
-//   - ctx heimdall.RequestContext
+//   - ctx heimdall.Context
 //   - sub identity.Subject
 func (_e *ExecutionConditionMock_Expecter) CanExecuteOnSubject(ctx interface{}, sub interface{}) *ExecutionConditionMock_CanExecuteOnSubject_Call {
 	return &ExecutionConditionMock_CanExecuteOnSubject_Call{Call: _e.mock.On("CanExecuteOnSubject", ctx, sub)}
 }
 
-func (_c *ExecutionConditionMock_CanExecuteOnSubject_Call) Run(run func(ctx heimdall.RequestContext, sub identity.Subject)) *ExecutionConditionMock_CanExecuteOnSubject_Call {
+func (_c *ExecutionConditionMock_CanExecuteOnSubject_Call) Run(run func(ctx heimdall.Context, sub identity.Subject)) *ExecutionConditionMock_CanExecuteOnSubject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.RequestContext
+		var arg0 heimdall.Context
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.RequestContext)
+			arg0 = args[0].(heimdall.Context)
 		}
 		var arg1 identity.Subject
 		if args[1] != nil {
@@ -164,7 +164,7 @@ func (_c *ExecutionConditionMock_CanExecuteOnSubject_Call) Return(b bool, err er
 	return _c
 }
 
-func (_c *ExecutionConditionMock_CanExecuteOnSubject_Call) RunAndReturn(run func(ctx heimdall.RequestContext, sub identity.Subject) (bool, error)) *ExecutionConditionMock_CanExecuteOnSubject_Call {
+func (_c *ExecutionConditionMock_CanExecuteOnSubject_Call) RunAndReturn(run func(ctx heimdall.Context, sub identity.Subject) (bool, error)) *ExecutionConditionMock_CanExecuteOnSubject_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -89,6 +89,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				Hijack: func(hijack httpsnoop.HijackFunc) httpsnoop.HijackFunc {
 					return func() (net.Conn, *bufio.ReadWriter, error) {
 						hijacked = true
+
 						buffer.Reset()
 						buffer = bytes.Buffer{}
 
@@ -138,6 +139,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 					return func() {
 						if !flushed {
 							logger.Trace().Msgf("Response: %s\n", stringx.ToString(buffer.Bytes()))
+
 							flushed = true
 
 							buffer.Reset()

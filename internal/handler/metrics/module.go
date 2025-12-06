@@ -54,9 +54,9 @@ func (noopManager) Start(context.Context) error { return nil }
 func (noopManager) Stop(context.Context) error  { return nil }
 
 // ErrLoggerFun is an adapter for promhttp Logger to log errors.
-type ErrLoggerFun func(v ...interface{})
+type ErrLoggerFun func(v ...any)
 
-func (l ErrLoggerFun) Println(v ...interface{}) { l(v) }
+func (l ErrLoggerFun) Println(v ...any) { l(v) }
 
 func newLifecycleManager(app app.Context) lifecycleManager {
 	conf := app.Config()
@@ -82,7 +82,7 @@ func newLifecycleManager(app app.Context) lifecycleManager {
 					prometheus.DefaultGatherer,
 					promhttp.HandlerOpts{
 						Registry: prometheus.DefaultRegisterer,
-						ErrorLog: ErrLoggerFun(func(v ...interface{}) { logger.Error().Msg(fmt.Sprint(v...)) }),
+						ErrorLog: ErrLoggerFun(func(v ...any) { logger.Error().Msg(fmt.Sprint(v...)) }),
 					},
 				),
 			)))

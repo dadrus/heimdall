@@ -38,6 +38,7 @@ func TestNewCelExecutionCondition(t *testing.T) {
 		err        string
 	}{
 		"malformed expression":     {expression: "foobar", err: "failed compiling"},
+		"empty expression":         {expression: "", err: "empty cel expression"},
 		"is not a bool expression": {expression: "1", err: "result type error"},
 		"valid expression":         {expression: "true"},
 	} {
@@ -97,7 +98,7 @@ func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 
 			ctx.EXPECT().Request().Return(&heimdall.Request{
 				Method: http.MethodGet,
@@ -152,7 +153,7 @@ func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 
 			ctx.EXPECT().Request().Return(&heimdall.Request{
 				Method: http.MethodGet,

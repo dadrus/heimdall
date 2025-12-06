@@ -22,7 +22,9 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -31,16 +33,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Finalizer, error) {
-			if typ != FinalizerCookie {
-				return false, nil, nil
-			}
-
-			finalizer, err := newCookieFinalizer(app, name, conf)
-
-			return true, finalizer, err
-		})
+	registry.Register(
+		types.KindFinalizer,
+		FinalizerCookie,
+		registry.FactoryFunc(newCookieFinalizer),
+	)
 }
 
 type cookieFinalizer struct {
@@ -50,7 +47,7 @@ type cookieFinalizer struct {
 	cookies map[string]template.Template
 }
 
-func newCookieFinalizer(app app.Context, name string, rawConfig map[string]any) (*cookieFinalizer, error) {
+func newCookieFinalizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", FinalizerCookie).
@@ -75,7 +72,9 @@ func newCookieFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}, nil
 }
 
-func (f *cookieFinalizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (f *cookieFinalizer) Accept(_ heimdall.Visitor) {}
+
+func (f *cookieFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerCookie).
@@ -104,14 +103,14 @@ func (f *cookieFinalizer) Execute(ctx heimdall.RequestContext, sub identity.Subj
 	return nil
 }
 
-func (f *cookieFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (f *cookieFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		fin := *f
-		fin.id = stepID
+		fin.id = def.ID
 
 		return &fin, nil
 	}
@@ -121,18 +120,20 @@ func (f *cookieFinalizer) WithConfig(stepID string, rawConfig map[string]any) (F
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for cookie finalizer '%s'", f.name).CausedBy(err)
 	}
 
 	return &cookieFinalizer{
 		name:    f.name,
-		id:      x.IfThenElse(len(stepID) == 0, f.id, stepID),
+		id:      x.IfThenElse(len(def.ID) == 0, f.id, def.ID),
 		app:     f.app,
 		cookies: conf.Cookies,
 	}, nil
 }
+
+func (f *cookieFinalizer) Kind() types.Kind { return types.KindFinalizer }
 
 func (f *cookieFinalizer) Name() string { return f.name }
 

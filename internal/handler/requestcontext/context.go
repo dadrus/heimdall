@@ -22,7 +22,7 @@ import (
 )
 
 type Context interface {
-	heimdall.RequestContext
+	heimdall.Context
 
 	Finalize(backend rule.Backend) error
 }

@@ -34,7 +34,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -44,21 +46,17 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorGeneric {
-				return false, nil, nil
-			}
-
-			auth, err := newGenericAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorGeneric,
+		registry.FactoryFunc(newGenericAuthenticator),
+	)
 }
 
 type genericAuthenticator struct {
 	name                string
 	id                  string
+	principalName       string
 	app                 app.Context
 	e                   endpoint.Endpoint
 	ads                 extractors.AuthDataExtractStrategy
@@ -70,7 +68,7 @@ type genericAuthenticator struct {
 	sessionLifespanConf *SessionLifespanConfig
 }
 
-func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]any) (*genericAuthenticator, error) {
+func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorGeneric).
@@ -91,7 +89,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for generic authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name).CausedBy(err)
 	}
 
 	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
@@ -102,15 +100,16 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}
 
 	return &genericAuthenticator{
-		name:       name,
-		id:         name,
-		app:        app,
-		e:          conf.Endpoint,
-		ads:        conf.AuthDataSource,
-		payload:    conf.Payload,
-		fwdHeaders: conf.ForwardHeaders,
-		fwdCookies: conf.ForwardCookies,
-		sf:         &conf.PrincipalInfo,
+		name:          name,
+		id:            name,
+		principalName: DefaultPrincipalName,
+		app:           app,
+		e:             conf.Endpoint,
+		ads:           conf.AuthDataSource,
+		payload:       conf.Payload,
+		fwdHeaders:    conf.ForwardHeaders,
+		fwdCookies:    conf.ForwardCookies,
+		sf:            &conf.PrincipalInfo,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),
@@ -118,7 +117,12 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *genericAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
+	visitor.VisitPrincipalNamer(a)
+}
+
+func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorGeneric).
@@ -147,20 +151,21 @@ func (a *genericAuthenticator) Execute(ctx heimdall.RequestContext, sub identity
 			CausedBy(err)
 	}
 
-	sub["default"] = principal
+	sub[a.principalName] = principal
 
 	return nil
 }
 
-func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// this authenticator allows ttl to be redefined on the rule level
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -178,21 +183,22 @@ func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]an
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for generic authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, a.name).CausedBy(err)
 	}
 
 	return &genericAuthenticator{
-		name:       a.name,
-		id:         x.IfThenElse(len(stepID) == 0, a.id, stepID),
-		app:        a.app,
-		e:          a.e,
-		sf:         a.sf,
-		ads:        a.ads,
-		payload:    a.payload,
-		fwdHeaders: a.fwdHeaders,
-		fwdCookies: a.fwdCookies,
+		name:          a.name,
+		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		app:           a.app,
+		e:             a.e,
+		sf:            a.sf,
+		ads:           a.ads,
+		payload:       a.payload,
+		fwdHeaders:    a.fwdHeaders,
+		fwdCookies:    a.fwdCookies,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return a.ttl }),
@@ -200,13 +206,17 @@ func (a *genericAuthenticator) WithConfig(stepID string, rawConfig map[string]an
 	}, nil
 }
 
+func (a *genericAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
+
 func (a *genericAuthenticator) Name() string { return a.name }
 
 func (a *genericAuthenticator) ID() string { return a.id }
 
 func (a *genericAuthenticator) IsInsecure() bool { return false }
 
-func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+func (a *genericAuthenticator) PrincipalName() string { return a.principalName }
+
+func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	cch := cache.Ctx(ctx.Context())
 
@@ -251,7 +261,7 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.RequestConte
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
+func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.Context, authData string) ([]byte, error) {
 	req, err := a.createRequest(ctx, authData)
 	if err != nil {
 		return nil, err
@@ -280,7 +290,7 @@ func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.RequestCon
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authData string) (*http.Request, error) {
+func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData string) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	var body io.Reader

@@ -95,11 +95,11 @@ func TestCELSubjectTypeConvertToNative(t *testing.T) {
 		expObj any
 	}{
 		"conversion to Subject type": {
-			typ:    reflect.TypeOf(identity.Subject{}),
+			typ:    reflect.TypeFor[identity.Subject](),
 			expObj: sub,
 		},
 		"conversion to string type": {
-			typ:    reflect.TypeOf(""),
+			typ:    reflect.TypeFor[string](),
 			expErr: "from 'Subject' to 'string'",
 		},
 	} {
@@ -139,11 +139,11 @@ func TestCELPrincipalTypeConvertToNative(t *testing.T) {
 		expObj any
 	}{
 		"conversion to Principal type": {
-			typ:    reflect.TypeOf(&identity.Principal{}),
+			typ:    reflect.TypeFor[*identity.Principal](),
 			expObj: principal,
 		},
 		"conversion to string type": {
-			typ:    reflect.TypeOf(""),
+			typ:    reflect.TypeFor[string](),
 			expErr: "from 'Principal' to 'string'",
 		},
 	} {
