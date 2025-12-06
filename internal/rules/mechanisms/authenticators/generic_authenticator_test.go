@@ -176,7 +176,9 @@ principal:
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"with valid configuration and enabled cache and TLS enforcement": {
@@ -210,7 +212,9 @@ cache_ttl: 5s`),
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"with session lifespan config and forward header": {
@@ -258,7 +262,9 @@ session_lifespan:
 				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"with disabled, but enforced TLS of identity info endpoint url": {
@@ -392,7 +398,9 @@ principal:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "prototype config without cache, config with cache", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"prototype config with cache ttl, config with cache tll": {
@@ -428,7 +436,9 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "prototype config with cache ttl, config with cache tll", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"prototype with session lifespan config and empty target config": {
@@ -475,7 +485,9 @@ session_lifespan:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "prototype with session lifespan config and empty target config", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"reconfiguration of identity_info_endpoint not possible": {
@@ -646,7 +658,9 @@ principal:
 				assert.Equal(t, prototype.Name(), prototype.ID())
 				assert.Equal(t, "minimal valid prototype config and step ID configured", prototype.Name())
 				assert.Equal(t, "foo", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"minimal valid prototype config and principal name configured": {
@@ -679,8 +693,10 @@ principal:
 				assert.Equal(t, prototype.Name(), prototype.ID())
 				assert.Equal(t, "minimal valid prototype config and principal name configured", prototype.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.NotEqual(t, prototype.principalName, configured.principalName)
-				assert.Equal(t, "foo", configured.principalName)
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 	} {
@@ -1498,14 +1514,20 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 	}
 }
 
-func TestGenericAuthenticatorKind(t *testing.T) {
+func TestGenericAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := genericAuthenticator{}
+	auth := &genericAuthenticator{}
+	visitor := heimdallmocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.Equal(t, types.KindAuthenticator, auth.Kind())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }
 
 func TestGenericAuthenticatorReadResponse(t *testing.T) {

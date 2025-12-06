@@ -60,6 +60,7 @@ func newUnauthorizedAuthenticator(app app.Context, name string, _ map[string]any
 }
 
 func (a *unauthorizedAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
@@ -102,5 +103,7 @@ func (a *unauthorizedAuthenticator) Name() string { return a.name }
 func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *unauthorizedAuthenticator) IsInsecure() bool { return false }
 
 func (a *unauthorizedAuthenticator) PrincipalName() string { return a.principalName }

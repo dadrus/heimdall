@@ -63,7 +63,9 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
 				assert.NotNil(t, auth.emptyAttributes)
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"without user_id": {
@@ -154,7 +156,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "password differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"no user_id provided": {
@@ -171,7 +175,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no user_id provided", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"no password provided": {
@@ -188,7 +194,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no password provided", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"user_id differs": {
@@ -205,7 +213,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "user_id differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"user_id and password differs": {
@@ -223,7 +233,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "user_id and password differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 
 				md := sha256.New()
 				md.Write([]byte("baz"))
@@ -250,7 +262,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				require.Equal(t, prototype.ads, configured.ads)
 				require.Equal(t, prototype.app, configured.app)
 				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"only principal name configured": {
@@ -269,8 +283,10 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				require.Equal(t, prototype.ads, configured.ads)
 				require.Equal(t, prototype.app, configured.app)
 				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.NotEqual(t, prototype.principalName, configured.principalName)
-				assert.Equal(t, "foo", configured.principalName)
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"malformed step configuration": {
@@ -525,12 +541,18 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 	}
 }
 
-func TestBasicAuthAuthenticatorKind(t *testing.T) {
+func TestBasicAuthAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := basicAuthAuthenticator{}
+	auth := &basicAuthAuthenticator{}
+	visitor := mocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.Equal(t, types.KindAuthenticator, auth.Kind())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }

@@ -210,7 +210,9 @@ assertions:
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with defaults, without cache and TLS enforcement", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"minimal jwks endpoint based configuration with cache and TLS enforcement": {
@@ -271,7 +273,9 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with cache and TLS enforcement", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"minimal jwks endpoint based configuration with enforced but disabled TLS": {
@@ -368,7 +372,9 @@ trust_store: ` + trustStorePath),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "valid configuration with overwrites, without cache", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -446,7 +452,9 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint based configuration with cache and enabled TLS enforcement", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -530,7 +538,9 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 	} {
@@ -583,18 +593,17 @@ func TestJwtAuthenticatorCreateStep(t *testing.T) {
 	trustStorePath := file.Name()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		stepDef         types.StepDefinition
-		assert          func(t *testing.T, err error, prototype, configured *jwtAuthenticator)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *jwtAuthenticator)
 	}{
-		"using empty target config and step ID": {
-			prototypeConfig: []byte(`
+		"no step definition": {
+			config: []byte(`
 jwks_endpoint:
   url: http://test.com
 assertions:
   issuers:
-    - foobar
-cache_ttl: 5s`),
+    - foobar`),
 			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
 
@@ -604,14 +613,13 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"using empty target config and step ID configured": {
-			prototypeConfig: []byte(`
+		"step definition without config, but with step ID": {
+			config: []byte(`
 jwks_endpoint:
   url: http://test.com
 assertions:
   issuers:
-    - foobar
-cache_ttl: 5s`),
+    - foobar`),
 			stepDef: types.StepDefinition{ID: "foo"},
 			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
 				t.Helper()
@@ -620,7 +628,7 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, "using empty target config and step ID configured", prototype.ID())
+				assert.Equal(t, "step definition without config, but with step ID", prototype.ID())
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ads, configured.ads)
@@ -630,17 +638,18 @@ cache_ttl: 5s`),
 				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
-		"using unsupported fields": {
-			prototypeConfig: []byte(`
+		"unsupported fields in step config definition": {
+			config: []byte(`
 jwks_endpoint:
   url: http://test.com
 assertions:
   issuers:
-    - foobar
-cache_ttl: 5s`),
+    - foobar`),
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
 			assert: func(t *testing.T, err error, _, _ *jwtAuthenticator) {
 				t.Helper()
@@ -649,8 +658,8 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 			},
 		},
-		"prototype config without cache, target config with overwrites, but without cache": {
-			prototypeConfig: []byte(`
+		"mechanism config without cache, step config with overwrites, but without cache": {
+			config: []byte(`
 jwks_endpoint:
   url: http://test.com
 assertions:
@@ -682,13 +691,15 @@ assertions:
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "prototype config without cache, target config with overwrites, but without cache", configured.ID())
+				assert.Equal(t, "mechanism config without cache, step config with overwrites, but without cache", configured.ID())
 
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
-		"prototype config without cache, config with overwrites incl cache": {
-			prototypeConfig: []byte(`
+		"mechanism config without cache, step config with overwrites incl cache": {
+			config: []byte(`
 metadata_endpoint:
   url: http://test.com
   http_cache:
@@ -726,13 +737,15 @@ metadata_endpoint:
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "prototype config without cache, config with overwrites incl cache", configured.ID())
+				assert.Equal(t, "mechanism config without cache, step config with overwrites incl cache", configured.ID())
 
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
-		"prototype config with cache, config without": {
-			prototypeConfig: []byte(`
+		"mechanism config with cache ttl, step config without": {
+			config: []byte(`
 jwks_endpoint:
   url: http://test.com
 assertions:
@@ -768,13 +781,15 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "prototype config with cache, config without", configured.ID())
+				assert.Equal(t, "mechanism config with cache ttl, step config without", configured.ID())
 
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
-		"prototype config with cache, target config with cache only": {
-			prototypeConfig: []byte(`
+		"minimal mechanism config with cache ttl, step config with cache ttl only": {
+			config: []byte(`
 jwks_endpoint:
   url: http://test.com
 assertions:
@@ -802,13 +817,15 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "prototype config with cache, target config with cache only", configured.ID())
+				assert.Equal(t, "minimal mechanism config with cache ttl, step config with cache ttl only", configured.ID())
 
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
-		"prototype without scopes configured, created authenticator configures them and merges other fields": {
-			prototypeConfig: []byte(`
+		"mechanism without scopes configured, created step configures them and merges other fields": {
+			config: []byte(`
 metadata_endpoint:
   url: http://test.com
 assertions:
@@ -845,13 +862,45 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "prototype without scopes configured, created authenticator configures them and merges other fields", configured.ID())
+				assert.Equal(t, "mechanism without scopes configured, created step configures them and merges other fields", configured.ID())
 
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
-		"prototype with defaults, configured does not allow jwk trust store override": {
-			prototypeConfig: []byte(`
+		"minimal mechanism config, step definition with custom principal name only": {
+			config: []byte(`
+metadata_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar`),
+			stepDef: types.StepDefinition{Principal: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.r, configured.r)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
+				assert.Equal(t, prototype.trustStore, configured.trustStore)
+
+				assert.Equal(t, "minimal mechanism config, step definition with custom principal name only", configured.ID())
+
+				assert.False(t, configured.IsInsecure())
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+			},
+		},
+		"mechanism with defaults, step does not allow jwk trust store override": {
+			config: []byte(`
 jwks_endpoint:
   url: http://test.com
 assertions:
@@ -871,8 +920,8 @@ assertions:
 				require.ErrorContains(t, err, "'trust_store' is not allowed")
 			},
 		},
-		"prototype with defaults, configured does not allow jwk validation override": {
-			prototypeConfig: []byte(`
+		"mechanism with defaults, step does not allow jwk validation override": {
+			config: []byte(`
 metadata_endpoint:
   url: https://test.com
 `),
@@ -891,7 +940,7 @@ metadata_endpoint:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -2809,12 +2858,18 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 	}
 }
 
-func TestJwtAuthenticatorKind(t *testing.T) {
+func TestJwtAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := jwtAuthenticator{}
+	auth := &jwtAuthenticator{}
+	visitor := heimdallmocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.Equal(t, types.KindAuthenticator, auth.Kind())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }

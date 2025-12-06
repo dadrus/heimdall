@@ -159,7 +159,9 @@ introspection_endpoint:
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with minimal introspection endpoint based config with used enforced TLS", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"with minimal introspection endpoint based config with enforced but disabled TLS": {
@@ -250,7 +252,9 @@ cache_ttl: 5s
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with valid introspection endpoint based config with overwrites", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -309,7 +313,9 @@ metadata_endpoint:
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "with metadata endpoint based config", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -388,7 +394,9 @@ metadata_endpoint:
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
 
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 	} {
@@ -521,7 +529,9 @@ principal:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, "with overwrites without cache", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"without cache, step config with cache overwrite": {
@@ -549,7 +559,9 @@ principal:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, "without cache, step config with cache overwrite", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"malformed step config": {
@@ -608,7 +620,9 @@ metadata_endpoint:
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 
 				assert.Equal(t, "metadata endpoint based config without cache, step config with overwrites incl cache", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"config with cache, step config with overwrites including cache": {
@@ -643,7 +657,9 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, "config with cache, step config with overwrites including cache", configured.ID())
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"step with custom principal name": {
@@ -665,8 +681,10 @@ assertions:
 				assert.Equal(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, "step with custom principal name", configured.ID())
-				assert.NotEqual(t, prototype.principalName, configured.principalName)
-				assert.Equal(t, "foo", configured.principalName)
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 	} {
@@ -2309,12 +2327,18 @@ func TestCacheTTLCalculation(t *testing.T) {
 	}
 }
 
-func TestOauth2IntrospectionAuthenticatorKind(t *testing.T) {
+func TestOauth2IntrospectionAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := oauth2IntrospectionAuthenticator{}
+	auth := &oauth2IntrospectionAuthenticator{}
+	visitor := heimdallmocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.Equal(t, types.KindAuthenticator, auth.Kind())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }

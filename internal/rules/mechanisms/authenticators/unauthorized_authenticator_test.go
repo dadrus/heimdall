@@ -68,7 +68,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 		stepDef types.StepDefinition
 		assert  func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator)
 	}{
-		"without step definition": {
+		"no step definition": {
 			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
 				t.Helper()
 
@@ -76,7 +76,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"with new config": {
+		"step definition with config": {
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
 			assert: func(t *testing.T, err error, _, _ *unauthorizedAuthenticator) {
 				t.Helper()
@@ -86,7 +86,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 				require.ErrorContains(t, err, "cannot be reconfigured")
 			},
 		},
-		"with new step ID": {
+		"step definition with ID": {
 			stepDef: types.StepDefinition{ID: "foo"},
 			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
 				t.Helper()
@@ -95,7 +95,26 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
-				assert.Equal(t, "with new step ID", prototype.ID())
+				assert.Equal(t, "step definition with ID", prototype.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+			},
+		},
+		"step definition with principal": {
+			stepDef: types.StepDefinition{Principal: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.Name(), configured.ID())
+				assert.Equal(t, "step definition with principal", prototype.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 	} {
@@ -124,12 +143,18 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 	}
 }
 
-func TestUnauthorizedAuthenticatorKind(t *testing.T) {
+func TestUnauthorizedAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := unauthorizedAuthenticator{}
+	auth := &unauthorizedAuthenticator{}
+	visitor := mocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.Equal(t, types.KindAuthenticator, auth.Kind())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }

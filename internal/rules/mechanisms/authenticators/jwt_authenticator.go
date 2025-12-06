@@ -190,6 +190,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 }
 
 func (a *jwtAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
@@ -287,6 +288,8 @@ func (a *jwtAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
 func (a *jwtAuthenticator) Name() string { return a.name }
 
 func (a *jwtAuthenticator) ID() string { return a.id }
+
+func (a *jwtAuthenticator) IsInsecure() bool { return false }
 
 func (a *jwtAuthenticator) PrincipalName() string { return a.principalName }
 

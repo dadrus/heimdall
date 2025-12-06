@@ -118,6 +118,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 }
 
 func (a *genericAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
@@ -210,6 +211,8 @@ func (a *genericAuthenticator) Kind() types.Kind { return types.KindAuthenticato
 func (a *genericAuthenticator) Name() string { return a.name }
 
 func (a *genericAuthenticator) ID() string { return a.id }
+
+func (a *genericAuthenticator) IsInsecure() bool { return false }
 
 func (a *genericAuthenticator) PrincipalName() string { return a.principalName }
 

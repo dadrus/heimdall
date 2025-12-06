@@ -51,7 +51,9 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.True(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"default principal": {
@@ -65,7 +67,9 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.True(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"unsupported attributes are ignored": {
@@ -80,7 +84,9 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Empty(t, auth.principal.Attributes)
 				assert.NotNil(t, auth.principal.Attributes)
-				assert.Equal(t, DefaultPrincipalName, auth.principalName)
+				assert.True(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"malformed configuration": {
@@ -153,7 +159,9 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.NotEqual(t, prototype.principal, configured.principal)
 				assert.Equal(t, "anon", prototype.principal.ID)
 				assert.Equal(t, "foo", configured.principal.ID)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.True(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"only step id is configured": {
@@ -170,7 +178,9 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.principal, configured.principal)
 				assert.NotNil(t, prototype.principal.Attributes)
-				assert.Equal(t, prototype.principalName, configured.principalName)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.True(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"only principal name is configured": {
@@ -186,8 +196,10 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.principal, configured.principal)
 				assert.NotNil(t, prototype.principal.Attributes)
-				assert.NotEqual(t, prototype.principalName, configured.principalName)
-				assert.Equal(t, "foo", configured.principalName)
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.True(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"empty principal for the configured authenticator": {
@@ -272,22 +284,18 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	assert.Equal(t, exp, sub[DefaultPrincipalName])
 }
 
-func TestAnonymousAuthenticatorIsInsecure(t *testing.T) {
+func TestAnonymousAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := anonymousAuthenticator{}
+	auth := &anonymousAuthenticator{}
+	visitor := mocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.True(t, auth.IsInsecure())
-}
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
 
-func TestAnonymousAuthenticatorKind(t *testing.T) {
-	t.Parallel()
+	// WHEN
+	auth.Accept(visitor)
 
-	// GIVEN
-	auth := anonymousAuthenticator{}
-
-	// WHEN & THEN
-	require.Equal(t, types.KindAuthenticator, auth.Kind())
+	// THEN expected calls are done
 }

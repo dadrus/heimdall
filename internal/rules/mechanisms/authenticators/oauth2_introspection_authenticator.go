@@ -178,6 +178,7 @@ func newOAuth2IntrospectionAuthenticator(
 }
 
 func (a *oauth2IntrospectionAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
@@ -264,6 +265,8 @@ func (a *oauth2IntrospectionAuthenticator) Kind() types.Kind { return types.Kind
 func (a *oauth2IntrospectionAuthenticator) Name() string { return a.name }
 
 func (a *oauth2IntrospectionAuthenticator) ID() string { return a.id }
+
+func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
 
 func (a *oauth2IntrospectionAuthenticator) PrincipalName() string { return a.principalName }
 

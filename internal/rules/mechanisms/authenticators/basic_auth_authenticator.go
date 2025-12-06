@@ -102,6 +102,7 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 }
 
 func (a *basicAuthAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
@@ -219,5 +220,7 @@ func (a *basicAuthAuthenticator) Name() string { return a.name }
 func (a *basicAuthAuthenticator) ID() string {
 	return a.id
 }
+
+func (a *basicAuthAuthenticator) IsInsecure() bool { return false }
 
 func (a *basicAuthAuthenticator) PrincipalName() string { return a.principalName }
