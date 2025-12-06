@@ -58,12 +58,11 @@ func (s stage) HasDefaultPrincipal() bool {
 }
 
 func (s stage) IsInsecure() bool {
-	if len(s) == 0 {
-		return false
-	}
-
 	sv := &stepVisitor{}
-	s[0].Accept(sv)
+
+	for _, step := range s {
+		step.Accept(sv)
+	}
 
 	if len(sv.insecure) == 0 {
 		return false
