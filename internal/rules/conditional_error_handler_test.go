@@ -112,3 +112,21 @@ func TestConditionalErrorHandlerID(t *testing.T) {
 	id := eh.ID()
 	assert.Equal(t, "test", id)
 }
+
+func TestConditionalErrorHandlerAccept(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	visitor := mocks.NewVisitorMock(t)
+	condition := rulemocks.NewExecutionConditionMock(t)
+	step := mocks.NewStepMock(t)
+
+	step.EXPECT().Accept(visitor)
+
+	cs := &conditionalErrorHandler{c: condition, s: step}
+
+	// WHEN
+	cs.Accept(visitor)
+
+	// THEN all expecations are met
+}

@@ -38,8 +38,7 @@ func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) er
 	logger.Debug().Str("_id", s.s.ID()).Msg("Checking execution condition")
 
 	if logger.GetLevel() == zerolog.TraceLevel {
-		dump, err := json.Marshal(sub)
-		if err != nil {
+		if dump, err := json.Marshal(sub); err != nil {
 			logger.Trace().Err(err).Msg("Failed to dump identity")
 		} else {
 			logger.Trace().Msg("Subject: \n" + stringx.ToString(dump))

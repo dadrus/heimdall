@@ -124,3 +124,23 @@ func TestCompositePrincipalCreatorExecution(t *testing.T) {
 		})
 	}
 }
+
+func TestCompositePrincipalCreatorAccept(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	visitor := mocks.NewVisitorMock(t)
+
+	step1 := mocks.NewStepMock(t)
+	step1.EXPECT().Accept(visitor)
+
+	step2 := mocks.NewStepMock(t)
+	step2.EXPECT().Accept(visitor)
+
+	eh := &compositePrincipalCreator{step1, step2}
+
+	// WHEN
+	eh.Accept(visitor)
+
+	// THEN all expecations are met
+}

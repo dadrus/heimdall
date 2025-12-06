@@ -28,7 +28,7 @@ import (
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 )
 
-func TestConditionalSubjectHandlerExecute(t *testing.T) {
+func TestConditionalStepExecute(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -98,7 +98,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 	}
 }
 
-func TestConditionalSubjectHandlerID(t *testing.T) {
+func TestConditionalStepID(t *testing.T) {
 	t.Parallel()
 
 	condition := rulemocks.NewExecutionConditionMock(t)
@@ -109,4 +109,22 @@ func TestConditionalSubjectHandlerID(t *testing.T) {
 
 	id := eh.ID()
 	assert.Equal(t, "test", id)
+}
+
+func TestConditionalStepAccept(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	visitor := mocks.NewVisitorMock(t)
+	condition := rulemocks.NewExecutionConditionMock(t)
+	step := mocks.NewStepMock(t)
+
+	step.EXPECT().Accept(visitor)
+
+	cs := &conditionalStep{c: condition, s: step}
+
+	// WHEN
+	cs.Accept(visitor)
+
+	// THEN all expecations are met
 }
