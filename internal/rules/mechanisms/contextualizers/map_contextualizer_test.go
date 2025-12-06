@@ -204,7 +204,7 @@ values:
 					"values": map[string]any{"foo": 1},
 				},
 			},
-			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
+			assert: func(t *testing.T, err error, _, _ *mapContextualizer) {
 				t.Helper()
 
 				require.Error(t, err)

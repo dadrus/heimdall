@@ -263,7 +263,7 @@ endpoint:
 payload: bar
 `),
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"payload": 1}},
-			assert: func(t *testing.T, err error, prototype, configured *genericContextualizer) {
+			assert: func(t *testing.T, err error, _, _ *genericContextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
