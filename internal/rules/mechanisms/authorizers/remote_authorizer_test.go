@@ -124,6 +124,8 @@ payload: "{{ .Subject.ID }}"
 
 				assert.Equal(t, "minimal valid configuration with enforced and used TLS", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
+
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 			},
 		},
 		"minimal configuration with enforced but not used TLS": {
@@ -161,6 +163,8 @@ endpoint:
 
 				assert.Equal(t, "configuration with endpoint and endpoint header", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
+
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 			},
 		},
 		"configuration with invalid expression": {
@@ -233,6 +237,8 @@ values:
 
 				assert.Equal(t, "full configuration", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
+
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 			},
 		},
 	} {
@@ -270,18 +276,17 @@ func TestRemoteAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *remoteAuthorizer)
 	}{
 		"without new configuration and without step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -290,13 +295,13 @@ payload: bar
 			},
 		},
 		"without new configuration but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -305,6 +310,7 @@ payload: bar
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.expressions, configured.expressions)
@@ -312,31 +318,48 @@ payload: bar
 				assert.NotNil(t, configured.ttl)
 			},
 		},
-		"with unknown properties": {
-			prototypeConfig: []byte(`
+		"with unknown properties in step configuration": {
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"with overridden empty payload": {
-			prototypeConfig: []byte(`
+		"with malformed step configuration": {
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"payload": 1}},
+			assert: func(t *testing.T, err error, _, _ *remoteAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
+		"with overridden empty payload": {
 			config: []byte(`
-payload: ""
-cache_ttl: 1s
+endpoint:
+  url: http://foo.bar
+payload: bar
 `),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"payload":   "",
+					"cache_ttl": "1s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -350,17 +373,20 @@ cache_ttl: 1s
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "with overridden empty payload", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with new config and step id": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`cache_ttl: 1s`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				ID:     "foo",
+				Config: config.MechanismConfig{"cache_ttl": "1s"},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -375,19 +401,23 @@ payload: bar
 				assert.Equal(t, "foo", configured.ID())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with invalid new expression": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`
-expressions:
-  - expression: "foo == 'bar'"
-`),
-			assert: func(t *testing.T, err error, _ *remoteAuthorizer, _ *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"expressions": []map[string]any{
+						{"expression": "foo == 'bar'"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -396,7 +426,7 @@ expressions:
 			},
 		},
 		"with everything possible, but values reconfigured": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
   headers:
@@ -404,16 +434,17 @@ endpoint:
 values:
   foo: bar
 `),
-			config: []byte(`
-payload: Baz
-forward_response_headers_to_upstream:
-  - Bar
-  - Foo
-expressions:
-  - expression: "Payload.foo == 'bar'"
-cache_ttl: 15s
-`),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"payload":                              "Baz",
+					"forward_response_headers_to_upstream": []string{"Bar", "Foo"},
+					"expressions": []map[string]any{
+						{"expression": "Payload.foo == 'bar'"},
+					},
+					"cache_ttl": "15s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -442,10 +473,11 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with everything possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
   headers:
@@ -453,18 +485,18 @@ endpoint:
 values:
   foo: bar
 `),
-			config: []byte(`
-values:
-  bar: foo
-payload: Baz
-forward_response_headers_to_upstream:
-  - Bar
-  - Foo
-expressions:
-  - expression: "Payload.foo == 'bar'"
-cache_ttl: 15s
-`),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values":                               map[string]any{"bar": "foo"},
+					"payload":                              "Baz",
+					"forward_response_headers_to_upstream": []string{"Bar", "Foo"},
+					"expressions": []map[string]any{
+						{"expression": "Payload.foo == 'bar'"},
+					},
+					"cache_ttl": "15s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -499,15 +531,13 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -526,7 +556,7 @@ cache_ttl: 15s
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			auth, ok := step.(*remoteAuthorizer)
@@ -1324,4 +1354,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			tc.assert(t, err, tc.subject, ctx.Outputs())
 		})
 	}
+}
+
+func TestRemoteAuthorizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &remoteAuthorizer{}
+
+	mech.Accept(nil)
 }

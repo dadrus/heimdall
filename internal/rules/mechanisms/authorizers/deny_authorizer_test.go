@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -33,22 +34,20 @@ func TestDenyAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		stepID  string
-		newConf map[string]any
-		assert  func(t *testing.T, err error, prototype *denyAuthorizer, configured *denyAuthorizer)
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *denyAuthorizer)
 	}{
 		"no new config and no step ID": {
-			assert: func(t *testing.T, err error, prototype *denyAuthorizer, configured *denyAuthorizer) {
+			assert: func(t *testing.T, err error, prototype, configured *denyAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-
 				assert.Equal(t, prototype, configured)
 			},
 		},
 		"no new config but with step ID": {
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *denyAuthorizer, configured *denyAuthorizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *denyAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -56,11 +55,12 @@ func TestDenyAuthorizerCreateStep(t *testing.T) {
 				assert.NotEqual(t, configured, prototype)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with new config": {
-			newConf: map[string]any{"foo": "bar"},
-			assert: func(t *testing.T, err error, _ *denyAuthorizer, _ *denyAuthorizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *denyAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -81,7 +81,7 @@ func TestDenyAuthorizerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			conf, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: tc.newConf})
+			conf, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			auth, ok := conf.(*denyAuthorizer)
@@ -121,4 +121,12 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 
 	require.ErrorAs(t, err, &identifier)
 	assert.Equal(t, "bar", identifier.ID())
+}
+
+func TestDenyAuthorizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &denyAuthorizer{}
+
+	mech.Accept(nil)
 }

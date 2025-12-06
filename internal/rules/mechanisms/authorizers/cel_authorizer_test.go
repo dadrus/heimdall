@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
@@ -125,6 +126,7 @@ expressions:
 				require.NoError(t, err)
 				assert.Equal(t, "with minimal valid configuration", auth.ID())
 				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 				assert.NotNil(t, auth.celEnv)
 				assert.NotEmpty(t, auth.expressions)
 				assert.Empty(t, auth.v)
@@ -144,6 +146,7 @@ expressions:
 				require.NoError(t, err)
 				assert.Equal(t, "with full configuration", auth.ID())
 				assert.Equal(t, auth.Name(), auth.ID())
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 				assert.NotNil(t, auth.celEnv)
 				assert.NotEmpty(t, auth.expressions)
 				assert.Len(t, auth.v, 1)
@@ -180,19 +183,18 @@ func TestCELAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *celAuthorizer)
 	}{
 		"no new configuration and no step id": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 values:
   foo: bar
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
 `),
-			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
+			assert: func(t *testing.T, err error, prototype, configured *celAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -200,14 +202,14 @@ expressions:
 			},
 		},
 		"no new configuration but step id": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 values:
   foo: bar
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *celAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -220,20 +222,20 @@ expressions:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"new values provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 values:
   foo: bar
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
 `),
-			config: []byte(`
-values:
-  foo: foo
-`),
-			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"values": map[string]any{"foo": "bar"}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *celAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -244,20 +246,24 @@ values:
 				assert.NotEqual(t, prototype.v, configured.v)
 				assert.Len(t, configured.v, 1)
 				assert.Equal(t, "new values provided", configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"new expressions provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 values:
   foo: bar
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
 `),
-			config: []byte(`
-expressions: 
-  - expression: "Request.Header('X-Foo-Bar') == 'Baz'"
-`),
-			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"expressions": []map[string]any{
+						{"expression": "Request.Header('X-Foo-Bar') == 'Baz'"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *celAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -267,21 +273,25 @@ expressions:
 				assert.Equal(t, prototype.celEnv, configured.celEnv)
 				assert.Equal(t, prototype.v, configured.v)
 				assert.Equal(t, "new expressions provided", configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"new expressions and step id provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 values:
   foo: bar
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
 `),
-			config: []byte(`
-expressions: 
-  - expression: "Request.Header('X-Foo-Bar') == 'Baz'"
-`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
+			stepDef: types.StepDefinition{
+				ID: "foo",
+				Config: config.MechanismConfig{
+					"expressions": []map[string]any{
+						{"expression": "Request.Header('X-Foo-Bar') == 'Baz'"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *celAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -293,53 +303,52 @@ expressions:
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"malformed values": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
 `),
-			config: []byte(`
-values:
-  foo: "{{ foo.bar }}"
-`),
-			assert: func(t *testing.T, err error, prototype *celAuthorizer, _ *celAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values": map[string]any{"foo": "{{ foo.bar }}"},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to parse template")
-
-				require.NotNil(t, prototype)
 			},
 		},
 		"malformed expressions": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 expressions: 
   - expression: "Request.URL.Scheme == 'http'"
 `),
-			config: []byte(`
-expressions: 
-  - expression: "foo()"
-`),
-			assert: func(t *testing.T, err error, prototype *celAuthorizer, _ *celAuthorizer) {
+			stepDef: types.StepDefinition{
+				ID: "foo",
+				Config: config.MechanismConfig{
+					"expressions": []map[string]any{
+						{"expression": "foo()"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to compile")
-
-				require.NotNil(t, prototype)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator()
@@ -356,7 +365,7 @@ expressions:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			auth, ok := step.(*celAuthorizer)
@@ -526,4 +535,12 @@ expressions:
 			tc.assert(t, err)
 		})
 	}
+}
+
+func TestCelAuthorizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &celAuthorizer{}
+
+	mech.Accept(nil)
 }

@@ -140,19 +140,18 @@ func TestMapContextualizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *mapContextualizer)
 	}{
 		"with empty target config and no step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -161,14 +160,14 @@ values:
 			},
 		},
 		"with empty target config but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -179,32 +178,53 @@ values:
 			},
 		},
 		"with unsupported fields": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"with only values reconfigured": {
-			prototypeConfig: []byte(`
+		"with malformed step config": {
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values": map[string]any{"foo": 1},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
+		"with only values reconfigured": {
 			config: []byte(`
-values:
-  foo: http://bar.foo
+items:
+  url: "{{ .Values.foo }}"
+values: 
+  foo: http://foo.bar
 `),
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values": map[string]any{"foo": "http://bar.foo"},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -230,10 +250,7 @@ values:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -252,7 +269,7 @@ values:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			contextualizer, ok := step.(*mapContextualizer)
@@ -419,4 +436,12 @@ func TestMapContextualizerExecute(t *testing.T) {
 			tc.assert(t, err, tc.subject, ctx.Outputs())
 		})
 	}
+}
+
+func TestMapContextualizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &mapContextualizer{}
+
+	mech.Accept(nil)
 }
