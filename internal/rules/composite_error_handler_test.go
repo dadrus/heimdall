@@ -38,6 +38,8 @@ func TestCompositeErrorHandlerExecute(t *testing.T) {
 	}{
 		"with fallback": {
 			errorHandler: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) *compositeErrorHandler {
+				t.Helper()
+
 				eh1 := mocks.NewStepMock(t)
 				eh1.EXPECT().Execute(ctx, sub).Return(errErrorHandlerNotApplicable)
 
@@ -47,11 +49,15 @@ func TestCompositeErrorHandlerExecute(t *testing.T) {
 				return &compositeErrorHandler{eh1, eh2}
 			},
 			assert: func(t *testing.T, err error) {
+				t.Helper()
+
 				require.NoError(t, err)
 			},
 		},
 		"without fallback": {
 			errorHandler: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) *compositeErrorHandler {
+				t.Helper()
+
 				eh1 := mocks.NewStepMock(t)
 				eh1.EXPECT().Execute(ctx, sub).Return(nil)
 
@@ -60,6 +66,8 @@ func TestCompositeErrorHandlerExecute(t *testing.T) {
 				return &compositeErrorHandler{eh1, eh2}
 			},
 			assert: func(t *testing.T, err error) {
+				t.Helper()
+
 				require.NoError(t, err)
 			},
 		},
@@ -70,6 +78,8 @@ func TestCompositeErrorHandlerExecute(t *testing.T) {
 				ctx.EXPECT().Error().Return(errors.New("test context error"))
 			},
 			errorHandler: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) *compositeErrorHandler {
+				t.Helper()
+
 				eh1 := mocks.NewStepMock(t)
 				eh1.EXPECT().Execute(ctx, sub).Return(errErrorHandlerNotApplicable)
 
@@ -79,18 +89,24 @@ func TestCompositeErrorHandlerExecute(t *testing.T) {
 				return &compositeErrorHandler{eh1, eh2}
 			},
 			assert: func(t *testing.T, err error) {
+				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorContains(t, err, "test context error")
 			},
 		},
 		"error handler fails executing": {
 			errorHandler: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) *compositeErrorHandler {
+				t.Helper()
+
 				eh1 := mocks.NewStepMock(t)
 				eh1.EXPECT().Execute(ctx, sub).Return(errors.New("test execution error"))
 
 				return &compositeErrorHandler{eh1}
 			},
 			assert: func(t *testing.T, err error) {
+				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorContains(t, err, "test execution error")
 			},
