@@ -45,6 +45,7 @@ packages:
       Insecure: {}
       PrincipalNamer: {}
       RequestFunctions: {}
+      Visitor: {}
   github.com/dadrus/heimdall/internal/keyholder:
     interfaces:
       Registry: {}
