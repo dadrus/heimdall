@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -38,41 +39,57 @@ func TestNewWWWAuthenticateErrorHandler(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config []byte
-		assert func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler)
+		assert func(t *testing.T, err error, eh *wwwAuthenticateErrorHandler)
 	}{
-		"with configuration containing unsupported fields": {
+		"configuration with unsupported fields": {
 			config: []byte(`
 realm: FooBar
-if: type(Error) == authentication_error
+foo: bar
 `),
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, eh *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, errorHandler)
+				require.NotNil(t, eh)
+				assert.Equal(t, "configuration with unsupported fields", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, "FooBar", eh.realm)
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
 			},
 		},
-		"without configuration (minimal configuration)": {
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+		"with malformed configuration": {
+			config: []byte(`realm: 1`),
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
+		"without configuration": {
+			assert: func(t *testing.T, err error, eh *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, errorHandler)
-				assert.Equal(t, "without configuration (minimal configuration)", errorHandler.ID())
-				assert.Equal(t, errorHandler.Name(), errorHandler.ID())
-				assert.Equal(t, "Please authenticate", errorHandler.realm)
+				require.NotNil(t, eh)
+				assert.Equal(t, "without configuration", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, "Please authenticate", eh.realm)
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
 			},
 		},
 		"with all possible attributes": {
 			config: []byte(`realm: "What is your password"`),
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, eh *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, errorHandler)
-				assert.Equal(t, "with all possible attributes", errorHandler.ID())
-				assert.Equal(t, errorHandler.Name(), errorHandler.ID())
-				assert.Equal(t, "What is your password", errorHandler.realm)
+				require.NotNil(t, eh)
+				assert.Equal(t, "with all possible attributes", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, "What is your password", eh.realm)
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
 			},
 		},
 	} {
@@ -106,17 +123,13 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
-			configured *wwwAuthenticateErrorHandler)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *wwwAuthenticateErrorHandler)
 	}{
 		"no new configuration and no step ID": {
-			prototypeConfig: []byte(`realm: "foo"`),
-			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
-				configured *wwwAuthenticateErrorHandler,
-			) {
+			config: []byte(`realm: "foo"`),
+			assert: func(t *testing.T, err error, prototype, configured *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -124,11 +137,9 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 			},
 		},
 		"no new configuration but with step ID": {
-			prototypeConfig: []byte(`realm: "foo"`),
-			stepID:          "bar",
-			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
-				configured *wwwAuthenticateErrorHandler,
-			) {
+			config:  []byte(`realm: "foo"`),
+			stepDef: types.StepDefinition{ID: "bar"},
+			assert: func(t *testing.T, err error, prototype, configured *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -137,13 +148,12 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.realm, configured.realm)
 				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, types.KindErrorHandler, configured.Kind())
 			},
 		},
 		"unsupported fields provided": {
-			config: []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler,
-				_ *wwwAuthenticateErrorHandler,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -152,11 +162,9 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 			},
 		},
 		"with 'realm' reconfigured": {
-			prototypeConfig: []byte(`realm: "Foobar"`),
-			config:          []byte(`realm: "You password please"`),
-			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
-				configured *wwwAuthenticateErrorHandler,
-			) {
+			config:  []byte(`realm: "Foobar"`),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"realm": "You password please"}},
+			assert: func(t *testing.T, err error, prototype, configured *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -165,14 +173,13 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				assert.Equal(t, "with 'realm' reconfigured", configured.ID())
 				assert.NotEqual(t, prototype.realm, configured.realm)
 				assert.Equal(t, "You password please", configured.realm)
+				assert.Equal(t, types.KindErrorHandler, configured.Kind())
 			},
 		},
 		"with empty 'realm' reconfigured": {
-			prototypeConfig: []byte(`realm: "Foobar"`),
-			config:          []byte(`realm: ""`),
-			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler,
-				_ *wwwAuthenticateErrorHandler,
-			) {
+			config:  []byte(`realm: "Foobar"`),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"realm": ""}},
+			assert: func(t *testing.T, err error, _, _ *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -183,10 +190,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator()
@@ -203,7 +207,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			eh, ok := step.(*wwwAuthenticateErrorHandler)
@@ -296,4 +300,12 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			tc.assert(t, err)
 		})
 	}
+}
+
+func TestWWWAuthenticateErrorHandlerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &wwwAuthenticateErrorHandler{}
+
+	mech.Accept(nil)
 }

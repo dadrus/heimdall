@@ -41,7 +41,7 @@ func TestNewRedirectErrorHandler(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
 		config     []byte
-		assert     func(t *testing.T, err error, redEH *redirectErrorHandler)
+		assert     func(t *testing.T, err error, eh *redirectErrorHandler)
 	}{
 		"configuration without required 'to' parameter": {
 			config: []byte(`code: 302`),
@@ -56,31 +56,42 @@ func TestNewRedirectErrorHandler(t *testing.T) {
 		"with unexpected fields in configuration": {
 			config: []byte(`
 to: http://foo.bar
-if: true == false
+foo: bar
 `),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, eh *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, redEH)
+				assert.NotNil(t, eh)
+
+				assert.Equal(t, "with unexpected fields in configuration", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+
+				toURL, err := eh.to.Render(nil)
+				require.NoError(t, err)
+
+				assert.Equal(t, "http://foo.bar", toURL)
+				assert.Equal(t, http.StatusFound, eh.code)
 			},
 		},
 		"with minimal valid configuration, enforced and used TLS": {
 			enforceTLS: true,
 			config:     []byte(`to: https://foo.bar`),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, eh *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, redEH)
-				assert.Equal(t, "with minimal valid configuration, enforced and used TLS", redEH.ID())
-				assert.Equal(t, redEH.Name(), redEH.ID())
+				require.NotNil(t, eh)
+				assert.Equal(t, "with minimal valid configuration, enforced and used TLS", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
 
-				toURL, err := redEH.to.Render(nil)
+				toURL, err := eh.to.Render(nil)
 				require.NoError(t, err)
 
 				assert.Equal(t, "https://foo.bar", toURL)
-				assert.Equal(t, http.StatusFound, redEH.code)
+				assert.Equal(t, http.StatusFound, eh.code)
 			},
 		},
 		"with minimal valid configuration, enforced but not used TLS": {
@@ -99,13 +110,14 @@ if: true == false
 to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 301
 `),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, eh *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, redEH)
-				assert.Equal(t, "with full valid configuration", redEH.ID())
-				assert.Equal(t, redEH.Name(), redEH.ID())
+				require.NotNil(t, eh)
+				assert.Equal(t, "with full valid configuration", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
 
 				ctx := mocks.NewContextMock(t)
 				ctx.EXPECT().Request().
@@ -113,13 +125,13 @@ code: 301
 						URL: &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
 					})
 
-				toURL, err := redEH.to.Render(map[string]any{
+				toURL, err := eh.to.Render(map[string]any{
 					"Request": ctx.Request(),
 				})
 				require.NoError(t, err)
 
 				assert.Equal(t, "http://foo.bar?origin=http%3A%2F%2Ffoobar.baz%2Fzab", toURL)
-				assert.Equal(t, http.StatusMovedPermanently, redEH.code)
+				assert.Equal(t, http.StatusMovedPermanently, eh.code)
 			},
 		},
 	} {
@@ -157,14 +169,13 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *redirectErrorHandler)
 	}{
 		"no new configuration and no step ID": {
-			prototypeConfig: []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
+			config: []byte(`to: http://foo.bar`),
+			assert: func(t *testing.T, err error, prototype, configured *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -172,9 +183,9 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 			},
 		},
 		"no new configuration but with step ID": {
-			prototypeConfig: []byte(`to: http://foo.bar`),
-			stepID:          "foo",
-			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
+			config:  []byte(`to: http://foo.bar`),
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -183,12 +194,13 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.code, configured.code)
 				assert.Equal(t, prototype.to, configured.to)
+				assert.Equal(t, types.KindErrorHandler, configured.Kind())
 			},
 		},
 		"unsupported configuration provided": {
-			prototypeConfig: []byte(`to: http://foo.bar`),
-			config:          []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, _ *redirectErrorHandler, _ *redirectErrorHandler) {
+			config:  []byte(`to: http://foo.bar`),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"to": "http://foo.bar"}},
+			assert: func(t *testing.T, err error, _, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -199,10 +211,7 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -221,7 +230,7 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			eh, ok := step.(*redirectErrorHandler)
@@ -345,4 +354,12 @@ code: 300
 			tc.assert(t, err)
 		})
 	}
+}
+
+func TestRedirectErrorHandlerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &redirectErrorHandler{}
+
+	mech.Accept(nil)
 }

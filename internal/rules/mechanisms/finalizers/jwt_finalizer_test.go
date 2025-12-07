@@ -35,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/keyholder/mocks"
@@ -143,6 +144,7 @@ signer:
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with signer only", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -187,6 +189,7 @@ signer:
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with ttl and signer", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -252,6 +255,7 @@ claims:
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "with claims and key store", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -300,6 +304,7 @@ claims: '{ "sub": {{ quote .Subject.ID }} }'
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "with claims, signer and ttl", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -373,6 +378,7 @@ header:
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with valid header config without scheme", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Empty(t, finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -420,6 +426,7 @@ values:
 				assert.NotNil(t, finalizer.claims)
 				assert.Equal(t, "with all possible entries", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Equal(t, "Bar", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -478,18 +485,17 @@ func TestJWTFinalizerCreateStep(t *testing.T) {
 	const expectedTTL = 5 * time.Second
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *jwtFinalizer)
 	}{
 		"no new configuration and no step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -497,13 +503,13 @@ signer:
 			},
 		},
 		"no new configuration but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -511,6 +517,7 @@ signer:
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.claims, configured.claims)
 				assert.Equal(t, "Authorization", configured.headerName)
 				assert.Equal(t, "Bearer", configured.headerScheme)
@@ -520,14 +527,16 @@ signer:
 			},
 		},
 		"configuration with ttl and step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`ttl: 5s`),
-			stepID: "bar",
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				ID:     "bar",
+				Config: config.MechanismConfig{"ttl": "5s"},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -540,17 +549,20 @@ signer:
 				assert.Equal(t, "configuration with ttl and step ID", prototype.ID())
 				assert.Equal(t, "bar", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with too short ttl": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`ttl: 5ms`),
-			assert: func(t *testing.T, err error, _ *jwtFinalizer, _ *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"ttl": "5ms"},
+			},
+			assert: func(t *testing.T, err error, _, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -559,16 +571,15 @@ signer:
 			},
 		},
 		"configuration with claims only provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`
-claims:
-  '{ "sub": {{ quote .Subject.ID }} }'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"claims": `{"sub": {{ quote .Subject.ID }} }`},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -584,21 +595,23 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with claims only provided", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with claims and values": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`
-claims: '{ "sub": {{ quote .Value.foo }} }'
-values:
-  foo: '{{ quote .Subject.ID }}'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"claims": `{"sub": "{{ quote .Subject.ID }}"}`,
+					"values": map[string]any{"foo": "{{ quote .Subject.ID }}"},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -611,22 +624,24 @@ values:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with claims and values", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with both ttl and claims provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`
-ttl: 5s
-claims:
-  '{ "sub": {{ quote .Subject.ID }} }'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"claims": `{"sub": {{ quote .Subject.ID }} }`,
+					"ttl":    "5s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -643,11 +658,12 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with both ttl and claims provided", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with values": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
@@ -655,11 +671,12 @@ claims: '{ "foo": {{ quote .Values.foo }} }'
 values:
   foo: bar
 `),
-			config: []byte(`
-values:
-  foo: '{{ quote .Subject.ID }}'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values": map[string]any{"foo": "{{ quote .Subject.ID }}"},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -671,18 +688,19 @@ values:
 				assert.Equal(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with values", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"with unknown entries in configuration": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -691,10 +709,7 @@ signer:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			protoConf, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			protoConf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			wm := mocks2.NewWatcherMock(t)
@@ -723,7 +738,7 @@ signer:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*jwtFinalizer)
@@ -1073,4 +1088,12 @@ values:
 			tc.assert(t, err)
 		})
 	}
+}
+
+func TestJWTFinalizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &jwtFinalizer{}
+
+	mech.Accept(nil)
 }

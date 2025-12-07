@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -41,6 +42,8 @@ func TestNoopFinalizerExecution(t *testing.T) {
 
 	mech, err := newNoopFinalizer(appCtx, "foo", nil)
 	require.NoError(t, err)
+	assert.Equal(t, types.KindFinalizer, mech.Kind())
+
 	step, err := mech.CreateStep(types.StepDefinition{ID: ""})
 	require.NoError(t, err)
 
@@ -50,18 +53,18 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	assert.Equal(t, "foo", step.ID())
+
 }
 
 func TestNoopFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		stepID  string
-		newConf map[string]any
-		assert  func(t *testing.T, err error, prototype *noopFinalizer, configured *noopFinalizer)
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *noopFinalizer)
 	}{
 		"no new config and no step ID": {
-			assert: func(t *testing.T, err error, prototype *noopFinalizer, configured *noopFinalizer) {
+			assert: func(t *testing.T, err error, prototype, configured *noopFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -70,8 +73,8 @@ func TestNoopFinalizerCreateStep(t *testing.T) {
 			},
 		},
 		"no new config but with step ID": {
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *noopFinalizer, configured *noopFinalizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *noopFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -79,11 +82,12 @@ func TestNoopFinalizerCreateStep(t *testing.T) {
 				assert.NotEqual(t, configured, prototype)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 			},
 		},
 		"with new config": {
-			newConf: map[string]any{"foo": "bar"},
-			assert: func(t *testing.T, err error, _ *noopFinalizer, _ *noopFinalizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *noopFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -104,7 +108,7 @@ func TestNoopFinalizerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: tc.newConf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*noopFinalizer)
@@ -115,4 +119,12 @@ func TestNoopFinalizerCreateStep(t *testing.T) {
 			tc.assert(t, err, configured, fin)
 		})
 	}
+}
+
+func TestNoopFinalizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &noopFinalizer{}
+
+	mech.Accept(nil)
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
@@ -97,6 +98,7 @@ headers:
 				assert.Len(t, finalizer.headers, 2)
 				assert.Equal(t, "with valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 
 				val, err := finalizer.headers["foo"].Render(nil)
 				require.NoError(t, err)
@@ -140,17 +142,16 @@ func TestHeaderFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *headerFinalizer)
 	}{
 		"no new configuration and no step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 headers:
   foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
+			assert: func(t *testing.T, err error, prototype, configured *headerFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -158,12 +159,12 @@ headers:
 			},
 		},
 		"no new configuration but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 headers:
   foo: bar
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *headerFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -171,20 +172,20 @@ headers:
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.headers, configured.headers)
 			},
 		},
 		"new headers provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 headers:
   foo: bar
 `),
-			config: []byte(`
-headers:
-  bar: foo
-`),
-			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"headers": map[string]any{"bar": "foo"}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *headerFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -193,6 +194,7 @@ headers:
 				assert.NotEmpty(t, configured.headers)
 				assert.Equal(t, "new headers provided", configured.ID())
 				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
@@ -200,16 +202,15 @@ headers:
 			},
 		},
 		"new headers and step id": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 headers:
   foo: bar
 `),
-			config: []byte(`
-headers:
-  bar: foo
-`),
-			stepID: "bar",
-			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
+			stepDef: types.StepDefinition{
+				ID:     "bar",
+				Config: config.MechanismConfig{"headers": map[string]any{"bar": "foo"}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *headerFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -219,6 +220,7 @@ headers:
 				assert.Equal(t, "bar", configured.ID())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
@@ -226,25 +228,36 @@ headers:
 			},
 		},
 		"with unsupported attributes": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 headers:
   foo: bar
 `),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *headerFinalizer, configured *headerFinalizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"bar": "foo"}},
+			assert: func(t *testing.T, err error, prototype, configured *headerFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 			},
 		},
+		"with malformed step config": {
+			config: []byte(`
+headers:
+  foo: bar
+`),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"headers": 1}},
+			assert: func(t *testing.T, err error, prototype, configured *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator()
@@ -261,7 +274,7 @@ headers:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(types.StepDefinition{ID: tc.stepID, Config: conf})
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*headerFinalizer)
@@ -404,4 +417,12 @@ headers:
 			tc.assert(t, err)
 		})
 	}
+}
+
+func TestHeaderFinalizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &headerFinalizer{}
+
+	mech.Accept(nil)
 }
