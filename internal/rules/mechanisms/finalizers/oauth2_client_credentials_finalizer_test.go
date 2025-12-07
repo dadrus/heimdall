@@ -366,7 +366,7 @@ cache_ttl: 11s
 			stepDef: types.StepDefinition{
 				Config: config.MechanismConfig{"token_url": 1},
 			},
-			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, _, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)

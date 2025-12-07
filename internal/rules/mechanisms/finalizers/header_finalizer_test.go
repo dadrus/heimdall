@@ -246,7 +246,7 @@ headers:
   foo: bar
 `),
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"headers": 1}},
-			assert: func(t *testing.T, err error, prototype, configured *headerFinalizer) {
+			assert: func(t *testing.T, err error, _, _ *headerFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)

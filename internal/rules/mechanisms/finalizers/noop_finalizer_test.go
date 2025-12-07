@@ -53,7 +53,6 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	assert.Equal(t, "foo", step.ID())
-
 }
 
 func TestNoopFinalizerCreateStep(t *testing.T) {
