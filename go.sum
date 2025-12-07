@@ -340,8 +340,12 @@ github.com/redis/go-redis/v9 v9.8.0 h1:q3nRvjrlge/6UD7eTu/DSg2uYiU2mCL0G/uzBWqhi
 github.com/redis/go-redis/v9 v9.8.0/go.mod h1:huWgSWd8mW6+m0VPhJjSSQ+d6Nh1VICQ6Q5lHuCH/Iw=
 github.com/redis/rueidis v1.0.68 h1:gept0E45JGxVigWb3zoWHvxEc4IOC7kc4V/4XvN8eG8=
 github.com/redis/rueidis v1.0.68/go.mod h1:Lkhr2QTgcoYBhxARU7kJRO8SyVlgUuEkcJO1Y8MCluA=
+github.com/redis/rueidis v1.0.69 h1:WlUefRhuDekji5LsD387ys3UCJtSFeBVf0e5yI0B8b4=
+github.com/redis/rueidis v1.0.69/go.mod h1:Lkhr2QTgcoYBhxARU7kJRO8SyVlgUuEkcJO1Y8MCluA=
 github.com/redis/rueidis/rueidisotel v1.0.68 h1:e8+5+Lkx/W5BEjzSUVPRAmUX+NKwDYu8usafyuMqFpY=
 github.com/redis/rueidis/rueidisotel v1.0.68/go.mod h1:ceFHwYq7j2pKyIKtTILByG5enx+NizjS0mBVvJUSnWw=
+github.com/redis/rueidis/rueidisotel v1.0.69 h1:UdGfoAfVbLMlbRniOBoKDJSKvVtT/6zzVfBx1HtVhUI=
+github.com/redis/rueidis/rueidisotel v1.0.69/go.mod h1:Hv8Hl9m5yDFQ45S6aVt8TNo/5Ra4g22k9OyhcPd3jn0=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
 github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
