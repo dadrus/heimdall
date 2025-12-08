@@ -31,8 +31,8 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	subjectType   = cel.ObjectType(reflect.TypeOf(CelSubject{}).String(), traits.ReceiverType|traits.IndexerType)
-	principalType = cel.ObjectType(reflect.TypeOf(celPrincipal{}).String(), traits.ReceiverType|traits.IndexerType)
+	subjectType   = cel.ObjectType(reflect.TypeFor[CelSubject]().String(), traits.ReceiverType|traits.IndexerType)
+	principalType = cel.ObjectType(reflect.TypeFor[celPrincipal]().String(), traits.ReceiverType|traits.IndexerType)
 )
 
 type CelSubject identity.Subject
@@ -62,11 +62,11 @@ func (c CelSubject) Equal(other ref.Val) ref.Val {
 }
 
 func (c CelSubject) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	if reflect.TypeOf(identity.Subject(c)).AssignableTo(typeDesc) {
+	if reflect.TypeFor[identity.Subject]().AssignableTo(typeDesc) {
 		return identity.Subject(c), nil
 	}
 
-	if reflect.TypeOf(c).AssignableTo(typeDesc) {
+	if reflect.TypeFor[CelSubject]().AssignableTo(typeDesc) {
 		return c, nil
 	}
 
@@ -125,11 +125,11 @@ func (c celPrincipal) Equal(other ref.Val) ref.Val {
 }
 
 func (c celPrincipal) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	if reflect.TypeOf(c.principal).AssignableTo(typeDesc) {
+	if reflect.TypeFor[*identity.Principal]().AssignableTo(typeDesc) {
 		return c.principal, nil
 	}
 
-	if reflect.TypeOf(c).AssignableTo(typeDesc) {
+	if reflect.TypeFor[celPrincipal]().AssignableTo(typeDesc) {
 		return c, nil
 	}
 

@@ -42,7 +42,7 @@ func format(req *http.Request, body error) (contenttype.MediaType, []byte, error
 	// Format based on the accept content type
 	switch mediaType.Subtype {
 	case "html":
-		return mediaType, []byte(fmt.Sprintf("<p>%s</p>", body)), nil
+		return mediaType, fmt.Appendf(nil, "<p>%s</p>", body), nil
 	case "json":
 		res, err := json.Marshal(body)
 

@@ -19,10 +19,9 @@ package config
 import "github.com/goccy/go-json"
 
 type Mechanism struct {
-	ID        string          `koanf:"id"`
-	Type      string          `koanf:"type"`
-	Config    MechanismConfig `koanf:"config"`
-	Condition string          `koanf:"if"`
+	Name   string          `koanf:"id"`
+	Type   string          `koanf:"type"`
+	Config MechanismConfig `koanf:"config"`
 }
 
 type MechanismConfig map[string]any

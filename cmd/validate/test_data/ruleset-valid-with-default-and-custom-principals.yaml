@@ -1,0 +1,50 @@
+version: "1beta1"
+name: test-rule-set
+rules:
+- id: rule:foo
+  match:
+    routes:
+      - path: /**
+    scheme: http
+    hosts:
+      - foo.bar
+    methods:
+      - POST
+      - PUT
+  forward_to:
+    host: bar.foo
+    rewrite:
+      strip_path_prefix: /foo
+      add_path_prefix: /baz
+      strip_query_parameters: [boo]
+  execute:
+    - authenticator: unauthorized_authenticator
+      principal: default
+    - authenticator: jwt_authenticator1
+      principal: a
+      config:
+        assertions:
+          allowed_algorithms:
+            - RS256
+          issuers:
+            - http://127.0.0.1:4444/
+          scopes:
+            - profile
+    - authenticator: introspection_authenticator1
+      principal: a
+    - contextualizer: subscription_contextualizer
+    - contextualizer: mapping
+      config:
+        values:
+          user_id: foo
+    - authorizer: allow_all_authorizer
+    - finalizer: jwt
+      config:
+        claims: |
+          {"foo": "bar"}
+    - finalizer: bla
+      config:
+        headers:
+          foo-bar: bla
+    - finalizer: blabla
+# no on_error (reuses default)

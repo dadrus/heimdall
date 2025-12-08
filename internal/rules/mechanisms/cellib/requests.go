@@ -43,10 +43,10 @@ func (requestsLib) ProgramOptions() []cel.ProgramOption {
 }
 
 func (requestsLib) CompileOptions() []cel.EnvOption {
-	requestType := cel.ObjectType(reflect.TypeOf(heimdall.Request{}).String(), traits.ReceiverType)
+	requestType := cel.ObjectType(reflect.TypeFor[heimdall.Request]().String(), traits.ReceiverType)
 
 	return []cel.EnvOption{
-		ext.NativeTypes(reflect.TypeOf(&heimdall.Request{})),
+		ext.NativeTypes(reflect.TypeFor[*heimdall.Request]()),
 		cel.Variable("Request", cel.DynType),
 		cel.Function("Header",
 			cel.MemberOverload("request_Header",

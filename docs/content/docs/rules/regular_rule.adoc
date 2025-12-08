@@ -326,14 +326,56 @@ In this example:
 
 == Authentication & Authorization Pipeline
 
-As described in the link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, this pipeline consists of mechanisms, previously configured in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanisms catalogue], organized in stages as described below, with authentication stage (consisting of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticators]) being mandatory.
-
-* **Authentication Stage:** List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references, each using authenticator as the key, followed by the required authenticator id. Regardless of their order in the pipeline, each authenticator step serves as a fallback for the preceding one if it fails.
+* **Authentication Stage:** A list of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references, each using `authenticator` as the key followed by the required authenticator id. Authenticator steps may each contribute their own principal to the resulting subject, or they may target the same principal and thus form a fallback chain, where a subsequent step is only used if a previous one fails or determines that it is not responsible for the authentication data present in the request.
++
+To express which principal an authenticator step should create, the `principal` property can be used. The following rules apply when multiple authenticator steps are defined:
++
+** If the principal name is omitted, the step creates a default principal.
+** When authenticator steps specify different principal names, they are all evaluated, and each successful authenticator contributes its principal to the resulting subject (multi-principal authentication).
+** When authenticator steps specify the same principal name, they form a fallback chain: only the first authenticator that succeeds determines the principal.
 +
 [NOTE]
 ====
-Some authenticators rely on the same sources to obtain the subject authentication object. For example, both the `jwt` and `oauth2_introspection` authenticators retrieve tokens from the `Authorization` header by default. When using such authenticators within the same pipeline, it's best to configure the more specific ones before the more general ones to optimize performance. In this case, the `jwt` authenticator is more specific since it only processes tokens in JWT format. In contrast, the `oauth2_introspection` authenticator is more general - it doesn’t depend on the token format and will attempt to handle any request containing a bearer token.
+Some authenticators rely on the same sources to obtain the subject authentication object. For example, both the `jwt` and `oauth2_introspection` authenticators retrieve tokens from the `Authorization` header by default. When such authenticators are used in the same fallback chain, it's best to configure the more specific ones before the more general ones to optimize performance. In this case, the `jwt` authenticator is more specific since it only processes tokens in JWT format. In contrast, the `oauth2_introspection` authenticator is more general - it doesn’t depend on the token format and will attempt to handle any request containing a bearer token.
 ====
+** The overall evaluation follows a conjunctive (CNF-like) composition model (see also examples below).
++
+.Independent authenticators (A and B)
+====
+[source, yaml]
+----
+- authenticator: A
+- authenticator: B
+  principal: custom
+----
+
+Both `A` and `B` will be executed. On success, `A` creates a principal named `default`, and `B` a principal named `custom`. If any of these steps fails, the entire authenticate stage fails.
+====
++
+.Fallback authenticators (A or B)
+====
+[source, yaml]
+----
+- authenticator: A
+- authenticator: B
+----
+
+Both steps establish the `default` principal, with `B` acting as fallback if `A` fails.
+====
++
+.Combined example (A and (B or C))
+====
+[source, yaml]
+----
+- authenticator: A
+- authenticator: B
+  principal: custom
+- authenticator: C
+  principal: custom
+----
+`A` must succeed and establishes the `default` principal. Either `B` or `C` must succeed and establish the `custom` principal.
+====
+
 
 * **Authorization Stage:** List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanism steps in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional.
 * **Finalization Stage:** List of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalizer] references using `finalizers` as key, followed by the required finalizer `id`. All finalizer steps in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional. If a link:{{< relref "default_rule.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
@@ -353,8 +395,6 @@ All steps can optionally define a step `id`. If not configured, its value is set
 # defining the authentication stage
 - authenticator: foo
 - authenticator: bar
-  config:
-    principal: anon
   # ... any further required authenticator
 # list of authorizers and contextualizers in any order
 # defining the authentication stage
@@ -363,10 +403,10 @@ All steps can optionally define a step `id`. If not configured, its value is set
     cache_ttl: 0s
 - authorizer: zab
 - contextualizer: bar
-  id: 1
+  id: first
   if: Subject.ID != "anonymous"
 - contextualizer: bar
-  id: 2
+  id: second
 - authorizer: foo
   if: Request.Method == "POST"
   config:
@@ -381,16 +421,17 @@ All steps can optionally define a step `id`. If not configured, its value is set
 - finalizer: bar
   config:
     headers:
-    - X-User-ID: {{ quote .ID }}
+    - X-User-ID: {{ quote .Subject.ID }}
+    - X-Some-Data: {{ quote .Outputs.second.result }}
   # ... any further required finalizers
 ----
 
 This example uses
 
-* two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`. This fallback authenticator is obviously of type link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous] as it reconfigures the referenced prototype to use `anon` for subject id.
+* two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`.
 * multiple contextualizers and authorizers, with first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization expression.
-* two finalizers, with the second one being obviously of type link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id to be forwarded to the upstream service.
-* step referring the `bar` contextualizer with the `id` set to `1` is only executed if the authenticated subject is not anonymous.
+* two finalizers, with the second one being obviously of type link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id and an `X-Some-Data` header, set to the result of the contextualizer step with the id `second`, both to be forwarded to the upstream service.
+* step referring the `bar` contextualizer with the `id` set to `first` is only executed if the authenticated subject is not anonymous.
 * authorizer `foo` is only executed if the request method is HTTP POST.
 ====
 

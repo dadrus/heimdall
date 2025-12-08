@@ -90,6 +90,6 @@ func defaultConfig() Configuration {
 			Port:    defaultProfilingServicePort,
 			Host:    loopbackIP,
 		},
-		Prototypes: &MechanismPrototypes{},
+		Catalogue: &MechanismCatalogue{},
 	}
 }

@@ -43,10 +43,10 @@ func (urlsLib) ProgramOptions() []cel.ProgramOption {
 }
 
 func (urlsLib) CompileOptions() []cel.EnvOption {
-	urlType := cel.ObjectType(reflect.TypeOf(heimdall.URL{}).String(), traits.ReceiverType)
+	urlType := cel.ObjectType(reflect.TypeFor[heimdall.URL]().String(), traits.ReceiverType)
 
 	return []cel.EnvOption{
-		ext.NativeTypes(reflect.TypeOf(&heimdall.URL{})),
+		ext.NativeTypes(reflect.TypeFor[*heimdall.URL]()),
 		cel.Function("String",
 			cel.MemberOverload("url_String",
 				[]*cel.Type{urlType}, cel.StringType,

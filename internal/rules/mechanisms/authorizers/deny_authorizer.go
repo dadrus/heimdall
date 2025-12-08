@@ -22,6 +22,8 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -29,14 +31,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, _ map[string]any) (bool, Authorizer, error) {
-			if typ != AuthorizerDeny {
-				return false, nil, nil
-			}
-
-			return true, newDenyAuthorizer(app, name), nil
-		})
+	registry.Register(
+		types.KindAuthorizer,
+		AuthorizerDeny,
+		registry.FactoryFunc(newDenyAuthorizer),
+	)
 }
 
 type denyAuthorizer struct {
@@ -44,7 +43,7 @@ type denyAuthorizer struct {
 	id   string
 }
 
-func newDenyAuthorizer(app app.Context, name string) *denyAuthorizer {
+func newDenyAuthorizer(app app.Context, name string, _ map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthorizerDeny).
@@ -54,10 +53,12 @@ func newDenyAuthorizer(app app.Context, name string) *denyAuthorizer {
 	return &denyAuthorizer{
 		name: name,
 		id:   name,
-	}
+	}, nil
 }
 
-func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
+func (a *denyAuthorizer) Accept(_ heimdall.Visitor) {}
+
+func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerDeny).
@@ -70,22 +71,24 @@ func (a *denyAuthorizer) Execute(ctx heimdall.RequestContext, _ identity.Subject
 		WithErrorContext(a)
 }
 
-func (a *denyAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Authorizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (a *denyAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) != 0 {
+	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "allow authorizer cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
 	auth := *a
-	auth.id = stepID
+	auth.id = def.ID
 
 	return &auth, nil
 }
+
+func (a *denyAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
 
 func (a *denyAuthorizer) Name() string { return a.name }
 

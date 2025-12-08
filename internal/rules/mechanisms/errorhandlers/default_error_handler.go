@@ -21,6 +21,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -28,14 +31,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, _ map[string]any) (bool, ErrorHandler, error) {
-			if typ != ErrorHandlerDefault {
-				return false, nil, nil
-			}
-
-			return true, newDefaultErrorHandler(app, name), nil
-		})
+	registry.Register(
+		types.KindErrorHandler,
+		ErrorHandlerDefault,
+		registry.FactoryFunc(newDefaultErrorHandler),
+	)
 }
 
 type defaultErrorHandler struct {
@@ -43,7 +43,7 @@ type defaultErrorHandler struct {
 	id   string
 }
 
-func newDefaultErrorHandler(app app.Context, name string) *defaultErrorHandler {
+func newDefaultErrorHandler(app app.Context, name string, _ map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", ErrorHandlerDefault).
@@ -53,10 +53,12 @@ func newDefaultErrorHandler(app app.Context, name string) *defaultErrorHandler {
 	return &defaultErrorHandler{
 		name: name,
 		id:   name,
-	}
+	}, nil
 }
 
-func (eh *defaultErrorHandler) Execute(ctx heimdall.RequestContext, causeErr error) error {
+func (eh *defaultErrorHandler) Accept(_ heimdall.Visitor) {}
+
+func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ErrorHandlerDefault).
@@ -64,19 +66,17 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.RequestContext, causeErr err
 		Str("_id", eh.id).
 		Msg("Executing error handler")
 
-	ctx.SetPipelineError(causeErr)
-
 	return nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(stepID string, rawConfig map[string]any) (ErrorHandler, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		erh := *eh
-		erh.id = stepID
+		erh.id = def.ID
 
 		return &erh, nil
 	}
@@ -84,6 +84,8 @@ func (eh *defaultErrorHandler) WithConfig(stepID string, rawConfig map[string]an
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 		"default error handler cannot be reconfigured")
 }
+
+func (eh *defaultErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
 
 func (eh *defaultErrorHandler) Name() string { return eh.name }
 

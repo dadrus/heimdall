@@ -107,8 +107,15 @@ func TestValidateConfig(t *testing.T) {
 			args:   []string{"--" + flags.Config, "test_data/config-no-tls-in-redis-cache.yaml"},
 			expErr: "'tls'.'disabled' must be false",
 		},
-		"valid config": {
-			args: []string{"--" + flags.Config, "test_data/config-valid.yaml"},
+		"no default principal in default rule": {
+			args:   []string{"--" + flags.Config, "test_data/config-no-default-principal-in-default-rule.yaml"},
+			expErr: "no authenticator defined which would create a default principal",
+		},
+		"valid config with default rule": {
+			args: []string{"--" + flags.Config, "test_data/config-valid-with-default-rule.yaml"},
+		},
+		"valid config without default rule": {
+			args: []string{"--" + flags.Config, "test_data/config-valid-without-default-rule.yaml"},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

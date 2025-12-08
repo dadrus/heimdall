@@ -89,7 +89,7 @@ func newService(
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
 		grpc.ReadBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Read))),
 		grpc.WriteBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Write))),
-		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
+		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),

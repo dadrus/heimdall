@@ -24,37 +24,41 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 )
 
-func TestDefaultErrorHandlerExecution(t *testing.T) {
+func TestDefaultErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
-	ctx.EXPECT().SetPipelineError(heimdall.ErrConfiguration)
 
-	errorHandler := newDefaultErrorHandler(appCtx, "foo")
+	mech, err := newDefaultErrorHandler(appCtx, "foo", nil)
+	require.NoError(t, err)
+
+	step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+	require.NoError(t, err)
 
 	// WHEN & THEN
-	require.NoError(t, errorHandler.Execute(ctx, heimdall.ErrConfiguration))
+	require.NoError(t, step.Execute(ctx, nil))
 }
 
-func TestDefaultErrorHandlerPrototype(t *testing.T) {
+func TestDefaultErrorHandlerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		stepID  string
-		newConf map[string]any
-		assert  func(t *testing.T, err error, prototype *defaultErrorHandler, configured *defaultErrorHandler)
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *defaultErrorHandler)
 	}{
 		"no new config and no step ID": {
-			assert: func(t *testing.T, err error, prototype *defaultErrorHandler, configured *defaultErrorHandler) {
+			assert: func(t *testing.T, err error, prototype, configured *defaultErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -63,8 +67,8 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 			},
 		},
 		"no new config but with step ID": {
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *defaultErrorHandler, configured *defaultErrorHandler) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *defaultErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -72,11 +76,12 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 				assert.NotEqual(t, configured, prototype)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindErrorHandler, configured.Kind())
 			},
 		},
 		"with new config": {
-			newConf: map[string]any{"foo": "bar"},
-			assert: func(t *testing.T, err error, _ *defaultErrorHandler, _ *defaultErrorHandler) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *defaultErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -90,18 +95,30 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newDefaultErrorHandler(appCtx, uc)
+			mech, err := newDefaultErrorHandler(appCtx, uc, nil)
+			require.NoError(t, err)
+
+			configured, ok := mech.(*defaultErrorHandler)
+			require.True(t, ok)
 
 			// WHEN
-			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
-			authz, ok := conf.(*defaultErrorHandler)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
+			eh, ok := step.(*defaultErrorHandler)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, authz)
+			tc.assert(t, err, configured, eh)
 		})
 	}
+}
+
+func TestDefaultErrorHandlerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &defaultErrorHandler{}
+
+	mech.Accept(nil)
 }
