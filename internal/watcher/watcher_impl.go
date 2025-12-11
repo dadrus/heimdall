@@ -18,6 +18,8 @@ package watcher
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -27,9 +29,14 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type listenerEntry struct {
+	listener     []ChangeListener
+	resolvedPath string
+}
+
 type watcher struct {
 	w *fsnotify.Watcher
-	m map[string][]ChangeListener
+	m map[string]*listenerEntry
 	l zerolog.Logger
 
 	mut sync.Mutex
@@ -43,23 +50,32 @@ func newWatcher(logger zerolog.Logger) (*watcher, error) {
 			CausedBy(err)
 	}
 
-	return &watcher{w: fsw, m: make(map[string][]ChangeListener), l: logger}, err
+	return &watcher{w: fsw, m: make(map[string]*listenerEntry), l: logger}, err
 }
 
 func (w *watcher) Add(path string, cl ChangeListener) error {
 	w.mut.Lock()
 	defer w.mut.Unlock()
 
-	list, ok := w.m[path]
-	if !ok {
+	e := w.m[path]
+	if e == nil {
 		if err := w.w.Add(path); err != nil {
 			return errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"listener registration for file %s failed", path).CausedBy(err)
 		}
 
-		w.m[path] = []ChangeListener{cl}
+		resolvedPath, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"listener registration for file %s failed", path).CausedBy(err)
+		}
+
+		w.m[path] = &listenerEntry{
+			listener:     []ChangeListener{cl},
+			resolvedPath: resolvedPath,
+		}
 	} else {
-		w.m[path] = append(list, cl)
+		e.listener = append(e.listener, cl)
 	}
 
 	return nil
@@ -75,7 +91,19 @@ func (w *watcher) startWatching() {
 				return
 			}
 
-			if evt.Has(fsnotify.Write) {
+			var (
+				changed bool
+				err     error
+			)
+
+			if evt.Has(fsnotify.Chmod) {
+				changed, err = w.chackForUpdate(evt.Name)
+				if err != nil {
+					w.l.Warn().Err(err).Msgf("Handling modification for %s failed", evt.Name)
+				}
+			}
+
+			if evt.Has(fsnotify.Write) || changed {
 				w.fireOnChange(evt)
 			}
 		case err, ok := <-w.w.Errors:
@@ -88,6 +116,38 @@ func (w *watcher) startWatching() {
 			w.l.Warn().Err(err).Msg("Config watcher error received")
 		}
 	}
+}
+
+func (w *watcher) chackForUpdate(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			_ = w.w.Remove(path)
+
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return false, err
+	}
+
+	w.mut.Lock()
+	defer w.mut.Unlock()
+
+	entry := w.m[path]
+	if entry.resolvedPath != resolvedPath {
+		_ = w.w.Remove(path)
+		entry.resolvedPath = resolvedPath
+		_ = w.w.Add(path)
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (w *watcher) start(_ context.Context) {
@@ -104,7 +164,7 @@ func (w *watcher) stop(_ context.Context) error {
 
 func (w *watcher) fireOnChange(evt fsnotify.Event) {
 	w.mut.Lock()
-	listeners := w.m[evt.Name]
+	listeners := w.m[evt.Name].listener
 	w.mut.Unlock()
 
 	for _, listener := range listeners {

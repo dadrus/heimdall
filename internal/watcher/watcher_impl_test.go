@@ -19,6 +19,7 @@ package watcher
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -73,5 +74,80 @@ func TestWatcherLifeCycle(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	f2.WriteString("baz")
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestWatchAtomicUpdate(t *testing.T) {
+	// GIVEN
+	cw, err := newWatcher(log.Logger)
+	require.NoError(t, err)
+
+	cw.start(t.Context())
+	defer cw.stop(t.Context())
+
+	cl := NewChangeListenerMock(t)
+	cl.EXPECT().OnChanged(mock.Anything).Times(2)
+
+	testDir := t.TempDir()
+	dir1 := filepath.Join(testDir, strconv.FormatInt(time.Now().UnixNano(), 10))
+	err = os.MkdirAll(dir1, os.ModePerm)
+	require.NoError(t, err)
+
+	dir2 := filepath.Join(testDir, strconv.FormatInt(time.Now().UnixNano()+1, 10))
+	err = os.MkdirAll(dir2, os.ModePerm)
+	require.NoError(t, err)
+
+	f1, err := os.Create(filepath.Join(dir1, "data"))
+	require.NoError(t, err)
+	_, err = f1.WriteString("foo")
+	require.NoError(t, err)
+
+	f2, err := os.Create(filepath.Join(dir2, "data"))
+	require.NoError(t, err)
+	_, err = f2.WriteString("bar")
+	require.NoError(t, err)
+
+	f3 := filepath.Join(testDir, "content")
+	err = os.Symlink(dir1, f3)
+	require.NoError(t, err)
+
+	f4 := filepath.Join(f3, "data")
+
+	err = cw.Add(f4, cl)
+	require.NoError(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	tmp := filepath.Join(testDir, "content.tmp")
+	err = os.Symlink(dir2, tmp)
+	require.NoError(t, err)
+
+	err = os.Rename(tmp, f3)
+	require.NoError(t, err)
+
+	err = os.RemoveAll(dir1)
+	require.NoError(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	dir1 = filepath.Join(testDir, strconv.FormatInt(time.Now().UnixNano(), 10))
+	err = os.MkdirAll(dir1, os.ModePerm)
+	require.NoError(t, err)
+
+	f1, err = os.Create(filepath.Join(dir1, "data"))
+	require.NoError(t, err)
+	_, err = f1.WriteString("bla")
+	require.NoError(t, err)
+
+	tmp = filepath.Join(testDir, "content.tmp")
+	err = os.Symlink(dir1, tmp)
+	require.NoError(t, err)
+
+	err = os.Rename(tmp, f3)
+	require.NoError(t, err)
+
+	err = os.RemoveAll(dir2)
+	require.NoError(t, err)
+
 	time.Sleep(100 * time.Millisecond)
 }
