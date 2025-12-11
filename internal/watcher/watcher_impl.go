@@ -57,8 +57,8 @@ func (w *watcher) Add(path string, cl ChangeListener) error {
 	w.mut.Lock()
 	defer w.mut.Unlock()
 
-	e := w.m[path]
-	if e == nil {
+	entry := w.m[path]
+	if entry == nil {
 		if err := w.w.Add(path); err != nil {
 			return errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"listener registration for file %s failed", path).CausedBy(err)
@@ -75,7 +75,7 @@ func (w *watcher) Add(path string, cl ChangeListener) error {
 			resolvedPath: resolvedPath,
 		}
 	} else {
-		e.listener = append(e.listener, cl)
+		entry.listener = append(entry.listener, cl)
 	}
 
 	return nil
