@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.17.6](https://github.com/dadrus/heimdall/compare/v0.17.5...v0.17.6) (2025-12-12)
+
+
+### Bug Fixes
+
+* Ensure watcher reacts to atomic file updates in Kubernetes mounts ([#2928](https://github.com/dadrus/heimdall/issues/2928)) ([4800b05](https://github.com/dadrus/heimdall/commit/4800b05fe566d080ac9f4f7ca694fa38271af518))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 72e0076 ([#2925](https://github.com/dadrus/heimdall/issues/2925)) ([f5d6312](https://github.com/dadrus/heimdall/commit/f5d631260f360ab2b1f3222f7ebfeab4d38ca9db))
+* update kubernetes packages to v0.34.3 ([#2924](https://github.com/dadrus/heimdall/issues/2924)) ([5e38f33](https://github.com/dadrus/heimdall/commit/5e38f33ab95a7a7c4638bd2f963bf4005ff6f136))
+* update module github.com/redis/rueidis to v1.0.69 ([#2914](https://github.com/dadrus/heimdall/issues/2914)) ([5078b0c](https://github.com/dadrus/heimdall/commit/5078b0c524ac2bc67462183d580e4c742e6bae09))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.69 ([#2914](https://github.com/dadrus/heimdall/issues/2914)) ([5078b0c](https://github.com/dadrus/heimdall/commit/5078b0c524ac2bc67462183d580e4c742e6bae09))
+* update opentelemetry-go monorepo to v1.39.0 ([#2916](https://github.com/dadrus/heimdall/issues/2916)) ([c4aaeee](https://github.com/dadrus/heimdall/commit/c4aaeeea593aa0517cc5c3b245414294c90e3736))
+* update opentelemetry-go-contrib monorepo to v0.64.0 ([#2917](https://github.com/dadrus/heimdall/issues/2917)) ([f19f2ed](https://github.com/dadrus/heimdall/commit/f19f2edbf55d4898eb2be3b9f2aa246d6af24cb7))
+
 ## [0.17.5](https://github.com/dadrus/heimdall/compare/v0.17.4...v0.17.5) (2025-12-05)
 
 
