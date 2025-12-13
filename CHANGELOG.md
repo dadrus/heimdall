@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.7](https://github.com/dadrus/heimdall/compare/v0.17.6...v0.17.7) (2025-12-13)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 97cd9d5 ([#2938](https://github.com/dadrus/heimdall/issues/2938)) ([31313b6](https://github.com/dadrus/heimdall/commit/31313b627667d93bfb342c3730394c9770fbfa87))
+* update module github.com/go-co-op/gocron/v2 to v2.19.0 ([#2935](https://github.com/dadrus/heimdall/issues/2935)) ([34cadef](https://github.com/dadrus/heimdall/commit/34cadefe388b686296e0b7528af81dea04f0f33b))
+* update module github.com/go-playground/validator/v10 to v10.29.0 ([#2936](https://github.com/dadrus/heimdall/issues/2936)) ([838abc4](https://github.com/dadrus/heimdall/commit/838abc41a9008b01de1a2703c21705ed32059dc3))
+* update module google.golang.org/protobuf to v1.36.11 ([#2933](https://github.com/dadrus/heimdall/issues/2933)) ([a5fe579](https://github.com/dadrus/heimdall/commit/a5fe579ea0d232f750efcec3f3e443f1bd459cbd))
+
 ## [0.17.6](https://github.com/dadrus/heimdall/compare/v0.17.5...v0.17.6) (2025-12-12)
 
 
