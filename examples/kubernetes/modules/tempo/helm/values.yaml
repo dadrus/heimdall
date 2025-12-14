@@ -21,6 +21,7 @@ tempo:
         processors:
           - service-graphs
           - span-metrics
+          - local-blocks
 
   receivers:
     otlp:

@@ -28,12 +28,17 @@ spec:
         queries:
           - name: 'See metrics'
             query: 'sum(rate(http_server_request_duration_seconds_bucket{$__tags}[5m]))'
-      #tracesToProfiles:
-      #  datasourceUid: PYROSCOPE
-      #  tags: ['job', 'instance', 'pod', 'namespace']
-      #  profileTypeId: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds'
-      #  customQuery: true
-      #  query: 'method="$${__span.tags.method}"'
+      tracesToProfiles:
+        datasourceUid: PYROSCOPE
+        spanStartTimeShift: '-10h'
+        spanEndTimeShift: '1h'
+        tags:
+          - key: 'service.name'
+            value: 'service_name'
+        profileTypeId: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds'
+        customQuery: false
+        #  customQuery: true
+        #  query: 'method="$${__span.tags.method}"'
       serviceMap:
         datasourceUid: PROMETHEUS
       nodeGraph:
