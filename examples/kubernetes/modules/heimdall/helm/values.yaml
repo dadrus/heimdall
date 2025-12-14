@@ -17,6 +17,7 @@ deployment:
       readOnly: true
       mountPath: "/etc/heimdall/certs/jwt"
 
+  %{ if profiling_enabled }
   pod:
     annotations:
       profiles.grafana.com/memory.scrape: "true"
@@ -25,17 +26,29 @@ deployment:
       profiles.grafana.com/cpu.port_name: "http-profiling"
       profiles.grafana.com/goroutine.scrape: "true"
       profiles.grafana.com/goroutine.port_name: "http-profiling"
+  %{ endif }
 
 admissionController:
   annotations:
     cert-manager.io/inject-ca-from: heimdall/heimdall-tls
 
+%{ if otel_metrics_enabled || otel_tracing_enabled }
 env:
-  OTEL_METRICS_EXPORTER: "prometheus"
+  %{ if otel_metrics_enabled }
+  OTEL_METRICS_EXPORTER: "${otel_metrics_exporter}"
+    %{ if otel_metrics_exporter == "prometheus" }
   OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
-  OTEL_TRACES_EXPORTER: "otlp"
-  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: "grpc"
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy.monitoring:4317"
+    %{ else }
+  OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: "${otel_metrics_protocol}"
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "${otel_metrics_endpoint}"
+    %{ endif }
+  %{ endif }
+  %{ if otel_tracing_enabled }
+  OTEL_TRACES_EXPORTER: "${otel_tracing_exporter}"
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: "${otel_tracing_protocol}"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "${otel_tracing_endpoint}"
+  %{ endif }
+%{ endif }
 
 image:
   tag: 0.17.4

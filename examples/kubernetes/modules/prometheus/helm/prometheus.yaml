@@ -13,3 +13,4 @@ server:
     servicePort: 9090
   extraFlags:
     - web.enable-remote-write-receiver
+    - web.enable-lifecycle

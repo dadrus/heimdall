@@ -8,10 +8,16 @@ resource "helm_release" "pyroscope" {
   upgrade_install  = true
   create_namespace = true
 
-  set = [{
-    name  = "serviceMonitor.enabled"
-    value = "true"
-  }]
+  set = [
+    {
+      name  = "serviceMonitor.enabled"
+      value = "true"
+    },
+    {
+      name = "alloy.enabled"
+      value = "false"
+    }
+  ]
 
   wait = true
 }

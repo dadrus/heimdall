@@ -50,7 +50,7 @@ module "alloy" {
   cluster_name         = "demo"
   loki_endpoint        = module.loki.loki_write_url
   prometheus_endpoint  = module.prometheus.prometheus_url
-  otel_traces_endpoint = module.tempo.tempo_url
+  otel_traces_endpoint = module.tempo.otlp_grpc_receiver_endpoint
 }
 
 module "grafana" {
@@ -68,6 +68,6 @@ module "grafana" {
   admin_password = "admin"
   prometheus_url = module.prometheus.prometheus_url
   loki_url       = module.loki.loki_read_url
-  tempo_url      = module.tempo.tempo_url
+  tempo_url      = module.tempo.server_endpoint
   pyroscope_url  = module.pyroscope.pyroscope_url
 }

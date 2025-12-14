@@ -54,6 +54,16 @@ module "ingress_controller" {
   kubeconfig_path            = module.cluster.kubeconfig_path
   global_integration_enabled = var.global_integration_enabled
   gateway_api_enabled        = var.gateway_api_enabled
+  observability = {
+    metrics_enabled  = var.observability_stack_enabled
+    metrics_exporter = "prometheus" # "otlp"
+    metrics_endpoint = var.observability_stack_enabled ? module.observability[0].otlp_metrics_endpoint : ""
+    metrics_protocol = var.observability_stack_enabled ? module.observability[0].otlp_metrics_protocol : ""
+    tracing_enabled  = var.observability_stack_enabled
+    tracing_endpoint = var.observability_stack_enabled ? module.observability[0].otlp_traces_endpoint : ""
+    tracing_protocol = var.observability_stack_enabled ? module.observability[0].otlp_traces_protocol : ""
+    log_level        = "debug" # "debug", "info", "warn", "info", "error"
+  }
 }
 
 module "heimdall" {
@@ -65,9 +75,21 @@ module "heimdall" {
     module.ingress_controller,
   ]
 
-  namespace                   = "heimdall"
-  ingress_controller          = var.ingress_controller
-  observability_stack_enabled = var.observability_stack_enabled
+  namespace          = "heimdall"
+  ingress_controller = var.ingress_controller
+  observability = {
+    metrics_enabled   = var.observability_stack_enabled
+    metrics_exporter  = "prometheus" # "otlp"
+    metrics_endpoint  = var.observability_stack_enabled ? module.observability[0].otlp_metrics_endpoint : ""
+    metrics_protocol  = var.observability_stack_enabled ? module.observability[0].otlp_metrics_protocol : ""
+    tracing_enabled   = var.observability_stack_enabled
+    tracing_exporter  = "otlp"
+    tracing_endpoint  = var.observability_stack_enabled ? module.observability[0].otlp_traces_endpoint : ""
+    tracing_protocol  = var.observability_stack_enabled ? module.observability[0].otlp_traces_protocol : ""
+    profiling_enabled = false
+    log_format        = "gelf"  # "text"
+    log_level         = "trace" # "debug", "info", "warn", "info", "error"
+  }
 }
 
 module "demo_app" {
