@@ -1,9 +1,19 @@
-
 logging {
   level = "debug"
   format = "logfmt" // "json"
 
   write_to = [loki.write.default.receiver]
+}
+
+//////////////////////////////////////////////////
+//   Pod Discovery
+//////////////////////////////////////////////////
+
+// discovery.kubernetes allows you to find scrape targets from Kubernetes resources.
+// It watches cluster state and ensures targets are continually synced with what is
+// currently running in your cluster.
+discovery.kubernetes "pod" {
+  role = "pod"
 }
 
 //////////////////////////////////////////////////
@@ -57,13 +67,6 @@ loki.source.file "node_logs" {
 // *********************************
 //            Pods Logs
 // *********************************
-
-// discovery.kubernetes allows you to find scrape targets from Kubernetes resources.
-// It watches cluster state and ensures targets are continually synced with what is
-// currently running in your cluster.
-discovery.kubernetes "pod" {
-  role = "pod"
-}
 
 // discovery.relabel rewrites the label set of the input targets by applying one or
 // more relabeling rules. If no rules are defined, then the input targets are exported as-is.
@@ -299,3 +302,81 @@ prometheus.operator.probes "default" {
     forward_to = [prometheus.remote_write.default.receiver]
 }
 
+
+//////////////////////////////////////////////////
+//         Profiling Sources
+//////////////////////////////////////////////////
+
+discovery.relabel "pod_profiling" {
+  targets = discovery.kubernetes.pod.targets
+
+  // filter only pods with annotation phlare.grafana.com/scrape="true"
+  rule {
+    source_labels = ["__meta_kubernetes_pod_annotation_phlare_grafana_com_scrape"]
+    action        = "keep"
+    regex         = "true"
+  }
+
+  // __address__ = <pod_ip>:<port from annotation>
+  rule {
+    source_labels = [
+      "__meta_kubernetes_pod_ip",
+      "__meta_kubernetes_pod_annotation_phlare_grafana_com_port",
+    ]
+    separator    = ":"
+    target_label = "__address__"
+    action       = "replace"
+  }
+
+  // service_name for Pyroscope / Grafana (should match OTEL service.name)
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    target_label  = "service_name"
+    action        = "replace"
+  }
+
+  // same labels as for logs/metrics
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label  = "namespace"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label  = "pod"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    target_label  = "container"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    target_label  = "app"
+    action        = "replace"
+  }
+
+  // job = namespace/container
+  rule {
+    source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
+    separator     = "/"
+    target_label  = "job"
+    action        = "replace"
+  }
+}
+
+
+pyroscope.write "default" {
+  endpoint {
+    url = "${pyroscope_endpoint}"
+  }
+}
+
+pyroscope.scrape "pod_profiles" {
+  targets    = discovery.relabel.pod_profiling.output
+  forward_to = [pyroscope.write.default.receiver]
+}

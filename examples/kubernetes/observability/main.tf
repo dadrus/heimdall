@@ -23,9 +23,9 @@ module "tempo" {
 
   namespace      = "monitoring"
   prometheus_url = module.prometheus.prometheus_url
-  s3_endpoint   = var.s3_endpoint
-  s3_access_key = var.access_key
-  s3_secret_key = var.secret_key
+  s3_endpoint    = var.s3_endpoint
+  s3_access_key  = var.access_key
+  s3_secret_key  = var.secret_key
   bucket_name    = "tempo"
 }
 
@@ -51,6 +51,7 @@ module "alloy" {
   loki_endpoint        = module.loki.loki_write_url
   prometheus_endpoint  = module.prometheus.prometheus_url
   otel_traces_endpoint = module.tempo.otlp_grpc_receiver_endpoint
+  pyroscope_endpoint   = module.pyroscope.pyroscope_url
 }
 
 module "grafana" {

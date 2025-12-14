@@ -86,7 +86,7 @@ module "heimdall" {
     tracing_exporter  = "otlp"
     tracing_endpoint  = var.observability_stack_enabled ? module.observability[0].otlp_traces_endpoint : ""
     tracing_protocol  = var.observability_stack_enabled ? module.observability[0].otlp_traces_protocol : ""
-    profiling_enabled = false
+    profiling_enabled = true
     log_format        = "gelf"  # "text"
     log_level         = "trace" # "debug", "info", "warn", "info", "error"
   }
