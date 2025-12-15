@@ -1357,7 +1357,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules(t, repo)
 
 			req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *tc.requestURL}}
-			ctx := mocks2.NewRequestContextMock(t)
+			ctx := mocks2.NewContextMock(t)
 			ctx.EXPECT().Context().Maybe().Return(t.Context())
 			ctx.EXPECT().Request().Return(req)
 

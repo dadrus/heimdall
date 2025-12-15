@@ -34,8 +34,8 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	errType    = cel.ObjectType(reflect.TypeOf(Error{}).String(), traits.ComparerType)
-	errTypeDef = cel.ObjectType(reflect.TypeOf(ErrorType{}).String(), traits.ComparerType)
+	errType    = cel.ObjectType(reflect.TypeFor[Error]().String(), traits.ComparerType)
+	errTypeDef = cel.ObjectType(reflect.TypeFor[ErrorType]().String(), traits.ComparerType)
 )
 
 type ErrorType struct {
@@ -159,7 +159,7 @@ func (errorsLib) ProgramOptions() []cel.ProgramOption {
 
 func (errorsLib) CompileOptions() []cel.EnvOption {
 	return []cel.EnvOption{
-		ext.NativeTypes(reflect.TypeOf(Error{})),
+		ext.NativeTypes(reflect.TypeFor[Error]()),
 		cel.Variable("Error", errType),
 
 		cel.Constant("authentication_error", cel.DynType,

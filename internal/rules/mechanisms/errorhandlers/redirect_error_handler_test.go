@@ -30,17 +30,18 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateRedirectErrorHandler(t *testing.T) {
+func TestNewRedirectErrorHandler(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
 		config     []byte
-		assert     func(t *testing.T, err error, redEH *redirectErrorHandler)
+		assert     func(t *testing.T, err error, eh *redirectErrorHandler)
 	}{
 		"configuration without required 'to' parameter": {
 			config: []byte(`code: 302`),
@@ -55,31 +56,42 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 		"with unexpected fields in configuration": {
 			config: []byte(`
 to: http://foo.bar
-if: true == false
+foo: bar
 `),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, eh *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, redEH)
+				assert.NotNil(t, eh)
+
+				assert.Equal(t, "with unexpected fields in configuration", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+
+				toURL, err := eh.to.Render(nil)
+				require.NoError(t, err)
+
+				assert.Equal(t, "http://foo.bar", toURL)
+				assert.Equal(t, http.StatusFound, eh.code)
 			},
 		},
 		"with minimal valid configuration, enforced and used TLS": {
 			enforceTLS: true,
 			config:     []byte(`to: https://foo.bar`),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, eh *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, redEH)
-				assert.Equal(t, "with minimal valid configuration, enforced and used TLS", redEH.ID())
-				assert.Equal(t, redEH.Name(), redEH.ID())
+				require.NotNil(t, eh)
+				assert.Equal(t, "with minimal valid configuration, enforced and used TLS", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
 
-				toURL, err := redEH.to.Render(nil)
+				toURL, err := eh.to.Render(nil)
 				require.NoError(t, err)
 
 				assert.Equal(t, "https://foo.bar", toURL)
-				assert.Equal(t, http.StatusFound, redEH.code)
+				assert.Equal(t, http.StatusFound, eh.code)
 			},
 		},
 		"with minimal valid configuration, enforced but not used TLS": {
@@ -98,27 +110,28 @@ if: true == false
 to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 301
 `),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, eh *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, redEH)
-				assert.Equal(t, "with full valid configuration", redEH.ID())
-				assert.Equal(t, redEH.Name(), redEH.ID())
+				require.NotNil(t, eh)
+				assert.Equal(t, "with full valid configuration", eh.ID())
+				assert.Equal(t, eh.Name(), eh.ID())
+				assert.Equal(t, types.KindErrorHandler, eh.Kind())
 
-				ctx := mocks.NewRequestContextMock(t)
+				ctx := mocks.NewContextMock(t)
 				ctx.EXPECT().Request().
 					Return(&heimdall.Request{
 						URL: &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
 					})
 
-				toURL, err := redEH.to.Render(map[string]any{
+				toURL, err := eh.to.Render(map[string]any{
 					"Request": ctx.Request(),
 				})
 				require.NoError(t, err)
 
 				assert.Equal(t, "http://foo.bar?origin=http%3A%2F%2Ffoobar.baz%2Fzab", toURL)
-				assert.Equal(t, http.StatusMovedPermanently, redEH.code)
+				assert.Equal(t, http.StatusMovedPermanently, eh.code)
 			},
 		},
 	} {
@@ -139,26 +152,30 @@ code: 301
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			errorHandler, err := newRedirectErrorHandler(appCtx, uc, conf)
+			mech, err := newRedirectErrorHandler(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, errorHandler)
+			eh, ok := mech.(*redirectErrorHandler)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, eh)
 		})
 	}
 }
 
-func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
+func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *redirectErrorHandler)
 	}{
 		"no new configuration and no step ID": {
-			prototypeConfig: []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
+			config: []byte(`to: http://foo.bar`),
+			assert: func(t *testing.T, err error, prototype, configured *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -166,9 +183,9 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 			},
 		},
 		"no new configuration but with step ID": {
-			prototypeConfig: []byte(`to: http://foo.bar`),
-			stepID:          "foo",
-			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
+			config:  []byte(`to: http://foo.bar`),
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *redirectErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -177,12 +194,13 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.code, configured.code)
 				assert.Equal(t, prototype.to, configured.to)
+				assert.Equal(t, types.KindErrorHandler, configured.Kind())
 			},
 		},
 		"unsupported configuration provided": {
-			prototypeConfig: []byte(`to: http://foo.bar`),
-			config:          []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, _ *redirectErrorHandler, _ *redirectErrorHandler) {
+			config:  []byte(`to: http://foo.bar`),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"to": "http://foo.bar"}},
+			assert: func(t *testing.T, err error, _, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -193,10 +211,7 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -208,24 +223,22 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newRedirectErrorHandler(appCtx, uc, pc)
+			mech, err := newRedirectErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*redirectErrorHandler)
+			require.True(t, ok)
+
 			// WHEN
-			errorHandler, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			var (
-				redirEH *redirectErrorHandler
-				ok      bool
-			)
-
+			eh, ok := step.(*redirectErrorHandler)
 			if err == nil {
-				redirEH, ok = errorHandler.(*redirectErrorHandler)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, redirEH)
+			tc.assert(t, err, configured, eh)
 		})
 	}
 }
@@ -235,14 +248,12 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config           []byte
-		error            error
-		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error)
 	}{
 		"with template rendering error": {
 			config: []byte(`to: http://foo.bar={{ len .foobar }}`),
-			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -257,12 +268,11 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 		},
 		"without return to url templating": {
 			config: []byte(`to: http://foo.bar`),
-			error:  heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
 					assert.Equal(t, "http://foo.bar", redirErr.RedirectTo)
@@ -283,15 +293,14 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 300
 `),
-			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				requestURL, err := url.Parse("http://test.org")
 				require.NoError(t, err)
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *requestURL}})
-				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
 					redirectURL, err := url.Parse(redirErr.RedirectTo)
@@ -319,7 +328,7 @@ code: 300
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewRequestContextMock(t)
+			mctx := mocks.NewContextMock(t)
 			mctx.EXPECT().Context().Return(t.Context())
 
 			tc.configureContext(t, mctx)
@@ -333,14 +342,24 @@ code: 300
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			errorHandler, err := newRedirectErrorHandler(appCtx, "foo", conf)
+			mech, err := newRedirectErrorHandler(appCtx, "foo", conf)
+			require.NoError(t, err)
+			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN
-			execErr := errorHandler.Execute(mctx, tc.error)
+			err = step.Execute(mctx, nil)
 
 			// THEN
-			tc.assert(t, execErr)
+			tc.assert(t, err)
 		})
 	}
+}
+
+func TestRedirectErrorHandlerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &redirectErrorHandler{}
+
+	mech.Accept(nil)
 }

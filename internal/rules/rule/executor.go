@@ -21,5 +21,5 @@ import (
 )
 
 type Executor interface {
-	Execute(ctx heimdall.RequestContext) (Backend, error)
+	Execute(ctx heimdall.Context) (Backend, error)
 }

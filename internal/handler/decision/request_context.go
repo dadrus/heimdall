@@ -45,7 +45,7 @@ type requestContext struct {
 }
 
 func (r *requestContext) Finalize(_ rule.Backend) error {
-	if err := r.PipelineError(); err != nil {
+	if err := r.Error(); err != nil {
 		return err
 	}
 

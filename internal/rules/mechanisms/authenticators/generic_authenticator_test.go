@@ -42,12 +42,13 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestGenericAuthenticatorCreate(t *testing.T) {
+func TestNewGenericAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -175,6 +176,9 @@ principal:
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"with valid configuration and enabled cache and TLS enforcement": {
@@ -208,6 +212,9 @@ cache_ttl: 5s`),
 				assert.Nil(t, auth.sessionLifespanConf)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"with session lifespan config and forward header": {
@@ -255,6 +262,9 @@ session_lifespan:
 				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Equal(t, "auth1", auth.ID())
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"with disabled, but enforced TLS of identity info endpoint url": {
@@ -294,26 +304,29 @@ principal:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newGenericAuthenticator(appCtx, "auth1", conf)
+			mech, err := newGenericAuthenticator(appCtx, "auth1", conf)
 
 			// THEN
+			auth, ok := mech.(*genericAuthenticator)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assertError(t, err, auth)
 		})
 	}
 }
 
-func TestGenericAuthenticatorWithConfig(t *testing.T) {
+func TestGenericAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *genericAuthenticator,
-			configured *genericAuthenticator)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *genericAuthenticator)
 	}{
 		"prototype config without cache configured and empty target config": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -327,9 +340,7 @@ payload: |
   foo=bar
 principal:
   id: some_template`),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
-			) {
+			assert: func(t *testing.T, err error, prototype, configured *genericAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -337,7 +348,7 @@ principal:
 			},
 		},
 		"with unsupported fields in target config": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -345,10 +356,8 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *genericAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -356,7 +365,7 @@ principal:
 			},
 		},
 		"prototype config without cache, config with cache": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -370,10 +379,8 @@ payload: |
   foo=bar
 principal:
   id: some_template`),
-			config: []byte(`cache_ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"cache_ttl": "5s"}},
+			assert: func(t *testing.T, err error, prototype, configured *genericAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -391,10 +398,13 @@ principal:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "prototype config without cache, config with cache", configured.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"prototype config with cache ttl, config with cache tll": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -407,11 +417,8 @@ payload: |
 principal:
   id: some_template
 cache_ttl: 5s`),
-			config: []byte(`
-cache_ttl: 15s`),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"cache_ttl": "15s"}},
+			assert: func(t *testing.T, err error, prototype, configured *genericAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -429,10 +436,13 @@ cache_ttl: 15s`),
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "prototype config with cache ttl, config with cache tll", configured.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"prototype with session lifespan config and empty target config": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -452,9 +462,7 @@ session_lifespan:
   not_after: zab
   time_format: foo bar
   validity_leeway: 2s`),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
-			) {
+			assert: func(t *testing.T, err error, prototype, configured *genericAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -477,10 +485,13 @@ session_lifespan:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "prototype with session lifespan config and empty target config", configured.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"reconfiguration of identity_info_endpoint not possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -488,13 +499,10 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`
-identity_info_endpoint:
-  url: http://foo.bar
-`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"identity_info_endpoint": map[string]any{"url": "http://foo.bar"},
+			}},
+			assert: func(t *testing.T, err error, _, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -503,7 +511,7 @@ identity_info_endpoint:
 			},
 		},
 		"reconfiguration of authentication_data_source not possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -511,13 +519,10 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`
-authentication_data_source:
-  - header: bar-header
-`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"authentication_data_source": []any{map[string]any{"header": "bar-header"}},
+			}},
+			assert: func(t *testing.T, err error, _, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -526,7 +531,7 @@ authentication_data_source:
 			},
 		},
 		"reconfiguration of principal not possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -534,13 +539,10 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`
-principal:
-  id: new_template
-`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"principal": map[string]any{"id": "new_template"},
+			}},
+			assert: func(t *testing.T, err error, _, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -549,7 +551,7 @@ principal:
 			},
 		},
 		"reconfiguration of session_lifespan not possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -557,13 +559,10 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`
-session_lifespan:
-  active: foo
-`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"session_lifespan": map[string]any{"active": "foo"},
+			}},
+			assert: func(t *testing.T, err error, _, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -572,7 +571,7 @@ session_lifespan:
 			},
 		},
 		"reconfiguration of payload not possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -580,13 +579,8 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`
-payload: |
-  foo=bar
-`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"payload": "foo=bar"}},
+			assert: func(t *testing.T, err error, _, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -595,7 +589,7 @@ payload: |
 			},
 		},
 		"reconfiguration of header to be forwarded not possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -603,13 +597,10 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`
-forward_headers:
-  - foo-bar
-`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"forward_headers": []string{"foo-bar"},
+			}},
+			assert: func(t *testing.T, err error, _, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -618,7 +609,7 @@ forward_headers:
 			},
 		},
 		"reconfiguration of cookies to be forwarded not possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
@@ -626,13 +617,10 @@ authentication_data_source:
   - header: foo-header
 principal:
   id: some_template`),
-			config: []byte(`
-forward_cookies:
-  - foo-bar
-`),
-			assert: func(t *testing.T, err error, _ *genericAuthenticator,
-				_ *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"forward_cookies": []string{"foo-bar"},
+			}},
+			assert: func(t *testing.T, err error, _, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -641,7 +629,7 @@ forward_cookies:
 			},
 		},
 		"minimal valid prototype config and step ID configured": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
 authentication_data_source:
@@ -650,10 +638,8 @@ forward_headers:
   - X-My-Header
 principal:
   id: some_template`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
-			) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *genericAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -672,15 +658,51 @@ principal:
 				assert.Equal(t, prototype.Name(), prototype.ID())
 				assert.Equal(t, "minimal valid prototype config and step ID configured", prototype.Name())
 				assert.Equal(t, "foo", configured.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+			},
+		},
+		"minimal valid prototype config and principal name configured": {
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+authentication_data_source:
+  - header: foo-header
+forward_headers:
+  - X-My-Header
+principal:
+  id: some_template`),
+			stepDef: types.StepDefinition{Principal: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *genericAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, time.Duration(0), prototype.ttl)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 0*time.Second, configured.ttl)
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.Name(), prototype.ID())
+				assert.Equal(t, "minimal valid prototype config and principal name configured", prototype.Name())
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -692,24 +714,22 @@ principal:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newGenericAuthenticator(appCtx, uc, pc)
+			mech, err := newGenericAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*genericAuthenticator)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			var (
-				genAuth *genericAuthenticator
-				ok      bool
-			)
-
+			auth, ok := step.(*genericAuthenticator)
 			if err == nil {
-				genAuth, ok = auth.(*genericAuthenticator)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, genAuth)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -755,7 +775,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		authenticator  *genericAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.RequestContextMock,
+			ctx *heimdallmocks.ContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *genericAuthenticator)
@@ -764,7 +784,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"with failing auth data source": {
 			authenticator: &genericAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -799,7 +819,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				}(),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -828,7 +848,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -857,7 +877,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -886,7 +906,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: srv.URL},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -928,7 +948,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf: &PrincipalInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -983,9 +1003,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					return tpl
 				}(),
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1037,11 +1058,12 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
-				sf:  &PrincipalInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				sf:            &PrincipalInfo{IDFrom: "user_id"},
+				ttl:           5 * time.Second,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1072,12 +1094,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:         &PrincipalInfo{IDFrom: "user_id"},
-				fwdHeaders: []string{"X-Original-Auth"},
-				ttl:        5 * time.Second,
+				sf:            &PrincipalInfo{IDFrom: "user_id"},
+				fwdHeaders:    []string{"X-Original-Auth"},
+				ttl:           5 * time.Second,
+				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *genericAuthenticator,
@@ -1134,9 +1157,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				fwdCookies:          []string{"original-auth"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
+				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1196,9 +1220,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
+				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1255,9 +1280,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 30 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
+				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.RequestContextMock,
+				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1302,6 +1328,74 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Len(t, sub.Attributes(), 2)
 			},
 		},
+		"execution with custom principal": {
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				payload: func() template.Template {
+					tpl, err := template.New("foo={{ .AuthenticationData }}")
+					require.NoError(t, err)
+
+					return tpl
+				}(),
+				sf:            &PrincipalInfo{IDFrom: "user_id"},
+				ttl:           30 * time.Second,
+				principalName: "foo",
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *genericAuthenticator,
+			) {
+				t.Helper()
+
+				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
+
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 30*time.Second).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+
+					res, err := io.ReadAll(req.Body)
+					require.NoError(t, err)
+					assert.Equal(t, "foo=session_token", string(res))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar", "exp": ` + exp + ` }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub identity.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Empty(t, sub.ID())
+				assert.Empty(t, sub.Attributes())
+				assert.NotNil(t, sub["foo"])
+				assert.Equal(t, "barbar", sub["foo"].ID)
+				assert.Len(t, sub["foo"].Attributes, 2)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -1319,7 +1413,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.RequestContextMock,
+					_ *heimdallmocks.ContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *genericAuthenticator,
@@ -1331,7 +1425,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			tc.authenticator.ads = ads
 
 			cch := mocks.NewCacheMock(t)
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
@@ -1420,14 +1514,20 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 	}
 }
 
-func TestGenericAuthenticatorIsInsecure(t *testing.T) {
+func TestGenericAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := genericAuthenticator{}
+	auth := &genericAuthenticator{}
+	visitor := heimdallmocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.False(t, auth.IsInsecure())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }
 
 func TestGenericAuthenticatorReadResponse(t *testing.T) {

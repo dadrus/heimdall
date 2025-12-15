@@ -37,13 +37,14 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestNewClientCredentialsFinalizer(t *testing.T) {
+func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -120,6 +121,7 @@ client_secret: bar
 
 				assert.Equal(t, "with minimal valid config with enforced and used TLS", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -166,6 +168,7 @@ header:
 
 				assert.Equal(t, "with full valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -196,22 +199,26 @@ header:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			finalizer, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
+			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, finalizer)
+			fin, ok := mech.(*oauth2ClientCredentialsFinalizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, fin)
 		})
 	}
 }
 
-func TestCreateClientCredentialsFinalizerFromPrototype(t *testing.T) {
+func TestOAuth2ClientCredentialsFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
 		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer)
+		stepDef         types.StepDefinition
+		assert          func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer)
 	}{
 		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`
@@ -225,7 +232,7 @@ scopes:
 header: 
   name: "X-My-Header"
 `),
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -244,8 +251,8 @@ scopes:
 header: 
   name: "X-My-Header"
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -253,6 +260,7 @@ header:
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.Name(), prototype.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.cfg, configured.cfg)
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.headerName, configured.headerName)
@@ -266,13 +274,11 @@ client_id: foo
 client_secret: bar
 cache_ttl: 11s
 `),
-			config: []byte(`
-scopes:
-  - foo
-  - baz
-`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
+			stepDef: types.StepDefinition{
+				ID:     "foo",
+				Config: config.MechanismConfig{"scopes": []string{"foo", "baz"}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -281,6 +287,7 @@ scopes:
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -305,10 +312,10 @@ client_id: foo
 client_secret: bar
 cache_ttl: 11s
 `),
-			config: []byte(`
-cache_ttl: 12s
-`),
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"cache_ttl": "12s"},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -316,6 +323,7 @@ cache_ttl: 12s
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -338,12 +346,32 @@ client_id: foo
 client_secret: bar
 cache_ttl: 11s
 `),
-			config: []byte(`foo: 10s`),
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"foo": "1s"},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+			},
+		},
+		"malformed step configuration": {
+			prototypeConfig: []byte(`
+token_url: https://foo.bar
+client_id: foo
+client_secret: bar
+cache_ttl: 11s
+`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"token_url": 1},
+			},
+			assert: func(t *testing.T, err error, _, _ *oauth2ClientCredentialsFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"header name reconfigured": {
@@ -353,11 +381,10 @@ client_id: foo
 client_secret: bar
 cache_ttl: 11s
 `),
-			config: []byte(`
-header: 
-  name: X-Foo-Bar
-`),
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"header": map[string]any{"name": "X-Foo-Bar"}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -365,6 +392,7 @@ header:
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -385,9 +413,6 @@ header:
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
-			conf, err := testsupport.DecodeTestConfig(tc.config)
-			require.NoError(t, err)
-
 			validator, err := validation.NewValidator(
 				validation.WithTagValidator(config.EnforcementSettings{}),
 			)
@@ -397,29 +422,27 @@ header:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, pc)
+			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*oauth2ClientCredentialsFinalizer)
+			require.True(t, ok)
+
 			// WHEN
-			finalizer, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			var (
-				ok            bool
-				realFinalizer *oauth2ClientCredentialsFinalizer
-			)
-
+			fin, ok := step.(*oauth2ClientCredentialsFinalizer)
 			if err == nil {
-				realFinalizer, ok = finalizer.(*oauth2ClientCredentialsFinalizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, realFinalizer)
+			tc.assert(t, err, configured, fin)
 		})
 	}
 }
 
-func TestClientCredentialsFinalizerExecute(t *testing.T) {
+func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 	t.Parallel()
 
 	type (
@@ -477,7 +500,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		finalizer      *oauth2ClientCredentialsFinalizer
-		configureMocks func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock)
+		configureMocks func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool)
@@ -487,7 +510,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				id:         "test",
 				headerName: "Authorization",
 			},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				rawData, err := json.Marshal(clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
@@ -512,7 +535,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					ClientSecret: "foo",
 				},
 			},
-			configureMocks: func(t *testing.T, _ *mocks.RequestContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, _ *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -548,7 +571,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					Scopes: []string{"baz", "zab"},
 				},
 			},
-			configureMocks: func(t *testing.T, ctx *mocks.RequestContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -593,11 +616,11 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			endpointCalled = false
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks.RequestContextMock, _ *mocks2.CacheMock) { t.Helper() },
+				func(t *testing.T, _ *mocks.ContextMock, _ *mocks2.CacheMock) { t.Helper() },
 			)
 
 			cch := mocks2.NewCacheMock(t)
-			ctx := mocks.NewRequestContextMock(t)
+			ctx := mocks.NewContextMock(t)
 
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			configureMocks(t, ctx, cch)
@@ -612,4 +635,12 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			tc.assert(t, err, endpointCalled)
 		})
 	}
+}
+
+func TestOAuth2ClientCredentialsFinalizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &oauth2ClientCredentialsFinalizer{}
+
+	mech.Accept(nil)
 }
