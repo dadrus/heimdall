@@ -7,10 +7,16 @@ resource "helm_release" "grafana_operator" {
   verify           = false
   create_namespace = false
 
-  set = [{
-    name  = "serviceMonitor.enabled",
-    value = "true"
-  }]
+  set = [
+    {
+      name  = "serviceMonitor.enabled"
+      value = "true"
+    },
+    {
+      name = "logging.encoder"
+      value = "json"
+    },
+  ]
 
   wait            = true
   upgrade_install = true

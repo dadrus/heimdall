@@ -1,8 +1,10 @@
 logs:
   general:
     level: ${log_level}
+    format: json
   access:
     enabled: true
+    format: json
 
 tracing:
   otlp:

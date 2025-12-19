@@ -1,4 +1,6 @@
 tempo:
+#  extraArgs:
+#    log.format: json
   retention: 24h
   storage:
     trace:

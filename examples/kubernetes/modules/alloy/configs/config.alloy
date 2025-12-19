@@ -1,197 +1,103 @@
 logging {
   level = "debug"
-  format = "logfmt" // "json"
+  format = "json" // "logfmt"
 
   write_to = [loki.write.default.receiver]
 }
 
 //////////////////////////////////////////////////
-//   Pod Discovery
+//   Pod Discovery & Shared Labels
 //////////////////////////////////////////////////
 
-// discovery.kubernetes allows you to find scrape targets from Kubernetes resources.
-// It watches cluster state and ensures targets are continually synced with what is
-// currently running in your cluster.
 discovery.kubernetes "pod" {
   role = "pod"
 }
 
+discovery.relabel "common" {
+  targets = discovery.kubernetes.pod.targets
+
+  // Core label set for pod-based targets
+  rule {
+    target_label = "cluster"
+    action       = "replace"
+    replacement  = "${cluster_name}"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label  = "node"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label  = "namespace"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label  = "pod"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    target_label  = "container"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    target_label  = "service"
+    action        = "replace"
+  }
+
+  // fallback 1: pod label "app"
+  rule {
+    source_labels = ["service", "__meta_kubernetes_pod_label_app"]
+    target_label  = "service"
+    action        = "replace"
+    regex         = "^$;(.*)$"
+    replacement   = "$1"
+  }
+
+  // fallback 2: pod label "k8s-app"
+  rule {
+    source_labels = ["service", "__meta_kubernetes_pod_label_k8s_app"]
+    target_label  = "service"
+    action        = "replace"
+    regex         = "^$;(.*)$"
+    replacement   = "$1"
+  }
+
+  rule {
+    source_labels = ["namespace", "service"]
+    separator     = "/"
+    target_label  = "job"
+    action        = "replace"
+  }
+}
+
 //////////////////////////////////////////////////
-//             Logs Sink
+//             Telemetry Sinks
 //////////////////////////////////////////////////
 
-// loki.write component delivers logs to Loki instance
+// write logs to Loki
 loki.write "default" {
   endpoint {
     url = "${loki_endpoint}/loki/api/v1/push"
   }
 }
 
-//////////////////////////////////////////////////
-//             Metrics Sink
-//////////////////////////////////////////////////
-
+// write metrics to Prometheus
 prometheus.remote_write "default" {
   endpoint {
     url = "${prometheus_endpoint}/api/v1/write"
   }
 }
 
-//////////////////////////////////////////////////
-//             Logs from Kubernetes
-//////////////////////////////////////////////////
-
-// *********************************
-//          System Logs
-// *********************************
-
-// local.file_match discovers files on the local filesystem using glob patterns
-// and the doublestar library. It returns an array of file paths.
-local.file_match "node_logs" {
-  path_targets = [{
-      // Monitor syslog to scrape node-logs
-      __path__  = "/var/log/syslog",
-      job       = "node/syslog",
-      node_name = sys.env("HOSTNAME"),
-      cluster   = "${cluster_name}",
-  }]
-}
-
-// loki.source.file reads log entries from files and forwards them to other loki.* components.
-// You can specify multiple loki.source.file components by giving them different labels.
-loki.source.file "node_logs" {
-  targets    = local.file_match.node_logs.targets
-  forward_to = [loki.write.default.receiver]
-}
-
-// *********************************
-//            Pods Logs
-// *********************************
-
-// discovery.relabel rewrites the label set of the input targets by applying one or
-// more relabeling rules. If no rules are defined, then the input targets are exported as-is.
-discovery.relabel "pod_logs" {
-  targets = discovery.kubernetes.pod.targets
-
-  // Label creation - "namespace" field from "__meta_kubernetes_namespace"
-  rule {
-    source_labels = ["__meta_kubernetes_namespace"]
-    action = "replace"
-    target_label = "namespace"
-  }
-
-  // Label creation - "pod" field from "__meta_kubernetes_pod_name"
-  rule {
-    source_labels = ["__meta_kubernetes_pod_name"]
-    action = "replace"
-    target_label = "pod"
-  }
-
-  // Label creation - "container" field from "__meta_kubernetes_pod_container_name"
-  rule {
-    source_labels = ["__meta_kubernetes_pod_container_name"]
-    action = "replace"
-    target_label = "container"
-  }
-
-  // Label creation -  "app" field from "__meta_kubernetes_pod_label_app_kubernetes_io_name"
-  rule {
-    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-    action = "replace"
-    target_label = "app"
-  }
-
-  // Label creation -  "job" field from "__meta_kubernetes_namespace" and "__meta_kubernetes_pod_container_name"
-  // Concatenate values __meta_kubernetes_namespace/__meta_kubernetes_pod_container_name
-  rule {
-    source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
-    action = "replace"
-    target_label = "job"
-    separator = "/"
-    replacement = "$1"
-  }
-
-  // Label creation - "container" field from "__meta_kubernetes_pod_uid" and "__meta_kubernetes_pod_container_name"
-  // Concatenate values __meta_kubernetes_pod_uid/__meta_kubernetes_pod_container_name.log
-  rule {
-    source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
-    action = "replace"
-    target_label = "__path__"
-    separator = "/"
-    replacement = "/var/log/pods/*$1/*.log"
-  }
-
-  // Label creation -  "container_runtime" field from "__meta_kubernetes_pod_container_id"
-  rule {
-    source_labels = ["__meta_kubernetes_pod_container_id"]
-    action = "replace"
-    target_label = "container_runtime"
-    regex = "^(\\S+):\\/\\/.+$"
-    replacement = "$1"
-  }
-}
-
-// loki.source.kubernetes tails logs from Kubernetes containers using the Kubernetes API.
-loki.source.kubernetes "pod_logs" {
-  targets    = discovery.relabel.pod_logs.output
-  forward_to = [loki.process.pod_logs.receiver]
-}
-
-// loki.process receives log entries from other Loki components, applies one or more
-// processing stages, and forwards the results to the list of receivers in the component's
-// arguments.
-loki.process "pod_logs" {
-  stage.static_labels {
-      values = {
-        cluster = "${cluster_name}",
-      }
-  }
-
-  forward_to = [loki.write.default.receiver]
-}
-
-// *********************************
-//         Cluster Events
-// *********************************
-
-// loki.source.kubernetes_events tails events from the Kubernetes API and converts
-// them into log lines to forward to other Loki components.
-loki.source.kubernetes_events "cluster_events" {
-  job_name   = "integrations/kubernetes/eventhandler"
-  log_format = "logfmt"
-  forward_to = [
-    loki.process.cluster_events.receiver,
-  ]
-}
-
-// loki.process receives log entries from other loki components, applies one or more processing stages,
-// and forwards the results to the list of receivers in the component's arguments.
-loki.process "cluster_events" {
-  forward_to = [loki.write.default.receiver]
-
-  stage.static_labels {
-    values = {
-      cluster = "${cluster_name}",
-    }
-  }
-
-  stage.labels {
-    values = {
-      kubernetes_cluster_events = "job",
-    }
-  }
-}
-
-//////////////////////////////////////////////////
-//         OpenTelemetry Data Delivery
-//////////////////////////////////////////////////
-
-// exports logs received over OTEL via Log delivery
-otelcol.exporter.loki "default" {
-  forward_to = [loki.write.default.receiver]
-}
-
-// exports OTEL traces to Tempo
+// write traces to Tempo
 otelcol.exporter.otlp "default" {
   client {
     endpoint = "${otel_traces_endpoint}"
@@ -202,20 +108,364 @@ otelcol.exporter.otlp "default" {
   }
 }
 
-// exports OTEL metrics to Prometheus
-otelcol.exporter.prometheus "default" {
-  forward_to = [prometheus.remote_write.default.receiver]
+// write profiles to Pyroscope
+pyroscope.write "default" {
+  endpoint {
+    url = "${pyroscope_endpoint}"
+  }
 }
 
-otelcol.receiver.otlp "default" {
-  grpc {}
-  http {}
+//////////////////////////////////////////////////
+//             Log Sources
+//////////////////////////////////////////////////
 
-  output {
-    metrics = [otelcol.exporter.prometheus.default.input]
-    logs    = [otelcol.exporter.loki.default.input]
-    traces  = [otelcol.exporter.otlp.default.input]
+// *********************************
+//          System Logs
+// *********************************
+
+local.file_match "node_logs" {
+  path_targets = [{
+      __path__  = "/var/log/syslog",
+      job       = "node/syslog",
+      node      = sys.env("HOSTNAME"),
+      cluster   = "${cluster_name}",
+  }]
+}
+
+loki.source.file "node_logs" {
+  targets    = local.file_match.node_logs.targets
+  forward_to = [loki.process.node_logs.receiver]
+}
+
+loki.process "node_logs" {
+  stage.template {
+    source   = "raw"
+    template = "{{ . }}"
   }
+
+  // optional <PRI>, then "Dec 18 13:10:28 host app[pid]: msg"
+  stage.regex {
+    expression = "^(?:<(?P<pri>\\d+)>)?(?P<ts>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2})\\s+(?P<host>\\S+)\\s+(?P<app>[^\\[:]+)(?:\\[(?P<pid>\\d+)\\])?:\\s+(?P<msg>.*)$"
+  }
+
+  stage.match {
+    selector = "{ts!=\"\"}"
+
+    stage.timestamp {
+      source   = "ts"
+      format   = "Jan _2 15:04:05"
+    }
+
+    stage.template {
+      source = "out"
+      template = `
+          {{- $pri := toString .pri -}}
+          {{- $lvl := "info" -}}
+          {{- if ne $pri "" -}}
+            {{- $sev := mod (int $pri) 8 -}}
+            {{- if eq $sev 7 -}}{{- $lvl = "debug" -}}{{- end -}}
+            {{- if eq $sev 6 -}}{{- $lvl = "info"  -}}{{- end -}}
+            {{- if eq $sev 5 -}}{{- $lvl = "notice" -}}{{- end -}}
+            {{- if eq $sev 4 -}}{{- $lvl = "warn"  -}}{{- end -}}
+            {{- if eq $sev 3 -}}{{- $lvl = "error" -}}{{- end -}}
+            {{- if eq $sev 2 -}}{{- $lvl = "critical" -}}{{- end -}}
+            {{- if eq $sev 1 -}}{{- $lvl = "alert" -}}{{- end -}}
+            {{- if eq $sev 0 -}}{{- $lvl = "emerg" -}}{{- end -}}
+          {{- end -}}
+          {{- toJson (dict "level" $lvl "service" (toString .app) "pid" (toString .pid) "message" (toString .msg)) -}}`
+    }
+
+    stage.output { source = "out" }
+  }
+
+  stage.match {
+    selector = "{ts=\"\"}"
+
+    stage.template {
+      source   = "out"
+      template = `{{- toJson (dict "level" "info" "message" (toString .raw)) -}}`
+    }
+
+    stage.output { source = "out" }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// *********************************
+//            Pods Logs
+// *********************************
+
+loki.source.kubernetes "pod_logs" {
+  targets    = discovery.relabel.common.output
+  forward_to = [loki.process.pod_logs.receiver]
+}
+
+loki.process "pod_logs" {
+  stage.template {
+    source   = "entry"
+    template = "{{ .Entry }}"
+  }
+
+  stage.replace {
+    source     = "entry"
+    expression = "[[:space:]]+$"
+    replace    = ""
+  }
+
+  stage.template {
+    source   = "fmt_detect"
+    template = `{{- if regexMatch "^[[:space:]]*{" .entry -}}json{{- else if regexMatch "^[IWEF][0-9]{4}[[:space:]]" .entry -}}klog{{- else if regexMatch "(^|[[:space:]])[A-Za-z_][A-Za-z0-9_.-]*=" .entry -}}logfmt{{- else -}}raw{{- end -}}`
+  }
+
+  stage.labels { values = { log_format = "fmt_detect" } }
+
+  stage.match {
+    selector = "{log_format=\"json\"}"
+
+    stage.json {
+      source = "entry"
+      expressions = {
+        gelf_version = "version",
+        gelf_ts      = "timestamp",
+        gelf_level   = "level",
+        gelf_sm      = "short_message",
+      }
+    }
+
+    stage.template {
+      source = "fmt"
+      template = `{{- if and
+          (eq .gelf_version "1.1")
+          (ne .gelf_ts "")
+          (regexMatch "^[0-7]$" (toString .gelf_level))
+          (ne .gelf_sm "")
+        -}}gelf{{- else -}}json{{- end -}}`
+    }
+
+    stage.labels { values = { log_format = "fmt" } }
+  }
+
+  stage.match {
+    selector = "{log_format=\"gelf\"}"
+
+    stage.json {
+      source = "entry"
+      expressions = { gelf_ts = "timestamp" }
+    }
+
+    stage.timestamp {
+      source="gelf_ts"
+      format="Unix"
+    }
+
+    stage.template {
+      source = "entry"
+      template = `
+         {{- $m := fromJson .entry -}}
+         {{- range $k, $v := $m -}}
+           {{- if hasPrefix $k "_" -}}
+             {{- $_ := set $m (trimPrefix "_" $k) $v -}}
+             {{- $_ := unset $m $k -}}
+           {{- end -}}
+         {{- end -}}
+         {{- $_ := set $m "level" (lower (get $m "level_name")) -}}
+         {{- $_ := unset $m "level_name" -}}
+         {{- $_ := set $m "message" (get $m "short_message") -}}
+         {{- $_ := unset $m "short_message" -}}
+         {{- $_ := unset $m "timestamp" -}}
+         {{- $_ := unset $m "version" -}}
+         {{- $_ := unset $m "host" -}}
+         {{- toJson $m -}}`
+    }
+  }
+
+  stage.match {
+    selector = "{log_format=\"logfmt\"}"
+
+    stage.replace {
+      source="entry"
+      expression="\\\\\""
+      replace="\""
+    }
+
+    stage.logfmt {
+      source = "entry"
+      mapping = {
+        level = "level",
+        msg   = "msg",
+        ts    = "ts",
+      }
+    }
+
+    stage.match {
+      selector = "{ts!=\"\"}"
+
+      stage.timestamp {
+        source="ts"
+        format="RFC3339Nano"
+      }
+    }
+
+    stage.template {
+      source = "entry"
+      template = `
+          {{- $m := . -}}
+          {{- $_ := set $m "level" (lower (get $m "level")) -}}
+          {{- $_ := set $m "message" (get $m "msg") -}}
+          {{- $_ := unset $m "msg" -}}
+          {{- $_ := unset $m "ts" -}}
+          {{- toJson $m -}}`
+    }
+  }
+
+  stage.match {
+    selector = "{log_format=\"klog\"}"
+
+    stage.regex {
+      source = "entry"
+      expression = "^(?P<sev>[IWEF])\\d{4}\\s+\\d{2}:\\d{2}:\\d{2}\\.\\d+\\s+(?P<pid>\\d+)\\s+(?P<file>[^:]+):(?P<line>\\d+)]\\s+(?P<msg>.*)$"
+    }
+
+    stage.template {
+      source = "entry"
+      template = `
+          {{- $lvl := "info" -}}
+          {{- if eq .sev "W" -}}{{- $lvl = "warn" -}}{{- end -}}
+          {{- if eq .sev "E" -}}{{- $lvl = "error" -}}{{- end -}}
+          {{- if eq .sev "F" -}}{{- $lvl = "fatal" -}}{{- end -}}
+          {{- toJson (dict "level" $lvl "message" .msg "caller" (printf "%s:%s" .file .line) "pid" .pid) -}}`
+    }
+  }
+
+  stage.match {
+    selector = "{log_format=\"json\"}"
+
+    stage.json {
+      source = "entry"
+      expressions = { ts = "ts", time = "time" }
+    }
+
+    stage.match {
+      selector = "{ts!=\"\"}"
+
+      stage.timestamp {
+        source="ts"
+        format="RFC3339Nano"
+      }
+    }
+
+    stage.match {
+      selector = "{ts=\"\",time!=\"\"}"
+
+      stage.timestamp {
+        source="time"
+        format="RFC3339Nano"
+      }
+    }
+
+    stage.template {
+      source = "entry"
+      template = `
+         {{- $m := fromJson .entry -}}
+         {{- $_ := set $m "level" (lower (get $m "level")) -}}
+
+         {{- if hasKey $m "msg" -}}
+           {{- $_ := set $m "message" (get $m "msg") -}}
+           {{- $_ := unset $m "msg" -}}
+         {{- end -}}
+
+         {{- if hasKey $m "traceID" -}}
+           {{- $_ := set $m "trace_id" (get $m "traceID") -}}
+           {{- $_ := unset $m "traceID" -}}
+         {{- end -}}
+         {{- if hasKey $m "traceId" -}}
+           {{- $_ := set $m "trace_id" (get $m "traceId") -}}
+           {{- $_ := unset $m "traceId" -}}
+         {{- end -}}
+         {{- if hasKey $m "spanID" -}}
+           {{- $_ := set $m "span_id" (get $m "spanID") -}}
+           {{- $_ := unset $m "spanID" -}}
+         {{- end -}}
+         {{- if hasKey $m "spanId" -}}
+           {{- $_ := set $m "span_id" (get $m "spanId") -}}
+           {{- $_ := unset $m "spanId" -}}
+         {{- end -}}
+
+         {{- $_ := unset $m "ts" -}}
+         {{- $_ := unset $m "time" -}}
+         {{- $_ := unset $m "timestamp" -}}
+
+         {{- toJson $m -}}`
+    }
+  }
+
+  stage.match {
+    selector = "{log_format=\"raw\"}"
+
+    stage.template {
+      source   = "entry"
+      template = `{{- toJson (dict "level" "info" "message" .entry) -}}`
+    }
+  }
+
+  stage.output { source="entry" }
+
+  stage.label_drop { values=["log_format"] }
+
+  stage.pack {
+    labels = ["pod", "container"]
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// *********************************
+//         Cluster Event Logs
+// *********************************
+
+loki.source.kubernetes_events "cluster_events" {
+  job_name   = "integrations/kubernetes/eventhandler"
+  log_format = "logfmt"
+  forward_to = [loki.process.cluster_events.receiver]
+}
+
+loki.process "cluster_events" {
+  stage.static_labels {
+    values = {
+      cluster = "${cluster_name}",
+      job     = "kubernetes/events",
+    }
+  }
+
+  stage.logfmt {
+    mapping = {
+      type = "type",
+      msg  = "msg",
+    }
+  }
+
+  stage.template {
+    source = "output"
+    template = `
+        {{- $m := . -}}
+        {{- $lvl := "info" -}}
+        {{- if eq (get $m "type") "Warning" -}}
+          {{- $lvl = "warn" -}}
+        {{- end -}}
+        {{- $_ := set $m "level" $lvl -}}
+
+        {{- if hasKey $m "msg" -}}
+          {{- $_ := set $m "message" (get $m "msg") -}}
+          {{- $_ := unset $m "msg" -}}
+        {{- end -}}
+
+        {{- toJson $m -}}`
+  }
+
+  stage.output { source = "output" }
+
+  forward_to = [loki.write.default.receiver]
 }
 
 
@@ -223,20 +473,20 @@ otelcol.receiver.otlp "default" {
 //         Metrics Sources
 //////////////////////////////////////////////////
 
+
 // *********************************
 //    collect and exposes metrics about Alloy itself
 // *********************************
 
-prometheus.exporter.self "default" {
-}
+prometheus.exporter.self "default" {}
 
 prometheus.scrape "alloy" {
   targets    = prometheus.exporter.self.default.targets
-  forward_to = [prometheus.remote_write.default.receiver]
+  forward_to = [prometheus.relabel.normalize.receiver]
 }
 
 // *********************************
-//    collect and exposes metrics about hw & OS metric
+//    hw & OS metrics
 // *********************************
 
 prometheus.exporter.unix "default" {
@@ -245,7 +495,7 @@ prometheus.exporter.unix "default" {
 
 prometheus.scrape "unix" {
   targets    = prometheus.exporter.unix.default.targets
-  forward_to = [prometheus.remote_write.default.receiver]
+  forward_to = [prometheus.relabel.normalize.receiver]
 }
 
 // *********************************
@@ -253,62 +503,210 @@ prometheus.scrape "unix" {
 // *********************************
 
 prometheus.operator.podmonitors "default" {
-  forward_to = [prometheus.remote_write.default.receiver]
-
-  // Label creation - "namespace" field from "__meta_kubernetes_namespace"
-  rule {
-    source_labels = ["__meta_kubernetes_namespace"]
-    action = "replace"
-    target_label = "namespace"
-  }
-
-  // Label creation - "pod" field from "__meta_kubernetes_pod_name"
-  rule {
-    source_labels = ["__meta_kubernetes_pod_name"]
-    action = "replace"
-    target_label = "pod"
-  }
-
-  // Label creation - "container" field from "__meta_kubernetes_pod_container_name"
-  rule {
-    source_labels = ["__meta_kubernetes_pod_container_name"]
-    action = "replace"
-    target_label = "container"
-  }
-
-  // Label creation -  "app" field from "__meta_kubernetes_pod_label_app_kubernetes_io_name"
-  rule {
-    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-    action = "replace"
-    target_label = "app"
-  }
-
-  // Label creation -  "job" field from "__meta_kubernetes_namespace" and "__meta_kubernetes_pod_container_name"
-  // Concatenate values __meta_kubernetes_namespace/__meta_kubernetes_pod_container_name
-  rule {
-    source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
-    action = "replace"
-    target_label = "job"
-    separator = "/"
-    replacement = "$1"
-  }
+  forward_to = [prometheus.relabel.normalize.receiver]
 }
 
 prometheus.operator.servicemonitors "default" {
-    forward_to = [prometheus.remote_write.default.receiver]
+  forward_to = [prometheus.relabel.normalize.receiver]
 }
 
 prometheus.operator.probes "default" {
-    forward_to = [prometheus.remote_write.default.receiver]
+  forward_to = [prometheus.relabel.normalize.receiver]
 }
 
+// *********************************
+// Normalization of metrics labels
+// *********************************
+
+prometheus.relabel "normalize" {
+  forward_to = [prometheus.remote_write.default.receiver]
+
+  rule {
+    target_label = "cluster"
+    action       = "replace"
+    replacement  = "${cluster_name}"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label  = "node"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label  = "namespace"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    target_label  = "service"
+    action        = "replace"
+  }
+
+  // fallback for service monitor
+  rule {
+    source_labels = ["service", "__meta_kubernetes_service_label_app_kubernetes_io_name"]
+    target_label  = "service"
+    action        = "replace"
+    regex         = "^$;(.*)$"
+    replacement   = "$1"
+  }
+
+  // fallback 2: pod label "app"
+  rule {
+    source_labels = ["service", "__meta_kubernetes_pod_label_app"]
+    target_label  = "service"
+    action        = "replace"
+    regex         = "^$;(.*)$"
+    replacement   = "$1"
+  }
+
+  // fallback 3: pod label "k8s-app"
+  rule {
+    source_labels = ["service", "__meta_kubernetes_pod_label_k8s_app"]
+    target_label  = "service"
+    action        = "replace"
+    regex         = "^$;(.*)$"
+    replacement   = "$1"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label  = "pod"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    target_label  = "container"
+    action        = "replace"
+  }
+}
+
+
+//////////////////////////////////////////////////
+//         OpenTelemetry Data Delivery
+//////////////////////////////////////////////////
+
+otelcol.receiver.otlp "default" {
+  grpc {}
+  http {}
+
+  output {
+    metrics = [otelcol.processor.k8sattributes.default.input]
+    logs    = [otelcol.processor.k8sattributes.default.input]
+    traces  = [otelcol.processor.k8sattributes.default.input]
+  }
+}
+
+// Enrich incoming OTLP data with Kubernetes metadata
+otelcol.processor.k8sattributes "default" {
+  wait_for_metadata = true
+
+  extract {
+    metadata = [
+      "k8s.namespace.name",
+      "k8s.pod.name",
+      "k8s.pod.start_time",
+      "k8s.container.name",
+      "k8s.node.name",
+      "k8s.deployment.name",
+      "k8s.statefulset.name",
+      "k8s.daemonset.name",
+      "k8s.cronjob.name",
+      "k8s.job.name",
+    ]
+  }
+
+  output {
+    metrics = [otelcol.processor.transform.metrics.input]
+    logs    = [otelcol.processor.transform.logs.input]
+    traces  = [otelcol.processor.transform.traces.input]
+  }
+}
+
+otelcol.processor.transform "metrics" {
+  error_mode = "ignore"
+
+  metric_statements {
+    context = "datapoint"
+    statements = [
+      `set(attributes["service"],   resource.attributes["service.name"])`,
+      `set(attributes["namespace"], resource.attributes["k8s.namespace.name"])`,
+      `set(attributes["pod"],       resource.attributes["k8s.pod.name"])`,
+      `set(attributes["container"], resource.attributes["k8s.container.name"])`,
+      `set(attributes["node"],      resource.attributes["k8s.node.name"])`,
+      `set(attributes["cluster"],   "${cluster_name}")`,
+    ]
+  }
+
+  output { metrics = [otelcol.exporter.prometheus.default.input] }
+}
+
+otelcol.processor.transform "logs" {
+  error_mode = "ignore"
+
+  log_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["service"],   attributes["service.name"])`,
+      `set(attributes["namespace"], attributes["k8s.namespace.name"])`,
+      `set(attributes["pod"],       attributes["k8s.pod.name"])`,
+      `set(attributes["container"], attributes["k8s.container.name"])`,
+      `set(attributes["node"],      attributes["k8s.node.name"])`,
+      `set(attributes["cluster"],   "${cluster_name}")`,
+    ]
+  }
+
+  output { logs = [otelcol.processor.attributes.loki_labels.input] }
+}
+
+otelcol.processor.transform "traces" {
+  error_mode = "ignore"
+
+  trace_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["service"],   attributes["service.name"])`,
+      `set(attributes["namespace"], attributes["k8s.namespace.name"])`,
+      `set(attributes["pod"],       attributes["k8s.pod.name"])`,
+      `set(attributes["container"], attributes["k8s.container.name"])`,
+      `set(attributes["node"],      attributes["k8s.node.name"])`,
+      `set(attributes["cluster"],   "${cluster_name}")`,
+    ]
+  }
+
+  output { traces = [otelcol.exporter.otlp.default.input] }
+}
+
+// Promote only stable canonical keys to Loki labels (lower cardinality).
+otelcol.processor.attributes "loki_labels" {
+  action {
+    key    = "loki.resource.labels"
+    action = "insert"
+    value  = "cluster,namespace,service,node"
+  }
+
+  output { logs = [otelcol.exporter.loki.default.input] }
+}
+
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+// exports OTEL metrics to Prometheus
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.relabel.normalize.receiver]
+}
 
 //////////////////////////////////////////////////
 //         Profiling Sources
 //////////////////////////////////////////////////
 
 discovery.relabel "pod_profiling" {
-  targets = discovery.kubernetes.pod.targets
+  targets = discovery.relabel.common.output
 
   // filter only pods with annotation phlare.grafana.com/scrape="true"
   rule {
@@ -330,49 +728,9 @@ discovery.relabel "pod_profiling" {
 
   // service_name for Pyroscope / Grafana (should match OTEL service.name)
   rule {
-    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    source_labels = ["service"]
     target_label  = "service_name"
     action        = "replace"
-  }
-
-  // same labels as for logs/metrics
-  rule {
-    source_labels = ["__meta_kubernetes_namespace"]
-    target_label  = "namespace"
-    action        = "replace"
-  }
-
-  rule {
-    source_labels = ["__meta_kubernetes_pod_name"]
-    target_label  = "pod"
-    action        = "replace"
-  }
-
-  rule {
-    source_labels = ["__meta_kubernetes_pod_container_name"]
-    target_label  = "container"
-    action        = "replace"
-  }
-
-  rule {
-    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-    target_label  = "app"
-    action        = "replace"
-  }
-
-  // job = namespace/container
-  rule {
-    source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
-    separator     = "/"
-    target_label  = "job"
-    action        = "replace"
-  }
-}
-
-
-pyroscope.write "default" {
-  endpoint {
-    url = "${pyroscope_endpoint}"
   }
 }
 

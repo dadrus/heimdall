@@ -8,23 +8,8 @@ resource "helm_release" "cert_manager" {
   create_namespace = true
   upgrade_install = true
 
-  set = [
-    {
-      name  = "crds.enabled"
-      value = "true"
-    },
-    {
-      name  = "featureGates"
-      value = "AdditionalCertificateOutputFormats=true"
-    },
-    {
-      name  = "webhook.featureGates"
-      value = "AdditionalCertificateOutputFormats=true"
-    },
-    {
-      name  = "extraArgs[0]"
-      value = "--enable-gateway-api"
-    }
+  values = [
+    file("${path.module}/helm/values.yaml")
   ]
 
   wait = true

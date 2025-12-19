@@ -7,13 +7,17 @@ resource "helm_release" "trust_manager" {
   namespace  = "cert-manager"
   version    = var.trustmanager_version
 
-  replace = true
+  replace         = true
   upgrade_install = true
 
   set = [
     {
       name  = "app.trust.namespace"
       value = "cert-manager"
+    },
+    {
+      name  = "app.logFormat"
+      value = "json"
     },
     {
       name  = "secretTargets.enabled"
