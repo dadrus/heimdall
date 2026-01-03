@@ -2,7 +2,6 @@ kube-state-metrics:
   enabled: true
 alertmanager:
   enabled: true
-
 prometheus-node-exporter:
   enabled: false
 prometheus-pushgateway:

@@ -4,17 +4,35 @@ module "cluster" {
   cluster_provider = var.cluster_provider
 }
 
+module "prometheus_operator_crds" {
+  source = "./modules/prometheus-operator-crds"
+  count  = var.observability_stack_enabled ? 1 : 0
+
+  namespace = "monitoring"
+  depends_on = [module.cluster]
+}
+
 module "cert_manager" {
   source = "./modules/cert-manager"
+  namespace = "cert-manager"
+  metrics_enabled = var.observability_stack_enabled
 
   depends_on = [module.cluster]
+}
+
+module "trust_manager" {
+  source = "./modules/trust-manager"
+  namespace = "cert-manager"
+  metrics_enabled = var.observability_stack_enabled
+
+  depends_on = [module.cert_manager]
 }
 
 module "minio_operator" {
   source = "./modules/minio"
   count  = var.cluster_provider == "kind" ? 1 : 0
 
-  depends_on = [module.cert_manager]
+  depends_on = [module.trust_manager]
 }
 
 resource "null_resource" "storage_deps" {
@@ -37,8 +55,13 @@ module "observability" {
   source = "./observability"
   count  = var.observability_stack_enabled ? 1 : 0
 
-  depends_on = [module.storage, module.cert_manager]
+  depends_on = [
+    module.prometheus_operator_crds,
+    module.storage,
+    module.trust_manager,
+  ]
 
+  namespace = "monitoring"
   s3_endpoint = module.storage.s3_endpoint
   access_key  = module.storage.access_key
   secret_key  = module.storage.secret_key
@@ -47,7 +70,7 @@ module "observability" {
 module "ingress_controller" {
   source = "./ingress"
 
-  depends_on = [module.cert_manager]
+  depends_on = [module.trust_manager]
 
   namespace                  = "ingress"
   ingress_controller         = var.ingress_controller
@@ -71,7 +94,7 @@ module "heimdall" {
 
   depends_on = [
     module.cluster,
-    module.cert_manager,
+    module.trust_manager,
     module.ingress_controller,
   ]
 
@@ -87,8 +110,8 @@ module "heimdall" {
     tracing_endpoint  = var.observability_stack_enabled ? module.observability[0].otlp_traces_endpoint : ""
     tracing_protocol  = var.observability_stack_enabled ? module.observability[0].otlp_traces_protocol : ""
     profiling_enabled = true
-    log_format        = "gelf"  # "text"
-    log_level         = "trace" # "debug", "info", "warn", "info", "error"
+    log_format        = "gelf"  # "text", "text"
+    log_level         = "info" # "trace", "debug", "info", "warn", "info", "error"
   }
 }
 
@@ -97,7 +120,7 @@ module "demo_app" {
 
   depends_on = [
     module.cluster,
-    module.cert_manager,
+    module.trust_manager,
     module.ingress_controller,
     module.heimdall,
   ]

@@ -51,4 +51,5 @@ env:
 %{ endif }
 
 image:
-  tag: 0.17.4
+  repository: heimdall
+  tag: local

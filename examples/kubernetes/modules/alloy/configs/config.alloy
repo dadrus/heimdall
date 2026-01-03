@@ -49,14 +49,14 @@ discovery.relabel "common" {
 
   rule {
     source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-    target_label  = "service"
+    target_label  = "app"
     action        = "replace"
   }
 
   // fallback 1: pod label "app"
   rule {
-    source_labels = ["service", "__meta_kubernetes_pod_label_app"]
-    target_label  = "service"
+    source_labels = ["app", "__meta_kubernetes_pod_label_app"]
+    target_label  = "app"
     action        = "replace"
     regex         = "^$;(.*)$"
     replacement   = "$1"
@@ -64,15 +64,15 @@ discovery.relabel "common" {
 
   // fallback 2: pod label "k8s-app"
   rule {
-    source_labels = ["service", "__meta_kubernetes_pod_label_k8s_app"]
-    target_label  = "service"
+    source_labels = ["app", "__meta_kubernetes_pod_label_k8s_app"]
+    target_label  = "app"
     action        = "replace"
     regex         = "^$;(.*)$"
     replacement   = "$1"
   }
 
   rule {
-    source_labels = ["namespace", "service"]
+    source_labels = ["namespace", "app"]
     separator     = "/"
     target_label  = "job"
     action        = "replace"
@@ -172,7 +172,7 @@ loki.process "node_logs" {
             {{- if eq $sev 1 -}}{{- $lvl = "alert" -}}{{- end -}}
             {{- if eq $sev 0 -}}{{- $lvl = "emerg" -}}{{- end -}}
           {{- end -}}
-          {{- toJson (dict "level" $lvl "service" (toString .app) "pid" (toString .pid) "message" (toString .msg)) -}}`
+          {{- toJson (dict "level" $lvl "app" (toString .app) "pid" (toString .pid) "message" (toString .msg)) -}}`
     }
 
     stage.output { source = "out" }
@@ -202,6 +202,19 @@ loki.source.kubernetes "pod_logs" {
 }
 
 loki.process "pod_logs" {
+  stage.pack {
+    labels = ["pod", "container"]
+  }
+
+  stage.json {
+    expressions = {
+      entry = "_entry",
+    }
+  }
+
+  stage.output { source="entry" }
+
+/**
   stage.template {
     source   = "entry"
     template = "{{ .Entry }}"
@@ -413,10 +426,7 @@ loki.process "pod_logs" {
 
   stage.label_drop { values=["log_format"] }
 
-  stage.pack {
-    labels = ["pod", "container"]
-  }
-
+**/
   forward_to = [loki.write.default.receiver]
 }
 
@@ -519,8 +529,6 @@ prometheus.operator.probes "default" {
 // *********************************
 
 prometheus.relabel "normalize" {
-  forward_to = [prometheus.remote_write.default.receiver]
-
   rule {
     target_label = "cluster"
     action       = "replace"
@@ -528,61 +536,36 @@ prometheus.relabel "normalize" {
   }
 
   rule {
-    source_labels = ["__meta_kubernetes_pod_node_name"]
-    target_label  = "node"
-    action        = "replace"
-  }
-
-  rule {
-    source_labels = ["__meta_kubernetes_namespace"]
-    target_label  = "namespace"
-    action        = "replace"
-  }
-
-  rule {
     source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-    target_label  = "service"
+    target_label  = "app"
     action        = "replace"
   }
 
-  // fallback for service monitor
   rule {
-    source_labels = ["service", "__meta_kubernetes_service_label_app_kubernetes_io_name"]
-    target_label  = "service"
-    action        = "replace"
-    regex         = "^$;(.*)$"
-    replacement   = "$1"
-  }
-
-  // fallback 2: pod label "app"
-  rule {
-    source_labels = ["service", "__meta_kubernetes_pod_label_app"]
-    target_label  = "service"
-    action        = "replace"
-    regex         = "^$;(.*)$"
-    replacement   = "$1"
-  }
-
-  // fallback 3: pod label "k8s-app"
-  rule {
-    source_labels = ["service", "__meta_kubernetes_pod_label_k8s_app"]
-    target_label  = "service"
+    source_labels = ["app", "__meta_kubernetes_pod_label_app"]
+    target_label  = "app"
     action        = "replace"
     regex         = "^$;(.*)$"
     replacement   = "$1"
   }
 
   rule {
-    source_labels = ["__meta_kubernetes_pod_name"]
-    target_label  = "pod"
+    source_labels = ["app", "__meta_kubernetes_pod_label_k8s_app"]
+    target_label  = "app"
     action        = "replace"
+    regex         = "^$;(.*)$"
+    replacement   = "$1"
   }
 
   rule {
-    source_labels = ["__meta_kubernetes_pod_container_name"]
-    target_label  = "container"
+    source_labels = ["app", "__meta_kubernetes_pod_label_kubernetes_io_name"]
+    target_label  = "app"
     action        = "replace"
+    regex         = "^$;(.*)$"
+    replacement   = "$1"
   }
+
+  forward_to = [prometheus.remote_write.default.receiver]
 }
 
 
@@ -633,12 +616,12 @@ otelcol.processor.transform "metrics" {
   metric_statements {
     context = "datapoint"
     statements = [
-      `set(attributes["service"],   resource.attributes["service.name"])`,
-      `set(attributes["namespace"], resource.attributes["k8s.namespace.name"])`,
-      `set(attributes["pod"],       resource.attributes["k8s.pod.name"])`,
-      `set(attributes["container"], resource.attributes["k8s.container.name"])`,
-      `set(attributes["node"],      resource.attributes["k8s.node.name"])`,
-      `set(attributes["cluster"],   "${cluster_name}")`,
+      `set(attributes["app"], resource.attributes["service.name"])`,
+      `set(attributes["namespace"],    resource.attributes["k8s.namespace.name"])`,
+      `set(attributes["pod"],          resource.attributes["k8s.pod.name"])`,
+      `set(attributes["container"],    resource.attributes["k8s.container.name"])`,
+      `set(attributes["node"],         resource.attributes["k8s.node.name"])`,
+      `set(attributes["cluster"],      "${cluster_name}")`,
     ]
   }
 
@@ -651,12 +634,12 @@ otelcol.processor.transform "logs" {
   log_statements {
     context = "resource"
     statements = [
-      `set(attributes["service"],   attributes["service.name"])`,
-      `set(attributes["namespace"], attributes["k8s.namespace.name"])`,
-      `set(attributes["pod"],       attributes["k8s.pod.name"])`,
-      `set(attributes["container"], attributes["k8s.container.name"])`,
-      `set(attributes["node"],      attributes["k8s.node.name"])`,
-      `set(attributes["cluster"],   "${cluster_name}")`,
+      `set(attributes["app"], attributes["service.name"])`,
+      `set(attributes["namespace"],    attributes["k8s.namespace.name"])`,
+      `set(attributes["pod"],          attributes["k8s.pod.name"])`,
+      `set(attributes["container"],    attributes["k8s.container.name"])`,
+      `set(attributes["node"],         attributes["k8s.node.name"])`,
+      `set(attributes["cluster"],      "${cluster_name}")`,
     ]
   }
 
@@ -669,12 +652,12 @@ otelcol.processor.transform "traces" {
   trace_statements {
     context = "resource"
     statements = [
-      `set(attributes["service"],   attributes["service.name"])`,
-      `set(attributes["namespace"], attributes["k8s.namespace.name"])`,
-      `set(attributes["pod"],       attributes["k8s.pod.name"])`,
-      `set(attributes["container"], attributes["k8s.container.name"])`,
-      `set(attributes["node"],      attributes["k8s.node.name"])`,
-      `set(attributes["cluster"],   "${cluster_name}")`,
+      `set(attributes["app"], attributes["service.name"])`,
+      `set(attributes["namespace"],    attributes["k8s.namespace.name"])`,
+      `set(attributes["pod"],          attributes["k8s.pod.name"])`,
+      `set(attributes["container"],    attributes["k8s.container.name"])`,
+      `set(attributes["node"],         attributes["k8s.node.name"])`,
+      `set(attributes["cluster"],      "${cluster_name}")`,
     ]
   }
 
@@ -686,7 +669,7 @@ otelcol.processor.attributes "loki_labels" {
   action {
     key    = "loki.resource.labels"
     action = "insert"
-    value  = "cluster,namespace,service,node"
+    value  = "cluster,namespace,app,node"
   }
 
   output { logs = [otelcol.exporter.loki.default.input] }
@@ -724,13 +707,6 @@ discovery.relabel "pod_profiling" {
     separator    = ":"
     target_label = "__address__"
     action       = "replace"
-  }
-
-  // service_name for Pyroscope / Grafana (should match OTEL service.name)
-  rule {
-    source_labels = ["service"]
-    target_label  = "service_name"
-    action        = "replace"
   }
 }
 
