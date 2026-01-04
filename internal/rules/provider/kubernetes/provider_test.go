@@ -58,6 +58,9 @@ import (
 )
 
 func TestNewProvider(t *testing.T) {
+	// disabling WatchListClient feature gate as it is not supported by the test server
+	t.Setenv("KUBE_FEATURE_WatchListClient", "false")
+
 	// provider creates a client which registers its scheme
 	// the corresponding k8s api is not threat safe.
 	// So, to avoid concurrent map writes, this test is not configured
@@ -336,7 +339,8 @@ func (h *RuleSetResourceHandler) writeSingleRuleResponse(t *testing.T, w http.Re
 }
 
 func TestProviderLifecycle(t *testing.T) {
-	t.Parallel()
+	// disabling WatchListClient feature gate as it is not supported by the test server
+	t.Setenv("KUBE_FEATURE_WatchListClient", "false")
 
 	for uc, tc := range map[string]struct {
 		conf           []byte
@@ -1066,7 +1070,8 @@ func TestProviderLifecycle(t *testing.T) {
 }
 
 func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
-	t.Parallel()
+	// disabling WatchListClient feature gate as it is not supported by the test server
+	t.Setenv("KUBE_FEATURE_WatchListClient", "false")
 
 	// GIVEN
 	tb := &testsupport.TestingLog{TB: t}
@@ -1118,7 +1123,8 @@ func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
 }
 
 func TestRuleSetStatusUpdate(t *testing.T) {
-	t.Parallel()
+	// disabling WatchListClient feature gate as it is not supported by the test server
+	t.Setenv("KUBE_FEATURE_WatchListClient", "false")
 
 	for uc, tc := range map[string]struct {
 		setupMocks func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock)
