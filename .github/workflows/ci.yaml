@@ -266,7 +266,7 @@ jobs:
           go test -v -coverprofile=coverage.cov -coverpkg=./... ./... 2>&1 | \
           tee >(go-junit-report -set-exit-code > junit-report.xml)
       - name: Upload test results to Codecov
-        uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1
+        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
         if: always() && !cancelled()
         with:
           files: junit-report.xml
@@ -351,7 +351,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Collect container meta-info for DockerHub
         if: github.ref == 'refs/heads/main'
         id: dockerhub-meta
@@ -474,7 +474,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@d697be2f83c6234b20877c3b5eac7a7f342f0d0c # v1.269.0
+        uses: ruby/setup-ruby@4c24fa5ec04b2e79eb40571b1cee2a0d2b705771 # v1.278.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
