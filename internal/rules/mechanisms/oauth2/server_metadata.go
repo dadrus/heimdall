@@ -17,7 +17,6 @@
 package oauth2
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -47,7 +46,7 @@ func (sm ServerMetadata) verify(usedMetadataURL string) error {
 	}
 
 	if strings.Contains(uriSuffix, "/") {
-		expectedIssuer = fmt.Sprintf("%s%s", uriPrefix, strings.Split(uriSuffix, "/")[1])
+		expectedIssuer = uriPrefix + strings.Split(uriSuffix, "/")[1]
 	} else {
 		expectedIssuer = strings.TrimSuffix(uriPrefix, "/")
 	}

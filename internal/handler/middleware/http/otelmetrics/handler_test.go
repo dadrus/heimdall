@@ -72,21 +72,17 @@ func TestHandlerExecution(t *testing.T) {
 
 				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "http.server.active_requests", activeRequestsMetric.Name)
-				assert.Equal(t, "Measures the number of concurrent HTTP requests that are currently in-flight.",
+				assert.Equal(t, "Number of active HTTP server requests.",
 					activeRequestsMetric.Description)
-				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
+				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[int64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
 				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
-				require.Equal(t, 8, activeRequests.DataPoints[0].Attributes.Len())
+				require.Equal(t, 6, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
 				assert.Equal(t, "zab",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "baz").AsString())
-				assert.Equal(t, "http",
-					attributeValue(activeRequests.DataPoints[0].Attributes, "network.protocol.name").AsString())
-				assert.Equal(t, "1.1",
-					attributeValue(activeRequests.DataPoints[0].Attributes, "network.protocol.version").AsString())
 				assert.Equal(t, http.MethodGet,
 					attributeValue(activeRequests.DataPoints[0].Attributes, "http.request.method").AsString())
 				assert.Equal(t, "http",
