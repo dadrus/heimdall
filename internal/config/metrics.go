@@ -17,7 +17,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -34,8 +33,7 @@ func envOr(key, defaultValue string) string {
 }
 
 func (c MetricsConfig) Address() string {
-	return fmt.Sprintf("%s:%s",
-		envOr("OTEL_EXPORTER_PROMETHEUS_HOST", "127.0.0.1"),
-		envOr("OTEL_EXPORTER_PROMETHEUS_PORT", "9464"),
-	)
+	return envOr("OTEL_EXPORTER_PROMETHEUS_HOST", "127.0.0.1") +
+		":" +
+		envOr("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
 }

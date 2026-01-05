@@ -17,7 +17,6 @@
 package admissioncontroller
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -60,8 +59,7 @@ func newService(
 		otelhttp.NewMiddleware("",
 			otelhttp.WithServerName(serviceName),
 			otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
-				return fmt.Sprintf("EntryPoint %s %s%s",
-					strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
+				return "EntryPoint " + strings.ToLower(req.URL.Scheme) + " " + httpx.LocalAddress(req) + req.URL.Path
 			}),
 		),
 		otelmetrics.New(

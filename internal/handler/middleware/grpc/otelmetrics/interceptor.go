@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 
@@ -43,7 +43,7 @@ type ServerInterceptor interface {
 }
 
 type metricsInterceptor struct {
-	activeRequests metric.Float64UpDownCounter
+	activeRequests metric.Int64UpDownCounter
 	attributes     []attribute.KeyValue
 	server         string
 	subsystem      attribute.KeyValue
@@ -62,9 +62,9 @@ func New(opts ...Option) ServerInterceptor {
 
 	meter := conf.provider.Meter(instrumentationName)
 
-	activeRequestsMeasure, err := meter.Float64UpDownCounter(
+	activeRequestsMeasure, err := meter.Int64UpDownCounter(
 		requestsActive,
-		metric.WithDescription("Measures the number of concurrent RPC requests that are currently in-flight."),
+		metric.WithDescription("Number of active RPC server requests."),
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
