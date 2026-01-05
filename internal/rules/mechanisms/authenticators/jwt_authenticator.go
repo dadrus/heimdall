@@ -629,7 +629,9 @@ func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL,
 	digest.Write(stringx.ToBytes(renderedURL))
 	digest.Write(stringx.ToBytes(reference))
 
-	return hex.EncodeToString(digest.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(digest.Sum(result[:0]))
 }
 
 func (a *jwtAuthenticator) validateJWK(jwk *jose.JSONWebKey) error {
