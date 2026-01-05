@@ -128,21 +128,24 @@ type routeImpl struct {
 }
 
 func (r *routeImpl) Matches(ctx heimdall.RequestContext, keys, values []string) bool {
-	logger := zerolog.Ctx(ctx.Context()).With().
-		Str("_source", r.rule.srcID).
-		Str("_id", r.rule.id).
-		Str("route", r.path).
-		Logger()
-
-	logger.Debug().Msg("Matching rule")
+	logger := zerolog.Ctx(ctx.Context())
 
 	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {
-		logger.Debug().Err(err).Msg("Request does not satisfy matching conditions")
+		logger.Debug().
+			Str("_source", r.rule.srcID).
+			Str("_id", r.rule.id).
+			Str("route", r.path).
+			Err(err).
+			Msg("Request does not satisfy matching conditions")
 
 		return false
 	}
 
-	logger.Debug().Msg("Rule matched")
+	logger.Debug().
+		Str("_source", r.rule.srcID).
+		Str("_id", r.rule.id).
+		Str("route", r.path).
+		Msg("Rule matched")
 
 	return true
 }

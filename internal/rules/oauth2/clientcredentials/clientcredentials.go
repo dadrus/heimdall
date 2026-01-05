@@ -128,7 +128,9 @@ func (c *Config) calculateCacheKey() string {
 	digest.Write(stringx.ToBytes(c.TokenURL))
 	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
 
-	return hex.EncodeToString(digest.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(digest.Sum(result[:0]))
 }
 
 func (c *Config) getCacheTTL(resp *TokenInfo) time.Duration {

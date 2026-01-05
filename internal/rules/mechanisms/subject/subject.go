@@ -20,18 +20,32 @@ import (
 	"crypto/sha256"
 
 	"github.com/goccy/go-json"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type Subject struct {
 	ID         string
 	Attributes map[string]any
+
+	// cached hash value
+	hash []byte
 }
 
 func (s *Subject) Hash() []byte {
+	if s.hash != nil {
+		return s.hash
+	}
+
 	hash := sha256.New()
-	rawSub, _ := json.Marshal(s)
 
-	hash.Write(rawSub)
+	if len(s.Attributes) != 0 {
+		_ = json.NewEncoder(hash).Encode(s)
+	} else {
+		hash.Write(stringx.ToBytes(s.ID))
+	}
 
-	return hash.Sum(nil)
+	s.hash = hash.Sum(nil)
+
+	return s.hash
 }

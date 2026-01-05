@@ -114,13 +114,13 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 	}
 
 	if s.TTL != nil {
-		ttlBytes := make([]byte, int64BytesCount)
+		var ttlBytes [int64BytesCount]byte
 
 		//nolint:gosec
 		// no integer overflow during conversion possible
-		binary.LittleEndian.PutUint64(ttlBytes, uint64(*s.TTL))
+		binary.LittleEndian.PutUint64(ttlBytes[:], uint64(*s.TTL))
 
-		hash.Write(ttlBytes)
+		hash.Write(ttlBytes[:])
 	}
 
 	hash.Write(stringx.ToBytes(s.Signer.Name))

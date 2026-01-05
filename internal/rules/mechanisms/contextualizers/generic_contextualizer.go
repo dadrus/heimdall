@@ -392,10 +392,10 @@ func (c *genericContextualizer) calculateCacheKey(
 ) string {
 	const int64BytesCount = 8
 
-	ttlBytes := make([]byte, int64BytesCount)
+	var ttlBytes [int64BytesCount]byte
 	//nolint:gosec
 	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes, uint64(c.ttl))
+	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
 
 	hash := sha256.New()
 	hash.Write(c.e.Hash())
@@ -403,7 +403,7 @@ func (c *genericContextualizer) calculateCacheKey(
 	hash.Write(stringx.ToBytes(strings.Join(c.fwdHeaders, ",")))
 	hash.Write(stringx.ToBytes(strings.Join(c.fwdCookies, ",")))
 	hash.Write(stringx.ToBytes(payload))
-	hash.Write(ttlBytes)
+	hash.Write(ttlBytes[:])
 	hash.Write(sub.Hash())
 
 	for k, v := range values {
@@ -411,7 +411,9 @@ func (c *genericContextualizer) calculateCacheKey(
 		hash.Write(stringx.ToBytes(v))
 	}
 
-	return hex.EncodeToString(hash.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(hash.Sum(result[:0]))
 }
 
 func (c *genericContextualizer) renderTemplates(
