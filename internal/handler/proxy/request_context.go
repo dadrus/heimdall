@@ -18,7 +18,6 @@ package proxy
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -109,7 +108,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(r.transport),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
+				return r.Proto + " " + r.Method + " " + r.URL.Path + " @" + r.URL.Host
 			})),
 	}
 
@@ -155,7 +154,7 @@ func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 
 	out.Header.Set("X-Forwarded-For", x.IfThenElseExec(len(forwardedFor) == 0,
 		func() string { return clientIP },
-		func() string { return fmt.Sprintf("%s, %s", forwardedFor, clientIP) }))
+		func() string { return forwardedFor + ", " + clientIP }))
 
 	out.Header.Set("X-Forwarded-Proto",
 		x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
@@ -170,8 +169,7 @@ func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 				clientIP = "\"[" + clientIP + "]\""
 			}
 
-			return fmt.Sprintf("for=%s;host=%s;proto=%s",
-				clientIP, in.Host, proto)
+			return "for=" + clientIP + ";host=" + in.Host + ";proto=" + proto
 		},
 		func() string {
 			if strings.Contains(clientIP, ":") {
@@ -179,8 +177,7 @@ func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 				clientIP = "\"[" + clientIP + "]\""
 			}
 
-			return fmt.Sprintf("%s, for=%s;host=%s;proto=%s",
-				forwarded, clientIP, in.Host, proto)
+			return forwarded + ", for=" + clientIP + ";host=" + in.Host + ";proto=" + proto
 		}))
 }
 

@@ -18,7 +18,6 @@ package accesslog
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -36,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -284,8 +284,8 @@ func TestHandlerExecution(t *testing.T) {
 							otelhttp.WithTracerProvider(otel.GetTracerProvider()),
 							otelhttp.WithServerName("proxy"),
 							otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
-								return fmt.Sprintf("EntryPoint %s %s%s",
-									strings.ToLower(req.URL.Scheme), "ctx.Context().LocalAddr().String()", req.URL.Path)
+								return "EntryPoint " + strings.ToLower(req.URL.Scheme) + " " +
+									httpx.LocalAddress(req) + req.URL.Path
 							}),
 						)
 					},

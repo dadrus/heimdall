@@ -17,7 +17,6 @@
 package config
 
 import (
-	"fmt"
 	"net/url"
 	"slices"
 	"strings"
@@ -41,7 +40,7 @@ type PrefixAdder string
 
 func (a PrefixAdder) AddTo(value string) string {
 	if len(a) != 0 {
-		return fmt.Sprintf("%s%s", a, value)
+		return string(a) + value
 	}
 
 	return value

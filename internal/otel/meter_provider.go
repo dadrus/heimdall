@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.38.0/httpconv"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -52,7 +52,7 @@ func initMeterProvider(
 		metric.WithResource(res),
 		metric.WithView(metric.NewView(
 			metric.Instrument{
-				Name: semconv.HTTPServerRequestDurationName,
+				Name: semconv.ServerRequestDuration{}.Name(),
 				Kind: metric.InstrumentKindHistogram,
 			},
 			metric.Stream{
