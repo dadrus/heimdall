@@ -40,7 +40,9 @@ func messageDigest(val, hash string) string {
 	mds.Write(stringx.ToBytes(val))
 	mds.Write(stringx.ToBytes(hash))
 
-	return hex.EncodeToString(mds.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(mds.Sum(result[:0]))
 }
 
 func toRealType(val string) any {

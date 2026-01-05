@@ -363,18 +363,18 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.RequestContext, resp *http.
 func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[string]string, payload string) string {
 	const int64BytesCount = 8
 
-	ttlBytes := make([]byte, int64BytesCount)
+	var ttlBytes [int64BytesCount]byte
 
 	//nolint:gosec
 	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes, uint64(a.ttl))
+	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(a.ttl))
 
 	hash := sha256.New()
 	hash.Write(a.e.Hash())
 	hash.Write(stringx.ToBytes(a.id))
 	hash.Write(stringx.ToBytes(strings.Join(a.headersForUpstream, ",")))
 	hash.Write(stringx.ToBytes(payload))
-	hash.Write(ttlBytes)
+	hash.Write(ttlBytes[:])
 	hash.Write(sub.Hash())
 
 	for k, v := range values {
@@ -382,7 +382,9 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[st
 		hash.Write(stringx.ToBytes(v))
 	}
 
-	return hex.EncodeToString(hash.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(hash.Sum(result[:0]))
 }
 
 func (a *remoteAuthorizer) verify(ctx heimdall.RequestContext, result any) error {
