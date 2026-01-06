@@ -14,7 +14,7 @@ tracing:
       endpoint: ${otel_tracing_endpoint}
     grpc:
       enabled: ${otel_tracing_protocol == "grpc"}
-      endpoint: ${split("://", otel_tracing_endpoint)[1]}
+      endpoint: ${try(split("://", otel_tracing_endpoint)[1], "")}
       insecure: true
 
 metrics:

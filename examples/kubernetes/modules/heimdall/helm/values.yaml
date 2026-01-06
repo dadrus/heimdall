@@ -50,6 +50,3 @@ env:
   %{ endif }
 %{ endif }
 
-image:
-  repository: heimdall
-  tag: local

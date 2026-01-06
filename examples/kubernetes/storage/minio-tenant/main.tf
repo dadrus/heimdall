@@ -1,8 +1,8 @@
-#resource "kubernetes_namespace" "storage" {
-#  metadata {
-#    name = var.namespace
-#  }
-#}
+resource "kubernetes_namespace" "storage" {
+  metadata {
+    name = var.namespace
+  }
+}
 
 resource "kubectl_manifest" "minio_tenant" {
   for_each = fileset(path.module, "./manifests/*.yaml")

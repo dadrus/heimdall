@@ -17,22 +17,14 @@ module "cert_manager" {
   namespace = "cert-manager"
   metrics_enabled = var.observability_stack_enabled
 
-  depends_on = [module.cluster]
-}
-
-module "trust_manager" {
-  source = "./modules/trust-manager"
-  namespace = "cert-manager"
-  metrics_enabled = var.observability_stack_enabled
-
-  depends_on = [module.cert_manager]
+  depends_on = [module.cluster, module.prometheus_operator_crds]
 }
 
 module "minio_operator" {
   source = "./modules/minio"
   count  = var.cluster_provider == "kind" ? 1 : 0
 
-  depends_on = [module.trust_manager]
+  depends_on = [module.cert_manager]
 }
 
 resource "null_resource" "storage_deps" {
@@ -58,7 +50,7 @@ module "observability" {
   depends_on = [
     module.prometheus_operator_crds,
     module.storage,
-    module.trust_manager,
+    module.cert_manager,
   ]
 
   namespace = "monitoring"
@@ -70,7 +62,7 @@ module "observability" {
 module "ingress_controller" {
   source = "./ingress"
 
-  depends_on = [module.trust_manager]
+  depends_on = [module.cert_manager]
 
   namespace                  = "ingress"
   ingress_controller         = var.ingress_controller
@@ -92,11 +84,7 @@ module "ingress_controller" {
 module "heimdall" {
   source = "./modules/heimdall"
 
-  depends_on = [
-    module.cluster,
-    module.trust_manager,
-    module.ingress_controller,
-  ]
+  depends_on = [module.ingress_controller]
 
   namespace          = "heimdall"
   ingress_controller = var.ingress_controller
@@ -119,8 +107,6 @@ module "demo_app" {
   source = "./modules/echo-app"
 
   depends_on = [
-    module.cluster,
-    module.trust_manager,
     module.ingress_controller,
     module.heimdall,
   ]
