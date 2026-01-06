@@ -1,10 +1,9 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: heimdall-pod-monitor
-  namespace: heimdall
+  name: heimdall
+  namespace: ${namespace}
   labels:
-    release: prometheus
     app.kubernetes.io/instance: heimdall
     app.kubernetes.io/name: heimdall
     app.kubernetes.io/part-of: heimdall
@@ -21,4 +20,4 @@ spec:
   jobLabel: heimdall-pod-monitor
   namespaceSelector:
     matchNames:
-      - heimdall
+      - ${namespace}

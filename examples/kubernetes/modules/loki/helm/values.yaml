@@ -1,3 +1,7 @@
+global:
+  extraArgs:
+    - "-log.format=json"
+
 loki:
   schemaConfig:
     configs:

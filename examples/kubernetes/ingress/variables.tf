@@ -22,12 +22,30 @@ variable "gateway_api_enabled" {
   description = "Whether to perform integration via k8s Gateway API"
 }
 
-variable "observability_stack_enabled" {
-  type = bool
-  default = false
-}
-
 variable "kubeconfig_path" {
   type        = string
   description = "Path to the Kubeconfig of the cluster (used to monitor creation of the resources)"
+}
+
+variable "observability" {
+  type = object({
+    log_level         = string
+    metrics_enabled   = bool
+    metrics_exporter  = string
+    metrics_endpoint  = string
+    metrics_protocol  = string
+    tracing_enabled   = bool
+    tracing_endpoint  = string
+    tracing_protocol  = string
+  })
+  default = {
+    log_level         = "INFO"
+    metrics_enabled   = false
+    metrics_exporter  = "otlp"
+    metrics_endpoint  = ""
+    metrics_protocol  = "grpc"
+    tracing_enabled   = false
+    tracing_endpoint  = ""
+    tracing_protocol  = "grpc"
+  }
 }

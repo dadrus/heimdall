@@ -1,3 +1,7 @@
+variable "namespace" {
+  type = string
+}
+
 variable "s3_endpoint" {
   type = string
 }

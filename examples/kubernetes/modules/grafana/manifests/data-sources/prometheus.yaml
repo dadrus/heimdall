@@ -1,7 +1,7 @@
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDatasource
 metadata:
-  name: prometheus-datasource
+  name: prometheus
   namespace: ${namespace}
 spec:
   datasource:
