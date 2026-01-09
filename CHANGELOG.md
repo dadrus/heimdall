@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.17.7](https://github.com/dadrus/heimdall/compare/v0.17.6...v0.17.7) (2026-01-09)
+
+
+### Performance Improvements
+
+* Reduction of CPU and memory footprint ([#2955](https://github.com/dadrus/heimdall/issues/2955)) ([2278df6](https://github.com/dadrus/heimdall/commit/2278df6b9c2a6d787627fc200b04c83dc22381c4))
+
+
+### Bug Fixes
+
+* Request duration metric resolution adjusted for sub-millisecond latencies ([#2954](https://github.com/dadrus/heimdall/issues/2954)) ([a8e1cbc](https://github.com/dadrus/heimdall/commit/a8e1cbcbb8a81b485e380133846e22f63d9062ae))
+
+
+### Documentation
+
+* Kubernetes examples updated to include working observability stack and a Grafana dashboard ([#2958](https://github.com/dadrus/heimdall/issues/2958)) ([6a6d4bb](https://github.com/dadrus/heimdall/commit/6a6d4bb177dc6a44b18e950a092e9e30ee20f694))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 0a764e5 ([#2945](https://github.com/dadrus/heimdall/issues/2945)) ([9c213ab](https://github.com/dadrus/heimdall/commit/9c213abf2b8b63cee96ac807f15c317042b1c1d7))
+* update kubernetes packages to v0.35.0 ([#2942](https://github.com/dadrus/heimdall/issues/2942)) ([7e0bc65](https://github.com/dadrus/heimdall/commit/7e0bc6515a105b124a149d40ec06af41c39f9121))
+* update module github.com/go-co-op/gocron/v2 to v2.19.0 ([#2935](https://github.com/dadrus/heimdall/issues/2935)) ([34cadef](https://github.com/dadrus/heimdall/commit/34cadefe388b686296e0b7528af81dea04f0f33b))
+* update module github.com/go-playground/validator/v10 to v10.30.1 ([#2947](https://github.com/dadrus/heimdall/issues/2947)) ([298040c](https://github.com/dadrus/heimdall/commit/298040c63c560b3b6af61ecff5f5f4c13c31ef19))
+* update module github.com/redis/rueidis to v1.0.70 ([#2950](https://github.com/dadrus/heimdall/issues/2950)) ([960f031](https://github.com/dadrus/heimdall/commit/960f031ec39ca63adcd3c792a5217db5e6811162))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.70 ([#2951](https://github.com/dadrus/heimdall/issues/2951)) ([3df1f08](https://github.com/dadrus/heimdall/commit/3df1f083463948518dc563955f04f21997a93f65))
+* update module google.golang.org/grpc to v1.78.0 ([#2946](https://github.com/dadrus/heimdall/issues/2946)) ([3bf3a82](https://github.com/dadrus/heimdall/commit/3bf3a821668b69f3c33ebfae5b81ae3f28feebe0))
+* update module google.golang.org/protobuf to v1.36.11 ([#2933](https://github.com/dadrus/heimdall/issues/2933)) ([a5fe579](https://github.com/dadrus/heimdall/commit/a5fe579ea0d232f750efcec3f3e443f1bd459cbd))
+
 ## [0.17.6](https://github.com/dadrus/heimdall/compare/v0.17.5...v0.17.6) (2025-12-12)
 
 
