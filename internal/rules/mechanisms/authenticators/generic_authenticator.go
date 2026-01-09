@@ -390,5 +390,7 @@ func (a *genericAuthenticator) calculateCacheKey(reference string) string {
 	digest.Write(a.e.Hash())
 	digest.Write(stringx.ToBytes(reference))
 
-	return hex.EncodeToString(digest.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(digest.Sum(result[:0]))
 }

@@ -40,8 +40,24 @@ resource "helm_release" "heimdall" {
   upgrade_install  = true
 
   values = [
-    file("${path.module}/configs/heimdall.yaml"),
-    file("${path.module}/helm/values.yaml"),
+    templatefile("${path.module}/configs/heimdall.yaml", {
+      metrics_enabled   = var.observability.metrics_enabled
+      tracing_enabled   = var.observability.tracing_enabled
+      profiling_enabled = var.observability.profiling_enabled
+      log_level         = var.observability.log_level
+      log_format        = var.observability.log_format
+    }),
+    templatefile("${path.module}/helm/values.yaml", {
+      otel_metrics_enabled  = var.observability.metrics_enabled
+      otel_metrics_exporter = var.observability.metrics_exporter
+      otel_metrics_protocol = var.observability.metrics_protocol
+      otel_metrics_endpoint = var.observability.metrics_endpoint
+      otel_tracing_enabled  = var.observability.tracing_enabled
+      otel_tracing_exporter = var.observability.tracing_exporter
+      otel_tracing_protocol = var.observability.tracing_protocol
+      otel_tracing_endpoint = var.observability.tracing_endpoint
+      profiling_enabled     = var.observability.profiling_enabled
+    }),
   ]
 
   set = [{
@@ -51,3 +67,4 @@ resource "helm_release" "heimdall" {
 
   wait = true
 }
+

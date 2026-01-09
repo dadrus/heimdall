@@ -19,7 +19,6 @@ package cloudblob
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/url"
 
@@ -42,7 +41,7 @@ type ruleSetEndpoint struct {
 }
 
 func (e *ruleSetEndpoint) ID() string {
-	return fmt.Sprintf("%s/%s", e.URL, e.Prefix)
+	return e.URL.String() + "/" + e.Prefix
 }
 
 func (e *ruleSetEndpoint) FetchRuleSets(
@@ -149,7 +148,7 @@ func (e *ruleSetEndpoint) readRuleSet(
 	}
 
 	ruleSet.Hash = attrs.MD5
-	ruleSet.Source = fmt.Sprintf("%s@%s", key, e.ID())
+	ruleSet.Source = key + "@" + e.ID()
 	ruleSet.ModTime = attrs.ModTime
 
 	return &ruleSet, nil

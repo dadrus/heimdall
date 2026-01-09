@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -78,10 +78,10 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-				assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
+				assert.Equal(t, "Number of active RPC server requests.",
 					activeRequestsMetric.Description)
 
-				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
+				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[int64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
 				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
@@ -128,13 +128,13 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-				assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
+				assert.Equal(t, "Number of active RPC server requests.",
 					activeRequestsMetric.Description)
 
-				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
+				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[int64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
-				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
+				require.InDelta(t, int64(0), activeRequests.DataPoints[0].Value, 0.00)
 				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
@@ -172,13 +172,13 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-				assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
+				assert.Equal(t, "Number of active RPC server requests.",
 					activeRequestsMetric.Description)
 
-				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
+				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[int64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
-				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
+				require.InDelta(t, int64(0), activeRequests.DataPoints[0].Value, 0.00)
 				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
@@ -322,13 +322,13 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 
 	activeRequestsMetric := metrics.Metrics[0]
 	assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-	assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
+	assert.Equal(t, "Number of active RPC server requests.",
 		activeRequestsMetric.Description)
 
-	activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
+	activeRequests := activeRequestsMetric.Data.(metricdata.Sum[int64]) // nolint: forcetypeassert
 	assert.False(t, activeRequests.IsMonotonic)
 	require.Len(t, activeRequests.DataPoints, 1)
-	require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
+	require.InDelta(t, int64(0), activeRequests.DataPoints[0].Value, 0.00)
 	require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 	assert.Equal(t, "foobar",
 		attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())

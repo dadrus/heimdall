@@ -1,0 +1,10 @@
+serviceMonitor:
+  enabled: true
+
+alloy:
+  enabled: false
+
+pyroscope:
+  extraArgs:
+    log.level: debug
+    log.format: json

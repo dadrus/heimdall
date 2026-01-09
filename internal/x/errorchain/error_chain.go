@@ -70,7 +70,8 @@ func (ec *ErrorChain) Error() string {
 		if len(c.msg) == 0 {
 			errs = append(errs, c.err.Error())
 		} else {
-			errs = append(errs, fmt.Sprintf("%s: %s", c.err.Error(), c.msg))
+			err := c.err.Error() + ": " + c.msg
+			errs = append(errs, err)
 		}
 	}
 

@@ -57,4 +57,5 @@ module "traefik" {
   namespace                  = var.namespace
   global_integration_enabled = var.global_integration_enabled
   gateway_api_enabled        = var.gateway_api_enabled
+  observability              = var.observability
 }

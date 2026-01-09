@@ -497,5 +497,7 @@ func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(ep *endpoint.Endpoi
 	digest.Write(stringx.ToBytes(templatedURL))
 	digest.Write(stringx.ToBytes(token))
 
-	return hex.EncodeToString(digest.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(digest.Sum(result[:0]))
 }

@@ -18,7 +18,6 @@ package grpcv3
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -183,7 +182,7 @@ func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 		cidx := 0
 
 		for k, v := range r.upstreamCookies {
-			cookies[cidx] = fmt.Sprintf("%s=%s", k, v)
+			cookies[cidx] = k + "=" + v
 			cidx++
 		}
 

@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -63,7 +62,7 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(http.DefaultTransport),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, peerName)
+				return r.Proto + " " + r.Method + " " + r.URL.Path + " @" + peerName
 			})),
 	}
 
@@ -182,7 +181,9 @@ func (e Endpoint) Hash() []byte {
 		hash.Write(e.AuthStrategy.Hash())
 	}
 
-	return hash.Sum(nil)
+	var result [sha256.Size]byte
+
+	return hash.Sum(result[:0])
 }
 
 func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {

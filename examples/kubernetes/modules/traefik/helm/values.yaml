@@ -1,25 +1,42 @@
 logs:
   general:
-    level: DEBUG
+    level: ${log_level}
+    format: json
   access:
     enabled: true
+    format: json
 
-#tracing:
-#  otlp:
-#    enabled: true
-#    grpc:
-#      enabled: true
-#      endpoint: alloy.monitoring:4317
-#      insecure: true
+tracing:
+  otlp:
+    enabled: ${otel_tracing_enabled}
+    http:
+      enabled: ${otel_tracing_protocol == "http"}
+      endpoint: ${otel_tracing_endpoint}
+    grpc:
+      enabled: ${otel_tracing_protocol == "grpc"}
+      endpoint: ${try(split("://", otel_tracing_endpoint)[1], "")}
+      insecure: true
 
-#metrics:
-#  prometheus:
-#    serviceMonitor:
-#      enabled: true
-
-experimental:
-  kubernetesGateway:
-    enabled: true
+metrics:
+%{ if otel_metrics_enabled }
+  %{ if otel_metrics_exporter == "prometheus" }
+  prometheus:
+    serviceMonitor:
+      enabled: true
+  %{ else }
+  prometheus: null
+  otlp:
+    http:
+      enabled: ${otel_metrics_protocol == "http"}
+      endpoint: ${otel_metrics_endpoint}
+    grpc:
+      enabled: ${otel_metrics_protocol == "grpc"}
+      endpoint: ${split("://", otel_metrics_endpoint)[1]}
+      insecure: false
+  %{ endif }
+%{ else }
+  prometheus: null
+%{ endif }
 
 providers:
   kubernetesCRD:
@@ -27,12 +44,10 @@ providers:
     # without that the middleware must be deployed into the same namespace as the resource
     # referencing it (IngressRoute)
     allowCrossNamespace: true
-%{ if gateway_api_enabled }
   kubernetesGateway:
-    enabled: true
+    enabled: ${gateway_api_enabled}
   kubernetesIngress:
-    enabled: false
-%{ endif }
+    enabled: ${!gateway_api_enabled}
 
 gateway:
   listeners:
