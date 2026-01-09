@@ -1,4 +1,4 @@
-resource "helm_release" "loki" {
+resource "helm_release" "tempo" {
   name       = "tempo"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "tempo"

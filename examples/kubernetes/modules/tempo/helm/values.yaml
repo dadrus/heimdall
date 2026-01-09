@@ -1,5 +1,7 @@
 tempo:
-  retention: 5h
+#  extraArgs:
+#    log.format: json
+  retention: 24h
   storage:
     trace:
       backend: s3
@@ -10,6 +12,23 @@ tempo:
         secret_key: ${s3_secret_key}
         tls_insecure_skip_verify: true
         forcepathstyle: true
+
   metricsGenerator:
     enabled: true
     remoteWriteUrl: "${prometheus_url}/api/v1/write"
+
+  overrides:
+    defaults:
+      metrics_generator:
+        processors:
+          - service-graphs
+          - span-metrics
+          - local-blocks
+
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"

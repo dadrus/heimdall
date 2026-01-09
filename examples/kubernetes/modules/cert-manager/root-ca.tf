@@ -10,3 +10,9 @@ resource "kubectl_manifest" "root_ca" {
   for_each  = local.ca_dict
   yaml_body = each.value
 }
+
+resource "kubectl_manifest" "cacerts_bundle" {
+  depends_on = [helm_release.trust_manager, kubectl_manifest.root_ca]
+
+  yaml_body = file("${path.module}/manifests/bundle.yaml")
+}

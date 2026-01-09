@@ -20,15 +20,20 @@ To be able to install and play with quickstarts, you need
 Depending on the Ingress Controller/Gateway API you want to install the demo for, execute
 
 ```bash
-   just install-<setup-type>-demo
+   just <options> install-<setup-type>-demo
 ```
 
-with `<setup-type>` being one of the following options:
+with `<options>` currently supporting the following options:
+
+* `OBS` - to enable the observability stack. Use `OBS=true`
+
+and `<setup-type>` being one of the following options:
 
 * `ngnix` - integration with heimdall happens using annotations on Ingress Resource level.
 * `ngnix-global` - heimdall is integrated globally.
 * `contour` - heimdall is integrated globally.
 * `haproxy` - integration with heimdall happens using annotations on Ingress Resource level.
+* `haproxy-global` - heimdall is integrated globally.
 * `emissary` - heimdall is integrated globally.
 * `envoygw` - heimdall is integrated on a gateway level.
 * `traefik-ingress` - heimdall is integrated globally. Standard k8s Ingress Resource is used four routing.
@@ -38,6 +43,14 @@ with `<setup-type>` being one of the following options:
 * `istio-gw` - heimdall is integrated on a gateway level.
 
 That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller, gateway api, respectively a vendor specific router implementation to forward incoming requests to heimdall as external authentication/authorization middleware. Depending on the response from heimdall the router implementation will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client.
+
+E.g., to setup a cluster with traefic using the Gateway API with observability stack enabled, run:
+
+```bash
+> just OBS=true install-traefik-gw-demo
+```
+
+**NOTE:** Sometimes the receipt may fail due to some (not yet analyzed) dependency issues. If that happens, simply run the receipt again.
 
 Depending on your internet connection, it may take some minutes. So, maybe it's time to grab some coffee :)
 
@@ -67,6 +80,13 @@ curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/foo
 and check the responses.
 
 Please note: Since nginx does not support 302 response codes from an external auth service, the call to `https://echo-app.local/redir/foo` will result in a 500 error code returned by nginx.
+
+If the observability stack has been installed, you most probably want to use it as well. For that purposes, you need to 
+
+1. establish a port forwarding to grafana: `kubectl port-forward -n monitoring svc/grafana-service 3000:3000`,
+2. open your browser and navigate to `localhost:3000`,
+3. and login into grafana (user: admin, pass: admin)
+4. navigate e.g., to heimdall metrics dashboard: Dashboards -> Heimdall -> Heimdall Metrics
 
 # Delete the demo
 

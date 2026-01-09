@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -184,7 +183,7 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, 
 		headerScheme = f.headerScheme
 	}
 
-	ctx.AddHeaderForUpstream(f.headerName, fmt.Sprintf("%s %s", headerScheme, token.AccessToken))
+	ctx.AddHeaderForUpstream(f.headerName, headerScheme+" "+token.AccessToken)
 
 	return nil
 }

@@ -1,0 +1,17 @@
+app:
+  trust:
+    namespace: ${namespace}
+
+  logFormat: json
+
+  metrics:
+    service:
+      enabled: ${prometheus_enabled}
+      servicemonitor:
+        enabled: ${prometheus_enabled}
+
+secretTargets:
+  enabled: true
+
+  authorizedSecrets:
+    - cacerts

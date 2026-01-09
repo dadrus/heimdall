@@ -112,6 +112,13 @@ This authenticator raises an `authentication_error` on following conditions:
 * the `session_lifespan.active` property evaluates to `false`,
 * the session associated with the authentication data is not yet valid or already expired.
 
+This authenticator raises an `authentication_error` on following conditions:
+
+* no authentication data is present in the request,
+* the response received from the `identity_info_endpoint` is either `401 Unauthorized`, or `403 Forbidden`,
+* the `session_lifespan.active` property evaluates to `false`,
+* the session associated with the authentication data is not yet valid or already expired.
+
 To enable the usage of this authenticator, you have to set the `type` property to `generic`.
 
 Configuration using the `config` property is mandatory. Following properties are available:

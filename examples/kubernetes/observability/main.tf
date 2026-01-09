@@ -1,7 +1,7 @@
 module "prometheus" {
   source = "../modules/prometheus"
 
-  namespace = "monitoring"
+  namespace = var.namespace
 }
 
 module "loki" {
@@ -9,7 +9,7 @@ module "loki" {
 
   depends_on = [module.prometheus]
 
-  namespace     = "monitoring"
+  namespace     = var.namespace
   s3_endpoint   = var.s3_endpoint
   s3_access_key = var.access_key
   s3_secret_key = var.secret_key
@@ -21,11 +21,11 @@ module "tempo" {
 
   depends_on = [module.prometheus]
 
-  namespace      = "monitoring"
+  namespace      = var.namespace
   prometheus_url = module.prometheus.prometheus_url
-  s3_endpoint   = var.s3_endpoint
-  s3_access_key = var.access_key
-  s3_secret_key = var.secret_key
+  s3_endpoint    = var.s3_endpoint
+  s3_access_key  = var.access_key
+  s3_secret_key  = var.secret_key
   bucket_name    = "tempo"
 }
 
@@ -34,7 +34,7 @@ module "pyroscope" {
 
   depends_on = [module.prometheus]
 
-  namespace = "monitoring"
+  namespace = var.namespace
 }
 
 module "alloy" {
@@ -46,11 +46,12 @@ module "alloy" {
     module.prometheus,
   ]
 
-  namespace            = "monitoring"
+  namespace            = var.namespace
   cluster_name         = "demo"
   loki_endpoint        = module.loki.loki_write_url
   prometheus_endpoint  = module.prometheus.prometheus_url
-  otel_traces_endpoint = module.tempo.tempo_url
+  otel_traces_endpoint = module.tempo.otlp_grpc_receiver_endpoint
+  pyroscope_endpoint   = module.pyroscope.pyroscope_url
 }
 
 module "grafana" {
@@ -63,11 +64,11 @@ module "grafana" {
     module.pyroscope
   ]
 
-  namespace      = "monitoring"
+  namespace      = var.namespace
   admin_user     = "admin"
   admin_password = "admin"
   prometheus_url = module.prometheus.prometheus_url
   loki_url       = module.loki.loki_read_url
-  tempo_url      = module.tempo.tempo_url
+  tempo_url      = module.tempo.server_endpoint
   pyroscope_url  = module.pyroscope.pyroscope_url
 }
