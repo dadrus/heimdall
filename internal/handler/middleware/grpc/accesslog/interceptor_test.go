@@ -307,7 +307,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	defer conn.Close()
 
 	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
+		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),

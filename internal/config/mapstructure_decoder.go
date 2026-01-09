@@ -36,7 +36,7 @@ func logLevelDecodeHookFunc(from reflect.Type, to reflect.Type, data any) (any, 
 		return data, nil
 	}
 
-	if to != reflect.TypeOf(zerolog.Level(0)) {
+	if to != reflect.TypeFor[zerolog.Level]() {
 		return data, nil
 	}
 
@@ -76,7 +76,7 @@ func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, 
 func DecodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
 	var suites TLSCipherSuites
 
-	if from.Kind() != reflect.Slice || to != reflect.TypeOf(TLSCipherSuites{}) {
+	if from.Kind() != reflect.Slice || to != reflect.TypeFor[TLSCipherSuites]() {
 		return data, nil
 	}
 
@@ -114,7 +114,7 @@ func DecodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) 
 }
 
 func DecodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
-	if from.Kind() != reflect.String || to != reflect.TypeOf(TLSMinVersion(0)) {
+	if from.Kind() != reflect.String || to != reflect.TypeFor[TLSMinVersion]() {
 		return data, nil
 	}
 
@@ -129,12 +129,12 @@ func DecodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (
 }
 
 func StringToByteSizeHookFunc() mapstructure.DecodeHookFunc {
-	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		if f.Kind() != reflect.String {
 			return data, nil
 		}
 
-		if t != reflect.TypeOf(bytesize.ByteSize(0)) {
+		if t != reflect.TypeFor[bytesize.ByteSize]() {
 			return data, nil
 		}
 

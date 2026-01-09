@@ -111,7 +111,7 @@ func (r *RequestContext) Cookie(name string) string {
 		return ""
 	}
 
-	for _, cookie := range strings.Split(values, ";") {
+	for cookie := range strings.SplitSeq(values, ";") {
 		if cookieName, cookieValue, ok := strings.Cut(cookie, "="); ok && strings.TrimSpace(cookieName) == name {
 			return strings.TrimSpace(cookieValue)
 		}

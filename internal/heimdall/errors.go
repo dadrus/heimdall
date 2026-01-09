@@ -40,4 +40,6 @@ type RedirectError struct {
 
 func (e *RedirectError) Error() string { return e.Message }
 
-func (e *RedirectError) Is(target error) bool { return reflect.TypeOf(e) == reflect.TypeOf(target) }
+func (e *RedirectError) Is(target error) bool {
+	return reflect.TypeFor[*RedirectError]() == reflect.TypeOf(target)
+}

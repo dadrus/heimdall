@@ -28,9 +28,6 @@ linters:
       ignore-enum-members: POT.+
     funlen:
       lines: 80
-    gomoddirectives:
-      replace-allow-list:
-        - golang.org/x/crypto
     mnd:
       ignored-functions:
         - ^make

@@ -106,7 +106,7 @@ func TestDecode(t *testing.T) {
 			opts: []DecoderOption{
 				WithSourceContentType("application/json"),
 				WithErrorOnUnused(true),
-				WithValidator(ValidatorFunc(func(interface{}) error { return errors.New("test error") })),
+				WithValidator(ValidatorFunc(func(any) error { return errors.New("test error") })),
 			},
 			data: []byte(`{ "foo": "baz" }`),
 			assert: func(t *testing.T, err error, _ TestType) {

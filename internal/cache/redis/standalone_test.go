@@ -150,10 +150,10 @@ func TestStandaloneCache(t *testing.T) {
 
 				db := miniredis.RunT(t)
 
-				return []byte(fmt.Sprintf(
+				return fmt.Appendf(nil,
 					"{address: %s, client_cache: {disabled: true}, tls: {disabled: true}}",
 					db.Addr(),
-				))
+				)
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -176,10 +176,10 @@ func TestStandaloneCache(t *testing.T) {
 
 				db := miniredis.RunT(t)
 
-				return []byte(fmt.Sprintf(
+				return fmt.Appendf(nil,
 					"{address: %s, client_cache: {disabled: true}, tls: {disabled: true}, credentials: {password: foo}}",
 					db.Addr(),
-				))
+				)
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -211,10 +211,10 @@ func TestStandaloneCache(t *testing.T) {
 
 				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(errors.New("test error"))
 
-				return []byte(fmt.Sprintf(
+				return fmt.Appendf(nil,
 					"{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: { path: %s }}",
 					cf.Name(),
-				))
+				)
 			},
 			assert: func(t *testing.T, err error, _ cache.Cache) {
 				t.Helper()
@@ -284,7 +284,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(nil)
 
-				return []byte(fmt.Sprintf("{address: %s, client_cache: {disabled: true}, credentials: { path: %s }}", db.Addr(), cf.Name()))
+				return fmt.Appendf(nil, "{address: %s, client_cache: {disabled: true}, credentials: { path: %s }}", db.Addr(), cf.Name())
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -325,10 +325,10 @@ func TestStandaloneCache(t *testing.T) {
 
 				t.Cleanup(db.Close)
 
-				return []byte(fmt.Sprintf(
+				return fmt.Appendf(nil,
 					"{address: %s, client_cache: {disabled: true}, tls: {key_store: {path: %s}}}",
 					db.Addr(), pemFile.Name(),
-				))
+				)
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()

@@ -40,7 +40,7 @@ func (r *registry) AddKeyHolder(kh KeyHolder) {
 }
 
 func (r *registry) Keys() []jose.JSONWebKey {
-	var keys []jose.JSONWebKey
+	keys := make([]jose.JSONWebKey, 0, len(r.keyHolders))
 
 	for _, holder := range r.keyHolders {
 		keys = append(keys, holder.Keys()...)
