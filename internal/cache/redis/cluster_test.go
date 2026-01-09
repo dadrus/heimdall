@@ -148,10 +148,10 @@ func TestClusterCache(t *testing.T) {
 				db1 := miniredis.RunT(t)
 				db2 := miniredis.RunT(t)
 
-				return []byte(fmt.Sprintf(
+				return fmt.Appendf(nil,
 					"{nodes: [ '%s', '%s' ], client_cache: {disabled: true}, tls: {disabled: true}}",
 					db1.Addr(), db2.Addr(),
-				))
+				)
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -225,9 +225,9 @@ func TestClusterCache(t *testing.T) {
 
 				t.Cleanup(db1.Close)
 
-				return []byte(fmt.Sprintf(
+				return fmt.Appendf(nil,
 					"{nodes: [ '%s', '%s' ], client_cache: {disabled: true}}",
-					db1.Addr(), db2.Addr()),
+					db1.Addr(), db2.Addr(),
 				)
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {

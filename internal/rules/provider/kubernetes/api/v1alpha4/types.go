@@ -41,8 +41,7 @@ func init() {
 	utilruntime.Must(schemeBuilder.AddToScheme(scheme.Scheme))
 }
 
-// nolint: gochecknoglobals
-var GroupVersion = schema.GroupVersion{
+var GroupVersion = schema.GroupVersion{ // nolint: gochecknoglobals
 	Group:   "heimdall.dadrus.github.com",
 	Version: "v1alpha4",
 }
@@ -53,12 +52,14 @@ const (
 )
 
 // +kubebuilder:object:generate=true
+// nolint: godoclint
 type RuleSetSpec struct {
 	AuthClassName string          `json:"authClassName"` //nolint:tagliatelle
 	Rules         []v1alpha4.Rule `json:"rules"`
 }
 
 // +kubebuilder:object:generate=true
+// nolint: godoclint
 type RuleSetStatus struct {
 	ActiveIn   string             `json:"activeIn"` // nolint: tagliatelle
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -66,6 +67,7 @@ type RuleSetStatus struct {
 
 // +kubebuilder:object:generate=true
 // +kubebuilder:object:root=true
+// nolint: godoclint
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -88,6 +90,7 @@ func (rs *RuleSet) AsConfig() *v1alpha4.RuleSet {
 
 // +kubebuilder:object:generate=true
 // +kubebuilder:object:root=true
+// nolint: godoclint
 type RuleSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

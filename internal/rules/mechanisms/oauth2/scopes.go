@@ -30,7 +30,7 @@ type Scopes []string
 
 // UnmarshalJSON reads scopes from its JSON representation.
 func (s *Scopes) UnmarshalJSON(b []byte) error {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal(b, &v); err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal scopes").CausedBy(err)
 	}
@@ -38,7 +38,7 @@ func (s *Scopes) UnmarshalJSON(b []byte) error {
 	switch value := v.(type) {
 	case string:
 		*s = strings.Split(value, " ")
-	case []interface{}:
+	case []any:
 		array := make([]string, len(value))
 
 		for idx, val := range value {

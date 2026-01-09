@@ -57,14 +57,12 @@ func newService(
 	streamInterceptors := []grpc.StreamServerInterceptor{
 		recovery.StreamServerInterceptor(recoveryHandler),
 		metrics.StreamServerInterceptor(),
+		accessLogger.Stream(),
 	}
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
 		recovery.UnaryServerInterceptor(recoveryHandler),
 		metrics.UnaryServerInterceptor(),
-	}
-
-	unaryInterceptors = append(unaryInterceptors,
 		errorhandler.New(
 			errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
 			errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
@@ -81,9 +79,7 @@ func newService(
 		accessLogger.Unary(),
 		loggermiddleware.New(logger),
 		cachemiddleware.New(cch),
-	)
-
-	streamInterceptors = append(streamInterceptors, accessLogger.Stream())
+	}
 
 	srv := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),

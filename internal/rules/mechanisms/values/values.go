@@ -37,9 +37,7 @@ func (v Values) Merge(other Values) Values {
 		res = maps.Clone(v)
 	}
 
-	for key, value := range other {
-		res[key] = value
-	}
+	maps.Copy(res, other)
 
 	return res
 }
