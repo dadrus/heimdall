@@ -1,3 +1,6 @@
+crds:
+  updateEnabled: true
+
 deployment:
   replicaCount: 1
   autoscaling:
