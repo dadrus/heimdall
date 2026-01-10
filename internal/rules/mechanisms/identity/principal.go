@@ -16,7 +16,38 @@
 
 package identity
 
+import (
+	"crypto/sha256"
+
+	"github.com/goccy/go-json"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
+)
+
 type Principal struct {
 	ID         string
 	Attributes map[string]any
+
+	// cached hash value
+	hash []byte
+}
+
+func (s *Principal) Hash() []byte {
+	if s.hash != nil {
+		return s.hash
+	}
+
+	hash := sha256.New()
+
+	if len(s.Attributes) != 0 {
+		_ = json.NewEncoder(hash).Encode(s)
+	} else {
+		hash.Write(stringx.ToBytes(s.ID))
+	}
+
+	var result [sha256.Size]byte
+
+	s.hash = hash.Sum(result[:0])
+
+	return s.hash
 }
