@@ -18,7 +18,8 @@ package identity
 
 import (
 	"crypto/sha256"
-	"encoding/json"
+
+	"github.com/goccy/go-json"
 
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
