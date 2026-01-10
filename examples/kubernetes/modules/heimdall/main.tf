@@ -38,6 +38,7 @@ resource "helm_release" "heimdall" {
   namespace        = var.namespace
   create_namespace = true
   upgrade_install  = true
+  take_ownership   = true
 
   values = [
     templatefile("${path.module}/configs/heimdall.yaml", {

@@ -11,6 +11,8 @@ metrics:
 tracing:
   enabled: ${tracing_enabled}
 
+secrets_reload_enabled: true
+
 serve:
   tls:
     min_version: TLS1.2
