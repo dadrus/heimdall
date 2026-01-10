@@ -15,8 +15,8 @@ env:
   GOLANGCI_LINT_VERSION: "v2.8.0"
   HELM_VERSION: "3.18.5"
   HELM_UNITTEST_VERSION: "v1.0.0"
-  KUBECONFORM_VERSION: "0.6.7"
-  KUBERNETES_API_VERSION: "1.31.0"
+  KUBECONFORM_VERSION: "0.7.0"
+  KUBERNETES_API_VERSION: "1.32.0"
   NODE_VERSION: "24.8.0"
   RUBY_VERSION: "3.4"
   COSIGN_VERSION: "v2.4.3"
@@ -204,14 +204,14 @@ jobs:
         run: helm lint ./charts/heimdall
       - name: Kubeconform decision mode deployment
         run: |
-          helm template --set crds.enabled=true ./charts/heimdall > generated-config.yaml
+          helm template --kube-version ${{ env.KUBERNETES_API_VERSION }} --set crds.enabled=true ./charts/heimdall > generated-config.yaml
           kubeconform \
               -schema-location default \
               -schema-location "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}.json" \
               --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} generated-config.yaml
       - name: Kubeconform proxy mode deployment
         run: |
-          helm template --set crds.enabled=true --set operationMode=proxy ./charts/heimdall > generated-config.yaml
+          helm template --kube-version ${{ env.KUBERNETES_API_VERSION }} --set crds.enabled=true --set operationMode=proxy ./charts/heimdall > generated-config.yaml
           kubeconform \
               -schema-location default \
               -schema-location "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}.json" \
