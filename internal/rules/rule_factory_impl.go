@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/rs/zerolog"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -117,6 +119,7 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 		sh:              subHandlers,
 		fi:              finalizers,
 		eh:              errorHandlers,
+		subjectPool:     &sync.Pool{New: func() any { return make(identity.Subject, 4) }},
 	}
 
 	mm, err := createMethodMatcher(rul.Matcher.Methods)
@@ -342,6 +345,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		sh:              subHandlers,
 		fi:              finalizers,
 		eh:              errorHandlers,
+		subjectPool:     &sync.Pool{New: func() any { return make(identity.Subject, 4) }},
 	}
 
 	f.hasDefaultRule = true
