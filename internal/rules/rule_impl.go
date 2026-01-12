@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/rs/zerolog"
 
@@ -42,6 +43,8 @@ type ruleImpl struct {
 	sh              compositeSubjectHandler
 	fi              compositeSubjectHandler
 	eh              compositeErrorHandler
+
+	subjectPool     *sync.Pool
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
@@ -72,7 +75,13 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 		captures[k] = unescape(v, r.slashesHandling)
 	}
 
-	sub := make(identity.Subject)
+	sub := r.subjectPool.Get().(identity.Subject) //nolint: forcetypeassert
+
+	defer func() {
+		clear(sub)
+
+		r.subjectPool.Put(sub)
+	}()
 
 	// authenticators
 	if err := r.sc.Execute(ctx, sub); err != nil {
