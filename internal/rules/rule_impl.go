@@ -44,7 +44,7 @@ type ruleImpl struct {
 	fi              compositeSubjectHandler
 	eh              compositeErrorHandler
 
-	subjectPool     *sync.Pool
+	subjectPool *sync.Pool
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
