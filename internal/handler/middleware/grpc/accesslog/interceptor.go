@@ -38,7 +38,7 @@ type ServerInterceptor interface {
 }
 
 func New(logger zerolog.Logger) ServerInterceptor {
-	return &accessLogInterceptor{l: logger}
+	return &accessLogInterceptor{l: logger.Level(zerolog.InfoLevel).With().Logger()}
 }
 
 type accessLogInterceptor struct {
@@ -47,12 +47,23 @@ type accessLogInterceptor struct {
 
 func (i *accessLogInterceptor) Unary() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		start, accLog := i.startTransaction(ctx, info.FullMethod)
-
+		start := time.Now()
+		requestMD, _ := metadata.FromIncomingContext(ctx)
+		peerAddr := peerFromCtx(ctx)
+		traceCtx := tracecontext.Extract(ctx)
 		ctx = accesscontext.New(ctx)
-		resp, err := handler(ctx, req)
 
-		i.finalizeTransaction(ctx, accLog, start, err)
+		logEvt := logCommonData(i.l.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt.Msg("TX started")
+
+		resp, err := handler(ctx, req)
+		grpcStatus, _ := status.FromError(err)
+
+		logEvt = logCommonData(i.l.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt = logAccessStatus(ctx, logEvt, err).
+			Uint32("_grpc_status_code", uint32(grpcStatus.Code())).
+			Int64("_tx_duration_ms", time.Since(start).Milliseconds())
+		logEvt.Msg("TX finished")
 
 		return resp, err
 	}
@@ -62,49 +73,46 @@ func (i *accessLogInterceptor) Stream() grpc.StreamServerInterceptor {
 	return func(
 		srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
 	) error {
+		start := time.Now()
 		ctx := stream.Context()
-		start, accLog := i.startTransaction(ctx, info.FullMethod)
-
+		requestMD, _ := metadata.FromIncomingContext(ctx)
+		peerAddr := peerFromCtx(ctx)
+		traceCtx := tracecontext.Extract(ctx)
 		ctx = accesscontext.New(ctx)
-		err := handler(srv, stream)
 
-		i.finalizeTransaction(ctx, accLog, start, err)
+		logEvt := logCommonData(i.l.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt.Msg("TX started")
+
+		err := handler(srv, stream)
+		grpcStatus, _ := status.FromError(err)
+
+		logEvt = logCommonData(i.l.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt = logAccessStatus(ctx, logEvt, err).
+			Uint32("_grpc_status_code", uint32(grpcStatus.Code())).
+			Int64("_tx_duration_ms", time.Since(start).Milliseconds())
+		logEvt.Msg("TX finished")
 
 		return err
 	}
 }
 
-func (i *accessLogInterceptor) startTransaction(ctx context.Context, fullMethod string) (time.Time, zerolog.Logger) {
-	start := time.Now()
-	requestMetadata, _ := metadata.FromIncomingContext(ctx)
-
-	logCtx := i.l.Level(zerolog.InfoLevel).With().
+func logCommonData(
+	logEvt *zerolog.Event,
+	start time.Time,
+	peerAddr string,
+	fullMethod string,
+	traceCtx tracecontext.TraceContext,
+	requestMD metadata.MD,
+) *zerolog.Event {
+	logEvt.
 		Int64("_tx_start", start.Unix()).
-		Str("_client_ip", peerFromCtx(ctx)).
+		Str("_client_ip", peerAddr).
 		Str("_grpc_method", fullMethod)
+	logEvt = logTraceData(&traceCtx, logEvt)
+	logEvt = logMetaData(logEvt, requestMD, "x-forwarded-for", "_x_forwarded_for")
+	logEvt = logMetaData(logEvt, requestMD, "forwarded", "_forwarded")
 
-	logCtx = logTraceData(ctx, logCtx)
-	logCtx = logMetaData(logCtx, requestMetadata, "x-forwarded-for", "_x_forwarded_for")
-	logCtx = logMetaData(logCtx, requestMetadata, "forwarded", "_forwarded")
-
-	accLog := logCtx.Logger()
-	accLog.Info().Msg("TX started")
-
-	return start, accLog
-}
-
-func (i *accessLogInterceptor) finalizeTransaction(
-	ctx context.Context, accLog zerolog.Logger, start time.Time, err error,
-) {
-	// grpc errors are only used to signal unusual conditions
-	// in all other cases the error is anyway embedded into the envoy CheckResponse object
-	// so that on the grpc level no error is returned
-	grpcStatus, _ := status.FromError(err)
-
-	logAccessStatus(ctx, accLog.Info(), err).
-		Uint32("_grpc_status_code", uint32(grpcStatus.Code())).
-		Int64("_tx_duration_ms", time.Since(start).Milliseconds()).
-		Msg("TX finished")
+	return logEvt
 }
 
 func logAccessStatus(ctx context.Context, event *zerolog.Event, err error) *zerolog.Event {
@@ -131,30 +139,30 @@ func logAccessStatus(ctx context.Context, event *zerolog.Event, err error) *zero
 	return event
 }
 
-func logTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context {
-	if traceCtx := tracecontext.Extract(ctx); traceCtx != nil {
-		logCtx = logCtx.
+func logTraceData(traceCtx *tracecontext.TraceContext, logEvt *zerolog.Event) *zerolog.Event {
+	if len(traceCtx.TraceID) != 0 {
+		logEvt = logEvt.
 			Str("_trace_id", traceCtx.TraceID).
 			Str("_span_id", traceCtx.SpanID)
 
 		if len(traceCtx.ParentID) != 0 {
-			logCtx = logCtx.Str("_parent_id", traceCtx.ParentID)
+			logEvt = logEvt.Str("_parent_id", traceCtx.ParentID)
 		}
 	}
 
-	return logCtx
+	return logEvt
 }
 
-func logMetaData(logCtx zerolog.Context, rmd metadata.MD, mdKey, logKey string) zerolog.Context {
+func logMetaData(logEvt *zerolog.Event, rmd metadata.MD, mdKey, logKey string) *zerolog.Event {
 	if len(rmd) == 0 {
-		return logCtx
+		return logEvt
 	}
 
 	if headerValue := rmd.Get(mdKey); len(headerValue) != 0 {
-		logCtx = logCtx.Str(logKey, strings.Join(headerValue, ","))
+		logEvt = logEvt.Str(logKey, strings.Join(headerValue, ","))
 	}
 
-	return logCtx
+	return logEvt
 }
 
 func peerFromCtx(ctx context.Context) string {
