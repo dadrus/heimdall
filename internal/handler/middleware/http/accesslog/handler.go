@@ -41,12 +41,12 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 			host := httpx.IPFromHostPort(req.RemoteAddr)
 			traceCtx := tracecontext.Extract(ctx)
 
-			logEvt := logCommonData(log.Info(), start, host, req, traceCtx)
+			logEvt := logCommonData(log.Info(), start, host, req, &traceCtx)
 			logEvt.Msg("TX started")
 
 			metrics := httpsnoop.CaptureMetrics(next, rw, req)
 
-			logEvt = logCommonData(log.Info(), start, host, req, traceCtx)
+			logEvt = logCommonData(log.Info(), start, host, req, &traceCtx)
 			logAccessStatus(ctx, logEvt, metrics.Code).
 				Int64("_body_bytes_sent", metrics.Written).
 				Int("_http_status_code", metrics.Code).
@@ -101,7 +101,7 @@ func logAccessStatus(ctx context.Context, event *zerolog.Event, statusCode int) 
 }
 
 func logTraceData(ctx *tracecontext.TraceContext, logEvt *zerolog.Event) *zerolog.Event {
-	if ctx != nil {
+	if len(ctx.TraceID) != 0 {
 		logEvt = logEvt.
 			Str("_trace_id", ctx.TraceID).
 			Str("_span_id", ctx.SpanID)

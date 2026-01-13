@@ -132,7 +132,7 @@ func logAccessStatus(ctx context.Context, event *zerolog.Event, err error) *zero
 }
 
 func logTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context {
-	if traceCtx := tracecontext.Extract(ctx); traceCtx != nil {
+	if traceCtx := tracecontext.Extract(ctx); len(traceCtx.TraceID) != 0 {
 		logCtx = logCtx.
 			Str("_trace_id", traceCtx.TraceID).
 			Str("_span_id", traceCtx.SpanID)

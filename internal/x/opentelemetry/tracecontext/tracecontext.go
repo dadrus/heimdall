@@ -29,22 +29,19 @@ type TraceContext struct {
 	ParentID string
 }
 
-func Extract(ctx context.Context) *TraceContext {
+func Extract(ctx context.Context) TraceContext {
 	span := trace.SpanFromContext(ctx)
 	spanCtx := span.SpanContext()
+	ctxInfo := TraceContext{}
 
 	if spanCtx.IsValid() {
-		ctxInfo := &TraceContext{}
-
 		if roSpan, ok := span.(trace2.ReadOnlySpan); ok && roSpan.Parent().IsValid() {
 			ctxInfo.ParentID = roSpan.Parent().SpanID().String()
 		}
 
 		ctxInfo.TraceID = spanCtx.TraceID().String()
 		ctxInfo.SpanID = spanCtx.SpanID().String()
-
-		return ctxInfo
 	}
 
-	return nil
+	return ctxInfo
 }
