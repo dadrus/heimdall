@@ -103,7 +103,7 @@ func (i *accessLogInterceptor) finalizeTransaction(
 
 	logAccessStatus(ctx, accLog.Info(), err).
 		Uint32("_grpc_status_code", uint32(grpcStatus.Code())).
-		Int64("_tx_duration_ms", time.Until(start).Milliseconds()).
+		Int64("_tx_duration_ms", time.Since(start).Milliseconds()).
 		Msg("TX finished")
 }
 
