@@ -63,7 +63,7 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 			logAccessStatus(ctx, accLog.Info(), metrics.Code).
 				Int64("_body_bytes_sent", metrics.Written).
 				Int("_http_status_code", metrics.Code).
-				Int64("_tx_duration_ms", time.Until(start).Milliseconds()).
+				Int64("_tx_duration_ms", time.Since(start).Milliseconds()).
 				Msg("TX finished")
 		})
 	}
