@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.17.8](https://github.com/dadrus/heimdall/compare/v0.17.7...v0.17.8) (2026-01-14)
+
+
+### Performance Improvements
+
+* Access Logger refactored to use less memory ([#2982](https://github.com/dadrus/heimdall/issues/2982)) ([f659968](https://github.com/dadrus/heimdall/commit/f6599682936fd40ff183f95e658ffbe0aa7ff1b9))
+* Memory footprint for capturing active requests metrics reduced ([#2984](https://github.com/dadrus/heimdall/issues/2984)) ([b5c6f19](https://github.com/dadrus/heimdall/commit/b5c6f1976681cc59aea0edf6fd4200e925da3e06))
+
+
+### Bug Fixes
+
+* Request duration entry in access log is now positive ([#2980](https://github.com/dadrus/heimdall/issues/2980)) ([c50cc8f](https://github.com/dadrus/heimdall/commit/c50cc8f218948995181fdcde1dacbb195a77504e))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 904502c ([#2976](https://github.com/dadrus/heimdall/issues/2976)) ([4ce6561](https://github.com/dadrus/heimdall/commit/4ce6561605b466f77e74933c9e3234fd730765ea))
+* update google.golang.org/genproto/googleapis/rpc digest to 99fd39f ([#2971](https://github.com/dadrus/heimdall/issues/2971)) ([6b428d8](https://github.com/dadrus/heimdall/commit/6b428d8c060741da81d041ab1577b66e15e06cea))
+* update module github.com/go-viper/mapstructure/v2 to v2.5.0 ([#2972](https://github.com/dadrus/heimdall/issues/2972)) ([990f6f6](https://github.com/dadrus/heimdall/commit/990f6f6a150f19fc1b84a2862d8185653557f3c3))
+
 ## [0.17.7](https://github.com/dadrus/heimdall/compare/v0.17.6...v0.17.7) (2026-01-09)
 
 
