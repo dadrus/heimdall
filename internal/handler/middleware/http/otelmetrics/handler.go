@@ -19,6 +19,7 @@ package otelmetrics
 import (
 	"net/http"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
@@ -43,6 +44,17 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 		panic(err)
 	}
 
+	pool := sync.Pool{
+		New: func() any {
+			// actually, we add len(conf.attributes) + 5 (serverRequestMetrics & and conf.subsystem),
+			// but, since, we retrieve further attributes from the labeler, added by other OTEL components,
+			// we need to allocate more space. The additional 15 is a conservative value to avoid reallocations
+			attrs := make([]attribute.KeyValue, 0, len(conf.attributes)+20)
+
+			return &attrs
+		},
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			if !conf.shouldProcess(req) {
@@ -56,11 +68,20 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 				labeler.Add(conf.subsystem)
 			}
 
-			attributes := serverRequestMetrics(conf.server, req)
-			attributes = append(labeler.Get(), attributes...)
-			attributes = append(attributes, conf.attributes...)
+			pkv := pool.Get().(*[]attribute.KeyValue) //nolint: forcetypeassert
+			attrs := *pkv
 
-			opt := metric.WithAttributes(attributes...)
+			defer func() {
+				*pkv = attrs[:0]
+
+				pool.Put(pkv)
+			}()
+
+			attrs = addRequestMetrics(attrs, conf.server, req)
+			attrs = append(labeler.Get(), attrs...)
+			attrs = append(attrs, conf.attributes...)
+
+			opt := metric.WithAttributeSet(attribute.NewSet(attrs...))
 
 			activeRequests.Inst().Add(req.Context(), 1, opt)
 			defer activeRequests.Inst().Add(req.Context(), -1, opt)
@@ -70,9 +91,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 	}
 }
 
-func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue {
-	attrsCount := 4 // Method, scheme, proto, and host name.
-
+func addRequestMetrics(attrs []attribute.KeyValue, server string, req *http.Request) []attribute.KeyValue {
 	var (
 		host string
 		port int
@@ -89,11 +108,7 @@ func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue
 	}
 
 	hostPort := requiredHTTPPort(req.TLS != nil, port)
-	if hostPort > 0 {
-		attrsCount++
-	}
 
-	attrs := make([]attribute.KeyValue, 0, attrsCount)
 	attrs = append(attrs, methodMetric(req.Method))
 	attrs = append(attrs, semconv.ServerAddress(host))
 
