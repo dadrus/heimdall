@@ -2404,7 +2404,7 @@
             "trace",
             "debug",
             "info",
-            "warning",
+            "warn",
             "error",
             "fatal",
             "panic"
