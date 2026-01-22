@@ -120,7 +120,7 @@ cache:
 secrets_reload_enabled: true
 
 log:
-  level: debug
+  level: warn
   format: text
 
 tracing:

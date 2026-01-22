@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.17.8](https://github.com/dadrus/heimdall/compare/v0.17.7...v0.17.8) (2026-01-22)
+
+
+### Performance Improvements
+
+* Access Logger refactored to use less memory ([#2982](https://github.com/dadrus/heimdall/issues/2982)) ([f659968](https://github.com/dadrus/heimdall/commit/f6599682936fd40ff183f95e658ffbe0aa7ff1b9))
+* Memory footprint for capturing active requests metrics reduced ([#2984](https://github.com/dadrus/heimdall/issues/2984)) ([b5c6f19](https://github.com/dadrus/heimdall/commit/b5c6f1976681cc59aea0edf6fd4200e925da3e06))
+
+
+### Bug Fixes
+
+* `warn` log level can be configured ([#2996](https://github.com/dadrus/heimdall/issues/2996)) ([45ec803](https://github.com/dadrus/heimdall/commit/45ec803eb98481670b2a6b0de0d2da9b507586e2))
+* Automatic rollout of replicas if there is a change in the ConfigMap ([#2994](https://github.com/dadrus/heimdall/issues/2994)) ([40243a0](https://github.com/dadrus/heimdall/commit/40243a0033e29dabe8654ddac1dc5c08f6565736))
+* Request duration entry in access log is now positive ([#2980](https://github.com/dadrus/heimdall/issues/2980)) ([c50cc8f](https://github.com/dadrus/heimdall/commit/c50cc8f218948995181fdcde1dacbb195a77504e))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 904502c ([#2976](https://github.com/dadrus/heimdall/issues/2976)) ([4ce6561](https://github.com/dadrus/heimdall/commit/4ce6561605b466f77e74933c9e3234fd730765ea))
+* update golang to v1.25.6 ([#2989](https://github.com/dadrus/heimdall/issues/2989)) ([d9e7173](https://github.com/dadrus/heimdall/commit/d9e7173a355a98f2383cb6abc6b5ee43231daa49))
+* update google.golang.org/genproto/googleapis/rpc digest to b8f7ae3 ([#2987](https://github.com/dadrus/heimdall/issues/2987)) ([1fe85a6](https://github.com/dadrus/heimdall/commit/1fe85a637801d69cd8a6da9af745aef9364b47d6))
+* update module github.com/go-viper/mapstructure/v2 to v2.5.0 ([#2972](https://github.com/dadrus/heimdall/issues/2972)) ([990f6f6](https://github.com/dadrus/heimdall/commit/990f6f6a150f19fc1b84a2862d8185653557f3c3))
+
 ## [0.17.7](https://github.com/dadrus/heimdall/compare/v0.17.6...v0.17.7) (2026-01-09)
 
 
@@ -80,7 +103,6 @@ Even though this is a regular patch release, there are two noticeable updates:
 * update module gocloud.dev to v0.44.0 ([#2896](https://github.com/dadrus/heimdall/issues/2896)) ([3533ca7](https://github.com/dadrus/heimdall/commit/3533ca72acb1483533cda60deb90bc94fff81b5b))
 * update module google.golang.org/grpc to v1.77.0 ([#2880](https://github.com/dadrus/heimdall/issues/2880)) ([805261d](https://github.com/dadrus/heimdall/commit/805261d2f25938409b2c9982bef21d609435155a))
 
-
 ## [0.17.4](https://github.com/dadrus/heimdall/compare/v0.17.3...v0.17.4) (2025-11-10)
 
 
@@ -129,7 +151,6 @@ Even though this is a regular patch release, there are two noticeable updates:
 * update module github.com/redis/rueidis/rueidisotel to v1.0.67 ([#2801](https://github.com/dadrus/heimdall/issues/2801)) ([3c146b3](https://github.com/dadrus/heimdall/commit/3c146b365ba14f751ee72e0f36449f672e28643e))
 * update module google.golang.org/grpc to v1.76.0 ([#2793](https://github.com/dadrus/heimdall/issues/2793)) ([c8a57b1](https://github.com/dadrus/heimdall/commit/c8a57b10a9c1001d32d509b1956c0650fa720f70))
 * update module google.golang.org/protobuf to v1.36.10 ([#2787](https://github.com/dadrus/heimdall/issues/2787)) ([1e4b5df](https://github.com/dadrus/heimdall/commit/1e4b5dfd10e9ee84329210069ba09b537ae25883))
-
 
 ## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-09-21)
 

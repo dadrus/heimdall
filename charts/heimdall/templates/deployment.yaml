@@ -24,7 +24,6 @@ metadata:
   labels:
     {{- include "heimdall.labels" $data | nindent 4 }}
   annotations:
-    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     {{- include "heimdall.annotations" $data | nindent 4 }}
 spec:
   {{- if not .Values.deployment.autoscaling.enabled }}
@@ -38,6 +37,7 @@ spec:
       labels:
         {{- include "heimdall.labels" $data | nindent 8 }}
       annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- if and
           (ne $metrics.enabled false)
           (eq "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default ""))

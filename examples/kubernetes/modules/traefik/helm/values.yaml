@@ -38,6 +38,7 @@ metrics:
   prometheus: null
 %{ endif }
 
+
 providers:
   kubernetesCRD:
     enabled: true

@@ -19,8 +19,8 @@ package otelmetrics
 import (
 	"context"
 	"net"
-	"slices"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -45,8 +45,7 @@ type ServerInterceptor interface {
 type metricsInterceptor struct {
 	activeRequests metric.Int64UpDownCounter
 	attributes     []attribute.KeyValue
-	server         string
-	subsystem      attribute.KeyValue
+	pool           sync.Pool
 }
 
 func (h *metricsInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
@@ -71,11 +70,27 @@ func New(opts ...Option) ServerInterceptor {
 		panic(err)
 	}
 
+	base := make([]attribute.KeyValue, 0, len(conf.attributes)+3)
+	base = append(base, conf.attributes...)
+	base = append(base, conf.subsystem)
+
+	host, port := httpx.HostPort(conf.server)
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	base = append(base, semconv.ServerAddress(host), semconv.ServerPort(port))
+
 	handler := &metricsInterceptor{
 		activeRequests: activeRequestsMeasure,
-		attributes:     conf.attributes,
-		server:         conf.server,
-		subsystem:      conf.subsystem,
+		attributes:     base,
+		pool: sync.Pool{
+			New: func() any {
+				attrs := make([]attribute.KeyValue, 0, len(base)+5)
+
+				return &attrs
+			},
+		},
 	}
 
 	return handler
@@ -84,15 +99,21 @@ func New(opts ...Option) ServerInterceptor {
 func (h *metricsInterceptor) observeUnaryRequest(
 	ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) {
-	attr := serverRequestMetrics(info.FullMethod, h.server, peerFromCtx(ctx))
+	pkv := h.pool.Get().(*[]attribute.KeyValue) //nolint: forcetypeassert
+	attrs := *pkv
 
-	attributes := append(slices.Clone(h.attributes), h.subsystem)
-	attributes = append(attributes, attr...)
+	defer func() {
+		*pkv = attrs[:0]
 
-	opt := metric.WithAttributes(attributes...)
+		h.pool.Put(pkv)
+	}()
 
-	h.activeRequests.Add(ctx, 1, opt)
-	defer h.activeRequests.Add(ctx, -1, opt)
+	attrs = append(attrs, h.attributes...)
+	attrs = addRequestAttributes(attrs, info.FullMethod, peerFromCtx(ctx))
+	opts := metric.WithAttributeSet(attribute.NewSet(attrs...))
+
+	h.activeRequests.Add(ctx, 1, opts)
+	defer h.activeRequests.Add(ctx, -1, opts)
 
 	return handler(ctx, req)
 }
@@ -100,16 +121,23 @@ func (h *metricsInterceptor) observeUnaryRequest(
 func (h *metricsInterceptor) observeStreamRequest(
 	srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
 ) error {
+	pkv := h.pool.Get().(*[]attribute.KeyValue) //nolint: forcetypeassert
+	attrs := *pkv
+
+	defer func() {
+		*pkv = attrs[:0]
+
+		h.pool.Put(pkv)
+	}()
+
 	ctx := stream.Context()
-	attr := serverRequestMetrics(info.FullMethod, h.server, peerFromCtx(ctx))
 
-	attributes := append(slices.Clone(h.attributes), h.subsystem)
-	attributes = append(attributes, attr...)
+	attrs = append(attrs, h.attributes...)
+	attrs = addRequestAttributes(attrs, info.FullMethod, peerFromCtx(ctx))
+	opts := metric.WithAttributeSet(attribute.NewSet(attrs...))
 
-	opt := metric.WithAttributes(attributes...)
-
-	h.activeRequests.Add(ctx, 1, opt)
-	defer h.activeRequests.Add(ctx, -1, opt)
+	h.activeRequests.Add(ctx, 1, opts)
+	defer h.activeRequests.Add(ctx, -1, opts)
 
 	return handler(srv, stream)
 }
@@ -123,71 +151,46 @@ func peerFromCtx(ctx context.Context) string {
 	return p.Addr.String()
 }
 
-func peerAttr(addr string) []attribute.KeyValue {
-	host, port := httpx.HostPort(addr)
-
-	if host == "" {
-		host = "127.0.0.1"
-	}
-
-	if ip := net.ParseIP(host); ip != nil {
-		return []attribute.KeyValue{semconv.NetworkPeerAddress(host), semconv.NetworkPeerPort(port)}
-	}
-
-	return []attribute.KeyValue{semconv.ClientAddress(host), semconv.ClientPort(port)}
-}
-
-func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
+func parseFullMethod(fullMethod string) (string, string) {
 	if !strings.HasPrefix(fullMethod, "/") {
 		// Invalid format, does not follow `/package.service/method`.
-		return fullMethod, nil
+		return "", ""
 	}
 
 	name := fullMethod[1:]
-	pos := strings.LastIndex(name, "/")
+	pos := strings.LastIndexByte(name, '/')
 
 	if pos < 0 {
 		// Invalid format, does not follow `/package.service/method`.
-		return name, nil
+		return "", ""
 	}
 
-	service, method := name[:pos], name[pos+1:]
-
-	var attrs []attribute.KeyValue
-	if service != "" {
-		attrs = append(attrs, semconv.RPCService(service))
-	}
-
-	if method != "" {
-		attrs = append(attrs, semconv.RPCMethod(method))
-	}
-
-	return name, attrs
+	return name[:pos], name[pos+1:]
 }
 
-func serverRequestMetrics(fullMethod, serverAddress, peerAddress string) []attribute.KeyValue {
-	_, mAttrs := parseFullMethod(fullMethod)
-	peerAttrs := peerAttr(peerAddress)
-	serverAttrs := serverAttr(serverAddress)
-
-	attrs := make([]attribute.KeyValue, 0, 1+len(mAttrs)+len(peerAttrs)+len(serverAttrs))
-	attrs = append(attrs, semconv.RPCSystemGRPC)
-	attrs = append(attrs, mAttrs...)
-	attrs = append(attrs, peerAttrs...)
-	attrs = append(attrs, serverAttrs...)
-
-	return attrs
-}
-
-func serverAttr(addr string) []attribute.KeyValue {
-	host, port := httpx.HostPort(addr)
+func addRequestAttributes(attrs []attribute.KeyValue, fullMethod, peerAddress string) []attribute.KeyValue {
+	service, method := parseFullMethod(fullMethod)
+	host, port := httpx.HostPort(peerAddress)
 
 	if host == "" {
 		host = "127.0.0.1"
 	}
 
-	return []attribute.KeyValue{
-		semconv.ServerAddress(host),
-		semconv.ServerPort(port),
+	attrs = append(attrs, semconv.RPCSystemGRPC)
+
+	if len(service) != 0 {
+		attrs = append(attrs, semconv.RPCService(service))
 	}
+
+	if len(method) != 0 {
+		attrs = append(attrs, semconv.RPCMethod(method))
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		attrs = append(attrs, semconv.NetworkPeerAddress(host), semconv.NetworkPeerPort(port))
+	} else {
+		attrs = append(attrs, semconv.ClientAddress(host), semconv.ClientPort(port))
+	}
+
+	return attrs
 }
