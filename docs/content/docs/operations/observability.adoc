@@ -37,7 +37,7 @@ log:
 
 * *`level`*: _string_ (optional)
 +
-Following log levels are available: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `panic` and `disabled`. The last one effectively disables logging. You usually do not want to do this. By default, the level is set to `error`.
+Following log levels are available: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. By default, the level is set to `error`.
 +
 WARNING: `debug` and `trace` log levels are not meant for production as setting log level to one of these will result in a high log verbosity and also affect performance pretty much. Both are only meant for setup analysis and debugging! `trace` log level will also dump all incoming and outgoing HTTP requests and responses, as well as the contents of objects used in templates. That dump is unedited. That means sensitive data will be available in logs.
 +

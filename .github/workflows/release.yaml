@@ -5,7 +5,7 @@ on:
     tags: [ "v*" ]
 
 env:
-  GO_VERSION: "1.25.5"
+  GO_VERSION: "1.25.6"
   COSIGN_VERSION: "v2.4.3"
   CYCLONEDX_GOMOD_VERSION: "v1.9.0"
   HELM_VERSION: "3.18.5"
@@ -33,7 +33,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
       - name: Set up Go
-        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Install Cosign
@@ -105,7 +105,7 @@ jobs:
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
-        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Generate SBOM
@@ -401,11 +401,11 @@ jobs:
           hugo-version: ${{ env.HUGO_VERSION }}
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup ruby
-        uses: ruby/setup-ruby@d5f787ce339eb0767271bc01d922e85644c2c8ab # v1.280.0
+        uses: ruby/setup-ruby@90be1154f987f4dc0fe0dd0feedac9e473aa4ba8 # v1.286.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
       - name: Install asciidoctor
@@ -471,7 +471,7 @@ jobs:
           echo "result=$branch_name" >> $GITHUB_OUTPUT
       - name: Create a PR for the updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
         with:
           title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
           commit-message: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
