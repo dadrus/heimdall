@@ -61,13 +61,16 @@ func TestNewRequestContext(t *testing.T) {
 	md := metadata.New(nil)
 	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1")
 
-	ctx := NewRequestContext(
+	cf := newContextFactory()
+	ctx := cf.Create(
 		metadata.NewIncomingContext(
 			t.Context(),
 			md,
 		),
 		checkReq,
 	)
+
+	defer cf.Destroy(ctx)
 
 	// THEN
 	require.Equal(t, httpReq.GetMethod(), ctx.Request().Method)
@@ -89,6 +92,8 @@ func TestNewRequestContext(t *testing.T) {
 
 func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
+
+	cf := newContextFactory()
 
 	findHeader := func(headers []*corev3.HeaderValueOption, name string) *corev3.HeaderValue {
 		for _, header := range headers {
@@ -254,7 +259,10 @@ func TestRequestContextFinalize(t *testing.T) {
 					},
 				},
 			}
-			ctx := NewRequestContext(t.Context(), checkReq)
+
+			ctx := cf.Create(t.Context(), checkReq)
+
+			defer cf.Destroy(ctx)
 
 			tc.updateContext(t, ctx)
 
@@ -269,6 +277,8 @@ func TestRequestContextFinalize(t *testing.T) {
 
 func TestRequestContextBody(t *testing.T) {
 	t.Parallel()
+
+	cf := newContextFactory()
 
 	for uc, tc := range map[string]struct {
 		ct     string
@@ -313,7 +323,8 @@ func TestRequestContextBody(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := NewRequestContext(
+
+			ctx := cf.Create(
 				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
@@ -325,6 +336,8 @@ func TestRequestContextBody(t *testing.T) {
 					},
 				},
 			)
+
+			defer cf.Destroy(ctx)
 
 			// WHEN
 			data := ctx.Request().Body()
@@ -339,7 +352,8 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := NewRequestContext(
+	cf := newContextFactory()
+	ctx := cf.Create(
 		t.Context(),
 		&envoy_auth.CheckRequest{
 			Attributes: &envoy_auth.AttributeContext{
@@ -351,6 +365,8 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 			},
 		},
 	)
+
+	defer cf.Destroy(ctx)
 
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 

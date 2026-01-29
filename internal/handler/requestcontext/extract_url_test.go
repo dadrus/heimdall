@@ -30,7 +30,7 @@ func TestExtractURL(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		configureRequest func(t *testing.T, req *http.Request)
-		assert           func(t *testing.T, extracted *url.URL)
+		assert           func(t *testing.T, extracted url.URL)
 	}{
 		"X-Forwarded-Proto set": {
 			configureRequest: func(t *testing.T, req *http.Request) {
@@ -39,7 +39,7 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted *url.URL) {
+			assert: func(t *testing.T, extracted url.URL) {
 				t.Helper()
 
 				assert.Equal(t, "https", extracted.Scheme)
@@ -55,7 +55,7 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Host", "foobar")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted *url.URL) {
+			assert: func(t *testing.T, extracted url.URL) {
 				t.Helper()
 
 				assert.Equal(t, "http", extracted.Scheme)
@@ -71,7 +71,7 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Path", "/bar%2Ftest/foo/%5Bval%5D")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted *url.URL) {
+			assert: func(t *testing.T, extracted url.URL) {
 				t.Helper()
 
 				assert.Equal(t, "http", extracted.Scheme)
@@ -87,7 +87,7 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/bar%2Ftest/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted *url.URL) {
+			assert: func(t *testing.T, extracted url.URL) {
 				t.Helper()
 
 				assert.Equal(t, "http", extracted.Scheme)

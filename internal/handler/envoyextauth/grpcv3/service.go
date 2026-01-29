@@ -97,7 +97,7 @@ func newService(
 		grpc.ChainStreamInterceptor(streamInterceptors...),
 	)
 
-	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec})
+	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec, cf: newContextFactory()})
 
 	return srv
 }
