@@ -42,5 +42,7 @@ resource "kind_cluster" "default" {
 }
 
 data "docker_network" "kind" {
+  depends_on = [kind_cluster.default]
+
   name = "kind"
 }
