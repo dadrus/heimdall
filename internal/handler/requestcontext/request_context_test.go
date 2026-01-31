@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRequestContextRequestClientIPs(t *testing.T) {
+func TestRequestClientIPs(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -98,10 +98,8 @@ func TestRequestContextRequestClientIPs(t *testing.T) {
 			req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 			tc.configureRequest(t, req)
 
-			ctx := &RequestContext{req: req}
-
 			// WHEN
-			ips := ctx.requestClientIPs()
+			ips := requestClientIPs(nil, req)
 
 			// THEN
 			tc.assert(t, ips)
@@ -117,7 +115,8 @@ func TestRequestContextHeaders(t *testing.T) {
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
-	ctx := New(req)
+	ctx := New()
+	ctx.Init(req)
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -137,7 +136,8 @@ func TestRequestContextHeader(t *testing.T) {
 	req.Header.Add("X-Foo-Bar", "bar")
 	req.Host = "bar.foo"
 
-	ctx := New(req)
+	ctx := New()
+	ctx.Init(req)
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -157,7 +157,8 @@ func TestRequestContextCookie(t *testing.T) {
 	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
-	ctx := New(req)
+	ctx := New()
+	ctx.Init(req)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -217,7 +218,8 @@ func TestRequestContextBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", tc.body)
 			req.Header.Set("Content-Type", tc.ct)
 
-			ctx := New(req)
+			ctx := New()
+			ctx.Init(req)
 
 			// WHEN
 			data := ctx.Request().Body()
@@ -232,7 +234,8 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := New(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
+	ctx := New()
+	ctx.Init(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
 
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 

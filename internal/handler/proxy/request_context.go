@@ -23,6 +23,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -37,46 +38,81 @@ import (
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
-type requestContext struct {
-	*requestcontext.RequestContext
+type contextFactory struct {
+	roundTripper http.RoundTripper
+	pool         *sync.Pool
+}
 
-	rw        http.ResponseWriter
-	req       *http.Request
-	transport *http.Transport
+func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
+	rc := cf.pool.Get().(*requestContext) //nolint: forcetypeassert
+
+	rc.Init(rw, req, cf.roundTripper)
+
+	return rc
+}
+
+func (cf *contextFactory) Destroy(ctx requestcontext.Context) {
+	rc := ctx.(*requestContext) //nolint: forcetypeassert
+
+	rc.Reset()
+
+	cf.pool.Put(rc)
 }
 
 func newContextFactory(
 	cfg config.ServeConfig,
 	tlsCfg *tls.Config,
 ) requestcontext.ContextFactory {
-	transport := &http.Transport{
-		// tlsClientConfig used for test purposes only
-		// must be removed as soon as tls configuration
-		// is possible per upstream
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second, //nolint:mnd
-			KeepAlive: 30 * time.Second, //nolint:mnd
-		}).DialContext,
-		ResponseHeaderTimeout: cfg.Timeout.Read,
-		MaxIdleConns:          cfg.ConnectionsLimit.MaxIdle,
-		MaxIdleConnsPerHost:   cfg.ConnectionsLimit.MaxIdlePerHost,
-		MaxConnsPerHost:       cfg.ConnectionsLimit.MaxPerHost,
-		IdleConnTimeout:       cfg.Timeout.Idle,
-		TLSHandshakeTimeout:   10 * time.Second, //nolint:mnd
-		ExpectContinueTimeout: 1 * time.Second,
-		ForceAttemptHTTP2:     true,
-		TLSClientConfig:       tlsCfg,
+	return &contextFactory{
+		roundTripper: &http.Transport{
+			// tlsClientConfig used for test purposes only
+			// must be removed as soon as tls configuration
+			// is possible per upstream
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second, //nolint:mnd
+				KeepAlive: 30 * time.Second, //nolint:mnd
+			}).DialContext,
+			ResponseHeaderTimeout: cfg.Timeout.Read,
+			MaxIdleConns:          cfg.ConnectionsLimit.MaxIdle,
+			MaxIdleConnsPerHost:   cfg.ConnectionsLimit.MaxIdlePerHost,
+			MaxConnsPerHost:       cfg.ConnectionsLimit.MaxPerHost,
+			IdleConnTimeout:       cfg.Timeout.Idle,
+			TLSHandshakeTimeout:   10 * time.Second, //nolint:mnd
+			ExpectContinueTimeout: 1 * time.Second,
+			ForceAttemptHTTP2:     true,
+			TLSClientConfig:       tlsCfg,
+		},
+		pool: &sync.Pool{New: func() any {
+			return &requestContext{
+				RequestContext: requestcontext.New(),
+			}
+		}},
 	}
+}
 
-	return requestcontext.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
-		return &requestContext{
-			RequestContext: requestcontext.New(req),
-			transport:      transport,
-			rw:             rw,
-			req:            req,
-		}
-	})
+type requestContext struct {
+	*requestcontext.RequestContext
+
+	rw  http.ResponseWriter
+	req *http.Request
+	rt  http.RoundTripper
+}
+
+func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, rt http.RoundTripper) {
+	r.rw = rw
+	r.rt = rt
+	r.req = req
+
+	r.RequestContext.Init(req)
+}
+
+func (r *requestContext) Reset() {
+	r.rw = nil
+	r.rt = nil
+	r.req = nil
+
+	r.RequestContext.Reset()
 }
 
 func (r *requestContext) Finalize(upstream rule.Backend) error {
@@ -106,7 +142,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 		},
 		Rewrite: r.rewriteRequest(upstream.URL(), upstream.ForwardHostHeader()),
 		Transport: otelhttp.NewTransport(
-			httpx.NewTraceRoundTripper(r.transport),
+			httpx.NewTraceRoundTripper(r.rt),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return r.Proto + " " + r.Method + " " + r.URL.Path + " @" + r.URL.Host
 			})),

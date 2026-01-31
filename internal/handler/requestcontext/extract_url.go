@@ -23,7 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func extractURL(req *http.Request) *url.URL {
+func extractURL(req *http.Request) url.URL {
 	var (
 		rawPath string
 		path    string
@@ -43,7 +43,7 @@ func extractURL(req *http.Request) *url.URL {
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
 		if forwardedURI, err := url.Parse(val); err == nil {
 			rawPath = forwardedURI.EscapedPath()
-			query = forwardedURI.Query().Encode()
+			query = forwardedURI.RawQuery
 		}
 	}
 
@@ -57,7 +57,7 @@ func extractURL(req *http.Request) *url.URL {
 
 	path, _ = url.PathUnescape(rawPath)
 
-	return &url.URL{
+	return url.URL{
 		Scheme:   proto,
 		Host:     host,
 		Path:     path,

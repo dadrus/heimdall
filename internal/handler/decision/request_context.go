@@ -18,6 +18,7 @@ package decision
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/rs/zerolog"
 
@@ -25,16 +26,38 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
+type contextFactory struct {
+	responseCode int
+	pool         *sync.Pool
+}
+
+func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
+	rc := cf.pool.Get().(*requestContext) //nolint: forcetypeassert
+
+	rc.Init(rw, req, cf.responseCode)
+
+	return rc
+}
+
+func (cf *contextFactory) Destroy(ctx requestcontext.Context) {
+	rc := ctx.(*requestContext) //nolint: forcetypeassert
+
+	rc.Reset()
+
+	cf.pool.Put(rc)
+}
+
 func newContextFactory(
 	responseCode int,
 ) requestcontext.ContextFactory {
-	return requestcontext.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
-		return &requestContext{
-			RequestContext: requestcontext.New(req),
-			responseCode:   responseCode,
-			rw:             rw,
-		}
-	})
+	return &contextFactory{
+		responseCode: responseCode,
+		pool: &sync.Pool{New: func() any {
+			return &requestContext{
+				RequestContext: requestcontext.New(),
+			}
+		}},
+	}
 }
 
 type requestContext struct {
@@ -42,6 +65,19 @@ type requestContext struct {
 
 	rw           http.ResponseWriter
 	responseCode int
+}
+
+func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, code int) {
+	r.rw = rw
+	r.responseCode = code
+	r.RequestContext.Init(req)
+}
+
+func (r *requestContext) Reset() {
+	r.rw = nil
+	r.responseCode = 0
+
+	r.RequestContext.Reset()
 }
 
 func (r *requestContext) Finalize(_ rule.Backend) error {

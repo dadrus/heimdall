@@ -25,11 +25,13 @@ import (
 )
 
 type Handler struct {
-	e rule.Executor
+	e  rule.Executor
+	cf *contextFactory
 }
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
-	reqCtx := NewRequestContext(ctx, req)
+	reqCtx := h.cf.Create(ctx, req)
+	defer h.cf.Destroy(reqCtx)
 
 	_, err := h.e.Execute(reqCtx)
 	if err != nil {
