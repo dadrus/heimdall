@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.17.9](https://github.com/dadrus/heimdall/compare/v0.17.8...v0.17.9) (2026-01-31)
+
+
+### Performance Improvements
+
+* Access logger and regular logger handler implementations merged to reduce copying of data ([#3018](https://github.com/dadrus/heimdall/issues/3018)) ([852c02c](https://github.com/dadrus/heimdall/commit/852c02cdacd036e00cac7f98975001380f76e657))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 8e98ce8 ([#3000](https://github.com/dadrus/heimdall/issues/3000)) ([9631c8a](https://github.com/dadrus/heimdall/commit/9631c8a77293e1810d448a1afa5b41d73034ea4a))
+* update module github.com/go-co-op/gocron/v2 to v2.19.1 ([#3010](https://github.com/dadrus/heimdall/issues/3010)) ([d3eef4e](https://github.com/dadrus/heimdall/commit/d3eef4e6231691bc1caab7948392a3a656051928))
+* update module github.com/google/cel-go to v0.27.0 ([#3015](https://github.com/dadrus/heimdall/issues/3015)) ([c2cc413](https://github.com/dadrus/heimdall/commit/c2cc413ea315e427c64d91439b52d74582d87234))
+* update module github.com/knadh/koanf/v2 to v2.3.2 ([#3005](https://github.com/dadrus/heimdall/issues/3005)) ([072706c](https://github.com/dadrus/heimdall/commit/072706c83ca06af48f91390e7a7c9a5670768266))
+* update module github.com/redis/rueidis to v1.0.71 ([#3013](https://github.com/dadrus/heimdall/issues/3013)) ([d9a262a](https://github.com/dadrus/heimdall/commit/d9a262add0ef11a56f1f171036723040f351214b))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.71 ([#3013](https://github.com/dadrus/heimdall/issues/3013)) ([d9a262a](https://github.com/dadrus/heimdall/commit/d9a262add0ef11a56f1f171036723040f351214b))
+
 ## [0.17.8](https://github.com/dadrus/heimdall/compare/v0.17.7...v0.17.8) (2026-01-22)
 
 
