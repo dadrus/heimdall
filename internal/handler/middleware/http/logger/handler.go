@@ -30,9 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
-
-
-func New(logger zerolog.Logger, opts... Option) func(http.Handler) http.Handler {
+func New(logger zerolog.Logger, opts ...Option) func(http.Handler) http.Handler {
 	accessLog := logger.Level(zerolog.InfoLevel).With().Logger()
 
 	conf := config{}
