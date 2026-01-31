@@ -19,24 +19,56 @@ package logger
 import (
 	"context"
 	"net/http"
+	"time"
 
+	"github.com/felixge/httpsnoop"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/accesscontext"
+	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
-func New(logger zerolog.Logger) func(http.Handler) http.Handler {
+
+
+func New(logger zerolog.Logger, opts... Option) func(http.Handler) http.Handler {
+	accessLog := logger.Level(zerolog.InfoLevel).With().Logger()
+
+	conf := config{}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			ctx := req.Context()
+			start := time.Now()
+			ctx := accesscontext.New(req.Context())
+			traceCtx := tracecontext.Extract(ctx)
+			req = req.WithContext(withTraceData(logger.With(), &traceCtx).Logger().WithContext(ctx))
+			host := httpx.IPFromHostPort(req.RemoteAddr)
 
-			next.ServeHTTP(rw, req.WithContext(withTraceData(ctx, logger.With()).Logger().WithContext(ctx)))
+			logEvt := logCommonData(accessLog.Info(), start, host, req, &traceCtx)
+			logEvt.Msg("TX started")
+
+			metrics := httpsnoop.CaptureMetrics(next, rw, req)
+
+			logEvt = logCommonData(accessLog.Info(), start, host, req, &traceCtx)
+
+			if conf.logAccessStatus {
+				logEvt = logAccessStatus(ctx, logEvt, metrics.Code)
+			}
+
+			logEvt.Int64("_body_bytes_sent", metrics.Written).
+				Int("_http_status_code", metrics.Code).
+				Int64("_tx_duration_ms", time.Since(start).Milliseconds()).
+				Msg("TX finished")
 		})
 	}
 }
 
-func withTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context {
-	if traceCtx := tracecontext.Extract(ctx); len(traceCtx.TraceID) != 0 {
+func withTraceData(logCtx zerolog.Context, traceCtx *tracecontext.TraceContext) zerolog.Context {
+	if len(traceCtx.TraceID) != 0 {
 		logCtx = logCtx.
 			Str("_trace_id", traceCtx.TraceID).
 			Str("_span_id", traceCtx.SpanID)
@@ -47,4 +79,70 @@ func withTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context 
 	}
 
 	return logCtx
+}
+
+func logCommonData(
+	logEvt *zerolog.Event,
+	start time.Time,
+	host string,
+	req *http.Request,
+	traceCtx *tracecontext.TraceContext,
+) *zerolog.Event {
+	logEvt = logEvt.
+		Int64("_tx_start", start.Unix()).
+		Str("_client_ip", host).
+		Str("_http_method", req.Method).
+		Str("_http_path", req.URL.Path).
+		Str("_http_user_agent", req.Header.Get("User-Agent")).
+		Str("_http_host", req.Host).
+		Str("_http_scheme", x.IfThenElse(req.TLS != nil, "https", "http"))
+
+	logEvt = logTraceData(traceCtx, logEvt)
+	logEvt = logHeader(req, logEvt, "X-Forwarded-Method", "_http_x_forwarded_method")
+	logEvt = logHeader(req, logEvt, "X-Forwarded-Proto", "_http_x_forwarded_proto")
+	logEvt = logHeader(req, logEvt, "X-Forwarded-Host", "_http_x_forwarded_host")
+	logEvt = logHeader(req, logEvt, "X-Forwarded-Uri", "_http_x_forwarded_uri")
+	logEvt = logHeader(req, logEvt, "X-Forwarded-For", "_http_x_forwarded_for")
+	logEvt = logHeader(req, logEvt, "Forwarded", "_http_forwarded")
+
+	return logEvt
+}
+
+func logAccessStatus(ctx context.Context, event *zerolog.Event, statusCode int) *zerolog.Event {
+	subject := accesscontext.Subject(ctx)
+	err := accesscontext.Error(ctx)
+
+	if len(subject) != 0 {
+		event.Str("_subject", subject)
+	}
+
+	if err != nil || statusCode >= 300 {
+		event.Err(err).Bool("_access_granted", false)
+	} else {
+		event.Bool("_access_granted", true)
+	}
+
+	return event
+}
+
+func logTraceData(ctx *tracecontext.TraceContext, logEvt *zerolog.Event) *zerolog.Event {
+	if len(ctx.TraceID) != 0 {
+		logEvt = logEvt.
+			Str("_trace_id", ctx.TraceID).
+			Str("_span_id", ctx.SpanID)
+
+		if len(ctx.ParentID) != 0 {
+			logEvt = logEvt.Str("_parent_id", ctx.ParentID)
+		}
+	}
+
+	return logEvt
+}
+
+func logHeader(req *http.Request, logEvt *zerolog.Event, headerName, logKey string) *zerolog.Event {
+	if headerValue := req.Header.Get(headerName); len(headerValue) != 0 {
+		logEvt = logEvt.Str(logKey, headerValue)
+	}
+
+	return logEvt
 }
