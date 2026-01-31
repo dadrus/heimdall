@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/accesslog"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
@@ -63,7 +62,6 @@ func newService(
 			otelmetrics.WithServerName(cfg.Address()),
 			otelmetrics.WithOperationFilter(opFilter),
 		),
-		accesslog.New(log),
 		logger.New(log),
 		dump.New(),
 		x.IfThenElseExec(cfg.CORS != nil,

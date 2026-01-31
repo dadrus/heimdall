@@ -29,7 +29,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	accesslogmiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/accesslog"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
@@ -44,7 +43,7 @@ func newService(
 	exec rule.Executor,
 ) *grpc.Server {
 	cfg := conf.Serve
-	accessLogger := accesslogmiddleware.New(logger)
+	logHandler := loggermiddleware.New(logger)
 	recoveryHandler := recovery.WithRecoveryHandler(func(any) error {
 		return status.Error(codes.Internal, "internal error")
 	})
@@ -54,37 +53,6 @@ func newService(
 		otelmetrics.WithSubsystem("decision"),
 	)
 
-	streamInterceptors := []grpc.StreamServerInterceptor{
-		recovery.StreamServerInterceptor(recoveryHandler),
-		metrics.StreamServerInterceptor(),
-	}
-
-	unaryInterceptors := []grpc.UnaryServerInterceptor{
-		recovery.UnaryServerInterceptor(recoveryHandler),
-		metrics.UnaryServerInterceptor(),
-	}
-
-	unaryInterceptors = append(unaryInterceptors,
-		errorhandler.New(
-			errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
-			errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
-			errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
-			errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
-			errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
-			errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
-			errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
-		),
-		// the accesslogger is used here to have access to the error object
-		// as it will be replaced by a CheckResponse object returned to envoy
-		// and will not contain all the details, typically required to enable
-		// error traceback
-		accessLogger.Unary(),
-		loggermiddleware.New(logger),
-		cachemiddleware.New(cch),
-	)
-
-	streamInterceptors = append(streamInterceptors, accessLogger.Stream())
-
 	srv := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
 		grpc.ReadBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Read))),
@@ -93,8 +61,30 @@ func newService(
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.ChainUnaryInterceptor(unaryInterceptors...),
-		grpc.ChainStreamInterceptor(streamInterceptors...),
+		grpc.ChainUnaryInterceptor(
+			recovery.UnaryServerInterceptor(recoveryHandler),
+			metrics.UnaryServerInterceptor(),
+			errorhandler.New(
+				errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
+				errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+				errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
+				errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
+				errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
+				errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
+				errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
+			),
+			// the logHandler is used here to have access to the error object
+			// as it will be replaced by a CheckResponse object returned to envoy
+			// and will not contain all the details, typically required to enable
+			// error traceback
+			logHandler.UnaryServerInterceptor(),
+			cachemiddleware.New(cch),
+		),
+		grpc.ChainStreamInterceptor(
+			recovery.StreamServerInterceptor(recoveryHandler),
+			metrics.StreamServerInterceptor(),
+			logHandler.StreamServerInterceptor(),
+		),
 	)
 
 	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec})
