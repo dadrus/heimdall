@@ -323,7 +323,6 @@ func TestRequestContextBody(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-
 			ctx := cf.Create(
 				t.Context(),
 				&envoy_auth.CheckRequest{

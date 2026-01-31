@@ -44,7 +44,7 @@ type contextFactory struct {
 }
 
 func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
-	rc := cf.pool.Get().(*requestContext)
+	rc := cf.pool.Get().(*requestContext) //nolint: forcetypeassert
 
 	rc.Init(rw, req, cf.roundTripper)
 
@@ -52,7 +52,7 @@ func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requ
 }
 
 func (cf *contextFactory) Destroy(ctx requestcontext.Context) {
-	rc := ctx.(*requestContext)
+	rc := ctx.(*requestContext) //nolint: forcetypeassert
 
 	rc.Reset()
 
