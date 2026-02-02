@@ -18,6 +18,7 @@ package requestcontext
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRequestContextRequestClientIPs(t *testing.T) {
+func TestRequestClientIPs(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -98,10 +99,8 @@ func TestRequestContextRequestClientIPs(t *testing.T) {
 			req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 			tc.configureRequest(t, req)
 
-			ctx := &RequestContext{req: req}
-
 			// WHEN
-			ips := ctx.requestClientIPs()
+			ips := requestClientIPs(nil, req)
 
 			// THEN
 			tc.assert(t, ips)
@@ -117,7 +116,8 @@ func TestRequestContextHeaders(t *testing.T) {
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
-	ctx := New(req)
+	ctx := New()
+	ctx.Init(req)
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -137,7 +137,8 @@ func TestRequestContextHeader(t *testing.T) {
 	req.Header.Add("X-Foo-Bar", "bar")
 	req.Host = "bar.foo"
 
-	ctx := New(req)
+	ctx := New()
+	ctx.Init(req)
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -157,7 +158,8 @@ func TestRequestContextCookie(t *testing.T) {
 	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
-	ctx := New(req)
+	ctx := New()
+	ctx.Init(req)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -217,7 +219,8 @@ func TestRequestContextBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", tc.body)
 			req.Header.Set("Content-Type", tc.ct)
 
-			ctx := New(req)
+			ctx := New()
+			ctx.Init(req)
 
 			// WHEN
 			data := ctx.Request().Body()
@@ -232,7 +235,8 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := New(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
+	ctx := New()
+	ctx.Init(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
 
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 
@@ -240,4 +244,50 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 	captures := ctx.Request().URL.Captures
 	require.Len(t, captures, 1)
 	assert.Equal(t, "b", captures["a"])
+}
+
+func TestRequestContextReset(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	req := httptest.NewRequest(http.MethodHead,
+		"https://foo.bar/test",
+		bytes.NewBufferString(`{ "content": "heimdall" }`),
+	)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	ctx := New()
+	ctx.Init(req)
+	ctx.Request().URL.Captures = map[string]string{"a": "b"}
+	ctx.SetPipelineError(errors.New("pipeline error"))
+	_ = ctx.Body()
+	ctx.Outputs()["a"] = "b"
+	ctx.AddCookieForUpstream("foo", "bar")
+	ctx.AddHeaderForUpstream("bar", "foo")
+	_ = ctx.Headers()
+
+	// WHEN
+	ctx.Reset()
+
+	// THEN
+	require.Nil(t, ctx.savedBody)
+	require.NoError(t, ctx.err)
+	require.Nil(t, ctx.req)
+	require.NotNil(t, ctx.outputs)
+	require.Empty(t, ctx.outputs)
+	require.NotNil(t, ctx.headers)
+	require.Empty(t, ctx.headers)
+	require.NotNil(t, ctx.upstreamCookies)
+	require.Empty(t, ctx.upstreamCookies)
+	require.NotNil(t, ctx.upstreamHeaders)
+	require.Empty(t, ctx.upstreamHeaders)
+	require.NotNil(t, ctx.hmdlReq)
+	require.NotNil(t, ctx.hmdlReq.URL)
+	require.Empty(t, ctx.hmdlReq.URL.URL)
+	require.Empty(t, ctx.hmdlReq.Method)
+	require.NotNil(t, ctx.hmdlReq.URL.Captures)
+	require.Empty(t, ctx.hmdlReq.URL.Captures)
+	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
 }
