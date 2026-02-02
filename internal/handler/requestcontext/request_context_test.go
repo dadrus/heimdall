@@ -18,6 +18,7 @@ package requestcontext
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -243,4 +244,50 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 	captures := ctx.Request().URL.Captures
 	require.Len(t, captures, 1)
 	assert.Equal(t, "b", captures["a"])
+}
+
+func TestRequestContextReset(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	req := httptest.NewRequest(http.MethodHead,
+		"https://foo.bar/test",
+		bytes.NewBufferString(`{ "content": "heimdall" }`),
+	)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	ctx := New()
+	ctx.Init(req)
+	ctx.Request().URL.Captures = map[string]string{"a": "b"}
+	ctx.SetPipelineError(errors.New("pipeline error"))
+	_ = ctx.Body()
+	ctx.Outputs()["a"] = "b"
+	ctx.AddCookieForUpstream("foo", "bar")
+	ctx.AddHeaderForUpstream("bar", "foo")
+	_ = ctx.Headers()
+
+	// WHEN
+	ctx.Reset()
+
+	// THEN
+	require.Nil(t, ctx.savedBody)
+	require.NoError(t, ctx.err)
+	require.Nil(t, ctx.req)
+	require.NotNil(t, ctx.outputs)
+	require.Empty(t, ctx.outputs)
+	require.NotNil(t, ctx.headers)
+	require.Empty(t, ctx.headers)
+	require.NotNil(t, ctx.upstreamCookies)
+	require.Empty(t, ctx.upstreamCookies)
+	require.NotNil(t, ctx.upstreamHeaders)
+	require.Empty(t, ctx.upstreamHeaders)
+	require.NotNil(t, ctx.hmdlReq)
+	require.NotNil(t, ctx.hmdlReq.URL)
+	require.Empty(t, ctx.hmdlReq.URL.URL)
+	require.Empty(t, ctx.hmdlReq.Method)
+	require.NotNil(t, ctx.hmdlReq.URL.Captures)
+	require.Empty(t, ctx.hmdlReq.URL.Captures)
+	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
 }
