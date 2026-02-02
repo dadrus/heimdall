@@ -56,18 +56,7 @@ func (cf *contextFactory) Destroy(rc *RequestContext) {
 func newContextFactory() *contextFactory {
 	return &contextFactory{
 		pool: &sync.Pool{New: func() any {
-			rc := &RequestContext{
-				upstreamHeaders: make(http.Header, 6),
-				upstreamCookies: make(map[string]string, 4),
-				outputs:         make(map[string]any, 10),
-			}
-
-			rc.hmdlReq = &heimdall.Request{
-				RequestFunctions: rc,
-				URL:              &heimdall.URL{},
-			}
-
-			return rc
+			return newRequestContext()
 		}},
 	}
 }
@@ -75,7 +64,6 @@ func newContextFactory() *contextFactory {
 type RequestContext struct {
 	ctx             context.Context // nolint: containedctx
 	reqHeaders      map[string]string
-	reqBody         string
 	reqRawBody      []byte
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
@@ -86,6 +74,21 @@ type RequestContext struct {
 
 	savedBody any
 	outputs   map[string]any
+}
+
+func newRequestContext() *RequestContext {
+	rc := &RequestContext{
+		upstreamHeaders: make(http.Header, 6),
+		upstreamCookies: make(map[string]string, 4),
+		outputs:         make(map[string]any, 10),
+	}
+
+	rc.hmdlReq = &heimdall.Request{
+		RequestFunctions: rc,
+		URL:              &heimdall.URL{},
+	}
+
+	return rc
 }
 
 func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) {
@@ -102,7 +105,6 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 
 	r.ctx = ctx
 	r.reqHeaders = canonicalizeHeaders(httpReq.GetHeaders())
-	r.reqBody = httpReq.GetBody()
 	r.reqRawBody = httpReq.GetRawBody()
 	r.hmdlReq.Method = httpReq.GetMethod()
 	r.hmdlReq.URL.URL = url.URL{
@@ -118,7 +120,6 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 func (r *RequestContext) Reset() {
 	r.ctx = nil
 	r.reqHeaders = nil
-	r.reqBody = ""
 	r.reqRawBody = nil
 	r.savedBody = nil
 	r.err = nil
