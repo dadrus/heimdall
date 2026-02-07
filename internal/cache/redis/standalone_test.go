@@ -24,7 +24,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
-	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -150,10 +149,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				db := miniredis.RunT(t)
 
-				return fmt.Appendf(nil,
-					"{address: %s, client_cache: {disabled: true}, tls: {disabled: true}}",
-					db.Addr(),
-				)
+				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, tls: {disabled: true}}")
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -176,10 +172,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				db := miniredis.RunT(t)
 
-				return fmt.Appendf(nil,
-					"{address: %s, client_cache: {disabled: true}, tls: {disabled: true}, credentials: {password: foo}}",
-					db.Addr(),
-				)
+				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, tls: {disabled: true}, credentials: {password: foo}}")
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -211,10 +204,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(errors.New("test error"))
 
-				return fmt.Appendf(nil,
-					"{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: { path: %s }}",
-					cf.Name(),
-				)
+				return []byte("{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: { path: " + cf.Name() + " }}")
 			},
 			assert: func(t *testing.T, err error, _ cache.Cache) {
 				t.Helper()
@@ -284,7 +274,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(nil)
 
-				return fmt.Appendf(nil, "{address: %s, client_cache: {disabled: true}, credentials: { path: %s }}", db.Addr(), cf.Name())
+				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, credentials: { path: " + cf.Name() + " }}")
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -325,10 +315,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				t.Cleanup(db.Close)
 
-				return fmt.Appendf(nil,
-					"{address: %s, client_cache: {disabled: true}, tls: {key_store: {path: %s}}}",
-					db.Addr(), pemFile.Name(),
-				)
+				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, tls: {key_store: {path: " + pemFile.Name() + "}}}")
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()

@@ -38,7 +38,7 @@ func TestTemplateRender(t *testing.T) {
 	reqf.EXPECT().Header("X-My-Header").Return("my-value")
 	reqf.EXPECT().Cookie("session_cookie").Return("session-value")
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{
 		RequestFunctions: reqf,
 		Method:           http.MethodPatch,

@@ -24,6 +24,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -33,16 +35,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authorizer, error) {
-			if typ != AuthorizerCEL {
-				return false, nil, nil
-			}
-
-			auth, err := newCELAuthorizer(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthorizer,
+		AuthorizerCEL,
+		registry.FactoryFunc(newCELAuthorizer),
+	)
 }
 
 type celAuthorizer struct {
@@ -54,7 +51,7 @@ type celAuthorizer struct {
 	v           values.Values
 }
 
-func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (*celAuthorizer, error) {
+func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthorizerCEL).
@@ -93,7 +90,9 @@ func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (*
 	}, nil
 }
 
-func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *celAuthorizer) Accept(_ heimdall.Visitor) {}
+
+func (a *celAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerCEL).
@@ -121,14 +120,14 @@ func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub identity.Subjec
 	}, a)
 }
 
-func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Authorizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (a *celAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = def.ID
 
 		return &auth, nil
 	}
@@ -139,7 +138,7 @@ func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Aut
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for cel authorizer '%s'", a.name).CausedBy(err)
 	}
@@ -151,13 +150,15 @@ func (a *celAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (Aut
 
 	return &celAuthorizer{
 		name:        a.name,
-		id:          x.IfThenElse(len(stepID) == 0, a.id, stepID),
+		id:          x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		app:         a.app,
 		celEnv:      a.celEnv,
 		expressions: x.IfThenElse(len(expressions) != 0, expressions, a.expressions),
 		v:           a.v.Merge(conf.Values),
 	}, nil
 }
+
+func (a *celAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
 
 func (a *celAuthorizer) Name() string { return a.name }
 

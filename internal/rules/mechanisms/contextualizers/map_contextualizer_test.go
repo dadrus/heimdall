@@ -29,13 +29,14 @@ import (
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateMapContextualizer(t *testing.T) {
+func TestNewMapContextualizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -122,31 +123,35 @@ values:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			contextualizer, err := newMapContextualizer(appCtx, uc, conf)
+			mech, err := newMapContextualizer(appCtx, uc, conf)
 
 			// THEN
+			contextualizer, ok := mech.(*mapContextualizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, contextualizer)
 		})
 	}
 }
 
-func TestCreateMapContextualizerFromPrototype(t *testing.T) {
+func TestMapContextualizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *mapContextualizer)
 	}{
 		"with empty target config and no step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -155,14 +160,14 @@ values:
 			},
 		},
 		"with empty target config but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -173,32 +178,53 @@ values:
 			},
 		},
 		"with unsupported fields": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"with only values reconfigured": {
-			prototypeConfig: []byte(`
+		"with malformed step config": {
+			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
 values: 
   foo: http://foo.bar
 `),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values": map[string]any{"foo": 1},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *mapContextualizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
+		"with only values reconfigured": {
 			config: []byte(`
-values:
-  foo: http://bar.foo
+items:
+  url: "{{ .Values.foo }}"
+values: 
+  foo: http://foo.bar
 `),
-			assert: func(t *testing.T, err error, prototype *mapContextualizer, configured *mapContextualizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values": map[string]any{"foo": "http://bar.foo"},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -224,10 +250,7 @@ values:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -239,24 +262,22 @@ values:
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newMapContextualizer(appCtx, uc, pc)
+			mech, err := newMapContextualizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*mapContextualizer)
+			require.True(t, ok)
+
 			// WHEN
-			concrete, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			var (
-				locContextualizer *mapContextualizer
-				ok                bool
-			)
-
+			contextualizer, ok := step.(*mapContextualizer)
 			if err == nil {
-				locContextualizer, ok = concrete.(*mapContextualizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, locContextualizer)
+			tc.assert(t, err, configured, contextualizer)
 		})
 	}
 }
@@ -267,7 +288,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		contextualizer   *mapContextualizer
 		subject          identity.Subject
-		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
 		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
 	}{
 		"with error in values rendering": {
@@ -286,7 +307,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -327,7 +348,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -380,7 +401,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -400,9 +421,9 @@ func TestMapContextualizerExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.RequestContextMock) { t.Helper() })
+				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
 
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			ctx.EXPECT().Context().Return(t.Context())
 
@@ -415,4 +436,12 @@ func TestMapContextualizerExecute(t *testing.T) {
 			tc.assert(t, err, tc.subject, ctx.Outputs())
 		})
 	}
+}
+
+func TestMapContextualizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &mapContextualizer{}
+
+	mech.Accept(nil)
 }

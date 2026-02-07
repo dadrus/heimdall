@@ -22,6 +22,8 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -29,17 +31,14 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, _ map[string]any) (bool, Finalizer, error) {
-			if typ != FinalizerNoop {
-				return false, nil, nil
-			}
-
-			return true, newNoopFinalizer(app, name), nil
-		})
+	registry.Register(
+		types.KindFinalizer,
+		FinalizerNoop,
+		registry.FactoryFunc(newNoopFinalizer),
+	)
 }
 
-func newNoopFinalizer(app app.Context, name string) *noopFinalizer {
+func newNoopFinalizer(app app.Context, name string, _ map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", FinalizerNoop).
@@ -49,7 +48,7 @@ func newNoopFinalizer(app app.Context, name string) *noopFinalizer {
 	return &noopFinalizer{
 		name: name,
 		id:   name,
-	}
+	}, nil
 }
 
 type noopFinalizer struct {
@@ -57,7 +56,9 @@ type noopFinalizer struct {
 	id   string
 }
 
-func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
+func (f *noopFinalizer) Accept(_ heimdall.Visitor) {}
+
+func (f *noopFinalizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerNoop).
@@ -68,22 +69,24 @@ func (f *noopFinalizer) Execute(ctx heimdall.RequestContext, _ identity.Subject)
 	return nil
 }
 
-func (f *noopFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (f *noopFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
 
-	if len(rawConfig) != 0 {
+	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "noop finalizer cannot be reconfigured").
 			WithErrorContext(f)
 	}
 
 	fin := *f
-	fin.id = stepID
+	fin.id = def.ID
 
 	return &fin, nil
 }
+
+func (f *noopFinalizer) Kind() types.Kind { return types.KindFinalizer }
 
 func (f *noopFinalizer) Name() string { return f.name }
 

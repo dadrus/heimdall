@@ -37,12 +37,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		expErr         error
 		createRequest  func(t *testing.T) *http.Request
-		configureMocks func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
+		configureMocks func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		"no matching rules": {
 			expErr: heimdall.ErrNoRuleFound,
-			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{URL: *matchingURL}}
@@ -54,7 +54,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 		},
 		"rule execution fails with authentication error": {
 			expErr: heimdall.ErrAuthentication,
-			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
@@ -66,7 +66,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			},
 		},
 		"rule execution succeeds": {
-			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
 				upstream := mocks4.NewBackendMock(t)
@@ -83,7 +83,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			// GIVEN
 			repo := mocks4.NewRepositoryMock(t)
 			rule := mocks4.NewRuleMock(t)
-			ctx := mocks2.NewRequestContextMock(t)
+			ctx := mocks2.NewContextMock(t)
 
 			tc.configureMocks(t, ctx, repo, rule)
 

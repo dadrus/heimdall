@@ -29,9 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest/fake"
-	"k8s.io/utils/ptr"
 
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRepositoryList(t *testing.T) {
@@ -68,7 +68,7 @@ func TestRepositoryList(t *testing.T) {
 				Body:       io.NopCloser(strings.NewReader("{}")),
 			},
 			opts: metav1.ListOptions{
-				TimeoutSeconds: ptr.To[int64](5),
+				TimeoutSeconds: pointer.To[int64](5),
 				Limit:          10,
 			},
 			assert: func(t *testing.T, req *http.Request) {
@@ -140,7 +140,7 @@ func TestRepositoryWatch(t *testing.T) {
 				Body:       io.NopCloser(strings.NewReader("{}")),
 			},
 			opts: metav1.ListOptions{
-				TimeoutSeconds: ptr.To[int64](5),
+				TimeoutSeconds: pointer.To[int64](5),
 				Limit:          10,
 			},
 			assert: func(t *testing.T, req *http.Request) {
@@ -286,7 +286,7 @@ func TestRepositoryPatchStatus(t *testing.T) {
 				Body:       io.NopCloser(strings.NewReader("{}")),
 			},
 			opts: metav1.PatchOptions{
-				Force: ptr.To[bool](true),
+				Force: pointer.To[bool](true),
 			},
 			assert: func(t *testing.T, req *http.Request) {
 				t.Helper()

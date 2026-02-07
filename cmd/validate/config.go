@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
@@ -85,13 +85,13 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		c:   conf,
 	}
 
-	mFactory, err := mechanisms.NewMechanismFactory(appCtx)
+	repo, err := repository.New(appCtx)
 	if err != nil {
 		return err
 	}
 
 	rFactory, err := rules.NewRuleFactory(
-		mFactory,
+		repo,
 		conf,
 		config.DecisionMode,
 		logger,

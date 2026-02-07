@@ -30,7 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/keyholder"
 	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -105,13 +105,13 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		c:   conf,
 	}
 
-	mFactory, err := mechanisms.NewMechanismFactory(appCtx)
+	repo, err := repository.New(appCtx)
 	if err != nil {
 		return err
 	}
 
 	rFactory, err := rules.NewRuleFactory(
-		mFactory,
+		repo,
 		conf,
 		opMode,
 		logger,
@@ -137,7 +137,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 type noopRepository struct{}
 
-func (*noopRepository) FindRule(_ heimdall.RequestContext) (rule.Rule, error) {
+func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) {
 	return nil, errFunctionNotSupported
 }
 func (*noopRepository) AddRuleSet(_ context.Context, _ string, _ []rule.Rule) error { return nil }

@@ -25,6 +25,8 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -34,16 +36,11 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Finalizer, error) {
-			if typ != FinalizerOAuth2ClientCredentials {
-				return false, nil, nil
-			}
-
-			finalizer, err := newOAuth2ClientCredentialsFinalizer(app, name, conf)
-
-			return true, finalizer, err
-		})
+	registry.Register(
+		types.KindFinalizer,
+		FinalizerOAuth2ClientCredentials,
+		registry.FactoryFunc(newOAuth2ClientCredentialsFinalizer),
+	)
 }
 
 type oauth2ClientCredentialsFinalizer struct {
@@ -59,7 +56,7 @@ func newOAuth2ClientCredentialsFinalizer(
 	app app.Context,
 	name string,
 	rawConfig map[string]any,
-) (*oauth2ClientCredentialsFinalizer, error) {
+) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", FinalizerOAuth2ClientCredentials).
@@ -110,18 +107,22 @@ func newOAuth2ClientCredentialsFinalizer(
 	}, nil
 }
 
+func (f *oauth2ClientCredentialsFinalizer) Accept(_ heimdall.Visitor) {}
+
+func (f *oauth2ClientCredentialsFinalizer) Kind() types.Kind { return types.KindFinalizer }
+
 func (f *oauth2ClientCredentialsFinalizer) Name() string { return f.name }
 
 func (f *oauth2ClientCredentialsFinalizer) ID() string { return f.id }
 
-func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		fin := *f
-		fin.id = stepID
+		fin.id = def.ID
 
 		return &fin, nil
 	}
@@ -142,7 +143,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig m
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for oauth2_client_credentials finalizer '%s'", f.id).CausedBy(err)
 	}
@@ -153,7 +154,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig m
 
 	return &oauth2ClientCredentialsFinalizer{
 		name: f.name,
-		id:   x.IfThenElse(len(stepID) == 0, f.id, stepID),
+		id:   x.IfThenElse(len(def.ID) == 0, f.id, def.ID),
 		app:  f.app,
 		cfg:  cfg,
 		headerName: x.IfThenElseExec(conf.Header != nil,
@@ -165,7 +166,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(stepID string, rawConfig m
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerOAuth2ClientCredentials).

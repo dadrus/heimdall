@@ -8,7 +8,9 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -18,19 +20,14 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Contextualizer, error) {
-			if typ != ContextualizerMap {
-				return false, nil, nil
-			}
-
-			eh, err := newMapContextualizer(app, name, conf)
-
-			return true, eh, err
-		})
+	registry.Register(
+		types.KindContextualizer,
+		ContextualizerMap,
+		registry.FactoryFunc(newMapContextualizer),
+	)
 }
 
-func newMapContextualizer(app app.Context, name string, rawConfig map[string]any) (*mapContextualizer, error) {
+func newMapContextualizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", ContextualizerMap).
@@ -65,7 +62,9 @@ type mapContextualizer struct {
 	values values.Values
 }
 
-func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (c *mapContextualizer) Accept(_ heimdall.Visitor) {}
+
+func (c *mapContextualizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerMap).
@@ -87,18 +86,20 @@ func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub identity.Su
 	return nil
 }
 
+func (c *mapContextualizer) Kind() types.Kind { return types.KindContextualizer }
+
 func (c *mapContextualizer) Name() string { return c.name }
 
 func (c *mapContextualizer) ID() string { return c.id }
 
-func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) (Contextualizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (c *mapContextualizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return c, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		cont := *c
-		cont.id = stepID
+		cont.id = def.ID
 
 		return &cont, nil
 	}
@@ -109,14 +110,14 @@ func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(c.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(c.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for map contextualizer '%s'", c.name).CausedBy(err)
 	}
 
 	return &mapContextualizer{
 		name:   c.name,
-		id:     x.IfThenElse(len(stepID) == 0, c.id, stepID),
+		id:     x.IfThenElse(len(def.ID) == 0, c.id, def.ID),
 		app:    c.app,
 		items:  c.items,
 		values: c.values.Merge(conf.Values),
@@ -124,7 +125,7 @@ func (c *mapContextualizer) WithConfig(stepID string, rawConfig map[string]any) 
 }
 
 func (c *mapContextualizer) renderTemplates(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	sub identity.Subject,
 ) (map[string]string, error) {
 	var rendered string

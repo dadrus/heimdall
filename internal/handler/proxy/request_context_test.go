@@ -56,7 +56,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				t.Helper()
 
 				err := errors.New("test error")
-				ctx.SetPipelineError(err)
+				ctx.SetError(err)
 
 				return nil
 			},

@@ -24,3 +24,5 @@ const (
 	AuthenticatorJWT                 = "jwt"
 	AuthenticatorGeneric             = "generic"
 )
+
+const DefaultPrincipalName = "default"

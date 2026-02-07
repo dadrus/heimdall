@@ -24,15 +24,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateCookieFinalizer(t *testing.T) {
+func TestNewCookieFinalizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -97,6 +99,7 @@ cookies:
 				assert.Len(t, finalizer.cookies, 2)
 				assert.Equal(t, "with valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 
 				val, err := finalizer.cookies["foo"].Render(nil)
 				require.NoError(t, err)
@@ -123,29 +126,33 @@ cookies:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			finalizer, err := newCookieFinalizer(appCtx, uc, conf)
+			mech, err := newCookieFinalizer(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, finalizer)
+			fin, ok := mech.(*cookieFinalizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, fin)
 		})
 	}
 }
 
-func TestCreateCookieFinalizerFromPrototype(t *testing.T) {
+func TestCookieFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *cookieFinalizer)
 	}{
 		"no new configuration and no step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 cookies:
   foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
+			assert: func(t *testing.T, err error, prototype, configured *cookieFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -153,32 +160,32 @@ cookies:
 			},
 		},
 		"no new configuration but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 cookies:
   foo: bar
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *cookieFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.cookies, configured.cookies)
 				assert.Equal(t, prototype.app, configured.app)
 			},
 		},
 		"new cookies provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 cookies:
   foo: bar
 `),
-			config: []byte(`
-cookies:
-  bar: foo
-`),
-			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"cookies": map[string]any{"bar": "foo"}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *cookieFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -187,6 +194,7 @@ cookies:
 				assert.NotEmpty(t, configured.cookies)
 				assert.Equal(t, "new cookies provided", configured.ID())
 				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 
 				val, err := configured.cookies["bar"].Render(nil)
 				require.NoError(t, err)
@@ -194,16 +202,15 @@ cookies:
 			},
 		},
 		"new cookies and step ID provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 cookies:
   foo: bar
 `),
-			config: []byte(`
-cookies:
-  bar: foo
-`),
-			stepID: "bar",
-			assert: func(t *testing.T, err error, prototype *cookieFinalizer, configured *cookieFinalizer) {
+			stepDef: types.StepDefinition{
+				ID:     "bar",
+				Config: config.MechanismConfig{"cookies": map[string]any{"bar": "foo"}},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *cookieFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -213,6 +220,7 @@ cookies:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.Name(), prototype.ID())
 				assert.Equal(t, "bar", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 
 				val, err := configured.cookies["bar"].Render(nil)
 				require.NoError(t, err)
@@ -220,12 +228,14 @@ cookies:
 			},
 		},
 		"empty cookies provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 cookies:
   foo: bar
 `),
-			config: []byte(`cookies: {}`),
-			assert: func(t *testing.T, err error, _ *cookieFinalizer, _ *cookieFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"cookies": map[string]any{}},
+			},
+			assert: func(t *testing.T, err error, _, _ *cookieFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -236,10 +246,7 @@ cookies:
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator()
@@ -249,19 +256,22 @@ cookies:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newCookieFinalizer(appCtx, uc, pc)
+			mech, err := newCookieFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*cookieFinalizer)
+			require.True(t, ok)
+
 			// WHEN
-			finalizer, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			realFinalizer, ok := finalizer.(*cookieFinalizer)
+			fin, ok := step.(*cookieFinalizer)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, realFinalizer)
+			tc.assert(t, err, configured, fin)
 		})
 	}
 }
@@ -271,7 +281,7 @@ func TestCookieFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config           []byte
-		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		createSubject    func(t *testing.T) identity.Subject
 		assert           func(t *testing.T, err error)
 	}{
@@ -280,7 +290,7 @@ func TestCookieFinalizerExecute(t *testing.T) {
 cookies:
   foo: "{{ .Subject.ID.foo }}"
 `),
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: mocks.NewRequestFunctionsMock(t)})
@@ -303,7 +313,7 @@ cookies:
   x_foo: '{{ .Request.Header "X-Foo" }}'
   x_bar: '{{ .Outputs.foo }}'
 `),
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				reqf := mocks.NewRequestFunctionsMock(t)
@@ -341,12 +351,12 @@ cookies:
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *mocks.RequestContextMock) { t.Helper() })
+				func(t *testing.T, _ *mocks.ContextMock) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := mocks.NewRequestContextMock(t)
+			mctx := mocks.NewContextMock(t)
 			mctx.EXPECT().Context().Return(t.Context())
 
 			sub := createSubject(t)
@@ -360,14 +370,25 @@ cookies:
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			finalizer, err := newCookieFinalizer(appCtx, uc, conf)
+			mech, err := newCookieFinalizer(appCtx, uc, conf)
+			require.NoError(t, err)
+
+			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN
-			err = finalizer.Execute(mctx, sub)
+			err = step.Execute(mctx, sub)
 
 			// THEN
 			tc.assert(t, err)
 		})
 	}
+}
+
+func TestCookieFinalizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &cookieFinalizer{}
+
+	mech.Accept(nil)
 }

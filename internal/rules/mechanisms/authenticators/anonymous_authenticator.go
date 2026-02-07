@@ -22,29 +22,24 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-// by intention. Used only during application bootstrap.
-func init() { // nolint: gochecknoinits
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorAnonymous {
-				return false, nil, nil
-			}
-
-			auth, err := newAnonymousAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+// by intention. Used only during application bootstrap
+//
+//nolint:gochecknoinits
+func init() {
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorAnonymous,
+		registry.FactoryFunc(newAnonymousAuthenticator),
+	)
 }
 
-func newAnonymousAuthenticator(
-	app app.Context,
-	name string,
-	rawConfig map[string]any,
-) (*anonymousAuthenticator, error) {
+func newAnonymousAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorAnonymous).
@@ -59,7 +54,7 @@ func newAnonymousAuthenticator(
 
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for anonymous authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorAnonymous, name).CausedBy(err)
 	}
 
 	if len(conf.Principal) == 0 {
@@ -67,24 +62,28 @@ func newAnonymousAuthenticator(
 	}
 
 	return &anonymousAuthenticator{
-		name: name,
-		id:   name,
-		principal: &identity.Principal{
-			ID:         conf.Principal,
-			Attributes: make(map[string]any),
-		},
-		app: app,
+		name:          name,
+		id:            name,
+		principalName: DefaultPrincipalName,
+		principal:     &identity.Principal{ID: conf.Principal, Attributes: make(map[string]any)},
+		app:           app,
 	}, nil
 }
 
 type anonymousAuthenticator struct {
-	name      string
-	id        string
-	app       app.Context
-	principal *identity.Principal
+	name          string
+	id            string
+	principalName string
+	app           app.Context
+	principal     *identity.Principal
 }
 
-func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *anonymousAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
+	visitor.VisitPrincipalNamer(a)
+}
+
+func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorAnonymous).
@@ -92,19 +91,20 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.RequestContext, sub identi
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	sub["default"] = a.principal
+	sub[a.principalName] = a.principal
 
 	return nil
 }
 
-func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -115,21 +115,26 @@ func (a *anonymousAuthenticator) WithConfig(stepID string, rawConfig map[string]
 
 	var conf Config
 
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for anonymous authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorAnonymous, a.name).CausedBy(err)
 	}
 
 	return &anonymousAuthenticator{
-		name:      a.name,
-		id:        x.IfThenElse(len(stepID) == 0, a.id, stepID),
-		principal: &identity.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
-		app:       a.app,
+		name:          a.name,
+		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		principal:     &identity.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
+		app:           a.app,
 	}, nil
 }
+
+func (a *anonymousAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
 
 func (a *anonymousAuthenticator) Name() string { return a.name }
 
 func (a *anonymousAuthenticator) ID() string { return a.id }
 
 func (a *anonymousAuthenticator) IsInsecure() bool { return true }
+
+func (a *anonymousAuthenticator) PrincipalName() string { return a.principalName }

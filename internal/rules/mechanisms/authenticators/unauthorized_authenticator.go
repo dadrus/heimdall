@@ -22,6 +22,9 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -29,22 +32,20 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, _ map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorUnauthorized {
-				return false, nil, nil
-			}
-
-			return true, newUnauthorizedAuthenticator(app, name), nil
-		})
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorUnauthorized,
+		registry.FactoryFunc(newUnauthorizedAuthenticator),
+	)
 }
 
 type unauthorizedAuthenticator struct {
-	name string
-	id   string
+	name          string
+	id            string
+	principalName string
 }
 
-func newUnauthorizedAuthenticator(app app.Context, name string) *unauthorizedAuthenticator {
+func newUnauthorizedAuthenticator(app app.Context, name string, _ map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorUnauthorized).
@@ -52,12 +53,18 @@ func newUnauthorizedAuthenticator(app app.Context, name string) *unauthorizedAut
 		Msg("Creating authenticator")
 
 	return &unauthorizedAuthenticator{
-		name: name,
-		id:   name,
-	}
+		name:          name,
+		id:            name,
+		principalName: DefaultPrincipalName,
+	}, nil
 }
 
-func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext, _ identity.Subject) error {
+func (a *unauthorizedAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
+	visitor.VisitPrincipalNamer(a)
+}
+
+func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context, _ identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorUnauthorized).
@@ -70,23 +77,26 @@ func (a *unauthorizedAuthenticator) Execute(ctx heimdall.RequestContext, _ ident
 		WithErrorContext(a)
 }
 
-func (a *unauthorizedAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// nothing can be reconfigured
-	if len(stepID) == 0 && len(rawConfig) == 0 {
-		return a, nil
-	}
-
-	if len(rawConfig) != 0 {
+	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "unauthorized authenticator cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
+	if def.IsEmpty() {
+		return a, nil
+	}
+
 	auth := *a
-	auth.id = stepID
+	auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+	auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 	return &auth, nil
 }
+
+func (a *unauthorizedAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
 
 func (a *unauthorizedAuthenticator) Name() string { return a.name }
 
@@ -95,3 +105,5 @@ func (a *unauthorizedAuthenticator) ID() string {
 }
 
 func (a *unauthorizedAuthenticator) IsInsecure() bool { return false }
+
+func (a *unauthorizedAuthenticator) PrincipalName() string { return a.principalName }

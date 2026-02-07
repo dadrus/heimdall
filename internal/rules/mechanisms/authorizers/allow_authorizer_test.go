@@ -24,20 +24,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 )
 
-func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
+func TestAllowAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		stepID  string
-		newConf map[string]any
-		assert  func(t *testing.T, err error, prototype *allowAuthorizer, configured *allowAuthorizer)
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *allowAuthorizer)
 	}{
 		"no new config and no step ID": {
-			assert: func(t *testing.T, err error, prototype *allowAuthorizer, configured *allowAuthorizer) {
+			assert: func(t *testing.T, err error, prototype, configured *allowAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -46,8 +47,8 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 			},
 		},
 		"no new config but with step ID": {
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *allowAuthorizer, configured *allowAuthorizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *allowAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -55,11 +56,12 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 				assert.NotEqual(t, configured, prototype)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with new config": {
-			newConf: map[string]any{"foo": "bar"},
-			assert: func(t *testing.T, err error, _ *allowAuthorizer, _ *allowAuthorizer) {
+			stepDef: types.StepDefinition{ID: "foo", Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *allowAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -73,18 +75,22 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newAllowAuthorizer(appCtx, uc)
+			mech, err := newAllowAuthorizer(appCtx, uc, nil)
+			require.NoError(t, err)
+
+			configured, ok := mech.(*allowAuthorizer)
+			require.True(t, ok)
 
 			// WHEN
-			conf, err := prototype.WithConfig(tc.stepID, tc.newConf)
-			authz, ok := conf.(*allowAuthorizer)
+			conf, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
+			authz, ok := conf.(*allowAuthorizer)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, authz)
+			tc.assert(t, err, configured, authz)
 		})
 	}
 }
@@ -93,17 +99,30 @@ func TestAllowAuthorizerExecute(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
-	auth := newAllowAuthorizer(appCtx, "baz")
+	mech, err := newAllowAuthorizer(appCtx, "baz", nil)
+	require.NoError(t, err)
+	assert.Equal(t, types.KindAuthorizer, mech.Kind())
+
+	step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+	require.NoError(t, err)
 
 	// WHEN
-	err := auth.Execute(ctx, nil)
+	err = step.Execute(ctx, nil)
 
 	// THEN
 	require.NoError(t, err)
+}
+
+func TestAllowAuthorizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &allowAuthorizer{}
+
+	mech.Accept(nil)
 }

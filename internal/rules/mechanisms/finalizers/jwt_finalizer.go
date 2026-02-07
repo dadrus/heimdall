@@ -30,7 +30,9 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -46,16 +48,11 @@ const (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Finalizer, error) {
-			if typ != FinalizerJwt {
-				return false, nil, nil
-			}
-
-			finalizer, err := newJWTFinalizer(app, name, conf)
-
-			return true, finalizer, err
-		})
+	registry.Register(
+		types.KindFinalizer,
+		FinalizerJwt,
+		registry.FactoryFunc(newJWTFinalizer),
+	)
 }
 
 type jwtFinalizer struct {
@@ -70,7 +67,7 @@ type jwtFinalizer struct {
 	v            values.Values
 }
 
-func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (*jwtFinalizer, error) {
+func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", FinalizerJwt).
@@ -126,7 +123,9 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (*j
 	return fin, nil
 }
 
-func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (f *jwtFinalizer) Accept(_ heimdall.Visitor) {}
+
+func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerJwt).
@@ -172,14 +171,14 @@ func (f *jwtFinalizer) Execute(ctx heimdall.RequestContext, sub identity.Subject
 	return nil
 }
 
-func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Finalizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		fin := *f
-		fin.id = stepID
+		fin.id = def.ID
 
 		return &fin, nil
 	}
@@ -198,14 +197,14 @@ func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fina
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for jwt finalizer '%s'", f.name).CausedBy(err)
 	}
 
 	return &jwtFinalizer{
 		name:   f.name,
-		id:     x.IfThenElse(len(stepID) == 0, f.id, stepID),
+		id:     x.IfThenElse(len(def.ID) == 0, f.id, def.ID),
 		app:    f.app,
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, f.claims),
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -220,11 +219,13 @@ func (f *jwtFinalizer) WithConfig(stepID string, rawConfig map[string]any) (Fina
 
 func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.activeCertificateChain() }
 
+func (f *jwtFinalizer) Kind() types.Kind { return types.KindFinalizer }
+
 func (f *jwtFinalizer) Name() string { return f.name }
 
 func (f *jwtFinalizer) ID() string { return f.id }
 
-func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub identity.Subject) (string, error) {
+func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")
 
@@ -275,7 +276,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub identity.S
 	return token, nil
 }
 
-func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub identity.Subject) string {
+func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub identity.Subject) string {
 	const int64BytesCount = 8
 
 	var ttlBytes [int64BytesCount]byte

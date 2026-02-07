@@ -35,8 +35,7 @@ import (
 
 type rulesetConverter struct{}
 
-// nolint: funlen
-func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response {
+func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response { //nolint: funlen
 	log := zerolog.Ctx(ctx)
 	convertedObjects := make([]runtime.RawExtension, len(req.Objects))
 

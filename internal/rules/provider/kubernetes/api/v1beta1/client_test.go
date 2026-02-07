@@ -164,8 +164,8 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 		RawQuery: url.Values{"boo": []string{"foo"}, "foo": []string{"bar"}}.Encode(),
 	}).String())
 	assert.Len(t, rule.Execute, 2)
-	assert.Equal(t, "test_authn", rule.Execute[0]["authenticator"])
-	assert.Equal(t, "test_authz", rule.Execute[1]["authorizer"])
+	assert.Equal(t, "test_authn", rule.Execute[0].AuthenticatorRef)
+	assert.Equal(t, "test_authz", rule.Execute[1].AuthorizerRef)
 }
 
 func (s *ClientTestSuite) TestRuleSetsList() {

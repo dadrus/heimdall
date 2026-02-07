@@ -44,13 +44,14 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateRemoteAuthorizer(t *testing.T) {
+func TestNewRemoteAuthorizer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -123,6 +124,8 @@ payload: "{{ .Subject.ID }}"
 
 				assert.Equal(t, "minimal valid configuration with enforced and used TLS", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
+
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 			},
 		},
 		"minimal configuration with enforced but not used TLS": {
@@ -160,6 +163,8 @@ endpoint:
 
 				assert.Equal(t, "configuration with endpoint and endpoint header", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
+
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 			},
 		},
 		"configuration with invalid expression": {
@@ -197,7 +202,7 @@ values:
 
 				require.NoError(t, err)
 
-				ctx := heimdallmocks.NewRequestContextMock(t)
+				ctx := heimdallmocks.NewContextMock(t)
 				ctx.EXPECT().Context().Return(t.Context()).Maybe()
 
 				rfunc := heimdallmocks.NewRequestFunctionsMock(t)
@@ -232,6 +237,8 @@ values:
 
 				assert.Equal(t, "full configuration", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
+
+				assert.Equal(t, types.KindAuthorizer, auth.Kind())
 			},
 		},
 	} {
@@ -252,30 +259,34 @@ values:
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			auth, err := newRemoteAuthorizer(appCtx, uc, conf)
+			mech, err := newRemoteAuthorizer(appCtx, uc, conf)
 
 			// THEN
+			auth, ok := mech.(*remoteAuthorizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, auth)
 		})
 	}
 }
 
-func TestCreateRemoteAuthorizerFromPrototype(t *testing.T) {
+func TestRemoteAuthorizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *remoteAuthorizer)
 	}{
 		"without new configuration and without step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -284,13 +295,13 @@ payload: bar
 			},
 		},
 		"without new configuration but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -299,6 +310,7 @@ payload: bar
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.expressions, configured.expressions)
@@ -306,31 +318,48 @@ payload: bar
 				assert.NotNil(t, configured.ttl)
 			},
 		},
-		"with unknown properties": {
-			prototypeConfig: []byte(`
+		"with unknown properties in step configuration": {
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"with overridden empty payload": {
-			prototypeConfig: []byte(`
+		"with malformed step configuration": {
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"payload": 1}},
+			assert: func(t *testing.T, err error, _, _ *remoteAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
+		"with overridden empty payload": {
 			config: []byte(`
-payload: ""
-cache_ttl: 1s
+endpoint:
+  url: http://foo.bar
+payload: bar
 `),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"payload":   "",
+					"cache_ttl": "1s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -344,17 +373,20 @@ cache_ttl: 1s
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "with overridden empty payload", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with new config and step id": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`cache_ttl: 1s`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				ID:     "foo",
+				Config: config.MechanismConfig{"cache_ttl": "1s"},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -369,19 +401,23 @@ payload: bar
 				assert.Equal(t, "foo", configured.ID())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with invalid new expression": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			config: []byte(`
-expressions:
-  - expression: "foo == 'bar'"
-`),
-			assert: func(t *testing.T, err error, _ *remoteAuthorizer, _ *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"expressions": []map[string]any{
+						{"expression": "foo == 'bar'"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -390,7 +426,7 @@ expressions:
 			},
 		},
 		"with everything possible, but values reconfigured": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
   headers:
@@ -398,16 +434,17 @@ endpoint:
 values:
   foo: bar
 `),
-			config: []byte(`
-payload: Baz
-forward_response_headers_to_upstream:
-  - Bar
-  - Foo
-expressions:
-  - expression: "Payload.foo == 'bar'"
-cache_ttl: 15s
-`),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"payload":                              "Baz",
+					"forward_response_headers_to_upstream": []string{"Bar", "Foo"},
+					"expressions": []map[string]any{
+						{"expression": "Payload.foo == 'bar'"},
+					},
+					"cache_ttl": "15s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -436,10 +473,11 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 		"with everything possible": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 endpoint:
   url: http://foo.bar
   headers:
@@ -447,18 +485,18 @@ endpoint:
 values:
   foo: bar
 `),
-			config: []byte(`
-values:
-  bar: foo
-payload: Baz
-forward_response_headers_to_upstream:
-  - Bar
-  - Foo
-expressions:
-  - expression: "Payload.foo == 'bar'"
-cache_ttl: 15s
-`),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values":                               map[string]any{"bar": "foo"},
+					"payload":                              "Baz",
+					"forward_response_headers_to_upstream": []string{"Bar", "Foo"},
+					"expressions": []map[string]any{
+						{"expression": "Payload.foo == 'bar'"},
+					},
+					"cache_ttl": "15s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *remoteAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -493,15 +531,13 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindAuthorizer, configured.Kind())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			validator, err := validation.NewValidator(
@@ -513,24 +549,22 @@ cache_ttl: 15s
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newRemoteAuthorizer(appCtx, uc, pc)
+			mech, err := newRemoteAuthorizer(appCtx, uc, pc)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*remoteAuthorizer)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			var (
-				locAuth *remoteAuthorizer
-				ok      bool
-			)
-
+			auth, ok := step.(*remoteAuthorizer)
 			if err == nil {
-				locAuth, ok = auth.(*remoteAuthorizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, locAuth)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -575,7 +609,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		authorizer       *remoteAuthorizer
 		subject          identity.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
+		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub identity.Subject)
 		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
 	}{
@@ -622,7 +656,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "my-id-bar-bar", string(data))
 				}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -698,7 +732,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "application/json"
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -781,7 +815,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseCode = http.StatusOK
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -839,7 +873,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -889,7 +923,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
@@ -951,7 +985,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusUnauthorized
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -990,7 +1024,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "text/text"
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1021,7 +1055,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					ID: "foo",
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1100,7 +1134,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1179,7 +1213,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1224,7 +1258,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1260,7 +1294,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
@@ -1295,7 +1329,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.RequestContextMock) { t.Helper() })
+				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
@@ -1305,7 +1339,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewRequestContextMock(t)
+			ctx := heimdallmocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
@@ -1320,4 +1354,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			tc.assert(t, err, tc.subject, ctx.Outputs())
 		})
 	}
+}
+
+func TestRemoteAuthorizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &remoteAuthorizer{}
+
+	mech.Accept(nil)
 }

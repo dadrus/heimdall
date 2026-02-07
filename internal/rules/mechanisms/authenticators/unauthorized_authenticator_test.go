@@ -24,11 +24,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 )
 
-func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
+func TestUnauthorizedAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 	// GIVEN
 	appCtx := app.NewContextMock(t)
@@ -39,13 +41,16 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 		Name() string
 	}
 
-	ctx := mocks.NewRequestContextMock(t)
+	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
-	auth := newUnauthorizedAuthenticator(appCtx, "unauth")
+	mechanisms, err := newUnauthorizedAuthenticator(appCtx, "unauth", nil)
+	require.NoError(t, err)
+	step, err := mechanisms.CreateStep(types.StepDefinition{})
+	require.NoError(t, err)
 
 	// WHEN
-	err := auth.Execute(ctx, nil)
+	err = step.Execute(ctx, nil)
 
 	// THEN
 	require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -56,25 +61,24 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	assert.Equal(t, identifier.Name(), identifier.ID())
 }
 
-func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
+func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		stepID  string
-		newConf map[string]any
-		assert  func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator)
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator)
 	}{
-		"without new config and step ID": {
-			assert: func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator) {
+		"no step definition": {
+			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 			},
 		},
-		"with new config": {
-			newConf: map[string]any{"foo": "bar"},
-			assert: func(t *testing.T, err error, _ *unauthorizedAuthenticator, _ *unauthorizedAuthenticator) {
+		"step definition with config": {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, _, _ *unauthorizedAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -82,16 +86,35 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 				require.ErrorContains(t, err, "cannot be reconfigured")
 			},
 		},
-		"with new step ID": {
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *unauthorizedAuthenticator, configured *unauthorizedAuthenticator) {
+		"step definition with ID": {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
-				assert.Equal(t, "with new step ID", prototype.ID())
+				assert.Equal(t, "step definition with ID", prototype.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+			},
+		},
+		"step definition with principal": {
+			stepDef: types.StepDefinition{Principal: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *unauthorizedAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.Name(), configured.ID())
+				assert.Equal(t, "step definition with principal", prototype.ID())
+				assert.False(t, configured.IsInsecure())
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 	} {
@@ -100,26 +123,38 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype := newUnauthorizedAuthenticator(appCtx, uc)
+			mechanism, err := newUnauthorizedAuthenticator(appCtx, uc, nil)
+			require.NoError(t, err)
 
-			auth, err := prototype.WithConfig(tc.stepID, tc.newConf)
+			configured, ok := mechanism.(*unauthorizedAuthenticator)
+			require.True(t, ok)
 
-			uaa, ok := auth.(*unauthorizedAuthenticator)
+			// WHEN
+			step, err := mechanism.CreateStep(tc.stepDef)
+
+			// THEN
+			auth, ok := step.(*unauthorizedAuthenticator)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, uaa)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
 
-func TestUnauthorizedAuthenticatorIsInsecure(t *testing.T) {
+func TestUnauthorizedAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := unauthorizedAuthenticator{}
+	auth := &unauthorizedAuthenticator{}
+	visitor := mocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.False(t, auth.IsInsecure())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }

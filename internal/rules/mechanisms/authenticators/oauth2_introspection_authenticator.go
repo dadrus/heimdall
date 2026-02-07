@@ -39,7 +39,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -49,27 +51,23 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Authenticator, error) {
-			if typ != AuthenticatorOAuth2Introspection {
-				return false, nil, nil
-			}
-
-			auth, err := newOAuth2IntrospectionAuthenticator(app, name, conf)
-
-			return true, auth, err
-		})
+	registry.Register(
+		types.KindAuthenticator,
+		AuthenticatorOAuth2Introspection,
+		registry.FactoryFunc(newOAuth2IntrospectionAuthenticator),
+	)
 }
 
 type oauth2IntrospectionAuthenticator struct {
-	name string
-	id   string
-	app  app.Context
-	r    oauth2.ServerMetadataResolver
-	a    oauth2.Expectation
-	sf   PrincipalFactory
-	ads  extractors.AuthDataExtractStrategy
-	ttl  *time.Duration
+	name          string
+	id            string
+	principalName string
+	app           app.Context
+	r             oauth2.ServerMetadataResolver
+	a             oauth2.Expectation
+	sf            PrincipalFactory
+	ads           extractors.AuthDataExtractStrategy
+	ttl           *time.Duration
 }
 
 // nolint: funlen, cyclop
@@ -77,7 +75,7 @@ func newOAuth2IntrospectionAuthenticator(
 	app app.Context,
 	name string,
 	rawConfig map[string]any,
-) (*oauth2IntrospectionAuthenticator, error) {
+) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", AuthenticatorOAuth2Introspection).
@@ -88,7 +86,7 @@ func newOAuth2IntrospectionAuthenticator(
 		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
 		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
 		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`                                                                                                    //nolint:lll,tagalign
-		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"                 validate:"-"`                                                                        //nolint:lll,tagalign
+		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"               validate:"-"`                                                                          //nolint:lll,tagalign
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
 	}
@@ -96,7 +94,8 @@ func newOAuth2IntrospectionAuthenticator(
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for oauth2_introspection authenticator '%s'", name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, name).
+			CausedBy(err)
 	}
 
 	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
@@ -166,18 +165,24 @@ func newOAuth2IntrospectionAuthenticator(
 	)
 
 	return &oauth2IntrospectionAuthenticator{
-		name: name,
-		id:   name,
-		app:  app,
-		ads:  ads,
-		r:    resolver,
-		a:    conf.Assertions,
-		sf:   &conf.PrincipalInfo,
-		ttl:  conf.CacheTTL,
+		name:          name,
+		id:            name,
+		principalName: DefaultPrincipalName,
+		app:           app,
+		ads:           ads,
+		r:             resolver,
+		a:             conf.Assertions,
+		sf:            &conf.PrincipalInfo,
+		ttl:           conf.CacheTTL,
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (a *oauth2IntrospectionAuthenticator) Accept(visitor heimdall.Visitor) {
+	visitor.VisitInsecure(a)
+	visitor.VisitPrincipalNamer(a)
+}
+
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorOAuth2Introspection).
@@ -207,20 +212,21 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.RequestContext, 
 			CausedBy(err)
 	}
 
-	sub["default"] = principal
+	sub[a.principalName] = principal
 
 	return nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig map[string]any) (Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+	if def.IsEmpty() {
 		return a, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		auth := *a
-		auth.id = stepID
+		auth.id = x.IfThenElse(len(def.ID) == 0, a.id, def.ID)
+		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
 	}
@@ -235,22 +241,26 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(stepID string, rawConfig m
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed decoding config for oauth2_introspection authenticator '%s'", a.name).CausedBy(err)
+			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, a.name).
+			CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{
-		name: a.name,
-		id:   x.IfThenElse(len(stepID) == 0, a.id, stepID),
-		app:  a.app,
-		r:    a.r,
-		a:    conf.Assertions.Merge(a.a),
-		sf:   a.sf,
-		ads:  a.ads,
-		ttl:  x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		name:          a.name,
+		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		app:           a.app,
+		r:             a.r,
+		a:             conf.Assertions.Merge(a.a),
+		sf:            a.sf,
+		ads:           a.ads,
+		ttl:           x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }
+
+func (a *oauth2IntrospectionAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
 
 func (a *oauth2IntrospectionAuthenticator) Name() string { return a.name }
 
@@ -258,8 +268,10 @@ func (a *oauth2IntrospectionAuthenticator) ID() string { return a.id }
 
 func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool { return false }
 
+func (a *oauth2IntrospectionAuthenticator) PrincipalName() string { return a.principalName }
+
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
-	ctx heimdall.RequestContext, claims map[string]any,
+	ctx heimdall.Context, claims map[string]any,
 ) (oauth2.ServerMetadata, error) {
 	args := map[string]any{}
 
@@ -295,7 +307,7 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 }
 
 func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	token string,
 ) ([]byte, error) {
 	cch := cache.Ctx(ctx.Context())
@@ -397,7 +409,7 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 }
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx heimdall.RequestContext, client *http.Client, req *http.Request,
+	ctx heimdall.Context, client *http.Client, req *http.Request,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 

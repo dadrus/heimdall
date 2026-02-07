@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRuleConfigDeepCopyInto(t *testing.T) {
@@ -59,8 +59,28 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 				QueryParamsToRemove: []string{"baz"},
 			},
 		},
-		Execute:      []config.MechanismConfig{{"foo": "bar"}},
-		ErrorHandler: []config.MechanismConfig{{"bar": "foo"}},
+		Execute: []Step{
+			{
+				ID:               "baz",
+				AuthenticatorRef: "bar",
+				Principal:        pointer.To("baz"),
+				Config:           map[string]any{"foo": "bar"},
+			},
+			{
+				ID:            "foo",
+				AuthorizerRef: "baz",
+				Condition:     pointer.To("baz"),
+				Config:        map[string]any{"bla": "bla"},
+			},
+		},
+		ErrorHandler: []Step{
+			{
+				ID:              "foo",
+				ErrorHandlerRef: "foo",
+				Condition:       pointer.To("baz"),
+				Config:          map[string]any{"bla": "bla"},
+			},
+		},
 	}
 
 	// WHEN
@@ -102,8 +122,28 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 				QueryParamsToRemove: []string{"baz"},
 			},
 		},
-		Execute:      []config.MechanismConfig{{"foo": "bar"}},
-		ErrorHandler: []config.MechanismConfig{{"bar": "foo"}},
+		Execute: []Step{
+			{
+				ID:               "baz",
+				AuthenticatorRef: "bar",
+				Principal:        pointer.To("baz"),
+				Config:           map[string]any{"foo": "bar"},
+			},
+			{
+				ID:            "foo",
+				AuthorizerRef: "baz",
+				Condition:     pointer.To("baz"),
+				Config:        map[string]any{"bla": "bla"},
+			},
+		},
+		ErrorHandler: []Step{
+			{
+				ID:              "foo",
+				ErrorHandlerRef: "foo",
+				Condition:       pointer.To("baz"),
+				Config:          map[string]any{"bla": "bla"},
+			},
+		},
 	}
 
 	// WHEN

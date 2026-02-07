@@ -35,11 +35,13 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/keyholder/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	mocks2 "github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -47,7 +49,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateJWTFinalizer(t *testing.T) {
+func TestNewJWTFinalizer(t *testing.T) {
 	t.Parallel()
 
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -142,6 +144,7 @@ signer:
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with signer only", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -186,6 +189,7 @@ signer:
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with ttl and signer", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -251,6 +255,7 @@ claims:
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "with claims and key store", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -299,6 +304,7 @@ claims: '{ "sub": {{ quote .Subject.ID }} }'
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "with claims, signer and ttl", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -372,6 +378,7 @@ header:
 				assert.Nil(t, finalizer.claims)
 				assert.Equal(t, "with valid header config without scheme", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Empty(t, finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -419,6 +426,7 @@ values:
 				assert.NotNil(t, finalizer.claims)
 				assert.Equal(t, "with all possible entries", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
+				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Equal(t, "Bar", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -444,15 +452,20 @@ values:
 			tc.configureAppContext(t, appCtx)
 
 			// WHEN
-			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
+			mech, err := newJWTFinalizer(appCtx, uc, conf)
 
 			// THEN
-			tc.assert(t, err, finalizer)
+			fin, ok := mech.(*jwtFinalizer)
+			if err == nil {
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, fin)
 		})
 	}
 }
 
-func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
+func TestJWTFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -472,18 +485,17 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 	const expectedTTL = 5 * time.Second
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer)
+		config  []byte
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *jwtFinalizer)
 	}{
 		"no new configuration and no step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -491,13 +503,13 @@ signer:
 			},
 		},
 		"no new configuration but with step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -505,6 +517,7 @@ signer:
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.claims, configured.claims)
 				assert.Equal(t, "Authorization", configured.headerName)
 				assert.Equal(t, "Bearer", configured.headerScheme)
@@ -514,14 +527,16 @@ signer:
 			},
 		},
 		"configuration with ttl and step ID": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`ttl: 5s`),
-			stepID: "bar",
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				ID:     "bar",
+				Config: config.MechanismConfig{"ttl": "5s"},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -534,17 +549,20 @@ signer:
 				assert.Equal(t, "configuration with ttl and step ID", prototype.ID())
 				assert.Equal(t, "bar", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with too short ttl": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`ttl: 5ms`),
-			assert: func(t *testing.T, err error, _ *jwtFinalizer, _ *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"ttl": "5ms"},
+			},
+			assert: func(t *testing.T, err error, _, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -553,16 +571,15 @@ signer:
 			},
 		},
 		"configuration with claims only provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`
-claims:
-  '{ "sub": {{ quote .Subject.ID }} }'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{"claims": `{"sub": {{ quote .Subject.ID }} }`},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -578,21 +595,23 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with claims only provided", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with claims and values": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`
-claims: '{ "sub": {{ quote .Value.foo }} }'
-values:
-  foo: '{{ quote .Subject.ID }}'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"claims": `{"sub": "{{ quote .Subject.ID }}"}`,
+					"values": map[string]any{"foo": "{{ quote .Subject.ID }}"},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -605,22 +624,24 @@ values:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with claims and values", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with both ttl and claims provided": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`
-ttl: 5s
-claims:
-  '{ "sub": {{ quote .Subject.ID }} }'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"claims": `{"sub": {{ quote .Subject.ID }} }`,
+					"ttl":    "5s",
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -637,11 +658,12 @@ claims:
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with both ttl and claims provided", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"configuration with values": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
@@ -649,11 +671,12 @@ claims: '{ "foo": {{ quote .Values.foo }} }'
 values:
   foo: bar
 `),
-			config: []byte(`
-values:
-  foo: '{{ quote .Subject.ID }}'
-`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"values": map[string]any{"foo": "{{ quote .Subject.ID }}"},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -665,18 +688,19 @@ values:
 				assert.Equal(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with values", configured.ID())
+				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
 		"with unknown entries in configuration": {
-			prototypeConfig: []byte(`
+			config: []byte(`
 signer:
   key_store:
     path: ` + pemFile + `
 `),
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -685,10 +709,7 @@ signer:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			protoConf, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			protoConf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			wm := mocks2.NewWatcherMock(t)
@@ -710,24 +731,22 @@ signer:
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newJWTFinalizer(appCtx, uc, protoConf)
+			mech, err := newJWTFinalizer(appCtx, uc, protoConf)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*jwtFinalizer)
+			require.True(t, ok)
+
 			// WHEN
-			finalizer, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			var (
-				jwtFin *jwtFinalizer
-				ok     bool
-			)
-
+			fin, ok := step.(*jwtFinalizer)
 			if err == nil {
-				jwtFin, ok = finalizer.(*jwtFinalizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, jwtFin)
+			tc.assert(t, err, configured, fin)
 		})
 	}
 }
@@ -756,7 +775,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 		subject        identity.Subject
 		configureMocks func(t *testing.T,
 			fin *jwtFinalizer,
-			ctx *heimdallmocks.RequestContextMock,
+			ctx *heimdallmocks.ContextMock,
 			cch *mocks.CacheMock,
 			sub identity.Subject)
 		assert func(t *testing.T, err error)
@@ -791,7 +810,7 @@ signer:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, sub identity.Subject,
 			) {
 				t.Helper()
@@ -821,7 +840,7 @@ ttl: 1m
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -859,7 +878,7 @@ claims: '{
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -893,7 +912,7 @@ values:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -924,7 +943,7 @@ claims: "foo: bar"
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -958,7 +977,7 @@ claims: "{{ len .foobar }}"
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -994,7 +1013,7 @@ values:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.RequestContextMock,
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock, _ identity.Subject,
 			) {
 				t.Helper()
@@ -1020,7 +1039,7 @@ values:
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.RequestContextMock, _ *mocks.CacheMock, _ identity.Subject) {
+				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock, _ *mocks.CacheMock, _ identity.Subject) {
 					t.Helper()
 				})
 
@@ -1028,7 +1047,7 @@ values:
 			require.NoError(t, err)
 
 			cch := mocks.NewCacheMock(t)
-			mctx := heimdallmocks.NewRequestContextMock(t)
+			mctx := heimdallmocks.NewContextMock(t)
 
 			wm := mocks2.NewWatcherMock(t)
 			wm.EXPECT().Add(pemFile, mock.Anything).Return(nil)
@@ -1051,16 +1070,30 @@ values:
 
 			mctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
-			finalizer, err := newJWTFinalizer(appCtx, uc, conf)
+			mech, err := newJWTFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			configureMocks(t, finalizer, mctx, cch, tc.subject)
+			configured, ok := mech.(*jwtFinalizer)
+			require.True(t, ok)
+
+			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			require.NoError(t, err)
+
+			configureMocks(t, configured, mctx, cch, tc.subject)
 
 			// WHEN
-			err = finalizer.Execute(mctx, tc.subject)
+			err = step.Execute(mctx, tc.subject)
 
 			// THEN
 			tc.assert(t, err)
 		})
 	}
+}
+
+func TestJWTFinalizerAccept(t *testing.T) {
+	t.Parallel()
+
+	mech := &jwtFinalizer{}
+
+	mech.Accept(nil)
 }

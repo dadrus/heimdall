@@ -36,7 +36,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -53,16 +55,11 @@ var errNoContent = errors.New("no payload received")
 //
 //nolint:gochecknoinits
 func init() {
-	registerTypeFactory(
-		func(app app.Context, name string, typ string, conf map[string]any) (bool, Contextualizer, error) {
-			if typ != ContextualizerGeneric {
-				return false, nil, nil
-			}
-
-			eh, err := newGenericContextualizer(app, name, conf)
-
-			return true, eh, err
-		})
+	registry.Register(
+		types.KindContextualizer,
+		ContextualizerGeneric,
+		registry.FactoryFunc(newGenericContextualizer),
+	)
 }
 
 type contextualizerData struct {
@@ -81,11 +78,7 @@ type genericContextualizer struct {
 	v          values.Values
 }
 
-func newGenericContextualizer(
-	app app.Context,
-	name string,
-	rawConfig map[string]any,
-) (*genericContextualizer, error) {
+func newGenericContextualizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
 	logger.Info().
 		Str("_type", ContextualizerGeneric).
@@ -132,8 +125,10 @@ func newGenericContextualizer(
 	}, nil
 }
 
+func (c *genericContextualizer) Accept(_ heimdall.Visitor) {}
+
 //nolint:cyclop
-func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub identity.Subject) error {
+func (c *genericContextualizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerGeneric).
@@ -188,14 +183,14 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub identit
 	return nil
 }
 
-func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]any) (Contextualizer, error) {
-	if len(stepID) == 0 && len(rawConfig) == 0 {
+func (c *genericContextualizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return c, nil
 	}
 
-	if len(rawConfig) == 0 {
+	if len(def.Config) == 0 {
 		cont := *c
-		cont.id = stepID
+		cont.id = def.ID
 
 		return &cont, nil
 	}
@@ -210,14 +205,14 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 	}
 
 	var conf Config
-	if err := decodeConfig(c.app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(c.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", c.name).CausedBy(err)
 	}
 
 	return &genericContextualizer{
 		name:       c.name,
-		id:         x.IfThenElse(len(stepID) == 0, c.id, stepID),
+		id:         x.IfThenElse(len(def.ID) == 0, c.id, def.ID),
 		app:        c.app,
 		e:          c.e,
 		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, c.payload),
@@ -230,12 +225,14 @@ func (c *genericContextualizer) WithConfig(stepID string, rawConfig map[string]a
 	}, nil
 }
 
+func (c *genericContextualizer) Kind() types.Kind { return types.KindContextualizer }
+
 func (c *genericContextualizer) Name() string { return c.name }
 
 func (c *genericContextualizer) ID() string { return c.id }
 
 func (c *genericContextualizer) callEndpoint(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	sub identity.Subject,
 	values map[string]string,
 	payload string,
@@ -275,7 +272,7 @@ func (c *genericContextualizer) callEndpoint(
 }
 
 func (c *genericContextualizer) createRequest(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	sub identity.Subject,
 	values map[string]string,
 	payload string,
@@ -327,7 +324,7 @@ func (c *genericContextualizer) createRequest(
 	return req, nil
 }
 
-func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *http.Response) (any, error) {
+func (c *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
@@ -403,7 +400,7 @@ func (c *genericContextualizer) calculateCacheKey(
 }
 
 func (c *genericContextualizer) renderTemplates(
-	ctx heimdall.RequestContext,
+	ctx heimdall.Context,
 	sub identity.Subject,
 ) (map[string]string, string, error) {
 	var payload string

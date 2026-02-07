@@ -21,5 +21,5 @@ import (
 )
 
 type AuthDataExtractStrategy interface {
-	GetAuthData(ctx heimdall.RequestContext) (string, error)
+	GetAuthData(ctx heimdall.Context) (string, error)
 }

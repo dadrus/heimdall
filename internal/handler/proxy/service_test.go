@@ -298,7 +298,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -380,7 +380,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -461,7 +461,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -549,7 +549,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -723,7 +723,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -818,7 +818,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -1013,7 +1013,7 @@ func TestWebSocketSupport(t *testing.T) {
 	backend.EXPECT().ForwardHostHeader().Return(true)
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+		mock.MatchedBy(func(ctx heimdall.Context) bool {
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 
@@ -1112,7 +1112,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	backend.EXPECT().ForwardHostHeader().Return(true)
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx heimdall.RequestContext) bool {
+		mock.MatchedBy(func(ctx heimdall.Context) bool {
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 

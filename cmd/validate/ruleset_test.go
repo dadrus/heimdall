@@ -50,7 +50,7 @@ func TestValidateRuleset(t *testing.T) {
 	err = os.WriteFile(pemFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	raw, err := os.ReadFile("test_data/config-valid.yaml")
+	raw, err := os.ReadFile("test_data/config-valid-with-default-rule.yaml")
 	require.NoError(t, err)
 
 	content, err := envsubst.EvalEnv(stringx.ToString(raw))
@@ -64,12 +64,21 @@ func TestValidateRuleset(t *testing.T) {
 		expError string
 	}{
 		"no config provided": {
+			args: []string{
+				"test_data/ruleset-valid-without-specifying-principals.yaml",
+			},
+			expError: "no config file provided",
+		},
+		"no ruleset file provided": {
+			args: []string{
+				"--" + flags.Config, configFile,
+			},
 			expError: "accepts 1 arg(s), received 0",
 		},
 		"invalid config file": {
 			args: []string{
 				"--" + flags.Config, "doesnotexist.yaml",
-				"test_data/ruleset-valid.yaml",
+				"test_data/ruleset-valid-without-specifying-principals.yaml",
 			},
 			expError: "no such file or directory",
 		},
@@ -80,10 +89,16 @@ func TestValidateRuleset(t *testing.T) {
 			},
 			expError: "no such file or directory",
 		},
-		"everything is valid for decision mode usage": {
+		"everything is valid for decision mode usage, default and custom principals are specified": {
 			args: []string{
 				"--" + flags.Config, configFile,
-				"test_data/ruleset-valid.yaml",
+				"test_data/ruleset-valid-with-default-and-custom-principals.yaml",
+			},
+		},
+		"everything is valid for decision mode usage, no principals are specified": {
+			args: []string{
+				"--" + flags.Config, configFile,
+				"test_data/ruleset-valid-without-specifying-principals.yaml",
 			},
 		},
 		"invalid for proxy usage": {
@@ -94,12 +109,25 @@ func TestValidateRuleset(t *testing.T) {
 			},
 			expError: "requires forward_to",
 		},
-		"everything is valid for proxy mode usage": {
+		"everything is valid for proxy mode usage, default and custom principals are specified": {
 			args: []string{
 				"--" + validationForProxyMode,
 				"--" + flags.Config, configFile,
-				"test_data/ruleset-valid.yaml",
+				"test_data/ruleset-valid-with-default-and-custom-principals.yaml",
 			},
+		},
+		"everything is valid for proxy mode usage, no principals are specified": {
+			args: []string{
+				"--" + flags.Config, configFile,
+				"test_data/ruleset-valid-without-specifying-principals.yaml",
+			},
+		},
+		"ruleset with custom principals only": {
+			args: []string{
+				"--" + flags.Config, configFile,
+				"test_data/ruleset-only-custom-principals.yaml",
+			},
+			expError: "no authenticator defined which would create a default principal",
 		},
 		"using http scheme for upstream communication": {
 			args: []string{

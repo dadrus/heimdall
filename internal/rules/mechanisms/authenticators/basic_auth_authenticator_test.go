@@ -27,24 +27,23 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateBasicAuthAuthenticator(t *testing.T) {
+func TestNewBasicAuthAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		config []byte
+		config config.MechanismConfig
 		assert func(t *testing.T, err error, auth *basicAuthAuthenticator)
 	}{
 		"valid configuration": {
-			config: []byte(`
-user_id: foo
-password: bar`),
+			config: config.MechanismConfig{"user_id": "foo", "password": "bar"},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -64,11 +63,13 @@ password: bar`),
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
 				assert.NotNil(t, auth.emptyAttributes)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 			},
 		},
 		"without user_id": {
-			config: []byte(`
-password: bar`),
+			config: config.MechanismConfig{"password": "bar"},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -79,8 +80,7 @@ password: bar`),
 			},
 		},
 		"without password": {
-			config: []byte(`
-user_id: foo`),
+			config: config.MechanismConfig{"user_id": "foo"},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -91,10 +91,7 @@ user_id: foo`),
 			},
 		},
 		"with unexpected config attribute": {
-			config: []byte(`
-user_id: foo
-password: bar
-foo: bar`),
+			config: config.MechanismConfig{"user_id": "foo", "password": "bar", "foo": "bar"},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -106,9 +103,6 @@ foo: bar`),
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			conf, err := testsupport.DecodeTestConfig(tc.config)
-			require.NoError(t, err)
-
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
@@ -117,28 +111,30 @@ foo: bar`),
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			auth, err := newBasicAuthAuthenticator(appCtx, uc, conf)
+			mech, err := newBasicAuthAuthenticator(appCtx, uc, tc.config)
 
 			// THEN
+			auth, ok := mech.(*basicAuthAuthenticator)
+			if err == nil {
+				require.True(t, ok)
+			}
+
 			tc.assert(t, err, auth)
 		})
 	}
 }
 
-func TestCreateBasicAuthAuthenticatorFromPrototype(t *testing.T) {
+func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		prototypeConfig []byte
-		config          []byte
-		stepID          string
-		assert          func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator)
+		config  config.MechanismConfig
+		stepDef types.StepDefinition
+		assert  func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator)
 	}{
 		"no new configuration for the configured authenticator": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+			config: config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -147,13 +143,9 @@ password: bar`),
 			},
 		},
 		"password differs": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			config: []byte(`
-user_id: foo
-password: baz`),
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "foo", "password": "baz"}},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -164,15 +156,15 @@ password: baz`),
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "password differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"no user_id provided": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			config: []byte(`
-password: baz`),
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"password": "baz"}},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -183,15 +175,15 @@ password: baz`),
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no user_id provided", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"no password provided": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			config: []byte(`
-user_id: baz`),
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz"}},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -202,16 +194,15 @@ user_id: baz`),
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no password provided", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"user_id differs": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			config: []byte(`
-user_id: baz
-password: bar`),
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz", "password": "bar"}},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -222,16 +213,15 @@ password: bar`),
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "user_id differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 			},
 		},
 		"user_id and password differs": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			config: []byte(`
-user_id: baz
-password: baz`),
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz", "password": "baz"}},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -243,6 +233,9 @@ password: baz`),
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "user_id and password differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 
 				md := sha256.New()
 				md.Write([]byte("baz"))
@@ -252,12 +245,10 @@ password: baz`),
 				assert.Equal(t, value, configured.password)
 			},
 		},
-		"step id configured": {
-			prototypeConfig: []byte(`
-user_id: foo
-password: bar`),
-			stepID: "foo",
-			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+		"only step id configured": {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{ID: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -271,17 +262,47 @@ password: bar`),
 				require.Equal(t, prototype.ads, configured.ads)
 				require.Equal(t, prototype.app, configured.app)
 				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+			},
+		},
+		"only principal name configured": {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{Principal: "foo"},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				require.Equal(t, prototype.Name(), configured.Name())
+				require.Equal(t, prototype.ID(), configured.ID())
+				require.Equal(t, prototype.userID, configured.userID)
+				require.Equal(t, prototype.password, configured.password)
+				require.Equal(t, prototype.ads, configured.ads)
+				require.Equal(t, prototype.app, configured.app)
+				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+			},
+		},
+		"malformed step configuration": {
+			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz", "password": 1}},
+			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
-			require.NoError(t, err)
-
-			conf, err := testsupport.DecodeTestConfig(tc.config)
-			require.NoError(t, err)
-
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
@@ -289,19 +310,22 @@ password: bar`),
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			prototype, err := newBasicAuthAuthenticator(appCtx, uc, pc)
+			mech, err := newBasicAuthAuthenticator(appCtx, uc, tc.config)
 			require.NoError(t, err)
 
+			configured, ok := mech.(*basicAuthAuthenticator)
+			require.True(t, ok)
+
 			// WHEN
-			auth, err := prototype.WithConfig(tc.stepID, conf)
+			step, err := mech.CreateStep(tc.stepDef)
 
 			// THEN
-			baa, ok := auth.(*basicAuthAuthenticator)
+			auth, ok := step.(*basicAuthAuthenticator)
 			if err == nil {
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, baa)
+			tc.assert(t, err, configured, auth)
 		})
 	}
 }
@@ -313,17 +337,15 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 		ID() string
 	}
 
-	conf, err := testsupport.DecodeTestConfig([]byte(`
-user_id: foo
-password: bar`))
-	require.NoError(t, err)
+	conf := config.MechanismConfig{"user_id": "foo", "password": "bar"}
 
 	for uc, tc := range map[string]struct {
-		configureContext func(t *testing.T, ctx *mocks.RequestContextMock)
+		stepDef          types.StepDefinition
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error, sub identity.Subject)
 	}{
 		"no required header present": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -347,7 +369,7 @@ password: bar`))
 			},
 		},
 		"base64 decoding error": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -371,7 +393,7 @@ password: bar`))
 			},
 		},
 		"malformed encoding": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -396,7 +418,7 @@ password: bar`))
 			},
 		},
 		"invalid user id": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -421,7 +443,7 @@ password: bar`))
 			},
 		},
 		"invalid password": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -445,8 +467,8 @@ password: bar`))
 				assert.Empty(t, sub)
 			},
 		},
-		"valid credentials": {
-			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
+		"default principal is created for valid credentials": {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
@@ -465,6 +487,29 @@ password: bar`))
 				assert.Empty(t, sub.Attributes())
 			},
 		},
+		"custom principal is created for valid credentials": {
+			stepDef: types.StepDefinition{Principal: "baz"},
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+				t.Helper()
+
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Authorization").
+					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:bar")))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+			},
+			assert: func(t *testing.T, err error, sub identity.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Empty(t, sub.ID())
+				assert.Empty(t, sub.Attributes())
+				assert.NotNil(t, sub["baz"])
+				assert.Equal(t, "foo", sub["baz"].ID)
+				assert.Empty(t, sub["baz"].Attributes)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -475,17 +520,20 @@ password: bar`))
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
-			auth, err := newBasicAuthAuthenticator(appCtx, uc, conf)
+			mech, err := newBasicAuthAuthenticator(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			ctx := mocks.NewRequestContextMock(t)
+			step, err := mech.CreateStep(tc.stepDef)
+			require.NoError(t, err)
+
+			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 			tc.configureContext(t, ctx)
 
 			sub := make(identity.Subject)
 
 			// WHEN
-			err = auth.Execute(ctx, sub)
+			err = step.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err, sub)
@@ -493,12 +541,18 @@ password: bar`))
 	}
 }
 
-func TestBasicAuthAuthenticatorIsInsecure(t *testing.T) {
+func TestBasicAuthAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := basicAuthAuthenticator{}
+	auth := &basicAuthAuthenticator{}
+	visitor := mocks.NewVisitorMock(t)
 
-	// WHEN & THEN
-	require.False(t, auth.IsInsecure())
+	visitor.EXPECT().VisitInsecure(auth)
+	visitor.EXPECT().VisitPrincipalNamer(auth)
+
+	// WHEN
+	auth.Accept(visitor)
+
+	// THEN expected calls are done
 }
