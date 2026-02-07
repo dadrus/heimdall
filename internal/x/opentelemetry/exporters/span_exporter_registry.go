@@ -25,7 +25,7 @@ import (
 	instana "github.com/instana/go-otel-exporter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-	"go.opentelemetry.io/otel/exporters/zipkin"
+	"go.opentelemetry.io/otel/exporters/zipkin" //nolint: staticcheck
 	"go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"

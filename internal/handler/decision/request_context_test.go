@@ -149,7 +149,11 @@ func TestRequestContextFinalize(t *testing.T) {
 			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://heimdall.local/foo", nil)
 			require.NoError(t, err)
 
-			reqCtx := newContextFactory(tc.code).Create(rw, req)
+			cf := newContextFactory(tc.code)
+			reqCtx := cf.Create(rw, req)
+
+			defer cf.Destroy(reqCtx)
+
 			tc.setup(t, reqCtx)
 
 			// WHEN

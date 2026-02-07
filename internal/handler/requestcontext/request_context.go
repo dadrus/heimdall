@@ -28,33 +28,59 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x/httpx"
-	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 type RequestContext struct {
-	reqMethod       string
-	reqURL          *url.URL
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
+	hmdlReq         *heimdall.Request
 	req             *http.Request
-	err             error
 
 	// the following properties are created lazy and cached
-
+	err       error
 	savedBody any
-	hmdlReq   *heimdall.Request
 	headers   map[string]string
 	outputs   map[string]any
 }
 
-func New(req *http.Request) *RequestContext {
-	return &RequestContext{
-		reqMethod:       extractMethod(req),
-		reqURL:          extractURL(req),
-		upstreamHeaders: make(http.Header),
-		upstreamCookies: make(map[string]string),
-		req:             req,
+func New() *RequestContext {
+	rc := &RequestContext{
+		upstreamHeaders: make(http.Header, 6),
+		upstreamCookies: make(map[string]string, 4),
+		outputs:         make(map[string]any, 10),
+		headers:         make(map[string]string, 10),
 	}
+
+	rc.hmdlReq = &heimdall.Request{
+		RequestFunctions:  rc,
+		URL:               &heimdall.URL{},
+		ClientIPAddresses: make([]string, 0, 10),
+	}
+
+	return rc
+}
+
+func (r *RequestContext) Init(req *http.Request) {
+	r.req = req
+	r.hmdlReq.Method = extractMethod(req)
+	r.hmdlReq.URL.URL = extractURL(req)
+	r.hmdlReq.ClientIPAddresses = requestClientIPs(r.hmdlReq.ClientIPAddresses, req)
+}
+
+func (r *RequestContext) Reset() {
+	r.savedBody = nil
+	r.err = nil
+	r.req = nil
+
+	clear(r.outputs)
+	clear(r.headers)
+	clear(r.upstreamCookies)
+	clear(r.upstreamHeaders)
+
+	r.hmdlReq.URL.URL = url.URL{}
+	r.hmdlReq.Method = ""
+	r.hmdlReq.ClientIPAddresses = r.hmdlReq.ClientIPAddresses[:0]
+	clear(r.hmdlReq.URL.Captures)
 }
 
 func (r *RequestContext) Header(name string) string {
@@ -76,8 +102,6 @@ func (r *RequestContext) Cookie(name string) string {
 
 func (r *RequestContext) Headers() map[string]string {
 	if len(r.headers) == 0 {
-		r.headers = make(map[string]string, len(r.req.Header)+1)
-
 		r.headers["Host"] = r.req.Host
 		for k, v := range r.req.Header {
 			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
@@ -126,19 +150,7 @@ func (r *RequestContext) Body() any {
 	return r.savedBody
 }
 
-func (r *RequestContext) Request() *heimdall.Request {
-	if r.hmdlReq == nil {
-		r.hmdlReq = &heimdall.Request{
-			RequestFunctions:  r,
-			Method:            r.reqMethod,
-			URL:               &heimdall.URL{URL: *r.reqURL},
-			ClientIPAddresses: r.requestClientIPs(),
-		}
-	}
-
-	return r.hmdlReq
-}
-
+func (r *RequestContext) Request() *heimdall.Request              { return r.hmdlReq }
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
@@ -146,37 +158,28 @@ func (r *RequestContext) UpstreamCookies() map[string]string      { return r.ups
 func (r *RequestContext) Context() context.Context                { return r.req.Context() }
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) PipelineError() error                    { return r.err }
-func (r *RequestContext) Outputs() map[string]any {
-	if r.outputs == nil {
-		r.outputs = make(map[string]any)
-	}
+func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
 
-	return r.outputs
-}
-
-func (r *RequestContext) requestClientIPs() []string {
-	var ips []string
-
-	if forwarded := r.req.Header.Get("Forwarded"); len(forwarded) != 0 {
-		values := strings.Split(forwarded, ",")
-		ips = make([]string, len(values))
-
-		for idx, val := range values {
-			for val := range strings.SplitSeq(strings.TrimSpace(val), ";") {
+func requestClientIPs(ips []string, req *http.Request) []string {
+	if forwarded := req.Header.Get("Forwarded"); len(forwarded) != 0 {
+		for entry := range strings.SplitSeq(forwarded, ",") {
+			for val := range strings.SplitSeq(strings.TrimSpace(entry), ";") {
 				if addr, found := strings.CutPrefix(strings.TrimSpace(val), "for="); found {
-					ips[idx] = addr
+					ips = append(ips, strings.TrimSpace(addr))
 				}
 			}
 		}
 	}
 
 	if ips == nil {
-		if forwardedFor := r.req.Header.Get("X-Forwarded-For"); len(forwardedFor) != 0 {
-			ips = slicex.Map(strings.Split(forwardedFor, ","), strings.TrimSpace)
+		if forwardedFor := req.Header.Get("X-Forwarded-For"); len(forwardedFor) != 0 {
+			for val := range strings.SplitSeq(forwardedFor, ",") {
+				ips = append(ips, strings.TrimSpace(val))
+			}
 		}
 	}
 
-	ips = append(ips, httpx.IPFromHostPort(r.req.RemoteAddr)) // nolint: makezero
+	ips = append(ips, httpx.IPFromHostPort(req.RemoteAddr)) // nolint: makezero
 
 	return ips
 }
