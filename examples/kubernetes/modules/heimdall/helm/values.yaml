@@ -51,4 +51,4 @@ env:
 %{ endif }
 
 image:
-  tag: 0.17.8
+  tag: 0.17.9
