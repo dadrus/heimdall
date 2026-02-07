@@ -266,15 +266,17 @@ jobs:
           go test -v -coverprofile=coverage.cov -coverpkg=./... ./... 2>&1 | \
           tee >(go-junit-report -set-exit-code > junit-report.xml)
       - name: Upload test results to Codecov
-        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         if: always() && !cancelled()
         with:
+          report_type: test_results
           files: junit-report.xml
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload code coverage report to Codecov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
+          report_type: coverage
           files: coverage.cov
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
