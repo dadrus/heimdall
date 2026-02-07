@@ -590,14 +590,22 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "attributes": {
-          "description": "The `attributes` field in the Heimdall's principal object is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
-          "type": "string",
-          "default": "@this"
-        },
         "id": {
-          "description": "The `id` field in the Heimdall's principal object is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
+          "description": "The `id` field in the Heimdall's principal object is set using this GJSON expression. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string"
+        },
+        "attributes": {
+          "oneOf": [
+            {
+              "description": "GJSON expression to extract the relevant attribute from the given authentication data. Defaults to `@this` (for the root element).",
+              "type": "string",
+              "default": "@this"
+            },
+            {
+              "description": "Key value map with GJSON expressions to extract the relevant attributes from the given authentication data",
+              "type": "object"
+            }
+          ]
         }
       }
     },
