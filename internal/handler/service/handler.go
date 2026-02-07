@@ -37,6 +37,8 @@ func NewHandler(rcf requestcontext.ContextFactory, re rule.Executor, eh errorhan
 func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rc := h.f.Create(rw, req)
 
+	defer h.f.Destroy(rc)
+
 	mut, err := h.e.Execute(rc)
 	if err != nil {
 		h.eh.HandleError(rw, req, err)

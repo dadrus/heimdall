@@ -37,6 +37,13 @@ import (
 func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
 
+	timeouts := config.Timeout{
+		Read:  100 * time.Millisecond,
+		Write: 100 * time.Millisecond,
+		Idle:  1 * time.Second,
+	}
+	cf := newContextFactory(config.ServeConfig{Timeout: timeouts}, nil)
+
 	for uc, tc := range map[string]struct {
 		upstreamCalled bool
 		useIPv6        bool
@@ -373,12 +380,9 @@ func TestRequestContextFinalize(t *testing.T) {
 			targetURL, err := url.Parse(srv.URL)
 			require.NoError(t, err)
 
-			timeouts := config.Timeout{
-				Read:  100 * time.Millisecond,
-				Write: 100 * time.Millisecond,
-				Idle:  1 * time.Second,
-			}
-			ctx := newContextFactory(config.ServeConfig{Timeout: timeouts}, nil).Create(rw, req)
+			ctx := cf.Create(rw, req)
+
+			defer cf.Destroy(ctx)
 
 			backend := tc.setup(t, ctx, targetURL)
 

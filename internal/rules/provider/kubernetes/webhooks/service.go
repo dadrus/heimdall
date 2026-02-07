@@ -26,7 +26,6 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/accesslog"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
@@ -51,9 +50,6 @@ func newService(
 	log zerolog.Logger,
 ) *http.Server {
 	hc := alice.New(
-		accesslog.New(log),
-		logger.New(log),
-		dump.New(),
 		recovery.New(errorHandlerFunc(func(rw http.ResponseWriter, _ *http.Request, _ error) {
 			rw.WriteHeader(http.StatusInternalServerError)
 		})),
@@ -67,6 +63,8 @@ func newService(
 			otelmetrics.WithSubsystem("kubernetes webhooks"),
 			otelmetrics.WithServerName(serviceName),
 		),
+		logger.New(log),
+		dump.New(),
 	).Then(newHandler(ruleFactory, authClass))
 
 	return &http.Server{

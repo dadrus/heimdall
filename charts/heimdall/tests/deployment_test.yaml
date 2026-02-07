@@ -237,6 +237,9 @@ tests:
             prometheus.io/scrape: "true"
             prometheus.io/path: "/metrics"
             prometheus.io/port: "9464"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: prometheus exporter port can be customized
     template: deployment.yaml
