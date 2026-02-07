@@ -96,3 +96,43 @@ func (_c *ContextFactoryMock_Create_Call) RunAndReturn(run func(rw http.Response
 	_c.Call.Return(run)
 	return _c
 }
+
+// Destroy provides a mock function for the type ContextFactoryMock
+func (_mock *ContextFactoryMock) Destroy(ctx requestcontext.Context) {
+	_mock.Called(ctx)
+	return
+}
+
+// ContextFactoryMock_Destroy_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Destroy'
+type ContextFactoryMock_Destroy_Call struct {
+	*mock.Call
+}
+
+// Destroy is a helper method to define mock.On call
+//   - ctx requestcontext.Context
+func (_e *ContextFactoryMock_Expecter) Destroy(ctx interface{}) *ContextFactoryMock_Destroy_Call {
+	return &ContextFactoryMock_Destroy_Call{Call: _e.mock.On("Destroy", ctx)}
+}
+
+func (_c *ContextFactoryMock_Destroy_Call) Run(run func(ctx requestcontext.Context)) *ContextFactoryMock_Destroy_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 requestcontext.Context
+		if args[0] != nil {
+			arg0 = args[0].(requestcontext.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ContextFactoryMock_Destroy_Call) Return() *ContextFactoryMock_Destroy_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *ContextFactoryMock_Destroy_Call) RunAndReturn(run func(ctx requestcontext.Context)) *ContextFactoryMock_Destroy_Call {
+	_c.Run(run)
+	return _c
+}

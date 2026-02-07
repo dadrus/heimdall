@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -167,7 +166,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error
 		}
 	}
 
-	ctx.AddHeaderForUpstream(f.headerName, fmt.Sprintf("%s %s", f.headerScheme, jwtToken))
+	ctx.AddHeaderForUpstream(f.headerName, f.headerScheme+" "+jwtToken)
 
 	return nil
 }
@@ -280,18 +279,20 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject)
 func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub identity.Subject) string {
 	const int64BytesCount = 8
 
-	ttlBytes := make([]byte, int64BytesCount)
+	var ttlBytes [int64BytesCount]byte
 
 	//nolint:gosec
 	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes, uint64(f.ttl))
+	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(f.ttl))
 
 	hash := sha256.New()
 	hash.Write(f.signer.Hash())
-	hash.Write(x.IfThenElseExec(f.claims != nil,
-		func() []byte { return f.claims.Hash() },
-		func() []byte { return []byte{} }))
-	hash.Write(ttlBytes)
+
+	if f.claims != nil {
+		hash.Write(f.claims.Hash())
+	}
+
+	hash.Write(ttlBytes[:])
 	hash.Write(sub.Hash())
 
 	for key, val := range f.v {
@@ -299,8 +300,13 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub identity.Subj
 		hash.Write(val.Hash())
 	}
 
-	rawSub, _ := json.Marshal(ctx.Outputs())
-	hash.Write(rawSub)
+	if outputs := ctx.Outputs(); len(outputs) != 0 {
+		rawOut, _ := json.Marshal(ctx.Outputs())
 
-	return hex.EncodeToString(hash.Sum(nil))
+		hash.Write(rawOut)
+	}
+
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(hash.Sum(result[:0]))
 }

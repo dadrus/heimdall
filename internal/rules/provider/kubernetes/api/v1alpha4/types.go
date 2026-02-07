@@ -52,6 +52,7 @@ const (
 
 // RuleSetSpec is the actual ruleset definition
 // +kubebuilder:object:generate=true
+// nolint: godoclint
 type RuleSetSpec struct {
 	AuthClassName string          `json:"authClassName"` //nolint:tagliatelle
 	Rules         []v1alpha4.Rule `json:"rules"`
@@ -59,6 +60,7 @@ type RuleSetSpec struct {
 
 // RuleSetStatus describes the deployment status of a ruleset
 // +kubebuilder:object:generate=true
+// nolint: godoclint
 type RuleSetStatus struct {
 	ActiveIn   string             `json:"activeIn"` // nolint: tagliatelle
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -67,6 +69,7 @@ type RuleSetStatus struct {
 // RuleSet defines the kubernetes custom resource to describe rulesets
 // +kubebuilder:object:generate=true
 // +kubebuilder:object:root=true
+// nolint: godoclint
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -90,6 +93,7 @@ func (rs *RuleSet) AsConfig() *v1alpha4.RuleSet {
 // RuleSetList defines the list of RuleSet resources
 // +kubebuilder:object:generate=true
 // +kubebuilder:object:root=true
+// nolint: godoclint
 type RuleSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`

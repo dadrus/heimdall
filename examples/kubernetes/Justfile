@@ -1,42 +1,100 @@
-init:
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+OBS := "false"
+
+_validate_bool NAME VALUE:
+  @if [[ "{{VALUE}}" != "true" && "{{VALUE}}" != "false" ]]; then \
+    echo "ERROR: {{NAME}} must be 'true' or 'false' (use {{NAME}}=true)"; \
+    exit 1; \
+  fi
+
+init: (_validate_bool "OBS" OBS)
   terraform init -upgrade
 
 install-ngnix-demo: init
-  terraform apply -auto-approve -var ingress_controller="nginx" -var gateway_api_enabled=false -var global_integration_enabled=false
+  terraform apply -auto-approve \
+    -var ingress_controller="nginx" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=false \
+    -var observability_stack_enabled={{OBS}}
 
 install-ngnix-global-demo: init
-  terraform apply -auto-approve -var ingress_controller="nginx" -var gateway_api_enabled=false -var global_integration_enabled=true
+  terraform apply -auto-approve \
+    -var ingress_controller="nginx" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=true \
+    -var observability_stack_enabled={{OBS}}
 
 install-contour-demo: init
-  terraform apply -auto-approve -var ingress_controller="contour" -var gateway_api_enabled=false -var global_integration_enabled=true
+  terraform apply -auto-approve \
+    -var ingress_controller="contour" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=true \
+    -var observability_stack_enabled={{OBS}}
 
 install-haproxy-demo: init
-  terraform apply -auto-approve -var ingress_controller="haproxy" -var gateway_api_enabled=false -var global_integration_enabled=false
+  terraform apply -auto-approve \
+    -var ingress_controller="haproxy" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=false \
+    -var observability_stack_enabled={{OBS}}
 
 install-haproxy-global-demo: init
-  terraform apply -auto-approve -var ingress_controller="haproxy" -var gateway_api_enabled=false -var global_integration_enabled=true
+  terraform apply -auto-approve \
+    -var ingress_controller="haproxy" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=true \
+    -var observability_stack_enabled={{OBS}}
 
 install-emissary-demo: init
-  terraform apply -auto-approve -var ingress_controller="emissary" -var gateway_api_enabled=false -var global_integration_enabled=true
+  terraform apply -auto-approve \
+    -var ingress_controller="emissary" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=true \
+    -var observability_stack_enabled={{OBS}}
 
 install-envoygw-demo: init
-  terraform apply -auto-approve -var ingress_controller="envoy-gateway" -var gateway_api_enabled=true -var global_integration_enabled=true
+  terraform apply -auto-approve \
+    -var ingress_controller="envoy-gateway" \
+    -var gateway_api_enabled=true \
+    -var global_integration_enabled=true \
+    -var observability_stack_enabled={{OBS}}
 
 install-traefik-ingress-demo: init
-  terraform apply -auto-approve -var ingress_controller="traefik" -var gateway_api_enabled=false -var global_integration_enabled=true
+  terraform apply -auto-approve \
+    -var ingress_controller="traefik" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=true \
+    -var observability_stack_enabled={{OBS}}
 
 install-traefik-ingress-route-demo: init
-  terraform apply -auto-approve -var ingress_controller="traefik" -var gateway_api_enabled=false -var global_integration_enabled=false
+  terraform apply -auto-approve \
+    -var ingress_controller="traefik" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=false \
+    -var observability_stack_enabled={{OBS}}
 
 install-traefik-gw-demo: init
-  terraform apply -auto-approve -var ingress_controller="traefik" -var gateway_api_enabled=true -var global_integration_enabled=true
+  terraform apply -auto-approve \
+    -var ingress_controller="traefik" \
+    -var gateway_api_enabled=true \
+    -var global_integration_enabled=true \
+    -var observability_stack_enabled={{OBS}}
 
 # this receipt doesn't work right now
 install-istio-ingress-gw-demo: init
-  terraform apply -auto-approve -var ingress_controller="istio" -var gateway_api_enabled=false -var global_integration_enabled=false
+  terraform apply -auto-approve \
+    -var ingress_controller="istio" \
+    -var gateway_api_enabled=false \
+    -var global_integration_enabled=false \
+    -var observability_stack_enabled={{OBS}}
 
 install-istio-gw-demo: init
-  terraform apply -auto-approve -var ingress_controller="istio" -var gateway_api_enabled=true -var global_integration_enabled=false
+  terraform apply -auto-approve \
+    -var ingress_controller="istio" \
+    -var gateway_api_enabled=true \
+    -var global_integration_enabled=false \
+    -var observability_stack_enabled={{OBS}}
 
 delete-cluster:
   terraform destroy -auto-approve

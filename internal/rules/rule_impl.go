@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/rs/zerolog"
 
@@ -42,6 +43,7 @@ type ruleImpl struct {
 	sh              stage
 	fi              stage
 	eh              stage
+	subjectPool     *sync.Pool
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
@@ -72,7 +74,13 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		captures[k] = unescape(v, r.slashesHandling)
 	}
 
-	sub := make(identity.Subject)
+	sub := r.subjectPool.Get().(identity.Subject) //nolint: forcetypeassert
+
+	defer func() {
+		clear(sub)
+
+		r.subjectPool.Put(sub)
+	}()
 
 	// authenticators
 	if err := r.sc.Execute(ctx, sub); err != nil {
@@ -136,21 +144,24 @@ type routeImpl struct {
 }
 
 func (r *routeImpl) Matches(ctx heimdall.Context, keys, values []string) bool {
-	logger := zerolog.Ctx(ctx.Context()).With().
-		Str("_source", r.rule.srcID).
-		Str("_id", r.rule.id).
-		Str("route", r.path).
-		Logger()
-
-	logger.Debug().Msg("Matching rule")
+	logger := zerolog.Ctx(ctx.Context())
 
 	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {
-		logger.Debug().Err(err).Msg("Request does not satisfy matching conditions")
+		logger.Debug().
+			Str("_source", r.rule.srcID).
+			Str("_id", r.rule.id).
+			Str("route", r.path).
+			Err(err).
+			Msg("Request does not satisfy matching conditions")
 
 		return false
 	}
 
-	logger.Debug().Msg("Rule matched")
+	logger.Debug().
+		Str("_source", r.rule.srcID).
+		Str("_id", r.rule.id).
+		Str("route", r.path).
+		Msg("Rule matched")
 
 	return true
 }

@@ -17,7 +17,6 @@
 package decision
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -28,7 +27,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/accesslog"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
@@ -70,16 +68,14 @@ func newService(
 		otelhttp.NewMiddleware("",
 			otelhttp.WithServerName(cfg.Address()),
 			otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
-				return fmt.Sprintf("EntryPoint %s %s%s",
-					strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
+				return "EntryPoint " + strings.ToLower(req.URL.Scheme) + " " + httpx.LocalAddress(req) + req.URL.Path
 			}),
 		),
 		otelmetrics.New(
 			otelmetrics.WithSubsystem("decision"),
 			otelmetrics.WithServerName(cfg.Address()),
 		),
-		accesslog.New(log),
-		logger.New(log),
+		logger.New(log, logger.WithAccessStatusEnabled(true)),
 		dump.New(),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))

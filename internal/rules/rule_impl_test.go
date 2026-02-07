@@ -19,6 +19,7 @@ package rules
 import (
 	"errors"
 	"net/url"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -502,6 +503,7 @@ func TestRuleExecute(t *testing.T) {
 				sh:              stage{authorizer},
 				fi:              stage{finalizer},
 				eh:              stage{errHandler},
+				subjectPool:     &sync.Pool{New: func() any { return make(identity.Subject, 4) }},
 			}
 
 			tc.configureMocks(t, ctx, authenticator, authorizer, finalizer, errHandler)

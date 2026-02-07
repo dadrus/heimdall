@@ -1,7 +1,7 @@
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDatasource
 metadata:
-  name: pyroscope-datasource
+  name: pyroscope
   namespace: ${namespace}
 spec:
   datasource:

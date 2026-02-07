@@ -22,3 +22,8 @@ variable "otel_traces_endpoint" {
   type        = string
   description = "The endpoint of an OTEL endpoint to send traces to"
 }
+
+variable "pyroscope_endpoint" {
+  type        = string
+  description = "The endpoint of pyroscope to send profile data to"
+}

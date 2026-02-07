@@ -2,7 +2,6 @@ kube-state-metrics:
   enabled: true
 alertmanager:
   enabled: true
-
 prometheus-node-exporter:
   enabled: false
 prometheus-pushgateway:
@@ -13,3 +12,5 @@ server:
     servicePort: 9090
   extraFlags:
     - web.enable-remote-write-receiver
+    - web.enable-lifecycle
+    - log.format=json

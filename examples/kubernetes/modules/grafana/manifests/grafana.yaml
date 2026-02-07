@@ -7,8 +7,8 @@ metadata:
     dashboards: "grafana"
 spec:
   config:
-    log:
-      mode: "console"
+#    log:
+#      mode: "json"
     security:
       admin_user: ${admin_user}
       admin_password: ${admin_password}

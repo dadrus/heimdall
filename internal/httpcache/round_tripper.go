@@ -104,5 +104,7 @@ func cacheKey(req *http.Request) string {
 		hash.Write(stringx.ToBytes(strings.TrimSpace(value)))
 	}
 
-	return hex.EncodeToString(hash.Sum(nil))
+	var result [sha256.Size]byte
+
+	return hex.EncodeToString(hash.Sum(result[:0]))
 }

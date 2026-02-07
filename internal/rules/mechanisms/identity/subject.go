@@ -19,7 +19,7 @@ package identity
 import (
 	"crypto/sha256"
 
-	"github.com/goccy/go-json"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type Subject map[string]*Principal
@@ -42,9 +42,13 @@ func (s Subject) Attributes() map[string]any {
 
 func (s Subject) Hash() []byte {
 	hash := sha256.New()
-	rawSub, _ := json.Marshal(s)
 
-	hash.Write(rawSub)
+	for name, principal := range s {
+		hash.Write(stringx.ToBytes(name))
+		hash.Write(principal.Hash())
+	}
 
-	return hash.Sum(nil)
+	var result [sha256.Size]byte
+
+	return hash.Sum(result[:0])
 }

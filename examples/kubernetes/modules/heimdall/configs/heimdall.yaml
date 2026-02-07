@@ -1,15 +1,17 @@
 log:
-  format: gelf
-  level: trace
+  format: ${log_format}
+  level: ${log_level}
 
 profiling:
-  enabled: false
+  enabled: ${profiling_enabled}
 
 metrics:
-  enabled: false
+  enabled: ${metrics_enabled}
 
 tracing:
-  enabled: false
+  enabled: ${tracing_enabled}
+
+secrets_reload_enabled: true
 
 serve:
   tls:

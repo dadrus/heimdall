@@ -1,0 +1,22 @@
+crds:
+  enabled: true
+
+featureGates: "AdditionalCertificateOutputFormats=true"
+
+webhook:
+  extraArgs:
+    - --logging-format=json
+  featureGates: "AdditionalCertificateOutputFormats=true"
+
+cainjector:
+  extraArgs:
+    - --logging-format=json
+
+prometheus:
+  enabled: ${prometheus_enabled}
+  podmonitor:
+    enabled: ${prometheus_enabled}
+
+extraArgs:
+  - --enable-gateway-api
+  - --logging-format=json

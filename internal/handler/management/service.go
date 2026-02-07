@@ -17,7 +17,6 @@
 package management
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -28,7 +27,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/accesslog"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
@@ -56,8 +54,7 @@ func newService(
 			otelhttp.WithServerName(cfg.Address()),
 			otelhttp.WithFilter(opFilter),
 			otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
-				return fmt.Sprintf("EntryPoint %s %s%s",
-					strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
+				return "EntryPoint " + strings.ToLower(req.URL.Scheme) + " " + httpx.LocalAddress(req) + req.URL.Path
 			}),
 		),
 		otelmetrics.New(
@@ -65,7 +62,6 @@ func newService(
 			otelmetrics.WithServerName(cfg.Address()),
 			otelmetrics.WithOperationFilter(opFilter),
 		),
-		accesslog.New(log),
 		logger.New(log),
 		dump.New(),
 		x.IfThenElseExec(cfg.CORS != nil,

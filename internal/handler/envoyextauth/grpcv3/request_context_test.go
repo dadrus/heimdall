@@ -17,6 +17,7 @@
 package grpcv3
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -61,13 +62,16 @@ func TestNewRequestContext(t *testing.T) {
 	md := metadata.New(nil)
 	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1")
 
-	ctx := NewRequestContext(
+	cf := newContextFactory()
+	ctx := cf.Create(
 		metadata.NewIncomingContext(
 			t.Context(),
 			md,
 		),
 		checkReq,
 	)
+
+	defer cf.Destroy(ctx)
 
 	// THEN
 	require.Equal(t, httpReq.GetMethod(), ctx.Request().Method)
@@ -89,6 +93,8 @@ func TestNewRequestContext(t *testing.T) {
 
 func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
+
+	cf := newContextFactory()
 
 	findHeader := func(headers []*corev3.HeaderValueOption, name string) *corev3.HeaderValue {
 		for _, header := range headers {
@@ -254,7 +260,10 @@ func TestRequestContextFinalize(t *testing.T) {
 					},
 				},
 			}
-			ctx := NewRequestContext(t.Context(), checkReq)
+
+			ctx := cf.Create(t.Context(), checkReq)
+
+			defer cf.Destroy(ctx)
 
 			tc.updateContext(t, ctx)
 
@@ -269,6 +278,8 @@ func TestRequestContextFinalize(t *testing.T) {
 
 func TestRequestContextBody(t *testing.T) {
 	t.Parallel()
+
+	cf := newContextFactory()
 
 	for uc, tc := range map[string]struct {
 		ct     string
@@ -313,7 +324,7 @@ func TestRequestContextBody(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := NewRequestContext(
+			ctx := cf.Create(
 				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
@@ -325,6 +336,8 @@ func TestRequestContextBody(t *testing.T) {
 					},
 				},
 			)
+
+			defer cf.Destroy(ctx)
 
 			// WHEN
 			data := ctx.Request().Body()
@@ -339,7 +352,8 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := NewRequestContext(
+	cf := newContextFactory()
+	ctx := cf.Create(
 		t.Context(),
 		&envoy_auth.CheckRequest{
 			Attributes: &envoy_auth.AttributeContext{
@@ -352,10 +366,70 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 		},
 	)
 
+	defer cf.Destroy(ctx)
+
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 
 	// WHEN
 	captures := ctx.Request().URL.Captures
 	require.Len(t, captures, 1)
 	assert.Equal(t, "b", captures["a"])
+}
+
+func TestRequestContextReset(t *testing.T) {
+	t.Parallel()
+
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodPatch,
+					Scheme:  "https",
+					Host:    "foo.bar:8080",
+					Path:    "/test",
+					Query:   "bar=moo",
+					RawBody: []byte(`{ "content": "heimdall" }`),
+					Headers: map[string]string{"content-type": "application/json"},
+				},
+			},
+		},
+	}
+
+	md := metadata.MD{
+		"x-forwarded-for": []string{"127.0.0.1"},
+	}
+
+	// GIVEN
+	ctx := newRequestContext()
+	ctx.Init(metadata.NewIncomingContext(context.TODO(), md), checkReq)
+	ctx.Request().URL.Captures = map[string]string{"b": "a"}
+	ctx.SetError(errors.New("test error"))
+	_ = ctx.Body()
+	ctx.Outputs()["a"] = "b"
+	ctx.AddCookieForUpstream("foo", "bar")
+	ctx.AddHeaderForUpstream("bar", "foo")
+	_ = ctx.Headers()
+
+	// WHEN
+	ctx.Reset()
+
+	// THEN
+	require.Nil(t, ctx.ctx)
+	require.Nil(t, ctx.reqHeaders)
+	require.Nil(t, ctx.reqRawBody)
+	require.Nil(t, ctx.savedBody)
+	require.NoError(t, ctx.err)
+	require.NotNil(t, ctx.outputs)
+	require.Empty(t, ctx.outputs)
+	require.NotNil(t, ctx.upstreamCookies)
+	require.Empty(t, ctx.upstreamCookies)
+	require.NotNil(t, ctx.upstreamHeaders)
+	require.Empty(t, ctx.upstreamHeaders)
+	require.NotNil(t, ctx.hmdlReq)
+	require.NotNil(t, ctx.hmdlReq.URL)
+	require.Empty(t, ctx.hmdlReq.URL.URL)
+	require.Empty(t, ctx.hmdlReq.Method)
+	require.NotNil(t, ctx.hmdlReq.URL.Captures)
+	require.Empty(t, ctx.hmdlReq.URL.Captures)
+	require.Nil(t, ctx.hmdlReq.ClientIPAddresses)
 }

@@ -83,6 +83,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 			rw := httptest.NewRecorder()
 
 			rcf.EXPECT().Create(rw, req).Return(rc)
+			rcf.EXPECT().Destroy(rc)
 
 			// WHEN -> THEN expectations are met
 			proxy.ServeHTTP(rw, req)

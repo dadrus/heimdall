@@ -1,5 +1,97 @@
 # Changelog
 
+## [0.17.9](https://github.com/dadrus/heimdall/compare/v0.17.8...v0.17.9) (2026-02-07)
+
+
+### Performance Improvements
+
+* Access logger and regular logger handler implementations merged to reduce copying of data ([#3018](https://github.com/dadrus/heimdall/issues/3018)) ([852c02c](https://github.com/dadrus/heimdall/commit/852c02cdacd036e00cac7f98975001380f76e657))
+* Memory footprint for inbound requests reduced ([#3014](https://github.com/dadrus/heimdall/issues/3014)) ([2cb327b](https://github.com/dadrus/heimdall/commit/2cb327bd7a7b123981ad07c6fa7996cac8e347f0))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 14f48b2 ([#3009](https://github.com/dadrus/heimdall/issues/3009)) ([d74b825](https://github.com/dadrus/heimdall/commit/d74b8255fb1a1ad4d493027ebceb7e6d60a98c61))
+* update golang to v1.25.7 ([#3029](https://github.com/dadrus/heimdall/issues/3029)) ([79067bf](https://github.com/dadrus/heimdall/commit/79067bf86c569258c74e32226b42fe13beba43f1))
+* update google.golang.org/genproto/googleapis/rpc digest to 546029d ([#3028](https://github.com/dadrus/heimdall/issues/3028)) ([3125432](https://github.com/dadrus/heimdall/commit/312543287dd3f48e3319f02fb6acb27e59021e2b))
+* update module github.com/go-co-op/gocron/v2 to v2.19.1 ([#3010](https://github.com/dadrus/heimdall/issues/3010)) ([d3eef4e](https://github.com/dadrus/heimdall/commit/d3eef4e6231691bc1caab7948392a3a656051928))
+* update module github.com/google/cel-go to v0.27.0 ([#3015](https://github.com/dadrus/heimdall/issues/3015)) ([c2cc413](https://github.com/dadrus/heimdall/commit/c2cc413ea315e427c64d91439b52d74582d87234))
+* update module github.com/knadh/koanf/v2 to v2.3.2 ([#3005](https://github.com/dadrus/heimdall/issues/3005)) ([072706c](https://github.com/dadrus/heimdall/commit/072706c83ca06af48f91390e7a7c9a5670768266))
+* update module github.com/redis/rueidis to v1.0.71 ([#3013](https://github.com/dadrus/heimdall/issues/3013)) ([d9a262a](https://github.com/dadrus/heimdall/commit/d9a262add0ef11a56f1f171036723040f351214b))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.71 ([#3013](https://github.com/dadrus/heimdall/issues/3013)) ([d9a262a](https://github.com/dadrus/heimdall/commit/d9a262add0ef11a56f1f171036723040f351214b))
+* update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.65.0 ([#3024](https://github.com/dadrus/heimdall/issues/3024)) ([958da8c](https://github.com/dadrus/heimdall/commit/958da8cb60205302df7fab6ffc9131e1a588d953))
+* update opentelemetry-go monorepo to v1.40.0 ([#3021](https://github.com/dadrus/heimdall/issues/3021)) ([5cb3e7c](https://github.com/dadrus/heimdall/commit/5cb3e7c699e1ba10f599ce6fac63315fa36b00da))
+* update opentelemetry-go-contrib monorepo to v0.65.0 ([#3022](https://github.com/dadrus/heimdall/issues/3022)) ([9f4cc35](https://github.com/dadrus/heimdall/commit/9f4cc35c3b40398c807170ad4ba2b04007cfbe70))
+
+## [0.17.8](https://github.com/dadrus/heimdall/compare/v0.17.7...v0.17.8) (2026-01-22)
+
+
+### Performance Improvements
+
+* Access Logger refactored to use less memory ([#2982](https://github.com/dadrus/heimdall/issues/2982)) ([f659968](https://github.com/dadrus/heimdall/commit/f6599682936fd40ff183f95e658ffbe0aa7ff1b9))
+* Memory footprint for capturing active requests metrics reduced ([#2984](https://github.com/dadrus/heimdall/issues/2984)) ([b5c6f19](https://github.com/dadrus/heimdall/commit/b5c6f1976681cc59aea0edf6fd4200e925da3e06))
+
+
+### Bug Fixes
+
+* `warn` log level can be configured ([#2996](https://github.com/dadrus/heimdall/issues/2996)) ([45ec803](https://github.com/dadrus/heimdall/commit/45ec803eb98481670b2a6b0de0d2da9b507586e2))
+* Automatic rollout of replicas if there is a change in the ConfigMap ([#2994](https://github.com/dadrus/heimdall/issues/2994)) ([40243a0](https://github.com/dadrus/heimdall/commit/40243a0033e29dabe8654ddac1dc5c08f6565736))
+* Request duration entry in access log is now positive ([#2980](https://github.com/dadrus/heimdall/issues/2980)) ([c50cc8f](https://github.com/dadrus/heimdall/commit/c50cc8f218948995181fdcde1dacbb195a77504e))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 904502c ([#2976](https://github.com/dadrus/heimdall/issues/2976)) ([4ce6561](https://github.com/dadrus/heimdall/commit/4ce6561605b466f77e74933c9e3234fd730765ea))
+* update golang to v1.25.6 ([#2989](https://github.com/dadrus/heimdall/issues/2989)) ([d9e7173](https://github.com/dadrus/heimdall/commit/d9e7173a355a98f2383cb6abc6b5ee43231daa49))
+* update google.golang.org/genproto/googleapis/rpc digest to b8f7ae3 ([#2987](https://github.com/dadrus/heimdall/issues/2987)) ([1fe85a6](https://github.com/dadrus/heimdall/commit/1fe85a637801d69cd8a6da9af745aef9364b47d6))
+* update module github.com/go-viper/mapstructure/v2 to v2.5.0 ([#2972](https://github.com/dadrus/heimdall/issues/2972)) ([990f6f6](https://github.com/dadrus/heimdall/commit/990f6f6a150f19fc1b84a2862d8185653557f3c3))
+
+## [0.17.7](https://github.com/dadrus/heimdall/compare/v0.17.6...v0.17.7) (2026-01-09)
+
+
+### Performance Improvements
+
+* Reduction of CPU and memory footprint ([#2955](https://github.com/dadrus/heimdall/issues/2955)) ([2278df6](https://github.com/dadrus/heimdall/commit/2278df6b9c2a6d787627fc200b04c83dc22381c4))
+
+
+### Bug Fixes
+
+* Request duration metric resolution adjusted for sub-millisecond latencies ([#2954](https://github.com/dadrus/heimdall/issues/2954)) ([a8e1cbc](https://github.com/dadrus/heimdall/commit/a8e1cbcbb8a81b485e380133846e22f63d9062ae))
+
+
+### Documentation
+
+* Kubernetes examples updated to include working observability stack and a Grafana dashboard ([#2958](https://github.com/dadrus/heimdall/issues/2958)) ([6a6d4bb](https://github.com/dadrus/heimdall/commit/6a6d4bb177dc6a44b18e950a092e9e30ee20f694))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 0a764e5 ([#2945](https://github.com/dadrus/heimdall/issues/2945)) ([9c213ab](https://github.com/dadrus/heimdall/commit/9c213abf2b8b63cee96ac807f15c317042b1c1d7))
+* update kubernetes packages to v0.35.0 ([#2942](https://github.com/dadrus/heimdall/issues/2942)) ([7e0bc65](https://github.com/dadrus/heimdall/commit/7e0bc6515a105b124a149d40ec06af41c39f9121))
+* update module github.com/go-co-op/gocron/v2 to v2.19.0 ([#2935](https://github.com/dadrus/heimdall/issues/2935)) ([34cadef](https://github.com/dadrus/heimdall/commit/34cadefe388b686296e0b7528af81dea04f0f33b))
+* update module github.com/go-playground/validator/v10 to v10.30.1 ([#2947](https://github.com/dadrus/heimdall/issues/2947)) ([298040c](https://github.com/dadrus/heimdall/commit/298040c63c560b3b6af61ecff5f5f4c13c31ef19))
+* update module github.com/redis/rueidis to v1.0.70 ([#2950](https://github.com/dadrus/heimdall/issues/2950)) ([960f031](https://github.com/dadrus/heimdall/commit/960f031ec39ca63adcd3c792a5217db5e6811162))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.70 ([#2951](https://github.com/dadrus/heimdall/issues/2951)) ([3df1f08](https://github.com/dadrus/heimdall/commit/3df1f083463948518dc563955f04f21997a93f65))
+* update module google.golang.org/grpc to v1.78.0 ([#2946](https://github.com/dadrus/heimdall/issues/2946)) ([3bf3a82](https://github.com/dadrus/heimdall/commit/3bf3a821668b69f3c33ebfae5b81ae3f28feebe0))
+* update module google.golang.org/protobuf to v1.36.11 ([#2933](https://github.com/dadrus/heimdall/issues/2933)) ([a5fe579](https://github.com/dadrus/heimdall/commit/a5fe579ea0d232f750efcec3f3e443f1bd459cbd))
+
+## [0.17.6](https://github.com/dadrus/heimdall/compare/v0.17.5...v0.17.6) (2025-12-12)
+
+
+### Bug Fixes
+
+* Ensure watcher reacts to atomic file updates in Kubernetes mounts ([#2928](https://github.com/dadrus/heimdall/issues/2928)) ([4800b05](https://github.com/dadrus/heimdall/commit/4800b05fe566d080ac9f4f7ca694fa38271af518))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 72e0076 ([#2925](https://github.com/dadrus/heimdall/issues/2925)) ([f5d6312](https://github.com/dadrus/heimdall/commit/f5d631260f360ab2b1f3222f7ebfeab4d38ca9db))
+* update kubernetes packages to v0.34.3 ([#2924](https://github.com/dadrus/heimdall/issues/2924)) ([5e38f33](https://github.com/dadrus/heimdall/commit/5e38f33ab95a7a7c4638bd2f963bf4005ff6f136))
+* update module github.com/redis/rueidis to v1.0.69 ([#2914](https://github.com/dadrus/heimdall/issues/2914)) ([5078b0c](https://github.com/dadrus/heimdall/commit/5078b0c524ac2bc67462183d580e4c742e6bae09))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.69 ([#2914](https://github.com/dadrus/heimdall/issues/2914)) ([5078b0c](https://github.com/dadrus/heimdall/commit/5078b0c524ac2bc67462183d580e4c742e6bae09))
+* update opentelemetry-go monorepo to v1.39.0 ([#2916](https://github.com/dadrus/heimdall/issues/2916)) ([c4aaeee](https://github.com/dadrus/heimdall/commit/c4aaeeea593aa0517cc5c3b245414294c90e3736))
+* update opentelemetry-go-contrib monorepo to v0.64.0 ([#2917](https://github.com/dadrus/heimdall/issues/2917)) ([f19f2ed](https://github.com/dadrus/heimdall/commit/f19f2edbf55d4898eb2be3b9f2aa246d6af24cb7))
+
 ## [0.17.5](https://github.com/dadrus/heimdall/compare/v0.17.4...v0.17.5) (2025-12-05)
 
 Even though this is a regular patch release, there are two noticeable updates:
@@ -33,7 +125,6 @@ Even though this is a regular patch release, there are two noticeable updates:
 * update module github.com/spf13/cobra to v1.10.2 ([#2906](https://github.com/dadrus/heimdall/issues/2906)) ([ee05617](https://github.com/dadrus/heimdall/commit/ee0561721cacff75316403b717d5e7d59dcee73c))
 * update module gocloud.dev to v0.44.0 ([#2896](https://github.com/dadrus/heimdall/issues/2896)) ([3533ca7](https://github.com/dadrus/heimdall/commit/3533ca72acb1483533cda60deb90bc94fff81b5b))
 * update module google.golang.org/grpc to v1.77.0 ([#2880](https://github.com/dadrus/heimdall/issues/2880)) ([805261d](https://github.com/dadrus/heimdall/commit/805261d2f25938409b2c9982bef21d609435155a))
-
 
 ## [0.17.4](https://github.com/dadrus/heimdall/compare/v0.17.3...v0.17.4) (2025-11-10)
 
@@ -83,7 +174,6 @@ Even though this is a regular patch release, there are two noticeable updates:
 * update module github.com/redis/rueidis/rueidisotel to v1.0.67 ([#2801](https://github.com/dadrus/heimdall/issues/2801)) ([3c146b3](https://github.com/dadrus/heimdall/commit/3c146b365ba14f751ee72e0f36449f672e28643e))
 * update module google.golang.org/grpc to v1.76.0 ([#2793](https://github.com/dadrus/heimdall/issues/2793)) ([c8a57b1](https://github.com/dadrus/heimdall/commit/c8a57b10a9c1001d32d509b1956c0650fa720f70))
 * update module google.golang.org/protobuf to v1.36.10 ([#2787](https://github.com/dadrus/heimdall/issues/2787)) ([1e4b5df](https://github.com/dadrus/heimdall/commit/1e4b5dfd10e9ee84329210069ba09b537ae25883))
-
 
 ## [0.17.2](https://github.com/dadrus/heimdall/compare/v0.17.1...v0.17.2) (2025-09-21)
 

@@ -96,7 +96,7 @@ func registerTranslations(validate *validator.Validate, trans ut.Translator) err
 					translation, err = ut.T("gt-items", fe.Field(), ct)
 
 				case reflect.Struct:
-					if fe.Type() != reflect.TypeFor[time.Duration]() {
+					if fe.Type() != reflect.TypeFor[time.Time]() {
 						goto END
 					}
 

@@ -18,10 +18,10 @@ package grpcv3
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -35,25 +35,62 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
+type contextFactory struct {
+	pool *sync.Pool
+}
+
+func (cf *contextFactory) Create(ctx context.Context, req *envoy_auth.CheckRequest) *RequestContext {
+	rc := cf.pool.Get().(*RequestContext) //nolint: forcetypeassert
+
+	rc.Init(ctx, req)
+
+	return rc
+}
+
+func (cf *contextFactory) Destroy(rc *RequestContext) {
+	rc.Reset()
+
+	cf.pool.Put(rc)
+}
+
+func newContextFactory() *contextFactory {
+	return &contextFactory{
+		pool: &sync.Pool{New: func() any {
+			return newRequestContext()
+		}},
+	}
+}
+
 type RequestContext struct {
 	ctx             context.Context // nolint: containedctx
-	ips             []string
-	reqMethod       string
 	reqHeaders      map[string]string
-	reqURL          *heimdall.URL
-	reqBody         string
 	reqRawBody      []byte
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	err             error
+	hmdlReq         *heimdall.Request
 
 	// the following properties are created lazy and cached
-
 	savedBody any
 	outputs   map[string]any
 }
 
-func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest) *RequestContext {
+func newRequestContext() *RequestContext {
+	rc := &RequestContext{
+		upstreamHeaders: make(http.Header, 6),
+		upstreamCookies: make(map[string]string, 4),
+		outputs:         make(map[string]any, 10),
+	}
+
+	rc.hmdlReq = &heimdall.Request{
+		RequestFunctions: rc,
+		URL:              &heimdall.URL{},
+	}
+
+	return rc
+}
+
+func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) {
 	var clientIPs []string
 
 	if rmd, ok := metadata.FromIncomingContext(ctx); ok {
@@ -63,25 +100,37 @@ func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest) *Reque
 		}
 	}
 
-	return &RequestContext{
-		ctx:        ctx,
-		ips:        clientIPs,
-		reqMethod:  req.GetAttributes().GetRequest().GetHttp().GetMethod(),
-		reqHeaders: canonicalizeHeaders(req.GetAttributes().GetRequest().GetHttp().GetHeaders()),
-		reqURL: &heimdall.URL{
-			URL: url.URL{
-				Scheme:   req.GetAttributes().GetRequest().GetHttp().GetScheme(),
-				Host:     req.GetAttributes().GetRequest().GetHttp().GetHost(),
-				Path:     req.GetAttributes().GetRequest().GetHttp().GetPath(),
-				RawQuery: req.GetAttributes().GetRequest().GetHttp().GetQuery(),
-				Fragment: req.GetAttributes().GetRequest().GetHttp().GetFragment(),
-			},
-		},
-		reqBody:         req.GetAttributes().GetRequest().GetHttp().GetBody(),
-		reqRawBody:      req.GetAttributes().GetRequest().GetHttp().GetRawBody(),
-		upstreamHeaders: make(http.Header),
-		upstreamCookies: make(map[string]string),
+	httpReq := req.GetAttributes().GetRequest().GetHttp()
+
+	r.ctx = ctx
+	r.reqHeaders = canonicalizeHeaders(httpReq.GetHeaders())
+	r.reqRawBody = httpReq.GetRawBody()
+	r.hmdlReq.Method = httpReq.GetMethod()
+	r.hmdlReq.URL.URL = url.URL{
+		Scheme:   httpReq.GetScheme(),
+		Host:     httpReq.GetHost(),
+		Path:     httpReq.GetPath(),
+		RawQuery: httpReq.GetQuery(),
+		Fragment: httpReq.GetFragment(),
 	}
+	r.hmdlReq.ClientIPAddresses = clientIPs
+}
+
+func (r *RequestContext) Reset() {
+	r.ctx = nil
+	r.reqHeaders = nil
+	r.reqRawBody = nil
+	r.savedBody = nil
+	r.err = nil
+
+	clear(r.upstreamHeaders)
+	clear(r.upstreamCookies)
+	clear(r.outputs)
+
+	clear(r.hmdlReq.URL.Captures)
+	r.hmdlReq.URL.URL = url.URL{}
+	r.hmdlReq.Method = ""
+	r.hmdlReq.ClientIPAddresses = nil
 }
 
 func canonicalizeHeaders(headers map[string]string) map[string]string {
@@ -94,15 +143,7 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 	return result
 }
 
-func (r *RequestContext) Request() *heimdall.Request {
-	return &heimdall.Request{
-		RequestFunctions:  r,
-		Method:            r.reqMethod,
-		URL:               r.reqURL,
-		ClientIPAddresses: r.ips,
-	}
-}
-
+func (r *RequestContext) Request() *heimdall.Request { return r.hmdlReq }
 func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
 func (r *RequestContext) Header(name string) string  { return r.reqHeaders[name] }
 
@@ -148,14 +189,7 @@ func (r *RequestContext) SetError(err error)                      { r.err = err 
 func (r *RequestContext) Error() error                            { return r.err }
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
-
-func (r *RequestContext) Outputs() map[string]any {
-	if r.outputs == nil {
-		r.outputs = make(map[string]any)
-	}
-
-	return r.outputs
-}
+func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
 
 func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if r.err != nil {
@@ -184,7 +218,7 @@ func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 		cidx := 0
 
 		for k, v := range r.upstreamCookies {
-			cookies[cidx] = fmt.Sprintf("%s=%s", k, v)
+			cookies[cidx] = k + "=" + v
 			cidx++
 		}
 

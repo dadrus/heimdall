@@ -18,22 +18,20 @@ package otelmetrics
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
+	"go.opentelemetry.io/otel/semconv/v1.38.0/httpconv"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 const (
 	instrumentationName = "github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
-
-	requestsActive = "http.server.active_requests"
 )
 
 func New(opts ...Option) func(http.Handler) http.Handler {
@@ -41,13 +39,20 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 
 	meter := conf.provider.Meter(instrumentationName)
 
-	activeRequests, err := meter.Float64UpDownCounter(
-		requestsActive,
-		metric.WithDescription("Measures the number of concurrent HTTP requests that are currently in-flight."),
-		metric.WithUnit("{request}"),
-	)
+	activeRequests, err := httpconv.NewServerActiveRequests(meter)
 	if err != nil {
 		panic(err)
+	}
+
+	pool := sync.Pool{
+		New: func() any {
+			// actually, we add len(conf.attributes) + 5 (serverRequestMetrics & and conf.subsystem),
+			// but, since, we retrieve further attributes from the labeler, added by other OTEL components,
+			// we need to allocate more space. The additional 15 is a conservative value to avoid reallocations
+			attrs := make([]attribute.KeyValue, 0, len(conf.attributes)+20)
+
+			return &attrs
+		},
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -63,26 +68,30 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 				labeler.Add(conf.subsystem)
 			}
 
-			attributes := serverRequestMetrics(conf.server, req)
-			attributes = append(labeler.Get(), attributes...)
-			attributes = append(attributes, conf.attributes...)
+			pkv := pool.Get().(*[]attribute.KeyValue) //nolint: forcetypeassert
+			attrs := *pkv
 
-			opt := metric.WithAttributes(attributes...)
+			defer func() {
+				*pkv = attrs[:0]
 
-			activeRequests.Add(req.Context(), 1, opt)
-
-			defer func() { //nolint:contextcheck
-				activeRequests.Add(req.Context(), -1, opt)
+				pool.Put(pkv)
 			}()
+
+			attrs = addRequestMetrics(attrs, conf.server, req)
+			attrs = append(labeler.Get(), attrs...)
+			attrs = append(attrs, conf.attributes...)
+
+			opt := metric.WithAttributeSet(attribute.NewSet(attrs...))
+
+			activeRequests.Inst().Add(req.Context(), 1, opt)
+			defer activeRequests.Inst().Add(req.Context(), -1, opt)
 
 			next.ServeHTTP(rw, req)
 		})
 	}
 }
 
-func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue {
-	attrsCount := 4 // Method, scheme, proto, and host name.
-
+func addRequestMetrics(attrs []attribute.KeyValue, server string, req *http.Request) []attribute.KeyValue {
 	var (
 		host string
 		port int
@@ -99,16 +108,15 @@ func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue
 	}
 
 	hostPort := requiredHTTPPort(req.TLS != nil, port)
-	if hostPort > 0 {
-		attrsCount++
-	}
 
-	attrs := make([]attribute.KeyValue, 0, attrsCount)
 	attrs = append(attrs, methodMetric(req.Method))
-	attrs = append(attrs, x.IfThenElse(req.TLS != nil, semconv.URLScheme("https"), semconv.URLScheme("http")))
-	attrs = append(attrs, semconv.NetworkProtocolName("http"))
-	attrs = append(attrs, semconv.NetworkProtocolVersion(strconv.Itoa(req.ProtoMajor)+"."+strconv.Itoa(req.ProtoMinor)))
 	attrs = append(attrs, semconv.ServerAddress(host))
+
+	if req.TLS != nil {
+		attrs = append(attrs, semconv.URLScheme("https"))
+	} else {
+		attrs = append(attrs, semconv.URLScheme("http"))
+	}
 
 	if hostPort > 0 {
 		attrs = append(attrs, semconv.ServerPort(hostPort))

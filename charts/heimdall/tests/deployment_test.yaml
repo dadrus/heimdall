@@ -89,12 +89,11 @@ tests:
             app.kubernetes.io/version: 1.0.0
             helm.sh/chart: heimdall-2.0.0
 
-  - it: should set checksum/config annotation by default
+  - it: should not set annotations by default
     template: deployment.yaml
     asserts:
-      - matchRegex:
-          path: metadata.annotations.checksum/config
-          pattern: "[a-f0-9]"
+      - isNullOrEmpty:
+          path: metadata.annotations
 
   - it: should set custom annotations if provided
     template: deployment.yaml
@@ -103,14 +102,11 @@ tests:
         foo: bar
         bar: foo
     asserts:
-      - isSubset:
+      - equal:
           path: metadata.annotations
-          content:
+          value:
             foo: bar
             bar: foo
-      - matchRegex:
-          path: metadata.annotations.checksum/config
-          pattern: "[a-f0-9]"
 
   - it: pod label selector is configured with the required labels and values
     template: deployment.yaml
@@ -175,11 +171,12 @@ tests:
       - notExists:
           path: spec.replicas
 
-  - it: template metadata annotations should not be set by default
+  - it: should set checksum/config annotation by default on pod template metadata
     template: deployment.yaml
     asserts:
-      - isNullOrEmpty:
-          path: spec.template.metadata.annotations
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: |
       should set prometheus scraping annotations on template metadata if 
@@ -191,12 +188,15 @@ tests:
       env:
         OTEL_METRICS_EXPORTER: prometheus
     asserts:
-      - equal:
+      - isSubset:
           path: spec.template.metadata.annotations
-          value:
+          content:
             prometheus.io/scrape: "true"
             prometheus.io/path: "/metrics"
             prometheus.io/port: "9464"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: |
       should set prometheus scraping annotations on template metadata if 
@@ -212,12 +212,15 @@ tests:
       env.OTEL_METRICS_EXPORTER: prometheus
       podMonitor.enabled: false
     asserts:
-      - equal:
+      - isSubset:
           path: spec.template.metadata.annotations
-          value:
+          content:
             prometheus.io/scrape: "true"
             prometheus.io/path: "/metrics"
             prometheus.io/port: "9464"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: should not set prometheus scraping annotations if all conditions are satisfied, but metrics are disabled
     template: deployment.yaml
@@ -225,8 +228,18 @@ tests:
       env.OTEL_METRICS_EXPORTER: prometheus
       metrics.enabled: false
     asserts:
-      - isNullOrEmpty:
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
+      - isNotSubset:
           path: spec.template.metadata.annotations
+          content:
+            prometheus.io/scrape: "true"
+            prometheus.io/path: "/metrics"
+            prometheus.io/port: "9464"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: prometheus exporter port can be customized
     template: deployment.yaml
@@ -235,23 +248,29 @@ tests:
         OTEL_METRICS_EXPORTER: prometheus
         OTEL_EXPORTER_PROMETHEUS_PORT: 8888
     asserts:
-      - equal:
+      - isSubset:
           path: spec.template.metadata.annotations
-          value:
+          content:
             prometheus.io/scrape: "true"
             prometheus.io/path: "/metrics"
             prometheus.io/port: "8888"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: phlare annotations should be set if profiling is enabled
     template: deployment.yaml
     set:
       profiling.enabled: true
     asserts:
-      - equal:
+      - isSubset:
           path: spec.template.metadata.annotations
-          value:
+          content:
             phlare.grafana.com/scrape: "true"
             phlare.grafana.com/port: "10251"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: port for phlare scraping can be customized
     template: deployment.yaml
@@ -259,11 +278,14 @@ tests:
       profiling.enabled: true
       profiling.port: 8888
     asserts:
-      - equal:
+      - isSubset:
           path: spec.template.metadata.annotations
-          value:
+          content:
             phlare.grafana.com/scrape: "true"
             phlare.grafana.com/port: "8888"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: should set custom pod annotations if provided
     template: deployment.yaml
@@ -271,10 +293,13 @@ tests:
       deployment.pod.annotations:
         foo: bar
     asserts:
-      - equal:
+      - isSubset:
           path: spec.template.metadata.annotations
-          value:
+          content:
             foo: bar
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: profiling, prometheus and custom pod annotations can be used together
     template: deployment.yaml
@@ -287,15 +312,18 @@ tests:
         OTEL_METRICS_EXPORTER: prometheus
         OTEL_EXPORTER_PROMETHEUS_PORT: 9999
     asserts:
-      - equal:
+      - isSubset:
           path: spec.template.metadata.annotations
-          value:
+          content:
             foo: bar
             phlare.grafana.com/port: "8888"
             phlare.grafana.com/scrape: "true"
             prometheus.io/path: /metrics
             prometheus.io/port: "9999"
             prometheus.io/scrape: "true"
+      - matchRegex:
+          path: spec.template.metadata.annotations.checksum/config
+          pattern: "[a-f0-9]"
 
   - it: imagePullSecrets should be empty by default
     template: deployment.yaml
