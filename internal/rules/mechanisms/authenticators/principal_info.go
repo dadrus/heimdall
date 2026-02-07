@@ -24,9 +24,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type AttributeRefs map[string]string
+
 type PrincipalInfo struct {
-	IDFrom         string            `mapstructure:"id"         validate:"required"`
-	AttributesFrom map[string]string `mapstructure:"attributes"`
+	IDFrom         string        `mapstructure:"id"         validate:"required"`
+	AttributesFrom AttributeRefs `mapstructure:"attributes"`
 }
 
 func (s *PrincipalInfo) CreatePrincipal(rawData []byte) (*identity.Principal, error) {
