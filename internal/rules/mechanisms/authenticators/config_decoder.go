@@ -41,6 +41,7 @@ func decodeConfig(app app.Context, input map[string]any, output any) error {
 			oauth2.DecodeScopesMatcherHookFunc(),
 			truststore.DecodeTrustStoreHookFunc(),
 			template.DecodeTemplateHookFunc(),
+			DecodeAttributeRefs(),
 		),
 	)
 
