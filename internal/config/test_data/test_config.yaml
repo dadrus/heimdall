@@ -154,8 +154,10 @@ mechanisms:
         forward_cookies:
           - ory_kratos_session
         principal:
-          attributes: "@this"
-          id: "identity.id"
+          attributes:
+            email: identity.email
+            name: identity.user_name
+          id: identity.id
         cache_ttl: 10m
         session_lifespan:
           active: active

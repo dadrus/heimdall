@@ -86,7 +86,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				t.Helper()
 
 				s.IDFrom = "string_slice.1"
-				s.AttributesFrom = "complex.nested"
+				s.AttributesFrom = map[string]string{"": "complex.nested"}
 			},
 			assert: func(t *testing.T, err error, sub *identity.Principal) {
 				t.Helper()
@@ -102,12 +102,54 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				assert.Equal(t, attrs, sub.Attributes)
 			},
 		},
+		"principal is extracted with multiple custom attributes set": {
+			configure: func(t *testing.T, s *PrincipalInfo) {
+				t.Helper()
+
+				s.IDFrom = "string_slice.1"
+				s.AttributesFrom = map[string]string{
+					"a": "some_string_attribute",
+					"b": "complex.array",
+					"c": "complex.nested.val",
+				}
+			},
+			assert: func(t *testing.T, err error, sub *identity.Principal) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "val2", sub.ID)
+
+				assert.Len(t, sub.Attributes, 3)
+				assert.Equal(t, "attr", sub.Attributes["a"])
+				assert.ElementsMatch(t, sub.Attributes["b"], []float64{1, 2, 3})
+				assert.Equal(t, true, sub.Attributes["c"])
+			},
+		},
+		"principal is extracted with single custom attributes set": {
+			configure: func(t *testing.T, s *PrincipalInfo) {
+				t.Helper()
+
+				s.IDFrom = "string_slice.1"
+				s.AttributesFrom = map[string]string{
+					"a": "some_string_attribute",
+				}
+			},
+			assert: func(t *testing.T, err error, sub *identity.Principal) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "val2", sub.ID)
+
+				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "attr", sub.Attributes["a"])
+			},
+		},
 		"attributes could no be extracted": {
 			configure: func(t *testing.T, s *PrincipalInfo) {
 				t.Helper()
 
 				s.IDFrom = "identity"
-				s.AttributesFrom = "foobar"
+				s.AttributesFrom = map[string]string{"": "foobar"}
 			},
 			assert: func(t *testing.T, err error, _ *identity.Principal) {
 				t.Helper()

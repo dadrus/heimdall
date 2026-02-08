@@ -92,7 +92,9 @@ mechanisms:
           audience:
             - bla
         principal:
-          attributes: "@this"
+          attributes:
+            foo: bar
+            bar: foo
           id: sub
     - id: introspection_authenticator2
       type: oauth2_introspection

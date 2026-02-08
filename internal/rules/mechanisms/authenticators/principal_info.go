@@ -24,36 +24,76 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type AttributeRefs map[string]string
+
 type PrincipalInfo struct {
-	IDFrom         string `mapstructure:"id"         validate:"required"`
-	AttributesFrom string `mapstructure:"attributes"`
+	IDFrom         string        `mapstructure:"id"         validate:"required"`
+	AttributesFrom AttributeRefs `mapstructure:"attributes"`
 }
 
 func (s *PrincipalInfo) CreatePrincipal(rawData []byte) (*identity.Principal, error) {
-	attributesFrom := "@this"
-	if len(s.AttributesFrom) != 0 {
-		attributesFrom = s.AttributesFrom
-	}
-
 	subjectID := gjson.GetBytes(rawData, s.IDFrom).String()
 	if len(subjectID) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"could not extract principal identifier using '%s' template", s.IDFrom)
 	}
 
-	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
+	principal := identity.Principal{
+		ID: subjectID,
+	}
+
+	switch {
+	case len(s.AttributesFrom) == 0:
+		attrs, err := extractEntry(rawData, "@this", true)
+		if err != nil {
+			return nil, err
+		}
+
+		principal.Attributes = attrs.(map[string]any) //nolint: forcetypeassert
+	case len(s.AttributesFrom) == 1:
+		for key, value := range s.AttributesFrom {
+			attrs, err := extractEntry(rawData, value, len(key) == 0)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(key) == 0 {
+				principal.Attributes = attrs.(map[string]any) //nolint: forcetypeassert
+			} else {
+				principal.Attributes = map[string]any{key: attrs}
+			}
+
+			break
+		}
+	default:
+		principal.Attributes = make(map[string]any, len(s.AttributesFrom))
+		for key, value := range s.AttributesFrom {
+			attrs, err := extractEntry(rawData, value, false)
+			if err != nil {
+				return nil, err
+			}
+
+			principal.Attributes[key] = attrs
+		}
+	}
+
+	return &principal, nil
+}
+
+func extractEntry(data []byte, path string, mapExpected bool) (any, error) {
+	attributes := gjson.GetBytes(data, path).Value()
 	if attributes == nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"could not extract attributes using '%s' template", attributesFrom)
+			"could not extract attributes using '%s' template", path)
 	}
 
-	attrs, ok := attributes.(map[string]any)
-	if !ok {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unexpected response from gjson template")
+	if mapExpected {
+		_, ok := attributes.(map[string]any)
+		if !ok {
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"unexpected type of the extracted attribute(s)")
+		}
 	}
 
-	return &identity.Principal{
-		ID:         subjectID,
-		Attributes: attrs,
-	}, nil
+	return attributes, nil
 }
