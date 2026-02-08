@@ -158,8 +158,10 @@ mechanisms:
       forward_cookies:
         - ory_kratos_session
       principal:
-        attributes: "@this"
         id: "identity.id"
+        attributes:
+          email: "identity.traits.email"
+          username: "identity.traits.user_name"
   - id: hydra_authenticator
     type: oauth2_introspection
     config:
@@ -188,8 +190,8 @@ mechanisms:
         audience:
           - bla
       principal:
-        attributes: "@this"
         id: "sub"
+        attributes: "@this"
   - id: jwt_authenticator
     type: jwt
     config:
@@ -226,8 +228,8 @@ mechanisms:
         allowed_algorithms:
           - RS256
       principal:
+        id: "sub"
         attributes: "@this"
-        id: "identity.id"
       cache_ttl: 5m
 
   authorizers:

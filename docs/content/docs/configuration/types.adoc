@@ -990,15 +990,15 @@ signer:
 
 == Principal
 
-This configuration type enables extraction of principal information from responses received by Heimdall from authentication services. Following properties are available.
+This configuration type enables extraction of principal information from responses received by heimdall from authentication services. Following properties are available.
 
 * *`id`*: _string_ (mandatory)
 +
 A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the id of the principal in the JSON object.
 
-* *`attributes`*: _string_ (optional)
+* *`attributes`*: _string or map_ (optional)
 +
-A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the principal in the JSON object. Defaults to `@this`.
+If this property is defined as a single string, it must be a https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the principal in the JSON object. Defaults to `@this`. Otherwise, if it defined as a key-value map, the values of that map must be https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] expressions.
 
 .Extracting principal id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response.
 ====
@@ -1008,20 +1008,23 @@ This example shows how to extract the principal id from an https://tools.ietf.or
 [source, yaml]
 ----
 id: sub
-attributes: @this
+attributes: "@this"
 ----
 
 Setting `attributes` was actually not required, as `@this` would be set by default anyway.
 ====
 
-.Extracting principal id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
+.Extracting principal from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
 ====
 
-This example shows how to extract the principal id from the https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response and set the principal attributes to the entire response. `attributes` is not configured, so default is used.
+In this example the `id` is set to the value of the `identity.id` property from the response. Additionally, some of the present attributes are mapped to particular names.
 
 [source, yaml]
 ----
 id: identity.id
+attributes:
+  email: identity.traits.email
+  username: identity.traits.user
 ----
 ====
 
