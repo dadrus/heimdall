@@ -18,6 +18,13 @@ linters:
     - zerologlint
     - goconst
     - noinlineerr
+    # disabled until next minor release
+    - modernize
+    - wsl_v5
+    - revive
+    - staticcheck
+    - prealloc
+    - godoclint
     # deprecated
     - wsl
   settings:

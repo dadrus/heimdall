@@ -246,8 +246,6 @@ github.com/instana/go-otel-exporter v1.0.0 h1:s7PPvvB8xcSRNaXpgjYpBQWnFZRAqGGJZP
 github.com/instana/go-otel-exporter v1.0.0/go.mod h1:chO0kaNOIV+bhh+eYRBiSShhuOHMV6HHQYgVo/7xxAs=
 github.com/jellydator/ttlcache/v3 v3.4.0 h1:YS4P125qQS0tNhtL6aeYkheEaB/m8HCqdMMP4mnWdTY=
 github.com/jellydator/ttlcache/v3 v3.4.0/go.mod h1:Hw9EgjymziQD3yGsQdf1FqFdpp7YjFMd4Srg5EJlgD4=
-github.com/johannesboyne/gofakes3 v0.0.0-20250916175020-ebf3e50324d3 h1:2713fQZ560HxoNVgfJH41GKzjMjIG+DW4hH6nYXfXW8=
-github.com/johannesboyne/gofakes3 v0.0.0-20250916175020-ebf3e50324d3/go.mod h1:S4S9jGBVlLri0OeqrSSbCGG5vsI6he06UJyuz1WT1EE=
 github.com/johannesboyne/gofakes3 v0.0.0-20260208201424-4c385a1f6a73 h1:0xkWp+RMC2ImuKacheMHEAtrbOTMOa0kYkxyzM1Z/II=
 github.com/johannesboyne/gofakes3 v0.0.0-20260208201424-4c385a1f6a73/go.mod h1:S4S9jGBVlLri0OeqrSSbCGG5vsI6he06UJyuz1WT1EE=
 github.com/jonboulle/clockwork v0.5.0 h1:Hyh9A8u51kptdkR+cqRpT1EebBwTn1oK9YfGYbdFz6I=
