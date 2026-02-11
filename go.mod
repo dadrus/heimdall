@@ -1,6 +1,6 @@
 module github.com/dadrus/heimdall
 
-go 1.25.7
+go 1.26.0
 
 require (
 	github.com/DmitriyVTitov/size v1.5.0
