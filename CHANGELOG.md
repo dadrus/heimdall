@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.18.0](https://github.com/dadrus/heimdall/compare/v0.17.0...v0.18.0) (2026-02-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* `host` matching configuration in rules simplified ([#2772](https://github.com/dadrus/heimdall/issues/2772))
+* Helm chart configuration related to CRD and admission controller settings changed ([#2772](https://github.com/dadrus/heimdall/issues/2772))
+* `PS256` dropped from the algorithms list allowed by default for signature verification purposes to better align with existing recommendations ([#2830](https://github.com/dadrus/heimdall/issues/2830))
+* `generic` contextualizer no longer supports `continue_pipeline_on_error` config property ([#2829](https://github.com/dadrus/heimdall/issues/2829))
+* `subject` configuration property defined for several authenticator mechanisms renamed to `principal` ([#2825](https://github.com/dadrus/heimdall/issues/2825))
+* `validate rules` command renamed to `validate ruleset` ([#2812](https://github.com/dadrus/heimdall/issues/2812))
+* Support for `glob` and `regex` host type expressions removed ([#2666](https://github.com/dadrus/heimdall/issues/2666))
+* `allow_fallback_on_error` property removed from authenticators ([#2665](https://github.com/dadrus/heimdall/issues/2665))
+* `backtracking_enabled` removed from the regular rule definition ([#2662](https://github.com/dadrus/heimdall/issues/2662))
+
+### Features
+
+* `Subject` object redesigned to be a composition of `Principal` objects ([#2827](https://github.com/dadrus/heimdall/issues/2827)) ([9199e20](https://github.com/dadrus/heimdall/commit/9199e2012a19334e0b65038b8321d153cb3b001a))
+* Better error responses for `validate config` command ([#2813](https://github.com/dadrus/heimdall/issues/2813)) ([7968008](https://github.com/dadrus/heimdall/commit/796800836e55705c3b4ce6c6c28d1bef724b4502))
+* Better error responses for the `serve` subcommands ([#2814](https://github.com/dadrus/heimdall/issues/2814)) ([5aec9df](https://github.com/dadrus/heimdall/commit/5aec9df3eacbb3c42bd7ef0b6aca9d3ae1f90428))
+* Fine-grained principal attribute extraction support ([#3037](https://github.com/dadrus/heimdall/issues/3037)) ([dcb7020](https://github.com/dadrus/heimdall/commit/dcb702003c8355c37119af2e9169ddfd2964130d))
+* Helm chart extended with `PodMonitor` support ([#2771](https://github.com/dadrus/heimdall/issues/2771)) ([434d65b](https://github.com/dadrus/heimdall/commit/434d65b9badb69f83c8f82e6b27cb1d7c520109c))
+* New `convert ruleset` command to convert rulesets between versions ([#2772](https://github.com/dadrus/heimdall/issues/2772)) ([f7a0fdf](https://github.com/dadrus/heimdall/commit/f7a0fdf4a4daa907b97b00913276c46129099236))
+* New kubernetes webhook for conversion of `RuleSet` resources between versions ([#2772](https://github.com/dadrus/heimdall/issues/2772)) ([f7a0fdf](https://github.com/dadrus/heimdall/commit/f7a0fdf4a4daa907b97b00913276c46129099236))
+* Old `v1alpha1`, `v1alpha2`, and `v1alpha3` ruleset schemas added to the CRD ([#2772](https://github.com/dadrus/heimdall/issues/2772)) ([f7a0fdf](https://github.com/dadrus/heimdall/commit/f7a0fdf4a4daa907b97b00913276c46129099236))
+* Support authenticating multiple principals in a single request ([#2849](https://github.com/dadrus/heimdall/issues/2849)) ([a1b11d6](https://github.com/dadrus/heimdall/commit/a1b11d6f5aef51b775e70e175e5086159edbe5f6))
+
+
+### Code Refactorings
+
+* `allow_fallback_on_error` property removed from authenticators ([#2665](https://github.com/dadrus/heimdall/issues/2665)) ([73496bf](https://github.com/dadrus/heimdall/commit/73496bf743c6497aafde5c03c9736399ccee4205))
+* `backtracking_enabled` removed from the regular rule definition ([#2662](https://github.com/dadrus/heimdall/issues/2662)) ([7775046](https://github.com/dadrus/heimdall/commit/77750469e8f97b2e86cd182ba06fce4d3c70a7bf))
+* `generic` contextualizer no longer supports `continue_pipeline_on_error` config property ([#2829](https://github.com/dadrus/heimdall/issues/2829)) ([5643c24](https://github.com/dadrus/heimdall/commit/5643c246beddefbbae3607795d1e9873e63ed5ad))
+* `host` matching configuration in rules simplified ([#2772](https://github.com/dadrus/heimdall/issues/2772)) ([f7a0fdf](https://github.com/dadrus/heimdall/commit/f7a0fdf4a4daa907b97b00913276c46129099236))
+* `PS256` dropped from the algorithms list allowed by default for signature verification purposes to better align with existing recommendations ([#2830](https://github.com/dadrus/heimdall/issues/2830)) ([5860e99](https://github.com/dadrus/heimdall/commit/5860e99a17a27b3c256ca74dd3f73c3f5fa47ee5))
+* `subject` configuration property defined for several authenticator mechanisms renamed to `principal` ([#2825](https://github.com/dadrus/heimdall/issues/2825)) ([667797f](https://github.com/dadrus/heimdall/commit/667797f0ed95ea26627c7c8bb74cc3191987df52))
+* `validate rules` command renamed to `validate ruleset` ([#2812](https://github.com/dadrus/heimdall/issues/2812)) ([172908f](https://github.com/dadrus/heimdall/commit/172908fb2d00e5433964b8f9c464442489dd8d5b))
+* Helm chart configuration related to CRD and admission controller settings changed ([#2772](https://github.com/dadrus/heimdall/issues/2772)) ([f7a0fdf](https://github.com/dadrus/heimdall/commit/f7a0fdf4a4daa907b97b00913276c46129099236))
+* Support for `glob` and `regex` host type expressions removed ([#2666](https://github.com/dadrus/heimdall/issues/2666)) ([d0f7bdb](https://github.com/dadrus/heimdall/commit/d0f7bdb827d3b769e3fdb6cec8ef1e137f261671))
+
+
+### Documentation
+
+* Clarified that heimdall config must be supplied via Helm values to the chart ([#2835](https://github.com/dadrus/heimdall/issues/2835)) ([850c601](https://github.com/dadrus/heimdall/commit/850c601dfed949313257e2133072553e67beb1d6))
+* Integration guide for KGateway ([#2760](https://github.com/dadrus/heimdall/issues/2760)) ([81c8a44](https://github.com/dadrus/heimdall/commit/81c8a442ed5ad4d0e934302c9bb5e76bbebe6814))
+* New section related to migration of rulesets ([#2772](https://github.com/dadrus/heimdall/issues/2772)) ([f7a0fdf](https://github.com/dadrus/heimdall/commit/f7a0fdf4a4daa907b97b00913276c46129099236))
+
 ## [0.17.9](https://github.com/dadrus/heimdall/compare/v0.17.8...v0.17.9) (2026-02-07)
 
 
