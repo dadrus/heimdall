@@ -171,6 +171,7 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 				var reviewResp admissionv1.AdmissionReview
+
 				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
 				require.NoError(t, err)
 
@@ -225,6 +226,7 @@ func TestControllerLifecycle(t *testing.T) {
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 				var reviewResp apiextv1.ConversionReview
+
 				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
 				require.NoError(t, err)
 

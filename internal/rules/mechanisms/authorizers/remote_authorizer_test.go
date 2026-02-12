@@ -728,6 +728,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					"groups":         []string{"Foo-Users"},
 				})
 				require.NoError(t, err)
+
 				responseContent = rawData
 				responseContentType = "application/json"
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
@@ -828,6 +829,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				cch.EXPECT().Set(mock.Anything, mock.Anything,
 					mock.MatchedBy(func(data []byte) bool {
 						var ai authorizationInformation
+
 						err := json.Unmarshal(data, &ai)
 
 						return err == nil && ai.Payload == nil && len(ai.Headers.Get("X-Foo-Bar")) != 0
@@ -1131,6 +1133,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					"groups":         []string{"Foo-Users"},
 				})
 				require.NoError(t, err)
+
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
@@ -1210,6 +1213,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					"groups":         []string{"Foo-Users"},
 				})
 				require.NoError(t, err)
+
 				responseContent = rawData
 				responseContentType = "application/json"
 			},

@@ -834,6 +834,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(data []byte) bool {
 					var val contextualizerData
+
 					err := json.Unmarshal(data, &val)
 
 					return err == nil && val.Payload == "Hi from endpoint"

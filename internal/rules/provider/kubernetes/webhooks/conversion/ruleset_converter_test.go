@@ -301,6 +301,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 				require.NoError(t, err)
 
 				var ruleSetSpec v1beta1.RuleSetSpec
+
 				err = json.Unmarshal(rawSpec, &ruleSetSpec)
 				require.NoError(t, err)
 
@@ -393,6 +394,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 				require.NoError(t, err)
 
 				var ruleSetSpec v1alpha4.RuleSetSpec
+
 				err = json.Unmarshal(rawSpec, &ruleSetSpec)
 				require.NoError(t, err)
 

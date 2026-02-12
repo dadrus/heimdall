@@ -1433,6 +1433,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseContent, err = json.Marshal(map[string]string{"issuer": oidcSrv.URL})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, _ identity.Subject) {
@@ -1479,6 +1480,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
@@ -1535,6 +1537,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
@@ -1591,6 +1594,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
@@ -1652,6 +1656,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
@@ -1713,6 +1718,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
@@ -1780,6 +1786,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, fmt.Sprintf("%s/%s", jwksSrv.URL, issuer), kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
@@ -1860,6 +1867,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
 				require.NoError(t, err)
 
@@ -1935,6 +1943,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
 				require.NoError(t, err)
 
@@ -1972,6 +1981,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					"issuer":   issuer,
 				})
 				require.NoError(t, err)
+
 				metadataResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub identity.Subject) {
@@ -2032,6 +2042,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
 				require.NoError(t, err)
 
@@ -2101,6 +2112,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
+
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
 				require.NoError(t, err)
 
@@ -2408,6 +2420,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					"issuer":   issuer,
 				})
 				require.NoError(t, err)
+
 				metadataResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, _ identity.Subject) {
@@ -2481,6 +2494,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					"issuer":   issuer,
 				})
 				require.NoError(t, err)
+
 				metadataResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub identity.Subject) {
@@ -2555,6 +2569,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					"issuer":   issuer,
 				})
 				require.NoError(t, err)
+
 				metadataResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub identity.Subject) {

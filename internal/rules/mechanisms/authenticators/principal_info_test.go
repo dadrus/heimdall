@@ -76,6 +76,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				assert.Equal(t, "foo", sub.ID)
 
 				var attrs map[string]any
+
 				e := json.Unmarshal(raw, &attrs)
 				require.NoError(t, e)
 				assert.Equal(t, attrs, sub.Attributes)
@@ -97,6 +98,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				require.NoError(t, err)
 
 				var attrs map[string]any
+
 				e := json.Unmarshal(rawNested, &attrs)
 				require.NoError(t, e)
 				assert.Equal(t, attrs, sub.Attributes)

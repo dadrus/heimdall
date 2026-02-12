@@ -57,6 +57,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 				require.Len(t, lines, 2)
 
 				var line1 map[string]any
+
 				err := json.Unmarshal([]byte(lines[0]+"}"), &line1)
 				require.NoError(t, err)
 
@@ -64,6 +65,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 				assert.Contains(t, line1["message"], "Foobar")
 
 				var line2 map[string]any
+
 				err = json.Unmarshal([]byte("{"+lines[1]), &line2)
 				require.NoError(t, err)
 

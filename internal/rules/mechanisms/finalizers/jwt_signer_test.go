@@ -515,6 +515,7 @@ func TestJWTSignerSign(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
+
 				claims["iss"] = signer.iss
 				validateTestJWT(t, rawJWT, signer, subjectID, ttl, claims)
 			},
