@@ -52,6 +52,13 @@ linters:
         - m map[string]int
         - w http.ResponseWriter
         - r *http.Request
+    revive:
+      rules:
+        - name: var-naming
+          arguments:
+            - [ "ID" ] # AllowList
+            - [ "VM" ] # DenyList
+            - [ skip-package-name-collision-with-go-std: true ]
   exclusions:
     generated: lax
     presets:
@@ -72,8 +79,6 @@ linters:
           - lll
           - maintidx
           - mnd
-        path: (.+)_test\.go
-      - linters:
           - goconst
         path: (.+)_test\.go
     paths:

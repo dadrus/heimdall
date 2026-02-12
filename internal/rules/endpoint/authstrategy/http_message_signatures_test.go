@@ -322,6 +322,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 				assert.Contains(t, sigInput, `alg="ecdsa-p384-sha384"`)
 				assert.Contains(t, sigInput, `nonce=`)
 				assert.Contains(t, sigInput, `tag="heimdall"`)
+
 				contentDigest := req.Header.Get("Content-Digest")
 				assert.Contains(t, contentDigest, "sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=:")
 				assert.Contains(t, contentDigest, "sha-512=:WZDPaVn/7XgHaAy8pmojAkGWoRx2UFChF41A2svX+TaPm+AbwAgBWnrIiYllu7BNNyealdVLvRwEmTHWXvJwew==:")

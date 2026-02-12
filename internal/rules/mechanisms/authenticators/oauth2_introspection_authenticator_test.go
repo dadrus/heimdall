@@ -1197,6 +1197,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					"issuer":                 "foobar",
 				})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, _ identity.Subject) {
@@ -1285,6 +1286,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					"issuer":                 "foobar",
 				})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, sub identity.Subject) {
@@ -1380,6 +1382,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					"issuer":                 "foobar",
 				})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, sub identity.Subject) {
@@ -1476,6 +1479,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					"issuer":                 "foobar",
 				})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, _ identity.Subject) {
@@ -1535,6 +1539,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					"issuer": "foobar",
 				})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, _ identity.Subject) {
@@ -1752,6 +1757,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					"issuer":                 oidcSrv.URL + "/foobar",
 				})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, sub identity.Subject) {
@@ -1943,6 +1949,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					"issuer":                 oidcSrv.URL,
 				})
 				require.NoError(t, err)
+
 				metadataResponseCode = http.StatusOK
 			},
 			assert: func(t *testing.T, err error, sub identity.Subject) {
