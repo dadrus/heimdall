@@ -53,7 +53,7 @@ func NewObserver() Observer {
 
 	return &observer{
 		meter: provider.Meter(
-			"github.com/dadrus/heimdall/internal/otel/metrics/certificate",
+			"github.com/dadrus/heimdall",
 			metric.WithInstrumentationVersion(version.Version),
 		),
 	}
