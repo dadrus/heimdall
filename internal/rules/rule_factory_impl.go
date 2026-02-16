@@ -404,6 +404,7 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 	var (
 		err       error
 		mechanism mechanisms.Mechanism
+		step      heimdall.Step
 	)
 
 	switch ref.Kind {
@@ -426,7 +427,7 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 		return nil, errorchain.New(ErrStepCreation).CausedBy(err)
 	}
 
-	step, err := mechanism.CreateStep(
+	step, err = mechanism.CreateStep(
 		mechanisms.StepDefinition{
 			ID:        def.ID,
 			Config:    def.Config,
@@ -443,8 +444,12 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 			return nil, err
 		}
 
-		return &conditionalStep{s: step, c: condition}, nil
+		step = &conditionalStep{s: step, c: condition}
 	}
 
-	return step, nil
+	return &telemetryStep{
+		s:    step,
+		kind: string(mechanism.Kind()),
+		typ:  mechanism.Name(),
+	}, nil
 }
