@@ -191,6 +191,12 @@ func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHe
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
 
+func (r *RequestContext) WithParent(ctx context.Context) heimdall.Context {
+	r.ctx = ctx
+
+	return r
+}
+
 func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if r.err != nil {
 		return nil, r.err

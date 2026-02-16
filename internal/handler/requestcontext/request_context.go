@@ -35,6 +35,7 @@ type RequestContext struct {
 	upstreamCookies map[string]string
 	hmdlReq         *heimdall.Request
 	req             *http.Request
+	ctx             context.Context
 
 	// the following properties are created lazy and cached
 	err       error
@@ -65,12 +66,14 @@ func (r *RequestContext) Init(req *http.Request) {
 	r.hmdlReq.Method = extractMethod(req)
 	r.hmdlReq.URL.URL = extractURL(req)
 	r.hmdlReq.ClientIPAddresses = requestClientIPs(r.hmdlReq.ClientIPAddresses, req)
+	r.ctx = req.Context()
 }
 
 func (r *RequestContext) Reset() {
 	r.savedBody = nil
 	r.err = nil
 	r.req = nil
+	r.ctx = nil
 
 	clear(r.outputs)
 	clear(r.headers)
@@ -155,10 +158,16 @@ func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHe
 func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
-func (r *RequestContext) Context() context.Context                { return r.req.Context() }
+func (r *RequestContext) Context() context.Context                { return r.ctx }
 func (r *RequestContext) SetError(err error)                      { r.err = err }
 func (r *RequestContext) Error() error                            { return r.err }
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
+
+func (r *RequestContext) WithParent(ctx context.Context) heimdall.Context {
+	r.ctx = ctx
+
+	return r
+}
 
 func requestClientIPs(ips []string, req *http.Request) []string {
 	if forwarded := req.Header.Get("Forwarded"); len(forwarded) != 0 {

@@ -351,3 +351,56 @@ func (_c *ContextMock_SetError_Call) RunAndReturn(run func(err error)) *ContextM
 	_c.Run(run)
 	return _c
 }
+
+// WithParent provides a mock function for the type ContextMock
+func (_mock *ContextMock) WithParent(ctx context.Context) heimdall.Context {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for WithParent")
+	}
+
+	var r0 heimdall.Context
+	if returnFunc, ok := ret.Get(0).(func(context.Context) heimdall.Context); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(heimdall.Context)
+		}
+	}
+	return r0
+}
+
+// ContextMock_WithParent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WithParent'
+type ContextMock_WithParent_Call struct {
+	*mock.Call
+}
+
+// WithParent is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *ContextMock_Expecter) WithParent(ctx interface{}) *ContextMock_WithParent_Call {
+	return &ContextMock_WithParent_Call{Call: _e.mock.On("WithParent", ctx)}
+}
+
+func (_c *ContextMock_WithParent_Call) Run(run func(ctx context.Context)) *ContextMock_WithParent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ContextMock_WithParent_Call) Return(context1 heimdall.Context) *ContextMock_WithParent_Call {
+	_c.Call.Return(context1)
+	return _c
+}
+
+func (_c *ContextMock_WithParent_Call) RunAndReturn(run func(ctx context.Context) heimdall.Context) *ContextMock_WithParent_Call {
+	_c.Call.Return(run)
+	return _c
+}
