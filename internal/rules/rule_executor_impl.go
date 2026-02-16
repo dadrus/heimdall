@@ -18,31 +18,65 @@ package rules
 
 import (
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
+const (
+	attrRuleID  = attribute.Key("rule.id")
+	attrRuleSrc = attribute.Key("rule.src")
+)
+
 type ruleExecutor struct {
 	r rule.Repository
+	t trace.Tracer
 }
 
 func newRuleExecutor(repository rule.Repository) rule.Executor {
-	return &ruleExecutor{r: repository}
+	tp := otel.GetTracerProvider()
+
+	return &ruleExecutor{
+		r: repository,
+		t: tp.Tracer("github.com(dadrus/heimdall"),
+	}
 }
 
-func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.Backend, error) {
-	request := ctx.Request()
+func (e *ruleExecutor) Execute(hctx heimdall.Context) (rule.Backend, error) {
+	request := hctx.Request()
+	ctx := hctx.Context()
 
-	zerolog.Ctx(ctx.Context()).Debug().
+	zerolog.Ctx(ctx).Debug().
 		Str("_method", request.Method).
 		Str("_url", request.URL.String()).
 		Msg("Analyzing request")
 
-	rul, err := e.r.FindRule(ctx)
+	rul, err := e.r.FindRule(hctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return rul.Execute(ctx)
+	var span trace.Span
+
+	ctx, span = e.t.Start(
+		ctx,
+		"Rule Execution",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attrRuleID.String(rul.ID()),
+			attrRuleSrc.String(rul.SrcID()),
+		),
+	)
+
+	defer span.End()
+
+	be, err := rul.Execute(hctx.WithParent(ctx))
+	if err != nil {
+		span.RecordError(err)
+	}
+
+	return be, err
 }

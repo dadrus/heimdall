@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -61,8 +62,11 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().WithParent(mock.Anything).Return(ctx)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
+				rule.EXPECT().ID().Return("test")
+				rule.EXPECT().SrcID().Return("test")
 			},
 		},
 		"rule execution succeeds": {
@@ -74,8 +78,11 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().WithParent(mock.Anything).Return(ctx)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(upstream, nil)
+				rule.EXPECT().ID().Return("test")
+				rule.EXPECT().SrcID().Return("test")
 			},
 		},
 	} {
