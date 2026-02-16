@@ -41,7 +41,7 @@ func newRuleExecutor(repository rule.Repository) rule.Executor {
 
 	return &ruleExecutor{
 		r: repository,
-		t: tp.Tracer("github.com(dadrus/heimdall"),
+		t: tp.Tracer("github.com/dadrus/heimdall"),
 	}
 }
 
