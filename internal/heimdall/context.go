@@ -28,6 +28,7 @@ type Context interface {
 	AddCookieForUpstream(name, value string)
 
 	Context() context.Context
+	WithParent(ctx context.Context) Context
 
 	SetError(err error)
 	Error() error
