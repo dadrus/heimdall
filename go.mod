@@ -44,8 +44,8 @@ require (
 	github.com/knadh/koanf/v2 v2.3.2
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/redis/rueidis v1.0.71
-	github.com/redis/rueidis/rueidisotel v1.0.71
+	github.com/redis/rueidis v1.0.72
+	github.com/redis/rueidis/rueidisotel v1.0.72
 	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
