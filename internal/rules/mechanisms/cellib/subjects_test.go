@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func TestCELSubjectExpressions(t *testing.T) {
@@ -66,12 +66,12 @@ func TestCELSubjectExpressions(t *testing.T) {
 			prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 			require.NoError(t, err)
 
-			sub := identity.Subject{
-				"default": &identity.Principal{
+			sub := pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "foo"},
 				},
-				"other": &identity.Principal{
+				"other": &pipeline.Principal{
 					ID:         "bar",
 					Attributes: map[string]any{"foo": "bar"},
 				},
@@ -92,7 +92,7 @@ func TestCELSubjectExpressions(t *testing.T) {
 func TestCELSubjectTypeAndValue(t *testing.T) {
 	t.Parallel()
 
-	sub := identity.Subject{"default": &identity.Principal{ID: "foo"}}
+	sub := pipeline.Subject{"default": &pipeline.Principal{ID: "foo"}}
 	wrapper := WrapSubject(sub)
 
 	require.Equal(t, subjectType, wrapper.Type())
@@ -102,7 +102,7 @@ func TestCELSubjectTypeAndValue(t *testing.T) {
 func TestCELSubjectTypeConvertToNative(t *testing.T) {
 	t.Parallel()
 
-	sub := identity.Subject{"default": &identity.Principal{ID: "foo"}}
+	sub := pipeline.Subject{"default": &pipeline.Principal{ID: "foo"}}
 	wrapper := WrapSubject(sub)
 
 	for uc, tc := range map[string]struct {
@@ -111,7 +111,7 @@ func TestCELSubjectTypeConvertToNative(t *testing.T) {
 		expObj any
 	}{
 		"conversion to Subject type": {
-			typ:    reflect.TypeFor[identity.Subject](),
+			typ:    reflect.TypeFor[pipeline.Subject](),
 			expObj: sub,
 		},
 		"conversion to string type": {
@@ -136,7 +136,7 @@ func TestCELSubjectTypeConvertToNative(t *testing.T) {
 func TestCELPrincipalTypeAndValue(t *testing.T) {
 	t.Parallel()
 
-	principal := &identity.Principal{ID: "foo"}
+	principal := &pipeline.Principal{ID: "foo"}
 	wrapper := celPrincipal{principal: principal}
 
 	require.Equal(t, principalType, wrapper.Type())
@@ -146,7 +146,7 @@ func TestCELPrincipalTypeAndValue(t *testing.T) {
 func TestCELPrincipalTypeConvertToNative(t *testing.T) {
 	t.Parallel()
 
-	principal := &identity.Principal{ID: "foo"}
+	principal := &pipeline.Principal{ID: "foo"}
 	wrapper := celPrincipal{principal: principal}
 
 	for uc, tc := range map[string]struct {
@@ -155,7 +155,7 @@ func TestCELPrincipalTypeConvertToNative(t *testing.T) {
 		expObj any
 	}{
 		"conversion to Principal type": {
-			typ:    reflect.TypeFor[*identity.Principal](),
+			typ:    reflect.TypeFor[*pipeline.Principal](),
 			expObj: principal,
 		},
 		"conversion to string type": {

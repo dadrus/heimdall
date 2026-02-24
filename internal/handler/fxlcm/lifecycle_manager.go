@@ -26,8 +26,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -57,7 +57,7 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 		m.CertificateObserver,
 	)
 	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"Could not create listener for %s service", m.ServiceName).
 			CausedBy(err)
 	}

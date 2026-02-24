@@ -28,7 +28,7 @@ import (
 
 	"github.com/youmark/pkcs8"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -80,17 +80,17 @@ func NewKeyStoreFromKey(privateKey crypto.Signer) (KeyStore, error) {
 func NewKeyStoreFromPEMFile(pemFilePath, password string) (KeyStore, error) {
 	fInfo, err := os.Stat(pemFilePath)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to get information about %s", pemFilePath).CausedBy(err)
 	}
 
 	if fInfo.IsDir() {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "'%s' is not a file", pemFilePath)
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "'%s' is not a file", pemFilePath)
 	}
 
 	contents, err := os.ReadFile(pemFilePath)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to read %s", pemFilePath).CausedBy(err)
 	}
 
@@ -130,12 +130,12 @@ func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
 		case pemBlockTypeCertificate:
 			cert, err = x509.ParseCertificate(block.Bytes)
 		default:
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"unsupported entry '%s' entry in the pem file", block.Type)
 		}
 
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"failed to parse %d entry in the pem file", idx).CausedBy(err)
 		}
 
@@ -156,7 +156,7 @@ func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
 
 func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keyStore, error) {
 	if len(entries) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no key material present in the keystore")
 	}
 
@@ -173,7 +173,7 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 		if len(entry.KeyID) == 0 {
 			kid, err := generateKeyID(chain, entry)
 			if err != nil {
-				return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+				return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 					"failed generating kid for %d entry", idx+1).CausedBy(err)
 			}
 
@@ -181,7 +181,7 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 		}
 
 		if _, ok := known[entry.KeyID]; ok {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"duplicate entry for key_id=%s found", entry.KeyID)
 		}
 
@@ -258,7 +258,7 @@ func createEntry(key any, keyID string) (*Entry, error) {
 		sigKey = typedKey
 		size = typedKey.Params().BitSize
 	default:
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"unsupported key type; only rsa and ecdsa keys are supported")
 	}
 

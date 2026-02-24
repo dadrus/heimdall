@@ -22,82 +22,36 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/dadrus/heimdall/version"
-)
-
-const (
-	serviceAttrKey  = attribute.Key("service")
-	issuerAttrKey   = attribute.Key("issuer")
-	serialNrAttrKey = attribute.Key("serial_nr")
-	subjectAttrKey  = attribute.Key("subject")
-	dnsNameAttrKey  = attribute.Key("dns_names")
+	"github.com/dadrus/heimdall/internal/otel/semconv"
 )
 
 type Observer interface {
 	Add(sup Supplier)
-	Start() error
 }
 
 type observer struct {
-	meter     metric.Meter
 	suppliers []Supplier
 	mut       sync.RWMutex
+
+	ce semconv.CertificateExpiry
 }
 
-func NewObserver() Observer {
-	provider := otel.GetMeterProvider()
-
-	return &observer{
-		meter: provider.Meter(
-			"github.com/dadrus/heimdall",
-			metric.WithInstrumentationVersion(version.Version),
-		),
-	}
-}
-
-// Start initializes reporting of host metrics using the supplied config.
-func (eo *observer) Start() error {
-	expirationCounter, err := eo.meter.Float64ObservableUpDownCounter(
-		"certificate.expiry",
-		metric.WithDescription("Number of seconds until certificate expires"),
-		metric.WithUnit("s"),
-	)
+func NewObserver(meter metric.Meter) (Observer, error) {
+	ce, err := semconv.NewCertificateExpiry(meter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = eo.meter.RegisterCallback(
-		func(_ context.Context, observer metric.Observer) error {
-			eo.mut.RLock()
-			defer eo.mut.RUnlock()
+	obs := &observer{ce: ce}
 
-			for _, sup := range eo.suppliers {
-				certs := sup.Certificates()
-				for _, cert := range certs {
-					observer.ObserveFloat64(
-						expirationCounter,
-						time.Until(cert.NotAfter).Seconds(),
-						metric.WithAttributes(
-							serviceAttrKey.String(sup.Name()),
-							issuerAttrKey.String(cert.Issuer.String()),
-							serialNrAttrKey.String(cert.SerialNumber.String()),
-							subjectAttrKey.String(cert.Subject.String()),
-							dnsNameAttrKey.String(strings.Join(cert.DNSNames, ",")),
-						),
-					)
-				}
-			}
+	if _, err = meter.RegisterCallback(obs.collectMetrics, ce.Inst()); err != nil {
+		return nil, err
+	}
 
-			return nil
-		},
-		expirationCounter,
-	)
-
-	return err
+	return obs, nil
 }
 
 func (eo *observer) Add(sup Supplier) {
@@ -105,4 +59,28 @@ func (eo *observer) Add(sup Supplier) {
 	defer eo.mut.Unlock()
 
 	eo.suppliers = append(eo.suppliers, sup)
+}
+
+func (eo *observer) collectMetrics(_ context.Context, observer metric.Observer) error {
+	eo.mut.RLock()
+	defer eo.mut.RUnlock()
+
+	for _, sup := range eo.suppliers {
+		certs := sup.Certificates()
+		for _, cert := range certs {
+			eo.ce.Observe(
+				observer,
+				time.Until(cert.NotAfter).Seconds(),
+				attribute.NewSet(
+					eo.ce.AttrService(sup.Name()),
+					eo.ce.AttrIssuer(cert.Issuer.String()),
+					eo.ce.AttrSerialNumber(cert.SerialNumber.String()),
+					eo.ce.AttrSubject(cert.Subject.String()),
+					eo.ce.AttrDNSNames(strings.Join(cert.DNSNames, ",")),
+				),
+			)
+		}
+	}
+
+	return nil
 }

@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -38,10 +38,10 @@ func New(eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
 
 					err, ok := rec.(error)
 					if ok {
-						err = errorchain.NewWithMessage(heimdall.ErrInternal, "runtime error occurred").
+						err = errorchain.NewWithMessage(pipeline.ErrInternal, "runtime error occurred").
 							CausedBy(err)
 					} else {
-						err = errorchain.NewWithMessage(heimdall.ErrInternal, "runtime error occurred").
+						err = errorchain.NewWithMessage(pipeline.ErrInternal, "runtime error occurred").
 							CausedBy(fmt.Errorf("%v", rec)) //nolint: err113
 					}
 

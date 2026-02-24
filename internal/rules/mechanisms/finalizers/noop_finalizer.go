@@ -20,8 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -56,9 +55,9 @@ type noopFinalizer struct {
 	id   string
 }
 
-func (f *noopFinalizer) Accept(_ heimdall.Visitor) {}
+func (f *noopFinalizer) Accept(_ pipeline.Visitor) {}
 
-func (f *noopFinalizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (f *noopFinalizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerNoop).
@@ -69,14 +68,14 @@ func (f *noopFinalizer) Execute(ctx heimdall.Context, _ identity.Subject) error 
 	return nil
 }
 
-func (f *noopFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (f *noopFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
 
 	if len(def.Config) != 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "noop finalizer cannot be reconfigured").
+			NewWithMessage(pipeline.ErrConfiguration, "noop finalizer cannot be reconfigured").
 			WithErrorContext(f)
 	}
 
@@ -87,7 +86,6 @@ func (f *noopFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, err
 }
 
 func (f *noopFinalizer) Kind() types.Kind { return types.KindFinalizer }
-
-func (f *noopFinalizer) Name() string { return f.name }
-
-func (f *noopFinalizer) ID() string { return f.id }
+func (f *noopFinalizer) Name() string     { return f.name }
+func (f *noopFinalizer) ID() string       { return f.id }
+func (f *noopFinalizer) Type() string     { return f.name }

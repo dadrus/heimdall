@@ -23,7 +23,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -53,7 +53,7 @@ func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHo
 		} else if m, ok := data.(map[string]any); ok {
 			typed = m
 		} else {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unexpected configuration type")
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unexpected configuration type")
 		}
 
 		switch typed["type"] {
@@ -78,7 +78,7 @@ func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHo
 		case "http_message_signatures":
 			return decodeHTTPMessageSignaturesStrategy(ctx, typed["config"])
 		default:
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"unsupported authentication type: '%s'", typed["type"])
 		}
 	}
@@ -96,7 +96,7 @@ func decodeHTTPMessageSignaturesStrategy(ctx app.Context, config any) (any, erro
 	}
 
 	if err := ctx.Watcher().Add(httpSig.Signer.KeyStore.Path, httpSig); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed registering http_message_signatures for updates").CausedBy(err)
 	}
 
@@ -112,7 +112,7 @@ func decodeStrategy[S endpoint.AuthenticationStrategy](
 	config any,
 ) (endpoint.AuthenticationStrategy, error) {
 	if config == nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"'%s' strategy requires 'config' property to be set", name)
 	}
 
@@ -124,17 +124,17 @@ func decodeStrategy[S endpoint.AuthenticationStrategy](
 		ErrorUnused: true,
 	})
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
 	}
 
 	if err = dec.Decode(config); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
 	}
 
 	if err = validator.ValidateStruct(strategy); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed validating '%s' strategy config", name).CausedBy(err)
 	}
 

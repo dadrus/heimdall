@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/cel-go/cel"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -40,10 +40,10 @@ func (ce compiledExpressions) eval(obj, ctx any) error {
 		err := expression.Eval(obj)
 		if err != nil {
 			if errors.Is(err, &cellib.EvalError{}) {
-				return errorchain.New(heimdall.ErrAuthorization).CausedBy(err).WithErrorContext(ctx)
+				return errorchain.New(pipeline.ErrAuthorization).CausedBy(err).WithErrorContext(ctx)
 			}
 
-			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed evaluating expression %d", i+1).
+			return errorchain.NewWithMessagef(pipeline.ErrInternal, "failed evaluating expression %d", i+1).
 				CausedBy(err).WithErrorContext(ctx)
 		}
 	}
@@ -61,7 +61,7 @@ func compileExpressions(expressions []Expression, env *cel.Env) (compiledExpress
 			x.IfThenElse(len(expression.Message) != 0, expression.Message, fmt.Sprintf("expression %d failed", i+1)),
 		)
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"failed to compile expression %d (%s)", i+1, expression.Value).CausedBy(err)
 		}
 

@@ -29,8 +29,8 @@ import (
 	"github.com/knadh/koanf/maps"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -74,7 +74,7 @@ func newJWTSigner(conf *SignerConfig, fw watcher.Watcher) (*jwtSigner, error) {
 	}
 
 	if err := fw.Add(signer.path, signer); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed registering jwt signer for updates").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed registering jwt signer for updates").
 			CausedBy(err)
 	}
 
@@ -120,7 +120,7 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]
 			WithHeader("kid", jwk.KeyID).
 			WithHeader("alg", jwk.Algorithm))
 	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").CausedBy(err)
+		return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create JWT signer").CausedBy(err)
 	}
 
 	claims := make(map[string]any)
@@ -139,7 +139,7 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]
 
 	rawJwt, err := builder.Serialize()
 	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to sign claims").CausedBy(err)
+		return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to sign claims").CausedBy(err)
 	}
 
 	return rawJwt, nil
@@ -162,7 +162,7 @@ func (s *jwtSigner) activeCertificateChain() []*x509.Certificate {
 func (s *jwtSigner) load() error {
 	ks, err := keystore.NewKeyStoreFromPEMFile(s.path, s.password)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
+		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed loading keystore").
 			CausedBy(err)
 	}
 
@@ -175,7 +175,7 @@ func (s *jwtSigner) load() error {
 	}
 
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed retrieving key from key store").CausedBy(err)
 	}
 
@@ -191,7 +191,7 @@ func (s *jwtSigner) load() error {
 		}
 
 		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 				"configured certificate cannot be used for JWT signing purposes").CausedBy(err)
 		}
 	}

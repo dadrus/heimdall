@@ -24,7 +24,7 @@ import (
 	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -103,7 +103,7 @@ func DecodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) 
 		case "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256":
 			alg = tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
 		default:
-			return 0, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return 0, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"TLS cipher suite %s is unsupported", val)
 		}
 
@@ -124,7 +124,7 @@ func DecodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (
 	case "TLS1.3":
 		return tls.VersionTLS13, nil
 	default:
-		return data, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "TLS version %s is unsupported", data)
+		return data, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "TLS version %s is unsupported", data)
 	}
 }
 

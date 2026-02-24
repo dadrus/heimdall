@@ -23,22 +23,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestStageExecution(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureMocks func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
-			second *mocks.StepMock, sub identity.Subject)
+		configureMocks func(t *testing.T, ctx pipeline.Context, first *mocks.StepMock,
+			second *mocks.StepMock, sub pipeline.Subject)
 		assert func(t *testing.T, err error)
 	}{
 		"all succeeded": {
-			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
-				second *mocks.StepMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx pipeline.Context, first *mocks.StepMock,
+				second *mocks.StepMock, sub pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -52,8 +51,8 @@ func TestStageExecution(t *testing.T) {
 			},
 		},
 		"first fails": {
-			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
-				_ *mocks.StepMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx pipeline.Context, first *mocks.StepMock,
+				_ *mocks.StepMock, sub pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -67,8 +66,8 @@ func TestStageExecution(t *testing.T) {
 			},
 		},
 		"second fails": {
-			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
-				second *mocks.StepMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx pipeline.Context, first *mocks.StepMock,
+				second *mocks.StepMock, sub pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -83,8 +82,8 @@ func TestStageExecution(t *testing.T) {
 			},
 		},
 		"tls related error stops pipeline execution": {
-			configureMocks: func(t *testing.T, ctx heimdall.Context, first *mocks.StepMock,
-				_ *mocks.StepMock, sub identity.Subject,
+			configureMocks: func(t *testing.T, ctx pipeline.Context, first *mocks.StepMock,
+				_ *mocks.StepMock, sub pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -94,14 +93,14 @@ func TestStageExecution(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			sub := identity.Subject{
-				"default": &identity.Principal{
+			sub := pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID: "foo",
 				},
 			}

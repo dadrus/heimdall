@@ -22,20 +22,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestCompositePrincipalCreatorExecution(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		principalCreator func(t *testing.T, ctx heimdall.Context, sub identity.Subject) compositePrincipalCreator
+		principalCreator func(t *testing.T, ctx pipeline.Context, sub pipeline.Subject) compositePrincipalCreator
 		assert           func(t *testing.T, err error)
 	}{
 		"with fallback to second authenticator": {
-			principalCreator: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) compositePrincipalCreator {
+			principalCreator: func(t *testing.T, ctx pipeline.Context, sub pipeline.Subject) compositePrincipalCreator {
 				t.Helper()
 
 				auth1 := mocks.NewStepMock(t)
@@ -53,7 +52,7 @@ func TestCompositePrincipalCreatorExecution(t *testing.T) {
 			},
 		},
 		"no fallback due to tls error": {
-			principalCreator: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) compositePrincipalCreator {
+			principalCreator: func(t *testing.T, ctx pipeline.Context, sub pipeline.Subject) compositePrincipalCreator {
 				t.Helper()
 
 				auth1 := mocks.NewStepMock(t)
@@ -67,11 +66,11 @@ func TestCompositePrincipalCreatorExecution(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 			},
 		},
 		"with fallback but both authenticators returning errors": {
-			principalCreator: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) compositePrincipalCreator {
+			principalCreator: func(t *testing.T, ctx pipeline.Context, sub pipeline.Subject) compositePrincipalCreator {
 				t.Helper()
 
 				auth1 := mocks.NewStepMock(t)
@@ -90,7 +89,7 @@ func TestCompositePrincipalCreatorExecution(t *testing.T) {
 			},
 		},
 		"only the first authenticator is executed": {
-			principalCreator: func(t *testing.T, ctx heimdall.Context, sub identity.Subject) compositePrincipalCreator {
+			principalCreator: func(t *testing.T, ctx pipeline.Context, sub pipeline.Subject) compositePrincipalCreator {
 				t.Helper()
 
 				auth1 := mocks.NewStepMock(t)
@@ -109,7 +108,7 @@ func TestCompositePrincipalCreatorExecution(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			sub := identity.Subject{"default": &identity.Principal{ID: "foo"}}
+			sub := pipeline.Subject{"default": &pipeline.Principal{ID: "foo"}}
 
 			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())

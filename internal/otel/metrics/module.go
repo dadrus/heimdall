@@ -27,10 +27,5 @@ import (
 var Module = fx.Options( // nolint: gochecknoglobals
 	fx.Invoke(runtime.Start),
 	fx.Invoke(host.Start),
-	fx.Provide(
-		fx.Annotate(
-			certificate.NewObserver,
-			fx.OnStart(func(co certificate.Observer) error { return co.Start() }),
-		),
-	),
+	fx.Provide(certificate.NewObserver),
 )

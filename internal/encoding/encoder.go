@@ -22,7 +22,7 @@ import (
 	"github.com/goccy/go-json"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -49,12 +49,12 @@ func (d *Encoder) Encode(in any, out io.Writer) error {
 	case "application/yaml":
 		err = yaml.NewEncoder(out).Encode(in)
 	default:
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"unsupported content type: %s", d.contentType)
 	}
 
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
+		return errorchain.NewWithMessage(pipeline.ErrInternal,
 			"marshalling object failed")
 	}
 

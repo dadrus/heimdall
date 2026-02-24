@@ -23,6 +23,7 @@ import (
 
 type noopObserver struct{}
 
+func (*noopObserver) Stop() error                { return nil }
 func (*noopObserver) Add(_ certificate.Supplier) {}
 func (*noopObserver) Start() error               { return nil }
 

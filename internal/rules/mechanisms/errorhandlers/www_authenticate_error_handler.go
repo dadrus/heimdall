@@ -20,8 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
@@ -59,7 +58,7 @@ func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[
 
 	var conf Config
 	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, name).CausedBy(err)
 	}
 
@@ -71,15 +70,13 @@ func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[
 	}, nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) Accept(_ heimdall.Visitor) {}
+func (eh *wwwAuthenticateErrorHandler) Accept(_ pipeline.Visitor) {}
+func (eh *wwwAuthenticateErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
+func (eh *wwwAuthenticateErrorHandler) Name() string              { return eh.name }
+func (eh *wwwAuthenticateErrorHandler) ID() string                { return eh.id }
+func (eh *wwwAuthenticateErrorHandler) Type() string              { return eh.name }
 
-func (eh *wwwAuthenticateErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
-
-func (eh *wwwAuthenticateErrorHandler) Name() string { return eh.name }
-
-func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }
-
-func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ErrorHandlerWWWAuthenticate).
@@ -88,12 +85,12 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ identity.
 		Msg("Executing error handler")
 
 	ctx.AddHeaderForUpstream("WWW-Authenticate", "Basic realm="+eh.realm)
-	ctx.SetError(heimdall.ErrAuthentication)
+	ctx.SetError(pipeline.ErrAuthentication)
 
 	return nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
@@ -113,7 +110,7 @@ func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (hei
 
 	err := decodeConfig(eh.app.Validator(), def.Config, &conf)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, eh.name).
 			CausedBy(err)
 	}

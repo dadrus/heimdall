@@ -18,18 +18,18 @@ package types //nolint: revive
 
 import (
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
-
-type Kind string
 
 const (
-	KindAuthenticator  Kind = "authenticator"
-	KindAuthorizer     Kind = "authorizer"
-	KindContextualizer Kind = "contextualizer"
-	KindFinalizer      Kind = "finalizer"
-	KindErrorHandler   Kind = "error_handler"
+	KindAuthenticator  = pipeline.KindAuthenticator
+	KindAuthorizer     = pipeline.KindAuthorizer
+	KindContextualizer = pipeline.KindContextualizer
+	KindFinalizer      = pipeline.KindFinalizer
+	KindErrorHandler   = pipeline.KindErrorHandler
 )
+
+type Kind = pipeline.MechanismKind
 
 type StepDefinition struct {
 	ID        string
@@ -44,5 +44,5 @@ func (sd *StepDefinition) IsEmpty() bool {
 type Mechanism interface {
 	Name() string
 	Kind() Kind
-	CreateStep(def StepDefinition) (heimdall.Step, error)
+	CreateStep(def StepDefinition) (pipeline.Step, error)
 }

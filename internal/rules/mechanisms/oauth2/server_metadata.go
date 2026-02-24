@@ -19,7 +19,7 @@ package oauth2
 import (
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -52,7 +52,7 @@ func (sm ServerMetadata) verify(usedMetadataURL string) error {
 	}
 
 	if sm.Issuer != expectedIssuer && sm.Issuer != expectedIssuer+"/" {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"expected issuer '%s' does not match issuer '%s' from the received metadata",
 			expectedIssuer, sm.Issuer)
 	}

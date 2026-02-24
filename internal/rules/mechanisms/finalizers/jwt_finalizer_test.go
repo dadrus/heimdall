@@ -36,11 +36,10 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/keyholder/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	heimdallmocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	mocks2 "github.com/dadrus/heimdall/internal/watcher/mocks"
@@ -211,7 +210,7 @@ signer:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'ttl' must be greater than 1s")
 			},
 		},
@@ -249,7 +248,7 @@ claims:
 				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
 				require.NotNil(t, finalizer.claims)
 				val, err := finalizer.claims.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -298,7 +297,7 @@ claims: '{ "sub": {{ quote .Subject.ID }} }'
 				assert.Equal(t, expectedTTL, finalizer.ttl)
 				require.NotNil(t, finalizer.claims)
 				val, err := finalizer.claims.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -324,7 +323,7 @@ foo: bar"
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -341,7 +340,7 @@ header:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'header'.'name' is a required field")
 			},
 		},
@@ -566,7 +565,7 @@ signer:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'ttl' must be greater than 1s")
 			},
 		},
@@ -590,7 +589,7 @@ signer:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				val, err := configured.claims.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -653,7 +652,7 @@ signer:
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				val, err := configured.claims.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
@@ -772,12 +771,12 @@ func TestJWTFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config         []byte
-		subject        identity.Subject
+		subject        pipeline.Subject
 		configureMocks func(t *testing.T,
 			fin *jwtFinalizer,
 			ctx *heimdallmocks.ContextMock,
 			cch *mocks.CacheMock,
-			sub identity.Subject)
+			sub pipeline.Subject)
 		assert func(t *testing.T, err error)
 	}{
 		"with 'nil' identity": {
@@ -790,7 +789,7 @@ signer:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "'nil' identity")
 
 				var identifier interface{ ID() string }
@@ -804,14 +803,14 @@ signer:
   key_store:
     path: ` + pemFile + `
 `),
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, sub identity.Subject,
+				cch *mocks.CacheMock, sub pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -834,14 +833,14 @@ signer:
     path: ` + pemFile + `
 ttl: 1m
 `),
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ identity.Subject,
+				cch *mocks.CacheMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -872,14 +871,14 @@ claims: '{
   {{ quote $val }}: "baz",
   "foo": {{ .Outputs.foo | quote }}
 }'`),
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ identity.Subject,
+				cch *mocks.CacheMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -906,14 +905,14 @@ values:
   foo: '{{ .Subject.ID | quote }}'
   bar: '{{ .Outputs.bar | quote }}'
 `),
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ identity.Subject,
+				cch *mocks.CacheMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -937,14 +936,14 @@ signer:
     path: ` + pemFile + `
 claims: "foo: bar"
 `),
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ identity.Subject,
+				cch *mocks.CacheMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -956,7 +955,7 @@ claims: "foo: bar"
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to unmarshal claims")
 
 				var identifier interface{ ID() string }
@@ -971,14 +970,14 @@ signer:
     path: ` + pemFile + `
 claims: "{{ len .foobar }}"
 `),
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ identity.Subject,
+				cch *mocks.CacheMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -990,7 +989,7 @@ claims: "{{ len .foobar }}"
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render claims")
 
 				var identifier interface{ ID() string }
@@ -1007,14 +1006,14 @@ claims: "{{ quote .Values.foo }}"
 values:
   foo: '{{ len .fooo }}'
 `),
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ identity.Subject,
+				cch *mocks.CacheMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -1026,7 +1025,7 @@ values:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
@@ -1039,7 +1038,7 @@ values:
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock, _ *mocks.CacheMock, _ identity.Subject) {
+				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock, _ *mocks.CacheMock, _ pipeline.Subject) {
 					t.Helper()
 				})
 

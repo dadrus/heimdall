@@ -22,13 +22,13 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -48,6 +48,7 @@ func NewRuleFactory(
 	conf *config.Configuration,
 	mode config.OperationMode,
 	logger zerolog.Logger,
+	tracer trace.Tracer,
 	sdr config.SecureDefaultRule,
 ) (rule.Factory, error) {
 	logger.Debug().Msg("Creating rule factory")
@@ -55,6 +56,7 @@ func NewRuleFactory(
 	rf := &ruleFactory{
 		r:                 repo,
 		l:                 logger,
+		t:                 tracer,
 		hasDefaultRule:    false,
 		secureDefaultRule: bool(sdr),
 		mode:              mode,
@@ -72,6 +74,7 @@ func NewRuleFactory(
 type ruleFactory struct {
 	r                 mechanisms.Repository
 	l                 zerolog.Logger
+	t                 trace.Tracer
 	defaultRule       *ruleImpl
 	hasDefaultRule    bool
 	secureDefaultRule bool
@@ -83,7 +86,7 @@ func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
 func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, error) { //nolint:cyclop,funlen
 	if f.mode == config.ProxyMode && rul.Backend == nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
 	slashesHandling := x.IfThenElse(len(rul.EncodedSlashesHandling) != 0,
@@ -109,11 +112,11 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 	}
 
 	if len(authenticators) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined")
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "no authenticator defined")
 	}
 
 	if !authenticators.HasDefaultPrincipal() {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no authenticator defined which would create a default principal")
 	}
 
@@ -132,7 +135,7 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 		sh:              subHandlers,
 		fi:              finalizers,
 		eh:              errorHandlers,
-		subjectPool:     &sync.Pool{New: func() any { return make(identity.Subject, 4) }},
+		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 	}
 
 	mm, err := createMethodMatcher(rul.Matcher.Methods)
@@ -145,7 +148,7 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 	for _, rc := range rul.Matcher.Routes {
 		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"failed creating route '%s'", rc.Path).
 				CausedBy(err)
 		}
@@ -180,7 +183,7 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage,
 
 	authenticatorCheck := func(id string) error {
 		if len(subjectHandlerStage) != 0 || len(finalizerStage) != 0 {
-			return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"%s authenticator is defined after some other non authenticator type", id)
 		}
 
@@ -189,7 +192,7 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage,
 
 	subjectHandlerCheck := func(id string, kind mechanisms.Kind) error {
 		if len(finalizerStage) != 0 {
-			return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"%s %s is defined after a finalizer", id, kind)
 		}
 
@@ -253,7 +256,7 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage,
 
 			finalizerStage = append(finalizerStage, step)
 		default:
-			return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return nil, nil, nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 				"unsupported configuration in execute pipeline")
 		}
 	}
@@ -261,7 +264,7 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage,
 	stepIDs = slices.DeleteFunc(stepIDs, func(s string) bool { return len(s) == 0 })
 
 	if slices.Compare(stepIDs, slices.Compact(stepIDs)) != 0 {
-		return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, nil, nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"IDs used for execute pipeline steps must be unique")
 	}
 
@@ -294,7 +297,7 @@ func (f *ruleFactory) createErrorPipeline(steps []v1beta1.Step) (stage, error) {
 
 			errorHandlers[idx] = step
 		default:
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 				"unsupported configuration in error pipeline")
 		}
 	}
@@ -302,7 +305,7 @@ func (f *ruleFactory) createErrorPipeline(steps []v1beta1.Step) (stage, error) {
 	stepIDs = slices.DeleteFunc(stepIDs, func(s string) bool { return len(s) == 0 })
 
 	if slices.Compare(stepIDs, slices.Compact(stepIDs)) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"IDs used for error pipeline steps must be unique")
 	}
 
@@ -341,18 +344,18 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	if len(authenticators) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no authenticators defined for default rule")
 	}
 
 	if !authenticators.HasDefaultPrincipal() {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no authenticator defined which would create a default principal")
 	}
 
 	if authenticators.IsInsecure() {
 		if f.secureDefaultRule {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 				"insecure default rule configured")
 		}
 
@@ -368,7 +371,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		sh:              subHandlers,
 		fi:              finalizers,
 		eh:              errorPipeline,
-		subjectPool:     &sync.Pool{New: func() any { return make(identity.Subject, 4) }},
+		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 	}
 
 	f.hasDefaultRule = true
@@ -391,7 +394,7 @@ func (f *ruleFactory) convertToSteps(rawSteps []config.MechanismConfig) ([]v1bet
 
 		ref := step.MechanismReference()
 		if ref.Kind == "unknown" {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unknown mechanism kind")
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unknown mechanism kind")
 		}
 
 		executeSteps[idx] = step
@@ -400,11 +403,11 @@ func (f *ruleFactory) convertToSteps(rawSteps []config.MechanismConfig) ([]v1bet
 	return executeSteps, nil
 }
 
-func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinition) (heimdall.Step, error) {
+func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinition) (pipeline.Step, error) {
 	var (
 		err       error
 		mechanism mechanisms.Mechanism
-		step      heimdall.Step
+		step      pipeline.Step
 	)
 
 	switch ref.Kind {
@@ -420,7 +423,7 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 		mechanism, err = f.r.ErrorHandler(ref.Name)
 	default:
 		// can actually never happen
-		err = errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unknown mechanism kind: %s", ref.Kind)
+		err = errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unknown mechanism kind: %s", ref.Kind)
 	}
 
 	if err != nil {
@@ -444,12 +447,8 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 			return nil, err
 		}
 
-		step = &conditionalStep{s: step, c: condition}
+		step = newConditionalStep(step, condition)
 	}
 
-	return &telemetryStep{
-		s:    step,
-		kind: string(mechanism.Kind()),
-		typ:  mechanism.Name(),
-	}, nil
+	return newTelemetryStep(step, f.t), nil
 }

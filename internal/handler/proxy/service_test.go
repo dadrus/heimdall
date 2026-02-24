@@ -50,7 +50,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -123,7 +123,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -155,7 +155,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -187,7 +187,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrConfiguration)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrConfiguration)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -219,7 +219,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -251,7 +251,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthorization)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -298,7 +298,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -380,7 +380,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -461,7 +461,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -549,7 +549,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -723,7 +723,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -818,7 +818,7 @@ func TestProxyService(t *testing.T) {
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -1013,7 +1013,7 @@ func TestWebSocketSupport(t *testing.T) {
 	backend.EXPECT().ForwardHostHeader().Return(true)
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx heimdall.Context) bool {
+		mock.MatchedBy(func(ctx pipeline.Context) bool {
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 
@@ -1112,7 +1112,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	backend.EXPECT().ForwardHostHeader().Return(true)
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx heimdall.Context) bool {
+		mock.MatchedBy(func(ctx pipeline.Context) bool {
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 

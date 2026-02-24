@@ -17,57 +17,46 @@
 package rules
 
 import (
-	"time"
-
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
-)
-
-const (
-	attrStepID        = attribute.Key("step.id")
-	attrStepError     = attribute.Key("step.error")
-	attrMechanismType = attribute.Key("mechanism.type")
-	attrMechanismKind = attribute.Key("mechanism.kind")
+	"github.com/dadrus/heimdall/internal/otel/semconv"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type telemetryStep struct {
-	s    heimdall.Step
-	typ  string
-	kind string
+	s pipeline.Step
+	t trace.Tracer
 }
 
-func (s *telemetryStep) Accept(visitor heimdall.Visitor) { s.s.Accept(visitor) }
+func newTelemetryStep(s pipeline.Step, t trace.Tracer) *telemetryStep {
+	return &telemetryStep{s: s, t: t}
+}
 
-func (s *telemetryStep) ID() string { return s.s.ID() }
-
-func (s *telemetryStep) Execute(ctx heimdall.Context, sub identity.Subject) error {
-	var kvs [4]attribute.KeyValue
-
-	span := trace.SpanFromContext(ctx.Context())
-
-	attrs := append(kvs[:0],
-		attrStepID.String(s.s.ID()),
-		attrMechanismKind.String(s.kind),
-		attrMechanismType.String(s.typ),
+func (s *telemetryStep) Execute(hctx pipeline.Context, sub pipeline.Subject) error {
+	ctx, span := s.t.Start(
+		hctx.Context(),
+		"Step Execution",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			semconv.StepID(s.s.ID()),
+			semconv.MechanismKind(string(s.s.Kind())),
+			semconv.MechanismName(s.s.Type()),
+		),
 	)
 
-	span.AddEvent("step started",
-		trace.WithTimestamp(time.Now()),
-		trace.WithAttributes(attrs...),
-	)
+	defer span.End()
 
-	err := s.s.Execute(ctx, sub)
+	err := s.s.Execute(hctx.WithParent(ctx), sub)
 	if err != nil {
-		attrs = append(attrs, attrStepError.String(err.Error()))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 	}
-
-	span.AddEvent("step completed",
-		trace.WithTimestamp(time.Now()),
-		trace.WithAttributes(attrs...),
-	)
 
 	return err
 }
+
+func (s *telemetryStep) ID() string                      { return s.s.ID() }
+func (s *telemetryStep) Type() string                    { return s.s.Type() }
+func (s *telemetryStep) Kind() pipeline.MechanismKind    { return s.s.Kind() }
+func (s *telemetryStep) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor) }

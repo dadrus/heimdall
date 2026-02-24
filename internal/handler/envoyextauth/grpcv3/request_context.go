@@ -30,7 +30,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -68,7 +68,7 @@ type RequestContext struct {
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	err             error
-	hmdlReq         *heimdall.Request
+	hmdlReq         *pipeline.Request
 
 	// the following properties are created lazy and cached
 	savedBody any
@@ -82,9 +82,9 @@ func newRequestContext() *RequestContext {
 		outputs:         make(map[string]any, 10),
 	}
 
-	rc.hmdlReq = &heimdall.Request{
+	rc.hmdlReq = &pipeline.Request{
 		RequestFunctions: rc,
-		URL:              &heimdall.URL{},
+		URL:              &pipeline.URL{},
 	}
 
 	return rc
@@ -143,7 +143,7 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 	return result
 }
 
-func (r *RequestContext) Request() *heimdall.Request { return r.hmdlReq }
+func (r *RequestContext) Request() *pipeline.Request { return r.hmdlReq }
 func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
 func (r *RequestContext) Header(name string) string  { return r.reqHeaders[name] }
 
@@ -191,7 +191,7 @@ func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHe
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
 
-func (r *RequestContext) WithParent(ctx context.Context) heimdall.Context {
+func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.ctx = ctx
 
 	return r

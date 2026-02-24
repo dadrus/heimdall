@@ -28,8 +28,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -49,7 +49,7 @@ func TestNewRedirectErrorHandler(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'to' is a required field")
 			},
 		},
@@ -101,7 +101,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.Contains(t, err.Error(), "'to' scheme must be https")
 			},
 		},
@@ -121,8 +121,8 @@ code: 301
 
 				ctx := mocks.NewContextMock(t)
 				ctx.EXPECT().Request().
-					Return(&heimdall.Request{
-						URL: &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
+					Return(&pipeline.Request{
+						URL: &pipeline.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
 					})
 
 				toURL, err := eh.to.Render(map[string]any{
@@ -204,7 +204,7 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "reconfiguration of a redirect error handler is not supported")
 			},
 		},
@@ -262,7 +262,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render")
 			},
 		},
@@ -272,7 +272,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *pipeline.RedirectError) bool {
 					t.Helper()
 
 					assert.Equal(t, "http://foo.bar", redirErr.RedirectTo)
@@ -299,8 +299,8 @@ code: 300
 				requestURL, err := url.Parse("http://test.org")
 				require.NoError(t, err)
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *requestURL}})
-				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *requestURL}})
+				ctx.EXPECT().SetError(mock.MatchedBy(func(redirErr *pipeline.RedirectError) bool {
 					t.Helper()
 
 					redirectURL, err := url.Parse(redirErr.RedirectTo)

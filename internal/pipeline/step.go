@@ -14,9 +14,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package heimdall
+package pipeline
 
-import "github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+type MechanismKind string
+
+const (
+	KindAuthenticator  MechanismKind = "authenticator"
+	KindAuthorizer     MechanismKind = "authorizer"
+	KindContextualizer MechanismKind = "contextualizer"
+	KindFinalizer      MechanismKind = "finalizer"
+	KindErrorHandler   MechanismKind = "error_handler"
+)
 
 type Insecure interface {
 	IsInsecure() bool
@@ -33,6 +41,8 @@ type Visitor interface {
 
 type Step interface {
 	ID() string
-	Execute(ctx Context, sub identity.Subject) error
+	Type() string
+	Kind() MechanismKind
+	Execute(ctx Context, sub Subject) error
 	Accept(visitor Visitor)
 }

@@ -38,11 +38,10 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
@@ -69,7 +68,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -83,7 +82,7 @@ payload: FooBar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'endpoint'.'url' is a required field")
 			},
 		},
@@ -96,7 +95,7 @@ endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'payload' is a required field")
 			},
 		},
@@ -115,7 +114,7 @@ payload: "{{ .Subject.ID }}"
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
 				val, err := auth.payload.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
@@ -139,7 +138,7 @@ payload: "{{ .Subject.ID }}"
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'endpoint'.'url' scheme must be https")
 			},
 		},
@@ -179,7 +178,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to compile")
 			},
 		},
@@ -202,18 +201,18 @@ values:
 
 				require.NoError(t, err)
 
-				ctx := heimdallmocks.NewContextMock(t)
+				ctx := pipelinemocks.NewContextMock(t)
 				ctx.EXPECT().Context().Return(t.Context()).Maybe()
 
-				rfunc := heimdallmocks.NewRequestFunctionsMock(t)
+				rfunc := pipelinemocks.NewRequestFunctionsMock(t)
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
 				val, err := auth.payload.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
-					"Request": &heimdall.Request{
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
+					"Request": &pipeline.Request{
 						RequestFunctions: rfunc,
-						URL:              &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo/bar"}},
+						URL:              &pipeline.URL{URL: url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo/bar"}},
 					},
 				})
 				require.NoError(t, err)
@@ -230,7 +229,7 @@ values:
 				assert.Equal(t, 5*time.Second, auth.ttl)
 
 				res, err := auth.v.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "bar"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, res)
@@ -343,7 +342,7 @@ payload: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -421,7 +420,7 @@ payload: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to compile")
 			},
 		},
@@ -607,11 +606,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		authorizer       *remoteAuthorizer
-		subject          identity.Subject
+		subject          pipeline.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
-		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub identity.Subject)
-		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
+		configureContext func(t *testing.T, ctx *pipelinemocks.ContextMock)
+		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub pipeline.Subject)
+		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any)
 	}{
 		"successful with payload and with header, without payload from server and without header " +
 			"forwarding and with disabled cache": {
@@ -631,8 +630,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "my-id",
 					Attributes: map[string]any{"bar": "baz"},
 				},
@@ -656,12 +655,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "my-id-bar-bar", string(data))
 				}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -692,8 +691,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}(),
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "my-id",
 					Attributes: map[string]any{"bar": "baz"},
 				},
@@ -733,13 +732,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "application/json"
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -786,8 +785,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 				ttl:                20 * time.Second,
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "my id",
 					Attributes: map[string]any{"bar": "baz"},
 				},
@@ -816,13 +815,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseCode = http.StatusOK
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ identity.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ pipeline.Subject) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -835,7 +834,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						return err == nil && ai.Payload == nil && len(ai.Headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -856,8 +855,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				},
 				ttl: 10 * time.Second,
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foobar",
 					Attributes: map[string]any{"bar": "baz"},
 				},
@@ -875,12 +874,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub identity.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub pipeline.Subject) {
 				t.Helper()
 
 				cacheKey := auth.calculateCacheKey(sub, nil, "")
@@ -888,7 +887,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, cacheKey, mock.Anything, auth.ttl).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -919,20 +918,20 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 				ttl:                20 * time.Second,
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "my id",
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().AddHeaderForUpstream("X-Bar-Foo", "HeyBar")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *remoteAuthorizer, _ identity.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *remoteAuthorizer, _ pipeline.Subject) {
 				t.Helper()
 
 				rawInfo, err := json.Marshal(authorizationInformation{
@@ -946,7 +945,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawInfo, nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -973,8 +972,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
 				},
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID: "foo",
 				},
 			},
@@ -987,17 +986,17 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusUnauthorized
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
 
-				require.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorIs(t, err, pipeline.ErrAuthorization)
 				require.ErrorContains(t, err, "authorization failed")
 
 				var identifier interface{ ID() string }
@@ -1013,8 +1012,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
 				},
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "foo",
 					Attributes: map[string]any{},
 				},
@@ -1026,12 +1025,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "text/text"
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -1052,21 +1051,21 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID: "foo",
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "endpoint failed")
 
 				assert.False(t, authorizationEndpointCalled)
@@ -1098,8 +1097,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return []*cellib.CompiledExpression{exp}
 				}(),
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "my-id",
 					Attributes: map[string]any{},
 				},
@@ -1137,18 +1136,18 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
 				t.Helper()
 
 				assert.True(t, authorizationEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorIs(t, err, pipeline.ErrAuthorization)
 				require.ErrorContains(t, err, "false != true")
 
 				var identifier interface{ ID() string }
@@ -1178,8 +1177,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return []*cellib.CompiledExpression{exp}
 				}(),
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "my-id",
 					Attributes: map[string]any{},
 				},
@@ -1217,12 +1216,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				assert.True(t, authorizationEndpointCalled)
@@ -1256,24 +1255,24 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "Foo",
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render payload")
 
 				var identifier interface{ ID() string }
@@ -1292,24 +1291,24 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return values.Values{"foo": tpl}
 				}(),
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "Foo",
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
@@ -1333,17 +1332,17 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *pipelinemocks.ContextMock) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(t *testing.T, _ *mocks.CacheMock, _ *remoteAuthorizer, _ identity.Subject) {
+				func(t *testing.T, _ *mocks.CacheMock, _ *remoteAuthorizer, _ pipeline.Subject) {
 					t.Helper()
 				})
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewContextMock(t)
+			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 

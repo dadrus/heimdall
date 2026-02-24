@@ -19,12 +19,13 @@ package validate
 import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/cache"
 	_ "github.com/dadrus/heimdall/internal/cache/module" // without this import, available cache configs are not registered.
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
@@ -52,7 +53,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 	logger := zerolog.Nop()
 
 	if len(configPath) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no config file provided")
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "no config file provided")
 	}
 
 	cmd.SilenceUsage = true
@@ -95,6 +96,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		conf,
 		config.DecisionMode,
 		logger,
+		noop.Tracer{},
 		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)
 	if err != nil {
@@ -123,9 +125,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// ignoring kubernetes provider for now as there are no insecure
-	// settings possible
-
+	// ignoring kubernetes provider for now as there are no insecure settings possible
 	cmd.Println("Configuration is valid")
 
 	return nil

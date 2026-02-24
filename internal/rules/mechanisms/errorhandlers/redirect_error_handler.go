@@ -23,8 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -64,7 +63,7 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 
 	var conf Config
 	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerRedirect, name).
 			CausedBy(err)
 	}
@@ -84,15 +83,13 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (eh *redirectErrorHandler) Accept(_ heimdall.Visitor) {}
+func (eh *redirectErrorHandler) Accept(_ pipeline.Visitor) {}
+func (eh *redirectErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
+func (eh *redirectErrorHandler) Name() string              { return eh.name }
+func (eh *redirectErrorHandler) ID() string                { return eh.id }
+func (eh *redirectErrorHandler) Type() string              { return eh.name }
 
-func (eh *redirectErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
-
-func (eh *redirectErrorHandler) Name() string { return eh.name }
-
-func (eh *redirectErrorHandler) ID() string { return eh.id }
-
-func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (eh *redirectErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ErrorHandlerRedirect).
@@ -104,11 +101,11 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject
 		"Request": ctx.Request(),
 	})
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed to render 'to' url").
+		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed to render 'to' url").
 			CausedBy(err)
 	}
 
-	ctx.SetError(&heimdall.RedirectError{
+	ctx.SetError(&pipeline.RedirectError{
 		Message:    "redirect",
 		Code:       eh.code,
 		RedirectTo: toURL,
@@ -117,7 +114,7 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject
 	return nil
 }
 
-func (eh *redirectErrorHandler) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (eh *redirectErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
@@ -129,6 +126,6 @@ func (eh *redirectErrorHandler) CreateStep(def types.StepDefinition) (heimdall.S
 		return &erh, nil
 	}
 
-	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+	return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 		"reconfiguration of a redirect error handler is not supported")
 }

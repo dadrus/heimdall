@@ -25,7 +25,7 @@ import (
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/ext"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func Urls() cel.EnvOption {
@@ -43,16 +43,16 @@ func (urlsLib) ProgramOptions() []cel.ProgramOption {
 }
 
 func (urlsLib) CompileOptions() []cel.EnvOption {
-	urlType := cel.ObjectType(reflect.TypeFor[heimdall.URL]().String(), traits.ReceiverType)
+	urlType := cel.ObjectType(reflect.TypeFor[pipeline.URL]().String(), traits.ReceiverType)
 
 	return []cel.EnvOption{
-		ext.NativeTypes(reflect.TypeFor[*heimdall.URL]()),
+		ext.NativeTypes(reflect.TypeFor[*pipeline.URL]()),
 		cel.Function("String",
 			cel.MemberOverload("url_String",
 				[]*cel.Type{urlType}, cel.StringType,
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
 					// nolint: forcetypeassert
-					return types.String(value.Value().(*heimdall.URL).String())
+					return types.String(value.Value().(*pipeline.URL).String())
 				}),
 			),
 		),
@@ -61,7 +61,7 @@ func (urlsLib) CompileOptions() []cel.EnvOption {
 				[]*cel.Type{urlType}, cel.MapType(types.StringType, cel.ListType(cel.StringType)),
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
 					// nolint: forcetypeassert
-					return types.NewDynamicMap(types.DefaultTypeAdapter, value.Value().(*heimdall.URL).Query())
+					return types.NewDynamicMap(types.DefaultTypeAdapter, value.Value().(*pipeline.URL).Query())
 				}),
 			),
 		),
@@ -70,7 +70,7 @@ func (urlsLib) CompileOptions() []cel.EnvOption {
 				[]*cel.Type{urlType}, types.StringType,
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
 					// nolint: forcetypeassert
-					return types.String(value.Value().(*heimdall.URL).Hostname())
+					return types.String(value.Value().(*pipeline.URL).Hostname())
 				}),
 			),
 		),
@@ -79,7 +79,7 @@ func (urlsLib) CompileOptions() []cel.EnvOption {
 				[]*cel.Type{urlType}, types.StringType,
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
 					// nolint: forcetypeassert
-					return types.String(value.Value().(*heimdall.URL).Port())
+					return types.String(value.Value().(*pipeline.URL).Port())
 				}),
 			),
 		),

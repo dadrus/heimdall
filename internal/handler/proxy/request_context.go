@@ -31,7 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -123,7 +123,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 	}
 
 	if upstream == nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "No upstream reference defined")
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "No upstream reference defined")
 	}
 
 	logger.Info().
@@ -137,7 +137,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 		ErrorHandler: func(_ http.ResponseWriter, _ *http.Request, err error) {
 			logger.Error().Err(err).Msg("Proxying error")
 
-			errHolder.err = errorchain.NewWithMessage(heimdall.ErrCommunication, "Failed to proxy request").
+			errHolder.err = errorchain.NewWithMessage(pipeline.ErrCommunication, "Failed to proxy request").
 				CausedBy(err)
 		},
 		Rewrite: r.rewriteRequest(upstream.URL(), upstream.ForwardHostHeader()),

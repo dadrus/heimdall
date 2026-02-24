@@ -25,7 +25,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -54,20 +54,20 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 	var rawConfig map[string]any
 
 	if d.contentType != "application/json" && d.contentType != "application/yaml" {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"unsupported content type: %s", d.contentType)
 	}
 
 	if d.substituteEnvVars {
 		raw, err := io.ReadAll(reader)
 		if err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrInternal,
+			return errorchain.NewWithMessage(pipeline.ErrInternal,
 				"reading object failed").CausedBy(err)
 		}
 
 		content, err := envsubst.EvalEnv(stringx.ToString(raw))
 		if err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 				"substitution of environment variables failed").CausedBy(err)
 		}
 
@@ -80,7 +80,7 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 			return err
 		}
 
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"parsing of object failed").CausedBy(err)
 	}
 
@@ -95,17 +95,17 @@ func (d *Decoder) DecodeMap(out any, in map[string]any) error {
 		DecodeHook:  x.IfThenElse(d.decodeHooks != nil, d.decodeHooks, mapstructure.ComposeDecodeHookFunc()),
 	})
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
+		return errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed creating object decoder").CausedBy(err)
 	}
 
 	if err = dec.Decode(in); err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"decoding of object failed").CausedBy(err)
 	}
 
 	if err = d.validator.Validate(out); err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"object validation failed").CausedBy(err)
 	}
 

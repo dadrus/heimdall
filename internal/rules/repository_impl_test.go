@@ -23,9 +23,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
@@ -128,7 +129,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -149,7 +150,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -170,7 +171,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -210,7 +211,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -250,7 +251,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -290,7 +291,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -330,7 +331,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -351,7 +352,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -372,7 +373,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -393,7 +394,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -433,7 +434,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -454,7 +455,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -494,7 +495,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -515,7 +516,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -536,7 +537,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -557,7 +558,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -578,7 +579,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -599,7 +600,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -620,7 +621,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -641,7 +642,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -662,7 +663,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
@@ -683,15 +684,17 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			repo := newRepository(&ruleFactory{}).(*repository)
+			mp := otel.GetMeterProvider()
+			repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
+			require.NoError(t, err)
 
-			err := repo.AddRuleSet(t.Context(), tc.initRules[0].SrcID(), tc.initRules)
+			err = repo.AddRuleSet(t.Context(), tc.initRules[0].SrcID(), tc.initRules)
 
 			if len(tc.tbaRules) != 0 {
 				require.NoError(t, err)
@@ -699,7 +702,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				err = repo.AddRuleSet(t.Context(), tc.tbaRules[0].SrcID(), tc.tbaRules)
 			}
 
-			tc.assert(t, err, repo)
+			tc.assert(t, err, repo.(*repository))
 		})
 	}
 }
@@ -708,7 +711,11 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
+	mp := otel.GetMeterProvider()
+	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
+	require.NoError(t, err)
+
+	impl := repo.(*repository)
 
 	rule1 := &ruleImpl{id: "1", srcID: "1"}
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*", path: "/foo/1"})
@@ -725,23 +732,25 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 	rules := []rule.Rule{rule1, rule2, rule3, rule4}
 
 	require.NoError(t, repo.AddRuleSet(t.Context(), "1", rules))
-	assert.Len(t, repo.knownRules, 4)
-	assert.False(t, repo.index.Empty())
+	assert.Len(t, impl.knownRules, 4)
+	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	err := repo.DeleteRuleSet(t.Context(), "1")
+	err = repo.DeleteRuleSet(t.Context(), "1")
 
 	// THEN
 	require.NoError(t, err)
-	assert.Empty(t, repo.knownRules)
-	assert.True(t, repo.index.Empty())
+	assert.Empty(t, impl.knownRules)
+	assert.True(t, impl.index.Empty())
 }
 
 func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
+	mp := otel.GetMeterProvider()
+	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
+	require.NoError(t, err)
 
 	rule1 := &ruleImpl{id: "1", srcID: "bar"}
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
@@ -762,36 +771,38 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	rules2 := []rule.Rule{rule4}
 	rules3 := []rule.Rule{rule5}
 
+	impl := repo.(*repository)
+
 	// WHEN
 	require.NoError(t, repo.AddRuleSet(t.Context(), "bar", rules1))
 	require.NoError(t, repo.AddRuleSet(t.Context(), "baz", rules2))
 	require.NoError(t, repo.AddRuleSet(t.Context(), "foo", rules3))
 
 	// THEN
-	assert.Len(t, repo.knownRules, 5)
-	assert.False(t, repo.index.Empty())
+	assert.Len(t, impl.knownRules, 5)
+	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	err := repo.DeleteRuleSet(t.Context(), "bar")
+	err = repo.DeleteRuleSet(t.Context(), "bar")
 
 	// THEN
 	require.NoError(t, err)
-	assert.Len(t, repo.knownRules, 2)
-	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0], rules3[0]})
+	assert.Len(t, impl.knownRules, 2)
+	assert.ElementsMatch(t, impl.knownRules, []rule.Rule{rules2[0], rules3[0]})
 
-	_, err = repo.index.FindEntry("example.com", "/bar/1", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = impl.index.FindEntry("example.com", "/bar/1", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.FindEntry("foo.example.com", "/bar/3", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = impl.index.FindEntry("foo.example.com", "/bar/3", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.FindEntry("foo.com", "/bar/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = impl.index.FindEntry("foo.com", "/bar/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.FindEntry("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = impl.index.FindEntry("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
-	_, err = repo.index.FindEntry("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = impl.index.FindEntry("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -799,13 +810,13 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Len(t, repo.knownRules, 1)
-	assert.ElementsMatch(t, repo.knownRules, []rule.Rule{rules2[0]})
+	assert.Len(t, impl.knownRules, 1)
+	assert.ElementsMatch(t, impl.knownRules, []rule.Rule{rules2[0]})
 
-	_, err = repo.index.FindEntry("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = impl.index.FindEntry("foo.bar", "/foo/4", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.Error(t, err) //nolint:testifylint
 
-	_, err = repo.index.FindEntry("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
+	_, err = impl.index.FindEntry("bar.com", "/baz/2", radixtrie.LookupMatcherFunc[rule.Route](func(_ rule.Route, _, _ []string) bool { return true }))
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
@@ -813,15 +824,19 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Empty(t, repo.knownRules)
-	assert.True(t, repo.index.Empty())
+	assert.Empty(t, impl.knownRules)
+	assert.True(t, impl.index.Empty())
 }
 
 func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
+	mp := otel.GetMeterProvider()
+	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
+	require.NoError(t, err)
+
+	impl := repo.(*repository)
 
 	rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
@@ -854,46 +869,46 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	updatedRules := []rule.Rule{rule1, rule3, rule4}
 
 	// WHEN
-	err := repo.UpdateRuleSet(t.Context(), "1", updatedRules)
+	err = repo.UpdateRuleSet(t.Context(), "1", updatedRules)
 
 	// THEN
 	require.NoError(t, err)
 
-	assert.Len(t, repo.knownRules, 3)
-	assert.False(t, repo.index.Empty())
+	assert.Len(t, impl.knownRules, 3)
+	assert.False(t, impl.index.Empty())
 
-	_, err = repo.index.FindEntry("example.com", "/bar/1",
+	_, err = impl.index.FindEntry("example.com", "/bar/1",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.FindEntry("bar.example.com", "/bar/1a",
+	_, err = impl.index.FindEntry("bar.example.com", "/bar/1a",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.FindEntry("bar.example.com", "/bar/1b",
+	_, err = impl.index.FindEntry("bar.example.com", "/bar/1b",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.FindEntry("example.com", "/bar/2",
+	_, err = impl.index.FindEntry("example.com", "/bar/2",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
 
-	_, err = repo.index.FindEntry("foo.example.com", "/bar/2",
+	_, err = impl.index.FindEntry("foo.example.com", "/bar/2",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = repo.index.FindEntry("foo.example.com", "/foo/3",
+	_, err = impl.index.FindEntry("foo.example.com", "/foo/3",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
-	_, err = repo.index.FindEntry("foo.example.com", "/foo/4",
+	_, err = impl.index.FindEntry("foo.example.com", "/foo/4",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
 
-	_, err = repo.index.FindEntry("baz.example.com", "/bar/4",
+	_, err = impl.index.FindEntry("baz.example.com", "/bar/4",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
@@ -978,7 +993,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 
 				assert.Len(t, repo.knownRules, 2)
@@ -1017,7 +1032,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 
 				entry, err := repo.index.FindEntry("foo.example.com", "/bar/1",
@@ -1053,7 +1068,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "conflicting rules")
 
 				entry, err := repo.index.FindEntry("foo.example.com", "/bar/1",
@@ -1077,95 +1092,20 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
+			mp := otel.GetMeterProvider()
+			repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
+			require.NoError(t, err)
 
-			err := repo.AddRuleSet(t.Context(), "1", tc.initRules)
+			err = repo.AddRuleSet(t.Context(), "1", tc.initRules)
 			require.NoError(t, err)
 
 			// WHEN
 			err = repo.UpdateRuleSet(t.Context(), "2", tc.updatedRules)
 
 			// THEN
-			tc.assert(t, err, repo)
+			tc.assert(t, err, repo.(*repository))
 		})
 	}
-
-	// GIVEN
-	repo := newRepository(&ruleFactory{}).(*repository) //nolint: forcetypeassert
-
-	rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*.example.com", path: "/:1/1"})
-
-	rule2 := &ruleImpl{id: "2", srcID: "1", hash: []byte{1}}
-	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
-
-	rule3 := &ruleImpl{id: "3", srcID: "1", hash: []byte{1}}
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/bar/2"})
-
-	rule4 := &ruleImpl{id: "4", srcID: "1", hash: []byte{1}}
-	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "baz.example.com", path: "/bar/4"})
-
-	initialRules := []rule.Rule{rule1, rule2, rule3, rule4}
-
-	require.NoError(t, repo.AddRuleSet(t.Context(), "1", initialRules))
-
-	// rule 1 changed: example.com/bar/1a gone, bar.example.com/bar/1b added
-	rule1 = &ruleImpl{id: "1", srcID: "1", hash: []byte{2}}
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
-	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "bar.example.com", path: "/bar/1b"})
-	// rule with id 2 is deleted
-	// rule 3 changed: foo.example.com/bar/2 gone, foo.example.com/foo/3 and /foo/4 added
-	rule3 = &ruleImpl{id: "3", srcID: "1", hash: []byte{2}}
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/3"})
-	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/4"})
-	// rule 4 same as before
-
-	updatedRules := []rule.Rule{rule1, rule3, rule4}
-
-	// WHEN
-	err := repo.UpdateRuleSet(t.Context(), "1", updatedRules)
-
-	// THEN
-	require.NoError(t, err)
-
-	assert.Len(t, repo.knownRules, 3)
-	assert.False(t, repo.index.Empty())
-
-	_, err = repo.index.FindEntry("example.com", "/bar/1",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-	_, err = repo.index.FindEntry("bar.example.com", "/bar/1a",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.Error(t, err)
-	_, err = repo.index.FindEntry("bar.example.com", "/bar/1b",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-
-	_, err = repo.index.FindEntry("example.com", "/bar/2",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.Error(t, err)
-
-	_, err = repo.index.FindEntry("foo.example.com", "/bar/2",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.Error(t, err)
-	_, err = repo.index.FindEntry("foo.example.com", "/foo/3",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-	_, err = repo.index.FindEntry("foo.example.com", "/foo/4",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-
-	_, err = repo.index.FindEntry("baz.example.com", "/bar/4",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
 }
 
 func TestRepositoryFindRule(t *testing.T) {
@@ -1173,7 +1113,7 @@ func TestRepositoryFindRule(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		requestURL       *url.URL
-		addRules         func(t *testing.T, repo *repository)
+		addRules         func(t *testing.T, repo rule.Repository)
 		configureFactory func(t *testing.T, factory *mocks.FactoryMock)
 		assert           func(t *testing.T, err error, rul rule.Rule)
 	}{
@@ -1188,7 +1128,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrNoRuleFound)
+				require.ErrorIs(t, err, pipeline.ErrNoRuleFound)
 			},
 		},
 		"matches default rule": {
@@ -1213,7 +1153,7 @@ func TestRepositoryFindRule(t *testing.T) {
 
 				factory.EXPECT().HasDefaultRule().Return(false)
 			},
-			addRules: func(t *testing.T, repo *repository) {
+			addRules: func(t *testing.T, repo rule.Repository) {
 				t.Helper()
 
 				rule1 := &ruleImpl{id: "test", srcID: "1", hash: []byte{1}}
@@ -1241,7 +1181,7 @@ func TestRepositoryFindRule(t *testing.T) {
 
 				factory.EXPECT().HasDefaultRule().Return(false)
 			},
-			addRules: func(t *testing.T, repo *repository) {
+			addRules: func(t *testing.T, repo rule.Repository) {
 				t.Helper()
 
 				rule1 := &ruleImpl{id: "rule1", srcID: "1", hash: []byte{1}}
@@ -1304,7 +1244,7 @@ func TestRepositoryFindRule(t *testing.T) {
 
 				factory.EXPECT().HasDefaultRule().Return(false)
 			},
-			addRules: func(t *testing.T, repo *repository) {
+			addRules: func(t *testing.T, repo rule.Repository) {
 				t.Helper()
 
 				rule1 := &ruleImpl{id: "rule1", srcID: "1", hash: []byte{1}}
@@ -1347,16 +1287,19 @@ func TestRepositoryFindRule(t *testing.T) {
 			// GIVEN
 			addRules := x.IfThenElse(tc.addRules != nil,
 				tc.addRules,
-				func(t *testing.T, _ *repository) { t.Helper() })
+				func(t *testing.T, _ rule.Repository) { t.Helper() })
 
 			factory := mocks.NewFactoryMock(t)
 			tc.configureFactory(t, factory)
 
-			repo := newRepository(factory).(*repository) //nolint: forcetypeassert
+			mp := otel.GetMeterProvider()
+
+			repo, err := newRepository(factory, mp.Meter("test"))
+			require.NoError(t, err)
 
 			addRules(t, repo)
 
-			req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *tc.requestURL}}
+			req := &pipeline.Request{Method: http.MethodGet, URL: &pipeline.URL{URL: *tc.requestURL}}
 			ctx := mocks2.NewContextMock(t)
 			ctx.EXPECT().Context().Maybe().Return(t.Context())
 			ctx.EXPECT().Request().Return(req)

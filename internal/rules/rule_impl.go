@@ -24,9 +24,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -46,7 +45,7 @@ type ruleImpl struct {
 	subjectPool     *sync.Pool
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
+func (r *ruleImpl) Execute(ctx pipeline.Context) (rule.Backend, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	if r.isDefault {
@@ -63,7 +62,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		request.URL.RawPath = ""
 	case v1beta1.EncodedSlashesOff:
 		if strings.Contains(request.URL.RawPath, "%2F") {
-			return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
+			return nil, errorchain.NewWithMessage(pipeline.ErrArgument,
 				"path contains encoded slash, which is not allowed")
 		}
 	}
@@ -74,7 +73,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		captures[k] = unescape(v, r.slashesHandling)
 	}
 
-	sub := r.subjectPool.Get().(identity.Subject) //nolint: forcetypeassert
+	sub := r.subjectPool.Get().(pipeline.Subject) //nolint: forcetypeassert
 
 	defer func() {
 		clear(sub)
@@ -122,7 +121,7 @@ func (r *ruleImpl) EqualTo(other rule.Rule) bool {
 		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
-func (r *ruleImpl) createBackend(request *heimdall.Request) rule.Backend {
+func (r *ruleImpl) createBackend(request *pipeline.Request) rule.Backend {
 	var upstream rule.Backend
 
 	if r.backend != nil {
@@ -143,7 +142,7 @@ type routeImpl struct {
 	matcher RouteMatcher
 }
 
-func (r *routeImpl) Matches(ctx heimdall.Context, keys, values []string) bool {
+func (r *routeImpl) Matches(ctx pipeline.Context, keys, values []string) bool {
 	logger := zerolog.Ctx(ctx.Context())
 
 	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {

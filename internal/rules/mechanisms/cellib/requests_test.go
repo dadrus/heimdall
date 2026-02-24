@@ -24,8 +24,8 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestRequests(t *testing.T) {
@@ -49,10 +49,10 @@ func TestRequests(t *testing.T) {
 	reqf.EXPECT().Header("accept").Return("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 	reqf.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}})
 
-	req := &heimdall.Request{
+	req := &pipeline.Request{
 		RequestFunctions: reqf,
 		Method:           http.MethodHead,
-		URL: &heimdall.URL{
+		URL: &pipeline.URL{
 			URL:      *uri,
 			Captures: map[string]string{"foo": "bar"},
 		},

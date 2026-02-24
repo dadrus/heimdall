@@ -16,10 +16,8 @@
 
 package rule
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-)
+import "github.com/dadrus/heimdall/internal/pipeline"
 
 type Executor interface {
-	Execute(ctx heimdall.Context) (Backend, error)
+	Execute(ctx pipeline.Context) (Backend, error)
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func TestUrls(t *testing.T) {
@@ -63,7 +63,7 @@ func TestUrls(t *testing.T) {
 			prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 			require.NoError(t, err)
 
-			out, _, err := prg.Eval(map[string]any{"uri": &heimdall.URL{URL: *uri, Captures: map[string]string{"zab": "baz"}}})
+			out, _, err := prg.Eval(map[string]any{"uri": &pipeline.URL{URL: *uri, Captures: map[string]string{"zab": "baz"}}})
 			require.NoError(t, err)
 			require.Equal(t, true, out.Value()) //nolint:testifylint
 		})

@@ -20,8 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
@@ -59,12 +58,12 @@ func newUnauthorizedAuthenticator(app app.Context, name string, _ map[string]any
 	}, nil
 }
 
-func (a *unauthorizedAuthenticator) Accept(visitor heimdall.Visitor) {
+func (a *unauthorizedAuthenticator) Accept(visitor pipeline.Visitor) {
 	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
-func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (a *unauthorizedAuthenticator) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorUnauthorized).
@@ -73,15 +72,15 @@ func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context, _ identity.Sub
 		Msg("Executing authenticator")
 
 	return errorchain.
-		NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator").
+		NewWithMessage(pipeline.ErrAuthentication, "denied by authenticator").
 		WithErrorContext(a)
 }
 
-func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	// nothing can be reconfigured
 	if len(def.Config) != 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "unauthorized authenticator cannot be reconfigured").
+			NewWithMessage(pipeline.ErrConfiguration, "unauthorized authenticator cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
@@ -96,14 +95,9 @@ func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (heimda
 	return &auth, nil
 }
 
-func (a *unauthorizedAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
-
-func (a *unauthorizedAuthenticator) Name() string { return a.name }
-
-func (a *unauthorizedAuthenticator) ID() string {
-	return a.id
-}
-
-func (a *unauthorizedAuthenticator) IsInsecure() bool { return false }
-
+func (a *unauthorizedAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
+func (a *unauthorizedAuthenticator) Name() string          { return a.name }
+func (a *unauthorizedAuthenticator) ID() string            { return a.id }
+func (a *unauthorizedAuthenticator) Type() string          { return a.name }
+func (a *unauthorizedAuthenticator) IsInsecure() bool      { return false }
 func (a *unauthorizedAuthenticator) PrincipalName() string { return a.principalName }

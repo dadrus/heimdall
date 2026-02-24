@@ -17,35 +17,37 @@
 package rules
 
 import (
+	"time"
+
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/otel/semconv"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-const (
-	attrRuleID  = attribute.Key("rule.id")
-	attrRuleSrc = attribute.Key("rule.src")
-)
-
 type ruleExecutor struct {
-	r rule.Repository
-	t trace.Tracer
+	r  rule.Repository
+	t  trace.Tracer
+	rd semconv.RuleExecutionDuration
 }
 
-func newRuleExecutor(repository rule.Repository) rule.Executor {
-	tp := otel.GetTracerProvider()
+func newRuleExecutor(repository rule.Repository, meter metric.Meter, tracer trace.Tracer) rule.Executor {
+	rd, _ := semconv.NewRuleExecutionDuration(meter)
 
 	return &ruleExecutor{
-		r: repository,
-		t: tp.Tracer("github.com/dadrus/heimdall"),
+		r:  repository,
+		t:  tracer,
+		rd: rd,
 	}
 }
 
-func (e *ruleExecutor) Execute(hctx heimdall.Context) (rule.Backend, error) {
+func (e *ruleExecutor) Execute(hctx pipeline.Context) (rule.Backend, error) {
+	startTime := time.Now()
 	request := hctx.Request()
 	ctx := hctx.Context()
 
@@ -59,24 +61,30 @@ func (e *ruleExecutor) Execute(hctx heimdall.Context) (rule.Backend, error) {
 		return nil, err
 	}
 
-	var span trace.Span
-
-	ctx, span = e.t.Start(
+	ctx, span := e.t.Start(
 		ctx,
 		"Rule Execution",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(
-			attrRuleID.String(rul.ID()),
-			attrRuleSrc.String(rul.SrcID()),
+			semconv.RuleIDKey.String(rul.ID()),
+			semconv.RuleSetKey.String(rul.SrcID()),
 		),
 	)
 
 	defer span.End()
 
 	be, err := rul.Execute(hctx.WithParent(ctx))
+	elapsedTime := float64(time.Since(startTime)) / float64(time.Millisecond)
+
 	if err != nil {
 		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 	}
+
+	e.rd.Record(ctx, elapsedTime, attribute.NewSet(
+		e.rd.AttrRuleID(rul.ID()),
+		e.rd.AttrRuleSet(rul.SrcID()),
+	))
 
 	return be, err
 }

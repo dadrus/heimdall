@@ -20,8 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -56,9 +55,9 @@ func newDenyAuthorizer(app app.Context, name string, _ map[string]any) (types.Me
 	}, nil
 }
 
-func (a *denyAuthorizer) Accept(_ heimdall.Visitor) {}
+func (a *denyAuthorizer) Accept(_ pipeline.Visitor) {}
 
-func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (a *denyAuthorizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerDeny).
@@ -67,18 +66,18 @@ func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) error
 		Msg("Executing authorizer")
 
 	return errorchain.
-		NewWithMessage(heimdall.ErrAuthorization, "denied by authorizer").
+		NewWithMessage(pipeline.ErrAuthorization, "denied by authorizer").
 		WithErrorContext(a)
 }
 
-func (a *denyAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *denyAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
 	if len(def.Config) != 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "allow authorizer cannot be reconfigured").
+			NewWithMessage(pipeline.ErrConfiguration, "allow authorizer cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
@@ -89,7 +88,6 @@ func (a *denyAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, er
 }
 
 func (a *denyAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-
-func (a *denyAuthorizer) Name() string { return a.name }
-
-func (a *denyAuthorizer) ID() string { return a.id }
+func (a *denyAuthorizer) Name() string     { return a.name }
+func (a *denyAuthorizer) ID() string       { return a.id }
+func (a *denyAuthorizer) Type() string     { return a.name }

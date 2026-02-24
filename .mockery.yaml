@@ -38,7 +38,7 @@ packages:
     interfaces:
       Context: {}
       ContextFactory: {}
-  github.com/dadrus/heimdall/internal/heimdall:
+  github.com/dadrus/heimdall/internal/pipeline:
     interfaces:
       Context: {}
       Step: {}

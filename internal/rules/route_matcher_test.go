@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 )
 
@@ -119,7 +119,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to compile path params matching expression for parameter 'foo' at index 0")
 			},
 		},
@@ -143,7 +143,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to compile path params matching expression for parameter 'foo' at index 0")
 			},
 		},
@@ -167,7 +167,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "unsupported path parameter expression type 'bar' for parameter 'foo' at index 0")
 			},
 		},
@@ -194,7 +194,7 @@ func TestSchemeMatcherMatches(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			err := tc.matcher.Matches(
-				&heimdall.Request{URL: &heimdall.URL{URL: url.URL{Scheme: tc.toMatch}}},
+				&pipeline.Request{URL: &pipeline.URL{URL: url.URL{Scheme: tc.toMatch}}},
 				nil,
 				nil,
 			)
@@ -222,7 +222,7 @@ func TestMethodMatcherMatches(t *testing.T) {
 		"does not match":      {matcher: methodMatcher{"GET"}, toMatch: "POST"},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			err := tc.matcher.Matches(&heimdall.Request{Method: tc.toMatch}, nil, nil)
+			err := tc.matcher.Matches(&pipeline.Request{Method: tc.toMatch}, nil, nil)
 
 			if tc.matches {
 				require.NoError(t, err)
@@ -309,7 +309,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			uri, err := url.Parse(tc.toMatch)
 			require.NoError(t, err)
 
-			err = hm.Matches(&heimdall.Request{URL: &heimdall.URL{URL: *uri}}, tc.keys, tc.values)
+			err = hm.Matches(&pipeline.Request{URL: &pipeline.URL{URL: *uri}}, tc.keys, tc.values)
 
 			if tc.matches {
 				require.NoError(t, err)
@@ -351,7 +351,7 @@ func TestAndMatcherMatches(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			err := tc.matcher.Matches(
-				&heimdall.Request{Method: tc.method, URL: &heimdall.URL{URL: url.URL{Scheme: tc.scheme}}},
+				&pipeline.Request{Method: tc.method, URL: &pipeline.URL{URL: url.URL{Scheme: tc.scheme}}},
 				nil,
 				nil,
 			)
@@ -395,7 +395,7 @@ func TestOrMatcherMatches(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			err := tc.matcher.Matches(
-				&heimdall.Request{Method: tc.method, URL: &heimdall.URL{URL: url.URL{Scheme: tc.scheme}}},
+				&pipeline.Request{Method: tc.method, URL: &pipeline.URL{URL: url.URL{Scheme: tc.scheme}}},
 				nil,
 				nil,
 			)

@@ -20,8 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -56,9 +55,9 @@ func newDefaultErrorHandler(app app.Context, name string, _ map[string]any) (typ
 	}, nil
 }
 
-func (eh *defaultErrorHandler) Accept(_ heimdall.Visitor) {}
+func (eh *defaultErrorHandler) Accept(_ pipeline.Visitor) {}
 
-func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (eh *defaultErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ErrorHandlerDefault).
@@ -69,7 +68,7 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, _ identity.Subject)
 	return nil
 }
 
-func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
@@ -81,12 +80,11 @@ func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (heimdall.St
 		return &erh, nil
 	}
 
-	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+	return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 		"default error handler cannot be reconfigured")
 }
 
 func (eh *defaultErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
-
-func (eh *defaultErrorHandler) Name() string { return eh.name }
-
-func (eh *defaultErrorHandler) ID() string { return eh.id }
+func (eh *defaultErrorHandler) Name() string     { return eh.name }
+func (eh *defaultErrorHandler) ID() string       { return eh.id }
+func (eh *defaultErrorHandler) Type() string     { return eh.name }

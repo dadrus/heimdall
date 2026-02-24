@@ -16,14 +16,12 @@
 
 package rule
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-)
+import "github.com/dadrus/heimdall/internal/pipeline"
 
 type Rule interface {
 	ID() string
 	SrcID() string
-	Execute(ctx heimdall.Context) (Backend, error)
+	Execute(ctx pipeline.Context) (Backend, error)
 	Routes() []Route
 	SameAs(other Rule) bool
 	EqualTo(other Rule) bool

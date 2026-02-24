@@ -27,7 +27,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -62,7 +62,7 @@ func New(val string) (Template, error) {
 		}).
 		Parse(val)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse template").
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "failed to parse template").
 			CausedBy(err)
 	}
 

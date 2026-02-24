@@ -24,7 +24,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/schema"
@@ -35,13 +35,13 @@ func ValidateConfigSchema(src io.Reader) error {
 
 	err := yaml.NewDecoder(src).Decode(&conf)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed to parse config").CausedBy(err)
 	}
 
 	compiledSchema, err := compileSchema("config.schema.json", stringx.ToString(schema.ConfigSchema))
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed to compile JSON schema").CausedBy(err)
 	}
 
@@ -49,7 +49,7 @@ func ValidateConfigSchema(src io.Reader) error {
 
 	err = compiledSchema.Validate(conf)
 	if err != nil {
-		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
+		return errorchain.New(pipeline.ErrConfiguration).CausedBy(err)
 	}
 
 	return nil

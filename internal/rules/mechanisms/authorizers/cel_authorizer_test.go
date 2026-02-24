@@ -27,9 +27,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -47,7 +46,7 @@ func TestNewCELAuthorizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'expressions' is a required field")
 			},
 		},
@@ -57,7 +56,7 @@ func TestNewCELAuthorizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'expressions' must contain more than 0 items")
 			},
 		},
@@ -70,7 +69,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to compile")
 			},
 		},
@@ -83,7 +82,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "wanted bool")
 			},
 		},
@@ -110,7 +109,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'expressions'[0].'expression' is a required field")
 			},
 		},
@@ -320,7 +319,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to parse template")
 			},
 		},
@@ -341,7 +340,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed to compile")
 			},
 		},
@@ -383,7 +382,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub identity.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub pipeline.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		"denied by expression without access to subject and request": {
@@ -391,7 +390,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ identity.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ pipeline.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -402,7 +401,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorIs(t, err, pipeline.ErrAuthorization)
 				require.ErrorContains(t, err, "expression 1 failed")
 
 				var identifier interface{ ID() string }
@@ -417,7 +416,7 @@ values:
 expressions:
   - expression: "true == true"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ identity.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ pipeline.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -428,7 +427,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
@@ -463,10 +462,10 @@ expressions:
   - expression: Outputs.foo == "bar"
   - expression: Subject.ID == Values.a + Values.b
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub identity.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub pipeline.Subject) {
 				t.Helper()
 
-				sub["default"] = &identity.Principal{
+				sub["default"] = &pipeline.Principal{
 					ID: "barbar",
 					Attributes: map[string]any{
 						"group1": []string{"admin@acme.co", "analyst@acme.co"},
@@ -479,10 +478,10 @@ expressions:
 				reqf.EXPECT().Header("X-Custom-Header").Return("foobar")
 				reqf.EXPECT().Cookie("FooCookie").Return("barfoo")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{
+				ctx.EXPECT().Request().Return(&pipeline.Request{
 					RequestFunctions: reqf,
 					Method:           http.MethodGet,
-					URL: &heimdall.URL{
+					URL: &pipeline.URL{
 						URL: url.URL{
 							Scheme:   "http",
 							Host:     "localhost",
@@ -511,7 +510,7 @@ expressions:
 			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
-			sub := make(identity.Subject)
+			sub := make(pipeline.Subject)
 
 			tc.configureContextAndSubject(t, ctx, sub)
 
