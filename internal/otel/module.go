@@ -18,12 +18,14 @@ package otel
 
 import (
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/contrib/instrumentation/host"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/otel/metrics"
+	"github.com/dadrus/heimdall/internal/otel/certificate"
 	"github.com/dadrus/heimdall/version"
 )
 
@@ -42,7 +44,9 @@ var Module = fx.Options(
 		createMeter,
 		createTracer,
 	),
-	metrics.Module,
+	fx.Invoke(runtime.Start),
+	fx.Invoke(host.Start),
+	fx.Provide(certificate.NewObserver),
 )
 
 const instrumentationIdentifier = "github.com/dadrus/heimdall"

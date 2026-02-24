@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
+	otelpipeline "github.com/dadrus/heimdall/internal/otel/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
@@ -450,5 +451,5 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 		step = newConditionalStep(step, condition)
 	}
 
-	return newTelemetryStep(step, f.t), nil
+	return otelpipeline.NewStep(step, f.t), nil
 }
