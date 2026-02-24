@@ -14,13 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rule
+package pipeline
 
-import (
-	"net/url"
-)
-
-type Backend interface {
-	URL() *url.URL
-	ForwardHostHeader() bool
+type Executor interface {
+	Execute(ctx Context) (Backend, error)
 }

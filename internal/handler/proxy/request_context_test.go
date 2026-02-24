@@ -30,8 +30,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
-	"github.com/dadrus/heimdall/internal/rules/rule"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestRequestContextFinalize(t *testing.T) {
@@ -48,11 +48,11 @@ func TestRequestContextFinalize(t *testing.T) {
 		upstreamCalled bool
 		useIPv6        bool
 		headers        http.Header
-		setup          func(*testing.T, requestcontext.Context, *url.URL) rule.Backend
+		setup          func(*testing.T, requestcontext.Context, *url.URL) pipeline.Backend
 		assertRequest  func(*testing.T, *http.Request)
 	}{
 		"error was present, forwarding aborted": {
-			setup: func(t *testing.T, ctx requestcontext.Context, _ *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, _ *url.URL) pipeline.Backend {
 				t.Helper()
 
 				err := errors.New("test error")
@@ -64,10 +64,10 @@ func TestRequestContextFinalize(t *testing.T) {
 		"no headers set, ipv6 is used": {
 			upstreamCalled: true,
 			useIPv6:        true,
-			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
@@ -100,10 +100,10 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-For":    []string{"127.0.0.2, 192.168.12.126"},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
@@ -130,10 +130,10 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
@@ -160,7 +160,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Foo-Bar": []string{"bar", "foo"},
 				"X-Bar":     []string{"bar"},
 			},
-			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("X-User-ID", "someid")
@@ -169,7 +169,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				ctx.AddCookieForUpstream("my_cookie_1", "my_value_1")
 				ctx.AddCookieForUpstream("my_cookie_2", "my_value_2")
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
@@ -203,7 +203,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Foo-Bar": []string{"bar", "foo"},
 				"X-Bar":     []string{"bar"},
 			},
-			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("X-User-ID", "someid")
@@ -214,7 +214,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				ctx.AddCookieForUpstream("my_cookie_1", "my_value_1")
 				ctx.AddCookieForUpstream("my_cookie_2", "my_value_2")
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
@@ -244,12 +244,12 @@ func TestRequestContextFinalize(t *testing.T) {
 		},
 		"Host header is manually set for upstream": {
 			upstreamCalled: true,
-			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("Host", "bar.foo")
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
@@ -275,10 +275,10 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Proto": []string{"http"},
 			},
-			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 
@@ -304,10 +304,10 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Host": []string{"bar.foo"},
 			},
-			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(true)
 
@@ -333,10 +333,10 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-For": []string{"172.2.34.1"},
 			},
-			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
+				backend := mocks.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
 				backend.EXPECT().ForwardHostHeader().Return(false)
 

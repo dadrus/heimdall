@@ -32,7 +32,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -115,7 +114,7 @@ func (r *requestContext) Reset() {
 	r.RequestContext.Reset()
 }
 
-func (r *requestContext) Finalize(upstream rule.Backend) error {
+func (r *requestContext) Finalize(upstream pipeline.Backend) error {
 	logger := zerolog.Ctx(r.Context())
 
 	if err := r.Error(); err != nil {

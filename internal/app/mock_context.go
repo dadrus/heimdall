@@ -7,7 +7,7 @@ package app
 import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/otel/certificate"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/rs/zerolog"

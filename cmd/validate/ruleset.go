@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/otel/certificate"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"

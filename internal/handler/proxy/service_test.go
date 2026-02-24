@@ -51,7 +51,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -102,7 +102,7 @@ func TestProxyService(t *testing.T) {
 		disableHTTP2   bool
 		createRequest  func(t *testing.T, host string) *http.Request
 		createClient   func(t *testing.T) *http.Client
-		configureMocks func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL)
+		configureMocks func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL)
 		processRequest func(t *testing.T, rw http.ResponseWriter, req *http.Request)
 		assertResponse func(t *testing.T, err error, upstreamCalled bool, resp *http.Response)
 	}{
@@ -120,7 +120,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
@@ -152,7 +152,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
@@ -184,7 +184,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrConfiguration)
@@ -216,7 +216,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
@@ -248,7 +248,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
@@ -286,10 +286,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				backend := mocks4.NewBackendMock(t)
+				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
@@ -368,10 +368,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				backend := mocks4.NewBackendMock(t)
+				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
@@ -449,10 +449,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				backend := mocks4.NewBackendMock(t)
+				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
@@ -537,10 +537,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				backend := mocks4.NewBackendMock(t)
+				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
@@ -622,7 +622,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock, _ *url.URL) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock, _ *url.URL) { t.Helper() },
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
 
@@ -664,7 +664,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock, _ *url.URL) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock, _ *url.URL) { t.Helper() },
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
 
@@ -711,10 +711,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				backend := mocks4.NewBackendMock(t)
+				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
@@ -806,10 +806,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				backend := mocks4.NewBackendMock(t)
+				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
@@ -924,7 +924,7 @@ func TestProxyService(t *testing.T) {
 				Metrics: config.MetricsConfig{Enabled: tc.enableMetrics},
 			}
 			cch := mocks.NewCacheMock(t)
-			exec := mocks4.NewExecutorMock(t)
+			exec := mocks2.NewExecutorMock(t)
 
 			tc.configureMocks(t, exec, upstreamURL)
 
@@ -1003,8 +1003,8 @@ func TestWebSocketSupport(t *testing.T) {
 	upstreamURL, err := url.Parse(upstreamSrv.URL)
 	require.NoError(t, err)
 
-	exec := mocks4.NewExecutorMock(t)
-	backend := mocks4.NewBackendMock(t)
+	exec := mocks2.NewExecutorMock(t)
+	backend := mocks2.NewBackendMock(t)
 	backend.EXPECT().URL().Return(&url.URL{
 		Scheme: upstreamURL.Scheme,
 		Host:   upstreamURL.Host,
@@ -1101,9 +1101,9 @@ func TestServerSentEventsSupport(t *testing.T) {
 	upstreamURL, err := url.Parse(upstreamSrv.URL)
 	require.NoError(t, err)
 
-	exec := mocks4.NewExecutorMock(t)
+	exec := mocks2.NewExecutorMock(t)
 
-	backend := mocks4.NewBackendMock(t)
+	backend := mocks2.NewBackendMock(t)
 	backend.EXPECT().URL().Return(&url.URL{
 		Scheme: upstreamURL.Scheme,
 		Host:   upstreamURL.Host,

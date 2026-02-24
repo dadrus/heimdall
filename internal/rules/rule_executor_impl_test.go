@@ -74,7 +74,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				upstream := mocks4.NewBackendMock(t)
+				upstream := mocks2.NewBackendMock(t)
 				req := &pipeline.Request{Method: http.MethodGet, URL: &pipeline.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().Context().Return(t.Context())

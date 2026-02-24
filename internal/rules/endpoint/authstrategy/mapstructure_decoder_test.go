@@ -37,7 +37,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	mocks3 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
+	mocks3 "github.com/dadrus/heimdall/internal/otel/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"

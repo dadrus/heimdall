@@ -89,23 +89,23 @@ func (_c *RuleMock_EqualTo_Call) RunAndReturn(run func(other rule.Rule) bool) *R
 }
 
 // Execute provides a mock function for the type RuleMock
-func (_mock *RuleMock) Execute(ctx pipeline.Context) (rule.Backend, error) {
+func (_mock *RuleMock) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Execute")
 	}
 
-	var r0 rule.Backend
+	var r0 pipeline.Backend
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (rule.Backend, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (pipeline.Backend, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) rule.Backend); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) pipeline.Backend); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(rule.Backend)
+			r0 = ret.Get(0).(pipeline.Backend)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(pipeline.Context) error); ok {
@@ -140,12 +140,12 @@ func (_c *RuleMock_Execute_Call) Run(run func(ctx pipeline.Context)) *RuleMock_E
 	return _c
 }
 
-func (_c *RuleMock_Execute_Call) Return(backend rule.Backend, err error) *RuleMock_Execute_Call {
+func (_c *RuleMock_Execute_Call) Return(backend pipeline.Backend, err error) *RuleMock_Execute_Call {
 	_c.Call.Return(backend, err)
 	return _c
 }
 
-func (_c *RuleMock_Execute_Call) RunAndReturn(run func(ctx pipeline.Context) (rule.Backend, error)) *RuleMock_Execute_Call {
+func (_c *RuleMock_Execute_Call) RunAndReturn(run func(ctx pipeline.Context) (pipeline.Backend, error)) *RuleMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

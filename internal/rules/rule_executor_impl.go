@@ -36,7 +36,7 @@ type ruleExecutor struct {
 	rd semconv.RuleExecutionDuration
 }
 
-func newRuleExecutor(repository rule.Repository, meter metric.Meter, tracer trace.Tracer) rule.Executor {
+func newRuleExecutor(repository rule.Repository, meter metric.Meter, tracer trace.Tracer) pipeline.Executor {
 	rd, _ := semconv.NewRuleExecutionDuration(meter)
 
 	return &ruleExecutor{
@@ -46,7 +46,7 @@ func newRuleExecutor(repository rule.Repository, meter metric.Meter, tracer trac
 	}
 }
 
-func (e *ruleExecutor) Execute(hctx pipeline.Context) (rule.Backend, error) {
+func (e *ruleExecutor) Execute(hctx pipeline.Context) (pipeline.Backend, error) {
 	startTime := time.Now()
 	request := hctx.Request()
 	ctx := hctx.Context()

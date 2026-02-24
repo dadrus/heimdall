@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,23 +37,23 @@ func (_m *ExecutorMock) EXPECT() *ExecutorMock_Expecter {
 }
 
 // Execute provides a mock function for the type ExecutorMock
-func (_mock *ExecutorMock) Execute(ctx pipeline.Context) (rule.Backend, error) {
+func (_mock *ExecutorMock) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Execute")
 	}
 
-	var r0 rule.Backend
+	var r0 pipeline.Backend
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (rule.Backend, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (pipeline.Backend, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) rule.Backend); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) pipeline.Backend); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(rule.Backend)
+			r0 = ret.Get(0).(pipeline.Backend)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(pipeline.Context) error); ok {
@@ -89,12 +88,12 @@ func (_c *ExecutorMock_Execute_Call) Run(run func(ctx pipeline.Context)) *Execut
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) Return(backend rule.Backend, err error) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) Return(backend pipeline.Backend, err error) *ExecutorMock_Execute_Call {
 	_c.Call.Return(backend, err)
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx pipeline.Context) (rule.Backend, error)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx pipeline.Context) (pipeline.Backend, error)) *ExecutorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

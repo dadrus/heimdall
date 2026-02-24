@@ -35,7 +35,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	mocks2 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
+	mocks2 "github.com/dadrus/heimdall/internal/otel/certificate/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"

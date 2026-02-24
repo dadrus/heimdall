@@ -26,7 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/otel/certificate"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"

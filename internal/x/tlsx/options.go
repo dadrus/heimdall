@@ -17,7 +17,7 @@
 package tlsx
 
 import (
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/otel/certificate"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 

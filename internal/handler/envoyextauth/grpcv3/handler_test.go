@@ -36,16 +36,16 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	mocks3 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	for uc, tc := range map[string]struct {
-		configureMocks func(t *testing.T, exec *mocks2.ExecutorMock)
+		configureMocks func(t *testing.T, exec *mocks3.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		"no rules configured": {
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
@@ -64,7 +64,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule doesn't match method": {
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
@@ -83,7 +83,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with authentication error": {
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
@@ -102,7 +102,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with authorization error": {
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
@@ -121,7 +121,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with a redirect": {
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, &pipeline.RedirectError{
@@ -146,7 +146,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution succeeds": {
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
@@ -170,7 +170,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"server panics and error does not contain traces": {
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Panic("wuff")
@@ -193,7 +193,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			conf := &config.Configuration{Metrics: config.MetricsConfig{Enabled: true}}
 			cch := mocks.NewCacheMock(t)
-			exec := mocks2.NewExecutorMock(t)
+			exec := mocks3.NewExecutorMock(t)
 
 			tc.configureMocks(t, exec)
 

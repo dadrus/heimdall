@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -222,7 +221,7 @@ func (_c *ContextMock_Error_Call) RunAndReturn(run func() error) *ContextMock_Er
 }
 
 // Finalize provides a mock function for the type ContextMock
-func (_mock *ContextMock) Finalize(backend rule.Backend) error {
+func (_mock *ContextMock) Finalize(backend pipeline.Backend) error {
 	ret := _mock.Called(backend)
 
 	if len(ret) == 0 {
@@ -230,7 +229,7 @@ func (_mock *ContextMock) Finalize(backend rule.Backend) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(rule.Backend) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Backend) error); ok {
 		r0 = returnFunc(backend)
 	} else {
 		r0 = ret.Error(0)
@@ -244,16 +243,16 @@ type ContextMock_Finalize_Call struct {
 }
 
 // Finalize is a helper method to define mock.On call
-//   - backend rule.Backend
+//   - backend pipeline.Backend
 func (_e *ContextMock_Expecter) Finalize(backend interface{}) *ContextMock_Finalize_Call {
 	return &ContextMock_Finalize_Call{Call: _e.mock.On("Finalize", backend)}
 }
 
-func (_c *ContextMock_Finalize_Call) Run(run func(backend rule.Backend)) *ContextMock_Finalize_Call {
+func (_c *ContextMock_Finalize_Call) Run(run func(backend pipeline.Backend)) *ContextMock_Finalize_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 rule.Backend
+		var arg0 pipeline.Backend
 		if args[0] != nil {
-			arg0 = args[0].(rule.Backend)
+			arg0 = args[0].(pipeline.Backend)
 		}
 		run(
 			arg0,
@@ -267,7 +266,7 @@ func (_c *ContextMock_Finalize_Call) Return(err error) *ContextMock_Finalize_Cal
 	return _c
 }
 
-func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(backend rule.Backend) error) *ContextMock_Finalize_Call {
+func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(backend pipeline.Backend) error) *ContextMock_Finalize_Call {
 	_c.Call.Return(run)
 	return _c
 }

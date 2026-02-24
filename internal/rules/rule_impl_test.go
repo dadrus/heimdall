@@ -29,7 +29,6 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	heimdallmocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -50,7 +49,7 @@ func TestRuleExecute(t *testing.T) {
 			finalizer *heimdallmocks.StepMock,
 			errHandler *heimdallmocks.StepMock,
 		)
-		assert func(t *testing.T, err error, backend rule.Backend, captures map[string]string)
+		assert func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string)
 	}{
 		"authenticator fails, but error handler succeeds": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
@@ -71,7 +70,7 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -97,7 +96,7 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(errors.New("some error"))
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -127,7 +126,7 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -156,7 +155,7 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(errors.New("some error"))
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -189,7 +188,7 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -221,7 +220,7 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(errors.New("some error"))
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -247,7 +246,7 @@ func TestRuleExecute(t *testing.T) {
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, _ rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -284,7 +283,7 @@ func TestRuleExecute(t *testing.T) {
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -327,7 +326,7 @@ func TestRuleExecute(t *testing.T) {
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -369,7 +368,7 @@ func TestRuleExecute(t *testing.T) {
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -406,7 +405,7 @@ func TestRuleExecute(t *testing.T) {
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -440,7 +439,7 @@ func TestRuleExecute(t *testing.T) {
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -474,7 +473,7 @@ func TestRuleExecute(t *testing.T) {
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)

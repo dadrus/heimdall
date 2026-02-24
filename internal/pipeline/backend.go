@@ -14,10 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rule
+package pipeline
 
-import "github.com/dadrus/heimdall/internal/pipeline"
+import (
+	"net/url"
+)
 
-type Executor interface {
-	Execute(ctx pipeline.Context) (Backend, error)
+type Backend interface {
+	URL() *url.URL
+	ForwardHostHeader() bool
 }

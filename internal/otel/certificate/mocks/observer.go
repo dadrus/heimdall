@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/otel/certificate"
 	mock "github.com/stretchr/testify/mock"
 )
 

@@ -45,7 +45,7 @@ type ruleImpl struct {
 	subjectPool     *sync.Pool
 }
 
-func (r *ruleImpl) Execute(ctx pipeline.Context) (rule.Backend, error) {
+func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	if r.isDefault {
@@ -121,8 +121,8 @@ func (r *ruleImpl) EqualTo(other rule.Rule) bool {
 		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
-func (r *ruleImpl) createBackend(request *pipeline.Request) rule.Backend {
-	var upstream rule.Backend
+func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {
+	var upstream pipeline.Backend
 
 	if r.backend != nil {
 		upstream = backend{

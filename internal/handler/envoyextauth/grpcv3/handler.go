@@ -21,11 +21,11 @@ import (
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type Handler struct {
-	e  rule.Executor
+	e  pipeline.Executor
 	cf *contextFactory
 }
 
