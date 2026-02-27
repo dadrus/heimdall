@@ -21,9 +21,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
@@ -63,11 +61,8 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().WithParent(mock.Anything).Return(ctx)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(nil, pipeline.ErrAuthentication)
-				rule.EXPECT().ID().Return("test")
-				rule.EXPECT().SrcID().Return("test")
 			},
 		},
 		"rule execution succeeds": {
@@ -79,11 +74,8 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().WithParent(mock.Anything).Return(ctx)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
 				rule.EXPECT().Execute(ctx).Return(upstream, nil)
-				rule.EXPECT().ID().Return("test")
-				rule.EXPECT().SrcID().Return("test")
 			},
 		},
 	} {
@@ -95,10 +87,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 			tc.configureMocks(t, ctx, repo, rule)
 
-			tp := otel.GetTracerProvider()
-			mp := otel.GetMeterProvider()
-
-			exec := newRuleExecutor(repo, mp.Meter("test"), tp.Tracer("test"))
+			exec := newRuleExecutor(repo)
 
 			// WHEN
 			mut, err := exec.Execute(ctx)
