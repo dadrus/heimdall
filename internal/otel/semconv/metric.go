@@ -237,3 +237,53 @@ func (m RulesLoaded) Observe(
 
 func (RulesLoaded) AttrProvider(val string) attribute.KeyValue { return Provider(val) }
 func (RulesLoaded) AttrRuleSet(val string) attribute.KeyValue  { return RuleSet(val) }
+
+type CacheLookupResult string
+
+const (
+	CacheHit  CacheLookupResult = "hit"
+	CacheMiss CacheLookupResult = "miss"
+)
+
+type CacheLookups struct {
+	metric.Int64Counter
+}
+
+var newCacheLookupsOpts = []metric.Int64CounterOption{ //nolint:gochecknoglobals
+	metric.WithDescription("Number of cache lookups"),
+	metric.WithUnit("1"),
+}
+
+func NewCacheLookups(
+	meter metric.Meter,
+	opt ...metric.Int64CounterOption,
+) (CacheLookups, error) {
+	if len(opt) == 0 {
+		opt = newCacheLookupsOpts
+	} else {
+		opt = append(opt, newCacheLookupsOpts...)
+	}
+
+	counter, err := meter.Int64Counter("cache.lookups", opt...)
+	if err != nil {
+		return CacheLookups{}, err
+	}
+
+	return CacheLookups{counter}, nil
+}
+
+func (m CacheLookups) Inst() metric.Int64Counter {
+	return m.Int64Counter
+}
+
+func (CacheLookups) Name() string {
+	return "cache.lookups"
+}
+
+func (CacheLookups) Unit() string {
+	return "1"
+}
+
+func (CacheLookups) Description() string { return "Number of cache lookups" }
+
+func (CacheLookups) AttrResult(val CacheLookupResult) attribute.KeyValue { return Result(string(val)) }

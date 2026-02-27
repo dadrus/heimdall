@@ -47,16 +47,20 @@ func CertificateDNSName(value string) attribute.KeyValue {
 }
 
 const (
+	ResultKey = attribute.Key("result")
+)
+
+func Result(value string) attribute.KeyValue { return ResultKey.String(value) }
+
+const (
 	RuleIDKey   = attribute.Key("rule.id")
 	RuleSetKey  = attribute.Key("ruleset.name")
 	ProviderKey = attribute.Key("provider")
-	ResultKey   = attribute.Key("result")
 )
 
 func RuleID(value string) attribute.KeyValue   { return RuleIDKey.String(value) }
 func RuleSet(value string) attribute.KeyValue  { return RuleSetKey.String(value) }
 func Provider(value string) attribute.KeyValue { return ProviderKey.String(value) }
-func Result(value string) attribute.KeyValue   { return ResultKey.String(value) }
 
 const (
 	StepIDKey        = attribute.Key("step.id")
