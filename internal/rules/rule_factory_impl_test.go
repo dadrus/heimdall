@@ -414,9 +414,8 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, ruleFactory)
 				assert.NotNil(t, ruleFactory.DefaultRule())
-				assert.Equal(t, ruleFactory.defaultRule, ruleFactory.DefaultRule())
 
-				defRule := ruleFactory.defaultRule
+				defRule := ruleFactory.templateRule
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
@@ -486,9 +485,8 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, ruleFactory)
 				assert.NotNil(t, ruleFactory.DefaultRule())
-				assert.Equal(t, ruleFactory.defaultRule, ruleFactory.DefaultRule())
 
-				defRule := ruleFactory.defaultRule
+				defRule := ruleFactory.templateRule
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
@@ -510,6 +508,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks(t, repo)
 
 			tp := otel.GetTracerProvider()
+			mp := otel.GetMeterProvider()
 
 			// WHEN
 			factory, err := NewRuleFactory(
@@ -518,6 +517,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				config.DecisionMode,
 				log.Logger,
 				tp.Tracer("test"),
+				mp.Meter("test"),
 				config.SecureDefaultRule(tc.enforceSecureDefaultRule),
 			)
 
@@ -1197,23 +1197,31 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Len(t, rul.sh, 3)
 
 				assert.NotNil(t, rul.sh[0])
-				sh, ok := rul.sh[0].(*conditionalStep)
+				ts, ok := rul.sh[0].(*telemetryStep)
 				require.True(t, ok)
-				assert.IsType(t, &celExecutionCondition{}, sh.c)
+				cs, ok := ts.s.(*conditionalStep)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				assert.NotNil(t, rul.sh[1])
-				sh, ok = rul.sh[1].(*conditionalStep)
+				ts, ok = rul.sh[1].(*telemetryStep)
 				require.True(t, ok)
-				assert.IsType(t, &celExecutionCondition{}, sh.c)
+				cs, ok = ts.s.(*conditionalStep)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				assert.NotNil(t, rul.sh[2])
-				_, ok = rul.sh[2].(*conditionalStep)
+				ts, ok = rul.sh[2].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.False(t, ok)
 
 				require.Len(t, rul.fi, 1)
-				un, ok := rul.fi[0].(*conditionalStep)
+				ts, ok = rul.fi[0].(*telemetryStep)
 				require.True(t, ok)
-				assert.IsType(t, &celExecutionCondition{}, un.c)
+				cs, ok = ts.s.(*conditionalStep)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				require.Empty(t, rul.eh)
 			},
@@ -1285,17 +1293,25 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Len(t, rul.sh, 1)
 
 				assert.NotNil(t, rul.sh[0])
-				_, ok := rul.sh[0].(*conditionalStep)
+				ts, ok := rul.sh[0].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.False(t, ok)
 
 				require.Len(t, rul.fi, 1)
-				_, ok = rul.fi[0].(*conditionalStep)
+				ts, ok = rul.fi[0].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.False(t, ok)
 
 				require.Len(t, rul.eh, 2)
-				_, ok = rul.eh[0].(*conditionalStep)
+				ts, ok = rul.eh[0].(*telemetryStep)
 				require.True(t, ok)
-				_, ok = rul.eh[1].(*conditionalStep)
+				_, ok = ts.s.(*conditionalStep)
+				require.True(t, ok)
+				ts, ok = rul.eh[1].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.True(t, ok)
 			},
 		},
@@ -1529,7 +1545,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 			factory := &ruleFactory{
 				r:              repo,
-				defaultRule:    tc.defaultRule,
+				templateRule:   tc.defaultRule,
+				defaultRule:    x.IfThenElse(tc.defaultRule != nil, tc.defaultRule, nil),
 				mode:           tc.opMode,
 				l:              log.Logger,
 				hasDefaultRule: x.IfThenElse(tc.defaultRule != nil, true, false),

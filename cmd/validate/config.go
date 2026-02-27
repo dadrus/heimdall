@@ -19,7 +19,8 @@ package validate
 import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"go.opentelemetry.io/otel/trace/noop"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/cache"
@@ -96,7 +97,8 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		conf,
 		config.DecisionMode,
 		logger,
-		noop.Tracer{},
+		nooptrace.Tracer{},
+		noopmetric.Meter{},
 		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)
 	if err != nil {

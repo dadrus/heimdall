@@ -23,7 +23,8 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"go.opentelemetry.io/otel/trace/noop"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
@@ -116,7 +117,8 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		conf,
 		opMode,
 		logger,
-		noop.Tracer{},
+		nooptrace.Tracer{},
+		noopmetric.Meter{},
 		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)
 	if err != nil {

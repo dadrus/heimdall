@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package pipeline
+package rules
 
 import (
 	"go.opentelemetry.io/otel/codes"
@@ -24,24 +24,24 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
-type step struct {
+type telemetryStep struct {
 	s pipeline.Step
 	t trace.Tracer
 }
 
-func NewStep(s pipeline.Step, t trace.Tracer) pipeline.Step {
-	return &step{s: s, t: t}
+func newTelemetryStep(s pipeline.Step, t trace.Tracer) pipeline.Step {
+	return &telemetryStep{s: s, t: t}
 }
 
-func (s *step) Execute(hctx pipeline.Context, sub pipeline.Subject) error {
+func (s *telemetryStep) Execute(hctx pipeline.Context, sub pipeline.Subject) error {
 	ctx, span := s.t.Start(
 		hctx.Context(),
 		"Step Execution",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(
-			semconv.StepID(s.s.ID()),
-			semconv.MechanismKind(string(s.s.Kind())),
-			semconv.MechanismName(s.s.Type()),
+			semconv.StepID(s.ID()),
+			semconv.MechanismKind(string(s.Kind())),
+			semconv.MechanismName(s.Type()),
 		),
 	)
 
@@ -56,7 +56,7 @@ func (s *step) Execute(hctx pipeline.Context, sub pipeline.Subject) error {
 	return err
 }
 
-func (s *step) ID() string                      { return s.s.ID() }
-func (s *step) Type() string                    { return s.s.Type() }
-func (s *step) Kind() pipeline.MechanismKind    { return s.s.Kind() }
-func (s *step) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor) }
+func (s *telemetryStep) ID() string                      { return s.s.ID() }
+func (s *telemetryStep) Type() string                    { return s.s.Type() }
+func (s *telemetryStep) Kind() pipeline.MechanismKind    { return s.s.Kind() }
+func (s *telemetryStep) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor) }

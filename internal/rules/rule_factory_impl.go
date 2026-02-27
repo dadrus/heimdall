@@ -22,11 +22,13 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/metric"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	otelpipeline "github.com/dadrus/heimdall/internal/otel/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
@@ -50,14 +52,24 @@ func NewRuleFactory(
 	mode config.OperationMode,
 	logger zerolog.Logger,
 	tracer trace.Tracer,
+	meter metric.Meter,
 	sdr config.SecureDefaultRule,
 ) (rule.Factory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
 	rf := &ruleFactory{
-		r:                 repo,
-		l:                 logger,
-		t:                 tracer,
+		r: repo,
+		l: logger,
+		t: x.IfThenElseExec(conf.Tracing.CoverRules,
+			func() trace.Tracer { return tracer },
+			func() trace.Tracer { return nooptrace.Tracer{} },
+		),
+		m: x.IfThenElseExec(conf.Metrics.CoverRules,
+			func() metric.Meter { return meter },
+			func() metric.Meter { return noopmetric.Meter{} },
+		),
+		templateRule:      nil,
+		defaultRule:       nil,
 		hasDefaultRule:    false,
 		secureDefaultRule: bool(sdr),
 		mode:              mode,
@@ -76,7 +88,9 @@ type ruleFactory struct {
 	r                 mechanisms.Repository
 	l                 zerolog.Logger
 	t                 trace.Tracer
-	defaultRule       *ruleImpl
+	m                 metric.Meter
+	templateRule      *ruleImpl
+	defaultRule       rule.Rule
 	hasDefaultRule    bool
 	secureDefaultRule bool
 	mode              config.OperationMode
@@ -105,11 +119,11 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 		return nil, err
 	}
 
-	if f.defaultRule != nil {
-		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
-		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
-		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
-		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
+	if f.templateRule != nil {
+		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.templateRule.sc)
+		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.templateRule.sh)
+		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.templateRule.fi)
+		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.templateRule.eh)
 	}
 
 	if len(authenticators) == 0 {
@@ -363,7 +377,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		logger.Warn().Msg("Insecure default rule configured")
 	}
 
-	f.defaultRule = &ruleImpl{
+	rul := &ruleImpl{
 		id:              "default",
 		slashesHandling: v1beta1.EncodedSlashesOff,
 		srcID:           "config",
@@ -375,6 +389,8 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 	}
 
+	f.defaultRule = newTelemetryRule(rul, f.m, f.t)
+	f.templateRule = rul
 	f.hasDefaultRule = true
 
 	return nil
@@ -451,5 +467,5 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 		step = newConditionalStep(step, condition)
 	}
 
-	return otelpipeline.NewStep(step, f.t), nil
+	return newTelemetryStep(step, f.t), nil
 }
