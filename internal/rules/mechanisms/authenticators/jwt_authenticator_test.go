@@ -44,14 +44,13 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
@@ -102,7 +101,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -119,7 +118,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'jwks_endpoint' is a required field")
 			},
 		},
@@ -136,7 +135,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'issuers' is a required field")
 			},
 		},
@@ -151,7 +150,7 @@ assertions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'jwks_endpoint'.'url' must be a valid URL")
 			},
 		},
@@ -290,7 +289,7 @@ assertions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'jwks_endpoint'.'url' scheme must be https")
 			},
 		},
@@ -386,7 +385,7 @@ metadata_endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
 			},
 		},
@@ -400,7 +399,7 @@ metadata_endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'metadata_endpoint'.'url' scheme must be https")
 			},
 		},
@@ -916,7 +915,7 @@ assertions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'trust_store' is not allowed")
 			},
 		},
@@ -934,7 +933,7 @@ metadata_endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'validate_jwk' is not allowed")
 			},
 		},
@@ -1065,33 +1064,33 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		authenticator  *jwtAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *pipelinemocks.ContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *jwtAuthenticator)
-		assert func(t *testing.T, err error, sub identity.Subject)
+		assert func(t *testing.T, err error, sub pipeline.Subject)
 	}{
 		"with failing auth data source": {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return("", pipeline.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "no JWT")
 
 				var identifier HandlerIdentifier
@@ -1102,7 +1101,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"with unsupported JWT format": {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1111,15 +1110,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz.bam", nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "JWS format must have three parts")
 
 				var identifier HandlerIdentifier
@@ -1130,7 +1129,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"with JWT parsing error": {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1139,15 +1138,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz", nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "parse JWT")
 
 				var identifier HandlerIdentifier
@@ -1164,7 +1163,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1173,15 +1172,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "render URL")
 
 				var identifier HandlerIdentifier
@@ -1198,7 +1197,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1207,15 +1206,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "JWKS endpoint failed")
 
 				var identifier HandlerIdentifier
@@ -1232,7 +1231,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1246,15 +1245,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				jwksResponseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "unexpected response")
 
 				var identifier HandlerIdentifier
@@ -1276,7 +1275,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1296,15 +1295,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = []byte(`Hello Foo`)
 				jwksResponseContentType = "text/text"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "failed to unmarshal")
 
 				var identifier HandlerIdentifier
@@ -1326,7 +1325,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1346,15 +1345,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithDuplicateEntries
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "no (unique) key found")
 
 				var identifier HandlerIdentifier
@@ -1369,7 +1368,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1388,14 +1387,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusBadRequest
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.True(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed retrieving oauth2 server metadata")
 
 				var identifier HandlerIdentifier
@@ -1410,7 +1409,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -1436,14 +1435,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.True(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "required jwks_uri")
 
 				var identifier HandlerIdentifier
@@ -1466,7 +1465,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1492,15 +1491,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "algorithm is not allowed")
 
 				var identifier HandlerIdentifier
@@ -1523,7 +1522,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1549,15 +1548,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "JWT signature")
 
 				var identifier HandlerIdentifier
@@ -1580,7 +1579,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1606,15 +1605,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "assertion conditions")
 
 				var identifier HandlerIdentifier
@@ -1642,7 +1641,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ttl: pointer.To(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1668,15 +1667,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "failed to extract principal")
 
 				var identifier HandlerIdentifier
@@ -1704,7 +1703,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1730,7 +1729,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1772,7 +1771,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1811,7 +1810,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneKeyOnlyEntry
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1853,7 +1852,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1891,7 +1890,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1928,7 +1927,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -1984,7 +1983,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2028,7 +2027,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -2060,14 +2059,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "JWK")
 				require.ErrorContains(t, err, "invalid")
 
@@ -2098,7 +2097,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
@@ -2136,7 +2135,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2179,7 +2178,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2199,7 +2198,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2235,7 +2234,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2255,14 +2254,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = []byte(`Hello Foo`)
 				jwksResponseContentType = "text/text"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to unmarshal")
 
 				var identifier HandlerIdentifier
@@ -2284,7 +2283,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2304,14 +2303,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithRSAKey
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "None of the keys")
 
 				var identifier HandlerIdentifier
@@ -2334,7 +2333,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2354,14 +2353,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "None of the keys")
 
 				var identifier HandlerIdentifier
@@ -2385,7 +2384,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2423,14 +2422,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
 				assert.True(t, jwksEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "issuer foobar is not trusted")
 			},
 		},
@@ -2458,7 +2457,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2497,7 +2496,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -2534,7 +2533,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				principalName: "baz",
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
@@ -2572,7 +2571,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -2621,7 +2620,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.ContextMock,
+					_ *pipelinemocks.ContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *jwtAuthenticator,
@@ -2634,13 +2633,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewContextMock(t)
+			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
-			sub := make(identity.Subject)
+			sub := make(pipeline.Subject)
 
 			// WHEN
 			err = tc.authenticator.Execute(ctx, sub)
@@ -2878,7 +2877,7 @@ func TestJwtAuthenticatorAccept(t *testing.T) {
 
 	// GIVEN
 	auth := &jwtAuthenticator{}
-	visitor := heimdallmocks.NewVisitorMock(t)
+	visitor := pipelinemocks.NewVisitorMock(t)
 
 	visitor.EXPECT().VisitInsecure(auth)
 	visitor.EXPECT().VisitPrincipalNamer(auth)

@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
 	"github.com/dadrus/heimdall/internal/handler/service"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
@@ -45,7 +45,7 @@ func newService(
 	conf *config.Configuration,
 	cch cache.Cache,
 	log zerolog.Logger,
-	exec rule.Executor,
+	exec pipeline.Executor,
 ) *http.Server {
 	cfg := conf.Serve
 	eh := errorhandler.New(

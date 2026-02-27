@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -37,7 +37,7 @@ func (n *NumericDate) UnmarshalJSON(b []byte) error {
 
 	f, err := strconv.ParseFloat(stringx.ToString(b), floatPrecision)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse date").CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "failed to parse date").CausedBy(err)
 	}
 
 	*n = NumericDate(f)

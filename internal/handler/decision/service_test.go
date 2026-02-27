@@ -31,8 +31,8 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -42,7 +42,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		serviceConf    config.ServeConfig
 		createRequest  func(t *testing.T, host string) *http.Request
-		configureMocks func(t *testing.T, exec *mocks4.ExecutorMock)
+		configureMocks func(t *testing.T, exec *mocks2.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		"no rules configured": {
@@ -59,10 +59,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -89,10 +89,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -119,10 +119,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -149,10 +149,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthorization)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -185,11 +185,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -239,11 +239,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -299,11 +299,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -353,11 +353,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -391,11 +391,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -430,11 +430,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -468,11 +468,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&
@@ -509,11 +509,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx heimdall.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&
@@ -545,7 +545,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			conf := &config.Configuration{Serve: srvConf}
 			cch := mocks.NewCacheMock(t)
-			exec := mocks4.NewExecutorMock(t)
+			exec := mocks2.NewExecutorMock(t)
 
 			tc.configureMocks(t, exec)
 

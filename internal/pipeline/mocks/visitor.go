@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,7 +37,7 @@ func (_m *VisitorMock) EXPECT() *VisitorMock_Expecter {
 }
 
 // VisitInsecure provides a mock function for the type VisitorMock
-func (_mock *VisitorMock) VisitInsecure(obj heimdall.Insecure) {
+func (_mock *VisitorMock) VisitInsecure(obj pipeline.Insecure) {
 	_mock.Called(obj)
 	return
 }
@@ -48,16 +48,16 @@ type VisitorMock_VisitInsecure_Call struct {
 }
 
 // VisitInsecure is a helper method to define mock.On call
-//   - obj heimdall.Insecure
+//   - obj pipeline.Insecure
 func (_e *VisitorMock_Expecter) VisitInsecure(obj interface{}) *VisitorMock_VisitInsecure_Call {
 	return &VisitorMock_VisitInsecure_Call{Call: _e.mock.On("VisitInsecure", obj)}
 }
 
-func (_c *VisitorMock_VisitInsecure_Call) Run(run func(obj heimdall.Insecure)) *VisitorMock_VisitInsecure_Call {
+func (_c *VisitorMock_VisitInsecure_Call) Run(run func(obj pipeline.Insecure)) *VisitorMock_VisitInsecure_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.Insecure
+		var arg0 pipeline.Insecure
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.Insecure)
+			arg0 = args[0].(pipeline.Insecure)
 		}
 		run(
 			arg0,
@@ -71,13 +71,13 @@ func (_c *VisitorMock_VisitInsecure_Call) Return() *VisitorMock_VisitInsecure_Ca
 	return _c
 }
 
-func (_c *VisitorMock_VisitInsecure_Call) RunAndReturn(run func(obj heimdall.Insecure)) *VisitorMock_VisitInsecure_Call {
+func (_c *VisitorMock_VisitInsecure_Call) RunAndReturn(run func(obj pipeline.Insecure)) *VisitorMock_VisitInsecure_Call {
 	_c.Run(run)
 	return _c
 }
 
 // VisitPrincipalNamer provides a mock function for the type VisitorMock
-func (_mock *VisitorMock) VisitPrincipalNamer(obj heimdall.PrincipalNamer) {
+func (_mock *VisitorMock) VisitPrincipalNamer(obj pipeline.PrincipalNamer) {
 	_mock.Called(obj)
 	return
 }
@@ -88,16 +88,16 @@ type VisitorMock_VisitPrincipalNamer_Call struct {
 }
 
 // VisitPrincipalNamer is a helper method to define mock.On call
-//   - obj heimdall.PrincipalNamer
+//   - obj pipeline.PrincipalNamer
 func (_e *VisitorMock_Expecter) VisitPrincipalNamer(obj interface{}) *VisitorMock_VisitPrincipalNamer_Call {
 	return &VisitorMock_VisitPrincipalNamer_Call{Call: _e.mock.On("VisitPrincipalNamer", obj)}
 }
 
-func (_c *VisitorMock_VisitPrincipalNamer_Call) Run(run func(obj heimdall.PrincipalNamer)) *VisitorMock_VisitPrincipalNamer_Call {
+func (_c *VisitorMock_VisitPrincipalNamer_Call) Run(run func(obj pipeline.PrincipalNamer)) *VisitorMock_VisitPrincipalNamer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.PrincipalNamer
+		var arg0 pipeline.PrincipalNamer
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.PrincipalNamer)
+			arg0 = args[0].(pipeline.PrincipalNamer)
 		}
 		run(
 			arg0,
@@ -111,7 +111,7 @@ func (_c *VisitorMock_VisitPrincipalNamer_Call) Return() *VisitorMock_VisitPrinc
 	return _c
 }
 
-func (_c *VisitorMock_VisitPrincipalNamer_Call) RunAndReturn(run func(obj heimdall.PrincipalNamer)) *VisitorMock_VisitPrincipalNamer_Call {
+func (_c *VisitorMock_VisitPrincipalNamer_Call) RunAndReturn(run func(obj pipeline.PrincipalNamer)) *VisitorMock_VisitPrincipalNamer_Call {
 	_c.Run(run)
 	return _c
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	config2 "github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -116,7 +116,7 @@ func (p *ruleSetProcessor) loadRules(ruleSet *v1beta1.RuleSet) ([]rule.Rule, err
 	for idx, rc := range ruleSet.Rules {
 		rul, err := p.f.CreateRule(ruleSet.Source, rc)
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"loading rule ID='%s' failed", rc.ID).CausedBy(err)
 		}
 

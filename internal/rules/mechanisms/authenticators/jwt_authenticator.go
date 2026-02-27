@@ -34,10 +34,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -97,14 +96,14 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, name).CausedBy(err)
 	}
 
 	if conf.JWKSEndpoint != nil {
 		if len(conf.Assertions.TrustedIssuers) == 0 {
 			return nil, errorchain.
-				NewWithMessage(heimdall.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
+				NewWithMessage(pipeline.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
 		}
 
 		if strings.HasPrefix(conf.JWKSEndpoint.URL, "http://") {
@@ -189,12 +188,12 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
-func (a *jwtAuthenticator) Accept(visitor heimdall.Visitor) {
+func (a *jwtAuthenticator) Accept(visitor pipeline.Visitor) {
 	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
-func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorJWT).
@@ -205,7 +204,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) e
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "no JWT present").
+			NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -213,9 +212,9 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) e
 	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
 	if err != nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").
+			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
 			WithErrorContext(a).
-			CausedBy(heimdall.ErrArgument).
+			CausedBy(pipeline.ErrArgument).
 			CausedBy(err)
 	}
 
@@ -227,7 +226,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) e
 	principal, err := a.sf.CreatePrincipal(rawClaims)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract principal information from jwt").
+			NewWithMessage(pipeline.ErrInternal, "failed to extract principal information from jwt").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -237,7 +236,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) e
 	return nil
 }
 
-func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -264,7 +263,7 @@ func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, 
 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, a.name).CausedBy(err)
 	}
 
@@ -283,14 +282,11 @@ func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, 
 	}, nil
 }
 
-func (a *jwtAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
-
-func (a *jwtAuthenticator) Name() string { return a.name }
-
-func (a *jwtAuthenticator) ID() string { return a.id }
-
-func (a *jwtAuthenticator) IsInsecure() bool { return false }
-
+func (a *jwtAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
+func (a *jwtAuthenticator) Name() string          { return a.name }
+func (a *jwtAuthenticator) ID() string            { return a.id }
+func (a *jwtAuthenticator) Type() string          { return a.name }
+func (a *jwtAuthenticator) IsInsecure() bool      { return false }
 func (a *jwtAuthenticator) PrincipalName() string { return a.principalName }
 
 func (a *jwtAuthenticator) isCacheEnabled() bool {
@@ -337,17 +333,17 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 }
 
 func (a *jwtAuthenticator) serverMetadata(
-	ctx heimdall.Context,
+	ctx pipeline.Context,
 	claims map[string]any,
 ) (oauth2.ServerMetadata, error) {
 	metadata, err := a.r.Get(ctx.Context(), map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
-		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
 	}
 
 	if metadata.JWKSEndpoint == nil {
-		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"received server metadata does not contain the required jwks_uri").
 			WithErrorContext(a)
 	}
@@ -355,10 +351,10 @@ func (a *jwtAuthenticator) serverMetadata(
 	return metadata, nil
 }
 
-func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
 	claims := map[string]any{}
 	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to deserialize JWT").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to deserialize JWT").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -386,7 +382,7 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebT
 }
 
 func (a *jwtAuthenticator) verifyTokenWithoutKID(
-	ctx heimdall.Context,
+	ctx pipeline.Context,
 	token *jwt.JSONWebToken,
 	tokenClaims map[string]any,
 	ep *endpoint.Endpoint,
@@ -425,7 +421,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 
 	if len(rawClaims) == 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication,
+			NewWithMessage(pipeline.ErrAuthentication,
 				"None of the keys received from the JWKS endpoint could be used to verify the JWT").
 			WithErrorContext(a)
 	}
@@ -434,7 +430,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 }
 
 func (a *jwtAuthenticator) getKey(
-	ctx heimdall.Context, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
+	ctx pipeline.Context, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
 ) (*jose.JSONWebKey, error) {
 	cch := cache.Ctx(ctx.Context())
 	logger := zerolog.Ctx(ctx.Context())
@@ -470,7 +466,7 @@ func (a *jwtAuthenticator) getKey(
 	keys := jwks.Key(keyID)
 	if len(keys) != 1 {
 		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication,
+			NewWithMessagef(pipeline.ErrAuthentication,
 				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
 			WithErrorContext(a)
 	}
@@ -478,7 +474,7 @@ func (a *jwtAuthenticator) getKey(
 	jwk := &keys[0]
 	if err = a.validateJWK(jwk); err != nil {
 		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
+			NewWithMessagef(pipeline.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -506,13 +502,13 @@ func (a *jwtAuthenticator) fetchJWKS(
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
+				NewWithMessage(pipeline.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
 				WithErrorContext(a).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to JWKS endpoint failed").
+			NewWithMessage(pipeline.ErrCommunication, "request to JWKS endpoint failed").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -533,7 +529,7 @@ func (a *jwtAuthenticator) createRequest(
 
 		tpl, err := template.New(value)
 		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
 				CausedBy(err)
 		}
 
@@ -541,7 +537,7 @@ func (a *jwtAuthenticator) createRequest(
 	}))
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -552,7 +548,7 @@ func (a *jwtAuthenticator) createRequest(
 func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, error) {
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
+			NewWithMessagef(pipeline.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
 			WithErrorContext(a)
 	}
 
@@ -561,7 +557,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 
 	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
+			NewWithMessage(pipeline.ErrInternal, "failed to unmarshal received jwks").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -576,14 +572,14 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 
 	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication,
+			NewWithMessage(pipeline.ErrAuthentication,
 				"algorithm in the JWT header does not match the algorithm referenced in the key").
 			WithErrorContext(a)
 	}
 
 	if err := assertions.AssertAlgorithm(key.Algorithm); err != nil {
 		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
+			NewWithMessagef(pipeline.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -595,14 +591,14 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 
 	if err := token.Claims(key, &mapClaims, &claims); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to verify JWT signature").
+			NewWithMessage(pipeline.ErrAuthentication, "failed to verify JWT signature").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	if err := claims.Validate(*assertions); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
+			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -610,7 +606,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	rawPayload, err := json.Marshal(mapClaims)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal jwt payload").
+			NewWithMessage(pipeline.ErrInternal, "failed to marshal jwt payload").
 			WithErrorContext(a).
 			CausedBy(err)
 	}

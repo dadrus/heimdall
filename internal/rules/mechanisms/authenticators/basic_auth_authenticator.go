@@ -25,9 +25,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
@@ -75,7 +74,7 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, name).CausedBy(err)
 	}
 
@@ -101,12 +100,12 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 	return &auth, nil
 }
 
-func (a *basicAuthAuthenticator) Accept(visitor heimdall.Visitor) {
+func (a *basicAuthAuthenticator) Accept(visitor pipeline.Visitor) {
 	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
-func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorBasicAuth).
@@ -117,7 +116,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "expected header not present in request").
+			NewWithMessage(pipeline.ErrAuthentication, "expected header not present in request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -125,14 +124,14 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 	res, err := base64.StdEncoding.DecodeString(authData)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to decode received credentials value").
+			NewWithMessage(pipeline.ErrAuthentication, "failed to decode received credentials value").
 			WithErrorContext(a)
 	}
 
 	userIDAndPassword := strings.Split(string(res), ":")
 	if len(userIDAndPassword) != basicAuthSchemeCredentialsElements {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "malformed user-id - password scheme").
+			NewWithMessage(pipeline.ErrAuthentication, "malformed user-id - password scheme").
 			WithErrorContext(a)
 	}
 
@@ -149,11 +148,11 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 
 	if !userIDOK || !passwordOK {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "invalid user credentials").
+			NewWithMessage(pipeline.ErrAuthentication, "invalid user credentials").
 			WithErrorContext(a)
 	}
 
-	sub[a.principalName] = &identity.Principal{
+	sub[a.principalName] = &pipeline.Principal{
 		ID:         userIDAndPassword[0],
 		Attributes: a.emptyAttributes,
 	}
@@ -161,7 +160,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 	return nil
 }
 
-func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if def.IsEmpty() {
 		return a, nil
 	}
@@ -181,7 +180,7 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (heimdall.
 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, a.name).CausedBy(err)
 	}
 
@@ -213,14 +212,9 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (heimdall.
 	}, nil
 }
 
-func (a *basicAuthAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
-
-func (a *basicAuthAuthenticator) Name() string { return a.name }
-
-func (a *basicAuthAuthenticator) ID() string {
-	return a.id
-}
-
-func (a *basicAuthAuthenticator) IsInsecure() bool { return false }
-
+func (a *basicAuthAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
+func (a *basicAuthAuthenticator) Name() string          { return a.name }
+func (a *basicAuthAuthenticator) ID() string            { return a.id }
+func (a *basicAuthAuthenticator) Type() string          { return a.name }
+func (a *basicAuthAuthenticator) IsInsecure() bool      { return false }
 func (a *basicAuthAuthenticator) PrincipalName() string { return a.principalName }

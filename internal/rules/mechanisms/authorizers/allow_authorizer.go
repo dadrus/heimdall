@@ -20,8 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -56,9 +55,9 @@ func newAllowAuthorizer(app app.Context, name string, _ map[string]any) (types.M
 	}, nil
 }
 
-func (a *allowAuthorizer) Accept(_ heimdall.Visitor) {}
+func (a *allowAuthorizer) Accept(_ pipeline.Visitor) {}
 
-func (a *allowAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (a *allowAuthorizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerAllow).
@@ -69,14 +68,14 @@ func (a *allowAuthorizer) Execute(ctx heimdall.Context, _ identity.Subject) erro
 	return nil
 }
 
-func (a *allowAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *allowAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
 
 	if len(def.Config) != 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "allow authorizer cannot be reconfigured").
+			NewWithMessage(pipeline.ErrConfiguration, "allow authorizer cannot be reconfigured").
 			WithErrorContext(a)
 	}
 
@@ -87,7 +86,6 @@ func (a *allowAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, e
 }
 
 func (a *allowAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-
-func (a *allowAuthorizer) Name() string { return a.name }
-
-func (a *allowAuthorizer) ID() string { return a.id }
+func (a *allowAuthorizer) Name() string     { return a.name }
+func (a *allowAuthorizer) ID() string       { return a.id }
+func (a *allowAuthorizer) Type() string     { return a.name }

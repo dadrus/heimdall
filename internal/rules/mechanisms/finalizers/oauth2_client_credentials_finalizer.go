@@ -23,8 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
@@ -76,7 +75,7 @@ func newOAuth2ClientCredentialsFinalizer(
 
 	var conf Config
 	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for oauth2_client_credentials finalizer '%s'", name).CausedBy(err)
 	}
 
@@ -107,15 +106,13 @@ func newOAuth2ClientCredentialsFinalizer(
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Accept(_ heimdall.Visitor) {}
+func (f *oauth2ClientCredentialsFinalizer) Accept(_ pipeline.Visitor) {}
+func (f *oauth2ClientCredentialsFinalizer) Kind() types.Kind          { return types.KindFinalizer }
+func (f *oauth2ClientCredentialsFinalizer) Name() string              { return f.name }
+func (f *oauth2ClientCredentialsFinalizer) ID() string                { return f.id }
+func (f *oauth2ClientCredentialsFinalizer) Type() string              { return f.name }
 
-func (f *oauth2ClientCredentialsFinalizer) Kind() types.Kind { return types.KindFinalizer }
-
-func (f *oauth2ClientCredentialsFinalizer) Name() string { return f.name }
-
-func (f *oauth2ClientCredentialsFinalizer) ID() string { return f.id }
-
-func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -144,7 +141,7 @@ func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) 
 
 	var conf Config
 	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for oauth2_client_credentials finalizer '%s'", f.id).CausedBy(err)
 	}
 
@@ -166,7 +163,7 @@ func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) 
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ identity.Subject) error {
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerOAuth2ClientCredentials).

@@ -18,10 +18,15 @@ package otel
 
 import (
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/contrib/instrumentation/host"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/otel/metrics"
+	"github.com/dadrus/heimdall/internal/otel/certificate"
+	"github.com/dadrus/heimdall/version"
 )
 
 // Module is used on app bootstrap.
@@ -31,7 +36,35 @@ var Module = fx.Options(
 	fx.Invoke(func(logger zerolog.Logger) {
 		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { logger.Warn().Err(err).Msg("OTEL Error") }))
 	}),
-	fx.Invoke(initTraceProvider),
-	fx.Invoke(initMeterProvider),
-	metrics.Module,
+	fx.Invoke(
+		initTraceProvider,
+		initMeterProvider,
+	),
+	fx.Provide(
+		createMeter,
+		createTracer,
+	),
+	fx.Invoke(runtime.Start),
+	fx.Invoke(host.Start),
+	fx.Provide(certificate.NewObserver),
 )
+
+const instrumentationIdentifier = "github.com/dadrus/heimdall"
+
+func createTracer() trace.Tracer {
+	provider := otel.GetTracerProvider()
+
+	return provider.Tracer(
+		instrumentationIdentifier,
+		trace.WithInstrumentationVersion(version.Version),
+	)
+}
+
+func createMeter() metric.Meter {
+	provider := otel.GetMeterProvider()
+
+	return provider.Meter(
+		instrumentationIdentifier,
+		metric.WithInstrumentationVersion(version.Version),
+	)
+}

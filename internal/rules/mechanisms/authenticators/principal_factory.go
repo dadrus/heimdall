@@ -16,10 +16,8 @@
 
 package authenticators
 
-import (
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
-)
+import "github.com/dadrus/heimdall/internal/pipeline"
 
 type PrincipalFactory interface {
-	CreatePrincipal(rawData []byte) (*identity.Principal, error)
+	CreatePrincipal(rawData []byte) (*pipeline.Principal, error)
 }

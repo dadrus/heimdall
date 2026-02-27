@@ -7,8 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -222,7 +221,7 @@ func (_c *ContextMock_Error_Call) RunAndReturn(run func() error) *ContextMock_Er
 }
 
 // Finalize provides a mock function for the type ContextMock
-func (_mock *ContextMock) Finalize(backend rule.Backend) error {
+func (_mock *ContextMock) Finalize(backend pipeline.Backend) error {
 	ret := _mock.Called(backend)
 
 	if len(ret) == 0 {
@@ -230,7 +229,7 @@ func (_mock *ContextMock) Finalize(backend rule.Backend) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(rule.Backend) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Backend) error); ok {
 		r0 = returnFunc(backend)
 	} else {
 		r0 = ret.Error(0)
@@ -244,16 +243,16 @@ type ContextMock_Finalize_Call struct {
 }
 
 // Finalize is a helper method to define mock.On call
-//   - backend rule.Backend
+//   - backend pipeline.Backend
 func (_e *ContextMock_Expecter) Finalize(backend interface{}) *ContextMock_Finalize_Call {
 	return &ContextMock_Finalize_Call{Call: _e.mock.On("Finalize", backend)}
 }
 
-func (_c *ContextMock_Finalize_Call) Run(run func(backend rule.Backend)) *ContextMock_Finalize_Call {
+func (_c *ContextMock_Finalize_Call) Run(run func(backend pipeline.Backend)) *ContextMock_Finalize_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 rule.Backend
+		var arg0 pipeline.Backend
 		if args[0] != nil {
-			arg0 = args[0].(rule.Backend)
+			arg0 = args[0].(pipeline.Backend)
 		}
 		run(
 			arg0,
@@ -267,7 +266,7 @@ func (_c *ContextMock_Finalize_Call) Return(err error) *ContextMock_Finalize_Cal
 	return _c
 }
 
-func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(backend rule.Backend) error) *ContextMock_Finalize_Call {
+func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(backend pipeline.Backend) error) *ContextMock_Finalize_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -319,19 +318,19 @@ func (_c *ContextMock_Outputs_Call) RunAndReturn(run func() map[string]any) *Con
 }
 
 // Request provides a mock function for the type ContextMock
-func (_mock *ContextMock) Request() *heimdall.Request {
+func (_mock *ContextMock) Request() *pipeline.Request {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Request")
 	}
 
-	var r0 *heimdall.Request
-	if returnFunc, ok := ret.Get(0).(func() *heimdall.Request); ok {
+	var r0 *pipeline.Request
+	if returnFunc, ok := ret.Get(0).(func() *pipeline.Request); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*heimdall.Request)
+			r0 = ret.Get(0).(*pipeline.Request)
 		}
 	}
 	return r0
@@ -354,12 +353,12 @@ func (_c *ContextMock_Request_Call) Run(run func()) *ContextMock_Request_Call {
 	return _c
 }
 
-func (_c *ContextMock_Request_Call) Return(request *heimdall.Request) *ContextMock_Request_Call {
+func (_c *ContextMock_Request_Call) Return(request *pipeline.Request) *ContextMock_Request_Call {
 	_c.Call.Return(request)
 	return _c
 }
 
-func (_c *ContextMock_Request_Call) RunAndReturn(run func() *heimdall.Request) *ContextMock_Request_Call {
+func (_c *ContextMock_Request_Call) RunAndReturn(run func() *pipeline.Request) *ContextMock_Request_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -401,5 +400,58 @@ func (_c *ContextMock_SetError_Call) Return() *ContextMock_SetError_Call {
 
 func (_c *ContextMock_SetError_Call) RunAndReturn(run func(err error)) *ContextMock_SetError_Call {
 	_c.Run(run)
+	return _c
+}
+
+// WithParent provides a mock function for the type ContextMock
+func (_mock *ContextMock) WithParent(ctx context.Context) pipeline.Context {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for WithParent")
+	}
+
+	var r0 pipeline.Context
+	if returnFunc, ok := ret.Get(0).(func(context.Context) pipeline.Context); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(pipeline.Context)
+		}
+	}
+	return r0
+}
+
+// ContextMock_WithParent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WithParent'
+type ContextMock_WithParent_Call struct {
+	*mock.Call
+}
+
+// WithParent is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *ContextMock_Expecter) WithParent(ctx interface{}) *ContextMock_WithParent_Call {
+	return &ContextMock_WithParent_Call{Call: _e.mock.On("WithParent", ctx)}
+}
+
+func (_c *ContextMock_WithParent_Call) Run(run func(ctx context.Context)) *ContextMock_WithParent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ContextMock_WithParent_Call) Return(context1 pipeline.Context) *ContextMock_WithParent_Call {
+	_c.Call.Return(context1)
+	return _c
+}
+
+func (_c *ContextMock_WithParent_Call) RunAndReturn(run func(ctx context.Context) pipeline.Context) *ContextMock_WithParent_Call {
+	_c.Call.Return(run)
 	return _c
 }

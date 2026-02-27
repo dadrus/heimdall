@@ -25,7 +25,7 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -35,13 +35,13 @@ func koanfFromYaml(configFile string, validateSyntax ConfigSyntaxValidator) (*ko
 
 	raw, err := os.ReadFile(configFile)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to read yaml config from %s", configFile).CausedBy(err)
 	}
 
 	content, err := envsubst.EvalEnv(stringx.ToString(raw))
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to parse yaml config from %s", configFile).CausedBy(err)
 	}
 
@@ -51,7 +51,7 @@ func koanfFromYaml(configFile string, validateSyntax ConfigSyntaxValidator) (*ko
 	}
 
 	if err = parser.Load(rawbytes.Provider(rawContent), yaml.Parser()); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to load yaml config from %s", configFile).CausedBy(err)
 	}
 

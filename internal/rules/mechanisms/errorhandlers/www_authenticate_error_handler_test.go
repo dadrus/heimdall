@@ -27,8 +27,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -63,7 +63,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -157,7 +157,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -183,7 +183,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'realm' is a required field")
 			},
 		},
@@ -232,7 +232,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetError(heimdall.ErrAuthentication)
+				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
@@ -253,7 +253,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetError(heimdall.ErrAuthentication)
+				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))

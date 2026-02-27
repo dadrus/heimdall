@@ -25,7 +25,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
@@ -33,8 +33,9 @@ import (
 type RequestContext struct {
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
-	hmdlReq         *heimdall.Request
+	hmdlReq         *pipeline.Request
 	req             *http.Request
+	ctx             context.Context //nolint: containedctx
 
 	// the following properties are created lazy and cached
 	err       error
@@ -51,9 +52,9 @@ func New() *RequestContext {
 		headers:         make(map[string]string, 10),
 	}
 
-	rc.hmdlReq = &heimdall.Request{
+	rc.hmdlReq = &pipeline.Request{
 		RequestFunctions:  rc,
-		URL:               &heimdall.URL{},
+		URL:               &pipeline.URL{},
 		ClientIPAddresses: make([]string, 0, 10),
 	}
 
@@ -65,12 +66,14 @@ func (r *RequestContext) Init(req *http.Request) {
 	r.hmdlReq.Method = extractMethod(req)
 	r.hmdlReq.URL.URL = extractURL(req)
 	r.hmdlReq.ClientIPAddresses = requestClientIPs(r.hmdlReq.ClientIPAddresses, req)
+	r.ctx = req.Context()
 }
 
 func (r *RequestContext) Reset() {
 	r.savedBody = nil
 	r.err = nil
 	r.req = nil
+	r.ctx = nil
 
 	clear(r.outputs)
 	clear(r.headers)
@@ -150,15 +153,21 @@ func (r *RequestContext) Body() any {
 	return r.savedBody
 }
 
-func (r *RequestContext) Request() *heimdall.Request              { return r.hmdlReq }
+func (r *RequestContext) Request() *pipeline.Request              { return r.hmdlReq }
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
-func (r *RequestContext) Context() context.Context                { return r.req.Context() }
+func (r *RequestContext) Context() context.Context                { return r.ctx }
 func (r *RequestContext) SetError(err error)                      { r.err = err }
 func (r *RequestContext) Error() error                            { return r.err }
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
+
+func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
+	r.ctx = ctx
+
+	return r
+}
 
 func requestClientIPs(ips []string, req *http.Request) []string {
 	if forwarded := req.Header.Get("Forwarded"); len(forwarded) != 0 {

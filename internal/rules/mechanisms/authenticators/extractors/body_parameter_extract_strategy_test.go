@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestExtractBodyParameter(t *testing.T) {
@@ -42,13 +42,13 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return("foobar=foo")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "no usable body present")
 			},
 		},
@@ -60,13 +60,13 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foo": "bar"})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "no foobar parameter present")
 			},
 		},
@@ -78,13 +78,13 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "no foobar parameter present")
 			},
 		},
@@ -96,13 +96,13 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{"foo", "bar"}})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "multiple times")
 			},
 		},
@@ -114,13 +114,13 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo", "bar"}})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "multiple times")
 			},
 		},
@@ -132,13 +132,13 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{1}})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "unexpected type")
 			},
 		},
@@ -150,13 +150,13 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foobar": map[string]any{"foo": "bar"}})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "unexpected type")
 			},
 		},
@@ -168,7 +168,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foobar": "foo"})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
@@ -185,7 +185,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo"}})
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()

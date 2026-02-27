@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -39,126 +39,126 @@ func TestHandlerHandle(t *testing.T) {
 	}{
 		"authentication error default": {
 			handler: New(),
-			err:     errorchain.New(heimdall.ErrAuthentication),
+			err:     errorchain.New(pipeline.ErrAuthentication),
 			expCode: http.StatusUnauthorized,
 		},
 		"authentication error overridden": {
 			handler: New(WithAuthenticationErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrAuthentication),
+			err:     errorchain.New(pipeline.ErrAuthentication),
 			expCode: http.StatusContinue,
 		},
 		"authentication error verbose without mime type set": {
 			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrAuthentication),
+			err:     errorchain.New(pipeline.ErrAuthentication),
 			expCode: http.StatusUnauthorized,
 			expBody: "<p>authentication error</p>",
 		},
 		"authorization error default": {
 			handler: New(),
-			err:     errorchain.New(heimdall.ErrAuthorization),
+			err:     errorchain.New(pipeline.ErrAuthorization),
 			expCode: http.StatusForbidden,
 		},
 		"authorization error overridden": {
 			handler: New(WithAuthorizationErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrAuthorization),
+			err:     errorchain.New(pipeline.ErrAuthorization),
 			expCode: http.StatusContinue,
 		},
 		"authorization error verbose expecting text/plain": {
 			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrAuthorization),
+			err:     errorchain.New(pipeline.ErrAuthorization),
 			expCode: http.StatusForbidden,
 			accept:  "text/plain",
 			expBody: "authorization error: authorization error",
 		},
 		"communication timeout error default": {
 			handler: New(),
-			err:     errorchain.New(heimdall.ErrCommunicationTimeout),
+			err:     errorchain.New(pipeline.ErrCommunicationTimeout),
 			expCode: http.StatusBadGateway,
 		},
 		"communication timeout error overridden": {
 			handler: New(WithCommunicationErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrCommunicationTimeout),
+			err:     errorchain.New(pipeline.ErrCommunicationTimeout),
 			expCode: http.StatusContinue,
 		},
 		"communication timeout error verbose expecting application/xml": {
 			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrCommunicationTimeout),
+			err:     errorchain.New(pipeline.ErrCommunicationTimeout),
 			expCode: http.StatusBadGateway,
 			accept:  "application/xml",
 			expBody: "<error><code>communicationTimeoutError</code><message>communication timeout error</message></error>",
 		},
 		"communication error default": {
 			handler: New(),
-			err:     errorchain.New(heimdall.ErrCommunication),
+			err:     errorchain.New(pipeline.ErrCommunication),
 			expCode: http.StatusBadGateway,
 		},
 		"communication error overridden": {
 			handler: New(WithCommunicationErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrCommunication),
+			err:     errorchain.New(pipeline.ErrCommunication),
 			expCode: http.StatusContinue,
 		},
 		"communication error verbose expecting application/json": {
 			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrCommunication),
+			err:     errorchain.New(pipeline.ErrCommunication),
 			expCode: http.StatusBadGateway,
 			accept:  "application/json",
 			expBody: `{"code":"communicationError","message":"communication error"}`,
 		},
 		"precondition error default": {
 			handler: New(),
-			err:     errorchain.New(heimdall.ErrArgument),
+			err:     errorchain.New(pipeline.ErrArgument),
 			expCode: http.StatusBadRequest,
 		},
 		"precondition error overridden": {
 			handler: New(WithPreconditionErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrArgument),
+			err:     errorchain.New(pipeline.ErrArgument),
 			expCode: http.StatusContinue,
 		},
 		"precondition error verbose expecting text/html": {
 			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrArgument),
+			err:     errorchain.New(pipeline.ErrArgument),
 			expCode: http.StatusBadRequest,
 			expBody: "<p>argument error</p>",
 		},
 		"no rule error default": {
 			handler: New(),
-			err:     errorchain.New(heimdall.ErrNoRuleFound),
+			err:     errorchain.New(pipeline.ErrNoRuleFound),
 			expCode: http.StatusNotFound,
 		},
 		"no rule error overridden": {
 			handler: New(WithNoRuleErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrNoRuleFound),
+			err:     errorchain.New(pipeline.ErrNoRuleFound),
 			expCode: http.StatusContinue,
 		},
 		"no rule error verbose without mime type": {
 			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrNoRuleFound),
+			err:     errorchain.New(pipeline.ErrNoRuleFound),
 			expCode: http.StatusNotFound,
 			expBody: "<p>no rule found</p>",
 		},
 		"redirect error": {
 			handler: New(),
-			err:     &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
+			err:     &pipeline.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode: http.StatusFound,
 		},
 		"redirect error verbose without mime type": {
 			handler: New(WithVerboseErrors(true)),
-			err:     &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
+			err:     &pipeline.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode: http.StatusFound,
 		},
 		"internal error default": {
 			handler: New(),
-			err:     errorchain.New(heimdall.ErrInternal),
+			err:     errorchain.New(pipeline.ErrInternal),
 			expCode: http.StatusInternalServerError,
 		},
 		"internal error overridden": {
 			handler: New(WithInternalServerErrorCode(http.StatusContinue)),
-			err:     errorchain.New(heimdall.ErrInternal),
+			err:     errorchain.New(pipeline.ErrInternal),
 			expCode: http.StatusContinue,
 		},
 		"internal error verbose without mime type": {
 			handler: New(WithVerboseErrors(true)),
-			err:     errorchain.New(heimdall.ErrInternal),
+			err:     errorchain.New(pipeline.ErrInternal),
 			expCode: http.StatusInternalServerError,
 			expBody: "<p>internal error</p>",
 		},

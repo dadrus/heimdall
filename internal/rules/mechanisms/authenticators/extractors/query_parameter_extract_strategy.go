@@ -19,7 +19,7 @@ package extractors
 import (
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -27,10 +27,10 @@ type QueryParameterExtractStrategy struct {
 	Name string
 }
 
-func (es QueryParameterExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
+func (es QueryParameterExtractStrategy) GetAuthData(s pipeline.Context) (string, error) {
 	if val := s.Request().URL.Query().Get(es.Name); len(val) != 0 {
 		return strings.TrimSpace(val), nil
 	}
 
-	return "", errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' query parameter present", es.Name)
+	return "", errorchain.NewWithMessagef(pipeline.ErrArgument, "no '%s' query parameter present", es.Name)
 }

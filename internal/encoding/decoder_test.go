@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func TestDecode(t *testing.T) {
@@ -46,7 +46,7 @@ func TestDecode(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "unsupported content type: foo")
 			},
 		},
@@ -60,7 +60,7 @@ func TestDecode(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "substitution of env")
 			},
 		},
@@ -84,7 +84,7 @@ func TestDecode(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "parsing of object failed")
 			},
 		},
@@ -98,7 +98,7 @@ func TestDecode(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "decoding of object failed")
 			},
 		},
@@ -113,7 +113,7 @@ func TestDecode(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "test error")
 			},
 		},

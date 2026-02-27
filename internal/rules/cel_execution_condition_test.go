@@ -24,9 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -62,8 +61,8 @@ func TestNewCelExecutionCondition(t *testing.T) {
 func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 	t.Parallel()
 
-	sub := identity.Subject{
-		"default": &identity.Principal{
+	sub := pipeline.Subject{
+		"default": &pipeline.Principal{
 			ID: "foobar",
 			Attributes: map[string]any{
 				"group1": []string{"admin@acme.co", "analyst@acme.co"},
@@ -100,9 +99,9 @@ func TestCelExecutionConditionCanExecuteOnSubject(t *testing.T) {
 			// GIVEN
 			ctx := mocks.NewContextMock(t)
 
-			ctx.EXPECT().Request().Return(&heimdall.Request{
+			ctx.EXPECT().Request().Return(&pipeline.Request{
 				Method: http.MethodGet,
-				URL: &heimdall.URL{URL: url.URL{
+				URL: &pipeline.URL{URL: url.URL{
 					Scheme:   "http",
 					Host:     "localhost",
 					Path:     "/test",
@@ -155,9 +154,9 @@ func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 			// GIVEN
 			ctx := mocks.NewContextMock(t)
 
-			ctx.EXPECT().Request().Return(&heimdall.Request{
+			ctx.EXPECT().Request().Return(&pipeline.Request{
 				Method: http.MethodGet,
-				URL: &heimdall.URL{URL: url.URL{
+				URL: &pipeline.URL{URL: url.URL{
 					Scheme:   "http",
 					Host:     "localhost",
 					Path:     "/test",
@@ -171,8 +170,8 @@ func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 
 			// WHEN
 			can, err := condition.CanExecuteOnError(ctx, errorchain.
-				NewWithMessage(heimdall.ErrCommunication, "test").
-				CausedBy(heimdall.ErrAuthorization).WithErrorContext(testIdentifier("foobar")))
+				NewWithMessage(pipeline.ErrCommunication, "test").
+				CausedBy(pipeline.ErrAuthorization).WithErrorContext(testIdentifier("foobar")))
 
 			// THEN
 			require.NoError(t, err)

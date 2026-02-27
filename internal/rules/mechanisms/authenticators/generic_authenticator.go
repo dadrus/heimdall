@@ -30,10 +30,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -88,7 +87,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name).CausedBy(err)
 	}
 
@@ -117,12 +116,12 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (a *genericAuthenticator) Accept(visitor heimdall.Visitor) {
+func (a *genericAuthenticator) Accept(visitor pipeline.Visitor) {
 	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
-func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (a *genericAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorGeneric).
@@ -133,7 +132,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subjec
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to get authentication data from request").
+			NewWithMessage(pipeline.ErrAuthentication, "failed to get authentication data from request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -146,7 +145,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subjec
 	principal, err := a.sf.CreatePrincipal(payload)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract principal information from response").
+			NewWithMessage(pipeline.ErrInternal, "failed to extract principal information from response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -156,7 +155,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context, sub identity.Subjec
 	return nil
 }
 
-func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -184,7 +183,7 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (heimdall.St
 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, a.name).CausedBy(err)
 	}
 
@@ -206,17 +205,14 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (heimdall.St
 	}, nil
 }
 
-func (a *genericAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
-
-func (a *genericAuthenticator) Name() string { return a.name }
-
-func (a *genericAuthenticator) ID() string { return a.id }
-
-func (a *genericAuthenticator) IsInsecure() bool { return false }
-
+func (a *genericAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
+func (a *genericAuthenticator) Name() string          { return a.name }
+func (a *genericAuthenticator) ID() string            { return a.id }
+func (a *genericAuthenticator) Type() string          { return a.name }
+func (a *genericAuthenticator) IsInsecure() bool      { return false }
 func (a *genericAuthenticator) PrincipalName() string { return a.principalName }
 
-func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.Context, authData string) ([]byte, error) {
+func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	cch := cache.Ctx(ctx.Context())
 
@@ -242,12 +238,12 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.Context, aut
 	if a.sessionLifespanConf != nil {
 		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)
 		if err != nil {
-			return nil, errorchain.New(heimdall.ErrInternal).WithErrorContext(a).CausedBy(err)
+			return nil, errorchain.New(pipeline.ErrInternal).WithErrorContext(a).CausedBy(err)
 		}
 
 		if session != nil {
 			if err = session.Assert(); err != nil {
-				return nil, errorchain.New(heimdall.ErrAuthentication).WithErrorContext(a).CausedBy(err)
+				return nil, errorchain.New(pipeline.ErrAuthentication).WithErrorContext(a).CausedBy(err)
 			}
 		}
 	}
@@ -261,7 +257,7 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx heimdall.Context, aut
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.Context, authData string) ([]byte, error) {
+func (a *genericAuthenticator) fetchPrincipalInformation(ctx pipeline.Context, authData string) ([]byte, error) {
 	req, err := a.createRequest(ctx, authData)
 	if err != nil {
 		return nil, err
@@ -272,14 +268,14 @@ func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.Context, a
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout,
+				NewWithMessage(pipeline.ErrCommunicationTimeout,
 					"request to the endpoint to get information about the user timed out").
 				WithErrorContext(a).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication,
+			NewWithMessage(pipeline.ErrCommunication,
 				"request to the endpoint to get information about the user failed").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -290,7 +286,7 @@ func (a *genericAuthenticator) fetchPrincipalInformation(ctx heimdall.Context, a
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData string) (*http.Request, error) {
+func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData string) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	var body io.Reader
@@ -302,7 +298,7 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 	if a.payload != nil {
 		value, err := a.payload.Render(templateData)
 		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the authenticator endpoint").
 				WithErrorContext(a).CausedBy(err)
 		}
@@ -314,7 +310,7 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
-				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
 					WithErrorContext(a).
 					CausedBy(err)
 			}
@@ -323,7 +319,7 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 		}))
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -356,16 +352,16 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+		return nil, errorchain.NewWithMessage(pipeline.ErrAuthentication,
 			"received authentication data rejected").WithErrorContext(a)
 	case resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices:
-		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).WithErrorContext(a)
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to read response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}

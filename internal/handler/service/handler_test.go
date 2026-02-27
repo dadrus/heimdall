@@ -26,27 +26,27 @@ import (
 
 	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/handler/requestcontext/mocks"
-	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	mocks4 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestHandlerServeHTTP(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup func(*testing.T, *mocks.ExecutorMock, *mocks3.ContextMock, *mocks2.ErrorHandlerMock)
+		setup func(*testing.T, *mocks4.ExecutorMock, *mocks3.ContextMock, *mocks2.ErrorHandlerMock)
 	}{
 		"no error": {
-			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, _ *mocks2.ErrorHandlerMock) {
+			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, _ *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
-				upstream := mocks.NewBackendMock(t)
+				upstream := mocks4.NewBackendMock(t)
 
 				exec.EXPECT().Execute(ctx).Return(upstream, nil)
 				ctx.EXPECT().Finalize(upstream).Return(nil)
 			},
 		},
 		"with error from executor": {
-			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
+			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
 				err := errors.New("exec error")
@@ -56,11 +56,11 @@ func TestHandlerServeHTTP(t *testing.T) {
 			},
 		},
 		"with error from finalizer": {
-			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
+			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
 				err := errors.New("finalizer error")
-				upstream := mocks.NewBackendMock(t)
+				upstream := mocks4.NewBackendMock(t)
 
 				exec.EXPECT().Execute(ctx).Return(upstream, nil)
 				ctx.EXPECT().Finalize(upstream).Return(err)
@@ -71,7 +71,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			rcf := mocks3.NewContextFactoryMock(t)
-			re := mocks.NewExecutorMock(t)
+			re := mocks4.NewExecutorMock(t)
 			rc := mocks3.NewContextMock(t)
 			eh := mocks2.NewErrorHandlerMock(t)
 

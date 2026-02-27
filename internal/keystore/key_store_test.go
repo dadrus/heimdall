@@ -34,8 +34,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -338,7 +338,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "duplicate entry")
 			},
 		},
@@ -360,7 +360,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "no key material present")
 			},
 		},
@@ -403,7 +403,7 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "duplicate entry")
 			},
 		},
@@ -423,7 +423,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "unsupported entry")
 			},
 		},
@@ -443,7 +443,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to parse")
 			},
 		},
@@ -638,7 +638,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "duplicate entry for key_id=foo")
 			},
 		},

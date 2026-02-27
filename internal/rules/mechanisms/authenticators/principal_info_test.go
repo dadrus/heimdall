@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func TestSubjectInfoCreateSubject(t *testing.T) {
@@ -62,7 +62,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		configure func(t *testing.T, s *PrincipalInfo)
-		assert    func(t *testing.T, err error, sub *identity.Principal)
+		assert    func(t *testing.T, err error, sub *pipeline.Principal)
 	}{
 		"principal is extracted and attributes are the whole object": {
 			configure: func(t *testing.T, s *PrincipalInfo) {
@@ -70,7 +70,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 				s.IDFrom = "identity"
 			},
-			assert: func(t *testing.T, err error, sub *identity.Principal) {
+			assert: func(t *testing.T, err error, sub *pipeline.Principal) {
 				t.Helper()
 				require.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
@@ -89,7 +89,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				s.IDFrom = "string_slice.1"
 				s.AttributesFrom = map[string]string{"": "complex.nested"}
 			},
-			assert: func(t *testing.T, err error, sub *identity.Principal) {
+			assert: func(t *testing.T, err error, sub *pipeline.Principal) {
 				t.Helper()
 				require.NoError(t, err)
 				assert.Equal(t, "val2", sub.ID)
@@ -115,7 +115,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 					"c": "complex.nested.val",
 				}
 			},
-			assert: func(t *testing.T, err error, sub *identity.Principal) {
+			assert: func(t *testing.T, err error, sub *pipeline.Principal) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 					"a": "some_string_attribute",
 				}
 			},
-			assert: func(t *testing.T, err error, sub *identity.Principal) {
+			assert: func(t *testing.T, err error, sub *pipeline.Principal) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 				s.IDFrom = "identity"
 				s.AttributesFrom = map[string]string{"": "foobar"}
 			},
-			assert: func(t *testing.T, err error, _ *identity.Principal) {
+			assert: func(t *testing.T, err error, _ *pipeline.Principal) {
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "could not extract attributes")
@@ -165,7 +165,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 				s.IDFrom = "foo"
 			},
-			assert: func(t *testing.T, err error, _ *identity.Principal) {
+			assert: func(t *testing.T, err error, _ *pipeline.Principal) {
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "could not extract principal")

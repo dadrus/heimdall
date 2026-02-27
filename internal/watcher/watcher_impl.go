@@ -25,7 +25,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -46,7 +46,7 @@ func newWatcher(logger zerolog.Logger) (*watcher, error) {
 	fsw, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to instantiating new file watcher").
+			NewWithMessage(pipeline.ErrInternal, "failed to instantiating new file watcher").
 			CausedBy(err)
 	}
 
@@ -60,13 +60,13 @@ func (w *watcher) Add(path string, cl ChangeListener) error {
 	entry := w.m[path]
 	if entry == nil {
 		if err := w.w.Add(path); err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"listener registration for file %s failed", path).CausedBy(err)
 		}
 
 		resolvedPath, err := filepath.EvalSymlinks(path)
 		if err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"listener registration for file %s failed", path).CausedBy(err)
 		}
 

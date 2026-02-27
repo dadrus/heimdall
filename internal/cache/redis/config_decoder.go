@@ -20,7 +20,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -39,17 +39,17 @@ func decodeConfig(validator validation.Validator, input any, output any) error {
 			ErrorUnused: true,
 		})
 	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding redis cache config").CausedBy(err)
 	}
 
 	if err = dec.Decode(input); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding redis cache config").CausedBy(err)
 	}
 
 	if err = validator.ValidateStruct(output); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed validating redis cache config").CausedBy(err)
 	}
 

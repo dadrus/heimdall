@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
@@ -77,7 +77,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.False(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "create template")
 			},
 		},
@@ -92,7 +92,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.False(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "creating oauth2 server metadata request")
 			},
 		},
@@ -107,7 +107,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.False(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 			},
 		},
 		"server responses with an error": {
@@ -126,7 +126,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.True(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "unexpected response code")
 			},
 		},
@@ -146,7 +146,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.True(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to unmarshal")
 			},
 		},
@@ -181,7 +181,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.True(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "jwks_uri contains a template")
 			},
 		},
@@ -216,7 +216,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.True(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "introspection_endpoint contains a template")
 			},
 		},
@@ -305,7 +305,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				require.True(t, endpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 			},
 		},
 		"configured settings for resolved endpoints are applied": {

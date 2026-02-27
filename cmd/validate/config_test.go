@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/cmd/flags"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 )
 
@@ -131,7 +131,7 @@ func TestValidateConfig(t *testing.T) {
 			// THEN
 			if len(tc.expErr) != 0 {
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, tc.expErr)
 			} else {
 				require.NoError(t, err)

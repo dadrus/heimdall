@@ -25,9 +25,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -46,7 +45,7 @@ func TestNewCookieFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'cookies' is a required field")
 			},
 		},
@@ -56,7 +55,7 @@ func TestNewCookieFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'cookies' must contain more than 0 items")
 			},
 		},
@@ -83,7 +82,7 @@ cookies:
 
 				require.Nil(t, finalizer)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -106,7 +105,7 @@ cookies:
 				assert.Equal(t, "bar", val)
 
 				val, err = finalizer.cookies["bar"].Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
@@ -239,7 +238,7 @@ cookies:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "empty cookies")
 			},
 		},
@@ -282,7 +281,7 @@ func TestCookieFinalizerExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config           []byte
 		configureContext func(t *testing.T, ctx *mocks.ContextMock)
-		createSubject    func(t *testing.T) identity.Subject
+		createSubject    func(t *testing.T) pipeline.Subject
 		assert           func(t *testing.T, err error)
 	}{
 		"rendering error": {
@@ -293,14 +292,14 @@ cookies:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: mocks.NewRequestFunctionsMock(t)})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: mocks.NewRequestFunctionsMock(t)})
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render")
 			},
 		},
@@ -324,13 +323,13 @@ cookies:
 				ctx.EXPECT().AddCookieForUpstream("baz", "bar")
 				ctx.EXPECT().AddCookieForUpstream("x_foo", "Bar")
 				ctx.EXPECT().AddCookieForUpstream("x_bar", "bar")
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			createSubject: func(t *testing.T) identity.Subject {
+			createSubject: func(t *testing.T) pipeline.Subject {
 				t.Helper()
 
-				return identity.Subject{"default": &identity.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}}
+				return pipeline.Subject{"default": &pipeline.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}}
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -343,10 +342,10 @@ cookies:
 			// GIVEN
 			createSubject := x.IfThenElse(tc.createSubject != nil,
 				tc.createSubject,
-				func(t *testing.T) identity.Subject {
+				func(t *testing.T) pipeline.Subject {
 					t.Helper()
 
-					return identity.Subject{"default": &identity.Principal{ID: "foo", Attributes: map[string]any{}}}
+					return pipeline.Subject{"default": &pipeline.Principal{ID: "foo", Attributes: map[string]any{}}}
 				})
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,

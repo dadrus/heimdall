@@ -21,7 +21,7 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -55,7 +55,7 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 
 			return createMatcherFromValues(createMatcher, data)
 		default:
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "invalid structure for scopes matcher")
+			return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "invalid structure for scopes matcher")
 		}
 
 		return matcher, nil
@@ -81,7 +81,7 @@ func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
 	} else if m, ok := data.(map[string]any); ok {
 		typed = m
 	} else {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "invalid structure for scopes matcher")
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "invalid structure for scopes matcher")
 	}
 
 	if name, ok := typed["matching_strategy"]; ok {
@@ -99,7 +99,7 @@ func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
 		return createMatcherFromValues(createMatcher, values)
 	}
 
-	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "invalid structure for scopes matcher")
+	return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "invalid structure for scopes matcher")
 }
 
 func createMatcherFromValues(createMatcher ScopeMatcherFactory, values any) (ScopesMatcher, error) {
@@ -126,6 +126,6 @@ func matcherFactory(name string) (ScopeMatcherFactory, error) {
 			return WildcardScopeStrategyMatcher(scopes), nil
 		}, nil
 	default:
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unsupported strategy \"%s\"", name)
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unsupported strategy \"%s\"", name)
 	}
 }

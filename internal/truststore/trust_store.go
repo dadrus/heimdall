@@ -20,7 +20,7 @@ import (
 	"crypto/x509"
 	"os"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 )
@@ -36,12 +36,12 @@ func NewTrustStoreFromPEMFile(pemFilePath string, strict bool) (TrustStore, erro
 	}
 
 	if fInfo.IsDir() {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "'%s' is not a file", pemFilePath)
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "'%s' is not a file", pemFilePath)
 	}
 
 	contents, err := os.ReadFile(pemFilePath)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to read %s", pemFilePath).CausedBy(err)
 	}
 
@@ -75,13 +75,13 @@ func (ts *TrustStore) addEntry(strict bool) pemx.PEMBlockCallback {
 		if blockType == pemBlockTypeCertificate {
 			cert, err = x509.ParseCertificate(content)
 			if err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				return errorchain.NewWithMessagef(pipeline.ErrInternal,
 					"failed to parse %d entry in the pem file", idx).CausedBy(err)
 			}
 
 			*ts = append(*ts, cert)
 		} else if strict {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"unsupported entry '%s' entry in the pem file", blockType)
 		}
 

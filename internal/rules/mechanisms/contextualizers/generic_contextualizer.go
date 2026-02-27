@@ -32,10 +32,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -96,7 +95,7 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", name).CausedBy(err)
 	}
 
@@ -125,10 +124,10 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 	}, nil
 }
 
-func (c *genericContextualizer) Accept(_ heimdall.Visitor) {}
+func (c *genericContextualizer) Accept(_ pipeline.Visitor) {}
 
 //nolint:cyclop
-func (c *genericContextualizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", ContextualizerGeneric).
@@ -183,7 +182,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.Context, sub identity.Subje
 	return nil
 }
 
-func (c *genericContextualizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (c *genericContextualizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return c, nil
 	}
@@ -206,7 +205,7 @@ func (c *genericContextualizer) CreateStep(def types.StepDefinition) (heimdall.S
 
 	var conf Config
 	if err := decodeConfig(c.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", c.name).CausedBy(err)
 	}
 
@@ -226,14 +225,13 @@ func (c *genericContextualizer) CreateStep(def types.StepDefinition) (heimdall.S
 }
 
 func (c *genericContextualizer) Kind() types.Kind { return types.KindContextualizer }
-
-func (c *genericContextualizer) Name() string { return c.name }
-
-func (c *genericContextualizer) ID() string { return c.id }
+func (c *genericContextualizer) Name() string     { return c.name }
+func (c *genericContextualizer) ID() string       { return c.id }
+func (c *genericContextualizer) Type() string     { return c.name }
 
 func (c *genericContextualizer) callEndpoint(
-	ctx heimdall.Context,
-	sub identity.Subject,
+	ctx pipeline.Context,
+	sub pipeline.Subject,
 	values map[string]string,
 	payload string,
 ) (*contextualizerData, error) {
@@ -249,13 +247,13 @@ func (c *genericContextualizer) callEndpoint(
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+			return nil, errorchain.NewWithMessage(pipeline.ErrCommunicationTimeout,
 				"request to the contextualizer endpoint timed out").
 				WithErrorContext(c).
 				CausedBy(err)
 		}
 
-		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
+		return nil, errorchain.NewWithMessage(pipeline.ErrCommunication,
 			"request to the contextualizer endpoint failed").
 			WithErrorContext(c).
 			CausedBy(err)
@@ -272,8 +270,8 @@ func (c *genericContextualizer) callEndpoint(
 }
 
 func (c *genericContextualizer) createRequest(
-	ctx heimdall.Context,
-	sub identity.Subject,
+	ctx pipeline.Context,
+	sub pipeline.Subject,
 	values map[string]string,
 	payload string,
 ) (*http.Request, error) {
@@ -282,7 +280,7 @@ func (c *genericContextualizer) createRequest(
 	endpointRenderer := endpoint.RenderFunc(func(value string) (string, error) {
 		tpl, err := template.New(value)
 		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
 				WithErrorContext(c).
 				CausedBy(err)
 		}
@@ -296,7 +294,7 @@ func (c *genericContextualizer) createRequest(
 
 	req, err := c.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithErrorContext(c).
 			CausedBy(err)
 	}
@@ -324,11 +322,11 @@ func (c *genericContextualizer) createRequest(
 	return req, nil
 }
 
-func (c *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
+func (c *genericContextualizer) readResponse(ctx pipeline.Context, resp *http.Response) (any, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).
 			WithErrorContext(c)
 	}
@@ -341,7 +339,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to read response").
 			WithErrorContext(c).
 			CausedBy(err)
 	}
@@ -360,7 +358,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 
 	result, err := decoder.Decode(rawData)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to unmarshal response").
 			WithErrorContext(c).
 			CausedBy(err)
 	}
@@ -369,7 +367,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 }
 
 func (c *genericContextualizer) calculateCacheKey(
-	sub identity.Subject,
+	sub pipeline.Subject,
 	values map[string]string,
 	payload string,
 ) string {
@@ -400,8 +398,8 @@ func (c *genericContextualizer) calculateCacheKey(
 }
 
 func (c *genericContextualizer) renderTemplates(
-	ctx heimdall.Context,
-	sub identity.Subject,
+	ctx pipeline.Context,
+	sub pipeline.Subject,
 ) (map[string]string, string, error) {
 	var payload string
 
@@ -411,7 +409,7 @@ func (c *genericContextualizer) renderTemplates(
 		"Outputs": ctx.Outputs(),
 	})
 	if err != nil {
-		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render values for the contextualization endpoint").
 			WithErrorContext(c).
 			CausedBy(err)
@@ -424,7 +422,7 @@ func (c *genericContextualizer) renderTemplates(
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
 		}); err != nil {
-			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the contextualization endpoint").
 				WithErrorContext(c).
 				CausedBy(err)

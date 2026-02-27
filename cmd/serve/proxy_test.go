@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/cmd/flags"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -61,7 +61,7 @@ func TestRunProxyModeFails(t *testing.T) {
 
 	err := cmd.Execute()
 	require.Error(t, err)
-	require.ErrorIs(t, err, heimdall.ErrConfiguration)
+	require.ErrorIs(t, err, pipeline.ErrConfiguration)
 	// secure config is enforcement, but not done
 	require.Contains(t, err.Error(), "configuration is invalid")
 }

@@ -27,7 +27,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -43,7 +43,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			CausedBy(err)
 	}
 
@@ -54,19 +54,19 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to rule set endpoint timed out").
+				NewWithMessage(pipeline.ErrCommunicationTimeout, "request to rule set endpoint timed out").
 				CausedBy(err)
 		}
 
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to rule set endpoint failed").
+			NewWithMessage(pipeline.ErrCommunication, "request to rule set endpoint failed").
 			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode)
 	}
 
@@ -80,7 +80,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 
 	var ruleSet v1beta1.RuleSet
 	if err = dec.Decode(&ruleSet, io.TeeReader(resp.Body, md)); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
 	}
 

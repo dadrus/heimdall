@@ -19,7 +19,7 @@ package extractors
 import (
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -28,15 +28,15 @@ type HeaderValueExtractStrategy struct {
 	Scheme string
 }
 
-func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
+func (es HeaderValueExtractStrategy) GetAuthData(s pipeline.Context) (string, error) {
 	if val := s.Request().Header(es.Name); len(val) != 0 {
 		if len(es.Scheme) != 0 && !strings.HasPrefix(val, es.Scheme+" ") {
-			return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
+			return "", errorchain.NewWithMessagef(pipeline.ErrArgument,
 				"'%s' header present, but without required '%s' scheme", es.Name, es.Scheme)
 		}
 
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Scheme)), nil
 	}
 
-	return "", errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' header present", es.Name)
+	return "", errorchain.NewWithMessagef(pipeline.ErrArgument, "no '%s' header present", es.Name)
 }

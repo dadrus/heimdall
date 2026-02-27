@@ -30,8 +30,8 @@ import (
 	"github.com/ybbus/httpretry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/httpcache"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -94,7 +94,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 
 	endpointURL, err := tpl.Render(e.URL)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render URL for the endpoint").CausedBy(err)
 	}
 
@@ -103,7 +103,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	req, err := http.NewRequestWithContext(ctx, method, endpointURL, body)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to create a request instance").
+			NewWithMessage(pipeline.ErrInternal, "failed to create a request instance").
 			CausedBy(err)
 	}
 
@@ -113,7 +113,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 		err = e.AuthStrategy.Apply(ctx, req)
 		if err != nil {
 			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to authenticate request").
+				NewWithMessage(pipeline.ErrInternal, "failed to authenticate request").
 				CausedBy(err)
 		}
 	}
@@ -121,7 +121,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	for headerName, valueTemplate := range e.Headers {
 		headerValue, err := tpl.Render(valueTemplate)
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"failed to render %s header value", headerName).CausedBy(err)
 		}
 
@@ -148,10 +148,10 @@ func (e Endpoint) SendRequest(
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.New(heimdall.ErrCommunicationTimeout).CausedBy(err)
+			return nil, errorchain.New(pipeline.ErrCommunicationTimeout).CausedBy(err)
 		}
 
-		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(err)
+		return nil, errorchain.New(pipeline.ErrCommunication).CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -191,7 +191,7 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 		rawData, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
+				NewWithMessage(pipeline.ErrInternal, "failed to read response").
 				CausedBy(err)
 		}
 
@@ -199,5 +199,5 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 	}
 
 	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+		NewWithMessagef(pipeline.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 }

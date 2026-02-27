@@ -33,7 +33,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
@@ -112,7 +112,7 @@ func (c *fileCredentials) load() error {
 
 func (c *fileCredentials) register(cw watcher.Watcher) error {
 	if err := cw.Add(c.Path, c); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"failed registering client credentials watcher on %s for Redis client", c.Path).CausedBy(err)
 	}
 

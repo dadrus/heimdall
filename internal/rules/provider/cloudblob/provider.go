@@ -31,7 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -76,12 +76,12 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) { //
 
 	var providerConf Config
 	if err := dec.DecodeMap(&providerConf, rawConf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed to decode cloud_blob rule provider config").CausedBy(err)
 	}
 
 	if len(providerConf.Buckets) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no buckets configured for cloud_blob rule provider")
 	}
 
@@ -98,7 +98,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) { //
 	if err != nil {
 		cancel()
 
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed creating scheduler for cloud_blob rule provider").CausedBy(err)
 	}
 
@@ -113,7 +113,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) { //
 
 	for idx, bucket := range providerConf.Buckets {
 		if bucket.URL == nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"missing url for #%d bucket in cloud_blob rule provider configuration", idx)
 		}
 
@@ -131,7 +131,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) { //
 			gocron.NewTask(prov.watchChanges, bucket),
 			gocron.WithContext(ctx),
 		); err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d cloud_blob", idx).
 				CausedBy(err)
 		}
@@ -183,7 +183,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
-		if errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration) {
+		if errors.Is(err, pipeline.ErrInternal) || errors.Is(err, pipeline.ErrConfiguration) {
 			return err
 		}
 	}
