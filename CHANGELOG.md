@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.17.10](https://github.com/dadrus/heimdall/compare/v0.17.9...v0.17.10) (2026-03-02)
+
+
+### Dependencies
+
+* update golang to v1.26.0 ([#3042](https://github.com/dadrus/heimdall/issues/3042)) ([872e15b](https://github.com/dadrus/heimdall/commit/872e15be523cf08bdbd72dbdb1ce431fd2a9ed77))
+* update google.golang.org/genproto/googleapis/rpc digest to 2f722ef ([#3055](https://github.com/dadrus/heimdall/issues/3055)) ([d204477](https://github.com/dadrus/heimdall/commit/d2044773e287af40b9f4c9d6b5c436877538fc65))
+* update kubernetes packages to v0.35.1 ([#3041](https://github.com/dadrus/heimdall/issues/3041)) ([5f872ba](https://github.com/dadrus/heimdall/commit/5f872baaea0a8d76463b097dffcac0d76ab97cf0))
+* update kubernetes packages to v0.35.2 ([#3069](https://github.com/dadrus/heimdall/issues/3069)) ([5e826c2](https://github.com/dadrus/heimdall/commit/5e826c28b2c41af65ec8caaa5c43beefae45ba1f))
+* update module github.com/envoyproxy/go-control-plane/envoy to v1.37.0 ([#3051](https://github.com/dadrus/heimdall/issues/3051)) ([e10e6c1](https://github.com/dadrus/heimdall/commit/e10e6c1e373dcede6a0ed80bdf0bcdc5266380ba))
+* update module github.com/redis/rueidis to v1.0.72 ([#3053](https://github.com/dadrus/heimdall/issues/3053)) ([cb73e0b](https://github.com/dadrus/heimdall/commit/cb73e0bd67a6fbf37b8091a6e55fac0ebc08d5a1))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.72 ([#3053](https://github.com/dadrus/heimdall/issues/3053)) ([cb73e0b](https://github.com/dadrus/heimdall/commit/cb73e0bd67a6fbf37b8091a6e55fac0ebc08d5a1))
+* update module gocloud.dev to v0.45.0 ([#3071](https://github.com/dadrus/heimdall/issues/3071)) ([16ab9a5](https://github.com/dadrus/heimdall/commit/16ab9a5c5b25f74975754f37abbbc5e970b9577b))
+* update module google.golang.org/grpc to v1.79.1 ([#3048](https://github.com/dadrus/heimdall/issues/3048)) ([20c8af3](https://github.com/dadrus/heimdall/commit/20c8af3a4cd440555409677fc4354b42634d1106))
+
 ## [0.17.9](https://github.com/dadrus/heimdall/compare/v0.17.8...v0.17.9) (2026-02-07)
 
 
