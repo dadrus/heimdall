@@ -59,11 +59,11 @@ require (
 	github.com/ybbus/httpretry v1.0.2
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.65.0
-	go.opentelemetry.io/contrib/instrumentation/host v0.65.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.65.0
-	go.opentelemetry.io/contrib/instrumentation/runtime v0.65.0
-	go.opentelemetry.io/contrib/propagators/autoprop v0.65.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.66.0
+	go.opentelemetry.io/contrib/instrumentation/host v0.66.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.66.0
+	go.opentelemetry.io/contrib/instrumentation/runtime v0.66.0
+	go.opentelemetry.io/contrib/propagators/autoprop v0.66.0
 	go.opentelemetry.io/otel v1.41.0
 	go.opentelemetry.io/otel/bridge/opentracing v1.41.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.41.0
@@ -138,7 +138,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20260121142036-a486691bba94 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dunglas/httpsfv v1.1.0 // indirect
-	github.com/ebitengine/purego v0.9.1 // indirect
+	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
@@ -162,7 +162,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
+	github.com/lufia/plan9stats v0.0.0-20260216142805-b3301c5f2a88 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -196,10 +196,10 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.39.0 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.40.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.40.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.40.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.40.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.41.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.41.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.41.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.41.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.shabbyrobe.org/gocovmerge v0.0.0-20230507111327-fa4f82cfbf4d // indirect
 	go.uber.org/dig v1.19.0 // indirect
