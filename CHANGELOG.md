@@ -2,6 +2,7 @@
 
 ## [0.17.10](https://github.com/dadrus/heimdall/compare/v0.17.9...v0.17.10) (2026-03-05)
 
+Although this is a regular monthly patch release, the switch to the  [Green Tea garbage collector](https://go.dev/doc/go1.26#new-garbage-collector), which became the default in Go v1.26.0, may result in noticeable performance improvements.
 
 ### Dependencies
 
@@ -113,13 +114,10 @@
 
 ## [0.17.5](https://github.com/dadrus/heimdall/compare/v0.17.4...v0.17.5) (2025-12-05)
 
-<<<<<<< HEAD
 Even though this is a regular patch release, there are two noticeable updates:
 
 * The gocloud.dev update in #2896 dropped support for the AWS v1 APIs. This means that if you were using the cloudblob provider to load your rulesets from S3 buckets and configured heimdall to use that API version, you will encounter a breaking change.
 * The Kubernetes-based examples were migrated to Terraform/OpenTofu in #2886, which makes using them a breeze :)
-=======
->>>>>>> release
 
 ### Documentation
 
