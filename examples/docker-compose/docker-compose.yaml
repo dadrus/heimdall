@@ -7,7 +7,7 @@ services:
       - heimdall-keys:/etc/heimdall/keys
 
   heimdall:
-    image: dadrus/heimdall:0.17.9
+    image: dadrus/heimdall:0.17.10
     depends_on:
       heimdall-init:
         condition: service_started
