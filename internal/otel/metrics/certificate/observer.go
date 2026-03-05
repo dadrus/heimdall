@@ -61,7 +61,7 @@ func NewObserver() Observer {
 
 // Start initializes reporting of host metrics using the supplied config.
 func (eo *observer) Start() error {
-	expirationCounter, err := eo.meter.Float64ObservableUpDownCounter(
+	expirationGauge, err := eo.meter.Float64ObservableGauge(
 		"certificate.expiry",
 		metric.WithDescription("Number of seconds until certificate expires"),
 		metric.WithUnit("s"),
@@ -79,7 +79,7 @@ func (eo *observer) Start() error {
 				certs := sup.Certificates()
 				for _, cert := range certs {
 					observer.ObserveFloat64(
-						expirationCounter,
+						expirationGauge,
 						time.Until(cert.NotAfter).Seconds(),
 						metric.WithAttributes(
 							serviceAttrKey.String(sup.Name()),
@@ -94,7 +94,7 @@ func (eo *observer) Start() error {
 
 			return nil
 		},
-		expirationCounter,
+		expirationGauge,
 	)
 
 	return err
