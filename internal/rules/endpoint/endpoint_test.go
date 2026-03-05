@@ -32,8 +32,8 @@ import (
 	"github.com/ybbus/httpretry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/httpcache"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -177,7 +177,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to create a request")
 			},
 		},
@@ -237,7 +237,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to authenticate request")
 			},
 		},
@@ -291,7 +291,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render URL")
 			},
 		},
@@ -324,7 +324,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "header value")
 			},
 		},
@@ -377,7 +377,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to create a request")
 			},
 		},
@@ -387,7 +387,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "lookup heimdall")
 			},
 		},
@@ -402,7 +402,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "unexpected response code")
 			},
 		},

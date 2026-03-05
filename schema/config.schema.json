@@ -2430,6 +2430,11 @@
           "description": "Whether exposure of metrics is enabled or not",
           "type": "boolean",
           "default": true
+        },
+        "cover_rules": {
+          "description": "Enables metrics collection for rules executions",
+          "type": "boolean",
+          "default": false
         }
       }
     },
@@ -2442,6 +2447,11 @@
           "description": "Whether tracing is enabled or not",
           "type": "boolean",
           "default": true
+        },
+        "cover_rules": {
+          "description": "Enables tracing of rules and steps",
+          "type": "boolean",
+          "default": false
         },
         "span_processor": {
           "description": "The type of the span processor to use",

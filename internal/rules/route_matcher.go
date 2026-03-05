@@ -23,7 +23,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -37,12 +37,12 @@ var (
 )
 
 type RouteMatcher interface {
-	Matches(request *heimdall.Request, keys, values []string) error
+	Matches(request *pipeline.Request, keys, values []string) error
 }
 
 type andMatcher []RouteMatcher
 
-func (c andMatcher) Matches(request *heimdall.Request, keys, values []string) error {
+func (c andMatcher) Matches(request *pipeline.Request, keys, values []string) error {
 	for _, matcher := range c {
 		if err := matcher.Matches(request, keys, values); err != nil {
 			return err
@@ -54,7 +54,7 @@ func (c andMatcher) Matches(request *heimdall.Request, keys, values []string) er
 
 type orMatcher []RouteMatcher
 
-func (c orMatcher) Matches(request *heimdall.Request, keys, values []string) error {
+func (c orMatcher) Matches(request *pipeline.Request, keys, values []string) error {
 	var err error
 
 	for _, matcher := range c {
@@ -68,7 +68,7 @@ func (c orMatcher) Matches(request *heimdall.Request, keys, values []string) err
 
 type schemeMatcher string
 
-func (s schemeMatcher) Matches(request *heimdall.Request, _, _ []string) error {
+func (s schemeMatcher) Matches(request *pipeline.Request, _, _ []string) error {
 	if len(s) != 0 && string(s) != request.URL.Scheme {
 		return errorchain.NewWithMessagef(ErrRequestSchemeMismatch, "expected '%s', got '%s'", s, request.URL.Scheme)
 	}
@@ -78,7 +78,7 @@ func (s schemeMatcher) Matches(request *heimdall.Request, _, _ []string) error {
 
 type methodMatcher []string
 
-func (m methodMatcher) Matches(request *heimdall.Request, _, _ []string) error {
+func (m methodMatcher) Matches(request *pipeline.Request, _, _ []string) error {
 	if len(m) == 0 {
 		return nil
 	}
@@ -97,7 +97,7 @@ type pathParamMatcher struct {
 	slashHandling v1beta1.EncodedSlashesHandling
 }
 
-func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []string) error {
+func (m *pathParamMatcher) Matches(request *pipeline.Request, keys, values []string) error {
 	idx := slices.Index(keys, m.name)
 	if idx == -1 {
 		return errorchain.NewWithMessagef(ErrRequestPathMismatch, "path parameter '%s' is not expected", m.name)
@@ -145,7 +145,7 @@ func createMethodMatcher(methods []string) (methodMatcher, error) {
 
 	methods = slices.Compact(methods)
 	if res := slicex.Filter(methods, func(s string) bool { return len(s) == 0 }); len(res) != 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"methods list contains empty values. "+
 				"have you forgotten to put the corresponding value into braces?")
 	}
@@ -177,13 +177,13 @@ func createPathParamsMatcher(
 		case "exact":
 			tm = newExactMatcher(param.Value)
 		default:
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"unsupported path parameter expression type '%s' for parameter '%s' at index %d",
 				param.Type, param.Name, idx)
 		}
 
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"failed to compile path params matching expression for parameter '%s' at index %d",
 				param.Name, idx).
 				CausedBy(err)

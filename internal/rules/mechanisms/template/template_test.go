@@ -24,9 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
@@ -39,17 +38,17 @@ func TestTemplateRender(t *testing.T) {
 	reqf.EXPECT().Cookie("session_cookie").Return("session-value")
 
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Request().Return(&heimdall.Request{
+	ctx.EXPECT().Request().Return(&pipeline.Request{
 		RequestFunctions: reqf,
 		Method:           http.MethodPatch,
-		URL: &heimdall.URL{
+		URL: &pipeline.URL{
 			URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
 		},
 		ClientIPAddresses: []string{"192.168.1.1"},
 	})
 
-	sub := identity.Subject{
-		"default": &identity.Principal{
+	sub := pipeline.Subject{
+		"default": &pipeline.Principal{
 			ID: "foo",
 			Attributes: map[string]any{
 				"name":    "bar",

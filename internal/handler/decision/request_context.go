@@ -23,7 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type contextFactory struct {
@@ -80,7 +80,7 @@ func (r *requestContext) Reset() {
 	r.RequestContext.Reset()
 }
 
-func (r *requestContext) Finalize(_ rule.Backend) error {
+func (r *requestContext) Finalize(_ pipeline.Backend) error {
 	if err := r.Error(); err != nil {
 		return err
 	}

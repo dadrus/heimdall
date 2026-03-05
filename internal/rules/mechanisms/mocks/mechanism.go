@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -38,23 +38,23 @@ func (_m *MechanismMock) EXPECT() *MechanismMock_Expecter {
 }
 
 // CreateStep provides a mock function for the type MechanismMock
-func (_mock *MechanismMock) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (_mock *MechanismMock) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	ret := _mock.Called(def)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateStep")
 	}
 
-	var r0 heimdall.Step
+	var r0 pipeline.Step
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) (heimdall.Step, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) (pipeline.Step, error)); ok {
 		return returnFunc(def)
 	}
-	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) heimdall.Step); ok {
+	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) pipeline.Step); ok {
 		r0 = returnFunc(def)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(heimdall.Step)
+			r0 = ret.Get(0).(pipeline.Step)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(types.StepDefinition) error); ok {
@@ -89,12 +89,12 @@ func (_c *MechanismMock_CreateStep_Call) Run(run func(def types.StepDefinition))
 	return _c
 }
 
-func (_c *MechanismMock_CreateStep_Call) Return(step heimdall.Step, err error) *MechanismMock_CreateStep_Call {
+func (_c *MechanismMock_CreateStep_Call) Return(step pipeline.Step, err error) *MechanismMock_CreateStep_Call {
 	_c.Call.Return(step, err)
 	return _c
 }
 
-func (_c *MechanismMock_CreateStep_Call) RunAndReturn(run func(def types.StepDefinition) (heimdall.Step, error)) *MechanismMock_CreateStep_Call {
+func (_c *MechanismMock_CreateStep_Call) RunAndReturn(run func(def types.StepDefinition) (pipeline.Step, error)) *MechanismMock_CreateStep_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -133,8 +133,8 @@ func (_c *MechanismMock_Kind_Call) Run(run func()) *MechanismMock_Kind_Call {
 	return _c
 }
 
-func (_c *MechanismMock_Kind_Call) Return(kind types.Kind) *MechanismMock_Kind_Call {
-	_c.Call.Return(kind)
+func (_c *MechanismMock_Kind_Call) Return(v types.Kind) *MechanismMock_Kind_Call {
+	_c.Call.Return(v)
 	return _c
 }
 

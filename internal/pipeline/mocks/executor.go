@@ -5,8 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,26 +37,26 @@ func (_m *ExecutorMock) EXPECT() *ExecutorMock_Expecter {
 }
 
 // Execute provides a mock function for the type ExecutorMock
-func (_mock *ExecutorMock) Execute(ctx heimdall.Context) (rule.Backend, error) {
+func (_mock *ExecutorMock) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Execute")
 	}
 
-	var r0 rule.Backend
+	var r0 pipeline.Backend
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) (rule.Backend, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (pipeline.Backend, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) rule.Backend); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) pipeline.Backend); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(rule.Backend)
+			r0 = ret.Get(0).(pipeline.Backend)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(pipeline.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -71,16 +70,16 @@ type ExecutorMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx pipeline.Context
 func (_e *ExecutorMock_Expecter) Execute(ctx interface{}) *ExecutorMock_Execute_Call {
 	return &ExecutorMock_Execute_Call{Call: _e.mock.On("Execute", ctx)}
 }
 
-func (_c *ExecutorMock_Execute_Call) Run(run func(ctx heimdall.Context)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) Run(run func(ctx pipeline.Context)) *ExecutorMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.Context
+		var arg0 pipeline.Context
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.Context)
+			arg0 = args[0].(pipeline.Context)
 		}
 		run(
 			arg0,
@@ -89,12 +88,12 @@ func (_c *ExecutorMock_Execute_Call) Run(run func(ctx heimdall.Context)) *Execut
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) Return(backend rule.Backend, err error) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) Return(backend pipeline.Backend, err error) *ExecutorMock_Execute_Call {
 	_c.Call.Return(backend, err)
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx heimdall.Context) (rule.Backend, error)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx pipeline.Context) (pipeline.Backend, error)) *ExecutorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

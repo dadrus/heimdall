@@ -35,12 +35,11 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -67,7 +66,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -81,7 +80,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'identity_info_endpoint' is a required field")
 			},
 		},
@@ -97,7 +96,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'identity_info_endpoint'.'url' must be a valid URL")
 			},
 		},
@@ -111,7 +110,7 @@ authentication_data_source:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'principal' is a required field")
 			},
 		},
@@ -125,7 +124,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'authentication_data_source' is a required field")
 			},
 		},
@@ -141,7 +140,7 @@ authentication_data_source:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'principal'.'id' is a required field")
 			},
 		},
@@ -282,7 +281,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'identity_info_endpoint'.'url' scheme must be https")
 			},
 		},
@@ -506,7 +505,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -526,7 +525,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -546,7 +545,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -566,7 +565,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -584,7 +583,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -604,7 +603,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -624,7 +623,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -775,31 +774,31 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		authenticator  *genericAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *pipelinemocks.ContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *genericAuthenticator)
-		assert func(t *testing.T, err error, sub identity.Subject)
+		assert func(t *testing.T, err error, sub pipeline.Subject)
 	}{
 		"with failing auth data source": {
 			authenticator: &genericAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return("", pipeline.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "failed to get authentication data")
 
 				var identifier HandlerIdentifier
@@ -819,7 +818,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				}(),
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -828,13 +827,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render payload")
 
 				var identifier HandlerIdentifier
@@ -848,7 +847,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -857,13 +856,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render URL")
 
 				var identifier HandlerIdentifier
@@ -877,7 +876,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -886,13 +885,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "request to the endpoint")
 
 				var identifier HandlerIdentifier
@@ -906,7 +905,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: srv.URL},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -920,13 +919,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				responseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "unexpected response code")
 
 				var identifier HandlerIdentifier
@@ -948,7 +947,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf: &PrincipalInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -972,13 +971,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to extract principal")
 
 				var identifier HandlerIdentifier
@@ -1006,7 +1005,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1036,7 +1035,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1063,7 +1062,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1073,7 +1072,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return([]byte(`{ "user_id": "barbar" }`), nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -1100,17 +1099,17 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *genericAuthenticator,
 			) {
 				t.Helper()
 
-				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+				reqFuns := pipelinemocks.NewRequestFunctionsMock(t)
 				reqFuns.EXPECT().Header("X-Original-Auth").Return("orig-auth")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
@@ -1131,7 +1130,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1160,17 +1159,17 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
-				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+				reqFuns := pipelinemocks.NewRequestFunctionsMock(t)
 				reqFuns.EXPECT().Cookie("original-auth").Return("orig-auth")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -1193,13 +1192,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "active": false }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "not active")
 
 				var identifier HandlerIdentifier
@@ -1223,7 +1222,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1248,13 +1247,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "iat": "2006-01-02T15:04:05.999999Z07" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed parsing issued_at")
 
 				var identifier HandlerIdentifier
@@ -1283,7 +1282,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				principalName:       DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1316,7 +1315,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "exp": ` + exp + ` }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1348,7 +1347,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				principalName: "foo",
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *genericAuthenticator,
@@ -1381,7 +1380,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "exp": ` + exp + ` }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1413,7 +1412,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.ContextMock,
+					_ *pipelinemocks.ContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *genericAuthenticator,
@@ -1425,13 +1424,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			tc.authenticator.ads = ads
 
 			cch := mocks.NewCacheMock(t)
-			ctx := heimdallmocks.NewContextMock(t)
+			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
-			sub := make(identity.Subject)
+			sub := make(pipeline.Subject)
 
 			// WHEN
 			err := tc.authenticator.Execute(ctx, sub)
@@ -1519,7 +1518,7 @@ func TestGenericAuthenticatorAccept(t *testing.T) {
 
 	// GIVEN
 	auth := &genericAuthenticator{}
-	visitor := heimdallmocks.NewVisitorMock(t)
+	visitor := pipelinemocks.NewVisitorMock(t)
 
 	visitor.EXPECT().VisitInsecure(auth)
 	visitor.EXPECT().VisitPrincipalNamer(auth)
@@ -1538,9 +1537,9 @@ func TestGenericAuthenticatorReadResponse(t *testing.T) {
 		err    error
 	}{
 		{http.StatusOK, nil},
-		{http.StatusUnauthorized, heimdall.ErrAuthentication},
-		{http.StatusForbidden, heimdall.ErrAuthentication},
-		{http.StatusBadGateway, heimdall.ErrCommunication},
+		{http.StatusUnauthorized, pipeline.ErrAuthentication},
+		{http.StatusForbidden, pipeline.ErrAuthentication},
+		{http.StatusBadGateway, pipeline.ErrCommunication},
 	}
 
 	for _, tc := range tests {

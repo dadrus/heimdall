@@ -19,7 +19,7 @@ package extractors
 import (
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -27,17 +27,17 @@ type BodyParameterExtractStrategy struct {
 	Name string
 }
 
-func (es BodyParameterExtractStrategy) GetAuthData(ctx heimdall.Context) (string, error) {
+func (es BodyParameterExtractStrategy) GetAuthData(ctx pipeline.Context) (string, error) {
 	data := ctx.Request().Body()
 
 	entries, ok := data.(map[string]any)
 	if !ok {
-		return "", errorchain.NewWithMessage(heimdall.ErrArgument, "no usable body present")
+		return "", errorchain.NewWithMessage(pipeline.ErrArgument, "no usable body present")
 	}
 
 	entry, ok := entries[es.Name]
 	if !ok {
-		return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
+		return "", errorchain.NewWithMessagef(pipeline.ErrArgument,
 			"no %s parameter present in request body", es.Name)
 	}
 
@@ -48,24 +48,24 @@ func (es BodyParameterExtractStrategy) GetAuthData(ctx heimdall.Context) (string
 		value = val
 	case []string:
 		if len(val) != 1 {
-			return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
+			return "", errorchain.NewWithMessagef(pipeline.ErrArgument,
 				"%s request body parameter is present multiple times", es.Name)
 		}
 
 		value = val[0]
 	case []any:
 		if len(val) != 1 {
-			return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
+			return "", errorchain.NewWithMessagef(pipeline.ErrArgument,
 				"%s request body parameter is present multiple times", es.Name)
 		}
 
 		value, ok = val[0].(string)
 		if !ok {
-			return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
+			return "", errorchain.NewWithMessagef(pipeline.ErrArgument,
 				"unexpected type for %s request body parameter", es.Name)
 		}
 	default:
-		return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
+		return "", errorchain.NewWithMessagef(pipeline.ErrArgument,
 			"unexpected type for %s request body parameter", es.Name)
 	}
 

@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -32,17 +31,17 @@ type stepVisitor struct {
 	principals []string
 }
 
-func (v *stepVisitor) VisitInsecure(obj heimdall.Insecure) {
+func (v *stepVisitor) VisitInsecure(obj pipeline.Insecure) {
 	v.insecure = append(v.insecure, obj.IsInsecure())
 }
 
-func (v *stepVisitor) VisitPrincipalNamer(obj heimdall.PrincipalNamer) {
+func (v *stepVisitor) VisitPrincipalNamer(obj pipeline.PrincipalNamer) {
 	v.principals = append(v.principals, obj.PrincipalName())
 }
 
 type step interface {
-	Accept(visitor heimdall.Visitor)
-	Execute(ctx heimdall.Context, sub identity.Subject) error
+	Accept(visitor pipeline.Visitor)
+	Execute(ctx pipeline.Context, sub pipeline.Subject) error
 }
 
 type stage []step
@@ -71,7 +70,7 @@ func (s stage) IsInsecure() bool {
 	return sv.insecure[0]
 }
 
-func (s stage) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (s stage) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	for _, step := range s {
@@ -80,7 +79,7 @@ func (s stage) Execute(ctx heimdall.Context, sub identity.Subject) error {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
 
 			if strings.Contains(err.Error(), "tls:") {
-				return errorchain.New(heimdall.ErrInternal).CausedBy(err)
+				return errorchain.New(pipeline.ErrInternal).CausedBy(err)
 			}
 
 			return err

@@ -19,8 +19,7 @@ package authenticators
 import (
 	"github.com/tidwall/gjson"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -31,14 +30,14 @@ type PrincipalInfo struct {
 	AttributesFrom AttributeRefs `mapstructure:"attributes"`
 }
 
-func (s *PrincipalInfo) CreatePrincipal(rawData []byte) (*identity.Principal, error) {
+func (s *PrincipalInfo) CreatePrincipal(rawData []byte) (*pipeline.Principal, error) {
 	subjectID := gjson.GetBytes(rawData, s.IDFrom).String()
 	if len(subjectID) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"could not extract principal identifier using '%s' template", s.IDFrom)
 	}
 
-	principal := identity.Principal{
+	principal := pipeline.Principal{
 		ID: subjectID,
 	}
 
@@ -83,14 +82,14 @@ func (s *PrincipalInfo) CreatePrincipal(rawData []byte) (*identity.Principal, er
 func extractEntry(data []byte, path string, mapExpected bool) (any, error) {
 	attributes := gjson.GetBytes(data, path).Value()
 	if attributes == nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"could not extract attributes using '%s' template", path)
 	}
 
 	if mapExpected {
 		_, ok := attributes.(map[string]any)
 		if !ok {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 				"unexpected type of the extracted attribute(s)")
 		}
 	}

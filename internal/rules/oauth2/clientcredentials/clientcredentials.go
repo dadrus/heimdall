@@ -30,7 +30,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -198,24 +198,24 @@ func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 		nil,
 		func(resp *http.Response) ([]byte, error) {
 			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
-				return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+				return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
 					"unexpected response code: %v", resp.StatusCode)
 			}
 
 			rawData, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 					"failed to read response").CausedBy(err)
 			}
 
 			if resp.StatusCode == http.StatusBadRequest {
 				var ter TokenErrorResponse
 				if err = json.Unmarshal(rawData, &ter); err != nil {
-					return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+					return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
 						"failed to fetch token: %s", stringx.ToString(rawData))
 				}
 
-				return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(&ter)
+				return nil, errorchain.New(pipeline.ErrCommunication).CausedBy(&ter)
 			}
 
 			return rawData, nil
@@ -228,13 +228,13 @@ func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 	var resp TokenEndpointResponse
 	if err := json.Unmarshal(rawData, &resp); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+			NewWithMessage(pipeline.ErrInternal, "failed to unmarshal response").
 			CausedBy(err)
 	}
 
 	tokenInfo, err := resp.TokenInfo()
 	if err != nil {
-		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(err)
+		return nil, errorchain.New(pipeline.ErrCommunication).CausedBy(err)
 	}
 
 	return tokenInfo, nil

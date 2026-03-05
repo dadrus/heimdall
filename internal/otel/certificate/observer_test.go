@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	"github.com/dadrus/heimdall/internal/otel/semconv"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -49,7 +50,7 @@ func dataPointForCert(cert *x509.Certificate, dps []metricdata.DataPoint[float64
 	var data []metricdata.DataPoint[float64]
 
 	for _, dp := range dps {
-		if cert.Subject.String() == attributeValue(dp.Attributes, subjectAttrKey).AsString() {
+		if cert.Subject.String() == attributeValue(dp.Attributes, semconv.CertificateSubjectKey).AsString() {
 			data = append(data, dp)
 		}
 	}
@@ -70,12 +71,12 @@ func checkMetric(t *testing.T, dp []metricdata.DataPoint[float64], service strin
 
 		attributes := entry.Attributes
 		require.Equal(t, 5, attributes.Len())
-		assert.Equal(t, strings.Join(cert.DNSNames, ","), attributeValue(attributes, dnsNameAttrKey).AsString())
-		assert.Equal(t, cert.Issuer.String(), attributeValue(attributes, issuerAttrKey).AsString())
-		assert.Equal(t, cert.SerialNumber.String(), attributeValue(attributes, serialNrAttrKey).AsString())
-		assert.Equal(t, cert.Subject.String(), attributeValue(attributes, subjectAttrKey).AsString())
+		assert.Equal(t, strings.Join(cert.DNSNames, ","), attributeValue(attributes, semconv.CertificateDNSNameKey).AsString())
+		assert.Equal(t, cert.Issuer.String(), attributeValue(attributes, semconv.CertificateIssuerKey).AsString())
+		assert.Equal(t, cert.SerialNumber.String(), attributeValue(attributes, semconv.CertificateSerialNumberKey).AsString())
+		assert.Equal(t, cert.Subject.String(), attributeValue(attributes, semconv.CertificateSubjectKey).AsString())
 
-		names[idx] = attributeValue(attributes, serviceAttrKey).AsString()
+		names[idx] = attributeValue(attributes, semconv.CertificateServiceKey).AsString()
 	}
 
 	assert.Contains(t, names, service)
@@ -278,18 +279,18 @@ func TestCertificateExpirationCollector(t *testing.T) {
 			// GIVEN
 			exp := metric.NewManualReader()
 
-			otel.SetMeterProvider(metric.NewMeterProvider(
+			mp := metric.NewMeterProvider(
 				metric.WithResource(resource.Default()),
 				metric.WithReader(exp),
-			))
+			)
+			otel.SetMeterProvider(mp)
 
-			obs := NewObserver()
+			obs, err := NewObserver(mp.Meter("test"))
+			require.NoError(t, err)
+
 			for _, supplier := range tc.suppliers {
 				obs.Add(supplier)
 			}
-
-			err = obs.Start()
-			require.NoError(t, err)
 
 			var rm1, rm2 metricdata.ResourceMetrics
 

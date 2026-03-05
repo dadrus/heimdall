@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package identity
+package pipeline
 
 import (
 	"crypto/sha256"

@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestExtractHeaderValue(t *testing.T) {
@@ -42,7 +42,7 @@ func TestExtractHeaderValue(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("X-Test-Header").Return("TestValue")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
@@ -59,13 +59,13 @@ func TestExtractHeaderValue(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("X-Test-Header").Return("TestValue")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "'Foo' scheme")
 			},
 		},
@@ -77,13 +77,13 @@ func TestExtractHeaderValue(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("X-Test-Header").Return("Bar TestValue")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "'Foo' scheme")
 			},
 		},
@@ -95,7 +95,7 @@ func TestExtractHeaderValue(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("X-Test-Header").Return("Foo TestValue")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
@@ -112,13 +112,13 @@ func TestExtractHeaderValue(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("X-Test-Header").Return("")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "no 'X-Test-Header' header")
 			},
 		},

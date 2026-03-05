@@ -22,7 +22,7 @@ import (
 
 	"github.com/goccy/go-json"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type Rule struct {
@@ -37,7 +37,7 @@ type Rule struct {
 func (r *Rule) Hash() ([]byte, error) {
 	rawRuleConfig, err := json.Marshal(r)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to create hash", heimdall.ErrInternal)
+		return nil, fmt.Errorf("%w: failed to create hash", pipeline.ErrInternal)
 	}
 
 	md := crypto.SHA256.New()

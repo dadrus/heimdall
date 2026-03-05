@@ -21,7 +21,7 @@ import (
 	"crypto/sha256"
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -43,7 +43,7 @@ func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
 		query.Set(c.Name, c.Value)
 		req.URL.RawQuery = query.Encode()
 	default:
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"unsupported in value (%s) in api key auth strategy", c.In)
 	}
 

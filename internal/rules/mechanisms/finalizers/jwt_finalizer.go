@@ -28,8 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -89,7 +88,7 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 
 	var conf Config
 	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for jwt finalizer '%s'", name).CausedBy(err)
 	}
 
@@ -123,9 +122,9 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 	return fin, nil
 }
 
-func (f *jwtFinalizer) Accept(_ heimdall.Visitor) {}
+func (f *jwtFinalizer) Accept(_ pipeline.Visitor) {}
 
-func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerJwt).
@@ -135,7 +134,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt finalizer due to 'nil' identity").
+			NewWithMessage(pipeline.ErrInternal, "failed to execute jwt finalizer due to 'nil' identity").
 			WithErrorContext(f)
 	}
 
@@ -171,7 +170,7 @@ func (f *jwtFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error
 	return nil
 }
 
-func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -198,7 +197,7 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, erro
 
 	var conf Config
 	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for jwt finalizer '%s'", f.name).CausedBy(err)
 	}
 
@@ -218,14 +217,12 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, erro
 }
 
 func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.activeCertificateChain() }
+func (f *jwtFinalizer) Kind() types.Kind                  { return types.KindFinalizer }
+func (f *jwtFinalizer) Name() string                      { return f.name }
+func (f *jwtFinalizer) ID() string                        { return f.id }
+func (f *jwtFinalizer) Type() string                      { return f.name }
 
-func (f *jwtFinalizer) Kind() types.Kind { return types.KindFinalizer }
-
-func (f *jwtFinalizer) Name() string { return f.name }
-
-func (f *jwtFinalizer) ID() string { return f.id }
-
-func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject) (string, error) {
+func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Generating new JWT")
 
@@ -237,7 +234,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject)
 			"Outputs": ctx.Outputs(),
 		})
 		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal,
+			return "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render values").
 				WithErrorContext(f).
 				CausedBy(err)
@@ -250,7 +247,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject)
 		})
 		if err != nil {
 			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to render claims").
+				NewWithMessage(pipeline.ErrInternal, "failed to render claims").
 				WithErrorContext(f).
 				CausedBy(err)
 		}
@@ -259,7 +256,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject)
 
 		if err = json.Unmarshal(stringx.ToBytes(claims), &result); err != nil {
 			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
+				NewWithMessage(pipeline.ErrInternal, "failed to unmarshal claims rendered by template").
 				WithErrorContext(f).
 				CausedBy(err)
 		}
@@ -268,7 +265,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject)
 	token, err := f.signer.Sign(sub.ID(), f.ttl, result)
 	if err != nil {
 		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to sign token").
+			NewWithMessage(pipeline.ErrInternal, "failed to sign token").
 			WithErrorContext(f).
 			CausedBy(err)
 	}
@@ -276,7 +273,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.Context, sub identity.Subject)
 	return token, nil
 }
 
-func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.Context, sub identity.Subject) string {
+func (f *jwtFinalizer) calculateCacheKey(ctx pipeline.Context, sub pipeline.Subject) string {
 	const int64BytesCount = 8
 
 	var ttlBytes [int64BytesCount]byte

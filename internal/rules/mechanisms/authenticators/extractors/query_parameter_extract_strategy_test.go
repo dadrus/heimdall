@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestExtractQueryParameter(t *testing.T) {
@@ -38,9 +38,9 @@ func TestExtractQueryParameter(t *testing.T) {
 	fnt := mocks.NewRequestFunctionsMock(t)
 
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Request().Return(&heimdall.Request{
+	ctx.EXPECT().Request().Return(&pipeline.Request{
 		RequestFunctions: fnt,
-		URL:              &heimdall.URL{URL: url.URL{RawQuery: fmt.Sprintf("%s=%s", queryParam, queryParamValue)}},
+		URL:              &pipeline.URL{URL: url.URL{RawQuery: fmt.Sprintf("%s=%s", queryParam, queryParamValue)}},
 	})
 
 	strategy := QueryParameterExtractStrategy{Name: queryParam}
@@ -60,9 +60,9 @@ func TestExtractNotExistingQueryParameterValue(t *testing.T) {
 	fnt := mocks.NewRequestFunctionsMock(t)
 
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Request().Return(&heimdall.Request{
+	ctx.EXPECT().Request().Return(&pipeline.Request{
 		RequestFunctions: fnt,
-		URL:              &heimdall.URL{},
+		URL:              &pipeline.URL{},
 	})
 
 	strategy := QueryParameterExtractStrategy{Name: "Test-Cookie"}
@@ -72,5 +72,5 @@ func TestExtractNotExistingQueryParameterValue(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	require.ErrorIs(t, err, heimdall.ErrArgument)
+	require.ErrorIs(t, err, pipeline.ErrArgument)
 }

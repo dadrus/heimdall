@@ -28,9 +28,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 )
@@ -74,7 +73,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 
 				assert.Nil(t, auth)
 			},
@@ -85,7 +84,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 
 				assert.Nil(t, auth)
 			},
@@ -296,7 +295,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -342,7 +341,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		stepDef          types.StepDefinition
 		configureContext func(t *testing.T, ctx *mocks.ContextMock)
-		assert           func(t *testing.T, err error, sub identity.Subject)
+		assert           func(t *testing.T, err error, sub pipeline.Subject)
 	}{
 		"no required header present": {
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
@@ -351,14 +350,14 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("Authorization").Return("")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "expected header not present")
 
 				var identifier HandlerIdentifier
@@ -375,14 +374,14 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("Authorization").Return("Basic bar")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "failed to decode")
 
 				var identifier HandlerIdentifier
@@ -400,14 +399,14 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo|bar")))
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "malformed user-id - password")
 
 				var identifier HandlerIdentifier
@@ -425,14 +424,14 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("baz:bar")))
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.Contains(t, err.Error(), "invalid user credentials")
 
 				var identifier HandlerIdentifier
@@ -450,14 +449,14 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:baz")))
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.NotErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "invalid user credentials")
 
 				var identifier HandlerIdentifier
@@ -475,9 +474,9 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:bar")))
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -496,9 +495,9 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:bar")))
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -530,7 +529,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 			ctx.EXPECT().Context().Return(t.Context())
 			tc.configureContext(t, ctx)
 
-			sub := make(identity.Subject)
+			sub := make(pipeline.Subject)
 
 			// WHEN
 			err = step.Execute(ctx, sub)

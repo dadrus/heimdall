@@ -16,10 +16,8 @@
 
 package extractors
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-)
+import "github.com/dadrus/heimdall/internal/pipeline"
 
 type AuthDataExtractStrategy interface {
-	GetAuthData(ctx heimdall.Context) (string, error)
+	GetAuthData(ctx pipeline.Context) (string, error)
 }

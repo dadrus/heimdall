@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -43,7 +43,7 @@ func TestNewCache(t *testing.T) {
 		},
 		"unknown config settings": {
 			config: []byte(`foo: bar`),
-			err:    heimdall.ErrConfiguration,
+			err:    pipeline.ErrConfiguration,
 		},
 		"max memory is configured": {
 			config: []byte(`memory_limit: 10MB`),

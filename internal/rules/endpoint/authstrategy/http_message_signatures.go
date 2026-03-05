@@ -30,8 +30,8 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -141,7 +141,7 @@ func (s *HTTPMessageSignatures) Certificates() []*x509.Certificate {
 func (s *HTTPMessageSignatures) init() error {
 	ks, err := keystore.NewKeyStoreFromPEMFile(s.Signer.KeyStore.Path, s.Signer.KeyStore.Password)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed loading keystore for http_message_signatures strategy").CausedBy(err)
 	}
 
@@ -154,7 +154,7 @@ func (s *HTTPMessageSignatures) init() error {
 	}
 
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed retrieving key from key store for http_message_signatures strategy").CausedBy(err)
 	}
 
@@ -170,7 +170,7 @@ func (s *HTTPMessageSignatures) init() error {
 		}
 
 		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 				"certificate for http_message_signatures strategy cannot be used for signing purposes").
 				CausedBy(err)
 		}
@@ -192,7 +192,7 @@ func (s *HTTPMessageSignatures) init() error {
 		)),
 	)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed to configure http_message_signatures strategy").CausedBy(err)
 	}
 

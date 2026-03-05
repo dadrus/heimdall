@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package heimdall
+package pipeline
 
 import (
 	"context"
@@ -28,6 +28,7 @@ type Context interface {
 	AddCookieForUpstream(name, value string)
 
 	Context() context.Context
+	WithParent(ctx context.Context) Context
 
 	SetError(err error)
 	Error() error

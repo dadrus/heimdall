@@ -32,7 +32,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -73,26 +73,26 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 	var providerConf Config
 	if err := dec.DecodeMap(&providerConf, rawConf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode file_system rule provider config").
+			NewWithMessage(pipeline.ErrConfiguration, "failed to decode file_system rule provider config").
 			CausedBy(err)
 	}
 
 	if len(providerConf.Src) == 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no src configured for file_system rule provider")
+			NewWithMessage(pipeline.ErrConfiguration, "no src configured for file_system rule provider")
 	}
 
 	absPath, err := filepath.Abs(providerConf.Src)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to get the absolute path for the configured src").
+			NewWithMessage(pipeline.ErrInternal, "failed to get the absolute path for the configured src").
 			CausedBy(err)
 	}
 
 	_, err = os.Stat(absPath)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal,
+			NewWithMessage(pipeline.ErrInternal,
 				"failed to get information about configured src form the file system").
 			CausedBy(err)
 	}
@@ -102,7 +102,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
 			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to instantiating new file watcher").
+				NewWithMessage(pipeline.ErrInternal, "failed to instantiating new file watcher").
 				CausedBy(err)
 		}
 	}
@@ -270,7 +270,7 @@ func (p *Provider) ruleSetDeleted(ctx context.Context, fileName string) error {
 func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"failed opening file %s", fileName).CausedBy(err)
 	}
 
@@ -286,7 +286,7 @@ func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 	var ruleSet v1beta1.RuleSet
 
 	if err = dec.Decode(&ruleSet, io.TeeReader(file, md)); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "failed to parse rule set %s", fileName).
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal, "failed to parse rule set %s", fileName).
 			CausedBy(err)
 	}
 

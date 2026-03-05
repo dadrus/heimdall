@@ -23,5 +23,6 @@ const (
 
 type TracingConfig struct {
 	Enabled           bool   `koanf:"enabled"`
+	CoverRules        bool   `koanf:"cover_rules"`
 	SpanProcessorType string `koanf:"span_processor"`
 }

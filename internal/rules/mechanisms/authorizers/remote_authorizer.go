@@ -33,11 +33,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -78,7 +77,7 @@ type authorizationInformation struct {
 	Payload any         `json:"payload"`
 }
 
-func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimdall.Context) {
+func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx pipeline.Context) {
 	for _, headerName := range headerNames {
 		headerValue := ai.Headers.Get(headerName)
 		if len(headerValue) != 0 {
@@ -87,7 +86,7 @@ func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimd
 	}
 }
 
-func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Context) {
+func (ai *authorizationInformation) addResultsTo(key string, ctx pipeline.Context) {
 	if ai.Payload != nil {
 		ctx.Outputs()[key] = ai.Payload
 	}
@@ -111,13 +110,13 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for remote authorizer '%s'", name).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating CEL environment").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating CEL environment").
 			CausedBy(err)
 	}
 
@@ -147,9 +146,9 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
-func (a *remoteAuthorizer) Accept(_ heimdall.Visitor) {}
+func (a *remoteAuthorizer) Accept(_ pipeline.Visitor) {}
 
-func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerRemote).
@@ -203,7 +202,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) e
 	return nil
 }
 
-func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
@@ -226,7 +225,7 @@ func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, 
 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
 	}
 
@@ -251,14 +250,13 @@ func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, 
 }
 
 func (a *remoteAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-
-func (a *remoteAuthorizer) Name() string { return a.name }
-
-func (a *remoteAuthorizer) ID() string { return a.id }
+func (a *remoteAuthorizer) Name() string     { return a.name }
+func (a *remoteAuthorizer) ID() string       { return a.id }
+func (a *remoteAuthorizer) Type() string     { return a.name }
 
 func (a *remoteAuthorizer) doAuthorize(
-	ctx heimdall.Context,
-	sub identity.Subject,
+	ctx pipeline.Context,
+	sub pipeline.Subject,
 	values map[string]string,
 	payload string,
 ) (*authorizationInformation, error) {
@@ -268,7 +266,7 @@ func (a *remoteAuthorizer) doAuthorize(
 	endpointRenderer := endpoint.RenderFunc(func(tplString string) (string, error) {
 		tpl, err := template.New(tplString)
 		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
 				WithErrorContext(a).
 				CausedBy(err)
 		}
@@ -282,7 +280,7 @@ func (a *remoteAuthorizer) doAuthorize(
 
 	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -291,13 +289,13 @@ func (a *remoteAuthorizer) doAuthorize(
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+			return nil, errorchain.NewWithMessage(pipeline.ErrCommunicationTimeout,
 				"request to the authorization endpoint timed out").
 				WithErrorContext(a).
 				CausedBy(err)
 		}
 
-		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
+		return nil, errorchain.NewWithMessage(pipeline.ErrCommunication,
 			"request to the authorization endpoint failed").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -318,11 +316,11 @@ func (a *remoteAuthorizer) doAuthorize(
 	return &authorizationInformation{Headers: resp.Header, Payload: data}, nil
 }
 
-func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
+func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Response) (any, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthorization,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrAuthorization,
 			"authorization failed based on received response code: %v", resp.StatusCode).
 			WithErrorContext(a)
 	}
@@ -335,7 +333,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to read response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -352,7 +350,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	result, err := decoder.Decode(rawData)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to unmarshal response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -360,7 +358,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub identity.Subject, values map[string]string, payload string) string {
+func (a *remoteAuthorizer) calculateCacheKey(sub pipeline.Subject, values map[string]string, payload string) string {
 	const int64BytesCount = 8
 
 	var ttlBytes [int64BytesCount]byte
@@ -387,7 +385,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub identity.Subject, values map[st
 	return hex.EncodeToString(hash.Sum(result[:0]))
 }
 
-func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
+func (a *remoteAuthorizer) verify(ctx pipeline.Context, result any) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Verifying authorization response")
 
@@ -395,8 +393,8 @@ func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
 }
 
 func (a *remoteAuthorizer) renderTemplates(
-	ctx heimdall.Context,
-	sub identity.Subject,
+	ctx pipeline.Context,
+	sub pipeline.Subject,
 ) (map[string]string, string, error) {
 	var payload string
 
@@ -406,7 +404,7 @@ func (a *remoteAuthorizer) renderTemplates(
 		"Outputs": ctx.Outputs(),
 	})
 	if err != nil {
-		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render values for the authorization endpoint").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -419,7 +417,7 @@ func (a *remoteAuthorizer) renderTemplates(
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
 		}); err != nil {
-			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the authorization endpoint").
 				WithErrorContext(a).
 				CausedBy(err)

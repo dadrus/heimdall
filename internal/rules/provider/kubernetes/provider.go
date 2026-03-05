@@ -42,7 +42,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/patch"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
@@ -94,13 +94,13 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	k8sConf, err := k8sCF()
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to create kubernetes provider").CausedBy(err)
 	}
 
 	client, err := v1beta1.NewClient(k8sConf)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed creating client for connecting to kubernetes cluster").CausedBy(err)
 	}
 
@@ -120,7 +120,7 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	var providerConf Config
 	if err = dec.DecodeMap(&providerConf, rawConf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed to decode kubernetes rule provider config").CausedBy(err)
 	}
 

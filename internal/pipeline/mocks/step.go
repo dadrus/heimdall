@@ -5,8 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,7 +37,7 @@ func (_m *StepMock) EXPECT() *StepMock_Expecter {
 }
 
 // Accept provides a mock function for the type StepMock
-func (_mock *StepMock) Accept(visitor heimdall.Visitor) {
+func (_mock *StepMock) Accept(visitor pipeline.Visitor) {
 	_mock.Called(visitor)
 	return
 }
@@ -49,16 +48,16 @@ type StepMock_Accept_Call struct {
 }
 
 // Accept is a helper method to define mock.On call
-//   - visitor heimdall.Visitor
+//   - visitor pipeline.Visitor
 func (_e *StepMock_Expecter) Accept(visitor interface{}) *StepMock_Accept_Call {
 	return &StepMock_Accept_Call{Call: _e.mock.On("Accept", visitor)}
 }
 
-func (_c *StepMock_Accept_Call) Run(run func(visitor heimdall.Visitor)) *StepMock_Accept_Call {
+func (_c *StepMock_Accept_Call) Run(run func(visitor pipeline.Visitor)) *StepMock_Accept_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.Visitor
+		var arg0 pipeline.Visitor
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.Visitor)
+			arg0 = args[0].(pipeline.Visitor)
 		}
 		run(
 			arg0,
@@ -72,13 +71,13 @@ func (_c *StepMock_Accept_Call) Return() *StepMock_Accept_Call {
 	return _c
 }
 
-func (_c *StepMock_Accept_Call) RunAndReturn(run func(visitor heimdall.Visitor)) *StepMock_Accept_Call {
+func (_c *StepMock_Accept_Call) RunAndReturn(run func(visitor pipeline.Visitor)) *StepMock_Accept_Call {
 	_c.Run(run)
 	return _c
 }
 
 // Execute provides a mock function for the type StepMock
-func (_mock *StepMock) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (_mock *StepMock) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	ret := _mock.Called(ctx, sub)
 
 	if len(ret) == 0 {
@@ -86,7 +85,7 @@ func (_mock *StepMock) Execute(ctx heimdall.Context, sub identity.Subject) error
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.Context, identity.Subject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context, pipeline.Subject) error); ok {
 		r0 = returnFunc(ctx, sub)
 	} else {
 		r0 = ret.Error(0)
@@ -100,21 +99,21 @@ type StepMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx heimdall.Context
-//   - sub identity.Subject
+//   - ctx pipeline.Context
+//   - sub pipeline.Subject
 func (_e *StepMock_Expecter) Execute(ctx interface{}, sub interface{}) *StepMock_Execute_Call {
 	return &StepMock_Execute_Call{Call: _e.mock.On("Execute", ctx, sub)}
 }
 
-func (_c *StepMock_Execute_Call) Run(run func(ctx heimdall.Context, sub identity.Subject)) *StepMock_Execute_Call {
+func (_c *StepMock_Execute_Call) Run(run func(ctx pipeline.Context, sub pipeline.Subject)) *StepMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.Context
+		var arg0 pipeline.Context
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.Context)
+			arg0 = args[0].(pipeline.Context)
 		}
-		var arg1 identity.Subject
+		var arg1 pipeline.Subject
 		if args[1] != nil {
-			arg1 = args[1].(identity.Subject)
+			arg1 = args[1].(pipeline.Subject)
 		}
 		run(
 			arg0,
@@ -129,7 +128,7 @@ func (_c *StepMock_Execute_Call) Return(err error) *StepMock_Execute_Call {
 	return _c
 }
 
-func (_c *StepMock_Execute_Call) RunAndReturn(run func(ctx heimdall.Context, sub identity.Subject) error) *StepMock_Execute_Call {
+func (_c *StepMock_Execute_Call) RunAndReturn(run func(ctx pipeline.Context, sub pipeline.Subject) error) *StepMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -174,6 +173,94 @@ func (_c *StepMock_ID_Call) Return(s string) *StepMock_ID_Call {
 }
 
 func (_c *StepMock_ID_Call) RunAndReturn(run func() string) *StepMock_ID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Kind provides a mock function for the type StepMock
+func (_mock *StepMock) Kind() pipeline.MechanismKind {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Kind")
+	}
+
+	var r0 pipeline.MechanismKind
+	if returnFunc, ok := ret.Get(0).(func() pipeline.MechanismKind); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(pipeline.MechanismKind)
+	}
+	return r0
+}
+
+// StepMock_Kind_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Kind'
+type StepMock_Kind_Call struct {
+	*mock.Call
+}
+
+// Kind is a helper method to define mock.On call
+func (_e *StepMock_Expecter) Kind() *StepMock_Kind_Call {
+	return &StepMock_Kind_Call{Call: _e.mock.On("Kind")}
+}
+
+func (_c *StepMock_Kind_Call) Run(run func()) *StepMock_Kind_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *StepMock_Kind_Call) Return(mechanismKind pipeline.MechanismKind) *StepMock_Kind_Call {
+	_c.Call.Return(mechanismKind)
+	return _c
+}
+
+func (_c *StepMock_Kind_Call) RunAndReturn(run func() pipeline.MechanismKind) *StepMock_Kind_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Type provides a mock function for the type StepMock
+func (_mock *StepMock) Type() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Type")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// StepMock_Type_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Type'
+type StepMock_Type_Call struct {
+	*mock.Call
+}
+
+// Type is a helper method to define mock.On call
+func (_e *StepMock_Expecter) Type() *StepMock_Type_Call {
+	return &StepMock_Type_Call{Call: _e.mock.On("Type")}
+}
+
+func (_c *StepMock_Type_Call) Run(run func()) *StepMock_Type_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *StepMock_Type_Call) Return(s string) *StepMock_Type_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *StepMock_Type_Call) RunAndReturn(run func() string) *StepMock_Type_Call {
 	_c.Call.Return(run)
 	return _c
 }

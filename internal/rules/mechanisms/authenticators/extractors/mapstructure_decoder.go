@@ -21,7 +21,7 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -60,7 +60,7 @@ func DecodeCompositeExtractStrategyHookFunc() mapstructure.DecodeHookFunc {
 				}
 			} else {
 				return nil, errorchain.
-					NewWithMessagef(heimdall.ErrInternal,
+					NewWithMessagef(pipeline.ErrInternal,
 						"unexpected authentication config type %s", reflect.TypeOf(entry).String())
 			}
 
@@ -93,5 +93,5 @@ func createStrategy(data map[string]string) (AuthDataExtractStrategy, error) {
 	}
 
 	return nil, errorchain.
-		NewWithMessage(heimdall.ErrConfiguration, "unsupported authentication source")
+		NewWithMessage(pipeline.ErrConfiguration, "unsupported authentication source")
 }

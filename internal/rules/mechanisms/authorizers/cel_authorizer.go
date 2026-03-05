@@ -21,9 +21,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
@@ -65,13 +64,13 @@ func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (t
 
 	var conf Config
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for cel authorizer '%s'", name).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed creating CEL environment").CausedBy(err)
 	}
 
@@ -90,9 +89,9 @@ func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (t
 	}, nil
 }
 
-func (a *celAuthorizer) Accept(_ heimdall.Visitor) {}
+func (a *celAuthorizer) Accept(_ pipeline.Visitor) {}
 
-func (a *celAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthorizerCEL).
@@ -106,7 +105,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) erro
 		"Outputs": ctx.Outputs(),
 	})
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
+		return errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render values").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -120,7 +119,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub identity.Subject) erro
 	}, a)
 }
 
-func (a *celAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *celAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
@@ -139,7 +138,7 @@ func (a *celAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, err
 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for cel authorizer '%s'", a.name).CausedBy(err)
 	}
 
@@ -159,7 +158,6 @@ func (a *celAuthorizer) CreateStep(def types.StepDefinition) (heimdall.Step, err
 }
 
 func (a *celAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-
-func (a *celAuthorizer) Name() string { return a.name }
-
-func (a *celAuthorizer) ID() string { return a.id }
+func (a *celAuthorizer) Name() string     { return a.name }
+func (a *celAuthorizer) ID() string       { return a.id }
+func (a *celAuthorizer) Type() string     { return a.name }

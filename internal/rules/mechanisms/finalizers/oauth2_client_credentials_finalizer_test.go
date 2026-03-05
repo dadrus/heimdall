@@ -35,8 +35,8 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	mocks2 "github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -57,7 +57,7 @@ func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "validation error")
 				require.ErrorContains(t, err, "token_url")
 				require.ErrorContains(t, err, "client_id")
@@ -70,7 +70,7 @@ func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "validation error")
 				require.ErrorContains(t, err, "token_url")
 				require.ErrorContains(t, err, "client_id")
@@ -102,7 +102,7 @@ auth_method: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'auth_method' must be one of [basic_auth request_body]")
 			},
 		},
@@ -142,7 +142,7 @@ client_secret: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'token_url' scheme must be https")
 			},
 		},
@@ -370,7 +370,7 @@ cache_ttl: 11s
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -551,7 +551,7 @@ func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 			},
 		},
 		"full configuration, no cache hit and token has expires_in claim": {

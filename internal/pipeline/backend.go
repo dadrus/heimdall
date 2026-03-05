@@ -14,23 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package metrics
+package pipeline
 
 import (
-	"go.opentelemetry.io/contrib/instrumentation/host"
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
-	"go.uber.org/fx"
-
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"net/url"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(runtime.Start),
-	fx.Invoke(host.Start),
-	fx.Provide(
-		fx.Annotate(
-			certificate.NewObserver,
-			fx.OnStart(func(co certificate.Observer) error { return co.Start() }),
-		),
-	),
-)
+type Backend interface {
+	URL() *url.URL
+	ForwardHostHeader() bool
+}

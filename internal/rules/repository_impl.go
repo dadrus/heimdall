@@ -21,7 +21,10 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"go.opentelemetry.io/otel/metric"
+
+	"github.com/dadrus/heimdall/internal/otel/semconv"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -33,14 +36,21 @@ type repository struct {
 	dr rule.Rule
 
 	knownRules      []rule.Rule
-	knownRulesMutex sync.Mutex
+	knownRulesMutex sync.RWMutex
 
 	index          *radixtrie.Trie[rule.Route]
 	rulesTrieMutex sync.RWMutex
+
+	rl semconv.RulesLoaded
 }
 
-func newRepository(ruleFactory rule.Factory) rule.Repository {
-	return &repository{
+func newRepository(ruleFactory rule.Factory, meter metric.Meter) (rule.Repository, error) {
+	rl, err := semconv.NewRulesLoaded(meter)
+	if err != nil {
+		return nil, err
+	}
+
+	repo := &repository{
 		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
 			func() rule.Rule { return ruleFactory.DefaultRule() },
 			func() rule.Rule { return nil }),
@@ -50,10 +60,17 @@ func newRepository(ruleFactory rule.Factory) rule.Repository {
 				return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
 			}),
 		),
+		rl: rl,
 	}
+
+	if _, err = meter.RegisterCallback(repo.collectMetrics, rl.Inst()); err != nil {
+		return nil, err
+	}
+
+	return repo, nil
 }
 
-func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
+func (r *repository) FindRule(ctx pipeline.Context) (rule.Rule, error) {
 	request := ctx.Request()
 
 	r.rulesTrieMutex.RLock()
@@ -71,7 +88,7 @@ func (r *repository) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 			return r.dr, nil
 		}
 
-		return nil, errorchain.NewWithMessagef(heimdall.ErrNoRuleFound,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrNoRuleFound,
 			"no applicable rule found for %s", request.URL.String())
 	}
 
@@ -241,7 +258,7 @@ func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.R
 				}),
 			)
 			if entry != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 					"conflicting rules: %s from %s and %s from %s",
 					rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
 			}
@@ -256,14 +273,14 @@ func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.R
 					}),
 				)
 				if entry != nil {
-					return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+					return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 						"conflicting rules: %s from %s and %s from %s",
 						rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
 				}
 			}
 
 			if err := trie.Add(host, path, route); err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				return errorchain.NewWithMessagef(pipeline.ErrInternal,
 					"failed adding rule %s from %s", rul.ID(), srcID).
 					CausedBy(err)
 			}
@@ -283,12 +300,21 @@ func (r *repository) removeRulesFrom(trie *radixtrie.Trie[rule.Route], tbdRules 
 					return route.Rule().SameAs(rul)
 				}),
 			); err != nil {
-				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				return errorchain.NewWithMessagef(pipeline.ErrInternal,
 					"failed deleting rule %s from %s", rul.ID(), rul.SrcID()).
 					CausedBy(err)
 			}
 		}
 	}
+
+	return nil
+}
+
+func (r *repository) collectMetrics(ctx context.Context, observer metric.Observer) error {
+	r.knownRulesMutex.RLock()
+	defer r.knownRulesMutex.RUnlock()
+
+	// TODO: implement me
 
 	return nil
 }

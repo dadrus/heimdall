@@ -21,7 +21,7 @@ import (
 	"crypto"
 	"crypto/x509"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
 )
@@ -86,7 +86,7 @@ func ValidateChain(chain []*x509.Certificate) error {
 		pkix.WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
 		pkix.WithIntermediateCACertificates(intermediatePool),
 	); err != nil {
-		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
+		return errorchain.New(pipeline.ErrConfiguration).CausedBy(err)
 	}
 
 	return nil

@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func New(opts ...Option) grpc.UnaryServerInterceptor {
@@ -59,18 +59,18 @@ func (h *interceptor) intercept(
 	accesscontext.SetError(ctx, err)
 
 	switch {
-	case errors.Is(err, heimdall.ErrAuthentication):
+	case errors.Is(err, pipeline.ErrAuthentication):
 		return h.authenticationError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, heimdall.ErrAuthorization):
+	case errors.Is(err, pipeline.ErrAuthorization):
 		return h.authorizationError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
+	case errors.Is(err, pipeline.ErrCommunicationTimeout) || errors.Is(err, pipeline.ErrCommunication):
 		return h.communicationError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, heimdall.ErrArgument):
+	case errors.Is(err, pipeline.ErrArgument):
 		return h.preconditionError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, heimdall.ErrNoRuleFound):
+	case errors.Is(err, pipeline.ErrNoRuleFound):
 		return h.noRuleError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, &heimdall.RedirectError{}):
-		var redirectError *heimdall.RedirectError
+	case errors.Is(err, &pipeline.RedirectError{}):
+		var redirectError *pipeline.RedirectError
 
 		errors.As(err, &redirectError)
 

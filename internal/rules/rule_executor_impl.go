@@ -19,7 +19,7 @@ package rules
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
@@ -27,22 +27,22 @@ type ruleExecutor struct {
 	r rule.Repository
 }
 
-func newRuleExecutor(repository rule.Repository) rule.Executor {
+func newRuleExecutor(repository rule.Repository) pipeline.Executor {
 	return &ruleExecutor{r: repository}
 }
 
-func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.Backend, error) {
-	request := ctx.Request()
+func (e *ruleExecutor) Execute(hctx pipeline.Context) (pipeline.Backend, error) {
+	request := hctx.Request()
 
-	zerolog.Ctx(ctx.Context()).Debug().
+	zerolog.Ctx(hctx.Context()).Debug().
 		Str("_method", request.Method).
 		Str("_url", request.URL.String()).
 		Msg("Analyzing request")
 
-	rul, err := e.r.FindRule(ctx)
+	rul, err := e.r.FindRule(hctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return rul.Execute(ctx)
+	return rul.Execute(hctx)
 }
