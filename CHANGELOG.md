@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.17.10](https://github.com/dadrus/heimdall/compare/v0.17.9...v0.17.10) (2026-03-05)
+
+Although this is a regular monthly patch release, the switch to the  [Green Tea garbage collector](https://go.dev/doc/go1.26#new-garbage-collector), which became the default in Go v1.26.0, may result in noticeable performance improvements.
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 921cc40 ([#3084](https://github.com/dadrus/heimdall/issues/3084)) ([8fa74c9](https://github.com/dadrus/heimdall/commit/8fa74c99b4e24c9803e151fbf84bcee5e8cccd9d))
+* update golang to v1.26.0 ([#3042](https://github.com/dadrus/heimdall/issues/3042)) ([872e15b](https://github.com/dadrus/heimdall/commit/872e15be523cf08bdbd72dbdb1ce431fd2a9ed77))
+* update google.golang.org/genproto/googleapis/rpc digest to a57be14 ([#3068](https://github.com/dadrus/heimdall/issues/3068)) ([da538d9](https://github.com/dadrus/heimdall/commit/da538d94758a16e973f273f11eb2d1cdd3849d62))
+* update kubernetes packages to v0.35.2 ([#3069](https://github.com/dadrus/heimdall/issues/3069)) ([5e826c2](https://github.com/dadrus/heimdall/commit/5e826c28b2c41af65ec8caaa5c43beefae45ba1f))
+* update module github.com/envoyproxy/go-control-plane/envoy to v1.37.0 ([#3051](https://github.com/dadrus/heimdall/issues/3051)) ([e10e6c1](https://github.com/dadrus/heimdall/commit/e10e6c1e373dcede6a0ed80bdf0bcdc5266380ba))
+* update module github.com/knadh/koanf/v2 to v2.3.3 ([#3081](https://github.com/dadrus/heimdall/issues/3081)) ([c53463c](https://github.com/dadrus/heimdall/commit/c53463cb2f5bdb9a73f8bf119bde8f6f11bbcf87))
+* update module github.com/redis/rueidis to v1.0.72 ([#3053](https://github.com/dadrus/heimdall/issues/3053)) ([cb73e0b](https://github.com/dadrus/heimdall/commit/cb73e0bd67a6fbf37b8091a6e55fac0ebc08d5a1))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.72 ([#3053](https://github.com/dadrus/heimdall/issues/3053)) ([cb73e0b](https://github.com/dadrus/heimdall/commit/cb73e0bd67a6fbf37b8091a6e55fac0ebc08d5a1))
+* update module gocloud.dev to v0.45.0 ([#3071](https://github.com/dadrus/heimdall/issues/3071)) ([16ab9a5](https://github.com/dadrus/heimdall/commit/16ab9a5c5b25f74975754f37abbbc5e970b9577b))
+* update module google.golang.org/grpc to v1.79.1 ([#3048](https://github.com/dadrus/heimdall/issues/3048)) ([20c8af3](https://github.com/dadrus/heimdall/commit/20c8af3a4cd440555409677fc4354b42634d1106))
+* update opentelemetry-go monorepo to v1.41.0 ([#3074](https://github.com/dadrus/heimdall/issues/3074)) ([2d2a1ad](https://github.com/dadrus/heimdall/commit/2d2a1adb91b830b0e5d5711e6141e13360ef1faf))
+* update opentelemetry-go-contrib monorepo to v0.66.0 ([#3075](https://github.com/dadrus/heimdall/issues/3075)) ([ba23e4a](https://github.com/dadrus/heimdall/commit/ba23e4a6c8da305818bd883f428ebbc20154415c))
+
+
 ## [0.17.9](https://github.com/dadrus/heimdall/compare/v0.17.8...v0.17.9) (2026-02-07)
 
 

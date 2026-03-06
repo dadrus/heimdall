@@ -182,8 +182,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Equal(t, "s", metrics.Unit)
 				assert.Equal(t, "Number of seconds until certificate expires", metrics.Description)
 
-				data := metrics.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
-				assert.False(t, data.IsMonotonic)
+				data := metrics.Data.(metricdata.Gauge[float64]) // nolint: forcetypeassert
 				assert.Len(t, data.DataPoints, 1)
 
 				checkMetric(t, data.DataPoints, "test", ee1cert)
@@ -206,8 +205,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Equal(t, "s", metrics.Unit)
 				assert.Equal(t, "Number of seconds until certificate expires", metrics.Description)
 
-				data := metrics.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
-				assert.False(t, data.IsMonotonic)
+				data := metrics.Data.(metricdata.Gauge[float64]) // nolint: forcetypeassert
 				assert.Len(t, data.DataPoints, 3)
 
 				checkMetric(t, data.DataPoints, "test", rootCA1.Certificate)
@@ -233,8 +231,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Equal(t, "s", metrics.Unit)
 				assert.Equal(t, "Number of seconds until certificate expires", metrics.Description)
 
-				data := metrics.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
-				assert.False(t, data.IsMonotonic)
+				data := metrics.Data.(metricdata.Gauge[float64]) // nolint: forcetypeassert
 				assert.Len(t, data.DataPoints, 6)
 
 				checkMetric(t, data.DataPoints, "test-1", rootCA1.Certificate)
@@ -263,8 +260,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Equal(t, "s", metrics.Unit)
 				assert.Equal(t, "Number of seconds until certificate expires", metrics.Description)
 
-				data := metrics.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
-				assert.False(t, data.IsMonotonic)
+				data := metrics.Data.(metricdata.Gauge[float64]) // nolint: forcetypeassert
 				assert.Len(t, data.DataPoints, 1)
 
 				if call == 1 {
