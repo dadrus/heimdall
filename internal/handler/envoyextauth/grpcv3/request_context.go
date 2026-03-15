@@ -102,6 +102,7 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	}
 
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
+	reqURI, _ := url.ParseRequestURI(httpReq.GetPath())
 
 	r.ctx = ctx
 	r.reqHeaders = canonicalizeHeaders(httpReq.GetHeaders())
@@ -110,9 +111,9 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	r.hmdlReq.URL.URL = url.URL{
 		Scheme:   httpReq.GetScheme(),
 		Host:     httpReq.GetHost(),
-		Path:     httpReq.GetPath(),
-		RawQuery: httpReq.GetQuery(),
-		Fragment: httpReq.GetFragment(),
+		Path:     reqURI.Path,
+		RawPath:  reqURI.RawPath,
+		RawQuery: reqURI.RawQuery,
 	}
 	r.hmdlReq.ClientIPAddresses = clientIPs
 }
