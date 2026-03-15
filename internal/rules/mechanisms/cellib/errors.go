@@ -28,7 +28,7 @@ import (
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/ext"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -163,14 +163,14 @@ func (errorsLib) CompileOptions() []cel.EnvOption {
 		cel.Variable("Error", errType),
 
 		cel.Constant("authentication_error", cel.DynType,
-			ErrorType{types: []error{heimdall.ErrAuthentication}}),
+			ErrorType{types: []error{pipeline.ErrAuthentication}}),
 		cel.Constant("authorization_error", cel.DynType,
-			ErrorType{types: []error{heimdall.ErrAuthorization}}),
+			ErrorType{types: []error{pipeline.ErrAuthorization}}),
 		cel.Constant("communication_error", cel.DynType,
-			ErrorType{types: []error{heimdall.ErrCommunication, heimdall.ErrCommunicationTimeout}}),
+			ErrorType{types: []error{pipeline.ErrCommunication, pipeline.ErrCommunicationTimeout}}),
 		cel.Constant("internal_error", cel.DynType,
-			ErrorType{types: []error{heimdall.ErrInternal, heimdall.ErrConfiguration}}),
+			ErrorType{types: []error{pipeline.ErrInternal, pipeline.ErrConfiguration}}),
 		cel.Constant("precondition_error", cel.DynType,
-			ErrorType{types: []error{heimdall.ErrArgument}}),
+			ErrorType{types: []error{pipeline.ErrArgument}}),
 	}
 }

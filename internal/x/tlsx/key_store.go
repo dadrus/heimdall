@@ -23,8 +23,10 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -36,20 +38,30 @@ type keyStore struct {
 	path     string
 	password string
 	keyID    string
+	ko       keyregistry.KeyObserver
 
 	tlsCert   *tls.Certificate
 	certChain []*x509.Certificate
 	mut       sync.RWMutex
 }
 
-func newTLSKeyStore(path, keyID, password string) (*keyStore, error) {
+func newTLSKeyStore(
+	path, keyID, password string,
+	fw watcher.Watcher,
+	ko keyregistry.KeyObserver,
+) (*keyStore, error) {
 	ks := &keyStore{
 		path:     path,
 		keyID:    keyID,
 		password: password,
+		ko:       ko,
 	}
 
 	if err := ks.load(); err != nil {
+		return nil, err
+	}
+
+	if err := fw.Add(ks.path, ks); err != nil {
 		return nil, err
 	}
 
@@ -71,12 +83,12 @@ func (cr *keyStore) OnChanged(log zerolog.Logger) {
 
 func (cr *keyStore) load() error {
 	if len(cr.path) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no path to tls key store specified")
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "no path to tls key store specified")
 	}
 
 	ks, err := keystore.NewKeyStoreFromPEMFile(cr.path, cr.password)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
+		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed loading keystore").
 			CausedBy(err)
 	}
 
@@ -89,15 +101,17 @@ func (cr *keyStore) load() error {
 	}
 
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed retrieving key from key store").CausedBy(err)
 	}
 
 	cert, err := entry.TLSCertificate()
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"key store entry is not suitable for TLS").CausedBy(err)
 	}
+
+	cr.ko.Notify(keyregistry.KeyInfo{Entry: *entry, Exportable: false})
 
 	cr.mut.Lock()
 	cr.tlsCert = &cert
@@ -105,13 +119,6 @@ func (cr *keyStore) load() error {
 	cr.mut.Unlock()
 
 	return nil
-}
-
-func (cr *keyStore) activeCertificateChain() []*x509.Certificate {
-	cr.mut.RLock()
-	defer cr.mut.RUnlock()
-
-	return cr.certChain
 }
 
 func (cr *keyStore) certificate(cc compatibilityChecker) (*tls.Certificate, error) {

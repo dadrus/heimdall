@@ -36,13 +36,12 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
@@ -72,7 +71,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -88,7 +87,7 @@ principal:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'introspection_endpoint' is a required field")
 			},
 		},
@@ -101,7 +100,7 @@ introspection_endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'introspection_endpoint'.'url' must be a valid URL")
 			},
 		},
@@ -174,7 +173,7 @@ introspection_endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.Contains(t, err.Error(), "'introspection_endpoint'.'url' scheme must be https")
 			},
 		},
@@ -266,7 +265,7 @@ metadata_endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
 			},
 		},
@@ -578,7 +577,7 @@ assertions:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -781,31 +780,31 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		authenticator  *oauth2IntrospectionAuthenticator
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *pipelinemocks.ContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *oauth2IntrospectionAuthenticator)
-		assert func(t *testing.T, err error, sub identity.Subject)
+		assert func(t *testing.T, err error, sub pipeline.Subject)
 	}{
 		"with failing auth data source": {
 			authenticator: &oauth2IntrospectionAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return("", pipeline.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "no access token")
 
 				var identifier HandlerIdentifier
@@ -823,7 +822,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -832,13 +831,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "introspection endpoint failed")
 
 				var identifier HandlerIdentifier
@@ -856,7 +855,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -870,13 +869,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				introspectionResponseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "unexpected response code")
 
 				var identifier HandlerIdentifier
@@ -892,7 +891,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -907,13 +906,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "unexpected response code")
 
 				var identifier HandlerIdentifier
@@ -940,7 +939,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -969,13 +968,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = []byte(`Hi foo`)
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "received introspection response")
 
 				var identifier HandlerIdentifier
@@ -1003,7 +1002,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1035,13 +1034,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = rawIntrospectResponse
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "assertion conditions")
 
 				var identifier HandlerIdentifier
@@ -1069,7 +1068,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1112,13 +1111,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = rawIntrospectResponse
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "assertion conditions")
 
 				var identifier HandlerIdentifier
@@ -1141,7 +1140,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1200,14 +1199,14 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
 				assert.True(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.ErrorContains(t, err, "issuer")
 
 				var identifier HandlerIdentifier
@@ -1231,7 +1230,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1289,7 +1288,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -1326,7 +1325,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1385,7 +1384,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -1423,7 +1422,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1482,14 +1481,14 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
 				assert.True(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to extract principal")
 
 				var identifier HandlerIdentifier
@@ -1513,7 +1512,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1542,14 +1541,14 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
 				assert.False(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "required introspection_endpoint")
 
 				var identifier HandlerIdentifier
@@ -1580,7 +1579,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1589,13 +1588,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtToken, nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, introspectionEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render URL")
 			},
 		},
@@ -1622,7 +1621,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1666,7 +1665,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = rawIntrospectResponse
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
@@ -1696,7 +1695,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1760,7 +1759,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
@@ -1804,7 +1803,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1849,7 +1848,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = rawIntrospectResponse
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
@@ -1891,7 +1890,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -1952,7 +1951,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -1984,7 +1983,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -2009,7 +2008,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawIntrospectResponse, nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, introspectionEndpointCalled)
@@ -2052,7 +2051,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				principalName: "bar",
 			},
 			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
+				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
@@ -2077,7 +2076,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawIntrospectResponse, nil)
 			},
-			assert: func(t *testing.T, err error, sub identity.Subject) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
 				t.Helper()
 
 				assert.False(t, introspectionEndpointCalled)
@@ -2124,7 +2123,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					_ *heimdallmocks.ContextMock,
+					_ *pipelinemocks.ContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *oauth2IntrospectionAuthenticator,
@@ -2137,13 +2136,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 			cch := mocks.NewCacheMock(t)
 
-			ctx := heimdallmocks.NewContextMock(t)
+			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
-			sub := make(identity.Subject)
+			sub := make(pipeline.Subject)
 
 			// WHEN
 			err := tc.authenticator.Execute(ctx, sub)
@@ -2339,7 +2338,7 @@ func TestOauth2IntrospectionAuthenticatorAccept(t *testing.T) {
 
 	// GIVEN
 	auth := &oauth2IntrospectionAuthenticator{}
-	visitor := heimdallmocks.NewVisitorMock(t)
+	visitor := pipelinemocks.NewVisitorMock(t)
 
 	visitor.EXPECT().VisitInsecure(auth)
 	visitor.EXPECT().VisitPrincipalNamer(auth)

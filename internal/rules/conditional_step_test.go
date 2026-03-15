@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 )
 

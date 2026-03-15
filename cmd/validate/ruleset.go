@@ -23,12 +23,13 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
+	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
@@ -97,12 +98,11 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	appCtx := &appContext{
-		w:   &watcher.NoopWatcher{},
-		khr: &noopRegistry{},
-		co:  &noopCertificateObserver{},
-		v:   validator,
-		l:   logger,
-		c:   conf,
+		w:  &watcher.NoopWatcher{},
+		kr: &noopRegistry{},
+		v:  validator,
+		l:  logger,
+		c:  conf,
 	}
 
 	repo, err := repository.New(appCtx)
@@ -115,6 +115,8 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		conf,
 		opMode,
 		logger,
+		nooptrace.Tracer{},
+		noopmetric.Meter{},
 		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)
 	if err != nil {
@@ -137,7 +139,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 type noopRepository struct{}
 
-func (*noopRepository) FindRule(_ heimdall.Context) (rule.Rule, error) {
+func (*noopRepository) FindRule(_ pipeline.Context) (rule.Rule, error) {
 	return nil, errFunctionNotSupported
 }
 func (*noopRepository) AddRuleSet(_ context.Context, _ string, _ []rule.Rule) error { return nil }
@@ -151,10 +153,5 @@ func (*noopRepository) DeleteRuleSet(_ context.Context, _ string) error {
 
 type noopRegistry struct{}
 
-func (*noopRegistry) AddKeyHolder(_ keyholder.KeyHolder) {}
-func (*noopRegistry) Keys() []jose.JSONWebKey            { return nil }
-
-type noopCertificateObserver struct{}
-
-func (*noopCertificateObserver) Add(_ certificate.Supplier) {}
-func (*noopCertificateObserver) Start() error               { return errFunctionNotSupported }
+func (*noopRegistry) Notify(_ keyregistry.KeyInfo) {}
+func (*noopRegistry) Keys() []jose.JSONWebKey      { return nil }

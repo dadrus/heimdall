@@ -20,19 +20,22 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type conditionalStep struct {
-	s heimdall.Step
+	s pipeline.Step
 	c executionCondition
 }
 
-func (s *conditionalStep) Accept(visitor heimdall.Visitor) { s.s.Accept(visitor) }
+func newConditionalStep(s pipeline.Step, c executionCondition) *conditionalStep {
+	return &conditionalStep{s: s, c: c}
+}
 
-func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (s *conditionalStep) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor) }
+
+func (s *conditionalStep) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Debug().Str("_id", s.s.ID()).Msg("Checking execution condition")
@@ -56,4 +59,6 @@ func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) er
 	return nil
 }
 
-func (s *conditionalStep) ID() string { return s.s.ID() }
+func (s *conditionalStep) ID() string                   { return s.s.ID() }
+func (s *conditionalStep) Type() string                 { return s.s.Type() }
+func (s *conditionalStep) Kind() pipeline.MechanismKind { return s.s.Kind() }

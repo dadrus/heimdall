@@ -16,12 +16,9 @@
 
 package rules
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
-)
+import "github.com/dadrus/heimdall/internal/pipeline"
 
 type executionCondition interface {
-	CanExecuteOnSubject(ctx heimdall.Context, sub identity.Subject) (bool, error)
-	CanExecuteOnError(ctx heimdall.Context, err error) (bool, error)
+	CanExecuteOnSubject(ctx pipeline.Context, sub pipeline.Subject) (bool, error)
+	CanExecuteOnError(ctx pipeline.Context, err error) (bool, error)
 }

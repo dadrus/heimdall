@@ -26,7 +26,7 @@ import (
 
 	"github.com/goccy/go-json"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -51,14 +51,14 @@ func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (Server
 	req, err := e.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
 		tpl, err := template.New(value)
 		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
 				CausedBy(err)
 		}
 
 		return tpl.Render(args)
 	}))
 	if err != nil {
-		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed creating oauth2 server metadata request").CausedBy(err)
 	}
 
@@ -66,11 +66,11 @@ func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (Server
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+			return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrCommunicationTimeout,
 				"request to oauth2 server metadata endpoint timed out").CausedBy(err)
 		}
 
-		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrCommunication,
+		return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrCommunication,
 			"request to oauth2 server metadata endpoint failed").CausedBy(err)
 	}
 
@@ -78,7 +78,7 @@ func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (Server
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return ServerMetadata{}, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+			NewWithMessagef(pipeline.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 	}
 
 	sm, err := e.decodeResponse(resp)
@@ -122,19 +122,19 @@ func (e *MetadataEndpoint) decodeResponse(resp *http.Response) (ServerMetadata, 
 
 	var spec metadata
 	if err := json.NewDecoder(resp.Body).Decode(&spec); err != nil {
-		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to unmarshal received oauth2 server metadata document").CausedBy(err)
 	}
 
 	if strings.Contains(spec.JWKSEndpointURL, "{{") &&
 		strings.Contains(spec.JWKSEndpointURL, "}}") {
-		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"received jwks_uri contains a template, which is not allowed")
 	}
 
 	if strings.Contains(spec.IntrospectionEndpointURL, "{{") &&
 		strings.Contains(spec.IntrospectionEndpointURL, "}}") {
-		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"received introspection_endpoint contains a template, which is not allowed")
 	}
 

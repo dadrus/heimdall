@@ -24,7 +24,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -90,7 +90,7 @@ func (c *configLoader) configFile() (string, error) {
 	if len(c.o.configFile) != 0 {
 		_, err := os.Stat(c.o.configFile)
 		if err != nil {
-			return "", errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
+			return "", errorchain.New(pipeline.ErrConfiguration).CausedBy(err)
 		}
 
 		return c.o.configFile, nil
@@ -123,7 +123,7 @@ func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func()
 			return nil
 		}))
 	if err != nil {
-		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
+		return errorchain.New(pipeline.ErrConfiguration).CausedBy(err)
 	}
 
 	return nil
@@ -131,7 +131,7 @@ func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func()
 
 func (c *configLoader) validateSemantics(config any) error {
 	if err := c.o.validateSemantics(config); err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "configuration is invalid").CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "configuration is invalid").CausedBy(err)
 	}
 
 	return nil

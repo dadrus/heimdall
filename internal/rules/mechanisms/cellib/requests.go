@@ -25,7 +25,7 @@ import (
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/ext"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func Requests() cel.EnvOption {
@@ -43,17 +43,17 @@ func (requestsLib) ProgramOptions() []cel.ProgramOption {
 }
 
 func (requestsLib) CompileOptions() []cel.EnvOption {
-	requestType := cel.ObjectType(reflect.TypeFor[heimdall.Request]().String(), traits.ReceiverType)
+	requestType := cel.ObjectType(reflect.TypeFor[pipeline.Request]().String(), traits.ReceiverType)
 
 	return []cel.EnvOption{
-		ext.NativeTypes(reflect.TypeFor[*heimdall.Request]()),
+		ext.NativeTypes(reflect.TypeFor[*pipeline.Request]()),
 		cel.Variable("Request", cel.DynType),
 		cel.Function("Header",
 			cel.MemberOverload("request_Header",
 				[]*cel.Type{requestType, cel.StringType}, cel.StringType,
 				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
 					// nolint: forcetypeassert
-					req := lhs.Value().(*heimdall.Request)
+					req := lhs.Value().(*pipeline.Request)
 
 					// nolint: forcetypeassert
 					return types.String(req.Header(rhs.Value().(string)))
@@ -65,7 +65,7 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 				[]*cel.Type{requestType, cel.StringType}, cel.StringType,
 				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
 					// nolint: forcetypeassert
-					req := lhs.Value().(*heimdall.Request)
+					req := lhs.Value().(*pipeline.Request)
 
 					// nolint: forcetypeassert
 					return types.String(req.Cookie(rhs.Value().(string)))
@@ -77,7 +77,7 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 				[]*cel.Type{requestType}, cel.DynType,
 				cel.UnaryBinding(func(lhs ref.Val) ref.Val {
 					// nolint: forcetypeassert
-					req := lhs.Value().(*heimdall.Request)
+					req := lhs.Value().(*pipeline.Request)
 
 					return types.DefaultTypeAdapter.NativeToValue(req.Body())
 				}),

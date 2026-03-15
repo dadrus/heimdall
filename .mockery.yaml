@@ -38,7 +38,7 @@ packages:
     interfaces:
       Context: {}
       ContextFactory: {}
-  github.com/dadrus/heimdall/internal/heimdall:
+  github.com/dadrus/heimdall/internal/pipeline:
     interfaces:
       Context: {}
       Step: {}
@@ -46,12 +46,13 @@ packages:
       PrincipalNamer: {}
       RequestFunctions: {}
       Visitor: {}
-  github.com/dadrus/heimdall/internal/keyholder:
+      Backend: {}
+      Executor: {}
+  github.com/dadrus/heimdall/internal/keyregistry:
     interfaces:
+      KeyObserver: {}
+      JWKSProvider: {}
       Registry: {}
-  github.com/dadrus/heimdall/internal/otel/metrics/certificate:
-    interfaces:
-      Observer: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}
@@ -92,8 +93,6 @@ packages:
           pkgname: "{{ .SrcPackageName }}"
   github.com/dadrus/heimdall/internal/rules/rule:
     interfaces:
-      Backend: {}
-      Executor: {}
       Factory: {}
       Repository: {}
       Rule: {}

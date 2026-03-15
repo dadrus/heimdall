@@ -30,7 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -50,7 +50,7 @@ func (e *ruleSetEndpoint) FetchRuleSets(
 ) ([]*v1beta1.RuleSet, error) {
 	bucket, err := blob.OpenBucket(ctx, e.URL.String())
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to open bucket").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to open bucket").
 			CausedBy(err)
 	}
 
@@ -143,7 +143,7 @@ func (e *ruleSetEndpoint) readRuleSet(
 	var ruleSet v1beta1.RuleSet
 	if err = dec.Decode(&ruleSet, reader); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
+			NewWithMessage(pipeline.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
 	}
 
@@ -161,10 +161,10 @@ func mapError(err error, message string) error {
 	case gcerrors.Unknown:
 		fallthrough
 	case gcerrors.Canceled:
-		return errorchain.NewWithMessage(heimdall.ErrCommunication, message).CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrCommunication, message).CausedBy(err)
 	case gcerrors.DeadlineExceeded:
-		return errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout, message).CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrCommunicationTimeout, message).CausedBy(err)
 	default:
-		return errorchain.NewWithMessage(heimdall.ErrInternal, message).CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrInternal, message).CausedBy(err)
 	}
 }

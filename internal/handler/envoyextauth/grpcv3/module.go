@@ -24,7 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 var Module = fx.Invoke( // nolint: gochecknoglobals
@@ -35,7 +35,7 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(app app.Context, exec rule.Executor, cch cache.Cache) *fxlcm.LifecycleManager {
+func newLifecycleManager(app app.Context, exec pipeline.Executor, cch cache.Cache) *fxlcm.LifecycleManager {
 	conf := app.Config()
 	logger := app.Logger()
 	cfg := conf.Serve
@@ -43,11 +43,10 @@ func newLifecycleManager(app app.Context, exec rule.Executor, cch cache.Cache) *
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Decision Envoy ExtAuth",
 		ServiceAddress: cfg.Address(),
-		Server: &adapter{
-			s: newService(conf, cch, logger, exec),
-		},
-		Logger:      logger,
-		TLSConf:     cfg.TLS,
-		FileWatcher: app.Watcher(),
+		Server:         &adapter{s: newService(conf, cch, logger, exec)},
+		Logger:         logger,
+		TLSConf:        cfg.TLS,
+		FileWatcher:    app.Watcher(),
+		KeyObserver:    app.KeyRegistry(),
 	}
 }

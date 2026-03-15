@@ -25,15 +25,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	mocks1 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRuleFactoryNew(t *testing.T) {
@@ -68,7 +68,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "unknown mechanism kind")
 			},
 		},
@@ -84,7 +84,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "unknown mechanism kind")
 			},
 		},
@@ -109,7 +109,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "zab authenticator is defined after")
 			},
 		},
@@ -134,7 +134,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "zab authenticator is defined after")
 			},
 		},
@@ -180,7 +180,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "authorizer is defined after")
 			},
 		},
@@ -226,7 +226,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "contextualizer is defined after")
 			},
 		},
@@ -303,7 +303,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "no authenticator")
 			},
 		},
@@ -326,7 +326,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitInsecure(insecure)
 					visitor.VisitPrincipalNamer(pn)
 
@@ -342,7 +342,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "insecure default rule")
 			},
 		},
@@ -362,7 +362,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("foo")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -377,7 +377,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "default principal")
 			},
 		},
@@ -396,7 +396,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -413,9 +413,8 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, ruleFactory)
 				assert.NotNil(t, ruleFactory.DefaultRule())
-				assert.Equal(t, ruleFactory.defaultRule, ruleFactory.DefaultRule())
 
-				defRule := ruleFactory.defaultRule
+				defRule := ruleFactory.templateRule
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
@@ -448,7 +447,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -485,9 +484,8 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, ruleFactory)
 				assert.NotNil(t, ruleFactory.DefaultRule())
-				assert.Equal(t, ruleFactory.defaultRule, ruleFactory.DefaultRule())
 
-				defRule := ruleFactory.defaultRule
+				defRule := ruleFactory.templateRule
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
@@ -508,12 +506,17 @@ func TestRuleFactoryNew(t *testing.T) {
 			repo := mocks1.NewRepositoryMock(t)
 			configureMocks(t, repo)
 
+			tp := otel.GetTracerProvider()
+			mp := otel.GetMeterProvider()
+
 			// WHEN
 			factory, err := NewRuleFactory(
 				repo,
 				tc.config,
 				config.DecisionMode,
 				log.Logger,
+				tp.Tracer("test"),
+				mp.Meter("test"),
 				config.SecureDefaultRule(tc.enforceSecureDefaultRule),
 			)
 
@@ -549,7 +552,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "requires forward_to")
 			},
 		},
@@ -571,7 +574,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -586,7 +589,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "methods list contains empty values")
 			},
 		},
@@ -612,7 +615,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -627,7 +630,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed creating route '/foo/:bar'")
 			},
 		},
@@ -682,7 +685,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "no authenticator defined")
 			},
 		},
@@ -698,7 +701,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
@@ -725,7 +728,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
@@ -744,7 +747,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -789,7 +792,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -828,7 +831,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			defaultRule: &ruleImpl{
 				sc: stage{func() step {
 					as := &mocks.StepMock{}
-					as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+					as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 						pn := mocks.NewPrincipalNamerMock(t)
 						pn.EXPECT().PrincipalName().Return("default")
 
@@ -903,7 +906,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -1011,7 +1014,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -1080,7 +1083,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
-					{FinalizerRef: "bar", Condition: pointer.To("")},
+					{FinalizerRef: "bar", Condition: new("")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1099,7 +1102,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "empty cel expression")
 			},
 		},
@@ -1128,7 +1131,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "must be unique")
 			},
 		},
@@ -1138,10 +1141,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
-					{AuthorizerRef: "bar", Condition: pointer.To("false")},
-					{ContextualizerRef: "bar", Condition: pointer.To("true")},
+					{AuthorizerRef: "bar", Condition: new("false")},
+					{ContextualizerRef: "bar", Condition: new("true")},
 					{AuthorizerRef: "baz"},
-					{FinalizerRef: "bar", Condition: pointer.To("true")},
+					{FinalizerRef: "bar", Condition: new("true")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1151,7 +1154,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -1193,23 +1196,31 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Len(t, rul.sh, 3)
 
 				assert.NotNil(t, rul.sh[0])
-				sh, ok := rul.sh[0].(*conditionalStep)
+				ts, ok := rul.sh[0].(*telemetryStep)
 				require.True(t, ok)
-				assert.IsType(t, &celExecutionCondition{}, sh.c)
+				cs, ok := ts.s.(*conditionalStep)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				assert.NotNil(t, rul.sh[1])
-				sh, ok = rul.sh[1].(*conditionalStep)
+				ts, ok = rul.sh[1].(*telemetryStep)
 				require.True(t, ok)
-				assert.IsType(t, &celExecutionCondition{}, sh.c)
+				cs, ok = ts.s.(*conditionalStep)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				assert.NotNil(t, rul.sh[2])
-				_, ok = rul.sh[2].(*conditionalStep)
+				ts, ok = rul.sh[2].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.False(t, ok)
 
 				require.Len(t, rul.fi, 1)
-				un, ok := rul.fi[0].(*conditionalStep)
+				ts, ok = rul.fi[0].(*telemetryStep)
 				require.True(t, ok)
-				assert.IsType(t, &celExecutionCondition{}, un.c)
+				cs, ok = ts.s.(*conditionalStep)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				require.Empty(t, rul.eh)
 			},
@@ -1224,8 +1235,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{FinalizerRef: "baz"},
 				},
 				ErrorHandler: []v1beta1.Step{
-					{ErrorHandlerRef: "foo", Condition: pointer.To("true")},
-					{ErrorHandlerRef: "bar", Condition: pointer.To("false")},
+					{ErrorHandlerRef: "foo", Condition: new("true")},
+					{ErrorHandlerRef: "bar", Condition: new("false")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1235,7 +1246,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -1281,17 +1292,25 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Len(t, rul.sh, 1)
 
 				assert.NotNil(t, rul.sh[0])
-				_, ok := rul.sh[0].(*conditionalStep)
+				ts, ok := rul.sh[0].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.False(t, ok)
 
 				require.Len(t, rul.fi, 1)
-				_, ok = rul.fi[0].(*conditionalStep)
+				ts, ok = rul.fi[0].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.False(t, ok)
 
 				require.Len(t, rul.eh, 2)
-				_, ok = rul.eh[0].(*conditionalStep)
+				ts, ok = rul.eh[0].(*telemetryStep)
 				require.True(t, ok)
-				_, ok = rul.eh[1].(*conditionalStep)
+				_, ok = ts.s.(*conditionalStep)
+				require.True(t, ok)
+				ts, ok = rul.eh[1].(*telemetryStep)
+				require.True(t, ok)
+				_, ok = ts.s.(*conditionalStep)
 				require.True(t, ok)
 			},
 		},
@@ -1327,7 +1346,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "must be unique")
 			},
 		},
@@ -1368,7 +1387,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn.EXPECT().PrincipalName().Return("default")
 
 				as := mocks.NewStepMock(t)
-				as.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn)
 
 					return true
@@ -1404,8 +1423,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
-					{AuthenticatorRef: "bar", Principal: pointer.To("custom")},
-					{AuthenticatorRef: "baz", Principal: pointer.To("custom")},
+					{AuthenticatorRef: "bar", Principal: new("custom")},
+					{AuthenticatorRef: "baz", Principal: new("custom")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1415,7 +1434,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn1.EXPECT().PrincipalName().Return("default")
 
 				as1 := mocks.NewStepMock(t)
-				as1.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as1.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn1)
 
 					return true
@@ -1425,7 +1444,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn2.EXPECT().PrincipalName().Return("custom")
 
 				as2 := mocks.NewStepMock(t)
-				as2.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as2.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn2)
 
 					return true
@@ -1469,8 +1488,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
-					{AuthenticatorRef: "bar", Principal: pointer.To("a")},
-					{AuthenticatorRef: "baz", Principal: pointer.To("b")},
+					{AuthenticatorRef: "bar", Principal: new("a")},
+					{AuthenticatorRef: "baz", Principal: new("b")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1480,7 +1499,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn1.EXPECT().PrincipalName().Return("a")
 
 				as1 := mocks.NewStepMock(t)
-				as1.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as1.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn1)
 
 					return true
@@ -1490,7 +1509,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				pn2.EXPECT().PrincipalName().Return("b")
 
 				as2 := mocks.NewStepMock(t)
-				as2.EXPECT().Accept(mock.MatchedBy(func(visitor heimdall.Visitor) bool {
+				as2.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
 					visitor.VisitPrincipalNamer(pn2)
 
 					return true
@@ -1509,7 +1528,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "default principal")
 			},
 		},
@@ -1525,7 +1544,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 			factory := &ruleFactory{
 				r:              repo,
-				defaultRule:    tc.defaultRule,
+				templateRule:   tc.defaultRule,
+				defaultRule:    x.IfThenElse(tc.defaultRule != nil, tc.defaultRule, nil),
 				mode:           tc.opMode,
 				l:              log.Logger,
 				hasDefaultRule: x.IfThenElse(tc.defaultRule != nil, true, false),

@@ -17,17 +17,15 @@
 package cache
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/cache/metrics"
 	"github.com/dadrus/heimdall/internal/cache/noop"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var (
-	ErrUnsupportedCacheType = errors.New("cache type unsupported")
-
 	// by intention. Used only during application bootstrap.
 	factories   = make(map[string]Factory) //nolint:gochecknoglobals
 	factoriesMu sync.RWMutex               //nolint:gochecknoglobals
@@ -54,8 +52,13 @@ func Create(ctx app.Context, typ string, config map[string]any) (Cache, error) {
 	factoriesMu.RUnlock()         // nolint: wsl_v5
 
 	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrUnsupportedCacheType, "'%s'", typ)
+		return nil, errorchain.NewWithMessagef(ErrUnsupportedType, "'%s'", typ)
 	}
 
-	return factory.Create(ctx, config)
+	cch, err := factory.Create(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return metrics.Decorate(ctx, cch, typ)
 }

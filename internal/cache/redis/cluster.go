@@ -44,7 +44,7 @@ func NewClusterCache(app app.Context, conf map[string]any) (cache.Cache, error) 
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions(app, "redis-cluster")
+	opts, err := cfg.clientOptions(app)
 	if err != nil {
 		return nil, err
 	}

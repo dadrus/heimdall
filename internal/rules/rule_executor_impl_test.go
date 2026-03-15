@@ -23,8 +23,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks2 "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
 
@@ -41,36 +41,36 @@ func TestRuleExecutorExecute(t *testing.T) {
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		"no matching rules": {
-			expErr: heimdall.ErrNoRuleFound,
+			expErr: pipeline.ErrNoRuleFound,
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
-				req := &heimdall.Request{Method: http.MethodPost, URL: &heimdall.URL{URL: *matchingURL}}
+				req := &pipeline.Request{Method: http.MethodPost, URL: &pipeline.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
-				repo.EXPECT().FindRule(ctx).Return(nil, heimdall.ErrNoRuleFound)
+				repo.EXPECT().FindRule(ctx).Return(nil, pipeline.ErrNoRuleFound)
 			},
 		},
 		"rule execution fails with authentication error": {
-			expErr: heimdall.ErrAuthentication,
+			expErr: pipeline.ErrAuthentication,
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
+				req := &pipeline.Request{Method: http.MethodGet, URL: &pipeline.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
-				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
+				rule.EXPECT().Execute(ctx).Return(nil, pipeline.ErrAuthentication)
 			},
 		},
 		"rule execution succeeds": {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				upstream := mocks4.NewBackendMock(t)
-				req := &heimdall.Request{Method: http.MethodGet, URL: &heimdall.URL{URL: *matchingURL}}
+				upstream := mocks2.NewBackendMock(t)
+				req := &pipeline.Request{Method: http.MethodGet, URL: &pipeline.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)

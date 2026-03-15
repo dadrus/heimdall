@@ -33,7 +33,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -183,7 +183,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 			},
 		},
 		"error while unmarshalling error response": {
@@ -204,7 +204,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 			},
 		},
 		"error while sending request": {
@@ -219,7 +219,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.False(t, tokenEndpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 			},
 		},
 		"full configuration, no cache hit with scopes and expires_in": {

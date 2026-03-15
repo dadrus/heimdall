@@ -48,7 +48,7 @@ func NewSentinelCache(app app.Context, conf map[string]any) (cache.Cache, error)
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions(app, "redis-sentinel")
+	opts, err := cfg.clientOptions(app)
 	if err != nil {
 		return nil, err
 	}

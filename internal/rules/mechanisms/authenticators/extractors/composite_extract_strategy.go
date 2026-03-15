@@ -17,13 +17,13 @@
 package extractors
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
-func (ce CompositeExtractStrategy) GetAuthData(ctx heimdall.Context) (string, error) {
+func (ce CompositeExtractStrategy) GetAuthData(ctx pipeline.Context) (string, error) {
 	// preallocation not possible
 	var errors []error //nolint:prealloc
 

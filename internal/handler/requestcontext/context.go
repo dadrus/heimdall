@@ -17,12 +17,11 @@
 package requestcontext
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type Context interface {
-	heimdall.Context
+	pipeline.Context
 
-	Finalize(backend rule.Backend) error
+	Finalize(backend pipeline.Backend) error
 }

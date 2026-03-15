@@ -22,8 +22,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -62,7 +61,7 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 
 	var conf Config
 	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for header finalizer '%s'", name).CausedBy(err)
 	}
 
@@ -74,9 +73,9 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}, nil
 }
 
-func (f *headerFinalizer) Accept(_ heimdall.Visitor) {}
+func (f *headerFinalizer) Accept(_ pipeline.Visitor) {}
 
-func (f *headerFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", FinalizerHeader).
@@ -92,7 +91,7 @@ func (f *headerFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) er
 		})
 		if err != nil {
 			return errorchain.
-				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' header", name).
+				NewWithMessagef(pipeline.ErrInternal, "failed to render value for '%s' header", name).
 				WithErrorContext(f).
 				CausedBy(err)
 		}
@@ -110,7 +109,7 @@ func (f *headerFinalizer) Execute(ctx heimdall.Context, sub identity.Subject) er
 	return nil
 }
 
-func (f *headerFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (f *headerFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -128,7 +127,7 @@ func (f *headerFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, e
 
 	var conf Config
 	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for header finalizer '%s'", f.name).CausedBy(err)
 	}
 
@@ -141,7 +140,6 @@ func (f *headerFinalizer) CreateStep(def types.StepDefinition) (heimdall.Step, e
 }
 
 func (f *headerFinalizer) Kind() types.Kind { return types.KindFinalizer }
-
-func (f *headerFinalizer) Name() string { return f.name }
-
-func (f *headerFinalizer) ID() string { return f.id }
+func (f *headerFinalizer) Name() string     { return f.name }
+func (f *headerFinalizer) ID() string       { return f.id }
+func (f *headerFinalizer) Type() string     { return f.name }

@@ -33,6 +33,7 @@ linters:
         - ^make
         - ^math\.
         - ^time\.*
+        - metric.WithExplicitBucketBoundaries
     tagliatelle:
       case:
         rules:

@@ -31,7 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -93,7 +93,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "endpoint failed")
 			},
 		},
@@ -113,7 +113,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "response code: 400")
 			},
 		},
@@ -142,7 +142,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "content type")
 			},
 		},

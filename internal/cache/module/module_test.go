@@ -22,10 +22,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	noop2 "go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/cache/noop"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -44,7 +44,7 @@ func TestNewCache(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, cache.ErrUnsupportedCacheType)
+				require.ErrorIs(t, err, cache.ErrUnsupportedType)
 			},
 		},
 		"in memory cache": {
@@ -57,7 +57,7 @@ func TestNewCache(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.IsType(t, &memory.Cache{}, cch)
+				assert.NotNil(t, cch)
 			},
 		},
 		"Redis standalone cache without config": {
@@ -126,7 +126,7 @@ func TestNewCache(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, cache.ErrUnsupportedCacheType)
+				require.ErrorIs(t, err, cache.ErrUnsupportedType)
 			},
 		},
 	} {
@@ -141,6 +141,7 @@ func TestNewCache(t *testing.T) {
 			appCtx.EXPECT().Config().Return(tc.conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Meter().Maybe().Return(noop2.Meter{})
 
 			// WHEN
 			cch, err := newCache(appCtx)

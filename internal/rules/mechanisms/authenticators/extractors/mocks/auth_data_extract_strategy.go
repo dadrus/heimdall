@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,7 +37,7 @@ func (_m *AuthDataExtractStrategyMock) EXPECT() *AuthDataExtractStrategyMock_Exp
 }
 
 // GetAuthData provides a mock function for the type AuthDataExtractStrategyMock
-func (_mock *AuthDataExtractStrategyMock) GetAuthData(ctx heimdall.Context) (string, error) {
+func (_mock *AuthDataExtractStrategyMock) GetAuthData(ctx pipeline.Context) (string, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -46,15 +46,15 @@ func (_mock *AuthDataExtractStrategyMock) GetAuthData(ctx heimdall.Context) (str
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (string, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) string); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(pipeline.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -73,11 +73,11 @@ func (_e *AuthDataExtractStrategyMock_Expecter) GetAuthData(ctx interface{}) *Au
 	return &AuthDataExtractStrategyMock_GetAuthData_Call{Call: _e.mock.On("GetAuthData", ctx)}
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Run(run func(ctx heimdall.Context)) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Run(run func(ctx pipeline.Context)) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.Context
+		var arg0 pipeline.Context
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.Context)
+			arg0 = args[0].(pipeline.Context)
 		}
 		run(
 			arg0,
@@ -91,7 +91,7 @@ func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Return(s string, err err
 	return _c
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(ctx heimdall.Context) (string, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(ctx pipeline.Context) (string, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	_c.Call.Return(run)
 	return _c
 }

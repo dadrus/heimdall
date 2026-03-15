@@ -24,7 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 var Module = fx.Invoke( // nolint: gochecknoglobals
@@ -35,7 +35,7 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(app app.Context, cch cache.Cache, exec rule.Executor) *fxlcm.LifecycleManager {
+func newLifecycleManager(app app.Context, cch cache.Cache, exec pipeline.Executor) *fxlcm.LifecycleManager {
 	conf := app.Config()
 	logger := app.Logger()
 	cfg := conf.Serve
@@ -47,5 +47,6 @@ func newLifecycleManager(app app.Context, cch cache.Cache, exec rule.Executor) *
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
 		FileWatcher:    app.Watcher(),
+		KeyObserver:    app.KeyRegistry(),
 	}
 }

@@ -24,6 +24,8 @@ import (
 	"fmt"
 
 	"github.com/go-jose/go-jose/v4"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 const (
@@ -48,9 +50,12 @@ type Entry struct {
 
 func (e *Entry) JWK() jose.JSONWebKey {
 	return jose.JSONWebKey{
-		KeyID:        e.KeyID,
-		Algorithm:    string(e.JOSEAlgorithm()),
-		Key:          e.PrivateKey.Public(),
+		KeyID:     e.KeyID,
+		Algorithm: string(e.JOSEAlgorithm()),
+		Key: x.IfThenElseExec(e.PrivateKey != nil,
+			func() crypto.PublicKey { return e.PrivateKey.Public() },
+			func() crypto.PublicKey { return e.CertChain[0].PublicKey },
+		),
 		Use:          "sig",
 		Certificates: e.CertChain,
 	}
