@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/go-jose/go-jose/v4"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -35,46 +35,6 @@ type RegistryMock_Expecter struct {
 
 func (_m *RegistryMock) EXPECT() *RegistryMock_Expecter {
 	return &RegistryMock_Expecter{mock: &_m.Mock}
-}
-
-// AddKeyHolder provides a mock function for the type RegistryMock
-func (_mock *RegistryMock) AddKeyHolder(kh keyholder.KeyHolder) {
-	_mock.Called(kh)
-	return
-}
-
-// RegistryMock_AddKeyHolder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddKeyHolder'
-type RegistryMock_AddKeyHolder_Call struct {
-	*mock.Call
-}
-
-// AddKeyHolder is a helper method to define mock.On call
-//   - kh keyholder.KeyHolder
-func (_e *RegistryMock_Expecter) AddKeyHolder(kh interface{}) *RegistryMock_AddKeyHolder_Call {
-	return &RegistryMock_AddKeyHolder_Call{Call: _e.mock.On("AddKeyHolder", kh)}
-}
-
-func (_c *RegistryMock_AddKeyHolder_Call) Run(run func(kh keyholder.KeyHolder)) *RegistryMock_AddKeyHolder_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 keyholder.KeyHolder
-		if args[0] != nil {
-			arg0 = args[0].(keyholder.KeyHolder)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *RegistryMock_AddKeyHolder_Call) Return() *RegistryMock_AddKeyHolder_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *RegistryMock_AddKeyHolder_Call) RunAndReturn(run func(kh keyholder.KeyHolder)) *RegistryMock_AddKeyHolder_Call {
-	_c.Run(run)
-	return _c
 }
 
 // Keys provides a mock function for the type RegistryMock
@@ -120,5 +80,45 @@ func (_c *RegistryMock_Keys_Call) Return(jSONWebKeys []jose.JSONWebKey) *Registr
 
 func (_c *RegistryMock_Keys_Call) RunAndReturn(run func() []jose.JSONWebKey) *RegistryMock_Keys_Call {
 	_c.Call.Return(run)
+	return _c
+}
+
+// Notify provides a mock function for the type RegistryMock
+func (_mock *RegistryMock) Notify(ki keyregistry.KeyInfo) {
+	_mock.Called(ki)
+	return
+}
+
+// RegistryMock_Notify_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Notify'
+type RegistryMock_Notify_Call struct {
+	*mock.Call
+}
+
+// Notify is a helper method to define mock.On call
+//   - ki keyregistry.KeyInfo
+func (_e *RegistryMock_Expecter) Notify(ki interface{}) *RegistryMock_Notify_Call {
+	return &RegistryMock_Notify_Call{Call: _e.mock.On("Notify", ki)}
+}
+
+func (_c *RegistryMock_Notify_Call) Run(run func(ki keyregistry.KeyInfo)) *RegistryMock_Notify_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 keyregistry.KeyInfo
+		if args[0] != nil {
+			arg0 = args[0].(keyregistry.KeyInfo)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *RegistryMock_Notify_Call) Return() *RegistryMock_Notify_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *RegistryMock_Notify_Call) RunAndReturn(run func(ki keyregistry.KeyInfo)) *RegistryMock_Notify_Call {
+	_c.Run(run)
 	return _c
 }

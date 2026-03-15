@@ -35,15 +35,15 @@ func ToTLSConfig(tlsCfg *config.TLS, opts ...Option) (*tls.Config, error) {
 	}
 
 	if args.serverAuthRequired || args.clientAuthRequired {
-		if ks, err = newTLSKeyStore(tlsCfg.KeyStore.Path, tlsCfg.KeyID, tlsCfg.KeyStore.Password); err != nil {
+		if ks, err = newTLSKeyStore(
+			tlsCfg.KeyStore.Path,
+			tlsCfg.KeyID,
+			tlsCfg.KeyStore.Password,
+			args.secretsWatcher,
+			args.keyObserver,
+		); err != nil {
 			return nil, err
 		}
-
-		if err = args.secretsWatcher.Add(ks.path, ks); err != nil {
-			return nil, err
-		}
-
-		args.certificateObserver.Add(&certificateSupplier{name: args.name, ks: ks})
 	}
 
 	// nolint:gosec

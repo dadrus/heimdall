@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/dadrus/httpsig"
-	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
@@ -55,14 +55,9 @@ type HTTPMessageSignatures struct {
 	TTL        *time.Duration `mapstructure:"ttl"`
 	Label      string         `mapstructure:"label"`
 
-	mut sync.RWMutex
-	// used to allow downloading the keys for signature verification purposes
-	// since the http message signatures rfc does not define a format for key transport
-	// JWK is used here.
-	pubKeys []jose.JSONWebKey
-	// used to monitor the expiration of configured certificates
-	certChain []*x509.Certificate
-	signer    httpsig.Signer
+	co     keyregistry.KeyObserver
+	mut    sync.RWMutex
+	signer httpsig.Signer
 }
 
 func (s *HTTPMessageSignatures) OnChanged(logger zerolog.Logger) {
@@ -96,13 +91,6 @@ func (s *HTTPMessageSignatures) Apply(ctx context.Context, req *http.Request) er
 	return nil
 }
 
-func (s *HTTPMessageSignatures) Keys() []jose.JSONWebKey {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.pubKeys
-}
-
 func (s *HTTPMessageSignatures) Hash() []byte {
 	const int64BytesCount = 8
 
@@ -127,15 +115,6 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 	hash.Write(stringx.ToBytes(s.Signer.KeyID))
 
 	return hash.Sum(nil)
-}
-
-func (s *HTTPMessageSignatures) Name() string { return "http message signer" }
-
-func (s *HTTPMessageSignatures) Certificates() []*x509.Certificate {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.certChain
 }
 
 func (s *HTTPMessageSignatures) init() error {
@@ -176,11 +155,6 @@ func (s *HTTPMessageSignatures) init() error {
 		}
 	}
 
-	keys := make([]jose.JSONWebKey, len(ks.Entries()))
-	for idx, entry := range ks.Entries() {
-		keys[idx] = entry.JWK()
-	}
-
 	signer, err := httpsig.NewSigner(
 		toHTTPSigKey(kse),
 		httpsig.WithComponents(s.Components...),
@@ -196,12 +170,16 @@ func (s *HTTPMessageSignatures) init() error {
 			"failed to configure http_message_signatures strategy").CausedBy(err)
 	}
 
-	s.mut.Lock()
-	defer s.mut.Unlock()
+	for _, kse := range ks.Entries() {
+		s.co.Notify(keyregistry.KeyInfo{
+			Entry:      *kse,
+			Exportable: true,
+		})
+	}
 
+	s.mut.Lock()
 	s.signer = signer
-	s.pubKeys = keys
-	s.certChain = kse.CertChain
+	s.mut.Unlock()
 
 	return nil
 }

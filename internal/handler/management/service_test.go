@@ -35,7 +35,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/keyholder/mocks"
+	"github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -122,7 +122,13 @@ func (suite *ServiceTestSuite) SetupTest() {
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
 
-	listener, err := listener.New(suite.T().Context(), "test", conf.Management.Address(), conf.Management.TLS, nil, nil)
+	listener, err := listener.New(
+		suite.T().Context(),
+		conf.Management.Address(),
+		conf.Management.TLS,
+		nil,
+		nil,
+	)
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()
 

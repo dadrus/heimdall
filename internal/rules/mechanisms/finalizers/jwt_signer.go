@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"crypto"
 	"crypto/sha256"
 	"crypto/x509"
 	"sync"
@@ -29,6 +28,7 @@ import (
 	"github.com/knadh/koanf/maps"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
@@ -54,19 +54,23 @@ type jwtSigner struct {
 	password string
 	keyID    string
 	iss      string
-
-	mut     sync.RWMutex
-	jwk     jose.JSONWebKey
-	key     crypto.Signer
-	pubKeys []jose.JSONWebKey
+	ko       keyregistry.KeyObserver
+	mut      sync.RWMutex
+	signer   jose.Signer
+	hash     []byte
 }
 
-func newJWTSigner(conf *SignerConfig, fw watcher.Watcher) (*jwtSigner, error) {
+func newJWTSigner(
+	conf *SignerConfig,
+	fw watcher.Watcher,
+	ko keyregistry.KeyObserver,
+) (*jwtSigner, error) {
 	signer := &jwtSigner{
 		path:     conf.KeyStore.Path,
 		password: conf.KeyStore.Password,
 		keyID:    conf.KeyID,
 		iss:      x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
+		ko:       ko,
 	}
 
 	if err := signer.load(); err != nil {
@@ -96,34 +100,17 @@ func (s *jwtSigner) OnChanged(logger zerolog.Logger) {
 
 func (s *jwtSigner) Hash() []byte {
 	s.mut.RLock()
-	jwk := s.jwk
-	s.mut.RUnlock()
+	defer s.mut.RUnlock()
 
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes(jwk.KeyID))
-	hash.Write(stringx.ToBytes(jwk.Algorithm))
-	hash.Write(stringx.ToBytes(s.iss))
-
-	return hash.Sum(nil)
+	return s.hash
 }
 
 func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]any) (string, error) {
 	s.mut.RLock()
-	jwk := s.jwk
-	key := s.key
+	signer := s.signer
 	s.mut.RUnlock()
 
-	signer, err := jose.NewSigner(
-		jose.SigningKey{Algorithm: jose.SignatureAlgorithm(jwk.Algorithm), Key: key},
-		new(jose.SignerOptions).
-			WithType("JWT").
-			WithHeader("kid", jwk.KeyID).
-			WithHeader("alg", jwk.Algorithm))
-	if err != nil {
-		return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create JWT signer").CausedBy(err)
-	}
-
-	claims := make(map[string]any)
+	claims := make(map[string]any, len(customClaims)+6)
 	maps.Merge(customClaims, claims)
 
 	now := time.Now().UTC()
@@ -143,20 +130,6 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]
 	}
 
 	return rawJwt, nil
-}
-
-func (s *jwtSigner) Keys() []jose.JSONWebKey {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.pubKeys
-}
-
-func (s *jwtSigner) activeCertificateChain() []*x509.Certificate {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.jwk.Certificates
 }
 
 func (s *jwtSigner) load() error {
@@ -196,17 +169,37 @@ func (s *jwtSigner) load() error {
 		}
 	}
 
-	keys := make([]jose.JSONWebKey, len(ks.Entries()))
-	for idx, entry := range ks.Entries() {
-		keys[idx] = entry.JWK()
+	jwk := kse.JWK()
+	key := kse.PrivateKey
+
+	signer, err := jose.NewSigner(
+		jose.SigningKey{Algorithm: jose.SignatureAlgorithm(jwk.Algorithm), Key: key},
+		new(jose.SignerOptions).
+			WithType("JWT").
+			WithHeader("kid", jwk.KeyID).
+			WithHeader("alg", jwk.Algorithm))
+	if err != nil {
+		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create JWT signer").CausedBy(err)
+	}
+
+	hash := sha256.New()
+	hash.Write(stringx.ToBytes(jwk.KeyID))
+	hash.Write(stringx.ToBytes(jwk.Algorithm))
+	hash.Write(stringx.ToBytes(s.iss))
+
+	md := hash.Sum(nil)
+
+	for _, kse := range ks.Entries() {
+		s.ko.Notify(keyregistry.KeyInfo{
+			Entry:      *kse,
+			Exportable: true,
+		})
 	}
 
 	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	s.jwk = kse.JWK()
-	s.key = kse.PrivateKey
-	s.pubKeys = keys
+	s.signer = signer
+	s.hash = md
+	s.mut.Unlock()
 
 	return nil
 }

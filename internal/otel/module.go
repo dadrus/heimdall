@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/otel/certificate"
 	"github.com/dadrus/heimdall/version"
 )
 
@@ -46,7 +45,6 @@ var Module = fx.Options(
 	),
 	fx.Invoke(runtime.Start),
 	fx.Invoke(host.Start),
-	fx.Provide(certificate.NewObserver),
 )
 
 const instrumentationIdentifier = "github.com/dadrus/heimdall"

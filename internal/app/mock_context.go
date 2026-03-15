@@ -6,8 +6,7 @@ package app
 
 import (
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/certificate"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/rs/zerolog"
@@ -39,52 +38,6 @@ type ContextMock_Expecter struct {
 
 func (_m *ContextMock) EXPECT() *ContextMock_Expecter {
 	return &ContextMock_Expecter{mock: &_m.Mock}
-}
-
-// CertificateObserver provides a mock function for the type ContextMock
-func (_mock *ContextMock) CertificateObserver() certificate.Observer {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for CertificateObserver")
-	}
-
-	var r0 certificate.Observer
-	if returnFunc, ok := ret.Get(0).(func() certificate.Observer); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(certificate.Observer)
-		}
-	}
-	return r0
-}
-
-// ContextMock_CertificateObserver_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CertificateObserver'
-type ContextMock_CertificateObserver_Call struct {
-	*mock.Call
-}
-
-// CertificateObserver is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) CertificateObserver() *ContextMock_CertificateObserver_Call {
-	return &ContextMock_CertificateObserver_Call{Call: _e.mock.On("CertificateObserver")}
-}
-
-func (_c *ContextMock_CertificateObserver_Call) Run(run func()) *ContextMock_CertificateObserver_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *ContextMock_CertificateObserver_Call) Return(observer certificate.Observer) *ContextMock_CertificateObserver_Call {
-	_c.Call.Return(observer)
-	return _c
-}
-
-func (_c *ContextMock_CertificateObserver_Call) RunAndReturn(run func() certificate.Observer) *ContextMock_CertificateObserver_Call {
-	_c.Call.Return(run)
-	return _c
 }
 
 // Config provides a mock function for the type ContextMock
@@ -133,48 +86,48 @@ func (_c *ContextMock_Config_Call) RunAndReturn(run func() *config.Configuration
 	return _c
 }
 
-// KeyHolderRegistry provides a mock function for the type ContextMock
-func (_mock *ContextMock) KeyHolderRegistry() keyholder.Registry {
+// KeyRegistry provides a mock function for the type ContextMock
+func (_mock *ContextMock) KeyRegistry() keyregistry.Registry {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for KeyHolderRegistry")
+		panic("no return value specified for KeyRegistry")
 	}
 
-	var r0 keyholder.Registry
-	if returnFunc, ok := ret.Get(0).(func() keyholder.Registry); ok {
+	var r0 keyregistry.Registry
+	if returnFunc, ok := ret.Get(0).(func() keyregistry.Registry); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(keyholder.Registry)
+			r0 = ret.Get(0).(keyregistry.Registry)
 		}
 	}
 	return r0
 }
 
-// ContextMock_KeyHolderRegistry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'KeyHolderRegistry'
-type ContextMock_KeyHolderRegistry_Call struct {
+// ContextMock_KeyRegistry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'KeyRegistry'
+type ContextMock_KeyRegistry_Call struct {
 	*mock.Call
 }
 
-// KeyHolderRegistry is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) KeyHolderRegistry() *ContextMock_KeyHolderRegistry_Call {
-	return &ContextMock_KeyHolderRegistry_Call{Call: _e.mock.On("KeyHolderRegistry")}
+// KeyRegistry is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) KeyRegistry() *ContextMock_KeyRegistry_Call {
+	return &ContextMock_KeyRegistry_Call{Call: _e.mock.On("KeyRegistry")}
 }
 
-func (_c *ContextMock_KeyHolderRegistry_Call) Run(run func()) *ContextMock_KeyHolderRegistry_Call {
+func (_c *ContextMock_KeyRegistry_Call) Run(run func()) *ContextMock_KeyRegistry_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *ContextMock_KeyHolderRegistry_Call) Return(registry keyholder.Registry) *ContextMock_KeyHolderRegistry_Call {
+func (_c *ContextMock_KeyRegistry_Call) Return(registry keyregistry.Registry) *ContextMock_KeyRegistry_Call {
 	_c.Call.Return(registry)
 	return _c
 }
 
-func (_c *ContextMock_KeyHolderRegistry_Call) RunAndReturn(run func() keyholder.Registry) *ContextMock_KeyHolderRegistry_Call {
+func (_c *ContextMock_KeyRegistry_Call) RunAndReturn(run func() keyregistry.Registry) *ContextMock_KeyRegistry_Call {
 	_c.Call.Return(run)
 	return _c
 }

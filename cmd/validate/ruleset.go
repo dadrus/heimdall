@@ -28,8 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/certificate"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
@@ -99,12 +98,11 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	appCtx := &appContext{
-		w:   &watcher.NoopWatcher{},
-		khr: &noopRegistry{},
-		co:  &noopCertificateObserver{},
-		v:   validator,
-		l:   logger,
-		c:   conf,
+		w:  &watcher.NoopWatcher{},
+		kr: &noopRegistry{},
+		v:  validator,
+		l:  logger,
+		c:  conf,
 	}
 
 	repo, err := repository.New(appCtx)
@@ -155,11 +153,5 @@ func (*noopRepository) DeleteRuleSet(_ context.Context, _ string) error {
 
 type noopRegistry struct{}
 
-func (*noopRegistry) AddKeyHolder(_ keyholder.KeyHolder) {}
-func (*noopRegistry) Keys() []jose.JSONWebKey            { return nil }
-
-type noopCertificateObserver struct{}
-
-func (*noopCertificateObserver) Stop() error                { return errFunctionNotSupported }
-func (*noopCertificateObserver) Add(_ certificate.Supplier) {}
-func (*noopCertificateObserver) Start() error               { return errFunctionNotSupported }
+func (*noopRegistry) Notify(_ keyregistry.KeyInfo) {}
+func (*noopRegistry) Keys() []jose.JSONWebKey      { return nil }

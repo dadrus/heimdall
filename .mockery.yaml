@@ -48,12 +48,11 @@ packages:
       Visitor: {}
       Backend: {}
       Executor: {}
-  github.com/dadrus/heimdall/internal/keyholder:
+  github.com/dadrus/heimdall/internal/keyregistry:
     interfaces:
+      KeyObserver: {}
+      JWKSProvider: {}
       Registry: {}
-  github.com/dadrus/heimdall/internal/otel/certificate:
-    interfaces:
-      Observer: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}

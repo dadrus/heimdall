@@ -14,37 +14,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package semconv
+package metrics
 
 import "go.opentelemetry.io/otel/attribute"
-
-const (
-	CertificateServiceKey      = attribute.Key("service")
-	CertificateIssuerKey       = attribute.Key("issuer")
-	CertificateSerialNumberKey = attribute.Key("serial_nr")
-	CertificateSubjectKey      = attribute.Key("subject")
-	CertificateDNSNameKey      = attribute.Key("dns_names")
-)
-
-func CertificateService(value string) attribute.KeyValue {
-	return CertificateServiceKey.String(value)
-}
-
-func CertificateIssuer(value string) attribute.KeyValue {
-	return CertificateIssuerKey.String(value)
-}
-
-func CertificateSerialNumber(value string) attribute.KeyValue {
-	return CertificateSerialNumberKey.String(value)
-}
-
-func CertificateSubject(value string) attribute.KeyValue {
-	return CertificateSubjectKey.String(value)
-}
-
-func CertificateDNSName(value string) attribute.KeyValue {
-	return CertificateDNSNameKey.String(value)
-}
 
 const (
 	ResultKey = attribute.Key("result")

@@ -21,8 +21,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRuleConfigDeepCopyInto(t *testing.T) {
@@ -63,13 +61,13 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 			{
 				ID:               "baz",
 				AuthenticatorRef: "bar",
-				Principal:        pointer.To("baz"),
+				Principal:        new("baz"),
 				Config:           map[string]any{"foo": "bar"},
 			},
 			{
 				ID:            "foo",
 				AuthorizerRef: "baz",
-				Condition:     pointer.To("baz"),
+				Condition:     new("baz"),
 				Config:        map[string]any{"bla": "bla"},
 			},
 		},
@@ -77,7 +75,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 			{
 				ID:              "foo",
 				ErrorHandlerRef: "foo",
-				Condition:       pointer.To("baz"),
+				Condition:       new("baz"),
 				Config:          map[string]any{"bla": "bla"},
 			},
 		},
@@ -126,13 +124,13 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 			{
 				ID:               "baz",
 				AuthenticatorRef: "bar",
-				Principal:        pointer.To("baz"),
+				Principal:        new("baz"),
 				Config:           map[string]any{"foo": "bar"},
 			},
 			{
 				ID:            "foo",
 				AuthorizerRef: "baz",
-				Condition:     pointer.To("baz"),
+				Condition:     new("baz"),
 				Config:        map[string]any{"bla": "bla"},
 			},
 		},
@@ -140,7 +138,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 			{
 				ID:              "foo",
 				ErrorHandlerRef: "foo",
-				Condition:       pointer.To("baz"),
+				Condition:       new("baz"),
 				Config:          map[string]any{"bla": "bla"},
 			},
 		},

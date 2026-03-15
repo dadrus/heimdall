@@ -141,7 +141,7 @@ type baseConfig struct {
 	TLS           tlsConfig          `mapstructure:"tls"`
 }
 
-func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientOption, error) {
+func (c baseConfig) clientOptions(app app.Context) (rueidis.ClientOption, error) {
 	var (
 		tlsCfg *tls.Config
 		err    error
@@ -151,7 +151,7 @@ func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientO
 		tlsCfg, err = tlsx.ToTLSConfig(&c.TLS.TLS,
 			tlsx.WithClientAuthentication(len(c.TLS.KeyStore.Path) != 0),
 			tlsx.WithSecretsWatcher(app.Watcher()),
-			tlsx.WithCertificateObserver(name, app.CertificateObserver()),
+			tlsx.WithKeyObserver(app.KeyRegistry()),
 		)
 		if err != nil {
 			return rueidis.ClientOption{}, err

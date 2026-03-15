@@ -85,7 +85,9 @@ func DecodeAuthenticationStrategyHookFunc(ctx app.Context) mapstructure.DecodeHo
 }
 
 func decodeHTTPMessageSignaturesStrategy(ctx app.Context, config any) (any, error) {
-	httpSig := &HTTPMessageSignatures{}
+	httpSig := &HTTPMessageSignatures{
+		co: ctx.KeyRegistry(),
+	}
 
 	if _, err := decodeStrategy(ctx.Validator(), "http_message_signatures", httpSig, config); err != nil {
 		return nil, err
@@ -99,8 +101,6 @@ func decodeHTTPMessageSignaturesStrategy(ctx app.Context, config any) (any, erro
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed registering http_message_signatures for updates").CausedBy(err)
 	}
-
-	ctx.CertificateObserver().Add(httpSig)
 
 	return httpSig, nil
 }

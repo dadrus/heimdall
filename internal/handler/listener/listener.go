@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/otel/certificate"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
@@ -95,10 +95,10 @@ func (l *listener) Accept() (net.Conn, error) {
 
 func New(
 	ctx context.Context,
-	name, address string,
+	address string,
 	tlsConf *config.TLS,
 	cw watcher.Watcher,
-	co certificate.Observer,
+	ko keyregistry.KeyObserver,
 ) (net.Listener, error) {
 	var lc net.ListenConfig
 
@@ -110,23 +110,22 @@ func New(
 	listnr = &listener{Listener: listnr}
 
 	if tlsConf != nil {
-		return newTLSListener(name, tlsConf, listnr, cw, co)
+		return newTLSListener(tlsConf, listnr, cw, ko)
 	}
 
 	return listnr, nil
 }
 
 func newTLSListener(
-	name string,
 	tlsConf *config.TLS,
 	listener net.Listener,
 	cw watcher.Watcher,
-	co certificate.Observer,
+	ko keyregistry.KeyObserver,
 ) (net.Listener, error) {
 	cfg, err := tlsx.ToTLSConfig(tlsConf,
 		tlsx.WithServerAuthentication(true),
 		tlsx.WithSecretsWatcher(cw),
-		tlsx.WithCertificateObserver(name, co),
+		tlsx.WithKeyObserver(ko),
 	)
 	if err != nil {
 		return nil, err

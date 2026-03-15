@@ -45,7 +45,7 @@ func NewStandaloneCache(app app.Context, conf map[string]any) (cache.Cache, erro
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions(app, "redis")
+	opts, err := cfg.clientOptions(app)
 	if err != nil {
 		return nil, err
 	}

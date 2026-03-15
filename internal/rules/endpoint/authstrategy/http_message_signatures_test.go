@@ -34,12 +34,17 @@ import (
 	"github.com/dadrus/httpsig"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
+	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
 
 func TestToHTTPSigKey(t *testing.T) {
@@ -129,8 +134,9 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		conf   *HTTPMessageSignatures
-		assert func(t *testing.T, err error, conf *HTTPMessageSignatures)
+		conf      *HTTPMessageSignatures
+		setupMock func(t *testing.T, ko *mocks.KeyObserverMock)
+		assert    func(t *testing.T, err error, conf *HTTPMessageSignatures)
 	}{
 		"failed loading keystore": {
 			conf: &HTTPMessageSignatures{},
@@ -184,26 +190,28 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "key1"},
 				Components: []string{"@method"},
 			},
+			setupMock: func(t *testing.T, ko *mocks.KeyObserverMock) {
+				t.Helper()
+
+				ko.EXPECT().Notify(mock.Anything)
+			},
 			assert: func(t *testing.T, err error, conf *HTTPMessageSignatures) {
 				t.Helper()
 
 				require.NoError(t, err)
-
 				assert.NotNil(t, conf.signer)
-				assert.NotEmpty(t, conf.Certificates())
-				assert.NotEmpty(t, conf.Keys())
-				assert.Equal(t, "http message signer", conf.Name())
 			},
 		},
 		"successful configuration with custom ttl": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "key1"},
 				Components: []string{"@method"},
-				TTL: func() *time.Duration {
-					ttl := 1 * time.Hour
+				TTL:        new(1 * time.Hour),
+			},
+			setupMock: func(t *testing.T, ko *mocks.KeyObserverMock) {
+				t.Helper()
 
-					return &ttl
-				}(),
+				ko.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, conf *HTTPMessageSignatures) {
 				t.Helper()
@@ -211,13 +219,20 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.NotNil(t, conf.signer)
-				assert.NotEmpty(t, conf.Certificates())
-				assert.NotEmpty(t, conf.Keys())
-				assert.Equal(t, "http message signer", conf.Name())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			kr := mocks.NewKeyObserverMock(t)
+			tc.conf.co = kr
+
+			setupMock := x.IfThenElse(
+				tc.setupMock != nil,
+				tc.setupMock,
+				func(t *testing.T, _ *mocks.KeyObserverMock) { t.Helper() },
+			)
+			setupMock(t, kr)
+
 			err := tc.conf.init()
 
 			tc.assert(t, err, tc.conf)
@@ -330,6 +345,11 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			kr := mocks.NewKeyObserverMock(t)
+			kr.EXPECT().Notify(mock.Anything)
+
+			tc.conf.co = kr
+
 			err := tc.conf.init()
 			require.NoError(t, err)
 
@@ -360,11 +380,12 @@ func TestHTTPMessageSignaturesOnChanged(t *testing.T) {
 	privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	cert1, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+	cert1, err := testsupport.NewCertificateBuilder(
+		testsupport.WithValidity(time.Now(), 10*time.Hour),
 		testsupport.WithSerialNumber(big.NewInt(1)),
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "test cert 1",
-			Organization: []string{"Test"},
+			Organization: []string{"Test 1"},
 			Country:      []string{"EU"},
 		}),
 		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
@@ -374,11 +395,12 @@ func TestHTTPMessageSignaturesOnChanged(t *testing.T) {
 		Build()
 	require.NoError(t, err)
 
-	cert2, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+	cert2, err := testsupport.NewCertificateBuilder(
+		testsupport.WithValidity(time.Now(), 10*time.Hour),
 		testsupport.WithSerialNumber(big.NewInt(1)),
 		testsupport.WithSubject(pkix.Name{
-			CommonName:   "test cert 1",
-			Organization: []string{"Test"},
+			CommonName:   "test cert 2",
+			Organization: []string{"Test 2"},
 			Country:      []string{"EU"},
 		}),
 		testsupport.WithSubjectPubKey(&privKey2.PublicKey, x509.ECDSAWithSHA384),
@@ -397,6 +419,8 @@ func TestHTTPMessageSignaturesOnChanged(t *testing.T) {
 	pemBytes2, err := pemx.BuildPEM(
 		pemx.WithECDSAPrivateKey(privKey2, pemx.WithHeader("X-Key-ID", "key1")),
 		pemx.WithX509Certificate(cert2),
+		pemx.WithECDSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key2")),
+		pemx.WithX509Certificate(cert1),
 	)
 	require.NoError(t, err)
 
@@ -406,15 +430,18 @@ func TestHTTPMessageSignaturesOnChanged(t *testing.T) {
 	_, err = pemFile.Write(pemBytes1)
 	require.NoError(t, err)
 
+	ko := mocks.NewKeyObserverMock(t)
+	ko.EXPECT().Notify(mock.Anything).
+		Run(mock2.NewArgumentCaptor[keyregistry.KeyInfo](&ko.Mock, "captor1").Capture).
+		Times(3)
+
 	conf := &HTTPMessageSignatures{
 		Signer:     SignerConfig{KeyStore: KeyStore{Path: pemFile.Name()}, KeyID: "key1"},
 		Components: []string{"@method"},
+		co:         ko,
 	}
 	err = conf.init()
 	require.NoError(t, err)
-
-	require.Equal(t, cert1, conf.certChain[0])
-	require.Equal(t, &privKey1.PublicKey, conf.pubKeys[0].Key)
 
 	// WHEN
 	_, err = pemFile.Seek(0, 0)
@@ -425,10 +452,6 @@ func TestHTTPMessageSignaturesOnChanged(t *testing.T) {
 
 	conf.OnChanged(log.Logger)
 
-	// THEN
-	require.Equal(t, cert2, conf.certChain[0])
-	require.Equal(t, &privKey2.PublicKey, conf.pubKeys[0].Key)
-
 	// WHEN
 	err = os.Truncate(pemFile.Name(), 0)
 	require.NoError(t, err)
@@ -436,6 +459,18 @@ func TestHTTPMessageSignaturesOnChanged(t *testing.T) {
 	conf.OnChanged(log.Logger)
 
 	// THEN
-	require.Equal(t, cert2, conf.certChain[0])
-	require.Equal(t, &privKey2.PublicKey, conf.pubKeys[0].Key)
+	keyInfos := mock2.ArgumentCaptorFrom[keyregistry.KeyInfo](&ko.Mock, "captor1").Values()
+	require.Len(t, keyInfos, 3)
+
+	assert.True(t, keyInfos[0].Exportable)
+	assert.Equal(t, "key1", keyInfos[0].KeyID)
+	assert.Equal(t, cert1, keyInfos[0].CertChain[0])
+
+	assert.True(t, keyInfos[1].Exportable)
+	assert.Equal(t, "key1", keyInfos[1].KeyID)
+	assert.Equal(t, cert2, keyInfos[1].CertChain[0])
+
+	assert.True(t, keyInfos[2].Exportable)
+	assert.Equal(t, "key2", keyInfos[2].KeyID)
+	assert.Equal(t, cert1, keyInfos[2].CertChain[0])
 }

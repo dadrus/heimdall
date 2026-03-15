@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/dadrus/heimdall/internal/otel/semconv"
+	"github.com/dadrus/heimdall/internal/otel/metrics"
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
@@ -39,9 +39,9 @@ func (s *telemetryStep) Execute(hctx pipeline.Context, sub pipeline.Subject) err
 		"Step Execution",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(
-			semconv.StepID(s.ID()),
-			semconv.MechanismKind(string(s.Kind())),
-			semconv.MechanismName(s.Type()),
+			metrics.StepID(s.ID()),
+			metrics.MechanismKind(string(s.Kind())),
+			metrics.MechanismName(s.Type()),
 		),
 	)
 

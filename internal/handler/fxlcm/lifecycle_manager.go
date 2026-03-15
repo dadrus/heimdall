@@ -26,7 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/otel/certificate"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -38,23 +38,22 @@ type Server interface {
 }
 
 type LifecycleManager struct {
-	ServiceName         string
-	ServiceAddress      string
-	Server              Server
-	Logger              zerolog.Logger
-	TLSConf             *config.TLS
-	FileWatcher         watcher.Watcher
-	CertificateObserver certificate.Observer
+	ServiceName    string
+	ServiceAddress string
+	Server         Server
+	Logger         zerolog.Logger
+	TLSConf        *config.TLS
+	FileWatcher    watcher.Watcher
+	KeyObserver    keyregistry.KeyObserver
 }
 
 func (m *LifecycleManager) Start(ctx context.Context) error {
 	ln, err := listener.New(
 		ctx,
-		m.ServiceName,
 		m.ServiceAddress,
 		m.TLSConf,
 		m.FileWatcher,
-		m.CertificateObserver,
+		m.KeyObserver,
 	)
 	if err != nil {
 		return errorchain.NewWithMessagef(pipeline.ErrInternal,

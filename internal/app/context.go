@@ -20,16 +20,14 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyholder"
-	"github.com/dadrus/heimdall/internal/otel/certificate"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 type Context interface {
 	Watcher() watcher.Watcher
-	KeyHolderRegistry() keyholder.Registry
-	CertificateObserver() certificate.Observer
+	KeyRegistry() keyregistry.Registry
 	Validator() validation.Validator
 	Logger() zerolog.Logger
 	Config() *config.Configuration

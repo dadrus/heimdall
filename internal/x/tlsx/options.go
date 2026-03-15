@@ -17,29 +17,25 @@
 package tlsx
 
 import (
-	"github.com/dadrus/heimdall/internal/otel/certificate"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 type noopObserver struct{}
 
-func (*noopObserver) Stop() error                { return nil }
-func (*noopObserver) Add(_ certificate.Supplier) {}
-func (*noopObserver) Start() error               { return nil }
+func (noopObserver) Notify(_ keyregistry.KeyInfo) {}
 
 type options struct {
-	name                string
-	serverAuthRequired  bool
-	clientAuthRequired  bool
-	secretsWatcher      watcher.Watcher
-	certificateObserver certificate.Observer
+	serverAuthRequired bool
+	clientAuthRequired bool
+	secretsWatcher     watcher.Watcher
+	keyObserver        keyregistry.KeyObserver
 }
 
 func newOptions() *options {
 	return &options{
-		name:                "unknown",
-		secretsWatcher:      &watcher.NoopWatcher{},
-		certificateObserver: &noopObserver{},
+		secretsWatcher: &watcher.NoopWatcher{},
+		keyObserver:    noopObserver{},
 	}
 }
 
@@ -65,11 +61,10 @@ func WithSecretsWatcher(cw watcher.Watcher) Option {
 	}
 }
 
-func WithCertificateObserver(name string, co certificate.Observer) Option {
+func WithKeyObserver(observer keyregistry.KeyObserver) Option {
 	return func(o *options) {
-		if co != nil {
-			o.name = name
-			o.certificateObserver = co
+		if observer != nil {
+			o.keyObserver = observer
 		}
 	}
 }

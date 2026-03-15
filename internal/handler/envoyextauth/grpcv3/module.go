@@ -43,11 +43,10 @@ func newLifecycleManager(app app.Context, exec pipeline.Executor, cch cache.Cach
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Decision Envoy ExtAuth",
 		ServiceAddress: cfg.Address(),
-		Server: &adapter{
-			s: newService(conf, cch, logger, exec),
-		},
-		Logger:      logger,
-		TLSConf:     cfg.TLS,
-		FileWatcher: app.Watcher(),
+		Server:         &adapter{s: newService(conf, cch, logger, exec)},
+		Logger:         logger,
+		TLSConf:        cfg.TLS,
+		FileWatcher:    app.Watcher(),
+		KeyObserver:    app.KeyRegistry(),
 	}
 }

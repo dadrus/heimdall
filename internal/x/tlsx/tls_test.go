@@ -35,9 +35,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	mocks2 "github.com/dadrus/heimdall/internal/otel/certificate/mocks"
+	mocks2 "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -80,17 +81,13 @@ func TestToTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		conf       func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS
+		conf       config.TLS
+		setupMocks func(t *testing.T, wm *mocks.WatcherMock, ko *mocks2.KeyObserverMock)
 		serverAuth bool
 		clientAuth bool
 		assert     func(t *testing.T, err error, conf *tls.Config)
 	}{
 		"empty config": {
-			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
-				t.Helper()
-
-				return config.TLS{}
-			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
 
@@ -106,11 +103,6 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"empty config, but requires server auth": {
 			serverAuth: true,
-			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
-				t.Helper()
-
-				return config.TLS{}
-			},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
 
@@ -121,11 +113,7 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"fails due to not existent key store for TLS usage": {
 			serverAuth: true,
-			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
-				t.Helper()
-
-				return config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}}
-			},
+			conf:       config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
 
@@ -136,14 +124,10 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"fails due to not existent key for the given key id for TLS usage": {
 			serverAuth: true,
-			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
-				t.Helper()
-
-				return config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					KeyID:      "foo",
-					MinVersion: tls.VersionTLS12,
-				}
+			conf: config.TLS{
+				KeyStore:   config.KeyStore{Path: pemFile.Name()},
+				KeyID:      "foo",
+				MinVersion: tls.VersionTLS12,
 			},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
@@ -155,14 +139,10 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"fails due to not present certificates for the given key id": {
 			serverAuth: true,
-			conf: func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
-				t.Helper()
-
-				return config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					KeyID:      "key2",
-					MinVersion: tls.VersionTLS12,
-				}
+			conf: config.TLS{
+				KeyStore:   config.KeyStore{Path: pemFile.Name()},
+				KeyID:      "key2",
+				MinVersion: tls.VersionTLS12,
 			},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
@@ -174,15 +154,15 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"fails due to failing watcher registration": {
 			serverAuth: true,
-			conf: func(t *testing.T, wm *mocks.WatcherMock, _ *mocks2.ObserverMock) config.TLS {
+			conf: config.TLS{
+				KeyStore:   config.KeyStore{Path: pemFile.Name()},
+				MinVersion: tls.VersionTLS12,
+			},
+			setupMocks: func(t *testing.T, wm *mocks.WatcherMock, ko *mocks2.KeyObserverMock) {
 				t.Helper()
 
 				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(errors.New("test error"))
-
-				return config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					MinVersion: tls.VersionTLS12,
-				}
+				ko.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
@@ -193,24 +173,15 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"successful with default key for TLS server auth": {
 			serverAuth: true,
-			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
+			conf: config.TLS{
+				KeyStore:   config.KeyStore{Path: pemFile.Name()},
+				MinVersion: tls.VersionTLS12,
+			},
+			setupMocks: func(t *testing.T, wm *mocks.WatcherMock, ko *mocks2.KeyObserverMock) {
 				t.Helper()
 
 				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
-				co.EXPECT().Add(mock.MatchedBy(func(sup *certificateSupplier) bool {
-					assert.Equal(t, "test", sup.Name())
-
-					certs := sup.Certificates()
-					assert.Len(t, certs, 1)
-					assert.Equal(t, cert, certs[0])
-
-					return true
-				}))
-
-				return config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					MinVersion: tls.VersionTLS12,
-				}
+				ko.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -227,24 +198,15 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"successful with default key for TLS client auth": {
 			clientAuth: true,
-			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
+			conf: config.TLS{
+				KeyStore:   config.KeyStore{Path: pemFile.Name()},
+				MinVersion: tls.VersionTLS12,
+			},
+			setupMocks: func(t *testing.T, wm *mocks.WatcherMock, ko *mocks2.KeyObserverMock) {
 				t.Helper()
 
 				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
-				co.EXPECT().Add(mock.MatchedBy(func(sup *certificateSupplier) bool {
-					assert.Equal(t, "test", sup.Name())
-
-					certs := sup.Certificates()
-					assert.Len(t, certs, 1)
-					assert.Equal(t, cert, certs[0])
-
-					return true
-				}))
-
-				return config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					MinVersion: tls.VersionTLS12,
-				}
+				ko.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -261,25 +223,16 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"successful with specified key id for TLS server auth": {
 			serverAuth: true,
-			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
+			conf: config.TLS{
+				KeyStore:   config.KeyStore{Path: pemFile.Name()},
+				KeyID:      "key1",
+				MinVersion: tls.VersionTLS12,
+			},
+			setupMocks: func(t *testing.T, wm *mocks.WatcherMock, ko *mocks2.KeyObserverMock) {
 				t.Helper()
 
 				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
-				co.EXPECT().Add(mock.MatchedBy(func(sup *certificateSupplier) bool {
-					assert.Equal(t, "test", sup.Name())
-
-					certs := sup.Certificates()
-					assert.Len(t, certs, 1)
-					assert.Equal(t, cert, certs[0])
-
-					return true
-				}))
-
-				return config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					KeyID:      "key1",
-					MinVersion: tls.VersionTLS12,
-				}
+				ko.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -296,25 +249,16 @@ func TestToTLSConfig(t *testing.T) {
 		},
 		"successful with specified key id for TLS client auth": {
 			clientAuth: true,
-			conf: func(t *testing.T, wm *mocks.WatcherMock, co *mocks2.ObserverMock) config.TLS {
+			conf: config.TLS{
+				KeyStore:   config.KeyStore{Path: pemFile.Name()},
+				KeyID:      "key1",
+				MinVersion: tls.VersionTLS12,
+			},
+			setupMocks: func(t *testing.T, wm *mocks.WatcherMock, ko *mocks2.KeyObserverMock) {
 				t.Helper()
 
 				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
-				co.EXPECT().Add(mock.MatchedBy(func(sup *certificateSupplier) bool {
-					assert.Equal(t, "test", sup.Name())
-
-					certs := sup.Certificates()
-					assert.Len(t, certs, 1)
-					assert.Equal(t, cert, certs[0])
-
-					return true
-				}))
-
-				return config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					KeyID:      "key1",
-					MinVersion: tls.VersionTLS12,
-				}
+				ko.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, conf *tls.Config) {
 				t.Helper()
@@ -333,16 +277,22 @@ func TestToTLSConfig(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// WHEN
 			wm := mocks.NewWatcherMock(t)
-			om := mocks2.NewObserverMock(t)
+			om := mocks2.NewKeyObserverMock(t)
 
-			tlsCfg := tc.conf(t, wm, om)
+			setupMocks := x.IfThenElse(
+				tc.setupMocks != nil,
+				tc.setupMocks,
+				func(t *testing.T, _ *mocks.WatcherMock, _ *mocks2.KeyObserverMock) { t.Helper() },
+			)
+
+			setupMocks(t, wm, om)
 
 			conf, err := ToTLSConfig(
-				&tlsCfg,
+				&tc.conf,
 				WithServerAuthentication(tc.serverAuth),
 				WithClientAuthentication(tc.clientAuth),
 				WithSecretsWatcher(wm),
-				WithCertificateObserver("test", om),
+				WithKeyObserver(om),
 			)
 
 			// THEN

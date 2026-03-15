@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package semconv
+package metrics
 
 import (
 	"context"
@@ -25,9 +25,17 @@ import (
 )
 
 var (
+	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}     //nolint:gochecknoglobals
 	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}  //nolint:gochecknoglobals
 	obsOptPool = &sync.Pool{New: func() any { return &[]metric.ObserveOption{} }} //nolint:gochecknoglobals
 )
+
+type Observation[T any] struct {
+	Value T
+	Attrs attribute.Set
+}
+
+type SupplierFn[T any] func(context.Context) ([]Observation[T], error)
 
 type RuleExecutionDuration struct {
 	metric.Float64Histogram
@@ -64,19 +72,10 @@ func NewRuleExecutionDuration(
 	return RuleExecutionDuration{histogram}, nil
 }
 
-func (m RuleExecutionDuration) Inst() metric.Float64Histogram {
-	return m.Float64Histogram
-}
-
-func (RuleExecutionDuration) Name() string {
-	return "rule.execution.duration"
-}
-
-func (RuleExecutionDuration) Unit() string {
-	return "s"
-}
-
-func (RuleExecutionDuration) Description() string { return "Duration of rule executions" }
+func (m RuleExecutionDuration) Inst() metric.Float64Histogram { return m.Float64Histogram }
+func (RuleExecutionDuration) Name() string                    { return "rule.execution.duration" }
+func (RuleExecutionDuration) Unit() string                    { return "s" }
+func (RuleExecutionDuration) Description() string             { return "Duration of rule executions" }
 
 func (m RuleExecutionDuration) Record(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
@@ -100,77 +99,6 @@ func (RuleExecutionDuration) AttrRuleID(val string) attribute.KeyValue   { retur
 func (RuleExecutionDuration) AttrRuleSet(val string) attribute.KeyValue  { return RuleSet(val) }
 func (RuleExecutionDuration) AttrProvider(val string) attribute.KeyValue { return Provider(val) }
 func (RuleExecutionDuration) AttrResult(val string) attribute.KeyValue   { return Result(val) }
-
-type CertificateExpiry struct {
-	metric.Float64ObservableUpDownCounter
-}
-
-var newCertificateExpiryOpts = []metric.Float64ObservableUpDownCounterOption{ //nolint:gochecknoglobals
-	metric.WithDescription("Number of seconds until certificate expires"),
-	metric.WithUnit("s"),
-}
-
-func NewCertificateExpiry(
-	meter metric.Meter,
-	opt ...metric.Float64ObservableUpDownCounterOption,
-) (CertificateExpiry, error) {
-	if len(opt) == 0 {
-		opt = newCertificateExpiryOpts
-	} else {
-		opt = append(opt, newCertificateExpiryOpts...)
-	}
-
-	counter, err := meter.Float64ObservableUpDownCounter("certificate.expiry", opt...)
-	if err != nil {
-		return CertificateExpiry{}, err
-	}
-
-	return CertificateExpiry{counter}, nil
-}
-
-func (m CertificateExpiry) Inst() metric.Float64ObservableUpDownCounter {
-	return m.Float64ObservableUpDownCounter
-}
-
-func (CertificateExpiry) Name() string {
-	return "certificate.expiry"
-}
-
-func (CertificateExpiry) Unit() string {
-	return "s"
-}
-
-func (CertificateExpiry) Description() string { return "Number of seconds until certificate expires" }
-
-func (m CertificateExpiry) Observe(
-	observer metric.Observer,
-	value float64,
-	set attribute.Set,
-) {
-	if set.Len() == 0 {
-		observer.ObserveFloat64(m.Float64ObservableUpDownCounter, value)
-
-		return
-	}
-
-	opts := obsOptPool.Get().(*[]metric.ObserveOption) // nolint: forcetypeassert
-
-	defer func() {
-		*opts = (*opts)[:0]
-		obsOptPool.Put(opts)
-	}()
-
-	*opts = append(*opts, metric.WithAttributeSet(set))
-	observer.ObserveFloat64(m.Float64ObservableUpDownCounter, value, *opts...)
-}
-
-func (CertificateExpiry) AttrService(val string) attribute.KeyValue { return CertificateService(val) }
-func (CertificateExpiry) AttrIssuer(val string) attribute.KeyValue  { return CertificateIssuer(val) }
-func (CertificateExpiry) AttrSubject(val string) attribute.KeyValue { return CertificateSubject(val) }
-func (CertificateExpiry) AttrSerialNumber(val string) attribute.KeyValue {
-	return CertificateSerialNumber(val)
-}
-func (CertificateExpiry) AttrDNSNames(val string) attribute.KeyValue { return CertificateDNSName(val) }
 
 type RulesLoaded struct {
 	metric.Int64ObservableGauge
@@ -199,19 +127,10 @@ func NewRulesLoaded(
 	return RulesLoaded{gauge}, nil
 }
 
-func (m RulesLoaded) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
-}
-
-func (RulesLoaded) Name() string {
-	return "rules.loaded"
-}
-
-func (RulesLoaded) Unit() string {
-	return "1"
-}
-
-func (RulesLoaded) Description() string { return "Number of loaded rules" }
+func (m RulesLoaded) Inst() metric.Int64ObservableGauge { return m.Int64ObservableGauge }
+func (RulesLoaded) Name() string                        { return "rules.loaded" }
+func (RulesLoaded) Unit() string                        { return "1" }
+func (RulesLoaded) Description() string                 { return "Number of loaded rules" }
 
 func (m RulesLoaded) Observe(
 	observer metric.Observer,
@@ -272,18 +191,24 @@ func NewCacheLookups(
 	return CacheLookups{counter}, nil
 }
 
-func (m CacheLookups) Inst() metric.Int64Counter {
-	return m.Int64Counter
+func (m CacheLookups) Add(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, val)
+	}
+
+	opts := addOptPool.Get().(*[]metric.AddOption) // nolint: forcetypeassert
+
+	defer func() {
+		*opts = (*opts)[:0]
+		addOptPool.Put(opts)
+	}()
+
+	*opts = append(*opts, metric.WithAttributeSet(set))
+	m.Int64Counter.Add(ctx, val, *opts...)
 }
 
-func (CacheLookups) Name() string {
-	return "cache.lookups"
-}
-
-func (CacheLookups) Unit() string {
-	return "1"
-}
-
-func (CacheLookups) Description() string { return "Number of cache lookups" }
-
+func (m CacheLookups) Inst() metric.Int64Counter                         { return m.Int64Counter }
+func (CacheLookups) Name() string                                        { return "cache.lookups" }
+func (CacheLookups) Unit() string                                        { return "1" }
+func (CacheLookups) Description() string                                 { return "Number of cache lookups" }
 func (CacheLookups) AttrResult(val CacheLookupResult) attribute.KeyValue { return Result(string(val)) }

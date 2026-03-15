@@ -168,7 +168,7 @@ func TestNewListener(t *testing.T) {
 			tc.serviceConf.Port = port
 
 			// WHEN
-			ln, err := New(t.Context(), "test", tc.serviceConf.Address(), tc.serviceConf.TLS, nil, nil)
+			ln, err := New(t.Context(), tc.serviceConf.Address(), tc.serviceConf.TLS, nil, nil)
 
 			// THEN
 			defer func() {

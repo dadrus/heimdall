@@ -79,12 +79,11 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 	}
 
 	appCtx := &appContext{
-		w:   &watcher.NoopWatcher{},
-		khr: &noopRegistry{},
-		co:  &noopCertificateObserver{},
-		v:   validator,
-		l:   logger,
-		c:   conf,
+		w:  &watcher.NoopWatcher{},
+		kr: &noopRegistry{},
+		v:  validator,
+		l:  logger,
+		c:  conf,
 	}
 
 	repo, err := repository.New(appCtx)

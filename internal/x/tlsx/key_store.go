@@ -23,8 +23,10 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -36,20 +38,30 @@ type keyStore struct {
 	path     string
 	password string
 	keyID    string
+	ko       keyregistry.KeyObserver
 
 	tlsCert   *tls.Certificate
 	certChain []*x509.Certificate
 	mut       sync.RWMutex
 }
 
-func newTLSKeyStore(path, keyID, password string) (*keyStore, error) {
+func newTLSKeyStore(
+	path, keyID, password string,
+	fw watcher.Watcher,
+	ko keyregistry.KeyObserver,
+) (*keyStore, error) {
 	ks := &keyStore{
 		path:     path,
 		keyID:    keyID,
 		password: password,
+		ko:       ko,
 	}
 
 	if err := ks.load(); err != nil {
+		return nil, err
+	}
+
+	if err := fw.Add(ks.path, ks); err != nil {
 		return nil, err
 	}
 
@@ -99,19 +111,14 @@ func (cr *keyStore) load() error {
 			"key store entry is not suitable for TLS").CausedBy(err)
 	}
 
+	cr.ko.Notify(keyregistry.KeyInfo{Entry: *entry, Exportable: false})
+
 	cr.mut.Lock()
 	cr.tlsCert = &cert
 	cr.certChain = entry.CertChain
 	cr.mut.Unlock()
 
 	return nil
-}
-
-func (cr *keyStore) activeCertificateChain() []*x509.Certificate {
-	cr.mut.RLock()
-	defer cr.mut.RUnlock()
-
-	return cr.certChain
 }
 
 func (cr *keyStore) certificate(cc compatibilityChecker) (*tls.Certificate, error) {

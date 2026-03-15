@@ -34,7 +34,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	mocks1 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRuleFactoryNew(t *testing.T) {
@@ -1084,7 +1083,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
-					{FinalizerRef: "bar", Condition: pointer.To("")},
+					{FinalizerRef: "bar", Condition: new("")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1142,10 +1141,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
-					{AuthorizerRef: "bar", Condition: pointer.To("false")},
-					{ContextualizerRef: "bar", Condition: pointer.To("true")},
+					{AuthorizerRef: "bar", Condition: new("false")},
+					{ContextualizerRef: "bar", Condition: new("true")},
 					{AuthorizerRef: "baz"},
-					{FinalizerRef: "bar", Condition: pointer.To("true")},
+					{FinalizerRef: "bar", Condition: new("true")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1236,8 +1235,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{FinalizerRef: "baz"},
 				},
 				ErrorHandler: []v1beta1.Step{
-					{ErrorHandlerRef: "foo", Condition: pointer.To("true")},
-					{ErrorHandlerRef: "bar", Condition: pointer.To("false")},
+					{ErrorHandlerRef: "foo", Condition: new("true")},
+					{ErrorHandlerRef: "bar", Condition: new("false")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1424,8 +1423,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
-					{AuthenticatorRef: "bar", Principal: pointer.To("custom")},
-					{AuthenticatorRef: "baz", Principal: pointer.To("custom")},
+					{AuthenticatorRef: "bar", Principal: new("custom")},
+					{AuthenticatorRef: "baz", Principal: new("custom")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
@@ -1489,8 +1488,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				ID:      "foobar",
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{
-					{AuthenticatorRef: "bar", Principal: pointer.To("a")},
-					{AuthenticatorRef: "baz", Principal: pointer.To("b")},
+					{AuthenticatorRef: "bar", Principal: new("a")},
+					{AuthenticatorRef: "baz", Principal: new("b")},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {

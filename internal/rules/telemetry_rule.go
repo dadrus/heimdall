@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/dadrus/heimdall/internal/otel/semconv"
+	"github.com/dadrus/heimdall/internal/otel/metrics"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
@@ -16,12 +16,12 @@ import (
 type telemetryRule struct {
 	r     rule.Rule
 	t     trace.Tracer
-	rd    semconv.RuleExecutionDuration
+	rd    metrics.RuleExecutionDuration
 	attrs attribute.Set
 }
 
 func newTelemetryRule(rul rule.Rule, meter metric.Meter, tracer trace.Tracer) rule.Rule {
-	rd, _ := semconv.NewRuleExecutionDuration(meter)
+	rd, _ := metrics.NewRuleExecutionDuration(meter)
 
 	return &telemetryRule{
 		r:  rul,
@@ -49,8 +49,8 @@ func (tr *telemetryRule) Execute(hctx pipeline.Context) (pipeline.Backend, error
 		"Rule Execution",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(
-			semconv.RuleIDKey.String(tr.r.ID()),
-			semconv.RuleSetKey.String(tr.r.SrcID()),
+			metrics.RuleIDKey.String(tr.r.ID()),
+			metrics.RuleSetKey.String(tr.r.SrcID()),
 		),
 	)
 

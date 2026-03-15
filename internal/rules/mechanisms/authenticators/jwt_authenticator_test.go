@@ -58,7 +58,6 @@ import (
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	"github.com/dadrus/heimdall/internal/x/pointer"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -1160,7 +1159,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL + "{{ Foo }}"}}, nil
 				}),
-				ttl: pointer.To(0 * time.Second),
+				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1194,7 +1193,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: "http://jwks.heimdall.test.local"}}, nil
 				}),
-				ttl: pointer.To(0 * time.Second),
+				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1228,7 +1227,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL}}, nil
 				}),
-				ttl: pointer.To(0 * time.Second),
+				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1272,7 +1271,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				ttl: pointer.To(0 * time.Second),
+				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1322,7 +1321,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						},
 					}, nil
 				}),
-				ttl: pointer.To(0 * time.Second),
+				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1365,7 +1364,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id:  "auth3",
 				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
-				ttl: pointer.To(0 * time.Second),
+				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1406,7 +1405,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id:  "auth3",
 				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
-				ttl: pointer.To(0 * time.Second),
+				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1462,7 +1461,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"foo"}},
-				ttl: pointer.To(10 * time.Second),
+				ttl: new(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1519,7 +1518,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
-				ttl: pointer.To(10 * time.Second),
+				ttl: new(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1576,7 +1575,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
-				ttl: pointer.To(10 * time.Second),
+				ttl: new(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1638,7 +1637,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &PrincipalInfo{IDFrom: "foobar"},
-				ttl: pointer.To(10 * time.Second),
+				ttl: new(10 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -1699,7 +1698,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           pointer.To(10 * time.Second),
+				ttl:           new(10 * time.Second),
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -1767,7 +1766,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           pointer.To(10 * time.Second),
+				ttl:           new(10 * time.Second),
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -1848,7 +1847,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           pointer.To(10 * time.Second),
+				ttl:           new(10 * time.Second),
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -1923,7 +1922,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           pointer.To(10 * time.Second),
+				ttl:           new(10 * time.Second),
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -2022,7 +2021,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &PrincipalInfo{IDFrom: "sub"},
-				ttl:             pointer.To(10 * time.Second),
+				ttl:             new(10 * time.Second),
 				validateJWKCert: true,
 				principalName:   DefaultPrincipalName,
 			},
@@ -2091,7 +2090,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &PrincipalInfo{IDFrom: "sub"},
-				ttl:             pointer.To(10 * time.Second),
+				ttl:             new(10 * time.Second),
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
 				principalName:   DefaultPrincipalName,
@@ -2380,7 +2379,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{"barfoo"},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           pointer.To(0 * time.Second),
+				ttl:           new(0 * time.Second),
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -2453,7 +2452,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					AllowedAlgorithms: []string{"ES384"},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           pointer.To(0 * time.Second),
+				ttl:           new(0 * time.Second),
 				principalName: DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -2529,7 +2528,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					AllowedAlgorithms: []string{"ES384"},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           pointer.To(0 * time.Second),
+				ttl:           new(0 * time.Second),
 				principalName: "baz",
 			},
 			configureMocks: func(t *testing.T,
@@ -2784,7 +2783,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk does not contain certificate and ttl configured": {
-			authenticator: &jwtAuthenticator{ttl: pointer.To(time.Hour * 2)},
+			authenticator: &jwtAuthenticator{ttl: new(time.Hour * 2)},
 			jwk: &jose.JSONWebKey{
 				KeyID: "1",
 				Key:   ee1PrivKey.PublicKey,
@@ -2796,7 +2795,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk does not contain certificate and ttl disabled": {
-			authenticator: &jwtAuthenticator{ttl: pointer.To(-1 * time.Second)},
+			authenticator: &jwtAuthenticator{ttl: new(-1 * time.Second)},
 			jwk: &jose.JSONWebKey{
 				KeyID: "1",
 				Key:   ee1PrivKey.PublicKey,
@@ -2821,7 +2820,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk contains certificate and ttl configured to a time point exceeding the ttl of certificate": {
-			authenticator: &jwtAuthenticator{ttl: pointer.To(time.Hour * 24 * 100)},
+			authenticator: &jwtAuthenticator{ttl: new(time.Hour * 24 * 100)},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
 				Key:          ee1PrivKey.PublicKey,
@@ -2836,7 +2835,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk contains certificate and ttl configured to a time point before the certificate expires": {
-			authenticator: &jwtAuthenticator{ttl: pointer.To(time.Hour * 2)},
+			authenticator: &jwtAuthenticator{ttl: new(time.Hour * 2)},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
 				Key:          ee1PrivKey.PublicKey,
@@ -2849,7 +2848,7 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 			},
 		},
 		"jwk contains certificate and ttl disabled": {
-			authenticator: &jwtAuthenticator{ttl: pointer.To(-1 * time.Second)},
+			authenticator: &jwtAuthenticator{ttl: new(-1 * time.Second)},
 			jwk: &jose.JSONWebKey{
 				KeyID:        "1",
 				Key:          ee1PrivKey.PublicKey,

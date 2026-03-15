@@ -18,7 +18,6 @@ package finalizers
 
 import (
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
 	"time"
@@ -92,12 +91,14 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 			"failed decoding config for jwt finalizer '%s'", name).CausedBy(err)
 	}
 
-	signer, err := newJWTSigner(&conf.Signer, app.Watcher())
+	signer, err := newJWTSigner(
+		&conf.Signer,
+		app.Watcher(),
+		app.KeyRegistry(),
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	app.KeyHolderRegistry().AddKeyHolder(signer)
 
 	fin := &jwtFinalizer{
 		name:   name,
@@ -116,8 +117,6 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 		signer: signer,
 		v:      conf.Values,
 	}
-
-	app.CertificateObserver().Add(fin)
 
 	return fin, nil
 }
@@ -216,11 +215,10 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, erro
 	}, nil
 }
 
-func (f *jwtFinalizer) Certificates() []*x509.Certificate { return f.signer.activeCertificateChain() }
-func (f *jwtFinalizer) Kind() types.Kind                  { return types.KindFinalizer }
-func (f *jwtFinalizer) Name() string                      { return f.name }
-func (f *jwtFinalizer) ID() string                        { return f.id }
-func (f *jwtFinalizer) Type() string                      { return f.name }
+func (f *jwtFinalizer) Kind() types.Kind { return types.KindFinalizer }
+func (f *jwtFinalizer) Name() string     { return f.name }
+func (f *jwtFinalizer) ID() string       { return f.id }
+func (f *jwtFinalizer) Type() string     { return f.name }
 
 func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())

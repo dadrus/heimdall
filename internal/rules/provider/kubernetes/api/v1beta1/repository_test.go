@@ -31,7 +31,6 @@ import (
 	"k8s.io/client-go/rest/fake"
 
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pointer"
 )
 
 func TestRepositoryList(t *testing.T) {
@@ -68,7 +67,7 @@ func TestRepositoryList(t *testing.T) {
 				Body:       io.NopCloser(strings.NewReader("{}")),
 			},
 			opts: metav1.ListOptions{
-				TimeoutSeconds: pointer.To[int64](5),
+				TimeoutSeconds: new(int64(5)),
 				Limit:          10,
 			},
 			assert: func(t *testing.T, req *http.Request) {
@@ -140,7 +139,7 @@ func TestRepositoryWatch(t *testing.T) {
 				Body:       io.NopCloser(strings.NewReader("{}")),
 			},
 			opts: metav1.ListOptions{
-				TimeoutSeconds: pointer.To[int64](5),
+				TimeoutSeconds: new(int64(5)),
 				Limit:          10,
 			},
 			assert: func(t *testing.T, req *http.Request) {
@@ -286,7 +285,7 @@ func TestRepositoryPatchStatus(t *testing.T) {
 				Body:       io.NopCloser(strings.NewReader("{}")),
 			},
 			opts: metav1.PatchOptions{
-				Force: pointer.To[bool](true),
+				Force: new(true),
 			},
 			assert: func(t *testing.T, req *http.Request) {
 				t.Helper()

@@ -17,6 +17,7 @@
 package testsupport
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -29,7 +30,7 @@ import (
 
 type EndEntity struct {
 	Certificate *x509.Certificate
-	PrivKey     any
+	PrivKey     crypto.Signer
 }
 
 type CA struct {
@@ -40,7 +41,7 @@ type CA struct {
 
 func NewCA(privKey *ecdsa.PrivateKey, cert *x509.Certificate) *CA {
 	return &CA{
-		lastEECertSN: 0,
+		lastEECertSN: 1000, //nolint: mnd
 		PrivKey:      privKey,
 		Certificate:  cert,
 	}
@@ -76,7 +77,7 @@ func NewRootCA(CN string, validity time.Duration) (*CA, error) { // nolint: gocr
 	return &CA{
 		PrivKey:      priv,
 		Certificate:  cert,
-		lastEECertSN: 0,
+		lastEECertSN: 1000, //nolint: mnd
 	}, nil
 }
 

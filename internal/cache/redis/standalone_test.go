@@ -350,7 +350,7 @@ func TestStandaloneCache(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Watcher().Maybe().Return(wm)
-			appCtx.EXPECT().CertificateObserver().Maybe().Return(nil)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
 
 			// WHEN
 			cch, err := NewStandaloneCache(appCtx, conf)

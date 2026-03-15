@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/dadrus/heimdall/internal/otel/semconv"
+	"github.com/dadrus/heimdall/internal/otel/metrics"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -41,11 +41,11 @@ type repository struct {
 	index          *radixtrie.Trie[rule.Route]
 	rulesTrieMutex sync.RWMutex
 
-	rl semconv.RulesLoaded
+	rl metrics.RulesLoaded
 }
 
 func newRepository(ruleFactory rule.Factory, meter metric.Meter) (rule.Repository, error) {
-	rl, err := semconv.NewRulesLoaded(meter)
+	rl, err := metrics.NewRulesLoaded(meter)
 	if err != nil {
 		return nil, err
 	}

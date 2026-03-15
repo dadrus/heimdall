@@ -261,7 +261,7 @@ tls:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Watcher().Maybe().Return(nil)
-			appCtx.EXPECT().CertificateObserver().Maybe().Return(nil)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
 
 			// WHEN
 			cch, err := NewClusterCache(appCtx, conf)

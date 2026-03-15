@@ -14,16 +14,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package tlsx
+package keyregistry
 
-import "crypto/x509"
+import (
+	"go.uber.org/fx"
+)
 
-type certificateSupplier struct {
-	name string
-	ks   *keyStore
-}
-
-func (c *certificateSupplier) Name() string { return c.name }
-func (c *certificateSupplier) Certificates() []*x509.Certificate {
-	return c.ks.activeCertificateChain()
-}
+var Module = fx.Options( // nolint: gochecknoglobals
+	fx.Provide(newRegistry),
+)
