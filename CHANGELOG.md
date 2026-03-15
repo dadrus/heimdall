@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.17.11](https://github.com/dadrus/heimdall/compare/v0.17.10...v0.17.11) (2026-03-15)
+
+
+### Bug Fixes
+
+* Split query from path in envoy gRPC based ExtAuth integration ([#3106](https://github.com/dadrus/heimdall/issues/3106)) ([50321b3](https://github.com/dadrus/heimdall/commit/50321b3007db1ccafdc6b1cfd6bdc3689c19a502))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 84a4fc4 ([#3102](https://github.com/dadrus/heimdall/issues/3102)) ([9fc7e63](https://github.com/dadrus/heimdall/commit/9fc7e63b24dd3ccd6214162826ca573b9c317873))
+* update module github.com/goccy/go-json to v0.10.6 ([#3103](https://github.com/dadrus/heimdall/issues/3103)) ([7dd3c18](https://github.com/dadrus/heimdall/commit/7dd3c18b7d67f1b88396b278d65c877921bbfdac))
+* update module google.golang.org/grpc to v1.79.2 ([#3094](https://github.com/dadrus/heimdall/issues/3094)) ([bdc835b](https://github.com/dadrus/heimdall/commit/bdc835b173f4e71c2c404430d4444e2296214d5a))
+* update module k8s.io/klog/v2 to v2.140.0 ([#3097](https://github.com/dadrus/heimdall/issues/3097)) ([8b739f1](https://github.com/dadrus/heimdall/commit/8b739f16f7322adfe97d1881be43cd363a545bc3))
+* update opentelemetry-go monorepo to v1.42.0([#3098](https://github.com/dadrus/heimdall/issues/3098)) ([6a226f5](https://github.com/dadrus/heimdall/commit/6a226f50e9cdfdef42ece50e8b932d7f17ad2ed5))
+* update opentelemetry-go-contrib monorepo to v0.67.0 ([#3099](https://github.com/dadrus/heimdall/issues/3099)) ([0c9ea4a](https://github.com/dadrus/heimdall/commit/0c9ea4ac96572afcc2b22488586970be9465e06f))
+
 ## [0.17.10](https://github.com/dadrus/heimdall/compare/v0.17.9...v0.17.10) (2026-03-05)
 
 
