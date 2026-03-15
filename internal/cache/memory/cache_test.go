@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -79,12 +79,12 @@ func TestMemoryCacheUsage(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		key            string
-		configureCache func(t *testing.T, cache cache.Cache)
+		configureCache func(t *testing.T, cache types.Cache)
 		assert         func(t *testing.T, err error, data []byte)
 	}{
 		"can retrieve not expired value": {
 			key: "foo",
-			configureCache: func(t *testing.T, cache cache.Cache) {
+			configureCache: func(t *testing.T, cache types.Cache) {
 				t.Helper()
 
 				err := cache.Set(t.Context(), "foo", []byte("bar"), 10*time.Minute)
@@ -99,7 +99,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 		},
 		"cannot retrieve expired value": {
 			key: "bar",
-			configureCache: func(t *testing.T, cache cache.Cache) {
+			configureCache: func(t *testing.T, cache types.Cache) {
 				t.Helper()
 
 				err := cache.Set(t.Context(), "bar", []byte("baz"), 1*time.Microsecond)
@@ -111,19 +111,19 @@ func TestMemoryCacheUsage(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, ErrNoCacheEntry)
+				require.ErrorIs(t, err, types.ErrNoEntry)
 			},
 		},
 		"cannot retrieve not existing value": {
 			key: "baz",
-			configureCache: func(t *testing.T, _ cache.Cache) {
+			configureCache: func(t *testing.T, _ types.Cache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, err error, _ []byte) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, ErrNoCacheEntry)
+				require.ErrorIs(t, err, types.ErrNoEntry)
 			},
 		},
 	} {

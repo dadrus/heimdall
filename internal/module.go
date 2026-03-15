@@ -18,6 +18,7 @@ package internal
 
 import (
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -39,6 +40,7 @@ type appContext struct {
 	kr keyregistry.Registry
 	v  validation.Validator
 	l  zerolog.Logger
+	m  metric.Meter
 	c  *config.Configuration
 }
 
@@ -46,6 +48,7 @@ func (c *appContext) Watcher() watcher.Watcher          { return c.w }
 func (c *appContext) KeyRegistry() keyregistry.Registry { return c.kr }
 func (c *appContext) Validator() validation.Validator   { return c.v }
 func (c *appContext) Logger() zerolog.Logger            { return c.l }
+func (c *appContext) Meter() metric.Meter               { return c.m }
 func (c *appContext) Config() *config.Configuration     { return c.c }
 
 var Module = fx.Options( //nolint:gochecknoglobals
@@ -56,6 +59,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 		kr keyregistry.Registry,
 		validator validation.Validator,
 		logger zerolog.Logger,
+		meter metric.Meter,
 		conf *config.Configuration,
 	) app.Context {
 		return &appContext{
@@ -63,6 +67,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 			kr: kr,
 			v:  validator,
 			l:  logger,
+			m:  meter,
 			c:  conf,
 		}
 	}),

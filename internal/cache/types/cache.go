@@ -1,4 +1,4 @@
-// Copyright 2022-2025 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,23 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package app
+package types //nolint: revive
 
 import (
-	"github.com/rs/zerolog"
-	"go.opentelemetry.io/otel/metric"
-
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
+	"context"
+	"errors"
+	"time"
 )
 
-type Context interface {
-	Watcher() watcher.Watcher
-	KeyRegistry() keyregistry.Registry
-	Validator() validation.Validator
-	Config() *config.Configuration
-	Logger() zerolog.Logger
-	Meter() metric.Meter
+var (
+	ErrNoEntry         = errors.New("no cache entry")
+	ErrUnsupportedType = errors.New("cache type unsupported")
+)
+
+type Cache interface {
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+
+	Get(ctx context.Context, key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 }

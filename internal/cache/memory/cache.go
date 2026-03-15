@@ -18,7 +18,6 @@ package memory
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/inhies/go-bytesize"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -39,8 +39,6 @@ const (
 	// approximately 184 bytes, excluding the empty cache size.
 	ttlCacheOverheadPerEntry = 184
 )
-
-var ErrNoCacheEntry = errors.New("no cache entry")
 
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
@@ -99,7 +97,7 @@ func (c *Cache) Stop(_ context.Context) error {
 func (c *Cache) Get(_ context.Context, key string) ([]byte, error) {
 	item := c.c.Get(key)
 	if item == nil || item.IsExpired() {
-		return nil, ErrNoCacheEntry
+		return nil, types.ErrNoEntry
 	}
 
 	return item.Value(), nil

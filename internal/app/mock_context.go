@@ -11,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/rs/zerolog"
 	mock "github.com/stretchr/testify/mock"
+	"go.opentelemetry.io/otel/metric"
 )
 
 // NewContextMock creates a new instance of ContextMock. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -172,6 +173,52 @@ func (_c *ContextMock_Logger_Call) Return(logger zerolog.Logger) *ContextMock_Lo
 }
 
 func (_c *ContextMock_Logger_Call) RunAndReturn(run func() zerolog.Logger) *ContextMock_Logger_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Meter provides a mock function for the type ContextMock
+func (_mock *ContextMock) Meter() metric.Meter {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Meter")
+	}
+
+	var r0 metric.Meter
+	if returnFunc, ok := ret.Get(0).(func() metric.Meter); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(metric.Meter)
+		}
+	}
+	return r0
+}
+
+// ContextMock_Meter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Meter'
+type ContextMock_Meter_Call struct {
+	*mock.Call
+}
+
+// Meter is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) Meter() *ContextMock_Meter_Call {
+	return &ContextMock_Meter_Call{Call: _e.mock.On("Meter")}
+}
+
+func (_c *ContextMock_Meter_Call) Run(run func()) *ContextMock_Meter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_Meter_Call) Return(meter metric.Meter) *ContextMock_Meter_Call {
+	_c.Call.Return(meter)
+	return _c
+}
+
+func (_c *ContextMock_Meter_Call) RunAndReturn(run func() metric.Meter) *ContextMock_Meter_Call {
 	_c.Call.Return(run)
 	return _c
 }

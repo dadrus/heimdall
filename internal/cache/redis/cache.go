@@ -23,6 +23,7 @@ import (
 	"github.com/redis/rueidis"
 	"github.com/redis/rueidis/rueidisotel"
 
+	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -59,6 +60,10 @@ func (c *redisCache) Stop(_ context.Context) error {
 func (c *redisCache) Get(ctx context.Context, key string) ([]byte, error) {
 	val, err := c.c.DoCache(ctx, c.c.B().Get().Key(key).Cache(), c.ttl).ToString()
 	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, types.ErrNoEntry
+		}
+
 		return nil, err
 	}
 
