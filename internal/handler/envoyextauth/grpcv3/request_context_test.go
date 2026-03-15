@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -38,16 +37,15 @@ func TestNewRequestContext(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	reqURI, err := url.ParseRequestURI("/test/baz?bar=moo#foobar")
-	require.NoError(t, err)
-
 	httpReq := &envoy_auth.AttributeContext_HttpRequest{
-		Method:  http.MethodPatch,
-		Scheme:  "https",
-		Host:    "foo.bar:8080",
-		Path:    reqURI.String(),
-		Body:    "content=heimdall",
-		RawBody: []byte("content=heimdall"),
+		Method:   http.MethodPatch,
+		Scheme:   "https",
+		Host:     "foo.bar:8080",
+		Path:     "/test/baz?bar=moo#foobar",
+		Query:    "", // documented to be empty
+		Fragment: "", // documented to be empty
+		Body:     "content=heimdall",
+		RawBody:  []byte("content=heimdall"),
 		Headers: map[string]string{
 			"x-foo-bar":    "barfoo",
 			"cookie":       "bar=foo;foo=baz",
@@ -79,10 +77,10 @@ func TestNewRequestContext(t *testing.T) {
 	require.Equal(t, httpReq.GetMethod(), ctx.Request().Method)
 	require.Equal(t, httpReq.GetScheme(), ctx.Request().URL.Scheme)
 	require.Equal(t, httpReq.GetHost(), ctx.Request().URL.Host)
-	require.Equal(t, reqURI.Path, ctx.Request().URL.Path)
+	require.Equal(t, "/test/baz", ctx.Request().URL.Path)
 	require.Empty(t, ctx.Request().URL.Fragment)
-	require.Equal(t, reqURI.RawQuery, ctx.Request().URL.RawQuery)
-	require.Equal(t, "moo#foobar", ctx.Request().URL.Query().Get("bar"))
+	require.Equal(t, "bar=moo#foobar", ctx.Request().URL.RawQuery)
+	require.Equal(t, "moo#foobar", ctx.Request().URL.URL.Query().Get("bar"))
 	require.Equal(t, map[string]any{"content": []string{"heimdall"}}, ctx.Request().Body())
 	require.Len(t, ctx.Request().Headers(), 3)
 	require.Equal(t, "barfoo", ctx.Request().Header("X-Foo-Bar"))

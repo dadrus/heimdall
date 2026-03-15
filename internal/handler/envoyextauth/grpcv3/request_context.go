@@ -71,7 +71,6 @@ type RequestContext struct {
 	hmdlReq         *heimdall.Request
 
 	// the following properties are created lazy and cached
-
 	savedBody any
 	outputs   map[string]any
 }
@@ -102,7 +101,11 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	}
 
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
-	reqURI, _ := url.ParseRequestURI(httpReq.GetPath())
+
+	parsed, err := url.ParseRequestURI(httpReq.GetPath())
+	if err != nil {
+		parsed = &url.URL{}
+	}
 
 	r.ctx = ctx
 	r.reqHeaders = canonicalizeHeaders(httpReq.GetHeaders())
@@ -111,9 +114,9 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	r.hmdlReq.URL.URL = url.URL{
 		Scheme:   httpReq.GetScheme(),
 		Host:     httpReq.GetHost(),
-		Path:     reqURI.Path,
-		RawPath:  reqURI.RawPath,
-		RawQuery: reqURI.RawQuery,
+		RawPath:  parsed.RawPath,
+		Path:     parsed.Path,
+		RawQuery: parsed.RawQuery,
 	}
 	r.hmdlReq.ClientIPAddresses = clientIPs
 }
