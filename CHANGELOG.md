@@ -5,7 +5,7 @@
 
 ### Bug Fixes
 
-* Split query from path in envoy gRPC based ExtAuth integration ([#3106](https://github.com/dadrus/heimdall/issues/3106)) ([50321b3](https://github.com/dadrus/heimdall/commit/50321b3007db1ccafdc6b1cfd6bdc3689c19a502))
+* Split query from path in envoy gRPC based ExtAuth integration ([#3106](https://github.com/dadrus/heimdall/issues/3106)) by by [@Kakadus](https://github.com/Kakadus) ([50321b3](https://github.com/dadrus/heimdall/commit/50321b3007db1ccafdc6b1cfd6bdc3689c19a502))
 
 
 ### Dependencies
@@ -963,7 +963,7 @@
 ### Features
 
 * `env` settings in helm chart extended to support ConfigMaps, Secrets and Pod configuration in addition to string literals ([#1128](https://github.com/dadrus/heimdall/issues/1128)) by [@martin31821](https://github.com/martin31821) ([bf75c97](https://github.com/dadrus/heimdall/commit/bf75c97de9346169acbc2a9496fb7756814a5e60))
-* Helm chart supports setting environment variables by referencing either a ConfigMap or a Secret via `envFrom` ([#1128](https://github.com/dadrus/heimdall/issues/1128)) by [@martin31821](https://github.com/martin31821)  ([bf75c97](https://github.com/dadrus/heimdall/commit/bf75c97de9346169acbc2a9496fb7756814a5e60))
+* Helm chart supports setting environment variables by referencing either a ConfigMap or a Secret via `envFrom` ([#1128](https://github.com/dadrus/heimdall/issues/1128)) by [@martin31821](https://github.com/martin31821) ([bf75c97](https://github.com/dadrus/heimdall/commit/bf75c97de9346169acbc2a9496fb7756814a5e60))
 * Hot reloading of Signer keys store ([#1232](https://github.com/dadrus/heimdall/issues/1232)) ([36076e1](https://github.com/dadrus/heimdall/commit/36076e1de864d969b1a23d9c4cd3e7cbfab4a38e))
 * Hot reloading of TLS key stores ([#1230](https://github.com/dadrus/heimdall/issues/1230)) ([9abf723](https://github.com/dadrus/heimdall/commit/9abf7232725534afca0aa62b48d3aef70a3a9ea5))
 * Redis as (distributed) cache ([#999](https://github.com/dadrus/heimdall/issues/999)) by [@tk-innoq](https://github.com/tk-innoq) ([2f9ba81](https://github.com/dadrus/heimdall/commit/2f9ba816b37268c1348ffa6632d6a038905c8474))
