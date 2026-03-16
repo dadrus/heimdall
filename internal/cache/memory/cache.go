@@ -24,7 +24,7 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/registry"
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -42,10 +42,10 @@ const (
 
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
-	cache.Register("in-memory", cache.FactoryFunc(NewCache))
+	registry.Register("in-memory", registry.FactoryFunc(NewCache))
 }
 
-func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
+func NewCache(_ app.Context, conf map[string]any) (types.Cache, error) {
 	type Config struct {
 		EntryLimit  uint64             `mapstructure:"entry_limit"`
 		MemoryLimit *bytesize.ByteSize `mapstructure:"memory_limit"`

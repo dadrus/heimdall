@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package registry
 
 import (
 	"sync"
@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/metrics"
 	"github.com/dadrus/heimdall/internal/cache/noop"
+	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -42,7 +43,7 @@ func Register(typ string, factory Factory) {
 	factories[typ] = factory
 }
 
-func Create(ctx app.Context, typ string, config map[string]any) (Cache, error) {
+func Create(ctx app.Context, typ string, config map[string]any) (types.Cache, error) {
 	if typ == "noop" {
 		return &noop.Cache{}, nil
 	}
@@ -52,7 +53,7 @@ func Create(ctx app.Context, typ string, config map[string]any) (Cache, error) {
 	factoriesMu.RUnlock()         // nolint: wsl_v5
 
 	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrUnsupportedType, "'%s'", typ)
+		return nil, errorchain.NewWithMessagef(types.ErrUnsupportedType, "'%s'", typ)
 	}
 
 	cch, err := factory.Create(ctx, config)

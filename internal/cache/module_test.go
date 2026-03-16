@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package module
+package cache
 
 import (
 	"testing"
@@ -25,7 +25,6 @@ import (
 	noop2 "go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/noop"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -36,15 +35,15 @@ func TestNewCache(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		conf   *config.Configuration
-		assert func(t *testing.T, err error, cch cache.Cache)
+		assert func(t *testing.T, err error, cch Cache)
 	}{
 		"empty cache type": {
 			conf: &config.Configuration{},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, cache.ErrUnsupportedType)
+				require.ErrorIs(t, err, ErrUnsupportedType)
 			},
 		},
 		"in memory cache": {
@@ -53,7 +52,7 @@ func TestNewCache(t *testing.T) {
 					Type: "in-memory",
 				},
 			},
-			assert: func(t *testing.T, err error, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch Cache) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{},
 				},
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -81,7 +80,7 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{},
 				},
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -95,7 +94,7 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{},
 				},
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -108,7 +107,7 @@ func TestNewCache(t *testing.T) {
 					Type: "noop",
 				},
 			},
-			assert: func(t *testing.T, err error, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch Cache) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -122,11 +121,11 @@ func TestNewCache(t *testing.T) {
 				},
 			},
 
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, cache.ErrUnsupportedType)
+				require.ErrorIs(t, err, ErrUnsupportedType)
 			},
 		},
 	} {

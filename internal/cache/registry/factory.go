@@ -14,16 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package registry
 
-import "github.com/dadrus/heimdall/internal/app"
+import (
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/cache/types"
+)
 
 type Factory interface {
-	Create(app app.Context, conf map[string]any) (Cache, error)
+	Create(app app.Context, conf map[string]any) (types.Cache, error)
 }
 
-type FactoryFunc func(app app.Context, conf map[string]any) (Cache, error)
+type FactoryFunc func(app app.Context, conf map[string]any) (types.Cache, error)
 
-func (f FactoryFunc) Create(app app.Context, conf map[string]any) (Cache, error) {
+func (f FactoryFunc) Create(app app.Context, conf map[string]any) (types.Cache, error) {
 	return f(app, conf)
 }

@@ -23,8 +23,8 @@ import (
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/cmd/flags"
-	"github.com/dadrus/heimdall/internal/cache"
-	_ "github.com/dadrus/heimdall/internal/cache/module" // without this import, available cache configs are not registered.
+	_ "github.com/dadrus/heimdall/internal/cache" // without this import, available cache configs are not registered.
+	"github.com/dadrus/heimdall/internal/cache/registry"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
@@ -104,7 +104,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	cch, err := cache.Create(appCtx, conf.Cache.Type, conf.Cache.Config)
+	cch, err := registry.Create(appCtx, conf.Cache.Type, conf.Cache.Config)
 	if err != nil {
 		return err
 	}

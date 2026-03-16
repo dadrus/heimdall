@@ -20,15 +20,16 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/registry"
+	"github.com/dadrus/heimdall/internal/cache/types"
 )
 
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
-	cache.Register("redis", cache.FactoryFunc(NewStandaloneCache))
+	registry.Register("redis", registry.FactoryFunc(NewStandaloneCache))
 }
 
-func NewStandaloneCache(app app.Context, conf map[string]any) (cache.Cache, error) {
+func NewStandaloneCache(app app.Context, conf map[string]any) (types.Cache, error) {
 	type Config struct {
 		baseConfig `mapstructure:",squash"`
 

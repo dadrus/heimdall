@@ -92,6 +92,7 @@ func TestCacheUsage(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
+				require.ErrorIs(t, err, types.ErrNoEntry)
 				assert.Nil(t, data)
 			},
 		},
@@ -104,6 +105,7 @@ func TestCacheUsage(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
+				require.ErrorIs(t, err, types.ErrNoEntry)
 				assert.Nil(t, data)
 			},
 		},

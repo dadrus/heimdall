@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package module
+package cache
 
 import (
 	"context"
@@ -22,25 +22,25 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/cache"
 	_ "github.com/dadrus/heimdall/internal/cache/memory" // to register the memory cache
 	_ "github.com/dadrus/heimdall/internal/cache/redis"  // to register the redis cache
+	"github.com/dadrus/heimdall/internal/cache/registry"
 )
 
 //nolint:gochecknoglobals
 var Module = fx.Provide(
 	fx.Annotate(
 		newCache,
-		fx.OnStart(func(ctx context.Context, cch cache.Cache) error { return cch.Start(ctx) }),
-		fx.OnStop(func(ctx context.Context, cch cache.Cache) error { return cch.Stop(ctx) }),
+		fx.OnStart(func(ctx context.Context, cch Cache) error { return cch.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, cch Cache) error { return cch.Stop(ctx) }),
 	),
 )
 
-func newCache(app app.Context) (cache.Cache, error) {
+func newCache(app app.Context) (Cache, error) {
 	logger := app.Logger()
 	conf := app.Config()
 
-	cch, err := cache.Create(app, conf.Cache.Type, conf.Cache.Config)
+	cch, err := registry.Create(app, conf.Cache.Type, conf.Cache.Config)
 	if err != nil {
 		logger.Error().Err(err).Str("_type", conf.Cache.Type).Msg("Failed creating cache instance")
 
