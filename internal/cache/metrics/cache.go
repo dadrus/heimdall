@@ -5,13 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/types"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 const (
@@ -29,6 +29,7 @@ type Cache struct {
 	errAttrs  attribute.Set
 }
 
+func (c *Cache) Type() string                    { return c.c.Type() }
 func (c *Cache) Start(ctx context.Context) error { return c.c.Start(ctx) }
 func (c *Cache) Stop(ctx context.Context) error  { return c.c.Stop(ctx) }
 
@@ -76,7 +77,7 @@ func (c *Cache) collect(ctx context.Context, counter metric.Int64Counter, attrs 
 	}
 }
 
-func Decorate(ctx app.Context, cache types.Cache, typ string) (types.Cache, error) {
+func Decorate(ctx app.Context, cache types.Cache) (types.Cache, error) {
 	getRequestsCounter, err := ctx.Meter().Int64Counter("cache.get.requests",
 		metric.WithDescription("Total number of cache get requests"),
 		metric.WithUnit("{request}"),
@@ -95,25 +96,27 @@ func Decorate(ctx app.Context, cache types.Cache, typ string) (types.Cache, erro
 			"failed creating cache.set.requests counter").CausedBy(err)
 	}
 
+	cacheType := cache.Type()
+
 	return &Cache{
 		c:  cache,
 		gc: getRequestsCounter,
 		sc: setRequestsCounter,
 		okAttrs: attribute.NewSet(
-			cacheResultKey.String("ok"),
-			cacheBackendKey.String(typ),
+			cacheResultKey.String("success"),
+			cacheBackendKey.String(cacheType),
 		),
 		hitAttrs: attribute.NewSet(
 			cacheResultKey.String("hit"),
-			cacheBackendKey.String(typ),
+			cacheBackendKey.String(cacheType),
 		),
 		missAttrs: attribute.NewSet(
 			cacheResultKey.String("miss"),
-			cacheBackendKey.String(typ),
+			cacheBackendKey.String(cacheType),
 		),
 		errAttrs: attribute.NewSet(
 			cacheResultKey.String("error"),
-			cacheBackendKey.String(typ),
+			cacheBackendKey.String(cacheType),
 		),
 	}, nil
 }

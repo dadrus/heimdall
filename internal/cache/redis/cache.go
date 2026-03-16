@@ -33,11 +33,14 @@ type redisCache struct {
 	opts rueidis.ClientOption
 	c    rueidis.Client
 	ttl  time.Duration
+	typ  string
 }
 
-func newRedisCache(opts rueidis.ClientOption, ttl time.Duration) *redisCache {
-	return &redisCache{opts: opts, ttl: ttl}
+func newRedisCache(opts rueidis.ClientOption, ttl time.Duration, typ string) *redisCache {
+	return &redisCache{opts: opts, ttl: ttl, typ: typ}
 }
+
+func (c *redisCache) Type() string { return c.typ }
 
 func (c *redisCache) Start(_ context.Context) error {
 	client, err := rueidisotel.NewClient(c.opts)

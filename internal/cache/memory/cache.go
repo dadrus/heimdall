@@ -38,11 +38,13 @@ const (
 	// averaging about 144 bytes per entry. Combined, this results in an overhead of
 	// approximately 184 bytes, excluding the empty cache size.
 	ttlCacheOverheadPerEntry = 184
+
+	cacheType = "in-memory"
 )
 
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
-	registry.Register("in-memory", registry.FactoryFunc(NewCache))
+	registry.Register(cacheType, registry.FactoryFunc(NewCache))
 }
 
 func NewCache(_ app.Context, conf map[string]any) (types.Cache, error) {
@@ -81,6 +83,8 @@ func NewCache(_ app.Context, conf map[string]any) (types.Cache, error) {
 type Cache struct {
 	c *ttlcache.Cache[string, []byte]
 }
+
+func (c *Cache) Type() string { return cacheType }
 
 func (c *Cache) Start(_ context.Context) error {
 	go c.c.Start()

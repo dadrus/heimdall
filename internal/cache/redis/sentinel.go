@@ -61,5 +61,5 @@ func NewSentinelCache(app app.Context, conf map[string]any) (types.Cache, error)
 		MasterSet: cfg.Master,
 	}
 
-	return newRedisCache(opts, cfg.ClientCache.TTL), nil
+	return newRedisCache(opts, cfg.ClientCache.TTL, "redis-sentinel"), nil
 }

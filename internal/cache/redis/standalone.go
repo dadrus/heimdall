@@ -55,5 +55,5 @@ func NewStandaloneCache(app app.Context, conf map[string]any) (types.Cache, erro
 	opts.SelectDB = cfg.DB
 	opts.ForceSingleClient = true
 
-	return newRedisCache(opts, cfg.ClientCache.TTL), nil
+	return newRedisCache(opts, cfg.ClientCache.TTL, "redis"), nil
 }
