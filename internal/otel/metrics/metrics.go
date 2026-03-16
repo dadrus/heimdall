@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}     //nolint:gochecknoglobals
 	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}  //nolint:gochecknoglobals
 	obsOptPool = &sync.Pool{New: func() any { return &[]metric.ObserveOption{} }} //nolint:gochecknoglobals
 )
