@@ -21,6 +21,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0/httpconv"
@@ -38,6 +39,7 @@ func initMeterProvider(
 ) error {
 	if !conf.Metrics.Enabled {
 		logger.Info().Msg("OpenTelemetry metrics disabled.")
+		otel.SetMeterProvider(noop.MeterProvider{})
 
 		return nil
 	}
