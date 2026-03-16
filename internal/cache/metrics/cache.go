@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
@@ -80,7 +82,8 @@ func Decorate(ctx app.Context, cache types.Cache, typ string) (types.Cache, erro
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
+			"failed creating cache.get.requests counter").CausedBy(err)
 	}
 
 	setRequestsCounter, err := ctx.Meter().Int64Counter("cache.set.requests",
@@ -88,7 +91,8 @@ func Decorate(ctx app.Context, cache types.Cache, typ string) (types.Cache, erro
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
+			"failed creating cache.set.requests counter").CausedBy(err)
 	}
 
 	return &Cache{
