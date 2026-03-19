@@ -21,9 +21,9 @@ import (
 	"slices"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/dadrus/heimdall/internal/otel/metrics"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -32,20 +32,41 @@ import (
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
+const (
+	ruleSetIDKey       = attribute.Key("ruleset.id")
+	ruleSetNameKey     = attribute.Key("ruleset.name")
+	ruleSetProviderKey = attribute.Key("provider")
+)
+
+type ruleSetID struct {
+	id       string
+	name     string
+	provider string
+}
+
+type ruleSetMetrics struct {
+	count int64
+	attrs attribute.Set
+}
+
 type repository struct {
 	dr rule.Rule
 
 	knownRules      []rule.Rule
+	ruleSetIDs      map[ruleSetID]ruleSetMetrics
 	knownRulesMutex sync.RWMutex
 
 	index          *radixtrie.Trie[rule.Route]
 	rulesTrieMutex sync.RWMutex
 
-	rl metrics.RulesLoaded
+	rl metric.Int64ObservableGauge
 }
 
 func newRepository(ruleFactory rule.Factory, meter metric.Meter) (rule.Repository, error) {
-	rl, err := metrics.NewRulesLoaded(meter)
+	gauge, err := meter.Int64ObservableGauge("rules.loaded",
+		metric.WithDescription("Number of loaded rules"),
+		metric.WithUnit("{rule}"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -60,10 +81,11 @@ func newRepository(ruleFactory rule.Factory, meter metric.Meter) (rule.Repositor
 				return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
 			}),
 		),
-		rl: rl,
+		rl:         gauge,
+		ruleSetIDs: make(map[ruleSetID]ruleSetMetrics, 10),
 	}
 
-	if _, err = meter.RegisterCallback(repo.collectMetrics, rl.Inst()); err != nil {
+	if _, err = meter.RegisterCallback(repo.collectMetrics, gauge); err != nil {
 		return nil, err
 	}
 
@@ -128,6 +150,8 @@ func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) 
 	}
 
 	r.knownRules = append(r.knownRules, rules...)
+
+	r.prepareMetrics()
 
 	r.rulesTrieMutex.Lock()
 	r.index = tmp
@@ -211,6 +235,8 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 	knownRules = append(knownRules, toBeAdded...)
 	r.knownRules = knownRules
 
+	r.prepareMetrics()
+
 	r.rulesTrieMutex.Lock()
 	r.index = tmp
 	r.rulesTrieMutex.Unlock()
@@ -236,11 +262,35 @@ func (r *repository) DeleteRuleSet(_ context.Context, srcID string) error {
 		return slices.Contains(applicable, r)
 	})
 
+	r.prepareMetrics()
+
 	r.rulesTrieMutex.Lock()
 	r.index = tmp
 	r.rulesTrieMutex.Unlock()
 
 	return nil
+}
+
+func (r *repository) prepareMetrics() {
+	clear(r.ruleSetIDs)
+
+	for _, rul := range r.knownRules {
+		key := ruleSetID{
+			name: rul.SrcID(),
+		}
+
+		metrics, ok := r.ruleSetIDs[key]
+		if !ok {
+			metrics.attrs = attribute.NewSet(
+				ruleSetIDKey.String(key.id),
+				ruleSetNameKey.String(key.name),
+				ruleSetProviderKey.String(key.provider),
+			)
+		}
+
+		metrics.count++
+		r.ruleSetIDs[key] = metrics
+	}
 }
 
 func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.Rule) error {
@@ -310,11 +360,13 @@ func (r *repository) removeRulesFrom(trie *radixtrie.Trie[rule.Route], tbdRules 
 	return nil
 }
 
-func (r *repository) collectMetrics(ctx context.Context, observer metric.Observer) error {
+func (r *repository) collectMetrics(_ context.Context, observer metric.Observer) error {
 	r.knownRulesMutex.RLock()
 	defer r.knownRulesMutex.RUnlock()
 
-	// TODO: implement me
+	for _, metrics := range r.ruleSetIDs {
+		observer.ObserveInt64(r.rl, metrics.count, metric.WithAttributeSet(metrics.attrs))
+	}
 
 	return nil
 }
