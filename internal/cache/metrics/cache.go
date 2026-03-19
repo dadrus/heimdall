@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	cacheResultKey  = attribute.Key("cache.result")
-	cacheBackendKey = attribute.Key("cache.backend")
+	cacheResultKey  = attribute.Key("result")
+	cacheBackendKey = attribute.Key("backend")
 )
 
 type Cache struct {
