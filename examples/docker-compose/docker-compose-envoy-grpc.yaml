@@ -1,6 +1,6 @@
 services:
   proxy:
-    image: envoyproxy/envoy:v1.35.3
+    image: envoyproxy/envoy:v1.37.1
     volumes:
     - ./envoy-config-grpc.yaml:/envoy.yaml:ro
     ports:
