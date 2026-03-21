@@ -193,7 +193,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Setup k8s tools
-        uses: yokawasa/action-setup-kube-tools@e9417d7e5e0ad29e33ea603f98cddbb46bdb6bcd # v0.13.2
+        uses: yokawasa/action-setup-kube-tools@4710caf20bc62368b8edab32f7c9cc7dc3a2ac31 # v0.13.3
         with:
           setup-tools: |
             helm
@@ -226,7 +226,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Setup k8s tools
-        uses: yokawasa/action-setup-kube-tools@e9417d7e5e0ad29e33ea603f98cddbb46bdb6bcd # v0.13.2
+        uses: yokawasa/action-setup-kube-tools@4710caf20bc62368b8edab32f7c9cc7dc3a2ac31 # v0.13.3
         with:
           setup-tools: |
             helm
