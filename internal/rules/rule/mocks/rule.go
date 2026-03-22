@@ -37,12 +37,12 @@ func (_m *RuleMock) EXPECT() *RuleMock_Expecter {
 	return &RuleMock_Expecter{mock: &_m.Mock}
 }
 
-// EqualTo provides a mock function for the type RuleMock
-func (_mock *RuleMock) EqualTo(other rule.Rule) bool {
+// Equals provides a mock function for the type RuleMock
+func (_mock *RuleMock) Equals(other rule.Rule) bool {
 	ret := _mock.Called(other)
 
 	if len(ret) == 0 {
-		panic("no return value specified for EqualTo")
+		panic("no return value specified for Equals")
 	}
 
 	var r0 bool
@@ -54,18 +54,18 @@ func (_mock *RuleMock) EqualTo(other rule.Rule) bool {
 	return r0
 }
 
-// RuleMock_EqualTo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EqualTo'
-type RuleMock_EqualTo_Call struct {
+// RuleMock_Equals_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Equals'
+type RuleMock_Equals_Call struct {
 	*mock.Call
 }
 
-// EqualTo is a helper method to define mock.On call
+// Equals is a helper method to define mock.On call
 //   - other rule.Rule
-func (_e *RuleMock_Expecter) EqualTo(other interface{}) *RuleMock_EqualTo_Call {
-	return &RuleMock_EqualTo_Call{Call: _e.mock.On("EqualTo", other)}
+func (_e *RuleMock_Expecter) Equals(other interface{}) *RuleMock_Equals_Call {
+	return &RuleMock_Equals_Call{Call: _e.mock.On("Equals", other)}
 }
 
-func (_c *RuleMock_EqualTo_Call) Run(run func(other rule.Rule)) *RuleMock_EqualTo_Call {
+func (_c *RuleMock_Equals_Call) Run(run func(other rule.Rule)) *RuleMock_Equals_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 rule.Rule
 		if args[0] != nil {
@@ -78,12 +78,12 @@ func (_c *RuleMock_EqualTo_Call) Run(run func(other rule.Rule)) *RuleMock_EqualT
 	return _c
 }
 
-func (_c *RuleMock_EqualTo_Call) Return(b bool) *RuleMock_EqualTo_Call {
+func (_c *RuleMock_Equals_Call) Return(b bool) *RuleMock_Equals_Call {
 	_c.Call.Return(b)
 	return _c
 }
 
-func (_c *RuleMock_EqualTo_Call) RunAndReturn(run func(other rule.Rule) bool) *RuleMock_EqualTo_Call {
+func (_c *RuleMock_Equals_Call) RunAndReturn(run func(other rule.Rule) bool) *RuleMock_Equals_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -291,46 +291,46 @@ func (_c *RuleMock_SameAs_Call) RunAndReturn(run func(other rule.Rule) bool) *Ru
 	return _c
 }
 
-// SrcID provides a mock function for the type RuleMock
-func (_mock *RuleMock) SrcID() string {
+// Source provides a mock function for the type RuleMock
+func (_mock *RuleMock) Source() rule.RuleSet {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for SrcID")
+		panic("no return value specified for Source")
 	}
 
-	var r0 string
-	if returnFunc, ok := ret.Get(0).(func() string); ok {
+	var r0 rule.RuleSet
+	if returnFunc, ok := ret.Get(0).(func() rule.RuleSet); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Get(0).(rule.RuleSet)
 	}
 	return r0
 }
 
-// RuleMock_SrcID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SrcID'
-type RuleMock_SrcID_Call struct {
+// RuleMock_Source_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Source'
+type RuleMock_Source_Call struct {
 	*mock.Call
 }
 
-// SrcID is a helper method to define mock.On call
-func (_e *RuleMock_Expecter) SrcID() *RuleMock_SrcID_Call {
-	return &RuleMock_SrcID_Call{Call: _e.mock.On("SrcID")}
+// Source is a helper method to define mock.On call
+func (_e *RuleMock_Expecter) Source() *RuleMock_Source_Call {
+	return &RuleMock_Source_Call{Call: _e.mock.On("Source")}
 }
 
-func (_c *RuleMock_SrcID_Call) Run(run func()) *RuleMock_SrcID_Call {
+func (_c *RuleMock_Source_Call) Run(run func()) *RuleMock_Source_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *RuleMock_SrcID_Call) Return(s string) *RuleMock_SrcID_Call {
-	_c.Call.Return(s)
+func (_c *RuleMock_Source_Call) Return(ruleSet rule.RuleSet) *RuleMock_Source_Call {
+	_c.Call.Return(ruleSet)
 	return _c
 }
 
-func (_c *RuleMock_SrcID_Call) RunAndReturn(run func() string) *RuleMock_SrcID_Call {
+func (_c *RuleMock_Source_Call) RunAndReturn(run func() rule.RuleSet) *RuleMock_Source_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -33,12 +33,12 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		ruleset   *v1beta1.RuleSet
+		ruleset   v1beta1.RuleSet
 		configure func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock)
 		assert    func(t *testing.T, err error)
 	}{
 		"unsupported version": {
-			ruleset:   &v1beta1.RuleSet{Version: "foo"},
+			ruleset:   v1beta1.RuleSet{Version: "foo"},
 			configure: func(t *testing.T, _ *mocks.FactoryMock, _ *mocks.RepositoryMock) { t.Helper() },
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -48,11 +48,12 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			},
 		},
 		"error while loading rule set": {
-			ruleset: &v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
+			ruleset: v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -62,12 +63,14 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			},
 		},
 		"error while adding rule set": {
-			ruleset: &v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
+			ruleset: v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
-				repo.EXPECT().AddRuleSet(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("test error"))
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
+					Return(&mocks.RuleMock{}, nil)
+				repo.EXPECT().AddRuleSet(mock.Anything, mock.Anything, mock.Anything).
+					Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -77,8 +80,8 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			},
 		},
 		"successful": {
-			ruleset: &v1beta1.RuleSet{
-				MetaData: v1beta1.MetaData{Source: "test"},
+			ruleset: v1beta1.RuleSet{
+				MetaData: v1beta1.MetaData{ID: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 				Rules:    []v1beta1.Rule{{ID: "foo"}},
@@ -89,9 +92,14 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				rul := &mocks.RuleMock{}
 
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(rul, nil)
-				repo.EXPECT().AddRuleSet(mock.Anything, "test", mock.MatchedBy(func(rules []rule.Rule) bool {
-					return len(rules) == 1 && rules[0] == rul
-				})).Return(nil)
+				repo.EXPECT().AddRuleSet(
+					mock.Anything,
+					rule.RuleSet{ID: "test", Name: "foobar"},
+					mock.MatchedBy(func(rules []rule.Rule) bool {
+						return len(rules) == 1 && rules[0] == rul
+					},
+					)).
+					Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -122,12 +130,12 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		ruleset   *v1beta1.RuleSet
+		ruleset   v1beta1.RuleSet
 		configure func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock)
 		assert    func(t *testing.T, err error)
 	}{
 		"unsupported version": {
-			ruleset: &v1beta1.RuleSet{Version: "foo"},
+			ruleset: v1beta1.RuleSet{Version: "foo"},
 			configure: func(t *testing.T, _ *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
 			},
@@ -139,11 +147,12 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			},
 		},
 		"error while loading rule set": {
-			ruleset: &v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
+			ruleset: v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, _ *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -153,12 +162,14 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			},
 		},
 		"error while updating rule set": {
-			ruleset: &v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
+			ruleset: v1beta1.RuleSet{Version: v1beta1.Version, Rules: []v1beta1.Rule{{ID: "foo"}}},
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
-				repo.EXPECT().UpdateRuleSet(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("test error"))
+				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
+					Return(&mocks.RuleMock{}, nil)
+				repo.EXPECT().UpdateRuleSet(mock.Anything, mock.Anything, mock.Anything).
+					Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -168,8 +179,8 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			},
 		},
 		"successful": {
-			ruleset: &v1beta1.RuleSet{
-				MetaData: v1beta1.MetaData{Source: "test"},
+			ruleset: v1beta1.RuleSet{
+				MetaData: v1beta1.MetaData{ID: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 				Rules:    []v1beta1.Rule{{ID: "foo"}},
@@ -180,9 +191,14 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				rul := &mocks.RuleMock{}
 
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).Return(rul, nil)
-				repo.EXPECT().UpdateRuleSet(mock.Anything, "test", mock.MatchedBy(func(rules []rule.Rule) bool {
-					return len(rules) == 1 && rules[0] == rul
-				})).Return(nil)
+				repo.EXPECT().UpdateRuleSet(
+					mock.Anything,
+					rule.RuleSet{ID: "test", Name: "foobar"},
+					mock.MatchedBy(func(rules []rule.Rule) bool {
+						return len(rules) == 1 && rules[0] == rul
+					},
+					)).
+					Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -213,20 +229,21 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		ruleset   *v1beta1.RuleSet
+		ruleset   v1beta1.RuleSet
 		configure func(t *testing.T, repo *mocks.RepositoryMock)
 		assert    func(t *testing.T, err error)
 	}{
 		"failed removing rule set": {
-			ruleset: &v1beta1.RuleSet{
-				MetaData: v1beta1.MetaData{Source: "test"},
+			ruleset: v1beta1.RuleSet{
+				MetaData: v1beta1.MetaData{ID: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 			},
 			configure: func(t *testing.T, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				repo.EXPECT().DeleteRuleSet(t.Context(), "test").Return(errors.New("test error"))
+				repo.EXPECT().DeleteRuleSet(t.Context(), rule.RuleSet{ID: "test", Name: "foobar"}).
+					Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -236,15 +253,16 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			},
 		},
 		"successful": {
-			ruleset: &v1beta1.RuleSet{
-				MetaData: v1beta1.MetaData{Source: "test"},
+			ruleset: v1beta1.RuleSet{
+				MetaData: v1beta1.MetaData{ID: "test"},
 				Version:  v1beta1.Version,
 				Name:     "foobar",
 			},
 			configure: func(t *testing.T, repo *mocks.RepositoryMock) {
 				t.Helper()
 
-				repo.EXPECT().DeleteRuleSet(t.Context(), "test").Return(nil)
+				repo.EXPECT().DeleteRuleSet(t.Context(), rule.RuleSet{ID: "test", Name: "foobar"}).
+					Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

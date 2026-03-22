@@ -32,9 +32,9 @@ import (
 
 type ruleImpl struct {
 	id              string
-	srcID           string
 	isDefault       bool
 	hash            []byte
+	source          rule.RuleSet
 	routes          []rule.Route
 	slashesHandling v1beta1.EncodedSlashesHandling
 	backend         *v1beta1.Backend
@@ -51,7 +51,11 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	if r.isDefault {
 		logger.Info().Msg("Executing default rule")
 	} else {
-		logger.Info().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
+		logger.Info().
+			Str("_ruleset_id", r.source.ID).
+			Str("_provider", r.source.Provider).
+			Str("_id", r.id).
+			Msg("Executing rule")
 	}
 
 	request := ctx.Request()
@@ -107,17 +111,17 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 
 func (r *ruleImpl) ID() string { return r.id }
 
-func (r *ruleImpl) SrcID() string { return r.srcID }
+func (r *ruleImpl) Source() rule.RuleSet { return r.source }
 
 func (r *ruleImpl) SameAs(other rule.Rule) bool {
-	return r.ID() == other.ID() && r.SrcID() == other.SrcID()
+	return r.ID() == other.ID() && r.Source().Equals(other.Source())
 }
 
 func (r *ruleImpl) Routes() []rule.Route { return r.routes }
 
-func (r *ruleImpl) EqualTo(other rule.Rule) bool {
+func (r *ruleImpl) Equals(other rule.Rule) bool {
 	return r.ID() == other.ID() &&
-		r.SrcID() == other.SrcID() &&
+		r.Source().Equals(other.Source()) &&
 		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
@@ -147,7 +151,8 @@ func (r *routeImpl) Matches(ctx pipeline.Context, keys, values []string) bool {
 
 	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {
 		logger.Debug().
-			Str("_source", r.rule.srcID).
+			Str("_ruleset_id", r.rule.source.ID).
+			Str("_provider", r.rule.source.Provider).
 			Str("_id", r.rule.id).
 			Str("route", r.path).
 			Err(err).
@@ -157,7 +162,8 @@ func (r *routeImpl) Matches(ctx pipeline.Context, keys, values []string) bool {
 	}
 
 	logger.Debug().
-		Str("_source", r.rule.srcID).
+		Str("_ruleset_id", r.rule.source.ID).
+		Str("_provider", r.rule.source.Provider).
 		Str("_id", r.rule.id).
 		Str("route", r.path).
 		Msg("Rule matched")

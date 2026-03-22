@@ -38,8 +38,8 @@ func (_m *FactoryMock) EXPECT() *FactoryMock_Expecter {
 }
 
 // CreateRule provides a mock function for the type FactoryMock
-func (_mock *FactoryMock) CreateRule(srcID string, ruleConfig v1beta1.Rule) (rule.Rule, error) {
-	ret := _mock.Called(srcID, ruleConfig)
+func (_mock *FactoryMock) CreateRule(source v1beta1.RuleSet, ruleConfig v1beta1.Rule) (rule.Rule, error) {
+	ret := _mock.Called(source, ruleConfig)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateRule")
@@ -47,18 +47,18 @@ func (_mock *FactoryMock) CreateRule(srcID string, ruleConfig v1beta1.Rule) (rul
 
 	var r0 rule.Rule
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, v1beta1.Rule) (rule.Rule, error)); ok {
-		return returnFunc(srcID, ruleConfig)
+	if returnFunc, ok := ret.Get(0).(func(v1beta1.RuleSet, v1beta1.Rule) (rule.Rule, error)); ok {
+		return returnFunc(source, ruleConfig)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, v1beta1.Rule) rule.Rule); ok {
-		r0 = returnFunc(srcID, ruleConfig)
+	if returnFunc, ok := ret.Get(0).(func(v1beta1.RuleSet, v1beta1.Rule) rule.Rule); ok {
+		r0 = returnFunc(source, ruleConfig)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(rule.Rule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, v1beta1.Rule) error); ok {
-		r1 = returnFunc(srcID, ruleConfig)
+	if returnFunc, ok := ret.Get(1).(func(v1beta1.RuleSet, v1beta1.Rule) error); ok {
+		r1 = returnFunc(source, ruleConfig)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,17 +71,17 @@ type FactoryMock_CreateRule_Call struct {
 }
 
 // CreateRule is a helper method to define mock.On call
-//   - srcID string
+//   - source v1beta1.RuleSet
 //   - ruleConfig v1beta1.Rule
-func (_e *FactoryMock_Expecter) CreateRule(srcID interface{}, ruleConfig interface{}) *FactoryMock_CreateRule_Call {
-	return &FactoryMock_CreateRule_Call{Call: _e.mock.On("CreateRule", srcID, ruleConfig)}
+func (_e *FactoryMock_Expecter) CreateRule(source interface{}, ruleConfig interface{}) *FactoryMock_CreateRule_Call {
+	return &FactoryMock_CreateRule_Call{Call: _e.mock.On("CreateRule", source, ruleConfig)}
 }
 
-func (_c *FactoryMock_CreateRule_Call) Run(run func(srcID string, ruleConfig v1beta1.Rule)) *FactoryMock_CreateRule_Call {
+func (_c *FactoryMock_CreateRule_Call) Run(run func(source v1beta1.RuleSet, ruleConfig v1beta1.Rule)) *FactoryMock_CreateRule_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 v1beta1.RuleSet
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(v1beta1.RuleSet)
 		}
 		var arg1 v1beta1.Rule
 		if args[1] != nil {
@@ -100,7 +100,7 @@ func (_c *FactoryMock_CreateRule_Call) Return(rule1 rule.Rule, err error) *Facto
 	return _c
 }
 
-func (_c *FactoryMock_CreateRule_Call) RunAndReturn(run func(srcID string, ruleConfig v1beta1.Rule) (rule.Rule, error)) *FactoryMock_CreateRule_Call {
+func (_c *FactoryMock_CreateRule_Call) RunAndReturn(run func(source v1beta1.RuleSet, ruleConfig v1beta1.Rule) (rule.Rule, error)) *FactoryMock_CreateRule_Call {
 	_c.Call.Return(run)
 	return _c
 }

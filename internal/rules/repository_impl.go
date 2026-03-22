@@ -32,21 +32,14 @@ import (
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
-const (
-	ruleSetIDKey       = attribute.Key("ruleset.id")
-	ruleSetNameKey     = attribute.Key("ruleset.name")
-	ruleSetProviderKey = attribute.Key("provider")
-)
-
-type ruleSetID struct {
-	id       string
-	name     string
-	provider string
-}
-
 type ruleSetMetrics struct {
 	count int64
 	attrs attribute.Set
+}
+
+type ruleSetID struct {
+	id       string
+	provider string
 }
 
 type repository struct {
@@ -78,7 +71,7 @@ func newRepository(ruleFactory rule.Factory, meter metric.Meter) (rule.Repositor
 		index: radixtrie.New[rule.Route](
 			radixtrie.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
 				// only rules from the same rule set can be placed in one node
-				return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
+				return len(oldValues) == 0 || oldValues[0].Rule().Source().Equals(newValue.Rule().Source())
 			}),
 		),
 		rl:         gauge,
@@ -119,7 +112,7 @@ func (r *repository) FindRule(ctx pipeline.Context) (rule.Rule, error) {
 	return entry.Value.Rule(), nil
 }
 
-func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) error {
+func (r *repository) AddRuleSet(_ context.Context, _ rule.RuleSet, rules []rule.Rule) error {
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
@@ -130,7 +123,7 @@ func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) 
 	tmp := radixtrie.New[rule.Route](
 		radixtrie.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
 			// only rules from the same rule set can be placed in one node
-			return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
+			return len(oldValues) == 0 || oldValues[0].Rule().Source().Equals(newValue.Rule().Source())
 		}))
 	if err := r.addRulesTo(tmp, rules); err != nil {
 		return err
@@ -160,13 +153,13 @@ func (r *repository) AddRuleSet(_ context.Context, _ string, rules []rule.Rule) 
 	return nil
 }
 
-func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule.Rule) error {
+func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []rule.Rule) error {
 	// create rules
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
 	// find all rules for the given src id
-	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
+	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.Source().Equals(src) })
 
 	// find new rules, as well as those, which have been changed.
 	toBeAdded := slicex.Filter(rules, func(newRule rule.Rule) bool {
@@ -175,7 +168,7 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 		})
 
 		ruleChanged := slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
-			return existingRule.SameAs(newRule) && !existingRule.EqualTo(newRule)
+			return existingRule.SameAs(newRule) && !existingRule.Equals(newRule)
 		})
 
 		return ruleIsNew || ruleChanged
@@ -188,7 +181,7 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 		})
 
 		ruleChanged := slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
-			return newRule.SameAs(existingRule) && !newRule.EqualTo(existingRule)
+			return newRule.SameAs(existingRule) && !newRule.Equals(existingRule)
 		})
 
 		return ruleGone || ruleChanged
@@ -207,7 +200,7 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 	tmp := radixtrie.New[rule.Route](
 		radixtrie.WithValuesConstraints(func(oldValues []rule.Route, newValue rule.Route) bool {
 			// only rules from the same rule set can be placed in one node
-			return len(oldValues) == 0 || oldValues[0].Rule().SrcID() == newValue.Rule().SrcID()
+			return len(oldValues) == 0 || oldValues[0].Rule().Source().Equals(newValue.Rule().Source())
 		}))
 	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
 		return err
@@ -244,12 +237,12 @@ func (r *repository) UpdateRuleSet(_ context.Context, srcID string, rules []rule
 	return nil
 }
 
-func (r *repository) DeleteRuleSet(_ context.Context, srcID string) error {
+func (r *repository) DeleteRuleSet(_ context.Context, src rule.RuleSet) error {
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
 	// find all rules for the given src id
-	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.SrcID() == srcID })
+	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.Source().Equals(src) })
 
 	tmp := r.index.Clone()
 
@@ -275,16 +268,18 @@ func (r *repository) prepareMetrics() {
 	clear(r.ruleSetIDs)
 
 	for _, rul := range r.knownRules {
+		src := rul.Source()
 		key := ruleSetID{
-			name: rul.SrcID(),
+			id:       src.ID,
+			provider: src.Provider,
 		}
 
 		metrics, ok := r.ruleSetIDs[key]
 		if !ok {
 			metrics.attrs = attribute.NewSet(
-				ruleSetIDKey.String(key.id),
-				ruleSetNameKey.String(key.name),
-				ruleSetProviderKey.String(key.provider),
+				ruleSetIDKey.String(src.ID),
+				ruleSetNameKey.String(src.Name),
+				ruleSetProviderKey.String(src.Provider),
 			)
 		}
 
@@ -296,7 +291,7 @@ func (r *repository) prepareMetrics() {
 func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.Rule) error {
 	for _, rul := range rules {
 		for _, route := range rul.Routes() {
-			srcID := rul.SrcID()
+			src := rul.Source()
 			path := route.Path()
 			host := route.Host()
 
@@ -304,13 +299,13 @@ func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.R
 				host,
 				path,
 				radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, _, _ []string) bool {
-					return route.Rule().SrcID() != srcID
+					return !route.Rule().Source().Equals(src)
 				}),
 			)
 			if entry != nil {
 				return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 					"conflicting rules: %s from %s and %s from %s",
-					rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
+					rul.ID(), rul.Source(), entry.Value.Rule().ID(), entry.Value.Rule().Source())
 			}
 
 			nodes, _ := trie.Lookup(host, "", radixtrie.WithWildcardMatch[rule.Route]())
@@ -319,19 +314,19 @@ func (r *repository) addRulesTo(trie *radixtrie.Trie[rule.Route], rules []rule.R
 					"",
 					path,
 					radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, _, _ []string) bool {
-						return route.Rule().SrcID() != srcID
+						return !route.Rule().Source().Equals(src)
 					}),
 				)
 				if entry != nil {
 					return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 						"conflicting rules: %s from %s and %s from %s",
-						rul.ID(), srcID, entry.Value.Rule().ID(), entry.Value.Rule().SrcID())
+						rul.ID(), src, entry.Value.Rule().ID(), entry.Value.Rule().Source())
 				}
 			}
 
 			if err := trie.Add(host, path, route); err != nil {
 				return errorchain.NewWithMessagef(pipeline.ErrInternal,
-					"failed adding rule %s from %s", rul.ID(), srcID).
+					"failed adding rule %s from %s", rul.ID(), src).
 					CausedBy(err)
 			}
 		}
@@ -351,7 +346,7 @@ func (r *repository) removeRulesFrom(trie *radixtrie.Trie[rule.Route], tbdRules 
 				}),
 			); err != nil {
 				return errorchain.NewWithMessagef(pipeline.ErrInternal,
-					"failed deleting rule %s from %s", rul.ID(), rul.SrcID()).
+					"failed deleting rule %s from %s", rul.ID(), rul.Source()).
 					CausedBy(err)
 			}
 		}

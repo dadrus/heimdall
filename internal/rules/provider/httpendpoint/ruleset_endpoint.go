@@ -39,10 +39,10 @@ type ruleSetEndpoint struct {
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v1beta1.RuleSet, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (v1beta1.RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
-		return nil, errorchain.
+		return v1beta1.RuleSet{}, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			CausedBy(err)
 	}
@@ -53,12 +53,12 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.
+			return v1beta1.RuleSet{}, errorchain.
 				NewWithMessage(pipeline.ErrCommunicationTimeout, "request to rule set endpoint timed out").
 				CausedBy(err)
 		}
 
-		return nil, errorchain.
+		return v1beta1.RuleSet{}, errorchain.
 			NewWithMessage(pipeline.ErrCommunication, "request to rule set endpoint failed").
 			CausedBy(err)
 	}
@@ -66,7 +66,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
+		return v1beta1.RuleSet{}, errorchain.NewWithMessagef(pipeline.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode)
 	}
 
@@ -80,15 +80,16 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (*v
 
 	var ruleSet v1beta1.RuleSet
 	if err = dec.Decode(&ruleSet, io.TeeReader(resp.Body, md)); err != nil {
-		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to parse received rule set").
-			CausedBy(err)
+		return v1beta1.RuleSet{}, errorchain.NewWithMessage(pipeline.ErrInternal,
+			"failed to parse received rule set").CausedBy(err)
 	}
 
 	ruleSet.Hash = md.Sum(nil)
-	ruleSet.Source = "http_endpoint:" + e.ID()
+	ruleSet.ID = e.ID()
+	ruleSet.Provider = "http_endpoint"
 	ruleSet.ModTime = time.Now()
 
-	return &ruleSet, nil
+	return ruleSet, nil
 }
 
 func (e *ruleSetEndpoint) init() {

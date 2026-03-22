@@ -23,7 +23,7 @@ import (
 )
 
 type SetProcessor interface {
-	OnCreated(ctx context.Context, ruleSet *v1beta1.RuleSet) error
-	OnUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet) error
-	OnDeleted(ctx context.Context, ruleSet *v1beta1.RuleSet) error
+	OnCreated(ctx context.Context, ruleSet v1beta1.RuleSet) error
+	OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSet) error
+	OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSet) error
 }

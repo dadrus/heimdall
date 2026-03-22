@@ -26,6 +26,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -417,7 +419,9 @@ func TestRuleFactoryNew(t *testing.T) {
 				defRule := ruleFactory.templateRule
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
-				assert.Equal(t, "config", defRule.srcID)
+				assert.Equal(t, "default", defRule.source.ID)
+				assert.Equal(t, "default", defRule.source.Name)
+				assert.Equal(t, "config", defRule.source.Provider)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Empty(t, defRule.sh)
@@ -488,7 +492,9 @@ func TestRuleFactoryNew(t *testing.T) {
 				defRule := ruleFactory.templateRule
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
-				assert.Equal(t, "config", defRule.srcID)
+				assert.Equal(t, "default", defRule.source.ID)
+				assert.Equal(t, "default", defRule.source.Name)
+				assert.Equal(t, "config", defRule.source.Provider)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
 				assert.Len(t, defRule.sc, 1)
 				assert.Len(t, defRule.sh, 2)
@@ -764,7 +770,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, rul.slashesHandling)
@@ -809,7 +815,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, rul.slashesHandling)
@@ -852,7 +858,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Len(t, rul.Routes(), 1)
@@ -939,7 +945,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Equal(t, v1beta1.EncodedSlashesOnNoDecode, rul.slashesHandling)
@@ -1047,7 +1053,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Equal(t, v1beta1.EncodedSlashesOn, rul.slashesHandling)
@@ -1183,7 +1189,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Len(t, rul.Routes(), 1)
@@ -1279,7 +1285,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Len(t, rul.Routes(), 1)
@@ -1405,7 +1411,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Len(t, rul.Routes(), 1)
@@ -1469,7 +1475,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, rul)
 
-				assert.Equal(t, "test", rul.srcID)
+				assert.Equal(t, "test", rul.source.ID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
 				assert.Len(t, rul.Routes(), 1)
@@ -1549,15 +1555,22 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mode:           tc.opMode,
 				l:              log.Logger,
 				hasDefaultRule: x.IfThenElse(tc.defaultRule != nil, true, false),
+				t:              nooptrace.Tracer{},
+				m:              noopmetric.Meter{},
 			}
 
 			// WHEN
-			rul, err := factory.CreateRule("test", tc.config)
+			rul, err := factory.CreateRule(v1beta1.RuleSet{MetaData: v1beta1.MetaData{ID: "test"}}, tc.config)
 
 			// THEN
-			impl, ok := rul.(*ruleImpl)
+			var impl *ruleImpl
+
 			if err == nil {
-				require.True(t, ok)
+				require.IsType(t, &telemetryRule{}, rul)
+				tr := rul.(*telemetryRule)
+
+				require.IsType(t, &ruleImpl{}, tr.r)
+				impl = tr.r.(*ruleImpl)
 			}
 
 			// THEN

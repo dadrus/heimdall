@@ -185,10 +185,11 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			return err
 		}
 
-		ruleSet = &v1beta1.RuleSet{
+		ruleSet = v1beta1.RuleSet{
 			MetaData: v1beta1.MetaData{
-				Source:  "http_endpoint:" + rsf.ID(),
-				ModTime: time.Now(),
+				ID:       rsf.ID(),
+				ModTime:  time.Now(),
+				Provider: "http_endpoint",
 			},
 		}
 	}
@@ -202,7 +203,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet, stateID string) error {
+func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet v1beta1.RuleSet, stateID string) error {
 	logger := zerolog.Ctx(ctx)
 
 	var hash []byte

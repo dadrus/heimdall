@@ -45,9 +45,58 @@ func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory, op co
 	}
 }
 
-func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
+func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("_rule_set", ruleSet.Name).Msg("New rule set received")
+	source := rule.RuleSet{
+		ID:       ruleSet.ID,
+		Name:     ruleSet.Name,
+		Provider: ruleSet.Provider,
+	}
+
+	logger.Info().
+		Str("_ruleset_id", source.ID).
+		Str("_ruleset_name", source.Name).
+		Str("_provider", source.Provider).
+		Msg("New rule set received")
+
+	if !p.isVersionSupported(ruleSet.Version) {
+		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
+	}
+
+	rules, err := p.loadRules(ruleSet)
+	if err != nil {
+		return err
+	}
+
+	if p.op == config2.ProxyMode {
+		for _, rul := range ruleSet.Rules {
+			if rul.Backend.IsInsecure() {
+				logger.Warn().
+					Str("_ruleset_id", source.ID).
+					Str("_ruleset_name", source.Name).
+					Str("_provider", source.Provider).
+					Str("_rule", rul.ID).
+					Msg("Rule contains insecure forward_to configuration")
+			}
+		}
+	}
+
+	return p.r.AddRuleSet(ctx, source, rules)
+}
+
+func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSet) error {
+	logger := zerolog.Ctx(ctx)
+	source := rule.RuleSet{
+		ID:       ruleSet.ID,
+		Name:     ruleSet.Name,
+		Provider: ruleSet.Provider,
+	}
+
+	logger.Info().
+		Str("_ruleset_id", source.ID).
+		Str("_ruleset_name", source.Name).
+		Str("_provider", source.Provider).
+		Msg("RuleSet update received")
 
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
@@ -69,52 +118,35 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet *v1beta1.RuleS
 		}
 	}
 
-	return p.r.AddRuleSet(ctx, ruleSet.Source, rules)
+	return p.r.UpdateRuleSet(ctx, source, rules)
 }
 
-func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
+func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Update of a ruleset received")
-
-	if !p.isVersionSupported(ruleSet.Version) {
-		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
+	source := rule.RuleSet{
+		ID:       ruleSet.ID,
+		Name:     ruleSet.Name,
+		Provider: ruleSet.Provider,
 	}
 
-	rules, err := p.loadRules(ruleSet)
-	if err != nil {
-		return err
-	}
+	logger.Info().
+		Str("_ruleset_id", source.ID).
+		Str("_ruleset_name", source.Name).
+		Str("_provider", source.Provider).
+		Msg("Deletion of a rule set received")
 
-	if p.op == config2.ProxyMode {
-		for _, rul := range ruleSet.Rules {
-			if rul.Backend.IsInsecure() {
-				logger.Warn().
-					Str("_rule_set", ruleSet.Name).
-					Str("_rule", rul.ID).
-					Msg("Rule contains insecure forward_to configuration")
-			}
-		}
-	}
-
-	return p.r.UpdateRuleSet(ctx, ruleSet.Source, rules)
-}
-
-func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet *v1beta1.RuleSet) error {
-	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("_rule_set", ruleSet.Name).Msg("Deletion of a rule set received")
-
-	return p.r.DeleteRuleSet(ctx, ruleSet.Source)
+	return p.r.DeleteRuleSet(ctx, source)
 }
 
 func (p *ruleSetProcessor) isVersionSupported(version string) bool {
 	return version == v1beta1.Version
 }
 
-func (p *ruleSetProcessor) loadRules(ruleSet *v1beta1.RuleSet) ([]rule.Rule, error) {
+func (p *ruleSetProcessor) loadRules(ruleSet v1beta1.RuleSet) ([]rule.Rule, error) {
 	rules := make([]rule.Rule, len(ruleSet.Rules))
 
 	for idx, rc := range ruleSet.Rules {
-		rul, err := p.f.CreateRule(ruleSet.Source, rc)
+		rul, err := p.f.CreateRule(ruleSet, rc)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"loading rule ID='%s' failed", rc.ID).CausedBy(err)

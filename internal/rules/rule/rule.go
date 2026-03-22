@@ -20,9 +20,9 @@ import "github.com/dadrus/heimdall/internal/pipeline"
 
 type Rule interface {
 	ID() string
-	SrcID() string
+	Source() RuleSet
 	Execute(ctx pipeline.Context) (pipeline.Backend, error)
 	Routes() []Route
 	SameAs(other Rule) bool
-	EqualTo(other Rule) bool
+	Equals(other Rule) bool
 }

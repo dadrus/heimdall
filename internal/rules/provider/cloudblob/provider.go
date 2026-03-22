@@ -206,7 +206,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 func (p *Provider) ruleSetsUpdated(
 	ctx context.Context,
-	ruleSets []*v1beta1.RuleSet,
+	ruleSets []v1beta1.RuleSet,
 	state BucketState,
 	buketID string,
 ) error {
@@ -221,10 +221,11 @@ func (p *Provider) ruleSetsUpdated(
 	newIDs := slicex.Subtract(currentIDs, oldIDs)
 
 	for _, ID := range removedIDs {
-		conf := &v1beta1.RuleSet{
+		conf := v1beta1.RuleSet{
 			MetaData: v1beta1.MetaData{
-				Source:  "blob:" + ID,
-				ModTime: time.Now(),
+				ID:       ID,
+				ModTime:  time.Now(),
+				Provider: "cloud_blob",
 			},
 		}
 
@@ -237,13 +238,13 @@ func (p *Provider) ruleSetsUpdated(
 
 	// check which rule sets are new and which are modified
 	for _, ruleSet := range ruleSets {
-		isNew := slices.Contains(newIDs, ruleSet.Source)
-		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Source], ruleSet.Hash)
+		isNew := slices.Contains(newIDs, ruleSet.ID)
+		hasChanged := !isNew && !bytes.Equal(state[ruleSet.ID], ruleSet.Hash)
 
 		if !isNew && !hasChanged {
 			logger.Debug().
 				Str("_bucket", buketID).
-				Str("_rule_set", ruleSet.Source).
+				Str("_rule_set", ruleSet.ID).
 				Msg("No updates received")
 
 			continue
@@ -261,7 +262,7 @@ func (p *Provider) ruleSetsUpdated(
 			return err
 		}
 
-		state[ruleSet.Source] = ruleSet.Hash
+		state[ruleSet.ID] = ruleSet.Hash
 	}
 
 	return nil
@@ -273,11 +274,11 @@ func (p *Provider) getBucketState(key string) BucketState {
 	return value.(BucketState) // nolint: forcetypeassert
 }
 
-func toRuleSetIDs(ruleSets []*v1beta1.RuleSet) []string {
+func toRuleSetIDs(ruleSets []v1beta1.RuleSet) []string {
 	currentIDs := make([]string, len(ruleSets))
 
 	for idx, ruleSet := range ruleSets {
-		currentIDs[idx] = ruleSet.Source
+		currentIDs[idx] = ruleSet.ID
 	}
 
 	return currentIDs

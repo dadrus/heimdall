@@ -217,7 +217,7 @@ rules:
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, err error, _ *Provider, processor *mocks.RuleSetProcessorMock) {
@@ -225,11 +225,12 @@ rules:
 
 				require.NoError(t, err)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Contains(t, ruleSet.Source, "file_system:")
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.ID, "file_system:")
 				require.NotNil(t, ruleSet)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "file_system", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 				require.Len(t, ruleSet.Rules[0].Matcher.Routes, 1)
@@ -279,7 +280,7 @@ rules:
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, err error, _ *Provider, processor *mocks.RuleSetProcessorMock) {
@@ -287,9 +288,10 @@ rules:
 
 				require.NoError(t, err)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Contains(t, ruleSet.Source, "file_system:")
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.ID, "file_system:")
 				assert.Equal(t, "2", ruleSet.Version)
+				assert.Equal(t, "file_system", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
@@ -363,11 +365,11 @@ rules:
 				t.Helper()
 
 				call1 := processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, v1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once().NotBefore(call1)
 			},
 			assert: func(t *testing.T, err error, _ *Provider, processor *mocks.RuleSetProcessorMock) {
@@ -375,14 +377,15 @@ rules:
 
 				require.NoError(t, err)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Contains(t, ruleSet.Source, "file_system:")
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.NotEmpty(t, ruleSet.ID)
 				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "file_system", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor2").Value()
-				assert.Contains(t, ruleSet.Source, "file_system:")
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, v1beta1.RuleSet](&processor.Mock, "captor2").Value()
+				assert.NotEmpty(t, ruleSet.ID)
 			},
 		},
 		"successfully start provider with watcher using initially empty file, " +
@@ -448,15 +451,15 @@ rules:
 				t.Helper()
 
 				call1 := processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				call2 := processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, v1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once().NotBefore(call1)
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor3").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, v1beta1.RuleSet](&processor.Mock, "captor3").Capture).
 					Return(nil).Once().NotBefore(call2)
 			},
 			assert: func(t *testing.T, err error, _ *Provider, processor *mocks.RuleSetProcessorMock) {
@@ -464,20 +467,23 @@ rules:
 
 				require.NoError(t, err)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Contains(t, ruleSet.Source, "file_system:")
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, v1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.ID, "file_system:")
 				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "file_system", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor2").Value()
-				assert.Contains(t, ruleSet.Source, "file_system:")
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, v1beta1.RuleSet](&processor.Mock, "captor2").Value()
+				assert.NotEmpty(t, ruleSet.ID)
 				assert.Equal(t, "2", ruleSet.Version)
+				assert.Equal(t, "file_system", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *v1beta1.RuleSet](&processor.Mock, "captor3").Value()
-				assert.Contains(t, ruleSet.Source, "file_system:")
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, v1beta1.RuleSet](&processor.Mock, "captor3").Value()
+				assert.NotEmpty(t, ruleSet.ID)
+				assert.Equal(t, "file_system", ruleSet.Provider)
 			},
 		},
 	} {

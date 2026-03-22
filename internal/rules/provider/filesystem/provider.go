@@ -251,10 +251,11 @@ func (p *Provider) ruleSetDeleted(ctx context.Context, fileName string) error {
 		return nil
 	}
 
-	conf := &v1beta1.RuleSet{
+	conf := v1beta1.RuleSet{
 		MetaData: v1beta1.MetaData{
-			Source:  "file_system:" + fileName,
-			ModTime: time.Now(),
+			ID:       fileName,
+			Provider: "file_system",
+			ModTime:  time.Now(),
 		},
 	}
 
@@ -267,10 +268,10 @@ func (p *Provider) ruleSetDeleted(ctx context.Context, fileName string) error {
 	return nil
 }
 
-func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
+func (p *Provider) loadRuleSet(fileName string) (v1beta1.RuleSet, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
+		return v1beta1.RuleSet{}, errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"failed opening file %s", fileName).CausedBy(err)
 	}
 
@@ -286,17 +287,18 @@ func (p *Provider) loadRuleSet(fileName string) (*v1beta1.RuleSet, error) {
 	var ruleSet v1beta1.RuleSet
 
 	if err = dec.Decode(&ruleSet, io.TeeReader(file, md)); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal, "failed to parse rule set %s", fileName).
-			CausedBy(err)
+		return v1beta1.RuleSet{}, errorchain.NewWithMessagef(pipeline.ErrInternal,
+			"failed to parse rule set %s", fileName).CausedBy(err)
 	}
 
 	stat, _ := os.Stat(fileName)
 
 	ruleSet.Hash = md.Sum(nil)
-	ruleSet.Source = "file_system:" + fileName
+	ruleSet.ID = "file_system:" + fileName
 	ruleSet.ModTime = stat.ModTime()
+	ruleSet.Provider = "file_system"
 
-	return &ruleSet, nil
+	return ruleSet, nil
 }
 
 func (p *Provider) loadInitialRuleSet(ctx context.Context) error {

@@ -371,7 +371,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -379,10 +379,11 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.ID, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				rule := ruleSet.Rules[0]
@@ -536,11 +537,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -548,10 +549,11 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				createdRule := ruleSet.Rules[0]
@@ -578,10 +580,11 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, new("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 
 				assert.Len(t, *statusList, 1)
 
@@ -614,7 +617,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -622,10 +625,11 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				createdRule := ruleSet.Rules[0]
@@ -686,7 +690,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -694,10 +698,11 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				createdRule := ruleSet.Rules[0]
@@ -831,11 +836,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -843,10 +848,11 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				createdRule := ruleSet.Rules[0]
@@ -873,10 +879,11 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, new("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				updatedRule := ruleSet.Rules[0]
@@ -943,11 +950,11 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).
-					Run(mock2.NewArgumentCaptor2[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor2[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor2").Capture).
 					Return(nil).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
@@ -955,10 +962,11 @@ func TestProviderLifecycle(t *testing.T) {
 
 				time.Sleep(250 * time.Millisecond)
 
-				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet := mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				createdRule := ruleSet.Rules[0]
@@ -985,10 +993,11 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, new("true"), authzStep.Condition)
 				assert.Equal(t, config.MechanismConfig{"bla": "bla"}, authzStep.Config)
 
-				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, *cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
-				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				_, ruleSet = mock2.ArgumentCaptor2From[context.Context, cfgv1beta1.RuleSet](&processor.Mock, "captor2").Value()
+				assert.Equal(t, "foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.ID)
 				assert.Equal(t, "1beta1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Equal(t, "kubernetes", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				deleteRule := ruleSet.Rules[0]
@@ -1349,10 +1358,10 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs cfgv1beta1.RuleSet) bool {
 					return rs.Name != "error"
 				})).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
 				})).Return(errors.New("test error"))
 
@@ -1565,10 +1574,10 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs cfgv1beta1.RuleSet) bool {
 					return rs.Name != "error"
 				})).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs *cfgv1beta1.RuleSet) bool {
+				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
 				})).Return(errors.New("test error"))
 

@@ -44,7 +44,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 	}{
 		"rule with multiple routes from the same rule set can be added": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/:some"})
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/2"})
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/3/**"})
@@ -95,13 +95,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching example.com/1/1 and example.com/2/1 defined in different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/1"})
 
 				return []rule.Rule{rul}
@@ -114,13 +114,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"rule from one ruleset cannot be overridden by a rule with the same matching expressions from another ruleset": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
@@ -135,13 +135,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with wildcard at the path start from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
@@ -156,13 +156,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with more specific host from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
@@ -177,13 +177,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching * for host and /1/1 for path and example.com/2/1 defined in different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/1"})
 
 				return []rule.Rule{rul}
@@ -196,13 +196,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with wildcard at the path end from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/:some"})
 
 				return []rule.Rule{rul}
@@ -217,13 +217,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching example.com/1/1 and example.com/2/:some defined in different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/:some"})
 
 				return []rule.Rule{rul}
@@ -236,13 +236,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with free wildcard at the path end from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
@@ -257,13 +257,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching example.com/1/1 and example.com/2/* defined in different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/2/**"})
 
 				return []rule.Rule{rul}
@@ -276,13 +276,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with free wildcards at the path end and in the host from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
@@ -297,13 +297,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching foo.example.com/1/2/3 and *.example.com/2/** defined in different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/2/**"})
 
 				return []rule.Rule{rul}
@@ -316,13 +316,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"rule matching foo.example.com/1/2/3 from one ruleset cannot be overridden by a rule matching *.example.com/1/:2/3 from another ruleset": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:2/3"})
 
 				return []rule.Rule{rul}
@@ -337,13 +337,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"rule matching foo.example.com/1/:2/3 from one ruleset cannot be overridden by a rule matching *.example.com/1/** from another ruleset": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
@@ -358,13 +358,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching foo.example.com/1/:2/3 and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
@@ -379,13 +379,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching foo.example.com/1/2/:3 and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/2/:3"})
 
 				return []rule.Rule{rul}
@@ -400,13 +400,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching *.example.com/1/2/3 and foo.example.com/2/2/:3 defined in different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/2/2/:3"})
 
 				return []rule.Rule{rul}
@@ -419,13 +419,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching foo.example.com/1/:2/:3 and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:2/:3"})
 
 				return []rule.Rule{rul}
@@ -440,13 +440,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching foo.example.com/1/** and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
@@ -461,13 +461,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching *.example.com/1/2/3 and foo.example.com/2/** defined in different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/2/**"})
 
 				return []rule.Rule{rul}
@@ -480,13 +480,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules matching foo.example.com/** and *.example.com/1/2/3 defined in different rulesets is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/*"})
 
 				return []rule.Rule{rul}
@@ -501,13 +501,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"overriding existing rule with wildcard in the host and at path end by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:some"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:some"})
 
 				return []rule.Rule{rul}
@@ -522,13 +522,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"rule matching *.example.com/1/** defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/** from another ruleset": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
@@ -543,13 +543,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"rule matching *.example.com/1/:some/3 defined in one ruleset cannot be overridden by a rule matching foo.example.com/1/:some/3 from another ruleset": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*.example.com", path: "/1/:some/3"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/1/:some/3"})
 
 				return []rule.Rule{rul}
@@ -564,13 +564,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with free wildcard at the path start from another ruleset is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/**"})
 
 				return []rule.Rule{rul}
@@ -585,13 +585,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with free wildcard at the path end from another ruleset for a rule starting with a wildcard is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/**"})
 
 				return []rule.Rule{rul}
@@ -606,13 +606,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with free wildcard at the path start from another ruleset for a rule starting with a wildcard is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/**"})
 
 				return []rule.Rule{rul}
@@ -627,13 +627,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding a route with free wildcard as host and at the path start from another ruleset for a rule starting with a wildcard is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:some/1"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "*", path: "/**"})
 
 				return []rule.Rule{rul}
@@ -648,13 +648,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"overriding a rule with multiple wildcards by a more specific rule for some of the path segments defined in a different rule set is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:a/:b/:c/:d"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/:a/1/:c/1"})
 
 				return []rule.Rule{rul}
@@ -669,13 +669,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"overriding of a rule defining a free wildcard at the end of the path by a more specific rule from another rule set is not possible": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", srcID: "1"}
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/**"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", srcID: "2"}
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/2/3"})
 
 				return []rule.Rule{rul}
@@ -694,12 +694,12 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 			repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
 			require.NoError(t, err)
 
-			err = repo.AddRuleSet(t.Context(), tc.initRules[0].SrcID(), tc.initRules)
+			err = repo.AddRuleSet(t.Context(), tc.initRules[0].Source(), tc.initRules)
 
 			if len(tc.tbaRules) != 0 {
 				require.NoError(t, err)
 
-				err = repo.AddRuleSet(t.Context(), tc.tbaRules[0].SrcID(), tc.tbaRules)
+				err = repo.AddRuleSet(t.Context(), tc.tbaRules[0].Source(), tc.tbaRules)
 			}
 
 			tc.assert(t, err, repo.(*repository))
@@ -716,27 +716,28 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 	require.NoError(t, err)
 
 	impl := repo.(*repository)
+	source := rule.RuleSet{ID: "1"}
 
-	rule1 := &ruleImpl{id: "1", srcID: "1"}
+	rule1 := &ruleImpl{id: "1", source: source}
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*", path: "/foo/1"})
 
-	rule2 := &ruleImpl{id: "2", srcID: "1"}
+	rule2 := &ruleImpl{id: "2", source: source}
 	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "*", path: "/foo/2"})
 
-	rule3 := &ruleImpl{id: "3", srcID: "1"}
+	rule3 := &ruleImpl{id: "3", source: source}
 	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "*", path: "/foo/4"})
 
-	rule4 := &ruleImpl{id: "4", srcID: "1"}
+	rule4 := &ruleImpl{id: "4", source: source}
 	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "*", path: "/foo/4"})
 
 	rules := []rule.Rule{rule1, rule2, rule3, rule4}
 
-	require.NoError(t, repo.AddRuleSet(t.Context(), "1", rules))
+	require.NoError(t, repo.AddRuleSet(t.Context(), source, rules))
 	assert.Len(t, impl.knownRules, 4)
 	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), "1")
+	err = repo.DeleteRuleSet(t.Context(), source)
 
 	// THEN
 	require.NoError(t, err)
@@ -752,19 +753,23 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
 	require.NoError(t, err)
 
-	rule1 := &ruleImpl{id: "1", srcID: "bar"}
+	barSource := rule.RuleSet{ID: "bar"}
+	bazSource := rule.RuleSet{ID: "baz"}
+	fooSource := rule.RuleSet{ID: "foo"}
+
+	rule1 := &ruleImpl{id: "1", source: barSource}
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
 
-	rule2 := &ruleImpl{id: "3", srcID: "bar"}
+	rule2 := &ruleImpl{id: "3", source: barSource}
 	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "*.example.com", path: "/bar/3"})
 
-	rule3 := &ruleImpl{id: "4", srcID: "bar"}
+	rule3 := &ruleImpl{id: "4", source: barSource}
 	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.com", path: "/bar/4"})
 
-	rule4 := &ruleImpl{id: "2", srcID: "baz"}
+	rule4 := &ruleImpl{id: "2", source: bazSource}
 	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "bar.com", path: "/baz/2"})
 
-	rule5 := &ruleImpl{id: "4", srcID: "foo"}
+	rule5 := &ruleImpl{id: "4", source: fooSource}
 	rule5.routes = append(rule5.routes, &routeImpl{rule: rule5, host: "*", path: "/foo/4"})
 
 	rules1 := []rule.Rule{rule1, rule2, rule3}
@@ -774,16 +779,16 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	impl := repo.(*repository)
 
 	// WHEN
-	require.NoError(t, repo.AddRuleSet(t.Context(), "bar", rules1))
-	require.NoError(t, repo.AddRuleSet(t.Context(), "baz", rules2))
-	require.NoError(t, repo.AddRuleSet(t.Context(), "foo", rules3))
+	require.NoError(t, repo.AddRuleSet(t.Context(), barSource, rules1))
+	require.NoError(t, repo.AddRuleSet(t.Context(), bazSource, rules2))
+	require.NoError(t, repo.AddRuleSet(t.Context(), fooSource, rules3))
 
 	// THEN
 	assert.Len(t, impl.knownRules, 5)
 	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), "bar")
+	err = repo.DeleteRuleSet(t.Context(), barSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -806,7 +811,7 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), "foo")
+	err = repo.DeleteRuleSet(t.Context(), fooSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -820,7 +825,7 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), "baz")
+	err = repo.DeleteRuleSet(t.Context(), bazSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -837,31 +842,32 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	require.NoError(t, err)
 
 	impl := repo.(*repository)
+	source := rule.RuleSet{ID: "1"}
 
-	rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
+	rule1 := &ruleImpl{id: "1", source: source, hash: []byte{1}}
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "bar.example.com", path: "/bar/1a"})
 
-	rule2 := &ruleImpl{id: "2", srcID: "1", hash: []byte{1}}
+	rule2 := &ruleImpl{id: "2", source: source, hash: []byte{1}}
 	rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
 
-	rule3 := &ruleImpl{id: "3", srcID: "1", hash: []byte{1}}
+	rule3 := &ruleImpl{id: "3", source: source, hash: []byte{1}}
 	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/bar/2"})
 
-	rule4 := &ruleImpl{id: "4", srcID: "1", hash: []byte{1}}
+	rule4 := &ruleImpl{id: "4", source: source, hash: []byte{1}}
 	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "baz.example.com", path: "/bar/4"})
 
 	initialRules := []rule.Rule{rule1, rule2, rule3, rule4}
 
-	require.NoError(t, repo.AddRuleSet(t.Context(), "1", initialRules))
+	require.NoError(t, repo.AddRuleSet(t.Context(), source, initialRules))
 
 	// rule 1 changed: example.com/bar/1a gone, bar.example.com/bar/1b added
-	rule1 = &ruleImpl{id: "1", srcID: "1", hash: []byte{2}}
+	rule1 = &ruleImpl{id: "1", source: source, hash: []byte{2}}
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
 	rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "bar.example.com", path: "/bar/1b"})
 	// rule with id 2 is deleted
 	// rule 3 changed: foo.example.com/bar/2 gone, foo.example.com/foo/3 and /foo/4 added
-	rule3 = &ruleImpl{id: "3", srcID: "1", hash: []byte{2}}
+	rule3 = &ruleImpl{id: "3", source: source, hash: []byte{2}}
 	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/3"})
 	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/4"})
 	// rule 4 same as before
@@ -869,7 +875,7 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	updatedRules := []rule.Rule{rule1, rule3, rule4}
 
 	// WHEN
-	err = repo.UpdateRuleSet(t.Context(), "1", updatedRules)
+	err = repo.UpdateRuleSet(t.Context(), source, updatedRules)
 
 	// THEN
 	require.NoError(t, err)
@@ -924,18 +930,18 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 	}{
 		"successful update": {
 			initRules: func() []rule.Rule {
-				rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
+				rule1 := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}, hash: []byte{1}}
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "example.com", path: "/bar/1"})
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "bar.example.com", path: "/bar/1a"})
 
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{1}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{1}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
 
 				return []rule.Rule{rule1, rule2}
 			}(),
 			updatedRules: func() []rule.Rule {
 				// rule 2 changed: example.com/bar/2 gone, foo.example.com/foo/3 and /foo/4 added
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{2}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{2}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "foo.example.com", path: "/foo/3"})
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "foo.example.com", path: "/foo/4"})
 
@@ -975,16 +981,16 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 		},
 		"rule attempts to provide a more specific host for an existing rule in a different rule set": {
 			initRules: func() []rule.Rule {
-				rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
+				rule1 := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}, hash: []byte{1}}
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*.example.com", path: "/bar/1"})
 
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{1}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{1}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
 
 				return []rule.Rule{rule1, rule2}
 			}(),
 			updatedRules: func() []rule.Rule {
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{2}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{2}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "foo.example.com", path: "/bar/1"})
 
 				return []rule.Rule{rule2}
@@ -1014,16 +1020,16 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 		},
 		"rule attempts to provide a more specific host and path for an existing rule in a different rule set": {
 			initRules: func() []rule.Rule {
-				rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
+				rule1 := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}, hash: []byte{1}}
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*.example.com", path: "/:bar/1"})
 
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{1}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{1}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
 
 				return []rule.Rule{rule1, rule2}
 			}(),
 			updatedRules: func() []rule.Rule {
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{2}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{2}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "foo.example.com", path: "/bar/1"})
 
 				return []rule.Rule{rule2}
@@ -1050,16 +1056,16 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 		},
 		"rule attempts to provide a more generic host and path for an existing rule in a different rule set": {
 			initRules: func() []rule.Rule {
-				rule1 := &ruleImpl{id: "1", srcID: "1", hash: []byte{1}}
+				rule1 := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}, hash: []byte{1}}
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "foo.example.com", path: "/bar/1"})
 
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{1}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{1}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
 
 				return []rule.Rule{rule1, rule2}
 			}(),
 			updatedRules: func() []rule.Rule {
-				rule2 := &ruleImpl{id: "2", srcID: "2", hash: []byte{2}}
+				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{2}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "*.example.com", path: "/:bar/1"})
 
 				return []rule.Rule{rule2}
@@ -1096,11 +1102,11 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 			repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
 			require.NoError(t, err)
 
-			err = repo.AddRuleSet(t.Context(), "1", tc.initRules)
+			err = repo.AddRuleSet(t.Context(), rule.RuleSet{ID: "1"}, tc.initRules)
 			require.NoError(t, err)
 
 			// WHEN
-			err = repo.UpdateRuleSet(t.Context(), "2", tc.updatedRules)
+			err = repo.UpdateRuleSet(t.Context(), rule.RuleSet{ID: "2"}, tc.updatedRules)
 
 			// THEN
 			tc.assert(t, err, repo.(*repository))
@@ -1156,10 +1162,12 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules: func(t *testing.T, repo rule.Repository) {
 				t.Helper()
 
-				rule1 := &ruleImpl{id: "test", srcID: "1", hash: []byte{1}}
+				source := rule.RuleSet{ID: "1"}
+
+				rule1 := &ruleImpl{id: "test", source: source, hash: []byte{1}}
 				rule1.routes = append(rule1.routes, &routeImpl{rule: rule1, host: "*", path: "/baz/bar", matcher: andMatcher{}})
 
-				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1})
+				err := repo.AddRuleSet(t.Context(), source, []rule.Rule{rule1})
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
@@ -1171,7 +1179,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.True(t, ok)
 
 				require.Equal(t, "test", impl.id)
-				require.Equal(t, "1", impl.srcID)
+				require.Equal(t, "1", impl.source.ID)
 			},
 		},
 		"upstream rule match with backtracking due to constraints limitations within the rule set": {
@@ -1184,7 +1192,9 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules: func(t *testing.T, repo rule.Repository) {
 				t.Helper()
 
-				rule1 := &ruleImpl{id: "rule1", srcID: "1", hash: []byte{1}}
+				source := rule.RuleSet{ID: "1"}
+
+				rule1 := &ruleImpl{id: "rule1", source: source, hash: []byte{1}}
 				rule1.routes = append(rule1.routes,
 					&routeImpl{
 						rule: rule1,
@@ -1198,7 +1208,7 @@ func TestRepositoryFindRule(t *testing.T) {
 					},
 				)
 
-				rule2 := &ruleImpl{id: "rule2", srcID: "1", hash: []byte{1}}
+				rule2 := &ruleImpl{id: "rule2", source: source, hash: []byte{1}}
 				rule2.routes = append(rule2.routes,
 					&routeImpl{
 						rule: rule2,
@@ -1212,7 +1222,7 @@ func TestRepositoryFindRule(t *testing.T) {
 					},
 				)
 
-				rule3 := &ruleImpl{id: "rule3", srcID: "1", hash: []byte{1}}
+				rule3 := &ruleImpl{id: "rule3", source: source, hash: []byte{1}}
 				rule3.routes = append(rule3.routes,
 					&routeImpl{
 						rule:    rule3,
@@ -1222,7 +1232,7 @@ func TestRepositoryFindRule(t *testing.T) {
 					},
 				)
 
-				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1, rule2, rule3})
+				err := repo.AddRuleSet(t.Context(), source, []rule.Rule{rule1, rule2, rule3})
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
@@ -1234,7 +1244,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.True(t, ok)
 
 				require.Equal(t, "rule3", impl.id)
-				require.Equal(t, "1", impl.srcID)
+				require.Equal(t, "1", impl.source.ID)
 			},
 		},
 		"upstream rule match with backtracking within the rule set": {
@@ -1247,7 +1257,9 @@ func TestRepositoryFindRule(t *testing.T) {
 			addRules: func(t *testing.T, repo rule.Repository) {
 				t.Helper()
 
-				rule1 := &ruleImpl{id: "rule1", srcID: "1", hash: []byte{1}}
+				source := rule.RuleSet{ID: "1"}
+
+				rule1 := &ruleImpl{id: "rule1", source: source, hash: []byte{1}}
 				rule1.routes = append(rule1.routes,
 					&routeImpl{
 						rule:    rule1,
@@ -1257,7 +1269,7 @@ func TestRepositoryFindRule(t *testing.T) {
 					},
 				)
 
-				rule2 := &ruleImpl{id: "rule2", srcID: "1", hash: []byte{1}}
+				rule2 := &ruleImpl{id: "rule2", source: source, hash: []byte{1}}
 				rule2.routes = append(rule2.routes,
 					&routeImpl{
 						rule:    rule2,
@@ -1267,7 +1279,7 @@ func TestRepositoryFindRule(t *testing.T) {
 					},
 				)
 
-				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1, rule2})
+				err := repo.AddRuleSet(t.Context(), source, []rule.Rule{rule1, rule2})
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
@@ -1279,7 +1291,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.True(t, ok)
 
 				require.Equal(t, "rule2", impl.id)
-				require.Equal(t, "1", impl.srcID)
+				require.Equal(t, "1", impl.source.ID)
 			},
 		},
 	} {

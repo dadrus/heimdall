@@ -99,7 +99,7 @@ type ruleFactory struct {
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
-func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, error) { //nolint:cyclop,funlen
+func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule.Rule, error) { //nolint:cyclop,funlen
 	if f.mode == config.ProxyMode && rul.Backend == nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
@@ -141,8 +141,12 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 	}
 
 	ri := &ruleImpl{
-		id:              rul.ID,
-		srcID:           srcID,
+		id: rul.ID,
+		source: rule.RuleSet{
+			ID:       source.ID,
+			Name:     source.Name,
+			Provider: source.Provider,
+		},
 		slashesHandling: slashesHandling,
 		backend:         rul.Backend,
 		hash:            hash,
@@ -183,7 +187,7 @@ func (f *ruleFactory) CreateRule(srcID string, rul v1beta1.Rule) (rule.Rule, err
 		}
 	}
 
-	return ri, nil
+	return newTelemetryRule(ri, f.m, f.t)
 }
 
 //nolint:funlen,gocognit,cyclop
@@ -380,7 +384,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	rul := &ruleImpl{
 		id:              "default",
 		slashesHandling: v1beta1.EncodedSlashesOff,
-		srcID:           "config",
+		source:          rule.RuleSet{ID: "default", Name: "default", Provider: "config"},
 		isDefault:       true,
 		sc:              authenticators,
 		sh:              subHandlers,
@@ -389,7 +393,11 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 	}
 
-	f.defaultRule = newTelemetryRule(rul, f.m, f.t)
+	f.defaultRule, err = newTelemetryRule(rul, f.m, f.t)
+	if err != nil {
+		return err
+	}
+
 	f.templateRule = rul
 	f.hasDefaultRule = true
 
