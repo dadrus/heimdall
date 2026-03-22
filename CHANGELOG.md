@@ -1,5 +1,29 @@
 # Changelog
 
+
+## [0.17.12](https://github.com/dadrus/heimdall/compare/v0.17.11...v0.17.12) (2026-03-22)
+
+### Bug Fixes
+
+* Proper extraction of client IP addresses from the request ([#3134](https://github.com/dadrus/heimdall/issues/3134)) ([857cdfe](https://github.com/dadrus/heimdall/commit/857cdfe0727c628e32a5c5641d5411b91918a2d3))
+
+### Documentation
+
+* Docker compose based examples updated to use the latest versions of traefik, nginx, opa, etc ([#3130](https://github.com/dadrus/heimdall/issues/3130)) ([bed5259](https://github.com/dadrus/heimdall/commit/bed525939fd88f365e5c966b95b9db54466c05ab))
+
+
+### Dependencies
+
+* update github.com/dadrus/httpsig digest to 3704855 ([#3127](https://github.com/dadrus/heimdall/issues/3127)) ([411cea4](https://github.com/dadrus/heimdall/commit/411cea414ac4f2c60932ac6a5e81547517f3abf2))
+* update golang to v1.26.1 ([#3124](https://github.com/dadrus/heimdall/issues/3124)) ([87620de](https://github.com/dadrus/heimdall/commit/87620deaf92103d1c616df83d6cf26b12b61621d))
+* update google.golang.org/genproto/googleapis/rpc digest to d00831a ([#3126](https://github.com/dadrus/heimdall/issues/3126)) ([79f8858](https://github.com/dadrus/heimdall/commit/79f885876f7ca3b6bb1005469752ba980be14d84))
+* update kubernetes monorepo to v0.35.3 ([#3125](https://github.com/dadrus/heimdall/issues/3125)) ([7460353](https://github.com/dadrus/heimdall/commit/7460353d96a8311923549c8f8984dbddc44beefb))
+* update module github.com/knadh/koanf/v2 to v2.3.4 ([#3129](https://github.com/dadrus/heimdall/issues/3129)) ([4aa8998](https://github.com/dadrus/heimdall/commit/4aa8998ab3d633c9684e6127dc0ed4d284446faf))
+* update module github.com/redis/rueidis to v1.0.73 ([#3114](https://github.com/dadrus/heimdall/issues/3114)) ([add85c3](https://github.com/dadrus/heimdall/commit/add85c36f8e65e4cbacce95381ab5f8c9d1f889e))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.73 ([#3114](https://github.com/dadrus/heimdall/issues/3114)) ([add85c3](https://github.com/dadrus/heimdall/commit/add85c36f8e65e4cbacce95381ab5f8c9d1f889e))
+* update module google.golang.org/grpc to v1.79.3 ([#3122](https://github.com/dadrus/heimdall/issues/3122)) ([69186e0](https://github.com/dadrus/heimdall/commit/69186e0718c9ed8c12b1064380bcc96006d9c9f9))
+
+
 ## [0.17.11](https://github.com/dadrus/heimdall/compare/v0.17.10...v0.17.11) (2026-03-15)
 
 ### Bug Fixes

@@ -99,11 +99,13 @@ func TestRequestClientIPs(t *testing.T) {
 			req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 			tc.configureRequest(t, req)
 
+			rc := New()
+
 			// WHEN
-			ips := requestClientIPs(nil, req)
+			rc.Init(req)
 
 			// THEN
-			tc.assert(t, ips)
+			tc.assert(t, rc.hmdlReq.ClientIPAddresses)
 		})
 	}
 }
