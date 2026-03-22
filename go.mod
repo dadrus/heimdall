@@ -1,13 +1,13 @@
 module github.com/dadrus/heimdall
 
-go 1.26.0
+go 1.26.1
 
 require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/ccoveille/go-safecast/v2 v2.0.0
-	github.com/dadrus/httpsig v0.0.0-20260305083642-921cc401eac3
+	github.com/dadrus/httpsig v0.0.0-20260320084101-37048551fc59
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
@@ -41,11 +41,11 @@ require (
 	github.com/knadh/koanf/providers/env/v2 v2.0.0
 	github.com/knadh/koanf/providers/rawbytes v1.0.0
 	github.com/knadh/koanf/providers/structs v1.0.0
-	github.com/knadh/koanf/v2 v2.3.3
+	github.com/knadh/koanf/v2 v2.3.4
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/redis/rueidis v1.0.72
-	github.com/redis/rueidis/rueidisotel v1.0.72
+	github.com/redis/rueidis v1.0.73
+	github.com/redis/rueidis/rueidisotel v1.0.73
 	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
@@ -79,14 +79,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.42.0
 	go.uber.org/fx v1.24.0
 	gocloud.dev v0.45.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260311181403-84a4fc48630c
-	google.golang.org/grpc v1.79.2
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7
+	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.35.2
-	k8s.io/apiextensions-apiserver v0.35.2
-	k8s.io/apimachinery v0.35.2
-	k8s.io/client-go v0.35.2
+	k8s.io/api v0.35.3
+	k8s.io/apiextensions-apiserver v0.35.3
+	k8s.io/apimachinery v0.35.3
+	k8s.io/client-go v0.35.3
 	k8s.io/klog/v2 v2.140.0
 )
 

@@ -330,6 +330,7 @@ func TestRequestContextBody(t *testing.T) {
 					Attributes: &envoy_auth.AttributeContext{
 						Request: &envoy_auth.AttributeContext_Request{
 							Http: &envoy_auth.AttributeContext_HttpRequest{
+								Path:    "/test",
 								RawBody: tc.body,
 								Headers: map[string]string{"content-type": tc.ct},
 							},
@@ -360,6 +361,7 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 			Attributes: &envoy_auth.AttributeContext{
 				Request: &envoy_auth.AttributeContext_Request{
 					Http: &envoy_auth.AttributeContext_HttpRequest{
+						Path:    "/test",
 						RawBody: []byte("foo"),
 						Headers: map[string]string{"content-type": "application/json"},
 					},
