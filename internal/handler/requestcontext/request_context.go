@@ -171,7 +171,7 @@ func requestClientIPs(ips []string, req *http.Request) []string {
 		}
 	}
 
-	if ips == nil {
+	if len(ips) == 0 {
 		if forwardedFor := req.Header.Get("X-Forwarded-For"); len(forwardedFor) != 0 {
 			for val := range strings.SplitSeq(forwardedFor, ",") {
 				ips = append(ips, strings.TrimSpace(val))

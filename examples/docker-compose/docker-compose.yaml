@@ -21,13 +21,13 @@ services:
     command: --port=8081
 
   idp:
-    image: nginx:1.29.1
+    image: nginx:1.29.6
     volumes:
     - ./idp.nginx:/etc/nginx/nginx.conf:ro
     - ./jwks.json:/var/www/nginx/jwks.json:ro
 
   opa:
-    image: openpolicyagent/opa:1.8.0
+    image: openpolicyagent/opa:1.14.1
     command: run --server --addr=0.0.0.0:8181 /etc/opa/policies
     volumes:
     - ./policy.rego:/etc/opa/policies/policy.rego:ro
