@@ -47,16 +47,10 @@ type ruleImpl struct {
 
 func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	logger := zerolog.Ctx(ctx.Context())
-
-	if r.isDefault {
-		logger.Info().Msg("Executing default rule")
-	} else {
-		logger.Info().
-			Str("_ruleset_id", r.source.ID).
-			Str("_provider", r.source.Provider).
-			Str("_id", r.id).
-			Msg("Executing rule")
-	}
+	logger.Info().
+		Str("_ruleset_id", r.source.ID).
+		Str("_id", r.id).
+		Msg("Executing rule")
 
 	request := ctx.Request()
 
@@ -120,9 +114,7 @@ func (r *ruleImpl) SameAs(other rule.Rule) bool {
 func (r *ruleImpl) Routes() []rule.Route { return r.routes }
 
 func (r *ruleImpl) Equals(other rule.Rule) bool {
-	return r.ID() == other.ID() &&
-		r.Source().Equals(other.Source()) &&
-		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
+	return r.SameAs(other) && bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
 func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {
@@ -152,7 +144,6 @@ func (r *routeImpl) Matches(ctx pipeline.Context, keys, values []string) bool {
 	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {
 		logger.Debug().
 			Str("_ruleset_id", r.rule.source.ID).
-			Str("_provider", r.rule.source.Provider).
 			Str("_id", r.rule.id).
 			Str("route", r.path).
 			Err(err).
@@ -163,7 +154,6 @@ func (r *routeImpl) Matches(ctx pipeline.Context, keys, values []string) bool {
 
 	logger.Debug().
 		Str("_ruleset_id", r.rule.source.ID).
-		Str("_provider", r.rule.source.Provider).
 		Str("_id", r.rule.id).
 		Str("route", r.path).
 		Msg("Rule matched")
