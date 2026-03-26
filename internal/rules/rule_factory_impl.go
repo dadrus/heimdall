@@ -429,33 +429,12 @@ func (f *ruleFactory) convertToSteps(rawSteps []config.MechanismConfig) ([]v1bet
 }
 
 func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinition) (pipeline.Step, error) {
-	var (
-		err       error
-		mechanism mechanisms.Mechanism
-		step      pipeline.Step
-	)
-
-	switch ref.Kind {
-	case "authenticator":
-		mechanism, err = f.r.Authenticator(ref.Name)
-	case "authorizer":
-		mechanism, err = f.r.Authorizer(ref.Name)
-	case "contextualizer":
-		mechanism, err = f.r.Contextualizer(ref.Name)
-	case "finalizer":
-		mechanism, err = f.r.Finalizer(ref.Name)
-	case "error_handler":
-		mechanism, err = f.r.ErrorHandler(ref.Name)
-	default:
-		// can actually never happen
-		err = errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unknown mechanism kind: %s", ref.Kind)
-	}
-
+	mechanism, err := f.lookupMechanism(ref)
 	if err != nil {
 		return nil, errorchain.New(ErrStepCreation).CausedBy(err)
 	}
 
-	step, err = mechanism.CreateStep(
+	step, err := mechanism.CreateStep(
 		mechanisms.StepDefinition{
 			ID:        def.ID,
 			Config:    def.Config,
@@ -475,5 +454,28 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 		step = newConditionalStep(step, condition)
 	}
 
+	if _, ok := f.t.(nooptrace.Tracer); ok {
+		return step, nil
+	}
+
 	return newTelemetryStep(step, f.t), nil
+}
+
+func (f *ruleFactory) lookupMechanism(ref v1beta1.MechanismReference) (mechanisms.Mechanism, error) {
+	switch ref.Kind {
+	case "authenticator":
+		return f.r.Authenticator(ref.Name)
+	case "authorizer":
+		return f.r.Authorizer(ref.Name)
+	case "contextualizer":
+		return f.r.Contextualizer(ref.Name)
+	case "finalizer":
+		return f.r.Finalizer(ref.Name)
+	case "error_handler":
+		return f.r.ErrorHandler(ref.Name)
+	default:
+		// can actually never happen
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
+			"unknown mechanism kind: %s", ref.Kind)
+	}
 }
