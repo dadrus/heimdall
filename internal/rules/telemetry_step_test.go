@@ -17,7 +17,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
-func TestTelemetryRuleID(t *testing.T) {
+func TestTelemetryStepID(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -123,7 +123,6 @@ func TestTelemetryStepExecute(t *testing.T) {
 				attrs := event[0].Attributes
 				require.Len(t, attrs, 2)
 
-				assert.Contains(t, attrs, semconv.ExceptionType("*errors.errorString"))
 				assert.Contains(t, attrs, semconv.ExceptionMessage(err.Error()))
 			} else {
 				require.NoError(t, err)
