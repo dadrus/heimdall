@@ -27,6 +27,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	trace2 "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -544,6 +546,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		opMode         config.OperationMode
 		config         v1beta1.Rule
+		tracer         trace.Tracer
 		defaultRule    *ruleImpl
 		configureMocks func(t *testing.T, repo *mocks1.RepositoryMock)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
@@ -1202,29 +1205,20 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Len(t, rul.sh, 3)
 
 				assert.NotNil(t, rul.sh[0])
-				ts, ok := rul.sh[0].(*telemetryStep)
-				require.True(t, ok)
-				cs, ok := ts.s.(*conditionalStep)
+				cs, ok := rul.sh[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				assert.NotNil(t, rul.sh[1])
-				ts, ok = rul.sh[1].(*telemetryStep)
-				require.True(t, ok)
-				cs, ok = ts.s.(*conditionalStep)
+				cs, ok = rul.sh[1].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
 				assert.NotNil(t, rul.sh[2])
-				ts, ok = rul.sh[2].(*telemetryStep)
-				require.True(t, ok)
-				_, ok = ts.s.(*conditionalStep)
-				require.False(t, ok)
+				assert.IsType(t, &mocks.StepMock{}, rul.sh[2])
 
 				require.Len(t, rul.fi, 1)
-				ts, ok = rul.fi[0].(*telemetryStep)
-				require.True(t, ok)
-				cs, ok = ts.s.(*conditionalStep)
+				cs, ok = rul.fi[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
@@ -1297,27 +1291,15 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				require.Len(t, rul.sh, 1)
 
-				assert.NotNil(t, rul.sh[0])
-				ts, ok := rul.sh[0].(*telemetryStep)
-				require.True(t, ok)
-				_, ok = ts.s.(*conditionalStep)
-				require.False(t, ok)
+				require.NotNil(t, rul.sh[0])
+				assert.IsType(t, &mocks.StepMock{}, rul.sh[0])
 
 				require.Len(t, rul.fi, 1)
-				ts, ok = rul.fi[0].(*telemetryStep)
-				require.True(t, ok)
-				_, ok = ts.s.(*conditionalStep)
-				require.False(t, ok)
+				assert.IsType(t, &mocks.StepMock{}, rul.fi[0])
 
 				require.Len(t, rul.eh, 2)
-				ts, ok = rul.eh[0].(*telemetryStep)
-				require.True(t, ok)
-				_, ok = ts.s.(*conditionalStep)
-				require.True(t, ok)
-				ts, ok = rul.eh[1].(*telemetryStep)
-				require.True(t, ok)
-				_, ok = ts.s.(*conditionalStep)
-				require.True(t, ok)
+				assert.IsType(t, &conditionalStep{}, rul.eh[0])
+				assert.IsType(t, &conditionalStep{}, rul.eh[0])
 			},
 		},
 		"duplicate ids in the error pipeline": {
@@ -1538,6 +1520,55 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.ErrorContains(t, err, "default principal")
 			},
 		},
+		"tracing is enabled for rule steps": {
+			tracer: trace2.NewTracerProvider().Tracer("test"),
+			config: v1beta1.Rule{
+				ID:      "foobar",
+				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
+				},
+			},
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+				t.Helper()
+
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "test", rul.source.ID)
+				assert.False(t, rul.isDefault)
+				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, v1beta1.EncodedSlashesOff, rul.slashesHandling)
+				assert.Len(t, rul.Routes(), 1)
+				assert.Equal(t, rul, rul.Routes()[0].Rule())
+				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
+				require.Len(t, rul.sc, 1)
+				cpc, ok := rul.sc[0].(compositePrincipalCreator)
+				require.True(t, ok)
+				require.Len(t, cpc, 1)
+				ts, ok := cpc[0].(*telemetryStep)
+				require.True(t, ok)
+				assert.IsType(t, &mocks.StepMock{}, ts.s)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -1555,7 +1586,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mode:           tc.opMode,
 				l:              log.Logger,
 				hasDefaultRule: x.IfThenElse(tc.defaultRule != nil, true, false),
-				t:              nooptrace.Tracer{},
+				t:              x.IfThenElse[trace.Tracer](tc.tracer != nil, tc.tracer, nooptrace.Tracer{}),
 				m:              noopmetric.Meter{},
 			}
 
