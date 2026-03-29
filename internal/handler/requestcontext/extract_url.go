@@ -19,15 +19,17 @@ package requestcontext
 import (
 	"net/http"
 	"net/url"
+	"path"
+	"strings"
 
 	"github.com/dadrus/heimdall/internal/x"
 )
 
 func extractURL(req *http.Request) url.URL {
 	var (
-		rawPath string
-		path    string
-		query   string
+		rawPath       string
+		unescapedPath string
+		query         string
 	)
 
 	proto := req.Header.Get("X-Forwarded-Proto")
@@ -55,13 +57,18 @@ func extractURL(req *http.Request) url.URL {
 		query = req.URL.RawQuery
 	}
 
-	path, _ = url.PathUnescape(rawPath)
+	cleanedRawPath := path.Clean(rawPath)
+	if strings.HasSuffix(rawPath, "/") {
+		cleanedRawPath += "/"
+	}
+
+	unescapedPath, _ = url.PathUnescape(cleanedRawPath)
 
 	return url.URL{
 		Scheme:   proto,
 		Host:     host,
-		Path:     path,
-		RawPath:  rawPath,
+		Path:     unescapedPath,
+		RawPath:  cleanedRawPath,
 		RawQuery: query,
 	}
 }

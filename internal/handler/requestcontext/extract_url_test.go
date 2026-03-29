@@ -117,3 +117,125 @@ func TestExtractURL(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractURLPathTraversal(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		reqURL           string
+		configureRequest func(t *testing.T, req *http.Request)
+		assert           func(t *testing.T, extracted url.URL)
+	}{
+		"path traversal via X-Forwarded-Uri with trailing /": {
+			reqURL: "http://heimdall.test.local/foo",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/bar/../admin/")
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin/", extracted.EscapedPath())
+			},
+		},
+		"path traversal via X-Forwarded-Uri without trailing /": {
+			reqURL: "http://heimdall.test.local/bar",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/bar/../admin")
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin", extracted.EscapedPath())
+			},
+		},
+		"path traversal via request path with trailing slash": {
+			reqURL: "http://heimdall.test.local/test/../admin/",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin/", extracted.EscapedPath())
+			},
+		},
+		"path traversal via request path without trailing slash": {
+			reqURL: "http://heimdall.test.local/test/../admin",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin", extracted.EscapedPath())
+			},
+		},
+		"path traversal via request going beyond the root": {
+			reqURL: "http://heimdall.test.local/test/../../../admin",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin", extracted.EscapedPath())
+			},
+		},
+		"": {
+			reqURL: "http://heimdall.test.local/scripts/..%5c../Windows/System32/cmd.exe?/c+dir+c",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin", extracted.EscapedPath())
+			},
+		},
+		"2": {
+			reqURL: "http://heimdall.test.local/scripts/%2e%2e%2fWindows/System32/cmd.exe?/c+dir+c",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin", extracted.EscapedPath())
+				assert.Equal(t, "/admin", extracted.Path)
+				assert.Equal(t, "/admin", extracted.RawPath)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, tc.reqURL, nil)
+			require.NoError(t, err)
+
+			tc.configureRequest(t, req)
+
+			// WHEN
+			extracted := extractURL(req)
+
+			// THEN
+			tc.assert(t, extracted)
+		})
+	}
+}
