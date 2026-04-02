@@ -123,9 +123,9 @@ func decorateWithMeter(exec executorFunc, meter metric.Meter, attrs []attribute.
 	}, nil
 }
 
-func (tr *telemetryRule) ID() string                                              { return tr.r.ID() }
-func (tr *telemetryRule) Source() rule.RuleSet                                    { return tr.r.Source() }
-func (tr *telemetryRule) Routes() []rule.Route                                    { return tr.r.Routes() }
-func (tr *telemetryRule) SameAs(other rule.Rule) bool                             { return tr.r.SameAs(other) }
-func (tr *telemetryRule) Equals(other rule.Rule) bool                             { return tr.r.Equals(other) }
-func (tr *telemetryRule) Execute(hctx pipeline.Context) (pipeline.Backend, error) { return tr.do(hctx) }
+func (tr *telemetryRule) ID() string                                             { return tr.r.ID() }
+func (tr *telemetryRule) Source() rule.RuleSet                                   { return tr.r.Source() }
+func (tr *telemetryRule) Routes() []rule.Route                                   { return tr.r.Routes() }
+func (tr *telemetryRule) SameAs(other rule.Rule) bool                            { return tr.r.SameAs(other) }
+func (tr *telemetryRule) Equals(other rule.Rule) bool                            { return tr.r.Equals(other) }
+func (tr *telemetryRule) Execute(ctx pipeline.Context) (pipeline.Backend, error) { return tr.do(ctx) }
