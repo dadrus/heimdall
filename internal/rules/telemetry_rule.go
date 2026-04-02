@@ -98,9 +98,7 @@ func (tr *telemetryRule) Execute(hctx pipeline.Context) (pipeline.Backend, error
 	}
 
 	if tr.rd.Enabled(ctx) {
-		elapsedTime := float64(time.Since(startTime)) / float64(time.Millisecond)
-
-		tr.rd.Record(ctx, elapsedTime, metric.WithAttributeSet(tr.attrSet))
+		tr.rd.Record(ctx, time.Since(startTime).Seconds(), metric.WithAttributeSet(tr.attrSet))
 	}
 
 	return be, err
