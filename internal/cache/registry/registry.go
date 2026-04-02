@@ -61,7 +61,8 @@ func Create(ctx app.Context, typ string, config map[string]any) (types.Cache, er
 		return nil, err
 	}
 
-	if ctx.Config().Metrics.CoverCache {
+	metricsCfg := ctx.Config().Metrics
+	if metricsCfg.Enabled && metricsCfg.CoverCache {
 		return metrics.Decorate(ctx, cch)
 	}
 
