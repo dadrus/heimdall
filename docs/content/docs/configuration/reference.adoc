@@ -119,9 +119,12 @@ log:
 tracing:
   enabled: true
   span_processor: batch
+  cover_rules: true
 
 metrics:
   enabled: true
+  cover_cache: true
+  cover_rules: true
 
 profiling:
   enabled: false
