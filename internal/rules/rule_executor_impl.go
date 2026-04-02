@@ -33,8 +33,9 @@ func newRuleExecutor(repository rule.Repository) pipeline.Executor {
 
 func (e *ruleExecutor) Execute(hctx pipeline.Context) (pipeline.Backend, error) {
 	request := hctx.Request()
+	logger := zerolog.Ctx(hctx.Context())
 
-	zerolog.Ctx(hctx.Context()).Debug().
+	logger.Debug().
 		Str("_method", request.Method).
 		Str("_url", request.URL.String()).
 		Msg("Analyzing request")
@@ -43,6 +44,14 @@ func (e *ruleExecutor) Execute(hctx pipeline.Context) (pipeline.Backend, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	src := rul.Source()
+	logger.Debug().
+		Str("_ruleset_id", src.ID).
+		Str("_ruleset_name", src.Name).
+		Str("_provider", src.Provider).
+		Str("_rule_id", rul.ID()).
+		Msg("Rule matched")
 
 	return rul.Execute(hctx)
 }

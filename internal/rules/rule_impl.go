@@ -139,24 +139,9 @@ type routeImpl struct {
 }
 
 func (r *routeImpl) Matches(ctx pipeline.Context, keys, values []string) bool {
-	logger := zerolog.Ctx(ctx.Context())
-
 	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {
-		logger.Debug().
-			Str("_ruleset_id", r.rule.source.ID).
-			Str("_id", r.rule.id).
-			Str("route", r.path).
-			Err(err).
-			Msg("Request does not satisfy matching conditions")
-
 		return false
 	}
-
-	logger.Debug().
-		Str("_ruleset_id", r.rule.source.ID).
-		Str("_id", r.rule.id).
-		Str("route", r.path).
-		Msg("Rule matched")
 
 	return true
 }
