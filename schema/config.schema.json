@@ -2435,6 +2435,11 @@
           "description": "Enables metrics collection for rules executions",
           "type": "boolean",
           "default": false
+        },
+        "cover_cache": {
+          "description": "Enables metrics collection for cache usage",
+          "type": "boolean",
+          "default": false
         }
       }
     },

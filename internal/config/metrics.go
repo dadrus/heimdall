@@ -23,6 +23,7 @@ import (
 type MetricsConfig struct {
 	Enabled    bool `koanf:"enabled"`
 	CoverRules bool `koanf:"cover_rules"`
+	CoverCache bool `koanf:"cover_cache"`
 }
 
 func envOr(key, defaultValue string) string {
