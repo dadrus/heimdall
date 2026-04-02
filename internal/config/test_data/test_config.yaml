@@ -131,6 +131,7 @@ tracing:
 metrics:
   enabled: true
   cover_rules: false
+  cover_cache: true
 
 profiling:
   enabled: true

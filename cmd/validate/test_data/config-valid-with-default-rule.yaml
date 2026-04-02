@@ -41,6 +41,7 @@ profiling:
 tracing:
   span_processor: simple
   cover_rules: true
+  cover_cache: true
 
 mechanisms:
   authenticators:
