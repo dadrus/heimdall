@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -27,6 +28,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -79,9 +81,14 @@ func TestTelemetryStepExecute(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
+			parentCtx := t.Context()
+
 			cm := mocks.NewContextMock(t)
-			cm.EXPECT().Context().Return(t.Context())
-			cm.EXPECT().WithParent(mock.Anything).Return(cm)
+			cm.EXPECT().Context().Return(parentCtx)
+			withSpanParent := cm.EXPECT().WithParent(mock.MatchedBy(func(ctx context.Context) bool {
+				return oteltrace.SpanFromContext(ctx).SpanContext().IsValid()
+			})).Return(cm).Once()
+			cm.EXPECT().WithParent(parentCtx).Return(cm).NotBefore(withSpanParent).Once()
 
 			sm := mocks.NewStepMock(t)
 			sm.EXPECT().ID().Return("test id")

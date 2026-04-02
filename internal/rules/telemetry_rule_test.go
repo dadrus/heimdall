@@ -144,12 +144,14 @@ func TestTelemetryRuleExecute(t *testing.T) {
 			// GIVEN
 			src := rule.RuleSet{ID: "test ruleset id", Name: "test ruleset name", Provider: "test provider"}
 			bem := mocks.NewBackendMock(t)
+			parentCtx := t.Context()
 
 			cm := mocks.NewContextMock(t)
-			cm.EXPECT().Context().Return(t.Context())
-			cm.EXPECT().WithParent(mock.MatchedBy(func(ctx context.Context) bool {
+			cm.EXPECT().Context().Return(parentCtx)
+			withSpanParent := cm.EXPECT().WithParent(mock.MatchedBy(func(ctx context.Context) bool {
 				return oteltrace.SpanFromContext(ctx).SpanContext().IsValid()
-			})).Return(cm)
+			})).Return(cm).Once()
+			cm.EXPECT().WithParent(parentCtx).Return(cm).NotBefore(withSpanParent).Once()
 
 			rulMock := mocks2.NewRuleMock(t)
 			rulMock.EXPECT().ID().Return("test rule id")

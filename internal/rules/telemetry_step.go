@@ -45,15 +45,19 @@ func newTelemetryStep(step pipeline.Step, t trace.Tracer) pipeline.Step {
 }
 
 func (s *telemetryStep) Execute(hctx pipeline.Context, sub pipeline.Subject) error {
-	ctx, span := s.t.Start(
-		hctx.Context(),
+	pctx := hctx.Context()
+	sctx, span := s.t.Start(
+		pctx,
 		"Step Execution",
 		s.attrs...,
 	)
 
+	hctx.WithParent(sctx)
+
+	defer hctx.WithParent(pctx)
 	defer span.End()
 
-	err := s.s.Execute(hctx.WithParent(ctx), sub)
+	err := s.s.Execute(hctx, sub)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

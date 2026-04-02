@@ -64,21 +64,24 @@ func decorateWithTracer(exec executorFunc, tracer trace.Tracer, attrs []attribut
 	}
 
 	return func(hctx pipeline.Context) (pipeline.Backend, error) {
-		ctx := hctx.Context()
-		ctx, span := tracer.Start(
-			ctx,
+		pctx := hctx.Context()
+		sctx, span := tracer.Start(
+			pctx,
 			"Rule Execution",
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(attrs...),
 		)
 
-		be, err := exec(hctx.WithParent(ctx))
+		hctx.WithParent(sctx)
+
+		defer hctx.WithParent(pctx)
+		defer span.End()
+
+		be, err := exec(hctx)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 		}
-
-		span.End()
 
 		return be, err
 	}
