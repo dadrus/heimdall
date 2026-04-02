@@ -40,7 +40,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestRuleFactoryNew(t *testing.T) {
+func TestNewRuleFactory(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -429,6 +429,91 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.Empty(t, defRule.sh)
 				assert.Empty(t, defRule.fi)
 				assert.Empty(t, defRule.eh)
+			},
+		},
+		"new factory with rule specific telemetry enabled": {
+			config: &config.Configuration{
+				Metrics: config.MetricsConfig{Enabled: true, CoverRules: true},
+				Tracing: config.TracingConfig{Enabled: true, CoverRules: true},
+				Default: &config.DefaultRule{
+					Execute: []config.MechanismConfig{
+						{"authenticator": "foo", "id": "bar"},
+					},
+				},
+			},
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+				t.Helper()
+
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().ID().Return("bar")
+				as.EXPECT().Kind().Return(pipeline.KindAuthenticator)
+				as.EXPECT().Type().Return("foo")
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "bar", Principal: "default"}).Return(as, nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
+			},
+			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ruleFactory)
+
+				assert.IsNotType(t, nooptrace.Tracer{}, ruleFactory.t)
+				assert.IsNotType(t, noopmetric.Meter{}, ruleFactory.m)
+
+				assert.NotNil(t, ruleFactory.DefaultRule())
+				assert.IsType(t, &telemetryRule{}, ruleFactory.defaultRule)
+			},
+		},
+		"new factory with rule specific telemetry disabled": {
+			config: &config.Configuration{
+				Metrics: config.MetricsConfig{Enabled: true, CoverRules: false},
+				Tracing: config.TracingConfig{Enabled: true, CoverRules: false},
+				Default: &config.DefaultRule{
+					Execute: []config.MechanismConfig{
+						{"authenticator": "foo", "id": "bar"},
+					},
+				},
+			},
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+				t.Helper()
+
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "bar", Principal: "default"}).Return(as, nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
+			},
+			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ruleFactory)
+
+				assert.IsType(t, nooptrace.Tracer{}, ruleFactory.t)
+				assert.IsType(t, noopmetric.Meter{}, ruleFactory.m)
+
+				assert.NotNil(t, ruleFactory.DefaultRule())
+				assert.IsType(t, &telemetryRule{}, ruleFactory.defaultRule)
 			},
 		},
 		"new factory with default rule, configured with all possible elements": {
