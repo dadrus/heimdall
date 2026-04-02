@@ -437,3 +437,38 @@ func TestRequestContextReset(t *testing.T) {
 	require.Empty(t, ctx.hmdlReq.URL.Captures)
 	require.Nil(t, ctx.hmdlReq.ClientIPAddresses)
 }
+
+func TestRequestContextWithParent(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodPatch,
+					Scheme:  "https",
+					Host:    "foo.bar:8080",
+					Path:    "/test",
+					Query:   "bar=moo",
+					RawBody: []byte(`{ "content": "heimdall" }`),
+					Headers: map[string]string{"content-type": "application/json"},
+				},
+			},
+		},
+	}
+
+	md := metadata.MD{
+		"x-forwarded-for": []string{"127.0.0.1"},
+	}
+
+	ctx := newRequestContext()
+	ctx.Init(metadata.NewIncomingContext(context.TODO(), md), checkReq)
+
+	orig := ctx.Context()
+
+	ctx.WithParent(t.Context())
+
+	assert.NotEqual(t, orig, ctx.ctx)
+	assert.Equal(t, t.Context(), ctx.ctx)
+}

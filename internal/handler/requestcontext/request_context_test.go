@@ -293,3 +293,18 @@ func TestRequestContextReset(t *testing.T) {
 	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
 }
+
+func TestRequestContextWithParent(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := New()
+	ctx.Init(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
+
+	orig := ctx.Context()
+
+	ctx.WithParent(t.Context())
+
+	assert.NotEqual(t, orig, ctx.ctx)
+	assert.Equal(t, t.Context(), ctx.ctx)
+}

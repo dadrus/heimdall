@@ -62,13 +62,14 @@ memory_limit: 100MB
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			_, err = NewCache(nil, conf)
+			cch, err := NewCache(nil, conf)
 
 			if tc.err != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.err)
 			} else {
 				require.NoError(t, err)
+				assert.Equal(t, cacheType, cch.Type())
 			}
 		})
 	}
