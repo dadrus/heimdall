@@ -389,6 +389,10 @@ metrics:
 +
 Enables metrics collection for rule executions. Defaults to `false` for performance reasons. When enabled, the `rule.execution.duration` metric is available. This setting is ignored when metrics collection is disabled (see above).
 
+* *`cover_cache`*: _boolean_ (optional)
++
+Enables metrics collection for cache usage. Defaults to `false` for performance reasons. When enabled, the `cache.get.requests` and `cache.set.requests` metrics are available. This setting is ignored when metrics collection is disabled (see above).
+
 ==== Metric Exporters
 
 By default, metrics are pushed to the OTEL collector using the `http/protobuf` transport protocol. You can change this behavior by setting either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_protocol[`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`] or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_protocol[`OTEL_EXPORTER_OTLP_PROTOCOL`].
@@ -406,7 +410,7 @@ You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` envir
 * Request metrics for each active service, including in-progress requests, according to OpenTelemetry https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/http-metrics/[Semantic Conventions for HTTP Metrics] and https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/rpc-metrics/[General RPC conventions].
 * Metrics about the metrics endpoint itself (if enabled), including internal errors during metric collection, current in-flight requests, and total scrapes.
 * Expiry information for configured certificates.
-* Cache usage information (as long as the link:{{< relref "/docs/operations/cache.adoc#_noop_backend" >}}[Noop Cache Backend] is not configured).
+* Cache usage information, if `metrics.cover_cache` is enabled and the link:{{< relref "/docs/operations/cache.adoc#_noop_backend" >}}[Noop Cache Backend] is not configured.
 * Number of loaded rules per rule set.
 * Execution duration information for individual rules (if enabled).
 
