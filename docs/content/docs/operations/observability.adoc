@@ -1,5 +1,5 @@
 ---
-title: "Observability "
+title: "Observability"
 date: 2022-08-03T18:53:31+02:00
 draft: false
 weight: 34
@@ -7,24 +7,24 @@ menu:
   docs:
     weight: 4
     parent: "Operations"
-description: To support easier operation and integration in diverse APM products heimdall implements different observability mechanisms. The following sections provide insights about what can be expected.
+description: To support operations and integration with diverse APM products, heimdall implements different observability mechanisms. The following sections describe what to expect.
 ---
 
 :toc:
 
 == Logging
 
-Heimdall's implementation uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.
+Heimdall uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can also log in plain text. All emitted log statements include distributed tracing information (if tracing is enabled), so log entries can be correlated with traces and grouped by request/transaction.
 
 === Configuration
 
-Logging configuration can be adjusted in the `log` property of heimdall's configuration and supports following properties.
+Logging can be configured in heimdall's `log` section and supports the following properties.
 
 * *`format`*: _string_ (optional)
 +
-With `text` and `gelf` being the available formats. `text` is the default format. And `gelf` defines a JSON format adhering to https://docs.graylog.org/v1/docs/gelf[GELF].
+Supported values are `text` and `gelf`. `text` is the default format. `gelf` emits JSON that adheres to https://docs.graylog.org/v1/docs/gelf[GELF].
 +
-WARNING: Usage of `text` (default) format is not recommended for production deployments as it requires more computational resources and is hence slow.
+WARNING: Using `text` format (the default) is not recommended for production deployments, as it requires more computational resources and is therefore slower.
 +
 .Configuring logging to emit logs using GELF format.
 ====
@@ -37,11 +37,11 @@ log:
 
 * *`level`*: _string_ (optional)
 +
-Following log levels are available: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. By default, the level is set to `error`.
+The following log levels are available: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. By default, the level is set to `error`.
 +
-WARNING: `debug` and `trace` log levels are not meant for production as setting log level to one of these will result in a high log verbosity and also affect performance pretty much. Both are only meant for setup analysis and debugging! `trace` log level will also dump all incoming and outgoing HTTP requests and responses, as well as the contents of objects used in templates. That dump is unedited. That means sensitive data will be available in logs.
+WARNING: `debug` and `trace` are not intended for production use. Setting either level results in high log verbosity and noticeable performance impact. Both are meant for setup analysis and debugging only. The `trace` level also dumps all incoming and outgoing HTTP requests and responses, as well as the contents of objects used in templates. This dump is unedited, which means sensitive data may appear in logs.
 +
-NOTE: Due to some limitations of the GRPC framework capabilities, setting log level to `trace` will not dump GRPC requests and responses. If you need these for analysis purposes (e.g. when debugging the integration with envoy proxy), you'll have to set https://pkg.go.dev/net/http?utm_source=godoc#hdr-HTTP_2[`GODEBUG`] as well as the https://pkg.go.dev/google.golang.org/grpc/examples/features/debugging#section-readme[`GRPC_GO_LOG_VERBOSITY_LEVEL`] and https://pkg.go.dev/google.golang.org/grpc/examples/features/debugging#section-readme[`GRPC_GO_LOG_SEVERITY_LEVEL`] environment variables.
+NOTE: Due to limitations in the gRPC framework, setting log level to `trace` will not dump gRPC requests and responses. If you need these for analysis (for example, when debugging integration with Envoy Proxy), you must also set https://pkg.go.dev/net/http?utm_source=godoc#hdr-HTTP_2[`GODEBUG`] as well as https://pkg.go.dev/google.golang.org/grpc/examples/features/debugging#section-readme[`GRPC_GO_LOG_VERBOSITY_LEVEL`] and https://pkg.go.dev/google.golang.org/grpc/examples/features/debugging#section-readme[`GRPC_GO_LOG_SEVERITY_LEVEL`].
 +
 .Configuring logging to emit logs in debug level.
 ====
@@ -54,7 +54,7 @@ log:
 
 === Regular Log Events
 
-If you configure heimdall to log in `text` format, you can expect output similar to the one shown below:
+If you configure heimdall to log in `text` format, you can expect output similar to the example below:
 
 [source, log]
 ----
@@ -73,9 +73,9 @@ If you configure heimdall to log in `text` format, you can expect output similar
 2022-08-03T12:51:52+02:00 DBG Finalizing request
 ----
 
-WARNING: Usage of this format is not recommended for production deployments as it requires more computational resources and is hence slow.
+WARNING: This format is not recommended for production deployments, as it requires more computational resources and is therefore slower.
 
-Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/docs/gelf[GELF] for format details) format, the output will look as follows:
+If you configure `gelf` format instead (see https://docs.graylog.org/v1/docs/gelf[GELF] for details), the output will look as follows:
 
 [source, json]
 ----
@@ -115,39 +115,39 @@ Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/do
  "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Finalizing request"}
 ----
 
-Each log statement does also include the following fields in both log formats for incoming requests if tracing is enabled:
+Each log statement for incoming requests also includes the following fields in both formats when tracing is enabled:
 
-* `_trace_id` - The trace id as defined by OpenTelemetry.
-* `_span_id` - The span id as defined by OpenTelemetry of the current transaction.
-* `_parent_id` - The span id of the callee, which started the given transaction. Only present if the callee set the corresponding tracing header.
+* `_trace_id` - The trace ID as defined by OpenTelemetry.
+* `_span_id` - The span ID of the current transaction, as defined by OpenTelemetry.
+* `_parent_id` - The span ID of the caller that started the transaction. Present only if the caller set the corresponding tracing header.
 
 === Access Log Events
 
-In addition to regular logs, heimdall emits access logs. These events are always emitted regardless the configured log level and the log level of these events in the log output is always `INFO`.
+In addition to regular logs, heimdall emits access log events. These events are always emitted, regardless of the configured log level, and always use `INFO` in log output.
 
-Each request to any of heimdall's endpoints will result in two access events:
+Each request to any heimdall endpoint produces two access log events:
 
-* event describing the start of the transaction, and an
-* event describing the finalization of the transaction.
+* An event describing the start of the transaction.
+* An event describing the finalization of the transaction.
 
-Following are the fields, which are always set for both events:
+The following fields are always set for both events:
 
-* `_tx_start` - Timestamp in Unix epoch format, when the transaction started.
+* `_tx_start` - Timestamp in Unix epoch format when the transaction started.
 * `_client_ip` - The IP of the client of the request.
 
-If the event has been emitted for an HTTP request, following fields are set as well:
+If the event is emitted for an HTTP request, the following fields are also set:
 
 * `_http_method` - The HTTP method used by the client while calling heimdall's endpoint.
-* `_http_path` - The used HTTP path.
+* `_http_path` - The HTTP path.
 * `_http_user_agent` - The agent used by the client. The value is taken from the HTTP "User-Agent" header.
-* `_http_host` - The host part of the URI, the client is using while communicating with Heimdall.
-* `_http_scheme` - The scheme part of the URI, the client is using while communicating with Heimdall.
+* `_http_host` - The host part of the URI the client uses while communicating with heimdall.
+* `_http_scheme` - The scheme part of the URI the client uses while communicating with heimdall.
 
-If the event has been emitted for a GRPC request, following fields are set:
+If the event is emitted for a gRPC request, the following field is set:
 
-* `_grpc_method` - The full GRPC method used.
+* `_grpc_method` - The full gRPC method used.
 
-If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration]), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
+If the request comes from an intermediary (for example, an API Gateway) and heimdall is configured to trust that proxy (see link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration]), the following fields are also included when the corresponding HTTP headers are present.
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
@@ -155,27 +155,27 @@ If the request comes from an intermediary, like e.g. an API Gateway and heimdall
 * `_http_x_forwarded_for` - The value of the "X-Forwarded-For" header.
 * `_http_forwarded` - The value of the "Forwarded" header.
 
-Following are the fields, which are set in the transaction finalization event in addition:
+The following fields are additionally set in the transaction finalization event:
 
 * `_body_bytes_sent` - The length of the response body.
-* `_tx_duration_ms` - The duration of the transaction in milliseconds. If heimdall is operated in proxy mode, it will also include the time used to communicate with the upstream service.
+* `_tx_duration_ms` - The duration of the transaction in milliseconds. If heimdall is operated in proxy mode, this also includes the time used to communicate with the upstream service.
 * `_access_granted` - Set either to `true` or `false`, indicating whether heimdall granted access or not.
 * `_subject` - The subject identifier if the access was granted.
 * `_error` - The information about an error, which e.g. led to the denial of the request.
 
-If the finalization event has been emitted for an HTTP request, following fields are set as well:
+If the finalization event is emitted for an HTTP request, the following field is also set:
 
-* `_http_status_code` - The numeric HTTP response status code
+* `_http_status_code` - The numeric HTTP response status code.
 
-If the finalization event has been emitted for a GRPC request, following fields are set:
+If the finalization event is emitted for a gRPC request, the following field is set:
 
-* `_grpc_status_code` - The numeric GRPC status code.
+* `_grpc_status_code` - The numeric gRPC status code.
 
-Following are the fields, which are set if tracing is enabled:
+The following fields are set when tracing is enabled:
 
-* `_trace_id` - The trace id as defined by OpenTelemetry.
-* `_span_id` - The span id as defined by OpenTelemetry of the current transaction.
-* `_parent_id` - The span id of the callee, which started the given transaction. Only present if the callee set the corresponding tracing header.
+* `_trace_id` - The trace ID as defined by OpenTelemetry.
+* `_span_id` - The span ID of the current transaction, as defined by OpenTelemetry.
+* `_parent_id` - The span ID of the caller that started the transaction. Present only if the caller set the corresponding tracing header.
 
 If you configure heimdall to log in `text` format, you can expect output as shown below:
 
@@ -217,15 +217,15 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described below and can be used to tune the behavior.
+Heimdall uses https://opentelemetry.io/[OpenTelemetry] for distributed tracing to record request paths. It supports OpenTelemetry environment variables and values as defined in the https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition, heimdall provides extra tracing options in its own configuration, described below.
 
 === Configuration
 
-By default, tracing is enabled and can be disabled or slightly tuned in the `tracing` property of heimdall's configuration supporting the following properties.
+By default, tracing is enabled. You can customize this behavior in heimdall's `tracing` configuration using the following properties.
 
 * *`enabled`*: _boolean_ (optional)
 +
-By making use of this property, you can configure heimdall to enable or disable tracing. Defaults to `true` (tracing enabled).
+Enables or disables tracing. Defaults to `true`.
 +
 .Disabling tracing.
 ====
@@ -236,9 +236,13 @@ tracing:
 ----
 ====
 
+* *`cover_rules`*: _boolean_ (optional)
++
+Enables tracing at rule and rule-step level. Defaults to `false` for performance reasons. This setting is ignored when tracing is disabled (see above). See <<rule-specific-spans,Rule-Specific Spans>> for details about generated spans and attributes.
+
 * *`span_processor`*: _string_ (optional)
 +
-With `simple` and `batch` being the available options. By setting this property, you can define how heimdall shall process the created spans. Defaults to `batch`. This property is only there, as there is no corresponding setting option via OTEL tracing environment variables available.
+Configures how heimdall processes created spans. Supported values are `simple` and `batch`. Defaults to `batch`. This property exists because there is no corresponding OTEL tracing environment variable.
 +
 .Setting the span processor to export completed spans in batches.
 ====
@@ -249,18 +253,73 @@ tracing:
 ----
 ====
 +
-Description of the options:
+Available options:
 +
-** `simple` - Configures heimdall to synchronously export the created spans via configured exporters. This is not recommended for production use as it is slow and has a high computation resource usage overhead. It might be however good for testing, debugging, or showing examples of other features.
-** `batch` - Configures heimdall to send completed span batches to the exporter. Recommended setting for production use.
+** `simple` - Exports spans synchronously via the configured exporter. Not recommended for production use, as it is slower and has higher overhead. Useful for testing, debugging, or demos.
+** `batch` - Exports completed spans in batches. Recommended for production use.
+
+[[rule-specific-spans]]
+=== Rule-Specific Spans
+
+When `tracing.cover_rules` is set to `true` (see above), heimdall emits additional internal spans (span kind is set to `internal`) for rule and step execution.
+
+==== Span: `Rule Execution`
+
+Emitted for each executed rule.
+
+[cols="2,1,5"]
+|===
+| **Attribute** | **Type** | **Description**
+
+| `rule.id`
+| string
+| The ID of the executed rule.
+
+| `ruleset.id`
+| string
+| Provider-specific ID of the ruleset.
+
+| `ruleset.name`
+| string
+| The name of the ruleset the rule belongs to (if set).
+
+| `provider`
+| string
+| The provider used to load the ruleset (e.g., `kubernetes`).
+
+|===
+
+==== Span: `Step Execution`
+
+Emitted for each executed step of a rule.
+
+[cols="2,1,5"]
+|===
+| **Attribute** | **Type** | **Description**
+
+| `step.id`
+| string
+| The ID of the executed step.
+
+| `mechanism.kind`
+| string
+| The mechanism kind of the step (for example, authenticator, authorizer, finalizer, mutator).
+
+| `mechanism.name`
+| string
+| The mechanism type of the step.
+
+|===
+
+For both span types, heimdall records encountered errors and sets the span status to `Error`.
 
 === Tracing Context Propagation
 
-When a request arrives at heimdall, it will create a trace context object based on the received headers, which according to OTEL are the `traceparent` and `tracestate` HTTP headers, defined in https://www.w3.org/TR/trace-context/[W3C Trace Context] as well as `baggage` HTTP header, defined in https://www.w3.org/TR/baggage/[W3C Baggage]. The creation of that context, as well as the transformation of it into new HTTP headers, set by heimdall while communicating with further services is named propagation and the components responsible for the creation of such context object are named propagators.
+When a request arrives at heimdall, it creates a trace context from the incoming headers. In OTEL, these are the `traceparent` and `tracestate` headers defined by https://www.w3.org/TR/trace-context/[W3C Trace Context], and the `baggage` header defined by https://www.w3.org/TR/baggage/[W3C Baggage]. Creating this context and forwarding it to downstream services via outgoing headers is called propagation. The components that perform this are called propagators.
 
-Since not every service in a multi-service system may set or understand the above OTEL specific HTTP headers (as these might still be using tracing vendor specific headers), interoperability can be achieved by configuring the required propagators by making use of the `OTEL_PROPAGATORS` environment variable. OTEL defines the following values for this variable:
+Not every service in a distributed system sets or understands OTEL-specific headers, as some still use vendor-specific tracing headers. Interoperability can be achieved by configuring propagators via the `OTEL_PROPAGATORS` environment variable. OTEL defines the following values:
 
-* `tracecontext` - https://www.w3.org/TR/trace-context/[W3C Trace Context] propagator. Enabled by default, if `OTEL_PROPAGATORS` is not set.
+* `tracecontext` - https://www.w3.org/TR/trace-context/[W3C Trace Context] propagator. Enabled by default if `OTEL_PROPAGATORS` is not set.
 * `baggage` - https://www.w3.org/TR/baggage/[W3C Baggage] propagator. Enabled by default if `OTEL_PROPAGATORS` is not set.
 * `b3` - https://github.com/openzipkin/b3-propagation#single-header[Zipkin B3 Single Header] propagator.
 * `b3multi` - https://github.com/openzipkin/b3-propagation#multiple-headers[Zipkin B3 Multiple Header] propagator.
@@ -269,27 +328,27 @@ Since not every service in a multi-service system may set or understand the abov
 * `ottrace` - https://github.com/opentracing?q=basic&type=&language=[OT Trace Header] propagator.
 * `none` - No automatically configured propagator.
 
-All of these are supported by heimdall. In addition, following propagators can be configured as well:
+All of these are supported by heimdall. In addition, the following propagator can be configured:
 
-* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.footnote:[Datadog supports the OTLP protocol. For that reason, there is no exporter available.]
+* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator footnote:[Datadog supports the OTLP protocol. For that reason, there is no exporter available.].
 
-Configured propagators are used for inbound, as well as for outbound traffic.
+Configured propagators are used for both inbound and outbound traffic.
 
 === Span Exporters
 
-Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver supporting protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variablefootnote:[jaeger exporter has been marked as deprecated and is not supported anymore]:
+Span exporters deliver spans to external receivers (collectors or agents). They are the final component in the trace export pipeline and are typically provided by APM vendors such as Jaeger, Zipkin, or Instana. Since not every distributed system has an up-to-date telemetry receiver that supports OTEL protocols, interoperability can be achieved by configuring exporters via the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variable footnote:[The Jaeger exporter has been marked as deprecated and is no longer supported.]:
 
 * `otlp` - https://opentelemetry.io/docs/reference/specification/protocol/otlp/[OTLP] exporter. Enabled by default if `OTEL_TRACES_EXPORTER` is not set.
 * `zipkin` - https://zipkin.io/zipkin-api/[Zipkin] exporter to export spans in Zipkin data model.
 * `none` - No automatically configured exporter for traces.
 
-All of these are supported by heimdall. In addition, following exporters can be configured as well:
+All of these are supported by heimdall. In addition, the following exporter can be configured:
 
-* `instana` - https://www.instana.com/[Instana] exporter to export spans in Instana data model.footnote:[Instana supports the W3C header used by OTEL. For that reason, there is no propagator available.]
+* `instana` - https://www.instana.com/[Instana] exporter footnote:[Instana supports the W3C header used by OTEL. For that reason, there is no propagator available.] to export spans in Instana data model.
 
 === Example Configuration
 
-The environment variables set below configure heimdall to use Jaeger propagator and to export the spans via OTLP over grpc to the collector available under `\https://collector:4317`.
+The environment variables below configure heimdall to use the Jaeger propagator and export spans via OTLP over gRPC to a collector at `\https://collector:4317`.
 
 [source,text]
 ----
@@ -299,21 +358,23 @@ OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://collector:4317
 ----
 
-If your environment supports OpenTelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
+If your environment already supports OpenTelemetry and the defaults are acceptable, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` is likely the only required environment variable.
 
 == Metrics
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported.
+Heimdall uses https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, both push-based and pull-based metric export are supported.
 
 === Configuration
 
-As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. The generated metrics can either be exported by pushing these to an OTEL collector (the default behavior). Alternatively, the available metrics can be pulled and are then exported in the (https://grafana.com/oss/prometheus/[Prometheus] style).
+As with tracing, most metrics configuration is done via environment variables, as defined in the https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications.
 
-Metrics are generated and exported by default. If this is not desired, you can explicitly disable this behavior within the `metrics` property of heimdall's configuration by making use of the following property:
+By default, metrics are pushed to an OTEL collector. Alternatively, metrics can be exposed for pull-based scraping in https://grafana.com/oss/prometheus/[Prometheus] format.
+
+As with tracing, metrics are generated and exported by default. You can customize this behavior in heimdall's `metrics` configuration using the following properties:
 
 * *`enabled`*: _boolean_ (optional)
 +
-By making use of this property, you can configure heimdall to enable or disable the metrics collection. Defaults to `true` (metrics exposure is enabled).
+Enables or disables metrics collection. Defaults to `true`.
 +
 .Disabling metrics.
 ====
@@ -324,13 +385,17 @@ metrics:
 ----
 ====
 
+* *`cover_rules`*: _boolean_ (optional)
++
+Enables metrics collection for rule executions. Defaults to `false` for performance reasons. When enabled, the `rule.execution.duration` metric is available. This setting is ignored when metrics collection is disabled (see above).
+
 ==== Metric Exporters
 
-By default, metrics are pushed to the OTEL collector using the `http/protobuf` transport protocol. You can change that behavior by making use of either the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_protocol[`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`], or the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_protocol[`OTEL_EXPORTER_OTLP_PROTOCOL`] environment variable.
+By default, metrics are pushed to the OTEL collector using the `http/protobuf` transport protocol. You can change this behavior by setting either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_protocol[`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`] or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_protocol[`OTEL_EXPORTER_OTLP_PROTOCOL`].
 
-To let heimdall know where to push the metrics to, either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_endpoint[`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`], or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_endpoint[`OTEL_EXPORTER_OTLP_ENDPOINT`] must be defined.
+To configure where heimdall pushes metrics, define either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_endpoint[`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`] or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_endpoint[`OTEL_EXPORTER_OTLP_ENDPOINT`].
 
-To let heimdall expose metrics over a pull based service (https://grafana.com/oss/prometheus/[Prometheus] style), the https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_metrics_exporter[`OTEL_METRICS_EXPORTER`] environment variable must be set to `"prometheus"`. In that case heimdall will expose the `127.0.0.1:9464/metrics` endpoint which can be queried using the HTTP GET verb. You can change the host and port of that service by making use of the https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_HOST`] and https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_PORT`] environment variables.
+To expose metrics via a pull-based endpoint (https://grafana.com/oss/prometheus/[Prometheus] style), set https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_metrics_exporter[`OTEL_METRICS_EXPORTER`] to `"prometheus"`. In this mode, heimdall exposes `127.0.0.1:9464/metrics`, which can be queried using HTTP GET. You can change the host and port by setting https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_HOST`] and https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_PORT`].
 
 You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` environment variable to `none`.
 
@@ -338,22 +403,55 @@ You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` envir
 
 * System metrics according to https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/system-metrics/[OpenTelemetry Semantic Conventions for System Metrics].
 * Process and Go runtime metrics according to https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/process-metrics/[OpenTelemetry Semantic Conventions for OS Process Metrics].
-* Information about the handled requests on each active service, as well as information about requests in progress according to OpenTelemetry https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/http-metrics/[Semantic Conventions for HTTP Metrics] and https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/rpc-metrics/[General RPC conventions].
-* Information about the metrics endpoint itself (if enabled), including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
-* Information about expiry for configured certificates.
+* Request metrics for each active service, including in-progress requests, according to OpenTelemetry https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/http-metrics/[Semantic Conventions for HTTP Metrics] and https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/rpc-metrics/[General RPC conventions].
+* Metrics about the metrics endpoint itself (if enabled), including internal errors during metric collection, current in-flight requests, and total scrapes.
+* Expiry information for configured certificates.
+* Cache usage information (as long as the link:{{< relref "/docs/operations/cache.adoc#_noop_backend" >}}[Noop Cache Backend] is not configured).
+* Number of loaded rules per rule set.
+* Execution duration information for individual rules (if enabled).
 
-All, but custom metrics adhere to the https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/[OpenTelementry semantic conventions]. For that reason, only the custom metrics are listed in the table below.
+All metrics except custom metrics adhere to the https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/[OpenTelemetry semantic conventions]. For that reason, only custom metrics are listed in the tables below.
 
-==== Metric: `certificate.expiry`
-Number of seconds until a certificate used by a particular service (main, management), or mechanism (e.g. jwt finalizer) expires. The metric type is Gauge und the unit is s.
+==== Metric: `cache.get.requests`
+Provides insights into cache hits, misses, and errors when retrieving a key. The metric type is a Counter.
 
 [cols="2,1,5"]
 |===
 | **Attribute** | **Type** | **Description**
 
-| `service`
+| `backend`
 | string
-| The service, the certificate is configured for.
+| The configured cache backend (e.g., `redis`).
+
+| `result`
+| string
+| The result of the request (`hit`, `miss`, or `error`).
+
+|===
+
+==== Metric: `cache.set.requests`
+Provides insights into cache write operations, including successes and errors. The metric type is a Counter.
+
+[cols="2,1,5"]
+|===
+| **Attribute** | **Type** | **Description**
+
+| `backend`
+| string
+| The configured cache backend (e.g., `redis`).
+
+| `result`
+| string
+| The result of the request (`success` or `error`).
+
+|===
+
+==== Metric: `certificate.expiry`
+Number of seconds until a certificate used by heimdall expires. The metric type is Gauge and the unit is `s`.
+
+[cols="2,1,5"]
+|===
+| **Attribute** | **Type** | **Description**
 
 | `issuer`
 | string
@@ -369,13 +467,59 @@ Number of seconds until a certificate used by a particular service (main, manage
 
 | `dns_names`
 | string
-| DNS entries in the SAN extension
+| DNS entries in the SAN extension.
+
+|===
+
+==== Metric: `rule.execution.duration`
+Provides insights into the execution duration of individual rules. The metric type is Histogram and the unit is `s`.
+
+[cols="2,1,5"]
+|===
+| **Attribute** | **Type** | **Description**
+
+| `rule.id`
+| string
+| The ID of the executed rule.
+
+| `ruleset.id`
+| string
+| Provider-specific ID of the ruleset.
+
+| `ruleset.name`
+| string
+| The name of the ruleset the rule belongs to (if set).
+
+| `provider`
+| string
+| The provider used to load the ruleset (e.g., `kubernetes`).
+
+|===
+
+==== Metric: `rules.loaded`
+The number of loaded rules per rule set. The metric type is Gauge.
+
+[cols="2,1,5"]
+|===
+| **Attribute** | **Type** | **Description**
+
+| `ruleset.id`
+| string
+| Provider-specific ID of the ruleset.
+
+| `ruleset.name`
+| string
+| The name of the ruleset the rule belongs to (if set).
+
+| `provider`
+| string
+| The provider used to load the ruleset (e.g., `kubernetes`).
 
 |===
 
 == Runtime Profiling
 
-If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also the configuration options below) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
+If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (see configuration options below), where runtime profiling data in `profile.proto` format (also known as `pprof`) can be consumed by APM tools such as https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope], and others for visualization. The following information is available:
 
 * `allocs` - A sampling of all past memory allocations.
 * `block` - Stack traces that led to blocking on synchronization primitives.
@@ -383,20 +527,20 @@ If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See
 * `goroutine` - Stack traces of all current goroutines.
 * `heap` - A sampling of memory allocations of live objects.
 * `mutex` - Stack traces of holders of contended mutexes.
-* `profile` - Cpu profile. Profiling lasts for duration specified in `seconds` parameter, or for 30 seconds if not specified
+* `profile` - CPU profile. Profiling lasts for the duration specified in the `seconds` parameter, or 30 seconds if not specified.
 * `symbol` - Looks up the program counters listed in the request, responding with a table mapping program counters to function names.
 * `threadcreate` - Stack traces that led to the creation of new OS threads.
-* `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
+* `trace` - Execution trace in binary form. Tracing lasts for the duration specified in the `seconds` parameter, or 1 second if not specified.
 
-See also the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for the documentation of the actual API.
+See also the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for details about the actual API.
 
 === Configuration
 
-Configuration for this service can be adjusted in the `profiling` property of heimdall's configuration by making use of the following properties.
+Configuration for this service can be adjusted in heimdall's `profiling` section using the following properties.
 
 * *`enabled`*: _boolean_ (optional)
 +
-By making use of this property, you can configure heimdall to enable or disable runtime profiling. Defaults to `false` (profiling disabled).
+Enables or disables runtime profiling. Defaults to `false`.
 +
 .Enabling profiling.
 ====
@@ -409,9 +553,9 @@ profiling:
 
 * *`host`*: _string_ (optional)
 +
-By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications interested in profiling data. The entry `0.0.0.0` allows listening for all IPv4 addresses. Defaults to `127.0.0.1`, which allow only local TCP/IP “loopback” connections to be made.
+Specifies the TCP/IP address on which heimdall listens for client connections requesting profiling data. The value `0.0.0.0` listens on all IPv4 addresses. Defaults to `127.0.0.1`, which allows only local TCP/IP loopback connections.
 +
-NOTE: If you operate heimdall in a container, you should set this property to a value, which would allow your APM system to scrape this information.
+NOTE: If you run heimdall in a container, set this property to a value that allows your APM system to scrape this information.
 +
 .Configure heimdall to listen on `192.168.2.10`.
 ====
@@ -424,7 +568,7 @@ profiling:
 
 * *`port`*: _integer_ (optional)
 +
-By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `10251`.
+Specifies the TCP port heimdall should listen on. Defaults to `10251`.
 +
 .Configure heimdall to listen on port `9999` for runtime profiling requests.
 ====
