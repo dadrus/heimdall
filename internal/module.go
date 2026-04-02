@@ -52,6 +52,7 @@ func (c *appContext) Meter() metric.Meter               { return c.m }
 func (c *appContext) Config() *config.Configuration     { return c.c }
 
 var Module = fx.Options( //nolint:gochecknoglobals
+	otel.Module,
 	watcher.Module,
 	keyregistry.Module,
 	fx.Provide(func(
@@ -71,7 +72,6 @@ var Module = fx.Options( //nolint:gochecknoglobals
 			c:  conf,
 		}
 	}),
-	otel.Module,
 	cache.Module,
 	mechanisms.Module,
 	rules.Module,
