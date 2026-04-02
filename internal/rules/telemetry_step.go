@@ -24,24 +24,31 @@ import (
 )
 
 type telemetryStep struct {
-	s pipeline.Step
-	t trace.Tracer
+	s     pipeline.Step
+	t     trace.Tracer
+	attrs []trace.SpanStartOption
 }
 
-func newTelemetryStep(s pipeline.Step, t trace.Tracer) pipeline.Step {
-	return &telemetryStep{s: s, t: t}
+func newTelemetryStep(step pipeline.Step, t trace.Tracer) pipeline.Step {
+	return &telemetryStep{
+		s: step,
+		t: t,
+		attrs: []trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(
+				stepIDKey.String(step.ID()),
+				mechanismKindKey.String(string(step.Kind())),
+				mechanismNameKey.String(step.Type()),
+			),
+		},
+	}
 }
 
 func (s *telemetryStep) Execute(hctx pipeline.Context, sub pipeline.Subject) error {
 	ctx, span := s.t.Start(
 		hctx.Context(),
 		"Step Execution",
-		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(
-			stepIDKey.String(s.ID()),
-			mechanismKindKey.String(string(s.Kind())),
-			mechanismNameKey.String(s.Type()),
-		),
+		s.attrs...,
 	)
 
 	defer span.End()

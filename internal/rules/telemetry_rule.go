@@ -26,13 +26,15 @@ import (
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type telemetryRule struct {
-	r     rule.Rule
-	t     trace.Tracer
-	rd    metric.Float64Histogram
-	attrs attribute.Set
+	r       rule.Rule
+	t       trace.Tracer
+	rd      metric.Float64Histogram
+	attrSet attribute.Set
+	attrs   []attribute.KeyValue
 }
 
 func newTelemetryRule(rul rule.Rule, meter metric.Meter, tracer trace.Tracer) (rule.Rule, error) {
@@ -49,21 +51,24 @@ func newTelemetryRule(rul rule.Rule, meter metric.Meter, tracer trace.Tracer) (r
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
+			"failed creating rule.execution.duration histogram").CausedBy(err)
 	}
 
 	src := rul.Source()
+	attrs := []attribute.KeyValue{
+		ruleIDKey.String(rul.ID()),
+		ruleSetIDKey.String(src.ID),
+		ruleSetNameKey.String(src.Name),
+		ruleSetProviderKey.String(src.Provider),
+	}
 
 	return &telemetryRule{
-		r:  rul,
-		t:  tracer,
-		rd: histogram,
-		attrs: attribute.NewSet(
-			ruleIDKey.String(rul.ID()),
-			ruleSetIDKey.String(src.ID),
-			ruleSetNameKey.String(src.Name),
-			ruleSetProviderKey.String(src.Provider),
-		),
+		r:       rul,
+		t:       tracer,
+		rd:      histogram,
+		attrSet: attribute.NewSet(attrs...),
+		attrs:   attrs,
 	}, nil
 }
 
@@ -81,7 +86,7 @@ func (tr *telemetryRule) Execute(hctx pipeline.Context) (pipeline.Backend, error
 		ctx,
 		"Rule Execution",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(tr.attrs.ToSlice()...),
+		trace.WithAttributes(tr.attrs...),
 	)
 
 	defer span.End()
@@ -95,7 +100,7 @@ func (tr *telemetryRule) Execute(hctx pipeline.Context) (pipeline.Backend, error
 	if tr.rd.Enabled(ctx) {
 		elapsedTime := float64(time.Since(startTime)) / float64(time.Millisecond)
 
-		tr.rd.Record(ctx, elapsedTime, metric.WithAttributeSet(tr.attrs))
+		tr.rd.Record(ctx, elapsedTime, metric.WithAttributeSet(tr.attrSet))
 	}
 
 	return be, err

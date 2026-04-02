@@ -33,8 +33,8 @@ import (
 )
 
 type ruleSetMetrics struct {
-	count int64
-	attrs attribute.Set
+	rulesCount int64
+	attrs      attribute.Set
 }
 
 type ruleSetID struct {
@@ -45,9 +45,9 @@ type ruleSetID struct {
 type repository struct {
 	dr rule.Rule
 
-	knownRules      []rule.Rule
-	ruleSetIDs      map[ruleSetID]ruleSetMetrics
-	knownRulesMutex sync.RWMutex
+	knownRules       []rule.Rule
+	ruleSetsMetaInfo map[ruleSetID]ruleSetMetrics
+	knownRulesMutex  sync.RWMutex
 
 	index          *radixtrie.Trie[rule.Route]
 	rulesTrieMutex sync.RWMutex
@@ -61,7 +61,8 @@ func newRepository(ruleFactory rule.Factory, meter metric.Meter) (rule.Repositor
 		metric.WithUnit("{rule}"),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
+			"failed creating rules.loaded gauge").CausedBy(err)
 	}
 
 	repo := &repository{
@@ -74,12 +75,13 @@ func newRepository(ruleFactory rule.Factory, meter metric.Meter) (rule.Repositor
 				return len(oldValues) == 0 || oldValues[0].Rule().Source().Equals(newValue.Rule().Source())
 			}),
 		),
-		rl:         gauge,
-		ruleSetIDs: make(map[ruleSetID]ruleSetMetrics, 10),
+		rl:               gauge,
+		ruleSetsMetaInfo: make(map[ruleSetID]ruleSetMetrics, 10),
 	}
 
 	if _, err = meter.RegisterCallback(repo.collectMetrics, gauge); err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
+			"failed registering callback for metrics collection").CausedBy(err)
 	}
 
 	return repo, nil
@@ -265,7 +267,7 @@ func (r *repository) DeleteRuleSet(_ context.Context, src rule.RuleSet) error {
 }
 
 func (r *repository) prepareMetrics() {
-	clear(r.ruleSetIDs)
+	clear(r.ruleSetsMetaInfo)
 
 	for _, rul := range r.knownRules {
 		src := rul.Source()
@@ -274,7 +276,7 @@ func (r *repository) prepareMetrics() {
 			provider: src.Provider,
 		}
 
-		metrics, ok := r.ruleSetIDs[key]
+		metrics, ok := r.ruleSetsMetaInfo[key]
 		if !ok {
 			metrics.attrs = attribute.NewSet(
 				ruleSetIDKey.String(src.ID),
@@ -283,8 +285,8 @@ func (r *repository) prepareMetrics() {
 			)
 		}
 
-		metrics.count++
-		r.ruleSetIDs[key] = metrics
+		metrics.rulesCount++
+		r.ruleSetsMetaInfo[key] = metrics
 	}
 }
 
@@ -359,8 +361,8 @@ func (r *repository) collectMetrics(_ context.Context, observer metric.Observer)
 	r.knownRulesMutex.RLock()
 	defer r.knownRulesMutex.RUnlock()
 
-	for _, metrics := range r.ruleSetIDs {
-		observer.ObserveInt64(r.rl, metrics.count, metric.WithAttributeSet(metrics.attrs))
+	for _, metrics := range r.ruleSetsMetaInfo {
+		observer.ObserveInt64(r.rl, metrics.rulesCount, metric.WithAttributeSet(metrics.attrs))
 	}
 
 	return nil

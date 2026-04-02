@@ -24,6 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
@@ -1323,4 +1326,158 @@ func TestRepositoryFindRule(t *testing.T) {
 			tc.assert(t, err, rul)
 		})
 	}
+}
+
+func TestRepositoryCollectMetrics(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		rules  []rule.Rule
+		assert func(t *testing.T, dp []metricdata.DataPoint[int64])
+	}{
+		"no ruleset loaded": {
+			assert: func(t *testing.T, dp []metricdata.DataPoint[int64]) {
+				t.Helper()
+
+				require.Empty(t, dp)
+			},
+		},
+		"single ruleset with a single rule": {
+			rules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1", Provider: "test-provider", Name: "test"}}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "example.com", path: "/1/:some"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, dp []metricdata.DataPoint[int64]) {
+				t.Helper()
+
+				require.Len(t, dp, 1)
+				assertDataPointForRuleSet(t, dp, rule.RuleSet{ID: "1", Provider: "test-provider", Name: "test"}, 1)
+			},
+		},
+		"single ruleset with multiple rules": {
+			rules: func() []rule.Rule {
+				rs1 := rule.RuleSet{ID: "2", Provider: "test-provider", Name: "test rs"}
+
+				rul1 := &ruleImpl{id: "1", source: rs1}
+				rul1.routes = append(rul1.routes, &routeImpl{rule: rul1, host: "example.com", path: "/1/foo"})
+
+				rul2 := &ruleImpl{id: "1", source: rs1}
+				rul2.routes = append(rul2.routes, &routeImpl{rule: rul2, host: "example.com", path: "/2/:some"})
+
+				return []rule.Rule{rul1, rul2}
+			}(),
+			assert: func(t *testing.T, dp []metricdata.DataPoint[int64]) {
+				t.Helper()
+
+				require.Len(t, dp, 1)
+				assertDataPointForRuleSet(t, dp, rule.RuleSet{ID: "2", Provider: "test-provider", Name: "test rs"}, 2)
+			},
+		},
+		"multiple rulesets with multiple rules, each": {
+			rules: func() []rule.Rule {
+				rs1 := rule.RuleSet{ID: "3", Provider: "some-provider", Name: "rs 1"}
+				rs2 := rule.RuleSet{ID: "4", Provider: "other-provider", Name: "rs 2"}
+
+				rul1 := &ruleImpl{id: "1", source: rs1}
+				rul1.routes = append(rul1.routes, &routeImpl{rule: rul1, host: "example.com", path: "/1/foo"})
+
+				rul2 := &ruleImpl{id: "2", source: rs1}
+				rul2.routes = append(rul2.routes, &routeImpl{rule: rul2, host: "example.com", path: "/2/:some"})
+
+				rul3 := &ruleImpl{id: "3", source: rs2}
+				rul3.routes = append(rul3.routes, &routeImpl{rule: rul3, host: "example.com", path: "/3/foo"})
+
+				rul4 := &ruleImpl{id: "4", source: rs2}
+				rul4.routes = append(rul4.routes, &routeImpl{rule: rul4, host: "example.com", path: "/4/:some"})
+
+				rul5 := &ruleImpl{id: "5", source: rs2}
+				rul5.routes = append(rul5.routes, &routeImpl{rule: rul5, host: "example.com", path: "/5/:some"})
+
+				return []rule.Rule{rul1, rul2, rul3, rul4, rul5}
+			}(),
+			assert: func(t *testing.T, dp []metricdata.DataPoint[int64]) {
+				t.Helper()
+
+				require.Len(t, dp, 2)
+
+				assertDataPointForRuleSet(t, dp, rule.RuleSet{ID: "3", Provider: "some-provider", Name: "rs 1"}, 2)
+				assertDataPointForRuleSet(t, dp, rule.RuleSet{ID: "4", Provider: "other-provider", Name: "rs 2"}, 3)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(
+				metric.WithResource(resource.Default()),
+				metric.WithReader(reader),
+			)
+			factory := mocks.NewFactoryMock(t)
+			factory.EXPECT().HasDefaultRule().Return(false)
+
+			repo, err := newRepository(factory, mp.Meter("test"))
+			require.NoError(t, err)
+
+			for _, rul := range tc.rules {
+				err = repo.AddRuleSet(t.Context(), rul.Source(), []rule.Rule{rul})
+				require.NoError(t, err)
+			}
+
+			var (
+				rm metricdata.ResourceMetrics
+				dp []metricdata.DataPoint[int64]
+			)
+
+			// WHEN
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+
+			// THEN
+			if len(rm.ScopeMetrics) > 0 {
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 1)
+
+				assert.Equal(t, "rules.loaded", sm.Metrics[0].Name)
+				assert.Equal(t, "{rule}", sm.Metrics[0].Unit)
+				assert.Equal(t, "Number of loaded rules", sm.Metrics[0].Description)
+
+				data, ok := sm.Metrics[0].Data.(metricdata.Gauge[int64])
+				require.True(t, ok)
+
+				dp = data.DataPoints
+			}
+
+			tc.assert(t, dp)
+		})
+	}
+}
+
+func assertDataPointForRuleSet(t *testing.T, points []metricdata.DataPoint[int64], rs rule.RuleSet, expValue int64) {
+	t.Helper()
+
+	var mdp metricdata.DataPoint[int64]
+
+	for _, dp := range points {
+		if res, present := dp.Attributes.Value(ruleSetIDKey); present && res.AsString() == rs.ID {
+			mdp = dp
+
+			break
+		}
+	}
+
+	require.NotEmpty(t, mdp)
+
+	require.Equal(t, 3, mdp.Attributes.Len())
+
+	assert.Equal(t, expValue, mdp.Value)
+	val, present := mdp.Attributes.Value(ruleSetNameKey)
+	require.True(t, present)
+	assert.Equal(t, rs.Name, val.AsString())
+
+	val, present = mdp.Attributes.Value(ruleSetProviderKey)
+	require.True(t, present)
+	assert.Equal(t, rs.Provider, val.AsString())
 }

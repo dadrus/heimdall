@@ -33,45 +33,21 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
-func TestTelemetryStepID(t *testing.T) {
+func TestTelemetryStepProperties(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	sm := mocks.NewStepMock(t)
 	sm.EXPECT().ID().Return("test id")
-
-	ts := newTelemetryStep(sm, noop.Tracer{})
-	require.NotNil(t, ts)
-
-	// WHEN & THEN
-	assert.Equal(t, "test id", ts.ID())
-}
-
-func TestTelemetryStepType(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	sm := mocks.NewStepMock(t)
 	sm.EXPECT().Type().Return("test type")
-
-	ts := newTelemetryStep(sm, noop.Tracer{})
-	require.NotNil(t, ts)
-
-	// WHEN & THEN
-	assert.Equal(t, "test type", ts.Type())
-}
-
-func TestTelemetryStepKind(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	sm := mocks.NewStepMock(t)
 	sm.EXPECT().Kind().Return(pipeline.KindAuthenticator)
 
 	ts := newTelemetryStep(sm, noop.Tracer{})
 	require.NotNil(t, ts)
 
 	// WHEN & THEN
+	assert.Equal(t, "test id", ts.ID())
+	assert.Equal(t, "test type", ts.Type())
 	assert.Equal(t, pipeline.KindAuthenticator, ts.Kind())
 }
 
@@ -82,6 +58,9 @@ func TestTelemetryStepAccept(t *testing.T) {
 	vm := mocks.NewVisitorMock(t)
 
 	sm := mocks.NewStepMock(t)
+	sm.EXPECT().ID().Return("test id")
+	sm.EXPECT().Type().Return("test type")
+	sm.EXPECT().Kind().Return(pipeline.KindAuthenticator)
 	sm.EXPECT().Accept(vm)
 
 	ts := newTelemetryStep(sm, noop.Tracer{})

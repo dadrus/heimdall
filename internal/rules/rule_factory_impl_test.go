@@ -1541,6 +1541,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 					return true
 				}))
+				as.EXPECT().ID().Return("test id")
+				as.EXPECT().Type().Return("foo")
+				as.EXPECT().Kind().Return(pipeline.KindAuthenticator)
 
 				mechanism := mocks1.NewMechanismMock(t)
 				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)

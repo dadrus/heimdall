@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/go-jose/go-jose/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -71,7 +73,8 @@ func newRegistry(meter metric.Meter) (Registry, error) {
 		metric.WithUnit("s"),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
+			"failed creating certificate.expiry gauge").CausedBy(err)
 	}
 
 	reg := &registry{
@@ -81,7 +84,8 @@ func newRegistry(meter metric.Meter) (Registry, error) {
 	}
 
 	if _, err = meter.RegisterCallback(reg.collect, certExpiry); err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
+			"failed registering callback for metrics collection").CausedBy(err)
 	}
 
 	return reg, nil

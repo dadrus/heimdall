@@ -99,7 +99,7 @@ func Decorate(ctx app.Context, cache types.Cache) (types.Cache, error) {
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"failed creating cache.get.requests counter").CausedBy(err)
 	}
 
@@ -108,7 +108,7 @@ func Decorate(ctx app.Context, cache types.Cache) (types.Cache, error) {
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"failed creating cache.set.requests counter").CausedBy(err)
 	}
 
