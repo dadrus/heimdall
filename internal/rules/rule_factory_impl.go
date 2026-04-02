@@ -219,6 +219,7 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage,
 	}
 
 	authn := make(map[string]compositePrincipalCreator)
+	principalOrder := make([]string, 0, len(steps))
 
 	for idx, step := range steps {
 		stepIDs[idx] = step.ID
@@ -242,6 +243,10 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage,
 			step, err := f.createStep(ref, def)
 			if err != nil {
 				return nil, nil, nil, err
+			}
+
+			if len(authn[def.Principal]) == 0 {
+				principalOrder = append(principalOrder, def.Principal)
 			}
 
 			authn[def.Principal] = append(authn[def.Principal], step)
@@ -287,8 +292,8 @@ func (f *ruleFactory) createExecutePipeline(steps []v1beta1.Step) (stage, stage,
 			"IDs used for execute pipeline steps must be unique")
 	}
 
-	for _, step := range authn {
-		authenticatorStage = append(authenticatorStage, step)
+	for _, p := range principalOrder {
+		authenticatorStage = append(authenticatorStage, authn[p])
 	}
 
 	return authenticatorStage, subjectHandlerStage, finalizerStage, nil
