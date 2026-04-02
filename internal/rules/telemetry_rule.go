@@ -72,13 +72,13 @@ func decorateWithTracer(exec executorFunc, tracer trace.Tracer, attrs []attribut
 			trace.WithAttributes(attrs...),
 		)
 
-		defer span.End()
-
 		be, err := exec(hctx.WithParent(ctx))
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 		}
+
+		span.End()
 
 		return be, err
 	}
