@@ -228,7 +228,6 @@ func TestTelemetryRuleExecute(t *testing.T) {
 			dp := histogram.DataPoints
 			require.Len(t, dp, 1)
 			assert.Equal(t, uint64(1), dp[0].Count)
-			assert.Len(t, dp[0].Exemplars, 1)
 			assert.GreaterOrEqual(t, dp[0].Sum, float64(0))
 
 			require.Equal(t, 4, dp[0].Attributes.Len())

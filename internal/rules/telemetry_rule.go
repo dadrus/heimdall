@@ -22,22 +22,80 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type executorFunc func(ctx pipeline.Context) (pipeline.Backend, error)
+
 type telemetryRule struct {
-	r       rule.Rule
-	t       trace.Tracer
-	rd      metric.Float64Histogram
-	attrSet attribute.Set
-	attrs   []attribute.KeyValue
+	r  rule.Rule
+	do executorFunc
 }
 
 func newTelemetryRule(rul rule.Rule, meter metric.Meter, tracer trace.Tracer) (rule.Rule, error) {
+	src := rul.Source()
+	attrs := []attribute.KeyValue{
+		ruleIDKey.String(rul.ID()),
+		ruleSetIDKey.String(src.ID),
+		ruleSetNameKey.String(src.Name),
+		ruleSetProviderKey.String(src.Provider),
+	}
+
+	exec := executorFunc(rul.Execute)
+
+	exec, err := decorateWithMeter(exec, meter, attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	exec, err = decorateWithTracer(exec, tracer, attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &telemetryRule{
+		r:  rul,
+		do: exec,
+	}, nil
+}
+
+func decorateWithTracer(exec executorFunc, tracer trace.Tracer, attrs []attribute.KeyValue) (executorFunc, error) {
+	if _, isNoopTracer := tracer.(nooptrace.Tracer); isNoopTracer {
+		return exec, nil
+	}
+
+	return func(hctx pipeline.Context) (pipeline.Backend, error) {
+		ctx := hctx.Context()
+		ctx, span := tracer.Start(
+			ctx,
+			"Rule Execution",
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(attrs...),
+		)
+
+		defer span.End()
+
+		be, err := exec(hctx.WithParent(ctx))
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+
+		return be, err
+	}, nil
+}
+
+func decorateWithMeter(exec executorFunc, meter metric.Meter, attrs []attribute.KeyValue) (executorFunc, error) {
+	if _, isNoopMeter := meter.(noopmetric.Meter); isNoopMeter {
+		return exec, nil
+	}
+
 	histogram, err := meter.Float64Histogram("rule.execution.duration",
 		metric.WithDescription("Duration of rule executions"),
 		metric.WithUnit("s"),
@@ -55,51 +113,26 @@ func newTelemetryRule(rul rule.Rule, meter metric.Meter, tracer trace.Tracer) (r
 			"failed creating rule.execution.duration histogram").CausedBy(err)
 	}
 
-	src := rul.Source()
-	attrs := []attribute.KeyValue{
-		ruleIDKey.String(rul.ID()),
-		ruleSetIDKey.String(src.ID),
-		ruleSetNameKey.String(src.Name),
-		ruleSetProviderKey.String(src.Provider),
-	}
+	attrSet := attribute.NewSet(attrs...)
 
-	return &telemetryRule{
-		r:       rul,
-		t:       tracer,
-		rd:      histogram,
-		attrSet: attribute.NewSet(attrs...),
-		attrs:   attrs,
+	return func(ctx pipeline.Context) (pipeline.Backend, error) {
+		startTime := time.Now()
+
+		be, err := exec(ctx)
+
+		histogram.Record(
+			ctx.Context(),
+			time.Since(startTime).Seconds(),
+			metric.WithAttributeSet(attrSet),
+		)
+
+		return be, err
 	}, nil
 }
 
-func (tr *telemetryRule) ID() string                  { return tr.r.ID() }
-func (tr *telemetryRule) Source() rule.RuleSet        { return tr.r.Source() }
-func (tr *telemetryRule) Routes() []rule.Route        { return tr.r.Routes() }
-func (tr *telemetryRule) SameAs(other rule.Rule) bool { return tr.r.SameAs(other) }
-func (tr *telemetryRule) Equals(other rule.Rule) bool { return tr.r.Equals(other) }
-
-func (tr *telemetryRule) Execute(hctx pipeline.Context) (pipeline.Backend, error) {
-	startTime := time.Now()
-	ctx := hctx.Context()
-
-	ctx, span := tr.t.Start(
-		ctx,
-		"Rule Execution",
-		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(tr.attrs...),
-	)
-
-	defer span.End()
-
-	be, err := tr.r.Execute(hctx.WithParent(ctx))
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-
-	if tr.rd.Enabled(ctx) {
-		tr.rd.Record(ctx, time.Since(startTime).Seconds(), metric.WithAttributeSet(tr.attrSet))
-	}
-
-	return be, err
-}
+func (tr *telemetryRule) ID() string                                              { return tr.r.ID() }
+func (tr *telemetryRule) Source() rule.RuleSet                                    { return tr.r.Source() }
+func (tr *telemetryRule) Routes() []rule.Route                                    { return tr.r.Routes() }
+func (tr *telemetryRule) SameAs(other rule.Rule) bool                             { return tr.r.SameAs(other) }
+func (tr *telemetryRule) Equals(other rule.Rule) bool                             { return tr.r.Equals(other) }
+func (tr *telemetryRule) Execute(hctx pipeline.Context) (pipeline.Backend, error) { return tr.do(hctx) }
