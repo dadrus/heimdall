@@ -33,16 +33,17 @@ func TestConditionalStepExecute(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureMocks func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock)
+		configureMocks func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, cm *mocks.ContextMock)
 		assert         func(t *testing.T, err error)
 	}{
-		"executes if can": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
+		"executes if can for non error_handler kind": {
+			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, _ *mocks.ContextMock) {
 				t.Helper()
 
-				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(true, nil)
-				s.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
-				s.EXPECT().ID().Return("test")
+				ecm.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(true, nil)
+				sm.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
+				sm.EXPECT().ID().Return("test")
+				sm.EXPECT().Kind().Return(pipeline.KindAuthenticator)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -50,12 +51,16 @@ func TestConditionalStepExecute(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		"does not execute if can not": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
+		"executes if can for error_handler kind": {
+			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, cm *mocks.ContextMock) {
 				t.Helper()
 
-				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(false, nil)
-				s.EXPECT().ID().Return("test")
+				cm.EXPECT().Error().Return(errors.New("some error"))
+
+				ecm.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).Return(true, nil)
+				sm.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
+				sm.EXPECT().ID().Return("test")
+				sm.EXPECT().Kind().Return(pipeline.KindErrorHandler)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -63,13 +68,62 @@ func TestConditionalStepExecute(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		"does not execute if can check fails": {
-			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, s *mocks.StepMock) {
+		"does not execute if can not on non error_handler kind": {
+			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, _ *mocks.ContextMock) {
 				t.Helper()
 
-				c.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).
+				ecm.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(false, nil)
+				sm.EXPECT().ID().Return("test")
+				sm.EXPECT().Kind().Return(pipeline.KindAuthorizer)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"does not execute if can not on error_handler kind": {
+			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, cm *mocks.ContextMock) {
+				t.Helper()
+
+				cm.EXPECT().Error().Return(errors.New("some error"))
+
+				ecm.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).Return(false, nil)
+				sm.EXPECT().ID().Return("test")
+				sm.EXPECT().Kind().Return(pipeline.KindErrorHandler)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"does not execute if can check fails for non error_handler kind": {
+			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, _ *mocks.ContextMock) {
+				t.Helper()
+
+				ecm.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).
 					Return(true, errors.New("test error"))
-				s.EXPECT().ID().Return("test")
+				sm.EXPECT().ID().Return("test")
+				sm.EXPECT().Kind().Return(pipeline.KindContextualizer)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "test error")
+			},
+		},
+		"does not execute if can check fails for error_handler kind": {
+			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, cm *mocks.ContextMock) {
+				t.Helper()
+
+				cm.EXPECT().Error().Return(errors.New("some error"))
+
+				ecm.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).
+					Return(true, errors.New("test error"))
+				sm.EXPECT().ID().Return("test")
+				sm.EXPECT().Kind().Return(pipeline.KindErrorHandler)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -88,7 +142,7 @@ func TestConditionalStepExecute(t *testing.T) {
 			ctx := mocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
-			tc.configureMocks(t, condition, step)
+			tc.configureMocks(t, condition, step, ctx)
 
 			// WHEN
 			err := decorator.Execute(ctx, nil)

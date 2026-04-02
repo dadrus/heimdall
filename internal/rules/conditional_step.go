@@ -48,7 +48,18 @@ func (s *conditionalStep) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 		}
 	}
 
-	if canExecute, err := s.c.CanExecuteOnSubject(ctx, sub); err != nil {
+	var (
+		canExecute bool
+		err        error
+	)
+
+	if s.s.Kind() == pipeline.KindErrorHandler {
+		canExecute, err = s.c.CanExecuteOnError(ctx, ctx.Error())
+	} else {
+		canExecute, err = s.c.CanExecuteOnSubject(ctx, sub)
+	}
+
+	if err != nil {
 		return err
 	} else if canExecute {
 		return s.s.Execute(ctx, sub)
