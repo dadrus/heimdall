@@ -58,7 +58,9 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("registers factory", func(t *testing.T) {
-		factory := FactoryFunc(func(_ app.Context, _ map[string]any) (types.Cache, error) { return nil, nil })
+		factory := FactoryFunc(func(_ app.Context, _ map[string]any) (types.Cache, error) {
+			return mocks.NewCacheMock(t), nil
+		})
 
 		Register("foo", factory)
 
