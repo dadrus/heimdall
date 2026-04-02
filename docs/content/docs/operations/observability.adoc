@@ -303,7 +303,7 @@ Emitted for each executed step of a rule.
 
 | `mechanism.kind`
 | string
-| The mechanism kind of the step (for example, authenticator, authorizer, finalizer, mutator).
+| The mechanism kind of the step (e.g., `authenticator`, `authorizer`, etc).
 
 | `mechanism.name`
 | string
