@@ -391,7 +391,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
@@ -454,6 +453,13 @@ jobs:
         id: update-version-json
         run: |
           cat ./docs/versions/data.json | jq '. + [{ "version": "${{ github.ref_name }}", "path": "/heimdall/${{ github.ref_name }}" }]' | tee ./docs/versions/data.json
+      - name: Store versions JSON artifact as job result
+        if: steps.update-version-json.outcome == 'success'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: released-docs-versions-json
+          path: ./docs/versions/data.json
+          retention-days: 1
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
@@ -472,13 +478,35 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/versions
           keep_files: true
+
+  create-pr-for-docs-versions-update:
+    runs-on: ubuntu-24.04
+    needs:
+      - release-documentation
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+        with:
+          egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download versions JSON artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v5.0.0
+        with:
+          name: released-docs-versions-json
+          path: ./docs/versions
       - name: Get branch of the tag
         id: base-branch
         run: |
           branch_name=$(git for-each-ref | grep ^${{ github.sha }} | grep origin | grep -v HEAD | head -n1 | sed "s/.*\///")
           echo "result=$branch_name" >> $GITHUB_OUTPUT
       - name: Create a PR for the updated versions JSON document
-        if: steps.update-version-json.outcome == 'success'
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
         with:
           title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
