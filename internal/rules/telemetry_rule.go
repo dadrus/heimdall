@@ -47,27 +47,20 @@ func newTelemetryRule(rul rule.Rule, meter metric.Meter, tracer trace.Tracer) (r
 		ruleSetProviderKey.String(src.Provider),
 	}
 
-	exec := executorFunc(rul.Execute)
-
-	exec, err := decorateWithMeter(exec, meter, attrs)
-	if err != nil {
-		return nil, err
-	}
-
-	exec, err = decorateWithTracer(exec, tracer, attrs)
+	exec, err := decorateWithMeter(rul.Execute, meter, attrs)
 	if err != nil {
 		return nil, err
 	}
 
 	return &telemetryRule{
 		r:  rul,
-		do: exec,
+		do: decorateWithTracer(exec, tracer, attrs),
 	}, nil
 }
 
-func decorateWithTracer(exec executorFunc, tracer trace.Tracer, attrs []attribute.KeyValue) (executorFunc, error) {
+func decorateWithTracer(exec executorFunc, tracer trace.Tracer, attrs []attribute.KeyValue) executorFunc {
 	if _, isNoopTracer := tracer.(nooptrace.Tracer); isNoopTracer {
-		return exec, nil
+		return exec
 	}
 
 	return func(hctx pipeline.Context) (pipeline.Backend, error) {
@@ -88,7 +81,7 @@ func decorateWithTracer(exec executorFunc, tracer trace.Tracer, attrs []attribut
 		}
 
 		return be, err
-	}, nil
+	}
 }
 
 func decorateWithMeter(exec executorFunc, meter metric.Meter, attrs []attribute.KeyValue) (executorFunc, error) {
