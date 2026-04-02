@@ -42,8 +42,6 @@ func (cp compositePrincipalCreator) Execute(ctx pipeline.Context, sub pipeline.S
 	for idx, a := range cp {
 		err = a.Execute(ctx, sub)
 		if err != nil {
-			logger.Warn().Err(err).Msg("Pipeline step execution failed")
-
 			if strings.Contains(err.Error(), "tls:") {
 				err = errorchain.New(pipeline.ErrInternal).CausedBy(err)
 
@@ -51,7 +49,7 @@ func (cp compositePrincipalCreator) Execute(ctx pipeline.Context, sub pipeline.S
 			}
 
 			if idx < len(cp)-1 {
-				logger.Info().Msg("Falling back to next configured one.")
+				logger.Info().Err(err).Msg("Falling back to next configured authenticator")
 
 				continue
 			}
