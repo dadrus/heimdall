@@ -30,12 +30,12 @@ jobs:
   check-changes:
     runs-on: ubuntu-24.04
     outputs:
-      code_changed: ${{steps.code-changes.outputs.count > 0}}
-      test_data_changed: ${{steps.test-data-changes.outputs.count > 0}}
-      image_config_changed: ${{steps.image-config-changes.outputs.count > 0}}
-      helm_chart_changed: ${{steps.helm-chart-changes.outputs.count > 0}}
-      docs_changed: ${{steps.docs-changes.outputs.count > 0}}
-      ci_config_changed: ${{steps.ci-changes.outputs.count > 0}}
+      code_changed: ${{steps.changes.outputs.code}}
+      test_data_changed: ${{steps.changes.outputs.testdata}}
+      image_config_changed: ${{steps.changes.outputs.imageconfig}}
+      helm_chart_changed: ${{steps.changes.outputs.helmchart}}
+      docs_changed: ${{steps.changes.outputs.docs}}
+      ci_config_changed: ${{steps.changes.outputs.ci}}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
@@ -44,47 +44,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Check code changes
-        id: code-changes
-        uses: technote-space/get-diff-action@f27caffdd0fb9b13f4fc191c016bb4e0632844af # v6.1.2
+        id: changes
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         with:
-          PATTERNS: |
-            *.go
-            **/*.go
-            schema/*.json
-          FILES: |
-            go.mod
-            go.sum
-      - name: Check test data changes
-        id: test-data-changes
-        uses: technote-space/get-diff-action@f27caffdd0fb9b13f4fc191c016bb4e0632844af # v6.1.2
-        with:
-          PATTERNS: |
-            cmd/**/*.yaml
-            internal/**/*.yaml
-      - name: Check container image config changes
-        id: image-config-changes
-        uses: technote-space/get-diff-action@f27caffdd0fb9b13f4fc191c016bb4e0632844af # v6.1.2
-        with:
-          PATTERNS: |
-            docker/Dockerfile
-      - name: Check helm chart changes
-        id: helm-chart-changes
-        uses: technote-space/get-diff-action@f27caffdd0fb9b13f4fc191c016bb4e0632844af # v6.1.2
-        with:
-          PATTERNS: |
-            charts/**
-      - name: Check documentation changes
-        id: docs-changes
-        uses: technote-space/get-diff-action@f27caffdd0fb9b13f4fc191c016bb4e0632844af # v6.1.2
-        with:
-          PATTERNS: |
-            docs/**
-      - name: Check CI settings changes
-        id: ci-changes
-        uses: technote-space/get-diff-action@f27caffdd0fb9b13f4fc191c016bb4e0632844af # v6.1.2
-        with:
-          PATTERNS: |
-            .github/workflows/*.yaml
+          filters: |
+            code:
+              - '*.go'
+              - '**/*.go'
+              - 'schema/*.json'
+              - 'go.mod'
+              - 'go.sum'
+            testdata:
+              - 'cmd/**/*.yaml'
+              - 'internal/**/*.yaml'
+            imageconfig:
+              - 'docker/Dockerfile'
+            helmchart:
+              - 'charts/**'
+            docs:
+              - 'docs/**'
+            ci:
+              - '.github/workflows/**'
 
   check-licenses:
     runs-on: ubuntu-24.04
