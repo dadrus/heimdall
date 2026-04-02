@@ -65,6 +65,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"without user_id": {
@@ -158,6 +159,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"no user_id provided": {
@@ -177,6 +179,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"no password provided": {
@@ -196,6 +199,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"user_id differs": {
@@ -215,6 +219,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"user_id and password differs": {
@@ -235,6 +240,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 
 				md := sha256.New()
 				md.Write([]byte("baz"))
@@ -264,6 +270,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"only principal name configured": {
@@ -286,6 +293,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"malformed step configuration": {

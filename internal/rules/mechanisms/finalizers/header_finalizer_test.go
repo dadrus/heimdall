@@ -98,6 +98,7 @@ headers:
 				assert.Equal(t, "with valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 
 				val, err := finalizer.headers["foo"].Render(nil)
 				require.NoError(t, err)
@@ -172,6 +173,7 @@ headers:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.headers, configured.headers)
 			},
@@ -194,6 +196,7 @@ headers:
 				assert.Equal(t, "new headers provided", configured.ID())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
@@ -220,6 +223,7 @@ headers:
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)

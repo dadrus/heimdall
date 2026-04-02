@@ -99,6 +99,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"step definition with principal": {
@@ -115,6 +116,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {

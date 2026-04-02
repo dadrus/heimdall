@@ -82,6 +82,7 @@ func TestNoopFinalizerCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with new config": {

@@ -125,6 +125,7 @@ payload: "{{ .Subject.ID }}"
 				assert.Equal(t, auth.ID(), auth.Name())
 
 				assert.Equal(t, types.KindAuthorizer, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"minimal configuration with enforced but not used TLS": {
@@ -164,6 +165,7 @@ endpoint:
 				assert.Equal(t, auth.ID(), auth.Name())
 
 				assert.Equal(t, types.KindAuthorizer, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"configuration with invalid expression": {
@@ -238,6 +240,7 @@ values:
 				assert.Equal(t, auth.ID(), auth.Name())
 
 				assert.Equal(t, types.KindAuthorizer, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 	} {
@@ -315,6 +318,7 @@ payload: bar
 				assert.Equal(t, prototype.expressions, configured.expressions)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with unknown properties in step configuration": {
@@ -373,6 +377,7 @@ payload: bar
 				assert.Equal(t, "with overridden empty payload", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindAuthorizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with new config and step id": {
@@ -401,6 +406,7 @@ payload: bar
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindAuthorizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with invalid new expression": {
@@ -473,6 +479,7 @@ values:
 				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindAuthorizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with everything possible": {
@@ -531,6 +538,7 @@ values:
 				assert.Equal(t, "with everything possible", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindAuthorizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {

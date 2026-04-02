@@ -67,6 +67,7 @@ foo: bar
 				assert.Equal(t, "with unexpected fields in configuration", eh.ID())
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 
 				toURL, err := eh.to.Render(nil)
 				require.NoError(t, err)
@@ -86,6 +87,7 @@ foo: bar
 				assert.Equal(t, "with minimal valid configuration, enforced and used TLS", eh.ID())
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 
 				toURL, err := eh.to.Render(nil)
 				require.NoError(t, err)
@@ -118,6 +120,7 @@ code: 301
 				assert.Equal(t, "with full valid configuration", eh.ID())
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 
 				ctx := mocks.NewContextMock(t)
 				ctx.EXPECT().Request().
@@ -195,6 +198,7 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.code, configured.code)
 				assert.Equal(t, prototype.to, configured.to)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"unsupported configuration provided": {

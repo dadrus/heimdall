@@ -178,6 +178,7 @@ principal:
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"with valid configuration and enabled cache and TLS enforcement": {
@@ -214,6 +215,7 @@ cache_ttl: 5s`),
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"with session lifespan config and forward header": {
@@ -264,6 +266,7 @@ session_lifespan:
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"with disabled, but enforced TLS of identity info endpoint url": {
@@ -400,6 +403,7 @@ principal:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"prototype config with cache ttl, config with cache tll": {
@@ -438,6 +442,7 @@ cache_ttl: 5s`),
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"prototype with session lifespan config and empty target config": {
@@ -487,6 +492,7 @@ session_lifespan:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"reconfiguration of identity_info_endpoint not possible": {
@@ -660,6 +666,7 @@ principal:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"minimal valid prototype config and principal name configured": {
@@ -696,6 +703,7 @@ principal:
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {

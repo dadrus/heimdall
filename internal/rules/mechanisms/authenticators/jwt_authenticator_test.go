@@ -211,6 +211,7 @@ assertions:
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"minimal jwks endpoint based configuration with cache and TLS enforcement": {
@@ -274,6 +275,7 @@ cache_ttl: 5s`),
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"minimal jwks endpoint based configuration with enforced but disabled TLS": {
@@ -373,6 +375,7 @@ trust_store: ` + trustStorePath),
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -453,6 +456,7 @@ cache_ttl: 5s`),
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -539,6 +543,7 @@ cache_ttl: 5s`),
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 	} {
@@ -639,6 +644,7 @@ assertions:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"unsupported fields in step config definition": {
@@ -694,6 +700,7 @@ assertions:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"mechanism config without cache, step config with overwrites incl cache": {
@@ -740,6 +747,7 @@ metadata_endpoint:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"mechanism config with cache ttl, step config without": {
@@ -784,6 +792,7 @@ cache_ttl: 5s`),
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"minimal mechanism config with cache ttl, step config with cache ttl only": {
@@ -820,6 +829,7 @@ cache_ttl: 5s`),
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"mechanism without scopes configured, created step configures them and merges other fields": {
@@ -865,6 +875,7 @@ cache_ttl: 5s`),
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"minimal mechanism config, step definition with custom principal name only": {
@@ -895,6 +906,7 @@ assertions:
 				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"mechanism with defaults, step does not allow jwk trust store override": {

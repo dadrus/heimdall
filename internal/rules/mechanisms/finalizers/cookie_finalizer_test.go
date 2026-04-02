@@ -99,6 +99,7 @@ cookies:
 				assert.Equal(t, "with valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 
 				val, err := finalizer.cookies["foo"].Render(nil)
 				require.NoError(t, err)
@@ -172,6 +173,7 @@ cookies:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.cookies, configured.cookies)
 				assert.Equal(t, prototype.app, configured.app)
 			},
@@ -194,6 +196,7 @@ cookies:
 				assert.Equal(t, "new cookies provided", configured.ID())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 
 				val, err := configured.cookies["bar"].Render(nil)
 				require.NoError(t, err)
@@ -220,6 +223,7 @@ cookies:
 				assert.Equal(t, prototype.Name(), prototype.ID())
 				assert.Equal(t, "bar", configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 
 				val, err := configured.cookies["bar"].Render(nil)
 				require.NoError(t, err)

@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 )
@@ -109,6 +110,32 @@ func TestConditionalStepID(t *testing.T) {
 
 	id := eh.ID()
 	assert.Equal(t, "test", id)
+}
+
+func TestConditionalStepType(t *testing.T) {
+	t.Parallel()
+
+	condition := rulemocks.NewExecutionConditionMock(t)
+	step := mocks.NewStepMock(t)
+	step.EXPECT().Type().Return("test")
+
+	eh := conditionalStep{c: condition, s: step}
+
+	typ := eh.Type()
+	assert.Equal(t, "test", typ)
+}
+
+func TestConditionalStepKind(t *testing.T) {
+	t.Parallel()
+
+	condition := rulemocks.NewExecutionConditionMock(t)
+	step := mocks.NewStepMock(t)
+	step.EXPECT().Kind().Return(pipeline.KindAuthenticator)
+
+	eh := conditionalStep{c: condition, s: step}
+
+	kind := eh.Kind()
+	assert.Equal(t, pipeline.KindAuthenticator, kind)
 }
 
 func TestConditionalStepAccept(t *testing.T) {

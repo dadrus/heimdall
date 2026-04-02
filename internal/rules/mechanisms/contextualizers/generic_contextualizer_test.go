@@ -109,6 +109,7 @@ payload: bar
 				assert.Equal(t, "with minimal valid configuration and enforced and used TLS", contextualizer.ID())
 				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
 				assert.Equal(t, types.KindContextualizer, contextualizer.Kind())
+				assert.Equal(t, contextualizer.ID(), contextualizer.Type())
 			},
 		},
 		"with minimal valid configuration and enforced but not used TLS": {
@@ -169,6 +170,7 @@ values:
 				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
 				assert.Equal(t, "with all fields configured", contextualizer.ID())
 				assert.Equal(t, types.KindContextualizer, contextualizer.Kind())
+				assert.Equal(t, contextualizer.ID(), contextualizer.Type())
 			},
 		},
 	} {
@@ -239,6 +241,7 @@ payload: bar
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, types.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with unsupported fields": {
@@ -304,6 +307,7 @@ cache_ttl: 5s
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.Equal(t, types.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with payload and forward_headers reconfigured": {
@@ -348,6 +352,7 @@ cache_ttl: 5s
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.Equal(t, types.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with payload, forward_headers and forward_cookies reconfigured": {
@@ -395,6 +400,7 @@ cache_ttl: 5s
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.Equal(t, types.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with everything possible, but values reconfigured": {
@@ -447,6 +453,7 @@ values:
 				assert.Equal(t, configured.Name(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.ID())
 				assert.Equal(t, types.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with everything possible reconfigured and a step id": {
@@ -504,6 +511,7 @@ values:
 				assert.Equal(t, "with everything possible reconfigured and a step id", prototype.ID())
 				assert.Equal(t, "bar", configured.ID())
 				assert.Equal(t, types.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {

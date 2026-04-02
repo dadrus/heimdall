@@ -138,6 +138,7 @@ signer:
 				assert.Equal(t, "with signer only", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -177,6 +178,7 @@ signer:
 				assert.Equal(t, "with ttl and signer", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -236,6 +238,7 @@ claims:
 				assert.Equal(t, "with claims and key store", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -279,6 +282,7 @@ claims: '{ "sub": {{ quote .Subject.ID }} }'
 				assert.Equal(t, "with claims, signer and ttl", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -345,6 +349,7 @@ header:
 				assert.Equal(t, "with valid header config without scheme", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Empty(t, finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -387,6 +392,7 @@ values:
 				assert.Equal(t, "with all possible entries", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "Foo", finalizer.headerName)
 				assert.Equal(t, "Bar", finalizer.headerScheme)
 				require.NotNil(t, finalizer.signer)
@@ -482,6 +488,7 @@ signer:
 				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.claims, configured.claims)
 				assert.Equal(t, "Authorization", configured.headerName)
 				assert.Equal(t, "Bearer", configured.headerScheme)
@@ -514,6 +521,7 @@ signer:
 				assert.Equal(t, "bar", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -560,6 +568,7 @@ signer:
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with claims only provided", configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -589,6 +598,7 @@ signer:
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with claims and values", configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
@@ -623,6 +633,7 @@ signer:
 				assert.JSONEq(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "configuration with both ttl and claims provided", configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.signer, configured.signer)
 			},
 		},
@@ -653,6 +664,7 @@ values:
 				require.NotNil(t, configured.claims)
 				assert.Equal(t, "configuration with values", configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
 			},

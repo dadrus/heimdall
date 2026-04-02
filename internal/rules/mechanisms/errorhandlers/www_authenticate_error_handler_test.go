@@ -55,6 +55,7 @@ foo: bar
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, "FooBar", eh.realm)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 			},
 		},
 		"with malformed configuration": {
@@ -77,6 +78,7 @@ foo: bar
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, "Please authenticate", eh.realm)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 			},
 		},
 		"with all possible attributes": {
@@ -90,6 +92,7 @@ foo: bar
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, "What is your password", eh.realm)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 			},
 		},
 	} {
@@ -149,6 +152,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.realm, configured.realm)
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"unsupported fields provided": {
@@ -174,6 +178,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				assert.NotEqual(t, prototype.realm, configured.realm)
 				assert.Equal(t, "You password please", configured.realm)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with empty 'realm' reconfigured": {

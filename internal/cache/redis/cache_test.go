@@ -51,6 +51,7 @@ func TestCacheUsage(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+	assert.Equal(t, "redis", cch.Type())
 
 	err = cch.Start(t.Context())
 	require.NoError(t, err)

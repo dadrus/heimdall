@@ -88,6 +88,8 @@ values:
 
 				assert.Equal(t, "with minimal valid configuration", contextualizer.ID())
 				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
+				assert.Equal(t, contextualizer.ID(), contextualizer.Type())
+				assert.Equal(t, pipeline.KindContextualizer, contextualizer.Kind())
 				assert.Len(t, contextualizer.items, 1)
 				assert.Len(t, contextualizer.values, 1)
 				assert.Equal(t, "http://foo.bar", contextualizer.values["foo"].String())
@@ -245,6 +247,8 @@ values:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://bar.foo", resp)
+				assert.Equal(t, pipeline.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {

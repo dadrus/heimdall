@@ -161,6 +161,7 @@ introspection_endpoint:
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"with minimal introspection endpoint based config with enforced but disabled TLS": {
@@ -254,6 +255,7 @@ cache_ttl: 5s
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -315,6 +317,7 @@ metadata_endpoint:
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"metadata endpoint with resolved endpoints configuration and enabled TLS enforcement": {
@@ -396,6 +399,7 @@ metadata_endpoint:
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 	} {
@@ -531,6 +535,7 @@ principal:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"without cache, step config with cache overwrite": {
@@ -561,6 +566,7 @@ principal:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"malformed step config": {
@@ -622,6 +628,7 @@ metadata_endpoint:
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"config with cache, step config with overwrites including cache": {
@@ -659,6 +666,7 @@ cache_ttl: 5s`),
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"step with custom principal name": {
@@ -684,6 +692,7 @@ assertions:
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {

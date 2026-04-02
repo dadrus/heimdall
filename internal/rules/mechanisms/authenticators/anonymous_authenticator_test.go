@@ -53,6 +53,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.True(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"default principal": {
@@ -69,6 +70,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.True(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"unsupported attributes are ignored": {
@@ -86,6 +88,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.True(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"malformed configuration": {
@@ -161,6 +164,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.True(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"only step id is configured": {
@@ -180,6 +184,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.True(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"only principal name is configured": {
@@ -199,6 +204,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.True(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"empty principal for the configured authenticator": {
