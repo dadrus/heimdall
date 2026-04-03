@@ -43,3 +43,16 @@ func (e *RedirectError) Error() string { return e.Message }
 func (e *RedirectError) Is(target error) bool {
 	return reflect.TypeFor[*RedirectError]() == reflect.TypeOf(target)
 }
+
+type GenericError struct {
+	Code   int
+	Header map[string]string
+	Body   string
+}
+
+func (e *GenericError) Error() string { return "todo" }
+
+func (e *GenericError) Is(target error) bool {
+	return reflect.TypeFor[*GenericError]() == reflect.TypeOf(target)
+}
+
