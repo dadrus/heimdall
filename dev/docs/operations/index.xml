@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 22 Mar 2026 11:06:08 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 03 Apr 2026 00:35:56 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;In heimdall, configuration encompasses two distinct concepts:&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class="ulist"&gt;
@@ -74,12 +74,19 @@ heimdall &lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="nt"&gt;--flag&lt;/s
 &lt;h2 id="_logging"&gt;Logging&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
-&lt;p&gt;Heimdall’s implementation uses &lt;a href="https://github.com/rs/zerolog"&gt;zerolog&lt;/a&gt; - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.&lt;/p&gt;
+&lt;p&gt;Heimdall uses &lt;a href="https://github.com/rs/zerolog"&gt;zerolog&lt;/a&gt; - Zero Allocation JSON Logger, which can also log in plain text. All emitted log statements include distributed tracing information (if tracing is enabled), so log entries can be correlated with traces and grouped by request/transaction.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class="sect2"&gt;
 &lt;h3 id="_configuration"&gt;Configuration&lt;/h3&gt;
 &lt;div class="paragraph"&gt;
-&lt;p&gt;Logging configuration can be adjusted in the &lt;code&gt;log&lt;/code&gt; property of heimdall’s configuration and supports following properties.&lt;/p&gt;
+&lt;p&gt;Logging can be configured in heimdall’s &lt;code&gt;log&lt;/code&gt; section and supports the following properties.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="ulist"&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;format&lt;/code&gt;&lt;/strong&gt;: &lt;em&gt;string&lt;/em&gt; (optional)&lt;/p&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Supported values are &lt;code&gt;text&lt;/code&gt; and &lt;code&gt;gelf&lt;/code&gt;. &lt;code&gt;text&lt;/code&gt; is the default format. &lt;code&gt;gelf&lt;/code&gt; emits JSON that adheres to &lt;a href="https://docs.graylog.org/v1/docs/gelf"&gt;GELF&lt;/a&gt;.&lt;/p&gt;
 &lt;/div&gt;</description></item><item><title>Caching</title><link>https://dadrus.github.io/docs/operations/cache/</link><pubDate>Mon, 06 Nov 2023 13:16:34 +0100</pubDate><guid>https://dadrus.github.io/docs/operations/cache/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;Even some default caching is in place, and you can instruct heimdall to cache particular data for some amount of time, like e.g how long to cache the response from the JWKS endpoint when using the &lt;a href="../../docs/mechanisms/authenticators/#_jwt"&gt;JWT Authenticator&lt;/a&gt;, all these options require a caching backend to be available. Otherwise, the corresponding configurations do not have any effect.&lt;/p&gt;
 &lt;/div&gt;
