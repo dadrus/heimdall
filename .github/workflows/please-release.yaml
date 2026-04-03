@@ -6,8 +6,7 @@ on:
       - main
       - release
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   create-release:
@@ -17,7 +16,7 @@ jobs:
       contents: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
         with:
           egress-policy: audit
       - name: Please Release
@@ -28,7 +27,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           skip-github-pull-request: true
       - name: Please Release PR
-        if: steps.create_release.outputs.release_created == false
+        if: steps.create_release.outputs.release_created == 'false'
         uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
         with:
           target-branch: ${{ github.ref_name }}
