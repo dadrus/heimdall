@@ -356,23 +356,27 @@ func TestEndpointSendRequest(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		checkRequest(r)
 
+		w.WriteHeader(statusCode)
+
 		if serverResponse != nil {
 			_, err := w.Write(serverResponse)
 			assert.NoError(t, err)
 		}
-
-		w.WriteHeader(statusCode)
 	}))
 	defer srv.Close()
 
 	for uc, tc := range map[string]struct {
-		endpoint       Endpoint
+		endpoint       func(t *testing.T) Endpoint
 		body           []byte
 		instructServer func(t *testing.T)
 		assert         func(t *testing.T, response []byte, err error)
 	}{
 		"with failing request creation": {
-			endpoint: Endpoint{URL: "://test.org"},
+			endpoint: func(t *testing.T) Endpoint {
+				t.Helper()
+
+				return Endpoint{URL: "://test.org"}
+			},
 			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
 
@@ -382,7 +386,11 @@ func TestEndpointSendRequest(t *testing.T) {
 			},
 		},
 		"with dns error": {
-			endpoint: Endpoint{URL: "http://heimdall.test.local"},
+			endpoint: func(t *testing.T) Endpoint {
+				t.Helper()
+
+				return Endpoint{URL: "http://heimdall.test.local"}
+			},
 			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
 
@@ -392,7 +400,11 @@ func TestEndpointSendRequest(t *testing.T) {
 			},
 		},
 		"with unexpected response from server": {
-			endpoint: Endpoint{URL: srv.URL},
+			endpoint: func(t *testing.T) Endpoint {
+				t.Helper()
+
+				return Endpoint{URL: srv.URL}
+			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
@@ -407,20 +419,22 @@ func TestEndpointSendRequest(t *testing.T) {
 			},
 		},
 		"successful": {
-			endpoint: Endpoint{
-				URL:    srv.URL,
-				Method: "PATCH",
-				AuthStrategy: func() AuthenticationStrategy {
-					as := mocks.NewAuthenticationStrategyMock(t)
-					as.EXPECT().Apply(mock.Anything, mock.MatchedBy(func(req *http.Request) bool {
-						req.Header.Set("X-Test", "test")
+			endpoint: func(t *testing.T) Endpoint {
+				t.Helper()
 
-						return true
-					})).Return(nil)
+				as := mocks.NewAuthenticationStrategyMock(t)
+				as.EXPECT().Apply(mock.Anything, mock.MatchedBy(func(req *http.Request) bool {
+					req.Header.Set("X-Test", "test")
 
-					return as
-				}(),
-				Headers: map[string]string{"Foo-Bar": "baz"},
+					return true
+				})).Return(nil)
+
+				return Endpoint{
+					URL:    srv.URL,
+					Method: "PATCH",
+					AuthStrategy: as,
+					Headers: map[string]string{"Foo-Bar": "baz"},
+				}
 			},
 			body: []byte(`{"hello":"world"}`),
 			instructServer: func(t *testing.T) {
@@ -453,6 +467,7 @@ func TestEndpointSendRequest(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			//  GIVEN
+			serverResponse = nil
 			statusCode = http.StatusOK
 			checkRequest = func(*http.Request) { t.Helper() }
 
@@ -466,8 +481,10 @@ func TestEndpointSendRequest(t *testing.T) {
 				body = bytes.NewReader(tc.body)
 			}
 
+			ep := tc.endpoint(t)
+
 			// WHEN
-			response, err := tc.endpoint.SendRequest(t.Context(), body, nil)
+			response, err := ep.SendRequest(t.Context(), body, nil)
 
 			// THEN
 			tc.assert(t, response, err)
