@@ -430,10 +430,10 @@ func TestEndpointSendRequest(t *testing.T) {
 				})).Return(nil)
 
 				return Endpoint{
-					URL:    srv.URL,
-					Method: "PATCH",
+					URL:          srv.URL,
+					Method:       "PATCH",
 					AuthStrategy: as,
-					Headers: map[string]string{"Foo-Bar": "baz"},
+					Headers:      map[string]string{"Foo-Bar": "baz"},
 				}
 			},
 			body: []byte(`{"hello":"world"}`),
