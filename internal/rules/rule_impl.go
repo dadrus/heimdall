@@ -47,9 +47,12 @@ type ruleImpl struct {
 
 func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	logger := zerolog.Ctx(ctx.Context())
+
 	logger.Info().
 		Str("_ruleset_id", r.source.ID).
-		Str("_id", r.id).
+		Str("_ruleset_name", r.source.Name).
+		Str("_provider", r.source.Provider).
+		Str("_rule_id", r.id).
 		Msg("Executing rule")
 
 	request := ctx.Request()

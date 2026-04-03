@@ -45,13 +45,5 @@ func (e *ruleExecutor) Execute(hctx pipeline.Context) (pipeline.Backend, error) 
 		return nil, err
 	}
 
-	src := rul.Source()
-	logger.Debug().
-		Str("_ruleset_id", src.ID).
-		Str("_ruleset_name", src.Name).
-		Str("_provider", src.Provider).
-		Str("_rule_id", rul.ID()).
-		Msg("Rule matched")
-
 	return rul.Execute(hctx)
 }

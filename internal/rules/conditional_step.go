@@ -38,7 +38,11 @@ func (s *conditionalStep) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor)
 func (s *conditionalStep) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
-	logger.Debug().Str("_id", s.s.ID()).Msg("Checking execution condition")
+	logger.Debug().
+		Str("_step_id", s.s.ID()).
+		Str("_mechanism_name", s.s.Type()).
+		Str("_mechanism_kind", string(s.s.Kind())).
+		Msg("Checking condition")
 
 	if logger.GetLevel() == zerolog.TraceLevel {
 		if dump, err := json.Marshal(sub); err != nil {
@@ -65,7 +69,11 @@ func (s *conditionalStep) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 		return s.s.Execute(ctx, sub)
 	}
 
-	logger.Debug().Str("_id", s.s.ID()).Msg("Execution skipped")
+	logger.Debug().
+		Str("_step_id", s.s.ID()).
+		Str("_mechanism_name", s.s.Type()).
+		Str("_mechanism_kind", string(s.s.Kind())).
+		Msg("Execution skipped")
 
 	return nil
 }

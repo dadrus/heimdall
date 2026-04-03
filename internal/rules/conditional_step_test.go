@@ -44,6 +44,7 @@ func TestConditionalStepExecute(t *testing.T) {
 				sm.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindAuthenticator)
+				sm.EXPECT().Type().Return("foo")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -61,6 +62,7 @@ func TestConditionalStepExecute(t *testing.T) {
 				sm.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindErrorHandler)
+				sm.EXPECT().Type().Return("foo")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -75,6 +77,7 @@ func TestConditionalStepExecute(t *testing.T) {
 				ecm.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).Return(false, nil)
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindAuthorizer)
+				sm.EXPECT().Type().Return("foo")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -91,6 +94,7 @@ func TestConditionalStepExecute(t *testing.T) {
 				ecm.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).Return(false, nil)
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindErrorHandler)
+				sm.EXPECT().Type().Return("foo")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -106,6 +110,7 @@ func TestConditionalStepExecute(t *testing.T) {
 					Return(true, errors.New("test error"))
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindContextualizer)
+				sm.EXPECT().Type().Return("foo")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -124,6 +129,7 @@ func TestConditionalStepExecute(t *testing.T) {
 					Return(true, errors.New("test error"))
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindErrorHandler)
+				sm.EXPECT().Type().Return("foo")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
