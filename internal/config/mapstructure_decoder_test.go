@@ -39,6 +39,7 @@ func TestDecodeLogLevel(t *testing.T) {
 	for _, tc := range []struct {
 		config string
 		expect zerolog.Level
+		err    string
 	}{
 		{config: `level: debug`, expect: zerolog.DebugLevel},
 		{config: `level: info`, expect: zerolog.InfoLevel},
@@ -46,9 +47,8 @@ func TestDecodeLogLevel(t *testing.T) {
 		{config: `level: error`, expect: zerolog.ErrorLevel},
 		{config: `level: fatal`, expect: zerolog.FatalLevel},
 		{config: `level: panic`, expect: zerolog.PanicLevel},
-		{config: `level: no`, expect: zerolog.NoLevel},
-		{config: `level: disabled`, expect: zerolog.Disabled},
 		{config: `level: trace`, expect: zerolog.TraceLevel},
+		{config: `level: foo`, err: "invalid log level"},
 	} {
 		t.Run(tc.config, func(t *testing.T) {
 			// GIVEN
@@ -67,6 +67,13 @@ func TestDecodeLogLevel(t *testing.T) {
 			err = dec.Decode(conf)
 
 			// THEN
+			if len(tc.err) != 0 {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.err)
+
+				return
+			}
+
 			require.NoError(t, err)
 			assert.Equal(t, tc.expect, typ.Level)
 		})
