@@ -17,6 +17,7 @@
 package finalizers
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -189,7 +190,7 @@ func TestNewJWTSigner(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, "foo", signer.iss)
-				assert.Equal(t, rsaPrivKey1, signer.key)
+				assertRSAKeyEqual(t, rsaPrivKey1, signer.key)
 				assert.Equal(t, "key1", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS256), signer.jwk.Algorithm)
 				assert.Empty(t, signer.activeCertificateChain())
@@ -209,7 +210,7 @@ func TestNewJWTSigner(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, "foo", signer.iss)
-				assert.Equal(t, rsaPrivKey2, signer.key)
+				assertRSAKeyEqual(t, rsaPrivKey2, signer.key)
 				assert.Equal(t, "key2", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS384), signer.jwk.Algorithm)
 				assert.Empty(t, signer.activeCertificateChain())
@@ -242,7 +243,7 @@ func TestNewJWTSigner(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, "foo", signer.iss)
-				assert.Equal(t, rsaPrivKey1, signer.key)
+				assertRSAKeyEqual(t, rsaPrivKey1, signer.key)
 				assert.Equal(t, "key1", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS256), signer.jwk.Algorithm)
 				assert.Empty(t, signer.activeCertificateChain())
@@ -262,7 +263,7 @@ func TestNewJWTSigner(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, "foo", signer.iss)
-				assert.Equal(t, rsaPrivKey2, signer.key)
+				assertRSAKeyEqual(t, rsaPrivKey2, signer.key)
 				assert.Equal(t, "key2", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS384), signer.jwk.Algorithm)
 				assert.Empty(t, signer.activeCertificateChain())
@@ -282,7 +283,7 @@ func TestNewJWTSigner(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, "foo", signer.iss)
-				assert.Equal(t, rsaPrivKey3, signer.key)
+				assertRSAKeyEqual(t, rsaPrivKey3, signer.key)
 				assert.Equal(t, "key3", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS512), signer.jwk.Algorithm)
 				assert.Empty(t, signer.activeCertificateChain())
@@ -542,6 +543,24 @@ func TestJWTSignerSign(t *testing.T) {
 			// THEN
 			tc.assert(t, err, jwt, tc.signer, tc.claims)
 		})
+	}
+}
+
+func assertRSAKeyEqual(t *testing.T, expected *rsa.PrivateKey, got crypto.Signer) {
+	t.Helper()
+
+	require.IsType(t, expected, got)
+
+	gotRSAKey, ok := got.(*rsa.PrivateKey)
+	require.True(t, ok)
+
+	require.Equal(t, expected.PublicKey.E, gotRSAKey.PublicKey.E)
+	require.Zero(t, expected.PublicKey.N.Cmp(gotRSAKey.PublicKey.N))
+	require.Zero(t, expected.D.Cmp(gotRSAKey.D))
+	require.Len(t, gotRSAKey.Primes, len(expected.Primes))
+
+	for i := range expected.Primes {
+		require.Zero(t, expected.Primes[i].Cmp(gotRSAKey.Primes[i]))
 	}
 }
 
