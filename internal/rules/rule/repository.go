@@ -19,13 +19,13 @@ package rule
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type Repository interface {
-	FindRule(ctx heimdall.Context) (Rule, error)
+	FindRule(ctx pipeline.Context) (Rule, error)
 
-	AddRuleSet(ctx context.Context, srcID string, rules []Rule) error
-	UpdateRuleSet(ctx context.Context, srcID string, rules []Rule) error
-	DeleteRuleSet(ctx context.Context, srcID string) error
+	AddRuleSet(ctx context.Context, src RuleSet, rules []Rule) error
+	UpdateRuleSet(ctx context.Context, src RuleSet, rules []Rule) error
+	DeleteRuleSet(ctx context.Context, src RuleSet) error
 }

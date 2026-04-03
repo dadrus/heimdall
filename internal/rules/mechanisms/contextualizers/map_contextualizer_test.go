@@ -25,9 +25,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
@@ -69,7 +68,7 @@ values:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -89,6 +88,8 @@ values:
 
 				assert.Equal(t, "with minimal valid configuration", contextualizer.ID())
 				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
+				assert.Equal(t, contextualizer.ID(), contextualizer.Type())
+				assert.Equal(t, pipeline.KindContextualizer, contextualizer.Kind())
 				assert.Len(t, contextualizer.items, 1)
 				assert.Len(t, contextualizer.values, 1)
 				assert.Equal(t, "http://foo.bar", contextualizer.values["foo"].String())
@@ -100,7 +101,7 @@ values:
 
 				val, err := contextualizer.items["url"].Render(map[string]any{
 					"Values":  vals,
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://foo.bar", val)
@@ -208,7 +209,7 @@ values:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -237,15 +238,17 @@ values:
 				assert.NotEqual(t, prototype.values, configured.values)
 				require.NotNil(t, configured.values)
 				val, err := configured.values.Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				resp, err := configured.items["url"].Render(map[string]any{
 					"Values":  val,
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "http://bar.foo", resp)
+				assert.Equal(t, pipeline.KindContextualizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {
@@ -287,9 +290,9 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		contextualizer   *mapContextualizer
-		subject          identity.Subject
-		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
-		assert           func(t *testing.T, err error, sub identity.Subject, outputs map[string]any)
+		subject          pipeline.Subject
+		configureContext func(t *testing.T, ctx *pipelinemocks.ContextMock)
+		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any)
 	}{
 		"with error in values rendering": {
 			contextualizer: &mapContextualizer{
@@ -301,22 +304,22 @@ func TestMapContextualizerExecute(t *testing.T) {
 					return values.Values{"foo": tpl}
 				}(),
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "Foo",
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render values")
 
 				var identifier interface{ ID() string }
@@ -342,22 +345,22 @@ func TestMapContextualizerExecute(t *testing.T) {
 					}(),
 				},
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "Foo",
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render item")
 
 				var identifier interface{ ID() string }
@@ -395,18 +398,18 @@ func TestMapContextualizerExecute(t *testing.T) {
 					}(),
 				},
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "Foo",
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ identity.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, outputs map[string]any) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -421,9 +424,9 @@ func TestMapContextualizerExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *pipelinemocks.ContextMock) { t.Helper() })
 
-			ctx := heimdallmocks.NewContextMock(t)
+			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			ctx.EXPECT().Context().Return(t.Context())
 

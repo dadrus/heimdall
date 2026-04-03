@@ -22,7 +22,7 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -73,10 +73,10 @@ func TestErrors(t *testing.T) {
 			prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 			require.NoError(t, err)
 
-			causeErr := errorchain.New(heimdall.ErrAuthorization).
-				CausedBy(errorchain.New(heimdall.ErrAuthentication)).
-				CausedBy(errorchain.New(heimdall.ErrConfiguration)).
-				CausedBy(errorchain.New(heimdall.ErrInternal)).
+			causeErr := errorchain.New(pipeline.ErrAuthorization).
+				CausedBy(errorchain.New(pipeline.ErrAuthentication)).
+				CausedBy(errorchain.New(pipeline.ErrConfiguration)).
+				CausedBy(errorchain.New(pipeline.ErrInternal)).
 				WithErrorContext(errorProvider{name: "test", id: "foo"})
 
 			out, _, err := prg.Eval(map[string]any{"Error": WrapError(causeErr)})
@@ -94,8 +94,8 @@ func TestWrapError(t *testing.T) {
 		name string
 		id   string
 	}{
-		"no source":   {err: heimdall.ErrArgument},
-		"with source": {err: errorchain.New(heimdall.ErrAuthorization).WithErrorContext(errorProvider{name: "test", id: "foo"}), name: "test", id: "foo"},
+		"no source":   {err: pipeline.ErrArgument},
+		"with source": {err: errorchain.New(pipeline.ErrAuthorization).WithErrorContext(errorProvider{name: "test", id: "foo"}), name: "test", id: "foo"},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// WHEN

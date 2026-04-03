@@ -18,14 +18,14 @@ package memory
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/inhies/go-bytesize"
 	"github.com/jellydator/ttlcache/v3"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/registry"
+	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -38,16 +38,16 @@ const (
 	// averaging about 144 bytes per entry. Combined, this results in an overhead of
 	// approximately 184 bytes, excluding the empty cache size.
 	ttlCacheOverheadPerEntry = 184
-)
 
-var ErrNoCacheEntry = errors.New("no cache entry")
+	cacheType = "in-memory"
+)
 
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
-	cache.Register("in-memory", cache.FactoryFunc(NewCache))
+	registry.Register(cacheType, registry.FactoryFunc(NewCache))
 }
 
-func NewCache(_ app.Context, conf map[string]any) (cache.Cache, error) {
+func NewCache(_ app.Context, conf map[string]any) (types.Cache, error) {
 	type Config struct {
 		EntryLimit  uint64             `mapstructure:"entry_limit"`
 		MemoryLimit *bytesize.ByteSize `mapstructure:"memory_limit"`
@@ -84,6 +84,8 @@ type Cache struct {
 	c *ttlcache.Cache[string, []byte]
 }
 
+func (c *Cache) Type() string { return cacheType }
+
 func (c *Cache) Start(_ context.Context) error {
 	go c.c.Start()
 
@@ -99,7 +101,7 @@ func (c *Cache) Stop(_ context.Context) error {
 func (c *Cache) Get(_ context.Context, key string) ([]byte, error) {
 	item := c.c.Get(key)
 	if item == nil || item.IsExpired() {
-		return nil, ErrNoCacheEntry
+		return nil, types.ErrNoEntry
 	}
 
 	return item.Value(), nil

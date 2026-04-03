@@ -27,11 +27,11 @@ import (
 	"time"
 
 	"github.com/dadrus/httpsig"
-	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -55,14 +55,9 @@ type HTTPMessageSignatures struct {
 	TTL        *time.Duration `mapstructure:"ttl"`
 	Label      string         `mapstructure:"label"`
 
-	mut sync.RWMutex
-	// used to allow downloading the keys for signature verification purposes
-	// since the http message signatures rfc does not define a format for key transport
-	// JWK is used here.
-	pubKeys []jose.JSONWebKey
-	// used to monitor the expiration of configured certificates
-	certChain []*x509.Certificate
-	signer    httpsig.Signer
+	co     keyregistry.KeyObserver
+	mut    sync.RWMutex
+	signer httpsig.Signer
 }
 
 func (s *HTTPMessageSignatures) OnChanged(logger zerolog.Logger) {
@@ -96,13 +91,6 @@ func (s *HTTPMessageSignatures) Apply(ctx context.Context, req *http.Request) er
 	return nil
 }
 
-func (s *HTTPMessageSignatures) Keys() []jose.JSONWebKey {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.pubKeys
-}
-
 func (s *HTTPMessageSignatures) Hash() []byte {
 	const int64BytesCount = 8
 
@@ -129,19 +117,10 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 	return hash.Sum(nil)
 }
 
-func (s *HTTPMessageSignatures) Name() string { return "http message signer" }
-
-func (s *HTTPMessageSignatures) Certificates() []*x509.Certificate {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
-
-	return s.certChain
-}
-
 func (s *HTTPMessageSignatures) init() error {
 	ks, err := keystore.NewKeyStoreFromPEMFile(s.Signer.KeyStore.Path, s.Signer.KeyStore.Password)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed loading keystore for http_message_signatures strategy").CausedBy(err)
 	}
 
@@ -154,7 +133,7 @@ func (s *HTTPMessageSignatures) init() error {
 	}
 
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed retrieving key from key store for http_message_signatures strategy").CausedBy(err)
 	}
 
@@ -170,15 +149,10 @@ func (s *HTTPMessageSignatures) init() error {
 		}
 
 		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 				"certificate for http_message_signatures strategy cannot be used for signing purposes").
 				CausedBy(err)
 		}
-	}
-
-	keys := make([]jose.JSONWebKey, len(ks.Entries()))
-	for idx, entry := range ks.Entries() {
-		keys[idx] = entry.JWK()
 	}
 
 	signer, err := httpsig.NewSigner(
@@ -192,16 +166,20 @@ func (s *HTTPMessageSignatures) init() error {
 		)),
 	)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed to configure http_message_signatures strategy").CausedBy(err)
 	}
 
-	s.mut.Lock()
-	defer s.mut.Unlock()
+	for _, kse := range ks.Entries() {
+		s.co.Notify(keyregistry.KeyInfo{
+			Entry:      *kse,
+			Exportable: true,
+		})
+	}
 
+	s.mut.Lock()
 	s.signer = signer
-	s.pubKeys = keys
-	s.certChain = kse.CertChain
+	s.mut.Unlock()
 
 	return nil
 }

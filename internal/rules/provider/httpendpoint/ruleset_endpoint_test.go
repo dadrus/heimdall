@@ -31,7 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -80,7 +80,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		ep            *ruleSetEndpoint
 		writeResponse ResponseWriter
-		assert        func(t *testing.T, err error, ruleSet *v1beta1.RuleSet)
+		assert        func(t *testing.T, err error, ruleSet v1beta1.RuleSet)
 	}{
 		"rule set loading error due to DNS error": {
 			ep: &ruleSetEndpoint{
@@ -89,11 +89,11 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 					Method: http.MethodGet,
 				},
 			},
-			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "endpoint failed")
 			},
 		},
@@ -109,11 +109,11 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 				w.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "response code: 400")
 			},
 		},
@@ -138,11 +138,11 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "content type")
 			},
 		},
@@ -159,7 +159,7 @@ rules:
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, err error, _ *v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -195,12 +195,11 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSet v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, ruleSet)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -241,12 +240,11 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSet v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, ruleSet)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 				require.NotEmpty(t, ruleSet.Hash)
@@ -282,12 +280,11 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSet v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, ruleSet)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 				require.NotEmpty(t, ruleSet.Hash)

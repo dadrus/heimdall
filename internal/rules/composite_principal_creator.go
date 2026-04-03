@@ -22,20 +22,19 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type compositePrincipalCreator []heimdall.Step
+type compositePrincipalCreator []pipeline.Step
 
-func (cp compositePrincipalCreator) Accept(visitor heimdall.Visitor) {
+func (cp compositePrincipalCreator) Accept(visitor pipeline.Visitor) {
 	for _, step := range cp {
 		step.Accept(visitor)
 	}
 }
 
-func (cp compositePrincipalCreator) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (cp compositePrincipalCreator) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	var err error
@@ -43,16 +42,14 @@ func (cp compositePrincipalCreator) Execute(ctx heimdall.Context, sub identity.S
 	for idx, a := range cp {
 		err = a.Execute(ctx, sub)
 		if err != nil {
-			logger.Warn().Err(err).Msg("Pipeline step execution failed")
-
 			if strings.Contains(err.Error(), "tls:") {
-				err = errorchain.New(heimdall.ErrInternal).CausedBy(err)
+				err = errorchain.New(pipeline.ErrInternal).CausedBy(err)
 
 				break
 			}
 
 			if idx < len(cp)-1 {
-				logger.Info().Msg("Falling back to next configured one.")
+				logger.Info().Err(err).Msg("Falling back to next configured authenticator")
 
 				continue
 			}

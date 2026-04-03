@@ -36,14 +36,16 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 func newLifecycleManager(app app.Context) *fxlcm.LifecycleManager {
 	conf := app.Config()
 	logger := app.Logger()
+	kr := app.KeyRegistry()
 	cfg := conf.Management
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Management",
 		ServiceAddress: cfg.Address(),
-		Server:         newService(conf, logger, app.KeyHolderRegistry()),
+		Server:         newService(conf, logger, kr),
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
 		FileWatcher:    app.Watcher(),
+		KeyObserver:    kr,
 	}
 }

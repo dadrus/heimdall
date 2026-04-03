@@ -42,7 +42,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/patch"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
@@ -94,13 +94,13 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	k8sConf, err := k8sCF()
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to create kubernetes provider").CausedBy(err)
 	}
 
 	client, err := v1beta1.NewClient(k8sConf)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed creating client for connecting to kubernetes cluster").CausedBy(err)
 	}
 
@@ -120,7 +120,7 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	var providerConf Config
 	if err = dec.DecodeMap(&providerConf, rawConf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"failed to decode kubernetes rule provider config").CausedBy(err)
 	}
 
@@ -239,12 +239,12 @@ func (p *Provider) addRuleSet(ctx context.Context, obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1beta1.RuleSet) // nolint: forcetypeassert
 	conf := rs.AsConfig()
-	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
+	logger := zerolog.Ctx(ctx).With().Str("_src", conf.ID).Logger()
 	ctx = logger.WithContext(ctx)
 
 	logger.Info().Msg("New rule set received")
 
-	if err := p.p.OnCreated(ctx, conf); err != nil {
+	if err := p.p.OnCreated(ctx, *conf); err != nil {
 		logger.Warn().Err(err).Msg("Failed loading rule set")
 
 		p.rsInUse[rs.UID] = false
@@ -291,12 +291,12 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 
 	conf := newRS.AsConfig()
 	inUse, known := p.rsInUse[newRS.UID]
-	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
+	logger := zerolog.Ctx(ctx).With().Str("_src", conf.ID).Logger()
 	ctx = logger.WithContext(ctx)
 
 	logger.Info().Msg("Rule set update received")
 
-	if err := p.p.OnUpdated(ctx, conf); err != nil {
+	if err := p.p.OnUpdated(ctx, *conf); err != nil {
 		logger.Warn().Err(err).Msg("Failed to apply rule set updates")
 
 		statusIncrement := x.IfThenElse(known && inUse, -1, 0)
@@ -344,12 +344,12 @@ func (p *Provider) deleteRuleSet(ctx context.Context, obj any) {
 	rs := obj.(*v1beta1.RuleSet) // nolint: forcetypeassert
 	conf := rs.AsConfig()
 	inUse, known := p.rsInUse[rs.UID]
-	logger := zerolog.Ctx(ctx).With().Str("_src", conf.Source).Logger()
+	logger := zerolog.Ctx(ctx).With().Str("_src", conf.ID).Logger()
 	ctx = logger.WithContext(ctx)
 
 	logger.Info().Msg("Rule set deletion received")
 
-	if err := p.p.OnDeleted(ctx, conf); err != nil {
+	if err := p.p.OnDeleted(ctx, *conf); err != nil {
 		logger.Warn().Err(err).Msg("Failed deleting rule set")
 
 		p.updateStatus(

@@ -25,9 +25,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -46,7 +45,7 @@ func TestNewHeaderFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'headers' is a required field")
 			},
 		},
@@ -56,7 +55,7 @@ func TestNewHeaderFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'headers' must contain more than 0 items")
 			},
 		},
@@ -82,7 +81,7 @@ headers:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -99,13 +98,14 @@ headers:
 				assert.Equal(t, "with valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 
 				val, err := finalizer.headers["foo"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 
 				val, err = finalizer.headers["bar"].Render(map[string]any{
-					"Subject": identity.Subject{"default": &identity.Principal{ID: "baz"}},
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
@@ -173,6 +173,7 @@ headers:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no new configuration but with step ID", prototype.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.headers, configured.headers)
 			},
@@ -195,6 +196,7 @@ headers:
 				assert.Equal(t, "new headers provided", configured.ID())
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
@@ -221,6 +223,7 @@ headers:
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
@@ -250,7 +253,7 @@ headers:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -292,7 +295,7 @@ func TestHeaderFinalizerExecute(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		config           []byte
-		subject          identity.Subject
+		subject          pipeline.Subject
 		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error)
 	}{
@@ -306,15 +309,15 @@ headers:
 
 				reqf := mocks.NewRequestFunctionsMock(t)
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			subject: identity.Subject{"default": &identity.Principal{ID: "FooBar", Attributes: map[string]any{}}},
+			subject: pipeline.Subject{"default": &pipeline.Principal{ID: "FooBar", Attributes: map[string]any{}}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to render value for 'X-Baz' header")
 
 				var identifier interface{ ID() string }
@@ -342,10 +345,10 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
 				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo", "bar")
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			},
-			subject: identity.Subject{"default": &identity.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}},
+			subject: pipeline.Subject{"default": &pipeline.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -367,11 +370,11 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group2")
 				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group3")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{})
+				ctx.EXPECT().Request().Return(&pipeline.Request{})
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 			},
-			subject: identity.Subject{
-				"default": &identity.Principal{
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
 					ID:         "FooBar",
 					Attributes: map[string]any{"groups": []string{"group1", "group2", "group3"}},
 				},

@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
-	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
@@ -42,7 +42,7 @@ import (
 func newService(
 	conf *config.Configuration,
 	log zerolog.Logger,
-	khr keyholder.Registry,
+	kp keyregistry.JWKSProvider,
 ) *http.Server {
 	cfg := conf.Management
 	eh := errorhandler2.New()
@@ -79,7 +79,7 @@ func newService(
 			},
 			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
-	).Then(newManagementHandler(khr, eh))
+	).Then(newHandler(kp, eh))
 
 	return &http.Server{
 		Handler:        hc,

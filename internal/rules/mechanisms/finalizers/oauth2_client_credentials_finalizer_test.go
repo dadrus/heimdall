@@ -35,8 +35,8 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	mocks2 "github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -57,7 +57,7 @@ func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "validation error")
 				require.ErrorContains(t, err, "token_url")
 				require.ErrorContains(t, err, "client_id")
@@ -70,7 +70,7 @@ func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "validation error")
 				require.ErrorContains(t, err, "token_url")
 				require.ErrorContains(t, err, "client_id")
@@ -102,7 +102,7 @@ auth_method: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'auth_method' must be one of [basic_auth request_body]")
 			},
 		},
@@ -122,6 +122,7 @@ client_secret: bar
 				assert.Equal(t, "with minimal valid config with enforced and used TLS", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -142,7 +143,7 @@ client_secret: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'token_url' scheme must be https")
 			},
 		},
@@ -169,6 +170,7 @@ header:
 				assert.Equal(t, "with full valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
+				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
@@ -261,6 +263,7 @@ header:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.Name(), prototype.ID())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.cfg, configured.cfg)
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.headerName, configured.headerName)
@@ -288,6 +291,7 @@ cache_ttl: 11s
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -324,6 +328,7 @@ cache_ttl: 11s
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
@@ -370,7 +375,7 @@ cache_ttl: 11s
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -394,6 +399,7 @@ cache_ttl: 11s
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
+				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
 				assert.Equal(t, "foo", prototype.cfg.ClientID)
 				assert.Equal(t, prototype.cfg.ClientID, configured.cfg.ClientID)
@@ -551,7 +557,7 @@ func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 			},
 		},
 		"full configuration, no cache hit and token has expires_in claim": {

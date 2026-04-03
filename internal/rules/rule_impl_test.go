@@ -26,11 +26,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	heimdallmocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -51,7 +49,7 @@ func TestRuleExecute(t *testing.T) {
 			finalizer *heimdallmocks.StepMock,
 			errHandler *heimdallmocks.StepMock,
 		)
-		assert func(t *testing.T, err error, backend rule.Backend, captures map[string]string)
+		assert func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string)
 	}{
 		"authenticator fails, but error handler succeeds": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
@@ -62,17 +60,17 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -88,17 +86,17 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(errors.New("some error"))
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -115,20 +113,20 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -144,20 +142,20 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(errors.New("some error"))
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -174,23 +172,23 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -206,23 +204,23 @@ func TestRuleExecute(t *testing.T) {
 
 				testErr := errors.New("test error")
 
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(errors.New("some error"))
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -241,18 +239,18 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{
-					URL: &heimdall.URL{
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, _ rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
 				require.ErrorContains(t, err, "path contains encoded slash")
 			},
 		},
@@ -268,24 +266,24 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{
-					URL: &heimdall.URL{
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api", "second": "v1", "third": "foo%5Bid%5D"},
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -311,24 +309,24 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{
-					URL: &heimdall.URL{
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -353,24 +351,24 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&heimdall.Request{
-					URL: &heimdall.URL{
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -395,19 +393,19 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -429,19 +427,19 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -463,19 +461,19 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
-					func(sub identity.Subject) bool { return sub != nil },
+					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
-				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{URL: *targetURL}})
+				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
 			},
-			assert: func(t *testing.T, err error, backend rule.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -503,7 +501,7 @@ func TestRuleExecute(t *testing.T) {
 				sh:              stage{authorizer},
 				fi:              stage{finalizer},
 				eh:              stage{errHandler},
-				subjectPool:     &sync.Pool{New: func() any { return make(identity.Subject, 4) }},
+				subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 			}
 
 			tc.configureMocks(t, ctx, authenticator, authorizer, finalizer, errHandler)

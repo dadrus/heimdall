@@ -32,9 +32,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -80,7 +80,7 @@ func TestSentinelCache(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
 		config     func(t *testing.T) []byte
-		assert     func(t *testing.T, err error, cch cache.Cache)
+		assert     func(t *testing.T, err error, cch types.Cache)
 	}{
 		"empty config": {
 			config: func(t *testing.T) []byte {
@@ -88,11 +88,11 @@ func TestSentinelCache(t *testing.T) {
 
 				return []byte(``)
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'nodes' must contain more than 0 items")
 			},
 		},
@@ -102,11 +102,11 @@ func TestSentinelCache(t *testing.T) {
 
 				return []byte(`nodes: [""]`)
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'nodes'[0] is a required field")
 			},
 		},
@@ -116,11 +116,11 @@ func TestSentinelCache(t *testing.T) {
 
 				return []byte(`nodes: ["foo:1234"]`)
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'master' is a required field")
 			},
 		},
@@ -130,11 +130,11 @@ func TestSentinelCache(t *testing.T) {
 
 				return []byte(`foo: bar`)
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding redis cache config")
 			},
 		},
@@ -144,11 +144,11 @@ func TestSentinelCache(t *testing.T) {
 
 				return []byte(`{nodes: ["foo.local:12345"], master: foo}`)
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed creating redis client")
 			},
 		},
@@ -160,11 +160,11 @@ func TestSentinelCache(t *testing.T) {
 					"{nodes: [ 'foo:1234' ], master: foo, client_cache: {disabled: true}, tls: { key_store: { path: /does/not/exist.pem } }}",
 				)
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed loading keystore")
 			},
 		},
@@ -177,11 +177,11 @@ func TestSentinelCache(t *testing.T) {
 					"{nodes: [ 'foo:1234' ], master: foo, tls: { disabled: true }}",
 				)
 			},
-			assert: func(t *testing.T, err error, _ cache.Cache) {
+			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'tls'.'disabled' must be false")
 			},
 		},
@@ -206,7 +206,7 @@ func TestSentinelCache(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Watcher().Maybe().Return(nil)
-			appCtx.EXPECT().CertificateObserver().Maybe().Return(nil)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
 
 			// WHEN
 			cch, err := NewSentinelCache(appCtx, conf)

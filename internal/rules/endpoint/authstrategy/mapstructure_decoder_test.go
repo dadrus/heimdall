@@ -37,8 +37,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks3 "github.com/dadrus/heimdall/internal/otel/metrics/certificate/mocks"
+	mocks2 "github.com/dadrus/heimdall/internal/keyregistry/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
@@ -89,7 +89,7 @@ auth:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
@@ -211,7 +211,7 @@ auth:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
@@ -406,7 +406,7 @@ auth:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
@@ -583,9 +583,9 @@ func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing
 	}
 
 	for uc, tc := range map[string]struct {
-		config           []byte
-		configureContext func(t *testing.T, ccm *app.ContextMock)
-		assert           func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
+		config     []byte
+		setupMocks func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock)
+		assert     func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"without signer": {
 			config: []byte(`
@@ -664,7 +664,7 @@ auth:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "/some/path.pem")
 			},
 		},
@@ -683,7 +683,7 @@ auth:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
@@ -697,19 +697,20 @@ auth:
       key_store:
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *app.ContextMock) {
+			setupMocks: func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
 				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(errors.New("test error"))
 
 				ccm.EXPECT().Watcher().Return(watcher)
+				krm.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed registering")
 			},
 		},
@@ -723,17 +724,14 @@ auth:
       key_store:
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *app.ContextMock) {
+			setupMocks: func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
 				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
 
-				observer := mocks3.NewObserverMock(t)
-				observer.EXPECT().Add(mock.Anything)
-
 				ccm.EXPECT().Watcher().Return(watcher)
-				ccm.EXPECT().CertificateObserver().Return(observer)
+				krm.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -744,9 +742,6 @@ auth:
 				require.True(t, ok)
 
 				assert.NotNil(t, httpSig.signer)
-				assert.NotEmpty(t, httpSig.Certificates())
-				assert.NotEmpty(t, httpSig.Keys())
-				assert.Equal(t, "http message signer", httpSig.Name())
 			},
 		},
 		"full possible configuration": {
@@ -764,17 +759,14 @@ auth:
         password: secret
         path: ` + pemFile.Name() + `
 `),
-			configureContext: func(t *testing.T, ccm *app.ContextMock) {
+			setupMocks: func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock) {
 				t.Helper()
 
 				watcher := mocks.NewWatcherMock(t)
 				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
 
-				observer := mocks3.NewObserverMock(t)
-				observer.EXPECT().Add(mock.Anything)
-
 				ccm.EXPECT().Watcher().Return(watcher)
-				ccm.EXPECT().CertificateObserver().Return(observer)
+				krm.EXPECT().Notify(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -785,9 +777,6 @@ auth:
 				require.True(t, ok)
 
 				assert.NotNil(t, httpSig.signer)
-				assert.NotEmpty(t, httpSig.Certificates())
-				assert.NotEmpty(t, httpSig.Keys())
-				assert.Equal(t, "http message signer", httpSig.Name())
 			},
 		},
 	} {
@@ -798,15 +787,18 @@ auth:
 			)
 			require.NoError(t, err)
 
+			kr := mocks2.NewRegistryMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+			appCtx.EXPECT().KeyRegistry().Return(kr)
 
-			configureContext := x.IfThenElse(tc.configureContext != nil,
-				tc.configureContext,
-				func(t *testing.T, _ *app.ContextMock) { t.Helper() },
+			setupMocks := x.IfThenElse(tc.setupMocks != nil,
+				tc.setupMocks,
+				func(t *testing.T, _ *app.ContextMock, _ *mocks2.RegistryMock) { t.Helper() },
 			)
-			configureContext(t, appCtx)
+			setupMocks(t, appCtx, kr)
 
 			var typ Type
 

@@ -28,7 +28,7 @@ import (
 	"github.com/knadh/koanf/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -143,7 +143,7 @@ func koanfFromEnv(prefix string) (*koanf.Koanf, error) {
 		}),
 	)
 	if err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed to parse environment variables to config").CausedBy(err)
 	}
 

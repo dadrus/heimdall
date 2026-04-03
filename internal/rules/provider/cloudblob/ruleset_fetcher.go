@@ -24,6 +24,6 @@ import (
 )
 
 type RuleSetFetcher interface {
-	FetchRuleSets(ctx context.Context, app app.Context) ([]*v1beta1.RuleSet, error)
+	FetchRuleSets(ctx context.Context, app app.Context) ([]v1beta1.RuleSet, error)
 	ID() string
 }

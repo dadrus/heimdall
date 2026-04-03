@@ -16,11 +16,11 @@
 
 package rule
 
-import "github.com/dadrus/heimdall/internal/heimdall"
+import "github.com/dadrus/heimdall/internal/pipeline"
 
 type Route interface {
 	Host() string
 	Path() string
-	Matches(ctx heimdall.Context, keys, values []string) bool
+	Matches(ctx pipeline.Context, keys, values []string) bool
 	Rule() Rule
 }

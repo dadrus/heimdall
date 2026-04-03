@@ -30,11 +30,15 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
+	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
 
 func TestKeyStoreCertificate(t *testing.T) {
@@ -136,7 +140,12 @@ func TestKeyStoreOnChanged(t *testing.T) {
 	_, err = pemFile.Write(pemBytes1)
 	require.NoError(t, err)
 
-	ks := &keyStore{path: pemFile.Name(), keyID: "key1"}
+	ko := mocks.NewKeyObserverMock(t)
+	ko.EXPECT().Notify(mock.Anything).
+		Run(mock2.NewArgumentCaptor[keyregistry.KeyInfo](&ko.Mock, "captor").Capture).
+		Times(2)
+
+	ks := &keyStore{path: pemFile.Name(), keyID: "key1", ko: ko}
 	ks.load()
 
 	require.Equal(t, cert1, ks.tlsCert.Leaf)
@@ -161,4 +170,16 @@ func TestKeyStoreOnChanged(t *testing.T) {
 
 	// THEN
 	require.Equal(t, cert2, ks.tlsCert.Leaf)
+
+	// checking notifications
+	keyInfos := mock2.ArgumentCaptorFrom[keyregistry.KeyInfo](&ko.Mock, "captor").Values()
+	require.Len(t, keyInfos, 2)
+
+	assert.False(t, keyInfos[0].Exportable)
+	assert.Equal(t, "key1", keyInfos[0].KeyID)
+	assert.Equal(t, cert1, keyInfos[0].CertChain[0])
+
+	assert.False(t, keyInfos[1].Exportable)
+	assert.Equal(t, "key1", keyInfos[1].KeyID)
+	assert.Equal(t, cert2, keyInfos[1].CertChain[0])
 }

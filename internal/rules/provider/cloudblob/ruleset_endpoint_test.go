@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -66,7 +66,7 @@ func TestFetchRuleSets(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		endpoint ruleSetEndpoint
 		setup    func(t *testing.T)
-		assert   func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet)
+		assert   func(t *testing.T, err error, ruleSets []v1beta1.RuleSet)
 	}{
 		"failed to open bucket": {
 			endpoint: ruleSetEndpoint{
@@ -76,11 +76,11 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: "endpoint=does-not-exist.local&foo=bar&region=eu-central-1",
 				},
 			},
-			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to open bucket")
 			},
 		},
@@ -92,11 +92,11 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: fmt.Sprintf("endpoint=%s&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "failed iterate blobs")
 			},
 		},
@@ -118,11 +118,11 @@ func TestFetchRuleSets(t *testing.T) {
 					strings.NewReader(data), int64(len(data)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to decode")
 			},
 		},
@@ -134,7 +134,7 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: fmt.Sprintf("endpoint=%s&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -157,7 +157,7 @@ func TestFetchRuleSets(t *testing.T) {
 					strings.NewReader(""), 0, nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -222,19 +222,19 @@ rules:
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 2)
 
-				assert.Contains(t, ruleSets[0].Source, "test-rule1")
+				assert.Contains(t, ruleSets[0].ID, "test-rule1")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
 
-				assert.Contains(t, ruleSets[1].Source, "test-rule2")
+				assert.Contains(t, ruleSets[1].ID, "test-rule2")
 				assert.NotEmpty(t, ruleSets[1].Hash)
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "barfoo", ruleSets[1].Rules[0].ID)
@@ -298,14 +298,14 @@ rules:
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 1)
 
-				assert.Contains(t, ruleSets[0].Source, "api-rule")
+				assert.Contains(t, ruleSets[0].ID, "api-rule")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
@@ -321,11 +321,11 @@ rules:
 				},
 				Prefix: "api",
 			},
-			assert: func(t *testing.T, err error, _ []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, _ []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "attributes")
 			},
 		},
@@ -347,7 +347,7 @@ rules:
 					strings.NewReader(""), 0, nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -390,14 +390,14 @@ rules:
 					strings.NewReader(ruleSet1), int64(len(ruleSet1)), nil)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*v1beta1.RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []v1beta1.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 1)
 
-				assert.Contains(t, ruleSets[0].Source, "ruleset")
+				assert.Contains(t, ruleSets[0].ID, "ruleset")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)

@@ -70,9 +70,9 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 		return newResponse(http.StatusOK, msg)
 	}
 
-	ruleSet := &cfgv1beta1.RuleSet{
+	ruleSet := cfgv1beta1.RuleSet{
 		MetaData: cfgv1beta1.MetaData{
-			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
+			ID:      fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
 			ModTime: time.Now(),
 		},
 		Version: rv.mapVersion(rs.APIVersion),
@@ -83,7 +83,7 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 	var errs []metav1.StatusCause
 
 	for idx, rc := range ruleSet.Rules {
-		_, err = rv.f.CreateRule(ruleSet.Source, rc)
+		_, err = rv.f.CreateRule(ruleSet, rc)
 		if err != nil {
 			errs = append(errs, metav1.StatusCause{
 				Type:    metav1.CauseTypeFieldValueInvalid,
@@ -105,15 +105,16 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 	return newResponse(http.StatusOK, "RuleSet valid")
 }
 
-func (rv *rulesetValidator) ruleSetFrom(req *request) (*v1beta1.RuleSet, error) {
+func (rv *rulesetValidator) ruleSetFrom(req *request) (v1beta1.RuleSet, error) {
+	rs := v1beta1.RuleSet{}
+
 	if req.Kind.Kind != v1beta1.ResourceName {
-		return nil, ErrInvalidObject
+		return rs, ErrInvalidObject
 	}
 
-	p := &v1beta1.RuleSet{}
-	err := json.Unmarshal(req.Object.Raw, p)
+	err := json.Unmarshal(req.Object.Raw, &rs)
 
-	return p, err
+	return rs, err
 }
 
 func (rv *rulesetValidator) mapVersion(_ string) string {

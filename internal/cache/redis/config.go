@@ -33,7 +33,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
@@ -112,7 +112,7 @@ func (c *fileCredentials) load() error {
 
 func (c *fileCredentials) register(cw watcher.Watcher) error {
 	if err := cw.Add(c.Path, c); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"failed registering client credentials watcher on %s for Redis client", c.Path).CausedBy(err)
 	}
 
@@ -141,7 +141,7 @@ type baseConfig struct {
 	TLS           tlsConfig          `mapstructure:"tls"`
 }
 
-func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientOption, error) {
+func (c baseConfig) clientOptions(app app.Context) (rueidis.ClientOption, error) {
 	var (
 		tlsCfg *tls.Config
 		err    error
@@ -151,7 +151,7 @@ func (c baseConfig) clientOptions(app app.Context, name string) (rueidis.ClientO
 		tlsCfg, err = tlsx.ToTLSConfig(&c.TLS.TLS,
 			tlsx.WithClientAuthentication(len(c.TLS.KeyStore.Path) != 0),
 			tlsx.WithSecretsWatcher(app.Watcher()),
-			tlsx.WithCertificateObserver(name, app.CertificateObserver()),
+			tlsx.WithKeyObserver(app.KeyRegistry()),
 		)
 		if err != nil {
 			return rueidis.ClientOption{}, err

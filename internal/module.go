@@ -18,17 +18,17 @@ package internal
 
 import (
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/app"
-	cache "github.com/dadrus/heimdall/internal/cache/module"
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
 	"github.com/dadrus/heimdall/internal/handler/profiling"
-	"github.com/dadrus/heimdall/internal/keyholder"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/otel"
-	"github.com/dadrus/heimdall/internal/otel/metrics/certificate"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -36,42 +36,42 @@ import (
 )
 
 type appContext struct {
-	w   watcher.Watcher
-	khr keyholder.Registry
-	co  certificate.Observer
-	v   validation.Validator
-	l   zerolog.Logger
-	c   *config.Configuration
+	w  watcher.Watcher
+	kr keyregistry.Registry
+	v  validation.Validator
+	l  zerolog.Logger
+	m  metric.Meter
+	c  *config.Configuration
 }
 
-func (c *appContext) Watcher() watcher.Watcher                  { return c.w }
-func (c *appContext) KeyHolderRegistry() keyholder.Registry     { return c.khr }
-func (c *appContext) CertificateObserver() certificate.Observer { return c.co }
-func (c *appContext) Validator() validation.Validator           { return c.v }
-func (c *appContext) Logger() zerolog.Logger                    { return c.l }
-func (c *appContext) Config() *config.Configuration             { return c.c }
+func (c *appContext) Watcher() watcher.Watcher          { return c.w }
+func (c *appContext) KeyRegistry() keyregistry.Registry { return c.kr }
+func (c *appContext) Validator() validation.Validator   { return c.v }
+func (c *appContext) Logger() zerolog.Logger            { return c.l }
+func (c *appContext) Meter() metric.Meter               { return c.m }
+func (c *appContext) Config() *config.Configuration     { return c.c }
 
 var Module = fx.Options( //nolint:gochecknoglobals
+	otel.Module,
 	watcher.Module,
-	keyholder.Module,
+	keyregistry.Module,
 	fx.Provide(func(
 		watcher watcher.Watcher,
-		khr keyholder.Registry,
-		observer certificate.Observer,
+		kr keyregistry.Registry,
 		validator validation.Validator,
 		logger zerolog.Logger,
+		meter metric.Meter,
 		conf *config.Configuration,
 	) app.Context {
 		return &appContext{
-			w:   watcher,
-			khr: khr,
-			co:  observer,
-			v:   validator,
-			l:   logger,
-			c:   conf,
+			w:  watcher,
+			kr: kr,
+			v:  validator,
+			l:  logger,
+			m:  meter,
+			c:  conf,
 		}
 	}),
-	otel.Module,
 	cache.Module,
 	mechanisms.Module,
 	rules.Module,

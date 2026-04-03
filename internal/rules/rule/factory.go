@@ -19,7 +19,7 @@ package rule
 import "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 
 type Factory interface {
-	CreateRule(srcID string, ruleConfig v1beta1.Rule) (Rule, error)
+	CreateRule(source v1beta1.RuleSet, ruleConfig v1beta1.Rule) (Rule, error)
 	DefaultRule() Rule
 	HasDefaultRule() bool
 }

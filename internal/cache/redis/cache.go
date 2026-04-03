@@ -23,7 +23,8 @@ import (
 	"github.com/redis/rueidis"
 	"github.com/redis/rueidis/rueidisotel"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/cache/types"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -32,16 +33,19 @@ type redisCache struct {
 	opts rueidis.ClientOption
 	c    rueidis.Client
 	ttl  time.Duration
+	typ  string
 }
 
-func newRedisCache(opts rueidis.ClientOption, ttl time.Duration) *redisCache {
-	return &redisCache{opts: opts, ttl: ttl}
+func newRedisCache(opts rueidis.ClientOption, ttl time.Duration, typ string) *redisCache {
+	return &redisCache{opts: opts, ttl: ttl, typ: typ}
 }
+
+func (c *redisCache) Type() string { return c.typ }
 
 func (c *redisCache) Start(_ context.Context) error {
 	client, err := rueidisotel.NewClient(c.opts)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
+		return errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed creating redis client").CausedBy(err)
 	}
 
@@ -59,6 +63,10 @@ func (c *redisCache) Stop(_ context.Context) error {
 func (c *redisCache) Get(ctx context.Context, key string) ([]byte, error) {
 	val, err := c.c.DoCache(ctx, c.c.B().Get().Key(key).Cache(), c.ttl).ToString()
 	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, types.ErrNoEntry
+		}
+
 		return nil, err
 	}
 

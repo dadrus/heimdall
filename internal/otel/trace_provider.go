@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -39,6 +40,7 @@ func initTraceProvider(
 ) error {
 	if !conf.Tracing.Enabled {
 		logger.Info().Msg("OpenTelemetry tracing disabled.")
+		otel.SetTracerProvider(noop.TracerProvider{})
 
 		return nil
 	}

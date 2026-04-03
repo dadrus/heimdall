@@ -30,7 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -47,10 +47,10 @@ func (e *ruleSetEndpoint) ID() string {
 func (e *ruleSetEndpoint) FetchRuleSets(
 	ctx context.Context,
 	app app.Context,
-) ([]*v1beta1.RuleSet, error) {
+) ([]v1beta1.RuleSet, error) {
 	bucket, err := blob.OpenBucket(ctx, e.URL.String())
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to open bucket").
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to open bucket").
 			CausedBy(err)
 	}
 
@@ -67,8 +67,8 @@ func (e *ruleSetEndpoint) readAllBlobs(
 	ctx context.Context,
 	bucket *blob.Bucket,
 	app app.Context,
-) ([]*v1beta1.RuleSet, error) {
-	var ruleSets []*v1beta1.RuleSet
+) ([]v1beta1.RuleSet, error) {
+	var ruleSets []v1beta1.RuleSet
 
 	it := bucket.List(&blob.ListOptions{Prefix: e.Prefix})
 
@@ -101,17 +101,17 @@ func (e *ruleSetEndpoint) readSingleBlob(
 	ctx context.Context,
 	bucket *blob.Bucket,
 	app app.Context,
-) ([]*v1beta1.RuleSet, error) {
+) ([]v1beta1.RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path, app)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			return []*v1beta1.RuleSet{}, nil
+			return []v1beta1.RuleSet{}, nil
 		}
 
 		return nil, err
 	}
 
-	return []*v1beta1.RuleSet{ruleSet}, nil
+	return []v1beta1.RuleSet{ruleSet}, nil
 }
 
 func (e *ruleSetEndpoint) readRuleSet(
@@ -120,16 +120,16 @@ func (e *ruleSetEndpoint) readRuleSet(
 	key string,
 	app app.Context,
 ) (
-	*v1beta1.RuleSet, error,
+	v1beta1.RuleSet, error,
 ) {
 	attrs, err := bucket.Attributes(ctx, key)
 	if err != nil {
-		return nil, mapError(err, "failed to get blob attributes")
+		return v1beta1.RuleSet{}, mapError(err, "failed to get blob attributes")
 	}
 
 	reader, err := bucket.NewReader(ctx, key, nil)
 	if err != nil {
-		return nil, mapError(err, "failed reading blob contents")
+		return v1beta1.RuleSet{}, mapError(err, "failed reading blob contents")
 	}
 
 	defer reader.Close()
@@ -142,16 +142,17 @@ func (e *ruleSetEndpoint) readRuleSet(
 
 	var ruleSet v1beta1.RuleSet
 	if err = dec.Decode(&ruleSet, reader); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
+		return v1beta1.RuleSet{}, errorchain.
+			NewWithMessage(pipeline.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
 	}
 
 	ruleSet.Hash = attrs.MD5
-	ruleSet.Source = key + "@" + e.ID()
+	ruleSet.ID = key + "@" + e.ID()
 	ruleSet.ModTime = attrs.ModTime
+	ruleSet.Provider = "cloud_blob"
 
-	return &ruleSet, nil
+	return ruleSet, nil
 }
 
 func mapError(err error, message string) error {
@@ -161,10 +162,10 @@ func mapError(err error, message string) error {
 	case gcerrors.Unknown:
 		fallthrough
 	case gcerrors.Canceled:
-		return errorchain.NewWithMessage(heimdall.ErrCommunication, message).CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrCommunication, message).CausedBy(err)
 	case gcerrors.DeadlineExceeded:
-		return errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout, message).CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrCommunicationTimeout, message).CausedBy(err)
 	default:
-		return errorchain.NewWithMessage(heimdall.ErrInternal, message).CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrInternal, message).CausedBy(err)
 	}
 }

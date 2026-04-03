@@ -32,6 +32,8 @@ log:
 
 metrics:
   enabled: false
+  cover_rules: true
+  cover_cache: true
 
 profiling:
   enabled: true
@@ -39,6 +41,7 @@ profiling:
 
 tracing:
   span_processor: simple
+  cover_rules: true
 
 mechanisms:
   authenticators:

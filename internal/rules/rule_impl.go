@@ -24,18 +24,17 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ruleImpl struct {
 	id              string
-	srcID           string
 	isDefault       bool
 	hash            []byte
+	source          rule.RuleSet
 	routes          []rule.Route
 	slashesHandling v1beta1.EncodedSlashesHandling
 	backend         *v1beta1.Backend
@@ -46,14 +45,15 @@ type ruleImpl struct {
 	subjectPool     *sync.Pool
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
+func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
-	if r.isDefault {
-		logger.Info().Msg("Executing default rule")
-	} else {
-		logger.Info().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
-	}
+	logger.Info().
+		Str("_ruleset_id", r.source.ID).
+		Str("_ruleset_name", r.source.Name).
+		Str("_provider", r.source.Provider).
+		Str("_rule_id", r.id).
+		Msg("Executing rule")
 
 	request := ctx.Request()
 
@@ -63,7 +63,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		request.URL.RawPath = ""
 	case v1beta1.EncodedSlashesOff:
 		if strings.Contains(request.URL.RawPath, "%2F") {
-			return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
+			return nil, errorchain.NewWithMessage(pipeline.ErrArgument,
 				"path contains encoded slash, which is not allowed")
 		}
 	}
@@ -74,7 +74,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		captures[k] = unescape(v, r.slashesHandling)
 	}
 
-	sub := r.subjectPool.Get().(identity.Subject) //nolint: forcetypeassert
+	sub := r.subjectPool.Get().(pipeline.Subject) //nolint: forcetypeassert
 
 	defer func() {
 		clear(sub)
@@ -108,22 +108,20 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 
 func (r *ruleImpl) ID() string { return r.id }
 
-func (r *ruleImpl) SrcID() string { return r.srcID }
+func (r *ruleImpl) Source() rule.RuleSet { return r.source }
 
 func (r *ruleImpl) SameAs(other rule.Rule) bool {
-	return r.ID() == other.ID() && r.SrcID() == other.SrcID()
+	return r.ID() == other.ID() && r.Source().Equals(other.Source())
 }
 
 func (r *ruleImpl) Routes() []rule.Route { return r.routes }
 
-func (r *ruleImpl) EqualTo(other rule.Rule) bool {
-	return r.ID() == other.ID() &&
-		r.SrcID() == other.SrcID() &&
-		bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
+func (r *ruleImpl) Equals(other rule.Rule) bool {
+	return r.SameAs(other) && bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
-func (r *ruleImpl) createBackend(request *heimdall.Request) rule.Backend {
-	var upstream rule.Backend
+func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {
+	var upstream pipeline.Backend
 
 	if r.backend != nil {
 		upstream = backend{
@@ -143,25 +141,10 @@ type routeImpl struct {
 	matcher RouteMatcher
 }
 
-func (r *routeImpl) Matches(ctx heimdall.Context, keys, values []string) bool {
-	logger := zerolog.Ctx(ctx.Context())
-
+func (r *routeImpl) Matches(ctx pipeline.Context, keys, values []string) bool {
 	if err := r.matcher.Matches(ctx.Request(), keys, values); err != nil {
-		logger.Debug().
-			Str("_source", r.rule.srcID).
-			Str("_id", r.rule.id).
-			Str("route", r.path).
-			Err(err).
-			Msg("Request does not satisfy matching conditions")
-
 		return false
 	}
-
-	logger.Debug().
-		Str("_source", r.rule.srcID).
-		Str("_id", r.rule.id).
-		Str("route", r.path).
-		Msg("Rule matched")
 
 	return true
 }

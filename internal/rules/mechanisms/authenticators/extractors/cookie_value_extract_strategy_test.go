@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
 func TestExtractExistingCookieValue(t *testing.T) {
@@ -38,7 +38,7 @@ func TestExtractExistingCookieValue(t *testing.T) {
 	fnt.EXPECT().Cookie(cookieName).Return(cookieValue)
 
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+	ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 
 	strategy := CookieValueExtractStrategy{Name: cookieName}
 
@@ -58,7 +58,7 @@ func TestExtractNotExistingCookieValue(t *testing.T) {
 	fnt.EXPECT().Cookie(mock.Anything).Return("")
 
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+	ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 
 	strategy := CookieValueExtractStrategy{Name: "Test-Cookie"}
 
@@ -67,5 +67,5 @@ func TestExtractNotExistingCookieValue(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	require.ErrorIs(t, err, heimdall.ErrArgument)
+	require.ErrorIs(t, err, pipeline.ErrArgument)
 }

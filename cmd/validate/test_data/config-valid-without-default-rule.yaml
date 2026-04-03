@@ -32,6 +32,7 @@ log:
 
 metrics:
   enabled: false
+  cover_cache: false
 
 profiling:
   enabled: true

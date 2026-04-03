@@ -23,7 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type ErrorHandler interface {
@@ -48,18 +48,18 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 	ctx := req.Context()
 
 	switch {
-	case errors.Is(err, heimdall.ErrAuthentication):
+	case errors.Is(err, pipeline.ErrAuthentication):
 		h.onAuthenticationError(rw, req, err)
-	case errors.Is(err, heimdall.ErrAuthorization):
+	case errors.Is(err, pipeline.ErrAuthorization):
 		h.onAuthorizationError(rw, req, err)
-	case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
+	case errors.Is(err, pipeline.ErrCommunicationTimeout) || errors.Is(err, pipeline.ErrCommunication):
 		h.onCommunicationError(rw, req, err)
-	case errors.Is(err, heimdall.ErrArgument):
+	case errors.Is(err, pipeline.ErrArgument):
 		h.onPreconditionError(rw, req, err)
-	case errors.Is(err, heimdall.ErrNoRuleFound):
+	case errors.Is(err, pipeline.ErrNoRuleFound):
 		h.onNoRuleError(rw, req, err)
-	case errors.Is(err, &heimdall.RedirectError{}):
-		var redirectError *heimdall.RedirectError
+	case errors.Is(err, &pipeline.RedirectError{}):
+		var redirectError *pipeline.RedirectError
 
 		errors.As(err, &redirectError)
 

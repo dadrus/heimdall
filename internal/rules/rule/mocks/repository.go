@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -40,16 +40,16 @@ func (_m *RepositoryMock) EXPECT() *RepositoryMock_Expecter {
 }
 
 // AddRuleSet provides a mock function for the type RepositoryMock
-func (_mock *RepositoryMock) AddRuleSet(ctx context.Context, srcID string, rules []rule.Rule) error {
-	ret := _mock.Called(ctx, srcID, rules)
+func (_mock *RepositoryMock) AddRuleSet(ctx context.Context, src rule.RuleSet, rules []rule.Rule) error {
+	ret := _mock.Called(ctx, src, rules)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AddRuleSet")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []rule.Rule) error); ok {
-		r0 = returnFunc(ctx, srcID, rules)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet, []rule.Rule) error); ok {
+		r0 = returnFunc(ctx, src, rules)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -63,21 +63,21 @@ type RepositoryMock_AddRuleSet_Call struct {
 
 // AddRuleSet is a helper method to define mock.On call
 //   - ctx context.Context
-//   - srcID string
+//   - src rule.RuleSet
 //   - rules []rule.Rule
-func (_e *RepositoryMock_Expecter) AddRuleSet(ctx interface{}, srcID interface{}, rules interface{}) *RepositoryMock_AddRuleSet_Call {
-	return &RepositoryMock_AddRuleSet_Call{Call: _e.mock.On("AddRuleSet", ctx, srcID, rules)}
+func (_e *RepositoryMock_Expecter) AddRuleSet(ctx interface{}, src interface{}, rules interface{}) *RepositoryMock_AddRuleSet_Call {
+	return &RepositoryMock_AddRuleSet_Call{Call: _e.mock.On("AddRuleSet", ctx, src, rules)}
 }
 
-func (_c *RepositoryMock_AddRuleSet_Call) Run(run func(ctx context.Context, srcID string, rules []rule.Rule)) *RepositoryMock_AddRuleSet_Call {
+func (_c *RepositoryMock_AddRuleSet_Call) Run(run func(ctx context.Context, src rule.RuleSet, rules []rule.Rule)) *RepositoryMock_AddRuleSet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 rule.RuleSet
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(rule.RuleSet)
 		}
 		var arg2 []rule.Rule
 		if args[2] != nil {
@@ -97,22 +97,22 @@ func (_c *RepositoryMock_AddRuleSet_Call) Return(err error) *RepositoryMock_AddR
 	return _c
 }
 
-func (_c *RepositoryMock_AddRuleSet_Call) RunAndReturn(run func(ctx context.Context, srcID string, rules []rule.Rule) error) *RepositoryMock_AddRuleSet_Call {
+func (_c *RepositoryMock_AddRuleSet_Call) RunAndReturn(run func(ctx context.Context, src rule.RuleSet, rules []rule.Rule) error) *RepositoryMock_AddRuleSet_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteRuleSet provides a mock function for the type RepositoryMock
-func (_mock *RepositoryMock) DeleteRuleSet(ctx context.Context, srcID string) error {
-	ret := _mock.Called(ctx, srcID)
+func (_mock *RepositoryMock) DeleteRuleSet(ctx context.Context, src rule.RuleSet) error {
+	ret := _mock.Called(ctx, src)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteRuleSet")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = returnFunc(ctx, srcID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet) error); ok {
+		r0 = returnFunc(ctx, src)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -126,20 +126,20 @@ type RepositoryMock_DeleteRuleSet_Call struct {
 
 // DeleteRuleSet is a helper method to define mock.On call
 //   - ctx context.Context
-//   - srcID string
-func (_e *RepositoryMock_Expecter) DeleteRuleSet(ctx interface{}, srcID interface{}) *RepositoryMock_DeleteRuleSet_Call {
-	return &RepositoryMock_DeleteRuleSet_Call{Call: _e.mock.On("DeleteRuleSet", ctx, srcID)}
+//   - src rule.RuleSet
+func (_e *RepositoryMock_Expecter) DeleteRuleSet(ctx interface{}, src interface{}) *RepositoryMock_DeleteRuleSet_Call {
+	return &RepositoryMock_DeleteRuleSet_Call{Call: _e.mock.On("DeleteRuleSet", ctx, src)}
 }
 
-func (_c *RepositoryMock_DeleteRuleSet_Call) Run(run func(ctx context.Context, srcID string)) *RepositoryMock_DeleteRuleSet_Call {
+func (_c *RepositoryMock_DeleteRuleSet_Call) Run(run func(ctx context.Context, src rule.RuleSet)) *RepositoryMock_DeleteRuleSet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 rule.RuleSet
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(rule.RuleSet)
 		}
 		run(
 			arg0,
@@ -154,13 +154,13 @@ func (_c *RepositoryMock_DeleteRuleSet_Call) Return(err error) *RepositoryMock_D
 	return _c
 }
 
-func (_c *RepositoryMock_DeleteRuleSet_Call) RunAndReturn(run func(ctx context.Context, srcID string) error) *RepositoryMock_DeleteRuleSet_Call {
+func (_c *RepositoryMock_DeleteRuleSet_Call) RunAndReturn(run func(ctx context.Context, src rule.RuleSet) error) *RepositoryMock_DeleteRuleSet_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindRule provides a mock function for the type RepositoryMock
-func (_mock *RepositoryMock) FindRule(ctx heimdall.Context) (rule.Rule, error) {
+func (_mock *RepositoryMock) FindRule(ctx pipeline.Context) (rule.Rule, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -169,17 +169,17 @@ func (_mock *RepositoryMock) FindRule(ctx heimdall.Context) (rule.Rule, error) {
 
 	var r0 rule.Rule
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) (rule.Rule, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (rule.Rule, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(heimdall.Context) rule.Rule); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) rule.Rule); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(rule.Rule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(heimdall.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(pipeline.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -193,16 +193,16 @@ type RepositoryMock_FindRule_Call struct {
 }
 
 // FindRule is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx pipeline.Context
 func (_e *RepositoryMock_Expecter) FindRule(ctx interface{}) *RepositoryMock_FindRule_Call {
 	return &RepositoryMock_FindRule_Call{Call: _e.mock.On("FindRule", ctx)}
 }
 
-func (_c *RepositoryMock_FindRule_Call) Run(run func(ctx heimdall.Context)) *RepositoryMock_FindRule_Call {
+func (_c *RepositoryMock_FindRule_Call) Run(run func(ctx pipeline.Context)) *RepositoryMock_FindRule_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 heimdall.Context
+		var arg0 pipeline.Context
 		if args[0] != nil {
-			arg0 = args[0].(heimdall.Context)
+			arg0 = args[0].(pipeline.Context)
 		}
 		run(
 			arg0,
@@ -216,22 +216,22 @@ func (_c *RepositoryMock_FindRule_Call) Return(rule1 rule.Rule, err error) *Repo
 	return _c
 }
 
-func (_c *RepositoryMock_FindRule_Call) RunAndReturn(run func(ctx heimdall.Context) (rule.Rule, error)) *RepositoryMock_FindRule_Call {
+func (_c *RepositoryMock_FindRule_Call) RunAndReturn(run func(ctx pipeline.Context) (rule.Rule, error)) *RepositoryMock_FindRule_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateRuleSet provides a mock function for the type RepositoryMock
-func (_mock *RepositoryMock) UpdateRuleSet(ctx context.Context, srcID string, rules []rule.Rule) error {
-	ret := _mock.Called(ctx, srcID, rules)
+func (_mock *RepositoryMock) UpdateRuleSet(ctx context.Context, src rule.RuleSet, rules []rule.Rule) error {
+	ret := _mock.Called(ctx, src, rules)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateRuleSet")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []rule.Rule) error); ok {
-		r0 = returnFunc(ctx, srcID, rules)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet, []rule.Rule) error); ok {
+		r0 = returnFunc(ctx, src, rules)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -245,21 +245,21 @@ type RepositoryMock_UpdateRuleSet_Call struct {
 
 // UpdateRuleSet is a helper method to define mock.On call
 //   - ctx context.Context
-//   - srcID string
+//   - src rule.RuleSet
 //   - rules []rule.Rule
-func (_e *RepositoryMock_Expecter) UpdateRuleSet(ctx interface{}, srcID interface{}, rules interface{}) *RepositoryMock_UpdateRuleSet_Call {
-	return &RepositoryMock_UpdateRuleSet_Call{Call: _e.mock.On("UpdateRuleSet", ctx, srcID, rules)}
+func (_e *RepositoryMock_Expecter) UpdateRuleSet(ctx interface{}, src interface{}, rules interface{}) *RepositoryMock_UpdateRuleSet_Call {
+	return &RepositoryMock_UpdateRuleSet_Call{Call: _e.mock.On("UpdateRuleSet", ctx, src, rules)}
 }
 
-func (_c *RepositoryMock_UpdateRuleSet_Call) Run(run func(ctx context.Context, srcID string, rules []rule.Rule)) *RepositoryMock_UpdateRuleSet_Call {
+func (_c *RepositoryMock_UpdateRuleSet_Call) Run(run func(ctx context.Context, src rule.RuleSet, rules []rule.Rule)) *RepositoryMock_UpdateRuleSet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 rule.RuleSet
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(rule.RuleSet)
 		}
 		var arg2 []rule.Rule
 		if args[2] != nil {
@@ -279,7 +279,7 @@ func (_c *RepositoryMock_UpdateRuleSet_Call) Return(err error) *RepositoryMock_U
 	return _c
 }
 
-func (_c *RepositoryMock_UpdateRuleSet_Call) RunAndReturn(run func(ctx context.Context, srcID string, rules []rule.Rule) error) *RepositoryMock_UpdateRuleSet_Call {
+func (_c *RepositoryMock_UpdateRuleSet_Call) RunAndReturn(run func(ctx context.Context, src rule.RuleSet, rules []rule.Rule) error) *RepositoryMock_UpdateRuleSet_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -30,7 +30,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func TestNewRequestContext(t *testing.T) {
@@ -107,11 +107,11 @@ func TestRequestContextFinalize(t *testing.T) {
 	}
 
 	for uc, tc := range map[string]struct {
-		updateContext func(t *testing.T, ctx heimdall.Context)
+		updateContext func(t *testing.T, ctx pipeline.Context)
 		assert        func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		"successful with some different header": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx pipeline.Context) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
@@ -140,7 +140,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"successful with multiple header with same name but different values": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx pipeline.Context) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream-1", "some-value-1")
@@ -166,7 +166,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"successful with some cookies": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx pipeline.Context) {
 				t.Helper()
 
 				ctx.AddCookieForUpstream("some-cookie", "value-1")
@@ -192,7 +192,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"successful with multiple header and cookie": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx pipeline.Context) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("x-for-upstream", "some-value")
@@ -219,7 +219,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"erroneous with header and cookie": {
-			updateContext: func(t *testing.T, ctx heimdall.Context) {
+			updateContext: func(t *testing.T, ctx pipeline.Context) {
 				t.Helper()
 
 				ctx.SetError(errors.New("test error"))
@@ -436,4 +436,39 @@ func TestRequestContextReset(t *testing.T) {
 	require.NotNil(t, ctx.hmdlReq.URL.Captures)
 	require.Empty(t, ctx.hmdlReq.URL.Captures)
 	require.Nil(t, ctx.hmdlReq.ClientIPAddresses)
+}
+
+func TestRequestContextWithParent(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodPatch,
+					Scheme:  "https",
+					Host:    "foo.bar:8080",
+					Path:    "/test",
+					Query:   "bar=moo",
+					RawBody: []byte(`{ "content": "heimdall" }`),
+					Headers: map[string]string{"content-type": "application/json"},
+				},
+			},
+		},
+	}
+
+	md := metadata.MD{
+		"x-forwarded-for": []string{"127.0.0.1"},
+	}
+
+	ctx := newRequestContext()
+	ctx.Init(metadata.NewIncomingContext(context.TODO(), md), checkReq)
+
+	orig := ctx.Context()
+
+	ctx.WithParent(t.Context())
+
+	assert.NotEqual(t, orig, ctx.ctx)
+	assert.Equal(t, t.Context(), ctx.ctx)
 }

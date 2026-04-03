@@ -20,8 +20,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
@@ -53,7 +52,7 @@ func newAnonymousAuthenticator(app app.Context, name string, rawConfig map[strin
 	var conf Config
 
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorAnonymous, name).CausedBy(err)
 	}
 
@@ -65,7 +64,7 @@ func newAnonymousAuthenticator(app app.Context, name string, rawConfig map[strin
 		name:          name,
 		id:            name,
 		principalName: DefaultPrincipalName,
-		principal:     &identity.Principal{ID: conf.Principal, Attributes: make(map[string]any)},
+		principal:     &pipeline.Principal{ID: conf.Principal, Attributes: make(map[string]any)},
 		app:           app,
 	}, nil
 }
@@ -75,15 +74,15 @@ type anonymousAuthenticator struct {
 	id            string
 	principalName string
 	app           app.Context
-	principal     *identity.Principal
+	principal     *pipeline.Principal
 }
 
-func (a *anonymousAuthenticator) Accept(visitor heimdall.Visitor) {
+func (a *anonymousAuthenticator) Accept(visitor pipeline.Visitor) {
 	visitor.VisitInsecure(a)
 	visitor.VisitPrincipalNamer(a)
 }
 
-func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (a *anonymousAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
 		Str("_type", AuthenticatorAnonymous).
@@ -96,7 +95,7 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.Context, sub identity.Subj
 	return nil
 }
 
-func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (heimdall.Step, error) {
+func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if def.IsEmpty() {
 		return a, nil
 	}
@@ -116,7 +115,7 @@ func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (heimdall.
 	var conf Config
 
 	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorAnonymous, a.name).CausedBy(err)
 	}
 
@@ -124,17 +123,14 @@ func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (heimdall.
 		name:          a.name,
 		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
-		principal:     &identity.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
+		principal:     &pipeline.Principal{ID: conf.Principal, Attributes: a.principal.Attributes},
 		app:           a.app,
 	}, nil
 }
 
-func (a *anonymousAuthenticator) Kind() types.Kind { return types.KindAuthenticator }
-
-func (a *anonymousAuthenticator) Name() string { return a.name }
-
-func (a *anonymousAuthenticator) ID() string { return a.id }
-
-func (a *anonymousAuthenticator) IsInsecure() bool { return true }
-
+func (a *anonymousAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
+func (a *anonymousAuthenticator) Name() string          { return a.name }
+func (a *anonymousAuthenticator) ID() string            { return a.id }
+func (a *anonymousAuthenticator) Type() string          { return a.name }
+func (a *anonymousAuthenticator) IsInsecure() bool      { return true }
 func (a *anonymousAuthenticator) PrincipalName() string { return a.principalName }

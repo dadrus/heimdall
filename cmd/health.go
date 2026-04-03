@@ -28,7 +28,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/handler/management"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -79,28 +79,28 @@ func healthStatus(cmd *cobra.Command) (string, error) {
 		nil,
 	)
 	if err != nil {
-		return "", errorchain.NewWithMessagef(heimdall.ErrInternal, "Failed to send request: %v", err)
+		return "", errorchain.NewWithMessagef(pipeline.ErrInternal, "Failed to send request: %v", err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Failed to send request: %v", err)
+		return "", errorchain.NewWithMessagef(pipeline.ErrCommunication, "Failed to send request: %v", err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Unexpected HTTP status code : %s", resp.Status)
+		return "", errorchain.NewWithMessagef(pipeline.ErrCommunication, "Unexpected HTTP status code : %s", resp.Status)
 	}
 
 	rawResp, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Failed to read response: %v", err)
+		return "", errorchain.NewWithMessagef(pipeline.ErrCommunication, "Failed to read response: %v", err)
 	}
 
 	var structuredResponse map[string]any
 	if err = json.Unmarshal(rawResp, &structuredResponse); err != nil {
-		return "", errorchain.NewWithMessagef(heimdall.ErrCommunication, "Failed to unmarshal response: %v", err)
+		return "", errorchain.NewWithMessagef(pipeline.ErrCommunication, "Failed to unmarshal response: %v", err)
 	}
 
 	switch outputFormat {

@@ -19,12 +19,14 @@ package validate
 import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/dadrus/heimdall/cmd/flags"
-	"github.com/dadrus/heimdall/internal/cache"
-	_ "github.com/dadrus/heimdall/internal/cache/module" // without this import, available cache configs are not registered.
+	_ "github.com/dadrus/heimdall/internal/cache" // without this import, available cache configs are not registered.
+	"github.com/dadrus/heimdall/internal/cache/registry"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
@@ -52,7 +54,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 	logger := zerolog.Nop()
 
 	if len(configPath) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no config file provided")
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "no config file provided")
 	}
 
 	cmd.SilenceUsage = true
@@ -77,12 +79,11 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 	}
 
 	appCtx := &appContext{
-		w:   &watcher.NoopWatcher{},
-		khr: &noopRegistry{},
-		co:  &noopCertificateObserver{},
-		v:   validator,
-		l:   logger,
-		c:   conf,
+		w:  &watcher.NoopWatcher{},
+		kr: &noopRegistry{},
+		v:  validator,
+		l:  logger,
+		c:  conf,
 	}
 
 	repo, err := repository.New(appCtx)
@@ -95,13 +96,15 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		conf,
 		config.DecisionMode,
 		logger,
+		nooptrace.Tracer{},
+		noopmetric.Meter{},
 		config.SecureDefaultRule(es.EnforceSecureDefaultRule),
 	)
 	if err != nil {
 		return err
 	}
 
-	cch, err := cache.Create(appCtx, conf.Cache.Type, conf.Cache.Config)
+	cch, err := registry.Create(appCtx, conf.Cache.Type, conf.Cache.Config)
 	if err != nil {
 		return err
 	}
@@ -123,9 +126,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// ignoring kubernetes provider for now as there are no insecure
-	// settings possible
-
+	// ignoring kubernetes provider for now as there are no insecure settings possible
 	cmd.Println("Configuration is valid")
 
 	return nil

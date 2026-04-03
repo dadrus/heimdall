@@ -25,9 +25,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 )
@@ -54,6 +53,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.True(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"default principal": {
@@ -70,6 +70,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.True(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"unsupported attributes are ignored": {
@@ -87,6 +88,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				assert.True(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
 		"malformed configuration": {
@@ -95,7 +97,7 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding config for anonymous authenticator")
 			},
 		},
@@ -162,6 +164,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.True(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"only step id is configured": {
@@ -181,6 +184,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.True(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"only principal name is configured": {
@@ -200,6 +204,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.True(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"empty principal for the configured authenticator": {
@@ -209,7 +214,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -219,7 +224,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -273,8 +278,8 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Context().Return(t.Context())
 
-	sub := make(identity.Subject)
-	exp := &identity.Principal{ID: "anon", Attributes: make(map[string]any)}
+	sub := make(pipeline.Subject)
+	exp := &pipeline.Principal{ID: "anon", Attributes: make(map[string]any)}
 
 	// WHEN
 	err = auth.Execute(ctx, sub)

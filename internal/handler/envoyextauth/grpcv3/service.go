@@ -33,14 +33,14 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func newService(
 	conf *config.Configuration,
 	cch cache.Cache,
 	logger zerolog.Logger,
-	exec rule.Executor,
+	exec pipeline.Executor,
 ) *grpc.Server {
 	cfg := conf.Serve
 	logHandler := loggermiddleware.New(logger)

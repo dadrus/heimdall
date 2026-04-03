@@ -26,7 +26,7 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 //nolint:gochecknoglobals
@@ -35,9 +35,9 @@ var (
 	principalType = cel.ObjectType(reflect.TypeFor[celPrincipal]().String(), traits.ReceiverType|traits.IndexerType)
 )
 
-type CelSubject identity.Subject
+type CelSubject pipeline.Subject
 
-func WrapSubject(sub identity.Subject) CelSubject {
+func WrapSubject(sub pipeline.Subject) CelSubject {
 	return CelSubject(sub)
 }
 
@@ -46,13 +46,13 @@ func (c CelSubject) Type() ref.Type {
 }
 
 func (c CelSubject) Value() any {
-	return identity.Subject(c)
+	return pipeline.Subject(c)
 }
 
 func (c CelSubject) Equal(other ref.Val) ref.Val {
 	if otherSub, ok := other.(CelSubject); ok {
 		return types.Bool(maps.EqualFunc(c, otherSub,
-			func(first *identity.Principal, second *identity.Principal) bool {
+			func(first *pipeline.Principal, second *pipeline.Principal) bool {
 				return first.ID == second.ID && reflect.DeepEqual(first.Attributes, second.Attributes)
 			},
 		))
@@ -62,8 +62,8 @@ func (c CelSubject) Equal(other ref.Val) ref.Val {
 }
 
 func (c CelSubject) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	if reflect.TypeFor[identity.Subject]().AssignableTo(typeDesc) {
-		return identity.Subject(c), nil
+	if reflect.TypeFor[pipeline.Subject]().AssignableTo(typeDesc) {
+		return pipeline.Subject(c), nil
 	}
 
 	if reflect.TypeFor[CelSubject]().AssignableTo(typeDesc) {
@@ -91,11 +91,11 @@ func (c CelSubject) Get(key ref.Val) ref.Val {
 
 	switch fieldName {
 	case "ID":
-		return types.String(identity.Subject(c).ID())
+		return types.String(pipeline.Subject(c).ID())
 	case "Attributes":
-		return types.NewStringInterfaceMap(types.DefaultTypeAdapter, identity.Subject(c).Attributes())
+		return types.NewStringInterfaceMap(types.DefaultTypeAdapter, pipeline.Subject(c).Attributes())
 	default:
-		if p, ok := identity.Subject(c)[fieldName]; ok {
+		if p, ok := pipeline.Subject(c)[fieldName]; ok {
 			return celPrincipal{principal: p}
 		}
 
@@ -104,7 +104,7 @@ func (c CelSubject) Get(key ref.Val) ref.Val {
 }
 
 type celPrincipal struct {
-	principal *identity.Principal
+	principal *pipeline.Principal
 }
 
 func (c celPrincipal) Type() ref.Type {
@@ -125,7 +125,7 @@ func (c celPrincipal) Equal(other ref.Val) ref.Val {
 }
 
 func (c celPrincipal) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	if reflect.TypeFor[*identity.Principal]().AssignableTo(typeDesc) {
+	if reflect.TypeFor[*pipeline.Principal]().AssignableTo(typeDesc) {
 		return c.principal, nil
 	}
 

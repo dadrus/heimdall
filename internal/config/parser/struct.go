@@ -22,7 +22,7 @@ import (
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -31,13 +31,13 @@ func koanfFromStruct(conf any) (*koanf.Koanf, error) {
 
 	err := parser.Load(structs.Provider(conf, "koanf"), nil)
 	if err != nil {
-		return nil, errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
+		return nil, errorchain.New(pipeline.ErrConfiguration).CausedBy(err)
 	}
 
 	// Assert all keys are lowercase
 	for _, key := range parser.Keys() {
 		if !isLower(key) {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"field %s does not have lowercase key", key)
 		}
 	}

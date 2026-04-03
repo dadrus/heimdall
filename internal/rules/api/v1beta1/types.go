@@ -29,7 +29,8 @@ const (
 )
 
 type MetaData struct {
-	Hash    []byte    `json:"-" yaml:"-"`
-	Source  string    `json:"-" yaml:"-"`
-	ModTime time.Time `json:"-" yaml:"-"`
+	Hash     []byte    `json:"-" yaml:"-"`
+	Provider string    `json:"-" yaml:"-"`
+	ID       string    `json:"-" yaml:"-"`
+	ModTime  time.Time `json:"-" yaml:"-"`
 }

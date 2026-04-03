@@ -19,8 +19,6 @@ package v1beta1
 //go:generate controller-gen object paths=$GOFILE
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -81,8 +79,9 @@ type RuleSet struct {
 func (rs *RuleSet) AsConfig() *v1beta1.RuleSet {
 	return &v1beta1.RuleSet{
 		MetaData: v1beta1.MetaData{
-			Source:  fmt.Sprintf("%s:%s:%s", "kubernetes", rs.Namespace, rs.UID),
-			ModTime: rs.CreationTimestamp.Time,
+			ID:       rs.Namespace + ":" + string(rs.UID),
+			Provider: "kubernetes",
+			ModTime:  rs.CreationTimestamp.Time,
 		},
 		Version: "1beta1",
 		Name:    rs.Name,

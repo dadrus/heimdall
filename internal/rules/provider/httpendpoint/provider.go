@@ -31,7 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
@@ -99,7 +99,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 	if err != nil {
 		cancel()
 
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed creating scheduler for http_endpoint rule provider").CausedBy(err)
 	}
 
@@ -127,7 +127,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 			gocron.NewTask(prov.watchChanges, ep),
 			gocron.WithContext(ctx),
 		); err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d http_endpoint", idx).
 				CausedBy(err)
 		}
@@ -181,14 +181,15 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			Msg("Failed to fetch rule set")
 
 		if !errors.Is(err, io.EOF) &&
-			(errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration)) {
+			(errors.Is(err, pipeline.ErrInternal) || errors.Is(err, pipeline.ErrConfiguration)) {
 			return err
 		}
 
-		ruleSet = &v1beta1.RuleSet{
+		ruleSet = v1beta1.RuleSet{
 			MetaData: v1beta1.MetaData{
-				Source:  "http_endpoint:" + rsf.ID(),
-				ModTime: time.Now(),
+				ID:       rsf.ID(),
+				ModTime:  time.Now(),
+				Provider: "http_endpoint",
 			},
 		}
 	}
@@ -202,7 +203,7 @@ func (p *Provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet *v1beta1.RuleSet, stateID string) error {
+func (p *Provider) ruleSetsUpdated(ctx context.Context, ruleSet v1beta1.RuleSet, stateID string) error {
 	logger := zerolog.Ctx(ctx)
 
 	var hash []byte

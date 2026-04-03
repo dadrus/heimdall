@@ -27,8 +27,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -55,6 +55,7 @@ foo: bar
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, "FooBar", eh.realm)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 			},
 		},
 		"with malformed configuration": {
@@ -63,7 +64,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -77,6 +78,7 @@ foo: bar
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, "Please authenticate", eh.realm)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 			},
 		},
 		"with all possible attributes": {
@@ -90,6 +92,7 @@ foo: bar
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, "What is your password", eh.realm)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
+				assert.Equal(t, eh.ID(), eh.Type())
 			},
 		},
 	} {
@@ -149,6 +152,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.realm, configured.realm)
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"unsupported fields provided": {
@@ -157,7 +161,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
@@ -174,6 +178,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				assert.NotEqual(t, prototype.realm, configured.realm)
 				assert.Equal(t, "You password please", configured.realm)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 		"with empty 'realm' reconfigured": {
@@ -183,7 +188,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'realm' is a required field")
 			},
 		},
@@ -232,7 +237,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetError(heimdall.ErrAuthentication)
+				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
@@ -253,7 +258,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetError(heimdall.ErrAuthentication)
+				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))

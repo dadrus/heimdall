@@ -20,22 +20,29 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/identity"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type conditionalStep struct {
-	s heimdall.Step
+	s pipeline.Step
 	c executionCondition
 }
 
-func (s *conditionalStep) Accept(visitor heimdall.Visitor) { s.s.Accept(visitor) }
+func newConditionalStep(s pipeline.Step, c executionCondition) *conditionalStep {
+	return &conditionalStep{s: s, c: c}
+}
 
-func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) error {
+func (s *conditionalStep) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor) }
+
+func (s *conditionalStep) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 
-	logger.Debug().Str("_id", s.s.ID()).Msg("Checking execution condition")
+	logger.Debug().
+		Str("_step_id", s.s.ID()).
+		Str("_mechanism_name", s.s.Type()).
+		Str("_mechanism_kind", string(s.s.Kind())).
+		Msg("Checking condition")
 
 	if logger.GetLevel() == zerolog.TraceLevel {
 		if dump, err := json.Marshal(sub); err != nil {
@@ -45,15 +52,32 @@ func (s *conditionalStep) Execute(ctx heimdall.Context, sub identity.Subject) er
 		}
 	}
 
-	if canExecute, err := s.c.CanExecuteOnSubject(ctx, sub); err != nil {
+	var (
+		canExecute bool
+		err        error
+	)
+
+	if s.s.Kind() == pipeline.KindErrorHandler {
+		canExecute, err = s.c.CanExecuteOnError(ctx, ctx.Error())
+	} else {
+		canExecute, err = s.c.CanExecuteOnSubject(ctx, sub)
+	}
+
+	if err != nil {
 		return err
 	} else if canExecute {
 		return s.s.Execute(ctx, sub)
 	}
 
-	logger.Debug().Str("_id", s.s.ID()).Msg("Execution skipped")
+	logger.Debug().
+		Str("_step_id", s.s.ID()).
+		Str("_mechanism_name", s.s.Type()).
+		Str("_mechanism_kind", string(s.s.Kind())).
+		Msg("Execution skipped")
 
 	return nil
 }
 
-func (s *conditionalStep) ID() string { return s.s.ID() }
+func (s *conditionalStep) ID() string                   { return s.s.ID() }
+func (s *conditionalStep) Type() string                 { return s.s.Type() }
+func (s *conditionalStep) Kind() pipeline.MechanismKind { return s.s.Kind() }
