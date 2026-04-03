@@ -27,7 +27,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           skip-github-pull-request: true
       - name: Please Release PR
-        if: steps.create_release.outputs.release_created == 'false'
+        if: steps.create_release.outputs.release_created == false
         uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
         with:
           target-branch: ${{ github.ref_name }}
