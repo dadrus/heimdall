@@ -2399,7 +2399,7 @@
         "level": {
           "description": "Debug enables stack traces on errors. Can also be set using environment variable LOG_LEVEL.",
           "type": "string",
-          "default": "info",
+          "default": "error",
           "enum": [
             "trace",
             "debug",
