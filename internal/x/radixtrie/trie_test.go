@@ -789,3 +789,20 @@ func TestTrieClone(t *testing.T) {
 		assert.Equal(t, values[1], entry.Value)
 	}
 }
+
+func TestTrieWildcardLookupDoesNotMatchDifferentExactHostsWithSharedPrefix(t *testing.T) {
+	t.Parallel()
+
+	tree := New[string]()
+
+	// Add a route for one exact host
+	err := tree.Add("foo.example.com", "/**", "foo-catchall")
+	require.NoError(t, err)
+
+	// Wildcard lookup for a different exact host sharing a subdomain prefix ("f")
+	// should NOT return any nodes
+	nodes, err := tree.Lookup("fuu.example.com", "", WithWildcardMatch[string]())
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotFound)
+	require.Empty(t, nodes)
+}
