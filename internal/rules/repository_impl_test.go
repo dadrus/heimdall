@@ -689,13 +689,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules with different exact hosts sharing a common subdomain prefix from different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
+				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "formscribe.example.com", path: "/**"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
+				rul := &ruleImpl{id: "2", srcID: "2"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "funnel.example.com", path: "/.data"})
 
 				return []rule.Rule{rul}
@@ -708,13 +708,13 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 		},
 		"adding rules with different exact hosts sharing a common subdomain prefix and overlapping paths from different rulesets is fine": {
 			initRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
+				rul := &ruleImpl{id: "1", srcID: "1"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/**"})
 
 				return []rule.Rule{rul}
 			}(),
 			tbaRules: func() []rule.Rule {
-				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
+				rul := &ruleImpl{id: "2", srcID: "2"}
 				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foobar.example.com", path: "/**"})
 
 				return []rule.Rule{rul}
