@@ -45,6 +45,8 @@ func (s wildcardLookupStrategy[V]) lookupNodes(trie *Trie[V], hostPattern, pathP
 				return s.lookupNodes(child, "", tokens[childTokenLen:])
 			}
 
+			child = nil
+
 			break
 		}
 	}
