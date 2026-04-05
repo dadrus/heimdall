@@ -53,14 +53,14 @@ func logLevelDecodeHookFunc(from reflect.Type, to reflect.Type, data any) (any, 
 		return zerolog.DebugLevel, nil
 	case "trace":
 		return zerolog.TraceLevel, nil
-	case "no":
-		return zerolog.NoLevel, nil
-	case "disabled":
-		return zerolog.Disabled, nil
 	case "info":
 		return zerolog.InfoLevel, nil
 	default:
-		return zerolog.InfoLevel, nil
+		return data, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"invalid log level '%v'. Supported levels are: panic, fatal, error, warn, info, debug, trace",
+			data,
+		)
 	}
 }
 

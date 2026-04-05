@@ -1,11 +1,32 @@
 # Changelog
 
+## [0.17.13](https://github.com/dadrus/heimdall/compare/v0.17.12...v0.17.13) (2026-04-05)
+
+
+### Bug Fixes
+
+* Reset child pointer in wildcard lookup to prevent false cross-host conflict ([#3170](https://github.com/dadrus/heimdall/issues/3170)) by [@Kakadus](https://github.com/Kakadus) ([aff881c](https://github.com/dadrus/heimdall/commit/aff881ce6fb02649afe4950532eafd041b763610))
+* Strict validation of `log.level` values ([#3168](https://github.com/dadrus/heimdall/issues/3168)) ([f5dcf01](https://github.com/dadrus/heimdall/commit/f5dcf01223d6ec4dd24d24a6854594ade06e6846))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 9d38bb4 ([#3147](https://github.com/dadrus/heimdall/issues/3147)) ([b1eb03d](https://github.com/dadrus/heimdall/commit/b1eb03de48f3d07460623e0e4076d8b18d8d0898))
+* update module github.com/go-jose/go-jose/v4 to v4.1.4 ([#3150](https://github.com/dadrus/heimdall/issues/3150)) ([d8c5f3f](https://github.com/dadrus/heimdall/commit/d8c5f3ffc6d559d34980f32eed5f62978fb817f1))
+* update module github.com/go-playground/validator/v10 to v10.30.2 ([#3148](https://github.com/dadrus/heimdall/issues/3148)) ([000bd81](https://github.com/dadrus/heimdall/commit/000bd816cb52d68bfede8ede193a2b7a19520019))
+* update module github.com/rs/zerolog to v1.35.0 ([#3145](https://github.com/dadrus/heimdall/issues/3145)) ([22ee7a2](https://github.com/dadrus/heimdall/commit/22ee7a2a3ed961dd533aab9d22566efcb1dbb9de))
+* update module github.com/wi2l/jsondiff to v0.7.1 ([#3153](https://github.com/dadrus/heimdall/issues/3153)) ([afca2cc](https://github.com/dadrus/heimdall/commit/afca2cc77f7ac3717ec2395e728b77f2f14e8224))
+* update module go.opentelemetry.io/otel/bridge/opentracing to v1.43.0 ([#3164](https://github.com/dadrus/heimdall/issues/3164)) ([4f00157](https://github.com/dadrus/heimdall/commit/4f001574d4d35e5677a2c9dfa550d11ad6cdd0f8))
+* update module google.golang.org/grpc to v1.80.0 ([#3151](https://github.com/dadrus/heimdall/issues/3151)) ([09fbd14](https://github.com/dadrus/heimdall/commit/09fbd143f4efc5c7be59b6ef1d75a45f104cbb5e))
+* update opentelemetry-go monorepo to v1.43.0 ([#3163](https://github.com/dadrus/heimdall/issues/3163)) ([1408cda](https://github.com/dadrus/heimdall/commit/1408cdaa40d1e24f482ec03d6be35d5460f160b5))
 
 ## [0.17.12](https://github.com/dadrus/heimdall/compare/v0.17.11...v0.17.12) (2026-03-22)
+
 
 ### Bug Fixes
 
 * Proper extraction of client IP addresses from the request ([#3134](https://github.com/dadrus/heimdall/issues/3134)) ([857cdfe](https://github.com/dadrus/heimdall/commit/857cdfe0727c628e32a5c5641d5411b91918a2d3))
+
 
 ### Documentation
 

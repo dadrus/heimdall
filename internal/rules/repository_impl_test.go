@@ -691,6 +691,44 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 				require.ErrorContains(t, err, "conflicting rules")
 			},
 		},
+		"adding rules with different exact hosts sharing a common subdomain prefix from different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "formscribe.example.com", path: "/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "funnel.example.com", path: "/.data"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"adding rules with different exact hosts sharing a common subdomain prefix and overlapping paths from different rulesets is fine": {
+			initRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "1", source: rule.RuleSet{ID: "1"}}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foo.example.com", path: "/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			tbaRules: func() []rule.Rule {
+				rul := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}}
+				rul.routes = append(rul.routes, &routeImpl{rule: rul, host: "foobar.example.com", path: "/**"})
+
+				return []rule.Rule{rul}
+			}(),
+			assert: func(t *testing.T, err error, _ *repository) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			mp := otel.GetMeterProvider()
