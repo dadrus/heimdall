@@ -17,10 +17,13 @@
 package rules
 
 import (
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 type ruleExecutor struct {
@@ -38,6 +41,11 @@ func (e *ruleExecutor) Execute(ctx heimdall.RequestContext) (rule.Backend, error
 		Str("_method", request.Method).
 		Str("_url", request.URL.String()).
 		Msg("Analyzing request")
+
+	if urlx.PathHasDotSegments(x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path)) {
+		return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
+			"path contains dot segments, which are not allowed")
+	}
 
 	rul, err := e.r.FindRule(ctx)
 	if err != nil {
