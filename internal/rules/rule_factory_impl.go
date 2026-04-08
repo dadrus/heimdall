@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -160,7 +161,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 			rul.routes = append(rul.routes,
 				&routeImpl{
 					rule:    rul,
-					host:    host.Value,
+					host:    strings.ToLower(host.Value),
 					path:    rc.Path,
 					matcher: andMatcher{sm, mm, hm, ppm},
 				})
