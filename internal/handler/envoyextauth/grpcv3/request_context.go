@@ -116,6 +116,7 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 		Path:     parsed.Path,
 		RawQuery: parsed.RawQuery,
 	}
+	r.reqHeaders["Host"] = r.hmdlReq.URL.Host
 	r.hmdlReq.ClientIPAddresses = clientIPs
 }
 
