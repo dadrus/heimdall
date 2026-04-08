@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnescapePathValue(t *testing.T) {
+func TestUnescape(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -69,7 +69,7 @@ func TestUnescapePathValue(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			assert.Equal(t, tc.expected, UnescapePathValue(tc.value, tc.decodeEncodedSlash))
+			assert.Equal(t, tc.expected, Unescape(tc.value, tc.decodeEncodedSlash))
 		})
 	}
 }

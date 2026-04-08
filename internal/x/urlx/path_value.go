@@ -21,9 +21,9 @@ import (
 	"strings"
 )
 
-// UnescapePathValue decodes URL-escaped path value.
+// Unescape decodes URL-escaped path value.
 // If decodeEncodedSlash is false, encoded slashes (%2F / %2f) are preserved.
-func UnescapePathValue(value string, decodeEncodedSlash bool) string { //nolint:cyclop
+func Unescape(value string, decodeEncodedSlash bool) string { //nolint:cyclop
 	start := strings.IndexByte(value, '%')
 	if start == -1 {
 		return value

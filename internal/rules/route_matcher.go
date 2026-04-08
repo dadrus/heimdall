@@ -125,7 +125,7 @@ func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []str
 					"request path contains encoded slashes which are not allowed")
 			}
 		default:
-			value = urlx.UnescapePathValue(value, m.slashHandling == config.EncodedSlashesOn)
+			value = urlx.Unescape(value, m.slashHandling == config.EncodedSlashesOn)
 		}
 	}
 

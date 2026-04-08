@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-func BenchmarkUnescapePathValueDecodeSlash(b *testing.B) {
+func BenchmarkUnescapeDecodeSlash(b *testing.B) {
 	for uc, value := range map[string]string{
 		"clean":              "api/v1/resource",
 		"encoded_upper":      "api%2Fv1%5Bid%5D",
@@ -30,13 +30,13 @@ func BenchmarkUnescapePathValueDecodeSlash(b *testing.B) {
 			b.ReportAllocs()
 
 			for b.Loop() {
-				_ = UnescapePathValue(value, true)
+				_ = Unescape(value, true)
 			}
 		})
 	}
 }
 
-func BenchmarkUnescapePathValuePreserveEncodedSlash(b *testing.B) {
+func BenchmarkUnescapePreserveEncodedSlash(b *testing.B) {
 	for uc, value := range map[string]string{
 		"clean":              "api/v1/resource",
 		"encoded_upper":      "api%2Fv1%5Bid%5D",
@@ -47,7 +47,7 @@ func BenchmarkUnescapePathValuePreserveEncodedSlash(b *testing.B) {
 			b.ReportAllocs()
 
 			for b.Loop() {
-				_ = UnescapePathValue(value, false)
+				_ = Unescape(value, false)
 			}
 		})
 	}
