@@ -40,7 +40,7 @@ func TestNewRequestContext(t *testing.T) {
 	httpReq := &envoy_auth.AttributeContext_HttpRequest{
 		Method:   http.MethodPatch,
 		Scheme:   "https",
-		Host:     "foo.bar:8080",
+		Host:     "FoO.Bar:8080",
 		Path:     "/test/baz?bar=moo#foobar",
 		Query:    "", // documented to be empty
 		Fragment: "", // documented to be empty
@@ -76,7 +76,7 @@ func TestNewRequestContext(t *testing.T) {
 	// THEN
 	require.Equal(t, httpReq.GetMethod(), ctx.Request().Method)
 	require.Equal(t, httpReq.GetScheme(), ctx.Request().URL.Scheme)
-	require.Equal(t, httpReq.GetHost(), ctx.Request().URL.Host)
+	require.Equal(t, "foo.bar:8080", ctx.Request().URL.Host)
 	require.Equal(t, "/test/baz", ctx.Request().URL.Path)
 	require.Empty(t, ctx.Request().URL.Fragment)
 	require.Equal(t, "bar=moo#foobar", ctx.Request().URL.RawQuery)
