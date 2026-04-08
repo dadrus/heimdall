@@ -58,6 +58,7 @@ linters:
       ignore-decls:
         - t testing.T
         - i int
+        - j int
         - T any
         - m map[string]int
         - w http.ResponseWriter
