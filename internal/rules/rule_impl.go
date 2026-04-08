@@ -68,7 +68,7 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 	// unescape captures
 	captures := request.URL.Captures
 	for k, v := range captures {
-		captures[k] = unescape(v, r.slashesHandling)
+		captures[k] = urlx.UnescapePathValue(v, r.slashesHandling == config.EncodedSlashesOn)
 	}
 
 	// authenticators
@@ -164,7 +164,3 @@ type backend struct {
 func (b backend) URL() *url.URL { return b.targetURL }
 
 func (b backend) ForwardHostHeader() bool { return b.forwardHostHeader }
-
-func unescape(value string, handling config.EncodedSlashesHandling) string {
-	return urlx.UnescapePathValue(value, handling == config.EncodedSlashesOn)
-}
