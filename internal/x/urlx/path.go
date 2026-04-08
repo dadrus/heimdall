@@ -21,6 +21,25 @@ import (
 	"strings"
 )
 
+// ContainsEncodedSlash reports whether path contains a URL-encoded slash
+// sequence, case-insensitive, e.g. %2F or %2f.
+func ContainsEncodedSlash(path string) bool {
+	for i := strings.IndexByte(path, '%'); i != -1; {
+		if i+2 < len(path) && path[i+1] == '2' && (path[i+2]|0x20) == 'f' { //nolint:mnd
+			return true
+		}
+
+		next := strings.IndexByte(path[i+1:], '%')
+		if next == -1 {
+			break
+		}
+
+		i += next + 1
+	}
+
+	return false
+}
+
 // Unescape decodes URL-escaped path value.
 // If decodeEncodedSlash is false, encoded slashes (%2F / %2f) are preserved.
 func Unescape(value string, decodeEncodedSlash bool) string { //nolint:cyclop

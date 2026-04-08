@@ -22,6 +22,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestContainsEncodedSlash(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		path     string
+		expected bool
+	}{
+		"empty": {},
+		"without escapes": {
+			path: "/api/v1/resource",
+		},
+		"uppercase sequence": {
+			path:     "/api%2Fv1/resource",
+			expected: true,
+		},
+		"lowercase sequence": {
+			path:     "/api%2fv1/resource",
+			expected: true,
+		},
+		"mixed in long path": {
+			path:     "/foo/bar/baz%2Fqux/quux",
+			expected: true,
+		},
+		"not slash escape": {
+			path: "/api%2Ev1/resource",
+		},
+		"incomplete escape": {
+			path: "/api%2",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			assert.Equal(t, tc.expected, ContainsEncodedSlash(tc.path))
+		})
+	}
+}
+
 func TestUnescape(t *testing.T) {
 	t.Parallel()
 
