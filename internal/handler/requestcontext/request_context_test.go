@@ -76,6 +76,23 @@ func TestRequestClientIPs(t *testing.T) {
 				assert.Equal(t, "192.0.2.1", ips[2])
 			},
 		},
+		"X-Forwarded-For appears multiple times": {
+			func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Add("X-Forwarded-For", "127.0.0.1")
+				req.Header.Add("X-Forwarded-For", "192.168.12.125")
+			},
+			func(t *testing.T, ips []string) {
+				t.Helper()
+
+				require.Len(t, ips, 3)
+
+				assert.Equal(t, "127.0.0.1", ips[0])
+				assert.Equal(t, "192.168.12.125", ips[1])
+				assert.Equal(t, "192.0.2.1", ips[2])
+			},
+		},
 		"Forwarded and X-Forwarded-For headers are present": {
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -90,6 +107,23 @@ func TestRequestClientIPs(t *testing.T) {
 
 				assert.Equal(t, "127.0.0.3", ips[0])
 				assert.Equal(t, "192.168.12.127", ips[1])
+				assert.Equal(t, "192.0.2.1", ips[2])
+			},
+		},
+		"Forwarded appears multiple times": {
+			func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Add("Forwarded", "proto=http;for=127.0.0.1")
+				req.Header.Add("Forwarded", "proto=https;for=192.168.12.125")
+			},
+			func(t *testing.T, ips []string) {
+				t.Helper()
+
+				require.Len(t, ips, 3)
+
+				assert.Equal(t, "127.0.0.1", ips[0])
+				assert.Equal(t, "192.168.12.125", ips[1])
 				assert.Equal(t, "192.0.2.1", ips[2])
 			},
 		},

@@ -161,20 +161,26 @@ func (r *RequestContext) PipelineError() error                    { return r.err
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
 
 func requestClientIPs(ips []string, req *http.Request) []string {
-	if forwarded := req.Header.Get("Forwarded"); len(forwarded) != 0 {
+	for _, forwarded := range req.Header.Values("Forwarded") {
 		for entry := range strings.SplitSeq(forwarded, ",") {
 			for val := range strings.SplitSeq(strings.TrimSpace(entry), ";") {
 				if addr, found := strings.CutPrefix(strings.TrimSpace(val), "for="); found {
-					ips = append(ips, strings.TrimSpace(addr))
+					addr = strings.TrimSpace(addr)
+					if len(addr) != 0 {
+						ips = append(ips, addr)
+					}
 				}
 			}
 		}
 	}
 
 	if len(ips) == 0 {
-		if forwardedFor := req.Header.Get("X-Forwarded-For"); len(forwardedFor) != 0 {
+		for _, forwardedFor := range req.Header.Values("X-Forwarded-For") {
 			for val := range strings.SplitSeq(forwardedFor, ",") {
-				ips = append(ips, strings.TrimSpace(val))
+				addr := strings.TrimSpace(val)
+				if len(addr) != 0 {
+					ips = append(ips, addr)
+				}
 			}
 		}
 	}
