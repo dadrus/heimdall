@@ -507,7 +507,7 @@ jobs:
           branch_name=$(git for-each-ref | grep ^${{ github.sha }} | grep origin | grep -v HEAD | head -n1 | sed "s/.*\///")
           echo "result=$branch_name" >> $GITHUB_OUTPUT
       - name: Create a PR for the updated versions JSON document
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           title: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
           commit-message: 'chore(${{ github.ref_name }}): Update to data.json to include the new released documentation version'
