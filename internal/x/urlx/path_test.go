@@ -32,6 +32,15 @@ func TestPathHasDotSegments(t *testing.T) {
 		"no dot segment": {
 			path: "/foo/bar",
 		},
+		"dot in a path segment": {
+			path: "/foo/bar.baz",
+		},
+		"two dots in a path segment": {
+			path: "/foo/bar..baz",
+		},
+		"only encoded slash in a path": {
+			path: "/foo%2fbar",
+		},
 		"single dot segment": {
 			path:     "/foo/./bar",
 			expected: true,
