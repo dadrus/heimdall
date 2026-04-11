@@ -62,12 +62,13 @@ The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Gui
 
 To mitigate path traversal attacks and interpretation conflicts between heimdall and upstream components, the following measures are implemented:
 
-* Requests are rejected with `400 Bad Request` if the evaluated request path contains dot segments (`.` or `..`), including URL-encoded variants (case-insensitive), e.g. `%2e`, `%2f`, and `%5c` combinations. This applies to both the path from `X-Forwarded-Uri` (if used) and the path from the actual request.
-* URL-encoded slash handling can be configured via `allow_encoded_slashes` in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[regular rules]. The default value `off` rejects encoded slashes, while less strict settings can increase the risk of interpretation conflicts depending on your proxy and upstream setup.
+* Request paths are normalized before rule evaluation by removing dot segments (`.` and `..`) when they appear with actual path separators (`/`). For example, `/user/../admin` is normalized to `/admin`.
+* Requests are rejected with `400 Bad Request` if the evaluated request path contains ambiguous or encoded dot segment patterns that cannot be safely normalized. This includes URL-encoded variants (case-insensitive), e.g. `%2e`, as well as combinations with encoded or alternative separators such as `%2f` and `%5c`.
+* Additionally, URL-encoded slash handling can be configured via `allow_encoded_slashes` in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[regular rules]. The default value `off` rejects encoded slashes, while less strict settings can increase the risk of interpretation conflicts depending on your proxy and upstream setup, but may be required for specific use cases where encoded slashes are part of the path semantics (e.g., object keys).
 
 == Observability Information
 
-Logs, metrics and profiling information is very valuable for operating heimdall. These are however also very valuable for any adversary. For this reason, the corresponding services, exposing such information are by default, if enabled, listening only on the loopback (`127.0.0.1`) interface. If you have to configure them to listen to other interfaces, e.g. because you operate heimdall in a container, make sure, you don't expose them publicly.
+Logs, metrics, and profiling information is very valuable for operating heimdall. These are however also very valuable for any adversary. For this reason, the corresponding services, exposing such information are by default, if enabled, listening only on the loopback (`127.0.0.1`) interface. If you have to configure them to listen to other interfaces, e.g. because you operate heimdall in a container, make sure, you don't expose them publicly.
 
 == Trust Store
 
