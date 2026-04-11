@@ -19,6 +19,8 @@ package requestcontext
 import (
 	"net/http"
 	"net/url"
+	pathpkg "path"
+	"strings"
 
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -55,6 +57,7 @@ func extractURL(req *http.Request) url.URL {
 		query = req.URL.RawQuery
 	}
 
+	rawPath = normalizePath(rawPath)
 	path, _ = url.PathUnescape(rawPath)
 
 	return url.URL{
@@ -64,4 +67,19 @@ func extractURL(req *http.Request) url.URL {
 		RawPath:  rawPath,
 		RawQuery: query,
 	}
+}
+
+func normalizePath(path string) string {
+	if path == "/" {
+		return path
+	}
+
+	hasTrailingSlash := strings.HasSuffix(path, "/")
+	path = pathpkg.Clean(path)
+
+	if hasTrailingSlash && path != "/" {
+		path += "/"
+	}
+
+	return path
 }
