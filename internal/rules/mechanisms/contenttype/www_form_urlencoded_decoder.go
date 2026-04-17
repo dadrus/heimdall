@@ -24,7 +24,7 @@ import (
 
 type WWWFormUrlencodedDecoder struct{}
 
-func (WWWFormUrlencodedDecoder) Decode(rawData []byte) (map[string]any, error) {
+func (WWWFormUrlencodedDecoder) Decode(rawData []byte) (any, error) {
 	values, err := url.ParseQuery(stringx.ToString(rawData))
 	if err != nil {
 		return nil, err

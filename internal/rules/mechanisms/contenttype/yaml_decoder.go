@@ -20,11 +20,11 @@ import "gopkg.in/yaml.v3"
 
 type YAMLDecoder struct{}
 
-func (YAMLDecoder) Decode(rawData []byte) (map[string]any, error) {
-	var mapData map[string]any
-	if err := yaml.Unmarshal(rawData, &mapData); err != nil {
+func (YAMLDecoder) Decode(rawData []byte) (any, error) {
+	var data any
+	if err := yaml.Unmarshal(rawData, &data); err != nil {
 		return nil, err
 	}
 
-	return mapData, nil
+	return data, nil
 }
