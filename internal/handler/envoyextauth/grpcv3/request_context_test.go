@@ -311,10 +311,45 @@ func TestRequestContextBody(t *testing.T) {
 			body:   []byte(`{ "content": "heimdall" }`),
 			expect: map[string]any{"content": "heimdall"},
 		},
+		"json encoded array": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`[{"content": "heimdall"}]`),
+			expect: []any{map[string]any{"content": "heimdall"}},
+		},
+		"json encoded scalar string": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`"heimdall"`),
+			expect: "heimdall",
+		},
+		"json encoded scalar number": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`42`),
+			expect: float64(42),
+		},
+		"json encoded scalar bool": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`true`),
+			expect: true,
+		},
+		"json encoded null": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`null`),
+			expect: nil,
+		},
 		"yaml encoded": {
 			ct:     "application/yaml; charset=utf-8",
 			body:   []byte("content: heimdall"),
 			expect: map[string]any{"content": "heimdall"},
+		},
+		"yaml encoded sequence": {
+			ct:     "application/yaml; charset=utf-8",
+			body:   []byte("- content: heimdall\n"),
+			expect: []any{map[string]any{"content": "heimdall"}},
+		},
+		"yaml encoded scalar": {
+			ct:     "application/yaml; charset=utf-8",
+			body:   []byte("heimdall\n"),
+			expect: "heimdall",
 		},
 		"plain text": {
 			ct:     "text/plain",
