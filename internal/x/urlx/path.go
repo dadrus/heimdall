@@ -16,7 +16,10 @@
 
 package urlx
 
-import "strings"
+import (
+	pathpkg "path"
+	"strings"
+)
 
 //nolint:gocognit,gocyclo,gocyclo,cyclop,funlen
 func PathHasDotSegments(path string) bool {
@@ -101,4 +104,19 @@ func PathHasDotSegments(path string) bool {
 	}
 
 	return (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2)
+}
+
+func NormalizePath(path string) string {
+	if path == "/" {
+		return path
+	}
+
+	hasTrailingSlash := strings.HasSuffix(path, "/")
+	path = pathpkg.Clean(path)
+
+	if hasTrailingSlash && path != "/" {
+		path += "/"
+	}
+
+	return path
 }

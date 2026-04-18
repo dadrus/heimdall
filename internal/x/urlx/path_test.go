@@ -90,3 +90,31 @@ func TestPathHasDotSegments(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizePath(t *testing.T) {
+	t.Parallel()
+
+	for given, expected := range map[string]string{
+		"/":                              "/",
+		"/.././":                         "/",
+		"/../":                           "/",
+		"/../../":                        "/",
+		"/bar/baz":                       "/bar/baz",
+		"/bar/baz/":                      "/bar/baz/",
+		"/bar/./baz":                     "/bar/baz",
+		"/bar/./baz/":                    "/bar/baz/",
+		"/bar//baz":                      "/bar/baz",
+		"/bar//baz/":                     "/bar/baz/",
+		"/bar/../baz":                    "/baz",
+		"/bar/../baz/":                   "/baz/",
+		"/bar/../../baz/":                "/baz/",
+		"/bar/../test/foo/%5Bval%5D":     "/test/foo/%5Bval%5D",
+		"/bar/%2e.%2ftest/foo/%5Bval%5D": "/bar/%2e.%2ftest/foo/%5Bval%5D",
+	} {
+		t.Run(given, func(t *testing.T) {
+			result := NormalizePath(given)
+
+			assert.Equal(t, expected, result)
+		})
+	}
+}
