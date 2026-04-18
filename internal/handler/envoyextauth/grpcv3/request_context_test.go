@@ -91,6 +91,74 @@ func TestNewRequestContext(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
 }
 
+func TestNewRequestContextXForwardedForCSV(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodGet,
+					Scheme:  "https",
+					Host:    "foo.bar",
+					Path:    "/",
+					Headers: map[string]string{},
+				},
+			},
+		},
+	}
+	md := metadata.New(nil)
+	md.Set("x-forwarded-for", "127.0.0.1, 192.168.1.1")
+
+	cf := newContextFactory()
+	ctx := cf.Create(
+		metadata.NewIncomingContext(
+			t.Context(),
+			md,
+		),
+		checkReq,
+	)
+	defer cf.Destroy(ctx)
+
+	// THEN
+	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
+}
+
+func TestNewRequestContextXForwardedForMixedValues(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodGet,
+					Scheme:  "https",
+					Host:    "foo.bar",
+					Path:    "/",
+					Headers: map[string]string{},
+				},
+			},
+		},
+	}
+	md := metadata.New(nil)
+	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1, 10.0.0.2", "   ")
+
+	cf := newContextFactory()
+	ctx := cf.Create(
+		metadata.NewIncomingContext(
+			t.Context(),
+			md,
+		),
+		checkReq,
+	)
+	defer cf.Destroy(ctx)
+
+	// THEN
+	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1", "10.0.0.2"}, ctx.Request().ClientIPAddresses)
+}
+
 func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
 
@@ -470,5 +538,7 @@ func TestRequestContextReset(t *testing.T) {
 	require.Empty(t, ctx.hmdlReq.Method)
 	require.NotNil(t, ctx.hmdlReq.URL.Captures)
 	require.Empty(t, ctx.hmdlReq.URL.Captures)
-	require.Nil(t, ctx.hmdlReq.ClientIPAddresses)
+	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
 }
