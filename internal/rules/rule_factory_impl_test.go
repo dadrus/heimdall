@@ -628,6 +628,36 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Empty(t, rul.eh)
 			},
 		},
+		"normalizes trie host matchers to lowercase": {
+			config: config2.Rule{
+				ID: "foobar",
+				Matcher: config2.Matcher{
+					Routes: []config2.Route{{Path: "/foo/bar"}},
+					Hosts: []config2.HostMatcher{
+						{Type: "exact", Value: "FoO.ExAmPlE.cOm"},
+						{Type: "wildcard", Value: "*.ExAmPlE.cOm"},
+					},
+				},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+				},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.MechanismFactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", "", mock.Anything).
+					Return(&mocks2.AuthenticatorMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+				require.Len(t, rul.Routes(), 2)
+				assert.Equal(t, "foo.example.com", rul.Routes()[0].Host())
+				assert.Equal(t, "*.example.com", rul.Routes()[1].Host())
+			},
+		},
 		"without default rule and minimum required configuration in proxy mode": {
 			opMode: config.ProxyMode,
 			config: config2.Rule{

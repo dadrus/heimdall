@@ -76,6 +76,23 @@ func TestRequestClientIPs(t *testing.T) {
 				assert.Equal(t, "192.0.2.1", ips[2])
 			},
 		},
+		"X-Forwarded-For appears multiple times": {
+			func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Add("X-Forwarded-For", "127.0.0.1")
+				req.Header.Add("X-Forwarded-For", "192.168.12.125")
+			},
+			func(t *testing.T, ips []string) {
+				t.Helper()
+
+				require.Len(t, ips, 3)
+
+				assert.Equal(t, "127.0.0.1", ips[0])
+				assert.Equal(t, "192.168.12.125", ips[1])
+				assert.Equal(t, "192.0.2.1", ips[2])
+			},
+		},
 		"Forwarded and X-Forwarded-For headers are present": {
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -90,6 +107,23 @@ func TestRequestClientIPs(t *testing.T) {
 
 				assert.Equal(t, "127.0.0.3", ips[0])
 				assert.Equal(t, "192.168.12.127", ips[1])
+				assert.Equal(t, "192.0.2.1", ips[2])
+			},
+		},
+		"Forwarded appears multiple times": {
+			func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Add("Forwarded", "proto=http;for=127.0.0.1")
+				req.Header.Add("Forwarded", "proto=https;for=192.168.12.125")
+			},
+			func(t *testing.T, ips []string) {
+				t.Helper()
+
+				require.Len(t, ips, 3)
+
+				assert.Equal(t, "127.0.0.1", ips[0])
+				assert.Equal(t, "192.168.12.125", ips[1])
 				assert.Equal(t, "192.0.2.1", ips[2])
 			},
 		},
@@ -114,7 +148,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://foo.baz/test", nil)
+	req := httptest.NewRequest(http.MethodHead, "https://FoO.Baz/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
@@ -134,10 +168,10 @@ func TestRequestContextHeader(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
+	req := httptest.NewRequest(http.MethodHead, "https://Foo.bar/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
-	req.Host = "bar.foo"
+	req.Host = "Bar.foo"
 
 	ctx := New()
 	ctx.Init(req)
@@ -205,10 +239,45 @@ func TestRequestContextBody(t *testing.T) {
 			body:   bytes.NewBufferString(`{ "content": "heimdall" }`),
 			expect: map[string]any{"content": "heimdall"},
 		},
+		"json encoded array": {
+			ct:     "application/json; charset=utf-8",
+			body:   bytes.NewBufferString(`[{"content": "heimdall"}]`),
+			expect: []any{map[string]any{"content": "heimdall"}},
+		},
+		"json encoded scalar string": {
+			ct:     "application/json; charset=utf-8",
+			body:   bytes.NewBufferString(`"heimdall"`),
+			expect: "heimdall",
+		},
+		"json encoded scalar number": {
+			ct:     "application/json; charset=utf-8",
+			body:   bytes.NewBufferString(`42`),
+			expect: float64(42),
+		},
+		"json encoded scalar bool": {
+			ct:     "application/json; charset=utf-8",
+			body:   bytes.NewBufferString(`true`),
+			expect: true,
+		},
+		"json encoded null": {
+			ct:     "application/json; charset=utf-8",
+			body:   bytes.NewBufferString(`null`),
+			expect: nil,
+		},
 		"yaml encoded": {
 			ct:     "application/yaml; charset=utf-8",
 			body:   bytes.NewBufferString("content: heimdall"),
 			expect: map[string]any{"content": "heimdall"},
+		},
+		"yaml encoded sequence": {
+			ct:     "application/yaml; charset=utf-8",
+			body:   bytes.NewBufferString("- content: heimdall\n"),
+			expect: []any{map[string]any{"content": "heimdall"}},
+		},
+		"yaml encoded scalar": {
+			ct:     "application/yaml; charset=utf-8",
+			body:   bytes.NewBufferString("heimdall\n"),
+			expect: "heimdall",
 		},
 		"plain text": {
 			ct:     "text/plain",

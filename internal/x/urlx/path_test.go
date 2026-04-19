@@ -91,6 +91,42 @@ func TestPathHasDotSegments(t *testing.T) {
 	}
 }
 
+func TestContainsEncodedSlash(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		path     string
+		expected bool
+	}{
+		"empty": {},
+		"without escapes": {
+			path: "/api/v1/resource",
+		},
+		"uppercase sequence": {
+			path:     "/api%2Fv1/resource",
+			expected: true,
+		},
+		"lowercase sequence": {
+			path:     "/api%2fv1/resource",
+			expected: true,
+		},
+		"mixed in long path": {
+			path:     "/foo/bar/baz%2Fqux/quux",
+			expected: true,
+		},
+		"not slash escape": {
+			path: "/api%2Ev1/resource",
+		},
+		"incomplete escape": {
+			path: "/api%2",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			assert.Equal(t, tc.expected, ContainsEncodedSlash(tc.path))
+		})
+	}
+}
+
 func TestNormalizePath(t *testing.T) {
 	t.Parallel()
 
@@ -115,6 +151,58 @@ func TestNormalizePath(t *testing.T) {
 			result := NormalizePath(given)
 
 			assert.Equal(t, expected, result)
+		})
+	}
+}
+
+func TestUnescape(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		value              string
+		decodeEncodedSlash bool
+		expected           string
+	}{
+		"decode slash on": {
+			value:              "api%2Fv1",
+			decodeEncodedSlash: true,
+			expected:           "api/v1",
+		},
+		"decode slash off uppercase": {
+			value:    "api%2Fv1",
+			expected: "api%2Fv1",
+		},
+		"decode slash off lowercase": {
+			value:    "api%2fv1",
+			expected: "api%2fv1",
+		},
+		"decode non slash escapes": {
+			value:    "foo%5Bid%5D",
+			expected: "foo[id]",
+		},
+		"decode mixed preserve slash": {
+			value:    "api%2Fv1%5Bid%5D",
+			expected: "api%2Fv1[id]",
+		},
+		"decode mixed preserve slash lowercase": {
+			value:    "api%2fv1%5Bid%5D",
+			expected: "api%2fv1[id]",
+		},
+		"no escapes": {
+			value:    "api/v1/resource",
+			expected: "api/v1/resource",
+		},
+		"incomplete escape": {
+			value:    "api%2",
+			expected: "api%2",
+		},
+		"invalid escape": {
+			value:    "api%ZZv1",
+			expected: "api%ZZv1",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			assert.Equal(t, tc.expected, Unescape(tc.value, tc.decodeEncodedSlash))
 		})
 	}
 }

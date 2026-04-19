@@ -64,6 +64,30 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extracted.Query())
 			},
 		},
+		"X-Forwarded-Host is normalized to lowercase": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Host", "FoObAr.Example.COM:8443")
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "foobar.example.com:8443", extracted.Host)
+			},
+		},
+		"request host fallback is normalized to lowercase": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Host = "FooBar.Example.Local:9443"
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "foobar.example.local:9443", extracted.Host)
+			},
+		},
 		"X-Forwarded-Path is ignored": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
