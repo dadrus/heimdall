@@ -19,6 +19,7 @@ package requestcontext
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -39,6 +40,8 @@ func extractURL(req *http.Request) url.URL {
 	if len(host) == 0 {
 		host = req.Host
 	}
+
+	host = strings.ToLower(host)
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
 		if forwardedURI, err := url.Parse(val); err == nil {

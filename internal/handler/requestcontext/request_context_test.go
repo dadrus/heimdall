@@ -148,7 +148,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://foo.baz/test", nil)
+	req := httptest.NewRequest(http.MethodHead, "https://FoO.Baz/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
@@ -168,10 +168,10 @@ func TestRequestContextHeader(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
+	req := httptest.NewRequest(http.MethodHead, "https://Foo.bar/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
-	req.Host = "bar.foo"
+	req.Host = "Bar.foo"
 
 	ctx := New()
 	ctx.Init(req)

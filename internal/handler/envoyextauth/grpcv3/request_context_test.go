@@ -40,7 +40,7 @@ func TestNewRequestContext(t *testing.T) {
 	httpReq := &envoy_auth.AttributeContext_HttpRequest{
 		Method:   http.MethodPatch,
 		Scheme:   "https",
-		Host:     "foo.bar:8080",
+		Host:     "FoO.Bar:8080",
 		Path:     "/test/baz?bar=moo#foobar",
 		Query:    "", // documented to be empty
 		Fragment: "", // documented to be empty
@@ -76,13 +76,14 @@ func TestNewRequestContext(t *testing.T) {
 	// THEN
 	require.Equal(t, httpReq.GetMethod(), ctx.Request().Method)
 	require.Equal(t, httpReq.GetScheme(), ctx.Request().URL.Scheme)
-	require.Equal(t, httpReq.GetHost(), ctx.Request().URL.Host)
+	require.Equal(t, "foo.bar:8080", ctx.Request().URL.Host)
 	require.Equal(t, "/test/baz", ctx.Request().URL.Path)
 	require.Empty(t, ctx.Request().URL.Fragment)
 	require.Equal(t, "bar=moo#foobar", ctx.Request().URL.RawQuery)
 	require.Equal(t, "moo#foobar", ctx.Request().URL.URL.Query().Get("bar"))
 	require.Equal(t, map[string]any{"content": []string{"heimdall"}}, ctx.Request().Body())
-	require.Len(t, ctx.Request().Headers(), 3)
+	require.Len(t, ctx.Request().Headers(), 4)
+	require.Equal(t, "foo.bar:8080", ctx.Request().Header("Host"))
 	require.Equal(t, "barfoo", ctx.Request().Header("X-Foo-Bar"))
 	require.Equal(t, "foo", ctx.Request().Cookie("bar"))
 	require.Equal(t, "baz", ctx.Request().Cookie("foo"))

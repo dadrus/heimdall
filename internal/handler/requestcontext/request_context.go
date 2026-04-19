@@ -86,7 +86,7 @@ func (r *RequestContext) Reset() {
 func (r *RequestContext) Header(name string) string {
 	key := textproto.CanonicalMIMEHeaderKey(name)
 	if key == "Host" {
-		return r.req.Host
+		return r.hmdlReq.URL.Host
 	}
 
 	return strings.Join(r.req.Header.Values(key), ",")
@@ -102,7 +102,7 @@ func (r *RequestContext) Cookie(name string) string {
 
 func (r *RequestContext) Headers() map[string]string {
 	if len(r.headers) == 0 {
-		r.headers["Host"] = r.req.Host
+		r.headers["Host"] = r.hmdlReq.URL.Host
 		for k, v := range r.req.Header {
 			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
 		}
