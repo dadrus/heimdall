@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 func extractURL(req *http.Request) url.URL {
@@ -58,6 +59,7 @@ func extractURL(req *http.Request) url.URL {
 		query = req.URL.RawQuery
 	}
 
+	rawPath = urlx.NormalizePath(rawPath)
 	path, _ = url.PathUnescape(rawPath)
 
 	return url.URL{

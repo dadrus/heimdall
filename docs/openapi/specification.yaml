@@ -638,6 +638,10 @@ paths:
           description: |
             If the request has been accepted. If heimdall is operated in proxy mode, it will be forwarded to the upstream service. In that case the
             response comes from the upstream service. Otherwise, if operated in decision mode, the response comes from heimdall.
+        '400':
+          description: |
+            Bad Request. Returned if the evaluated request path contains dot segments (`.` or `..`), including
+            URL-encoded variants (case-insensitive), e.g. `%2e`, `%2f`, and `%5c` combinations, to prevent path traversal.
         '401':
           description: Unauthorized. Returned if a matching rule could not verify the authentication status of the subject related to the request.
         '403':

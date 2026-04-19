@@ -78,6 +78,81 @@ func TestRuleExecutorExecute(t *testing.T) {
 				rule.EXPECT().Execute(ctx).Return(upstream, nil)
 			},
 		},
+		"request path contains plain dot segments": {
+			expErr: heimdall.ErrArgument,
+			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+				t.Helper()
+
+				req := &heimdall.Request{
+					Method: http.MethodGet,
+					URL: &heimdall.URL{URL: url.URL{
+						Scheme: "https",
+						Host:   "foo.bar",
+						Path:   "/foo/../admin",
+					}},
+				}
+
+				ctx.EXPECT().Context().Return(t.Context())
+				ctx.EXPECT().Request().Return(req)
+			},
+		},
+		"request path contains encoded dot segments and slash (lowercase)": {
+			expErr: heimdall.ErrArgument,
+			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+				t.Helper()
+
+				req := &heimdall.Request{
+					Method: http.MethodGet,
+					URL: &heimdall.URL{URL: url.URL{
+						Scheme:  "https",
+						Host:    "foo.bar",
+						Path:    "/scripts/../Windows/System32/cmd.exe",
+						RawPath: "/scripts/%2e%2e%2fWindows/System32/cmd.exe",
+					}},
+				}
+
+				ctx.EXPECT().Context().Return(t.Context())
+				ctx.EXPECT().Request().Return(req)
+			},
+		},
+		"request path contains encoded dot segments and slash (uppercase)": {
+			expErr: heimdall.ErrArgument,
+			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+				t.Helper()
+
+				req := &heimdall.Request{
+					Method: http.MethodGet,
+					URL: &heimdall.URL{URL: url.URL{
+						Scheme:  "https",
+						Host:    "foo.bar",
+						Path:    "/scripts/../Windows/System32/cmd.exe",
+						RawPath: "/scripts/%2E%2E%2FWindows/System32/cmd.exe",
+					}},
+				}
+
+				ctx.EXPECT().Context().Return(t.Context())
+				ctx.EXPECT().Request().Return(req)
+			},
+		},
+		"request path contains encoded backslash separators": {
+			expErr: heimdall.ErrArgument,
+			configureMocks: func(t *testing.T, ctx *mocks2.RequestContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+				t.Helper()
+
+				req := &heimdall.Request{
+					Method: http.MethodGet,
+					URL: &heimdall.URL{URL: url.URL{
+						Scheme:  "https",
+						Host:    "foo.bar",
+						Path:    "/scripts/..\\Windows/System32/cmd.exe",
+						RawPath: "/scripts/%2E%2E%5CWindows/System32/cmd.exe",
+					}},
+				}
+
+				ctx.EXPECT().Context().Return(t.Context())
+				ctx.EXPECT().Request().Return(req)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
