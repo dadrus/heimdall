@@ -19,8 +19,10 @@ package requestcontext
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 func extractURL(req *http.Request) url.URL {
@@ -40,6 +42,8 @@ func extractURL(req *http.Request) url.URL {
 		host = req.Host
 	}
 
+	host = strings.ToLower(host)
+
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
 		if forwardedURI, err := url.Parse(val); err == nil {
 			rawPath = forwardedURI.EscapedPath()
@@ -55,6 +59,7 @@ func extractURL(req *http.Request) url.URL {
 		query = req.URL.RawQuery
 	}
 
+	rawPath = urlx.NormalizePath(rawPath)
 	path, _ = url.PathUnescape(rawPath)
 
 	return url.URL{

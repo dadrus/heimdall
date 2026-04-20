@@ -228,7 +228,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Nil(t, backend)
 			},
 		},
-		"all handler succeed with disallowed urlencoded slashes": {
+		"all handler succeed with disallowed uppercase urlencoded slashes": {
 			slashHandling: v1beta1.EncodedSlashesOff,
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
@@ -243,6 +243,32 @@ func TestRuleExecute(t *testing.T) {
 					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
+					},
+				})
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Backend, _ map[string]string) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrArgument)
+				require.ErrorContains(t, err, "path contains encoded slash")
+			},
+		},
+		"all handler succeed with disallowed lowercase urlencoded slashes": {
+			slashHandling: v1beta1.EncodedSlashesOff,
+			backend: &v1beta1.Backend{
+				Host: "foo.bar",
+			},
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, _ *heimdallmocks.StepMock,
+				_ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
+			) {
+				t.Helper()
+
+				targetURL, _ := url.Parse("http://foo.local/api%2fv1/foo%5Bid%5D")
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					URL: &pipeline.URL{
+						URL:      *targetURL,
+						Captures: map[string]string{"first": "api%2fv1", "second": "foo%5Bid%5D"},
 					},
 				})
 			},
@@ -297,7 +323,7 @@ func TestRuleExecute(t *testing.T) {
 				assert.Equal(t, "foo[id]", captures["third"])
 			},
 		},
-		"all handler succeed with urlencoded slashes on with urlencoded slash": {
+		"all handler succeed with urlencoded slashes on with uppercase urlencoded slash": {
 			slashHandling: v1beta1.EncodedSlashesOn,
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
@@ -339,7 +365,48 @@ func TestRuleExecute(t *testing.T) {
 				assert.Equal(t, "foo[id]", captures["second"])
 			},
 		},
-		"all handler succeed with urlencoded slashes on with urlencoded slash but without decoding it": {
+		"all handler succeed with urlencoded slashes on with lowercase urlencoded slash": {
+			slashHandling: v1beta1.EncodedSlashesOn,
+			backend: &v1beta1.Backend{
+				Host: "foo.bar",
+			},
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
+			) {
+				t.Helper()
+
+				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
+					func(sub pipeline.Subject) bool { return sub != nil },
+				)).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
+					func(sub pipeline.Subject) bool { return sub != nil },
+				)).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
+					func(sub pipeline.Subject) bool { return sub != nil },
+				)).Return(nil)
+
+				targetURL, _ := url.Parse("http://foo.local/api%2fv1/foo%5Bid%5D")
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					URL: &pipeline.URL{
+						URL:      *targetURL,
+						Captures: map[string]string{"first": "api%2fv1", "second": "foo%5Bid%5D"},
+					},
+				})
+			},
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
+				assert.Equal(t, expectedURL, backend.URL())
+				assert.True(t, backend.ForwardHostHeader())
+
+				assert.Equal(t, "api/v1", captures["first"])
+				assert.Equal(t, "foo[id]", captures["second"])
+			},
+		},
+		"all handler succeed with urlencoded slashes on with uppercase urlencoded slash but without decoding it": {
 			slashHandling: v1beta1.EncodedSlashesOnNoDecode,
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
@@ -378,6 +445,47 @@ func TestRuleExecute(t *testing.T) {
 				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api%2Fv1", captures["first"])
+				assert.Equal(t, "foo[id]", captures["second"])
+			},
+		},
+		"all handler succeed with urlencoded slashes on with lowercase urlencoded slash but without decoding it": {
+			slashHandling: v1beta1.EncodedSlashesOnNoDecode,
+			backend: &v1beta1.Backend{
+				Host: "foo.bar",
+			},
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
+			) {
+				t.Helper()
+
+				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
+					func(sub pipeline.Subject) bool { return sub != nil },
+				)).Return(nil)
+				authorizer.EXPECT().Execute(ctx, mock.MatchedBy(
+					func(sub pipeline.Subject) bool { return sub != nil },
+				)).Return(nil)
+				finalizer.EXPECT().Execute(ctx, mock.MatchedBy(
+					func(sub pipeline.Subject) bool { return sub != nil },
+				)).Return(nil)
+
+				targetURL, _ := url.Parse("http://foo.local/api%2fv1/foo%5Bid%5D")
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					URL: &pipeline.URL{
+						URL:      *targetURL,
+						Captures: map[string]string{"first": "api%2fv1", "second": "foo%5Bid%5D"},
+					},
+				})
+			},
+			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				expectedURL, _ := url.Parse("http://foo.bar/api%2fv1/foo%5Bid%5D")
+				assert.Equal(t, expectedURL, backend.URL())
+				assert.True(t, backend.ForwardHostHeader())
+
+				assert.Equal(t, "api%2fv1", captures["first"])
 				assert.Equal(t, "foo[id]", captures["second"])
 			},
 		},

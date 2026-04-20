@@ -24,7 +24,7 @@ import (
 var ErrUnsupportedContentType = errors.New("unsupported mime type")
 
 type Decoder interface {
-	Decode(data []byte) (map[string]any, error)
+	Decode(data []byte) (any, error)
 }
 
 func NewDecoder(contentType string) (Decoder, error) {

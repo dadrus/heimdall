@@ -871,6 +871,46 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Empty(t, rul.eh)
 			},
 		},
+		"normalizes trie host matchers to lowercase": {
+			config: v1beta1.Rule{
+				ID: "foobar",
+				Matcher: v1beta1.Matcher{
+					Routes: []v1beta1.Route{{Path: "/foo/bar"}},
+					Hosts:  []string{"FoO.ExAmPlE.cOm", "*.ExAmPlE.cOm"},
+				},
+				Execute: []v1beta1.Step{
+					{AuthenticatorRef: "foo"},
+				},
+			},
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+				t.Helper()
+
+				pn := mocks.NewPrincipalNamerMock(t)
+				pn.EXPECT().PrincipalName().Return("default")
+
+				as := mocks.NewStepMock(t)
+				as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
+					visitor.VisitPrincipalNamer(pn)
+
+					return true
+				}))
+
+				mechanism := mocks1.NewMechanismMock(t)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
+
+				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+				require.Len(t, rul.Routes(), 2)
+				assert.Equal(t, "foo.example.com", rul.Routes()[0].Host())
+				assert.Equal(t, "*.example.com", rul.Routes()[1].Host())
+			},
+		},
 		"without default rule and minimum required configuration in proxy mode": {
 			opMode: config.ProxyMode,
 			config: v1beta1.Rule{

@@ -40,7 +40,7 @@ func TestNewRequestContext(t *testing.T) {
 	httpReq := &envoy_auth.AttributeContext_HttpRequest{
 		Method:   http.MethodPatch,
 		Scheme:   "https",
-		Host:     "foo.bar:8080",
+		Host:     "FoO.Bar:8080",
 		Path:     "/test/baz?bar=moo#foobar",
 		Query:    "", // documented to be empty
 		Fragment: "", // documented to be empty
@@ -76,19 +76,90 @@ func TestNewRequestContext(t *testing.T) {
 	// THEN
 	require.Equal(t, httpReq.GetMethod(), ctx.Request().Method)
 	require.Equal(t, httpReq.GetScheme(), ctx.Request().URL.Scheme)
-	require.Equal(t, httpReq.GetHost(), ctx.Request().URL.Host)
+	require.Equal(t, "foo.bar:8080", ctx.Request().URL.Host)
 	require.Equal(t, "/test/baz", ctx.Request().URL.Path)
 	require.Empty(t, ctx.Request().URL.Fragment)
 	require.Equal(t, "bar=moo#foobar", ctx.Request().URL.RawQuery)
 	require.Equal(t, "moo#foobar", ctx.Request().URL.URL.Query().Get("bar"))
 	require.Equal(t, map[string]any{"content": []string{"heimdall"}}, ctx.Request().Body())
-	require.Len(t, ctx.Request().Headers(), 3)
+	require.Len(t, ctx.Request().Headers(), 4)
+	require.Equal(t, "foo.bar:8080", ctx.Request().Header("Host"))
 	require.Equal(t, "barfoo", ctx.Request().Header("X-Foo-Bar"))
 	require.Equal(t, "foo", ctx.Request().Cookie("bar"))
 	require.Equal(t, "baz", ctx.Request().Cookie("foo"))
 	require.Empty(t, ctx.Request().Cookie("baz"))
 	require.NotNil(t, ctx.Context())
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
+}
+
+func TestNewRequestContextXForwardedForCSV(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodGet,
+					Scheme:  "https",
+					Host:    "foo.bar",
+					Path:    "/",
+					Headers: map[string]string{},
+				},
+			},
+		},
+	}
+	md := metadata.New(nil)
+	md.Set("x-forwarded-for", "127.0.0.1, 192.168.1.1")
+
+	cf := newContextFactory()
+
+	ctx := cf.Create(
+		metadata.NewIncomingContext(
+			t.Context(),
+			md,
+		),
+		checkReq,
+	)
+	defer cf.Destroy(ctx)
+
+	// THEN
+	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
+}
+
+func TestNewRequestContextXForwardedForMixedValues(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodGet,
+					Scheme:  "https",
+					Host:    "foo.bar",
+					Path:    "/",
+					Headers: map[string]string{},
+				},
+			},
+		},
+	}
+	md := metadata.New(nil)
+	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1, 10.0.0.2", "   ")
+
+	cf := newContextFactory()
+
+	ctx := cf.Create(
+		metadata.NewIncomingContext(
+			t.Context(),
+			md,
+		),
+		checkReq,
+	)
+	defer cf.Destroy(ctx)
+
+	// THEN
+	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1", "10.0.0.2"}, ctx.Request().ClientIPAddresses)
 }
 
 func TestRequestContextFinalize(t *testing.T) {
@@ -311,10 +382,45 @@ func TestRequestContextBody(t *testing.T) {
 			body:   []byte(`{ "content": "heimdall" }`),
 			expect: map[string]any{"content": "heimdall"},
 		},
+		"json encoded array": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`[{"content": "heimdall"}]`),
+			expect: []any{map[string]any{"content": "heimdall"}},
+		},
+		"json encoded scalar string": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`"heimdall"`),
+			expect: "heimdall",
+		},
+		"json encoded scalar number": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`42`),
+			expect: float64(42),
+		},
+		"json encoded scalar bool": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`true`),
+			expect: true,
+		},
+		"json encoded null": {
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`null`),
+			expect: nil,
+		},
 		"yaml encoded": {
 			ct:     "application/yaml; charset=utf-8",
 			body:   []byte("content: heimdall"),
 			expect: map[string]any{"content": "heimdall"},
+		},
+		"yaml encoded sequence": {
+			ct:     "application/yaml; charset=utf-8",
+			body:   []byte("- content: heimdall\n"),
+			expect: []any{map[string]any{"content": "heimdall"}},
+		},
+		"yaml encoded scalar": {
+			ct:     "application/yaml; charset=utf-8",
+			body:   []byte("heimdall\n"),
+			expect: "heimdall",
 		},
 		"plain text": {
 			ct:     "text/plain",
@@ -435,7 +541,9 @@ func TestRequestContextReset(t *testing.T) {
 	require.Empty(t, ctx.hmdlReq.Method)
 	require.NotNil(t, ctx.hmdlReq.URL.Captures)
 	require.Empty(t, ctx.hmdlReq.URL.Captures)
-	require.Nil(t, ctx.hmdlReq.ClientIPAddresses)
+	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
+	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
 }
 
 func TestRequestContextWithParent(t *testing.T) {

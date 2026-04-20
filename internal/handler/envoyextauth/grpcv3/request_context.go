@@ -83,21 +83,19 @@ func newRequestContext() *RequestContext {
 	}
 
 	rc.hmdlReq = &pipeline.Request{
-		RequestFunctions: rc,
-		URL:              &pipeline.URL{},
+		RequestFunctions:  rc,
+		URL:               &pipeline.URL{},
+		ClientIPAddresses: make([]string, 0, 10),
 	}
 
 	return rc
 }
 
 func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) {
-	var clientIPs []string
+	clientIPs := r.hmdlReq.ClientIPAddresses
 
 	if rmd, ok := metadata.FromIncomingContext(ctx); ok {
-		// this header is used by envoyproxy to forward the ip addresses of the hops
-		if headerValue := rmd.Get("x-forwarded-for"); len(headerValue) != 0 {
-			clientIPs = headerValue
-		}
+		clientIPs = requestClientIPs(clientIPs, rmd)
 	}
 
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
@@ -113,12 +111,26 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	r.hmdlReq.Method = httpReq.GetMethod()
 	r.hmdlReq.URL.URL = url.URL{
 		Scheme:   httpReq.GetScheme(),
-		Host:     httpReq.GetHost(),
+		Host:     strings.ToLower(httpReq.GetHost()),
 		RawPath:  parsed.RawPath,
 		Path:     parsed.Path,
 		RawQuery: parsed.RawQuery,
 	}
+	r.reqHeaders["Host"] = r.hmdlReq.URL.Host
 	r.hmdlReq.ClientIPAddresses = clientIPs
+}
+
+func requestClientIPs(ips []string, md metadata.MD) []string {
+	// this header is used by envoyproxy to forward the ip addresses of the hops
+	for _, value := range md.Get("x-forwarded-for") {
+		for token := range strings.SplitSeq(value, ",") {
+			if ip := strings.TrimSpace(token); len(ip) != 0 {
+				ips = append(ips, ip)
+			}
+		}
+	}
+
+	return ips
 }
 
 func (r *RequestContext) Reset() {
@@ -135,7 +147,7 @@ func (r *RequestContext) Reset() {
 	clear(r.hmdlReq.URL.Captures)
 	r.hmdlReq.URL.URL = url.URL{}
 	r.hmdlReq.Method = ""
-	r.hmdlReq.ClientIPAddresses = nil
+	r.hmdlReq.ClientIPAddresses = r.hmdlReq.ClientIPAddresses[:0]
 }
 
 func canonicalizeHeaders(headers map[string]string) map[string]string {

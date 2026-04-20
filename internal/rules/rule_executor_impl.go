@@ -21,6 +21,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 type ruleExecutor struct {
@@ -39,6 +42,11 @@ func (e *ruleExecutor) Execute(hctx pipeline.Context) (pipeline.Backend, error) 
 		Str("_method", request.Method).
 		Str("_url", request.URL.String()).
 		Msg("Analyzing request")
+
+	if urlx.PathHasDotSegments(x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path)) {
+		return nil, errorchain.NewWithMessage(pipeline.ErrArgument,
+			"path contains dot segments, which are not allowed")
+	}
 
 	rul, err := e.r.FindRule(hctx)
 	if err != nil {

@@ -24,7 +24,7 @@ The following configurations and behaviors are enforced by default:
 
 * If heimdall is operated as part of e.g. a service mesh, that handles secure communication between the services, you may choose to disable TLS enforcement. This can be done by using the individual flags mentioned above or, alternatively, by using the `--insecure-skip-all-tls-enforcement` flag, which enables all the above options at once.
 
-* Configuring the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`] property to allow insecure networks (`0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0`) is prohibited. See also link:{{< relref "security.adoc#_http_header_security_considerations" >}}[HTTP Header Security Considerations]. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag.
+* Configuring the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`] property to allow insecure networks (`0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0`) is prohibited. See also link:{{< relref "security.adoc#_http_header" >}}[HTTP Header]. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag.
 
 * The authentication stage of the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-default-rule-enforcement` flag.
 
@@ -36,28 +36,39 @@ If any of the above enforcement settings are disabled and an insecure configurat
 ====
 
 
-== HTTP Header Security Considerations
+== Request Security Considerations
 
-If `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configuration options]) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:
+=== HTTP Header
 
-* The value for the used HTTP scheme is taken from the `X-Forwarded-Proto` header.
-* The value for the used HTTP host and port is taken from the `X-Forwarded-Host` header.
-* The value for the used HTTP path is taken from `X-Forwarded-Uri` header, which may also contain query parameters.
-* The value for the used HTTP method is taken from the `X-Forwarded-Method` header.
+If the `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configuration options]), heimdall may use specific HTTP headers to build the URL and HTTP method for rule matching. In that case, the following logic applies:
 
-If the evaluation result for any of the above said steps is empty, the corresponding value is taken from the actual request to heimdall. E.g. if `X-Forwarded-Method` is set, the HTTP method used to communicate with heimdall is used for rule matching respectively evaluation purposes.
+* The HTTP scheme is taken from the `X-Forwarded-Proto` header.
+* The HTTP host and port are taken from the `X-Forwarded-Host` header.
+* The HTTP path is taken from the `X-Forwarded-Uri` header, which may also contain query parameters.
+* The HTTP method is taken from the `X-Forwarded-Method` header.
 
-That means, if the client integrating with heimdall does not make use of the above said headers and does not drop them, a malicious actor could spoof them most probably leading to privileges escalation (depending on your rules). To avoid such situations, please adhere to the following practices:
+If any of these values is missing, heimdall falls back to the corresponding value from the actual request. For example, if `X-Forwarded-Method` is not set, the HTTP method used to communicate with heimdall is used for rule matching and evaluation.
 
-* If you can, try avoiding usage of `trusted_proxies`. Nothing can be spoofed then. However, you will lose the information about the used HTTP scheme, host and port and cannot rely on these in your rules.
-* Configure all headers and use those taking precedence. That is, always set `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri`.
-* If you cannot influence, which headers are set by your system, you're integrating with heimdall, let it drop unused ones. E.g. If the proxy forwarding the request to heimdall by default sets only `X-Forwarded-Proto` and `X-Forwarded-Host`, let it drop the `X-Forwarded-Method` and `X-Forwarded-Uri` headers.
+This means that if a client integrating with heimdall does not use these headers and does not drop them, a malicious actor could spoof them and potentially escalate privileges (depending on your rules). To reduce this risk, follow these practices:
 
-The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Guides] follow these practices, respectively highlight where caution is required. So, you can find examples there.
+* If possible, avoid using `trusted_proxies`. In that case, these headers cannot be spoofed. However, you lose the original HTTP scheme, host, and port information and cannot rely on them in your rules.
+* If you use forwarded headers, configure and set all of them consistently: `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Uri`.
+* Configure your edge proxy to overwrite `X-Forwarded-*` headers instead of appending values.
+* If you cannot control which headers your integrating system sets, ensure it drops unused ones. For example, if the proxy forwarding requests to heimdall sets only `X-Forwarded-Proto` and `X-Forwarded-Host`, it should drop `X-Forwarded-Method` and `X-Forwarded-Uri`.
+
+The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Guides] follow these practices and highlight where additional caution is required.
+
+=== Request Path
+
+To mitigate path traversal attacks and interpretation conflicts between heimdall and upstream components, the following measures are implemented:
+
+* Request paths are normalized before rule evaluation by removing dot segments (`.` and `..`) when they appear with actual path separators (`/`). For example, `/user/../admin` is normalized to `/admin`.
+* Requests are rejected with `400 Bad Request` if the evaluated request path contains ambiguous or encoded dot segment patterns that cannot be safely normalized. This includes URL-encoded variants (case-insensitive), e.g. `%2e`, as well as combinations with encoded or alternative separators such as `%2f` and `%5c`.
+* Additionally, URL-encoded slash handling can be configured via `allow_encoded_slashes` in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[regular rules]. The default value `off` rejects encoded slashes, while less strict settings can increase the risk of interpretation conflicts depending on your proxy and upstream setup, but may be required for specific use cases where encoded slashes are part of the path semantics (e.g., object keys).
 
 == Observability Information
 
-Logs, metrics and profiling information is very valuable for operating heimdall. These are however also very valuable for any adversary. For this reason, the corresponding services, exposing such information are by default, if enabled, listening only on the loopback (`127.0.0.1`) interface. If you have to configure them to listen to other interfaces, e.g. because you operate heimdall in a container, make sure, you don't expose them publicly.
+Logs, metrics, and profiling information is very valuable for operating heimdall. These are however also very valuable for any adversary. For this reason, the corresponding services, exposing such information are by default, if enabled, listening only on the loopback (`127.0.0.1`) interface. If you have to configure them to listen to other interfaces, e.g. because you operate heimdall in a container, make sure, you don't expose them publicly.
 
 == Trust Store
 
@@ -157,7 +168,7 @@ On success, Cosign outputs JSON (similar to the example below) and exits with `0
       "1.3.6.1.4.1.57264.1.3": "04379639dc5f3fbfc260e883ee4938a35076d63e",
       "1.3.6.1.4.1.57264.1.4": "release",
       "1.3.6.1.4.1.57264.1.5": "dadrus/heimdall",
-      "1.3.6.1.4.1.57264.1.6": "refs/tags/v0.17.13",
+      "1.3.6.1.4.1.57264.1.6": "refs/tags/v0.17.14",
       "Bundle": {
         "SignedEntryTimestamp": "MEUCIFIvxs30zysroG6...tQ3U/2yx8Jqu8H75g6sihIcpg=",
         "Payload": {
@@ -168,9 +179,9 @@ On success, Cosign outputs JSON (similar to the example below) and exits with `0
         }
       },
       "Issuer": "https://token.actions.githubusercontent.com",
-      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/release.yaml@refs/tags/v0.17.12",
+      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/release.yaml@refs/tags/v0.17.14",
       "githubWorkflowName": "release",
-      "githubWorkflowRef": "refs/tags/v0.17.13",
+      "githubWorkflowRef": "refs/tags/v0.17.14",
       "githubWorkflowRepository": "dadrus/heimdall",
       "githubWorkflowSha": "04379639dc5f3fbfc260e883ee4938a35076d63e",
       "githubWorkflowTrigger": "push"
@@ -217,7 +228,7 @@ cosign verify ghcr.io/dadrus/heimdall/chart/heimdall:<tag> \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.16.13`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.16.14`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
 
 ==== Provenance Verification with slsa-verifier
 
@@ -238,7 +249,7 @@ slsa-verifier verify-image "${IMAGE}@${DIGEST}" \
   --source-tag <heimdall release version>
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.16.13`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.16.14`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
 
 === Release Binary Verification
 
@@ -268,7 +279,7 @@ slsa-verifier verify-artifact \
   /path/to/the/downloaded/<archive>
 ----
 
-Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.13`) that corresponds to the archive.
+Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.14`) that corresponds to the archive.
 
 On success, `slsa-verifier` prints a success message and exits with `0`.
 
@@ -321,5 +332,3 @@ cosign verify-attestation dadrus/heimdall:<tag> \
 ----
 
 The result will be the `heimdall.sbom.json` SBOM document, which you can use with any SCA or monitoring tool of your choice, e.g. https://dependencytrack.org/[Dependency Track].
-
-

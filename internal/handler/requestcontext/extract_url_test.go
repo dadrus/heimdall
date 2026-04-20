@@ -64,6 +64,30 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extracted.Query())
 			},
 		},
+		"X-Forwarded-Host is normalized to lowercase": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Host", "FoObAr.Example.COM:8443")
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "foobar.example.com:8443", extracted.Host)
+			},
+		},
+		"request host fallback is normalized to lowercase": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Host = "FooBar.Example.Local:9443"
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "foobar.example.local:9443", extracted.Host)
+			},
+		},
 		"X-Forwarded-Path is ignored": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -80,7 +104,7 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extracted.Query())
 			},
 		},
-		"X-Forwarded-Uri set": {
+		"X-Forwarded-Uri set without dot segments": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -94,6 +118,70 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
 				assert.Equal(t, "/bar%2Ftest/foo/%5Bval%5D", extracted.EscapedPath())
 				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
+			},
+		},
+		"X-Forwarded-Uri set with dot segments": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/bar/../test/foo/%5Bval%5D?bar=foo")
+				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/test/foo/%5Bval%5D", extracted.EscapedPath())
+				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
+			},
+		},
+		"X-Forwarded-Uri set with encoded dot segments": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/bar/%2e.%2ftest/foo/%5Bval%5D?bar=foo")
+				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/bar/%2e.%2ftest/foo/%5Bval%5D", extracted.EscapedPath())
+				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
+			},
+		},
+		"Request path is used and ends with a slash": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.URL.Path = "/bar/baz/"
+				req.URL.RawPath = "/bar/baz/"
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/bar/baz/", extracted.EscapedPath())
+				assert.Empty(t, extracted.Query())
+			},
+		},
+		"Request path is used which is a slash": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.URL.Path = "/"
+				req.URL.RawPath = "/"
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "http", extracted.Scheme)
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/", extracted.EscapedPath())
+				assert.Empty(t, extracted.Query())
 			},
 		},
 	} {

@@ -19,7 +19,6 @@ package rules
 import (
 	"bytes"
 	"net/url"
-	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -28,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 type ruleImpl struct {
@@ -62,7 +62,7 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 		// unescape path
 		request.URL.RawPath = ""
 	case v1beta1.EncodedSlashesOff:
-		if strings.Contains(request.URL.RawPath, "%2F") {
+		if urlx.ContainsEncodedSlash(request.URL.RawPath) {
 			return nil, errorchain.NewWithMessage(pipeline.ErrArgument,
 				"path contains encoded slash, which is not allowed")
 		}
@@ -71,7 +71,7 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	// unescape captures
 	captures := request.URL.Captures
 	for k, v := range captures {
-		captures[k] = unescape(v, r.slashesHandling)
+		captures[k] = urlx.Unescape(v, r.slashesHandling == v1beta1.EncodedSlashesOn)
 	}
 
 	sub := r.subjectPool.Get().(pipeline.Subject) //nolint: forcetypeassert
@@ -163,15 +163,3 @@ type backend struct {
 func (b backend) URL() *url.URL { return b.targetURL }
 
 func (b backend) ForwardHostHeader() bool { return b.forwardHostHeader }
-
-func unescape(value string, handling v1beta1.EncodedSlashesHandling) string {
-	if handling == v1beta1.EncodedSlashesOn {
-		unescaped, _ := url.PathUnescape(value)
-
-		return unescaped
-	}
-
-	unescaped, _ := url.PathUnescape(strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$"))
-
-	return strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
-}
