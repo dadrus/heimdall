@@ -119,8 +119,38 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Equal(t, "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127, for=\"[a746:9bbd:955b:e17e:cede:9748:0bf5:f2ea]\";host=foo.bar;proto=https", req.Header.Get("Forwarded"))
-				assert.Equal(t, "127.0.0.2, 192.168.12.126, a746:9bbd:955b:e17e:cede:9748:0bf5:f2ea", req.Header.Get("X-Forwarded-For"))
+				assert.Equal(t, "127.0.0.3, 192.168.12.127, a746:9bbd:955b:e17e:cede:9748:0bf5:f2ea", req.Header.Get("X-Forwarded-For"))
 				assert.Equal(t, "bar.foo", req.Header.Get("X-Forwarded-Host"))
+				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
+			},
+		},
+		"Forwarded and X-Forwarded-For appear multiple times": {
+			upstreamCalled: true,
+			headers: http.Header{
+				"X-Forwarded-For": []string{"127.0.0.2", "192.168.12.126"},
+				"Forwarded":       []string{"proto=http;for=127.0.0.3", "proto=https;for=192.168.12.127"},
+			},
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) pipeline.Backend {
+				t.Helper()
+
+				backend := mocks.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
+
+				return backend
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Contains(t, req.Host, "127.0.0.1")
+				assert.Equal(t, http.MethodGet, req.Method)
+
+				require.Len(t, req.Header, 6)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Equal(t, "proto=http;for=127.0.0.3, proto=https;for=192.168.12.127, for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
+				assert.Equal(t, "127.0.0.3, 192.168.12.127, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
+				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
@@ -149,7 +179,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Equal(t, "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127, for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
-				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
+				assert.Equal(t, "127.0.0.3, 192.168.12.127, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
 				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},

@@ -19,7 +19,6 @@ package rules
 import (
 	"errors"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 var (
@@ -108,15 +108,12 @@ func (m *pathParamMatcher) Matches(request *pipeline.Request, keys, values []str
 	if len(request.URL.RawPath) != 0 {
 		switch m.slashHandling {
 		case v1beta1.EncodedSlashesOff:
-			if strings.Contains(request.URL.RawPath, "%2F") {
+			if urlx.ContainsEncodedSlash(request.URL.RawPath) {
 				return errorchain.NewWithMessage(ErrRequestPathMismatch,
 					"request path contains encoded slashes which are not allowed")
 			}
-		case v1beta1.EncodedSlashesOn:
-			value, _ = url.PathUnescape(value)
 		default:
-			unescaped, _ := url.PathUnescape(strings.ReplaceAll(value, "%2F", "$$$escaped-slash$$$"))
-			value = strings.ReplaceAll(unescaped, "$$$escaped-slash$$$", "%2F")
+			value = urlx.Unescape(value, m.slashHandling == v1beta1.EncodedSlashesOn)
 		}
 	}
 

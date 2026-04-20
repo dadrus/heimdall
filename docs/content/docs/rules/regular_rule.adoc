@@ -56,10 +56,8 @@ The actual expression based on the given `type`.
 ** *`hosts`*: _string array_ (optional)
 +
 Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. If not defined, any host will be matched. Each entry can define an exact host, or be a wildcard expression (e.g., `\*.example.com` matches all subdomains under `example.com`). The `*` can only appear once at the start of the expression, and `*` alone matches any host.
-
-*** *`value`*: _string_ (mandatory)
 +
-The actual host expression based on the `type`.
+NOTE: As required by https://www.rfc-editor.org/rfc/rfc3986#section-3.2.2[RFC 3986, Section 3.2.2], the host matching happens case-insensitive.
 
 ** *`scheme`*: _string_ (optional)
 +
@@ -89,7 +87,7 @@ methods:
 +
 Controls how to handle URL-encoded slashes in request paths during matching and forwarding. Options include:
 
-** *`off`* - Reject requests with encoded slashes (`%2F`). This is the default behavior.
+** *`off`* - Reject requests with encoded slashes. This is the default behavior.
 ** *`on`* - Accept requests with encoded slashes decoding them to `/`.
 ** *`no_decode`* - Accept requests with encoded slashes without touching them.
 
@@ -456,4 +454,3 @@ As with the authentication & authorization pipeline, each step can optionally ha
 ====
 
 This example uses two error handlers, named `foo` and `bar`. `bar` will only be executed if `foo` 's error condition does not match. `bar` does also override the error handler configuration as required by the given rule.
-

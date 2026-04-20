@@ -261,6 +261,15 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			values:        []string{"bar%2Fbaz"},
 			toMatch:       "http://example.com/bar%2Fbaz",
 		},
+		"lowercase encoded slashes are not allowed": {
+			conf: []v1beta1.ParameterMatcher{
+				{Name: "foo", Type: "exact", Value: "bar%2fbaz"},
+			},
+			slashHandling: v1beta1.EncodedSlashesOff,
+			keys:          []string{"foo"},
+			values:        []string{"bar%2fbaz"},
+			toMatch:       "http://example.com/bar%2fbaz",
+		},
 		"matches with path having allowed but not decoded encoded slashes": {
 			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz[id]"},
@@ -271,6 +280,16 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			toMatch:       "http://example.com/bar%2Fbaz%5Bid%5D",
 			matches:       true,
 		},
+		"matches with path having allowed but not decoded lowercase encoded slashes": {
+			conf: []v1beta1.ParameterMatcher{
+				{Name: "foo", Type: "exact", Value: "bar%2fbaz[id]"},
+			},
+			slashHandling: v1beta1.EncodedSlashesOnNoDecode,
+			keys:          []string{"foo"},
+			values:        []string{"bar%2fbaz%5Bid%5D"},
+			toMatch:       "http://example.com/bar%2fbaz%5Bid%5D",
+			matches:       true,
+		},
 		"matches with path having allowed decoded slashes": {
 			conf: []v1beta1.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar/baz[id]"},
@@ -279,6 +298,16 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz%5Bid%5D"},
 			toMatch:       "http://example.com/foo%2Fbaz%5Bid%5D",
+			matches:       true,
+		},
+		"matches with path having allowed decoded lowercase encoded slashes": {
+			conf: []v1beta1.ParameterMatcher{
+				{Name: "foo", Type: "exact", Value: "bar/baz[id]"},
+			},
+			slashHandling: v1beta1.EncodedSlashesOn,
+			keys:          []string{"foo"},
+			values:        []string{"bar%2fbaz%5Bid%5D"},
+			toMatch:       "http://example.com/foo%2fbaz%5Bid%5D",
 			matches:       true,
 		},
 		"does not match the request path if appropriate matcher is not defined as first element": {

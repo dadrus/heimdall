@@ -182,38 +182,27 @@ func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 	// and have not been dropped
 	forwardedHost := in.Header.Get("X-Forwarded-Host")
 	forwardedProto := in.Header.Get("X-Forwarded-Proto")
-	forwardedFor := in.Header.Get("X-Forwarded-For")
-	forwarded := in.Header.Get("Forwarded")
 	proto := x.IfThenElse(in.TLS != nil, "https", "http")
 	clientIP := httpx.IPFromHostPort(in.RemoteAddr)
+	clientIPs := r.Request().ClientIPAddresses
 
-	out.Header.Set("X-Forwarded-For", x.IfThenElseExec(len(forwardedFor) == 0,
-		func() string { return clientIP },
-		func() string { return forwardedFor + ", " + clientIP }))
-
+	out.Header.Set("X-Forwarded-For", strings.Join(clientIPs, ", "))
 	out.Header.Set("X-Forwarded-Proto",
 		x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
-
 	out.Header.Set("X-Forwarded-Host",
 		x.IfThenElse(len(forwardedHost) == 0, in.Host, forwardedHost))
 
-	out.Header.Set("Forwarded", x.IfThenElseExec(len(forwarded) == 0,
-		func() string {
-			if strings.Contains(clientIP, ":") {
-				// IPv6 must be quoted
-				clientIP = "\"[" + clientIP + "]\""
-			}
+	if strings.Contains(clientIP, ":") {
+		// IPv6 must be quoted
+		clientIP = "\"[" + clientIP + "]\""
+	}
 
-			return "for=" + clientIP + ";host=" + in.Host + ";proto=" + proto
-		},
-		func() string {
-			if strings.Contains(clientIP, ":") {
-				// IPv6 must be quoted
-				clientIP = "\"[" + clientIP + "]\""
-			}
+	current := strings.Join(in.Header.Values("Forwarded"), ", ")
+	entry := "for=" + clientIP + ";host=" + in.Host + ";proto=" + proto
 
-			return forwarded + ", for=" + clientIP + ";host=" + in.Host + ";proto=" + proto
-		}))
+	out.Header.Set("Forwarded", x.IfThenElseExec(len(current) == 0,
+		func() string { return entry },
+		func() string { return current + ", " + entry }))
 }
 
 func (r *requestContext) addUpstreamCookies(req *http.Request) {

@@ -22,11 +22,11 @@ import (
 
 type JSONDecoder struct{}
 
-func (JSONDecoder) Decode(rawData []byte) (map[string]any, error) {
-	var mapData map[string]any
-	if err := json.Unmarshal(rawData, &mapData); err != nil {
+func (JSONDecoder) Decode(rawData []byte) (any, error) {
+	var data any
+	if err := json.Unmarshal(rawData, &data); err != nil {
 		return nil, err
 	}
 
-	return mapData, nil
+	return data, nil
 }

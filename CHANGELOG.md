@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.17.14](https://github.com/dadrus/heimdall/compare/v0.17.13...v0.17.14) (2026-04-19)
+
+
+### Bug Fixes
+
+* Allow non-object JSON/YAML payloads in contextualizer and authorizer responses ([#3202](https://github.com/dadrus/heimdall/issues/3202)) by [@Kakadus](https://github.com/Kakadus) ([f855bf1](https://github.com/dadrus/heimdall/commit/f855bf14a0e403adb32fc270f150ccb23dd9f87b))
+* Case-insensitive handling of URL-encoded slashes ([#3207](https://github.com/dadrus/heimdall/issues/3207)) ([8b0de6a](https://github.com/dadrus/heimdall/commit/8b0de6aba23a047cfee3081df878271bb17f4351))
+* Case-insensitive host matching ([#3208](https://github.com/dadrus/heimdall/issues/3208)) ([3d05e56](https://github.com/dadrus/heimdall/commit/3d05e56a9e7ef0355f17482b4322054af4e85943))
+* Considering all `Forwarded` and `X-Forwarded-For` header values when extracting hop chain ([#3206](https://github.com/dadrus/heimdall/issues/3206)) ([a6fd601](https://github.com/dadrus/heimdall/commit/a6fd601abe806135f43f57a3346096c021b2d726))
+* Request path normalized to avoid interpretation conflicts ([#3209](https://github.com/dadrus/heimdall/issues/3209)) ([b5dfa48](https://github.com/dadrus/heimdall/commit/b5dfa484b7a8c2ce6d8691c026f9da867719947a))
+
+
+### Dependencies
+
+* update golang to v1.26.2 ([#3181](https://github.com/dadrus/heimdall/issues/3181)) ([c23610b](https://github.com/dadrus/heimdall/commit/c23610b641c20fb8b76c68e15e8a9f220046a9db))
+* update google.golang.org/genproto/googleapis/rpc digest to afd174a ([#3193](https://github.com/dadrus/heimdall/issues/3193)) ([cbc3224](https://github.com/dadrus/heimdall/commit/cbc32246d51726bf3ec0c9a49395ab635f18dbe2))
+* update kubernetes monorepo to v0.35.4 ([#3198](https://github.com/dadrus/heimdall/issues/3198)) ([ac2f19a](https://github.com/dadrus/heimdall/commit/ac2f19a14382cb9b15f287bdc28808e885ec14b3))
+* update module github.com/dlclark/regexp2 to v1.12.0 ([#3205](https://github.com/dadrus/heimdall/issues/3205)) ([bb65c19](https://github.com/dadrus/heimdall/commit/bb65c19b328a0a6044d8c51b3e73d51abbe7995a))
+* update module github.com/go-co-op/gocron/v2 to v2.21.0 ([#3194](https://github.com/dadrus/heimdall/issues/3194)) ([c0d0ab3](https://github.com/dadrus/heimdall/commit/c0d0ab38c694542d7c49c93072034a90946ac431))
+* update module github.com/google/cel-go to v0.28.0 ([#3182](https://github.com/dadrus/heimdall/issues/3182)) ([d5bbc2f](https://github.com/dadrus/heimdall/commit/d5bbc2fbebbc65926f29d1d5d39cc0b8704d2e4c))
+* update module github.com/redis/rueidis to v1.0.74 ([#3189](https://github.com/dadrus/heimdall/issues/3189)) ([3a607b5](https://github.com/dadrus/heimdall/commit/3a607b566d34f13599f070c6bcf34ad5245a8a61))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.74 ([#3189](https://github.com/dadrus/heimdall/issues/3189)) ([3a607b5](https://github.com/dadrus/heimdall/commit/3a607b566d34f13599f070c6bcf34ad5245a8a61))
+* update opentelemetry-go-contrib monorepo to v0.68.0 ([#3178](https://github.com/dadrus/heimdall/issues/3178)) ([9466eeb](https://github.com/dadrus/heimdall/commit/9466eebe1014e1d7f067e06604ba85f4be88ee42))
+
 ## [0.17.13](https://github.com/dadrus/heimdall/compare/v0.17.12...v0.17.13) (2026-04-05)
 
 
