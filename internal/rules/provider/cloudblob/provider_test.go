@@ -120,10 +120,10 @@ buckets:
 
 				jobs := prov.s.Jobs()
 				assert.Len(t, jobs, 2)
-				lr, err := jobs[0].LastRun()
+				lr, err := jobs[0].LastRunStartedAt()
 				require.NoError(t, err)
 				assert.True(t, lr.IsZero())
-				lr, err = jobs[1].LastRun()
+				lr, err = jobs[1].LastRunStartedAt()
 				require.NoError(t, err)
 				assert.True(t, lr.IsZero())
 			},
