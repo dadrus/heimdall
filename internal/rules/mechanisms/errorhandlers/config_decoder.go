@@ -28,6 +28,7 @@ func decodeConfig(validator validation.Validator, input map[string]any, output a
 		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
 		encoding.WithDecodeHooks(
 			template.DecodeTemplateHookFunc(),
+			DecodeHeaderEntryHookFunc(),
 		),
 	)
 
