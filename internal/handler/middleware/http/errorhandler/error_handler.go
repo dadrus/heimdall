@@ -72,8 +72,10 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 
 		errors.As(err, &genericError)
 
-		for name, value := range genericError.Header {
-			rw.Header().Set(name, value)
+		for name, values := range genericError.Header {
+			for _, value := range values {
+				rw.Header().Add(name, value)
+			}
 		}
 
 		rw.WriteHeader(genericError.Code)

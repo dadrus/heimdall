@@ -46,7 +46,7 @@ func (e *RedirectError) Is(target error) bool {
 
 type GenericError struct {
 	Code   int
-	Header map[string]string
+	Header map[string][]string
 	Body   string
 	Cause  error
 }

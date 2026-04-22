@@ -191,11 +191,22 @@ func TestHandlerHandle(t *testing.T) {
 			err: &pipeline.GenericError{
 				Code:   http.StatusOK,
 				Body:   `{"foo": "bar"}`,
-				Header: map[string]string{"Content-Type": "application/json; charset=utf-8"},
+				Header: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
 			},
 			expCode:   http.StatusOK,
 			expBody:   `{"foo": "bar"}`,
 			expHeader: http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
+		},
+		"generic error with multiple header values": {
+			handler: New(),
+			err: &pipeline.GenericError{
+				Code: http.StatusOK,
+				Header: map[string][]string{
+					"Set-Cookie": {"a=1", "b=2"},
+				},
+			},
+			expCode:   http.StatusOK,
+			expHeader: http.Header{"Set-Cookie": []string{"a=1", "b=2"}},
 		},
 		"generic error without body and header": {
 			handler: New(),
@@ -210,7 +221,7 @@ func TestHandlerHandle(t *testing.T) {
 			err: &pipeline.GenericError{
 				Code:   http.StatusAccepted,
 				Body:   `{"foo": "bar"}`,
-				Header: map[string]string{"Content-Type": "application/json; charset=utf-8"},
+				Header: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
 			},
 			expCode:   http.StatusAccepted,
 			expBody:   `{"foo": "bar"}`,

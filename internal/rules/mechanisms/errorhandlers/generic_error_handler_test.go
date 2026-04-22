@@ -19,6 +19,7 @@ package errorhandlers
 import (
 	"errors"
 	"net/url"
+	"slices"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -34,6 +35,25 @@ import (
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
+
+func renderHeaderValues(t *testing.T, entries []HeaderEntry, name string, vals map[string]any) []string {
+	t.Helper()
+
+	var rendered []string
+
+	for _, entry := range entries {
+		if entry.Name != name {
+			continue
+		}
+
+		value, err := entry.Value.Render(vals)
+		require.NoError(t, err)
+
+		rendered = append(rendered, value)
+	}
+
+	return rendered
+}
 
 func TestNewGenericErrorHandler(t *testing.T) {
 	t.Parallel()
@@ -75,7 +95,8 @@ foo: bar
 			config: []byte(`
 code: 418
 header:
-  X-Request-Host: "{{ .Request.URL.Host }}"
+  - X-Request-Host: "{{ .Request.URL.Host }}"
+  - X-Foo: bar
 body: "{{ .Values.foo }}"
 values:
   foo: bar
@@ -88,7 +109,7 @@ values:
 				assert.Equal(t, "with full valid configuration", eh.ID())
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, 418, eh.code)
-				assert.Len(t, eh.header, 1)
+				assert.Len(t, eh.header, 2)
 				assert.NotNil(t, eh.body)
 				assert.Len(t, eh.values, 1)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
@@ -103,12 +124,11 @@ values:
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, vals)
 
-				header, err := eh.header["X-Request-Host"].Render(map[string]any{
+				headers := renderHeaderValues(t, eh.header, "X-Request-Host", map[string]any{
 					"Request": &pipeline.Request{URL: &pipeline.URL{URL: *reqURL}},
 					"Values":  vals,
 				})
-				require.NoError(t, err)
-				assert.Equal(t, "foo.bar", header)
+				assert.Equal(t, []string{"foo.bar"}, headers)
 
 				body, err := eh.body.Render(map[string]any{"Values": vals})
 				require.NoError(t, err)
@@ -154,7 +174,7 @@ func TestGenericErrorHandlerCreateStep(t *testing.T) {
 			config: []byte(`
 code: 401
 header:
-  X-First: foo
+  - X-First: "{{ .Values.foo }}"
 body: bar
 values:
   foo: bar
@@ -170,7 +190,7 @@ values:
 			config: []byte(`
 code: 401
 header:
-  X-First: foo
+  - X-First: foo
 body: bar
 values:
   foo: bar
@@ -192,9 +212,7 @@ values:
 			},
 		},
 		"with malformed configuration": {
-			config: []byte(`
-code: 401
-`),
+			config:  []byte(`code: 401`),
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"code": "bad"}},
 			assert: func(t *testing.T, err error, _, _ *genericErrorHandler) {
 				t.Helper()
@@ -205,9 +223,7 @@ code: 401
 			},
 		},
 		"with invalid code reconfigured below allowed range": {
-			config: []byte(`
-code: 401
-`),
+			config:  []byte(`code: 401`),
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"code": 99}},
 			assert: func(t *testing.T, err error, _, _ *genericErrorHandler) {
 				t.Helper()
@@ -218,9 +234,7 @@ code: 401
 			},
 		},
 		"with invalid code reconfigured above allowed range": {
-			config: []byte(`
-code: 401
-`),
+			config:  []byte(`code: 401`),
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"code": 600}},
 			assert: func(t *testing.T, err error, _, _ *genericErrorHandler) {
 				t.Helper()
@@ -234,7 +248,7 @@ code: 401
 			config: []byte(`
 code: 401
 header:
-  X-First: foo
+  - X-First: foo
 body: "{{ .Values.foo }}"
 values:
   foo: bar
@@ -243,8 +257,8 @@ values:
 				ID: "baz",
 				Config: config.MechanismConfig{
 					"code": 403,
-					"header": map[string]any{
-						"X-Second": "{{ .Values.foo }}",
+					"header": []map[string]string{
+						{"X-Second": "{{ .Values.foo }}"},
 					},
 					"body": "{{ .Values.foo }}",
 					"values": map[string]any{
@@ -262,8 +276,12 @@ values:
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, 403, configured.code)
 				assert.Len(t, configured.header, 1)
-				assert.Contains(t, configured.header, "X-Second")
-				assert.NotContains(t, configured.header, "X-First")
+				assert.True(t, slices.ContainsFunc(configured.header, func(entry HeaderEntry) bool {
+					return entry.Name == "X-Second"
+				}))
+				assert.False(t, slices.ContainsFunc(configured.header, func(entry HeaderEntry) bool {
+					return entry.Name == "X-First"
+				}))
 				assert.NotEqual(t, prototype.body, configured.body)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
 				assert.Equal(t, prototype.Type(), configured.Type())
@@ -274,12 +292,11 @@ values:
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "baz"}, vals)
 
-				header, err := configured.header["X-Second"].Render(map[string]any{
+				headers := renderHeaderValues(t, configured.header, "X-Second", map[string]any{
 					"Request": nil,
 					"Values":  vals,
 				})
-				require.NoError(t, err)
-				assert.Equal(t, "baz", header)
+				assert.Equal(t, []string{"baz"}, headers)
 
 				body, err := configured.body.Render(map[string]any{"Values": vals})
 				require.NoError(t, err)
@@ -290,7 +307,7 @@ values:
 			config: []byte(`
 code: 401
 header:
-  X-First: foo
+  - X-First: "{{ .Values.foo }}"
 body: "{{ .Values.foo }}"
 values:
   foo: bar
@@ -393,7 +410,7 @@ code: 500
 			config: []byte(`
 code: 500
 header:
-  X-Error-Reason: blocked
+  - X-Error-Reason: blocked
 `),
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
@@ -404,7 +421,37 @@ header:
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
-					assert.Equal(t, map[string]string{"X-Error-Reason": "blocked"}, genErr.Header)
+					assert.Equal(t, map[string][]string{"X-Error-Reason": {"blocked"}}, genErr.Header)
+					assert.Empty(t, genErr.Body)
+					require.Error(t, genErr.Cause)
+					assert.Equal(t, "test error", genErr.Cause.Error())
+
+					return true
+				}))
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"with code and multiple header values": {
+			config: []byte(`
+code: 500
+header:
+  - Set-Cookie: a=1
+  - Set-Cookie: b=2
+`),
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil).Times(3)
+				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.GenericError) bool {
+					t.Helper()
+
+					assert.Equal(t, 500, genErr.Code)
+					assert.Equal(t, map[string][]string{"Set-Cookie": {"a=1", "b=2"}}, genErr.Header)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
@@ -469,7 +516,7 @@ values:
 			config: []byte(`
 code: 500
 header:
-  X-Foo: "{{ .Values.foo.bar }}"
+  - X-Foo: "{{ .Values.foo.bar }}"
 values:
   foo: bar
 `),
@@ -510,8 +557,8 @@ values:
 			config: []byte(`
 code: 451
 header:
-  X-Auth-Reason: "{{ .Values.reason }}"
-  X-Request-Host: "{{ .Request.URL.Host }}"
+  - X-Auth-Reason: "{{ .Values.reason }}"
+  - X-Request-Host: "{{ .Request.URL.Host }}"
 body: "{{ .Values.reason }} for {{ .Request.URL.Host }}"
 values:
   reason: blocked
@@ -521,6 +568,7 @@ values:
 
 				reqURL, err := url.Parse("https://foo.bar/baz")
 				require.NoError(t, err)
+
 				req := &pipeline.Request{URL: &pipeline.URL{URL: *reqURL}}
 
 				ctx.EXPECT().Request().Return(req).Times(4)
@@ -530,9 +578,9 @@ values:
 
 					assert.Equal(t, 451, genErr.Code)
 					assert.Equal(t, "blocked for foo.bar", genErr.Body)
-					assert.Equal(t, map[string]string{
-						"X-Auth-Reason":  "blocked",
-						"X-Request-Host": "foo.bar",
+					assert.Equal(t, map[string][]string{
+						"X-Auth-Reason":  {"blocked"},
+						"X-Request-Host": {"foo.bar"},
 					}, genErr.Header)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
