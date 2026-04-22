@@ -97,7 +97,7 @@ func (h *interceptor) customErrorResponse(ctx context.Context, err error) (any, 
 
 		headers := make([]*envoy_core.HeaderValueOption, 0)
 
-		for name, values := range genericError.Header {
+		for name, values := range genericError.Headers {
 			for _, value := range values {
 				headers = append(headers, &envoy_core.HeaderValueOption{
 					Header: &envoy_core.HeaderValue{

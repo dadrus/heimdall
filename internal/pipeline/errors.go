@@ -45,10 +45,10 @@ func (e *RedirectError) Is(target error) bool {
 }
 
 type GenericError struct {
-	Code   int
-	Header map[string][]string
-	Body   string
-	Cause  error
+	Code    int
+	Headers map[string][]string
+	Body    string
+	Cause   error
 }
 
 func (e *GenericError) Error() string { return "generic_error" }

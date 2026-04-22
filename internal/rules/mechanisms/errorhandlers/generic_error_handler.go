@@ -41,13 +41,13 @@ func init() {
 }
 
 type genericErrorHandler struct {
-	name   string
-	id     string
-	app    app.Context
-	code   int
-	header []HeaderEntry
-	body   template.Template
-	values values.Values
+	name    string
+	id      string
+	app     app.Context
+	code    int
+	headers []HeaderEntry
+	body    template.Template
+	values  values.Values
 }
 
 func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
@@ -58,10 +58,10 @@ func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]a
 		Msg("Creating error handler")
 
 	type Config struct {
-		Code   int               `mapstructure:"code"   validate:"required,gte=100,lt=600"`
-		Header []HeaderEntry     `mapstructure:"header"`
-		Body   template.Template `mapstructure:"body"`
-		Values values.Values     `mapstructure:"values"`
+		Code    int               `mapstructure:"code"    validate:"required,gte=100,lt=600"`
+		Headers []HeaderEntry     `mapstructure:"headers"`
+		Body    template.Template `mapstructure:"body"`
+		Values  values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -72,13 +72,13 @@ func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]a
 	}
 
 	return &genericErrorHandler{
-		name:   name,
-		id:     name,
-		app:    app,
-		code:   conf.Code,
-		header: conf.Header,
-		body:   conf.Body,
-		values: conf.Values,
+		name:    name,
+		id:      name,
+		app:     app,
+		code:    conf.Code,
+		headers: conf.Headers,
+		body:    conf.Body,
+		values:  conf.Values,
 	}, nil
 }
 
@@ -101,10 +101,10 @@ func (eh *genericErrorHandler) CreateStep(def types.StepDefinition) (pipeline.St
 	}
 
 	type Config struct {
-		Code   int               `mapstructure:"code"   validate:"omitempty,gte=100,lt=600"`
-		Header []HeaderEntry     `mapstructure:"header"`
-		Body   template.Template `mapstructure:"body"`
-		Values values.Values     `mapstructure:"values"`
+		Code    int               `mapstructure:"code"    validate:"omitempty,gte=100,lt=600"`
+		Headers []HeaderEntry     `mapstructure:"headers"`
+		Body    template.Template `mapstructure:"body"`
+		Values  values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -115,13 +115,13 @@ func (eh *genericErrorHandler) CreateStep(def types.StepDefinition) (pipeline.St
 	}
 
 	return &genericErrorHandler{
-		id:     x.IfThenElse(len(def.ID) == 0, eh.id, def.ID),
-		name:   eh.name,
-		app:    eh.app,
-		code:   x.IfThenElse(conf.Code != 0, conf.Code, eh.code),
-		header: x.IfThenElse(len(conf.Header) != 0, conf.Header, eh.header),
-		body:   x.IfThenElse(conf.Body != nil, conf.Body, eh.body),
-		values: eh.values.Merge(conf.Values),
+		id:      x.IfThenElse(len(def.ID) == 0, eh.id, def.ID),
+		name:    eh.name,
+		app:     eh.app,
+		code:    x.IfThenElse(conf.Code != 0, conf.Code, eh.code),
+		headers: x.IfThenElse(len(conf.Headers) != 0, conf.Headers, eh.headers),
+		body:    x.IfThenElse(conf.Body != nil, conf.Body, eh.body),
+		values:  eh.values.Merge(conf.Values),
 	}, nil
 }
 
@@ -152,10 +152,10 @@ func (eh *genericErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 	}
 
 	ctx.SetError(&pipeline.GenericError{
-		Code:   eh.code,
-		Header: headers,
-		Body:   body,
-		Cause:  ctx.Error(),
+		Code:    eh.code,
+		Headers: headers,
+		Body:    body,
+		Cause:   ctx.Error(),
 	})
 
 	return nil
@@ -167,12 +167,12 @@ func (eh *genericErrorHandler) renderHeaders(
 ) (map[string][]string, error) {
 	var headers map[string][]string
 
-	if len(eh.header) == 0 {
+	if len(eh.headers) == 0 {
 		return headers, nil
 	}
 
-	headers = make(map[string][]string, len(eh.header))
-	for _, he := range eh.header {
+	headers = make(map[string][]string, len(eh.headers))
+	for _, he := range eh.headers {
 		value, err := he.Value.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Values":  vals,

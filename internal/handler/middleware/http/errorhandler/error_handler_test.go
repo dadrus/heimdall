@@ -189,9 +189,9 @@ func TestHandlerHandle(t *testing.T) {
 		"generic error with body": {
 			handler: New(),
 			err: &pipeline.GenericError{
-				Code:   http.StatusOK,
-				Body:   `{"foo": "bar"}`,
-				Header: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
+				Code:    http.StatusOK,
+				Body:    `{"foo": "bar"}`,
+				Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
 			},
 			expCode:   http.StatusOK,
 			expBody:   `{"foo": "bar"}`,
@@ -201,7 +201,7 @@ func TestHandlerHandle(t *testing.T) {
 			handler: New(),
 			err: &pipeline.GenericError{
 				Code: http.StatusOK,
-				Header: map[string][]string{
+				Headers: map[string][]string{
 					"Set-Cookie": {"a=1", "b=2"},
 				},
 			},
@@ -219,9 +219,9 @@ func TestHandlerHandle(t *testing.T) {
 		"generic error verbose": {
 			handler: New(WithVerboseErrors(true)),
 			err: &pipeline.GenericError{
-				Code:   http.StatusAccepted,
-				Body:   `{"foo": "bar"}`,
-				Header: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
+				Code:    http.StatusAccepted,
+				Body:    `{"foo": "bar"}`,
+				Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
 			},
 			expCode:   http.StatusAccepted,
 			expBody:   `{"foo": "bar"}`,

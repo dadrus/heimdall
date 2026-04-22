@@ -200,9 +200,9 @@ func TestErrorInterceptor(t *testing.T) {
 		"generic error": {
 			interceptor: New(),
 			err: &pipeline.GenericError{
-				Code:   http.StatusUnprocessableEntity,
-				Header: map[string][]string{"X-Error-Reason": {"blocked"}},
-				Body:   `{"error":"denied"}`,
+				Code:    http.StatusUnprocessableEntity,
+				Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
+				Body:    `{"error":"denied"}`,
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusUnprocessableEntity,
@@ -218,9 +218,9 @@ func TestErrorInterceptor(t *testing.T) {
 		"generic error with multiple header values": {
 			interceptor: New(),
 			err: &pipeline.GenericError{
-				Code:   http.StatusTooManyRequests,
-				Header: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
-				Body:   "rate limited",
+				Code:    http.StatusTooManyRequests,
+				Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
+				Body:    "rate limited",
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusTooManyRequests,

@@ -84,7 +84,7 @@ foo: bar
 				assert.Equal(t, "with unsupported fields", eh.ID())
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, 500, eh.code)
-				assert.Nil(t, eh.header)
+				assert.Nil(t, eh.headers)
 				assert.Nil(t, eh.body)
 				assert.Nil(t, eh.values)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
@@ -94,7 +94,7 @@ foo: bar
 		"with full valid configuration": {
 			config: []byte(`
 code: 418
-header:
+headers:
   - X-Request-Host: "{{ .Request.URL.Host }}"
   - X-Foo: bar
 body: "{{ .Values.foo }}"
@@ -109,7 +109,7 @@ values:
 				assert.Equal(t, "with full valid configuration", eh.ID())
 				assert.Equal(t, eh.Name(), eh.ID())
 				assert.Equal(t, 418, eh.code)
-				assert.Len(t, eh.header, 2)
+				assert.Len(t, eh.headers, 2)
 				assert.NotNil(t, eh.body)
 				assert.Len(t, eh.values, 1)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
@@ -124,7 +124,7 @@ values:
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, vals)
 
-				headers := renderHeaderValues(t, eh.header, "X-Request-Host", map[string]any{
+				headers := renderHeaderValues(t, eh.headers, "X-Request-Host", map[string]any{
 					"Request": &pipeline.Request{URL: &pipeline.URL{URL: *reqURL}},
 					"Values":  vals,
 				})
@@ -173,7 +173,7 @@ func TestGenericErrorHandlerCreateStep(t *testing.T) {
 		"no new configuration and no step ID": {
 			config: []byte(`
 code: 401
-header:
+headers:
   - X-First: "{{ .Values.foo }}"
 body: bar
 values:
@@ -189,7 +189,7 @@ values:
 		"no new configuration but with step ID": {
 			config: []byte(`
 code: 401
-header:
+headers:
   - X-First: foo
 body: bar
 values:
@@ -204,7 +204,7 @@ values:
 				assert.Equal(t, "bar", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.code, configured.code)
-				assert.Equal(t, prototype.header, configured.header)
+				assert.Equal(t, prototype.headers, configured.headers)
 				assert.Equal(t, prototype.body, configured.body)
 				assert.Equal(t, prototype.values, configured.values)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
@@ -247,7 +247,7 @@ values:
 		"with all fields reconfigured": {
 			config: []byte(`
 code: 401
-header:
+headers:
   - X-First: foo
 body: "{{ .Values.foo }}"
 values:
@@ -257,7 +257,7 @@ values:
 				ID: "baz",
 				Config: config.MechanismConfig{
 					"code": 403,
-					"header": []map[string]string{
+					"headers": []map[string]string{
 						{"X-Second": "{{ .Values.foo }}"},
 					},
 					"body": "{{ .Values.foo }}",
@@ -275,11 +275,11 @@ values:
 				assert.Equal(t, "baz", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, 403, configured.code)
-				assert.Len(t, configured.header, 1)
-				assert.True(t, slices.ContainsFunc(configured.header, func(entry HeaderEntry) bool {
+				assert.Len(t, configured.headers, 1)
+				assert.True(t, slices.ContainsFunc(configured.headers, func(entry HeaderEntry) bool {
 					return entry.Name == "X-Second"
 				}))
-				assert.False(t, slices.ContainsFunc(configured.header, func(entry HeaderEntry) bool {
+				assert.False(t, slices.ContainsFunc(configured.headers, func(entry HeaderEntry) bool {
 					return entry.Name == "X-First"
 				}))
 				assert.NotEqual(t, prototype.body, configured.body)
@@ -292,7 +292,7 @@ values:
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "baz"}, vals)
 
-				headers := renderHeaderValues(t, configured.header, "X-Second", map[string]any{
+				headers := renderHeaderValues(t, configured.headers, "X-Second", map[string]any{
 					"Request": nil,
 					"Values":  vals,
 				})
@@ -306,7 +306,7 @@ values:
 		"with values reconfigured only": {
 			config: []byte(`
 code: 401
-header:
+headers:
   - X-First: "{{ .Values.foo }}"
 body: "{{ .Values.foo }}"
 values:
@@ -326,7 +326,7 @@ values:
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, prototype.code, configured.code)
-				assert.Equal(t, prototype.header, configured.header)
+				assert.Equal(t, prototype.headers, configured.headers)
 				assert.Equal(t, prototype.body, configured.body)
 				assert.Equal(t, types.KindErrorHandler, configured.Kind())
 				assert.Equal(t, prototype.Type(), configured.Type())
@@ -392,7 +392,7 @@ code: 500
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
-					assert.Nil(t, genErr.Header)
+					assert.Nil(t, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
@@ -409,7 +409,7 @@ code: 500
 		"with code and header": {
 			config: []byte(`
 code: 500
-header:
+headers:
   - X-Error-Reason: blocked
 `),
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
@@ -421,7 +421,7 @@ header:
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
-					assert.Equal(t, map[string][]string{"X-Error-Reason": {"blocked"}}, genErr.Header)
+					assert.Equal(t, map[string][]string{"X-Error-Reason": {"blocked"}}, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
@@ -438,7 +438,7 @@ header:
 		"with code and multiple header values": {
 			config: []byte(`
 code: 500
-header:
+headers:
   - Set-Cookie: a=1
   - Set-Cookie: b=2
 `),
@@ -451,7 +451,7 @@ header:
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
-					assert.Equal(t, map[string][]string{"Set-Cookie": {"a=1", "b=2"}}, genErr.Header)
+					assert.Equal(t, map[string][]string{"Set-Cookie": {"a=1", "b=2"}}, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
@@ -479,7 +479,7 @@ body: blocked
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
-					assert.Nil(t, genErr.Header)
+					assert.Nil(t, genErr.Headers)
 					assert.Equal(t, "blocked", genErr.Body)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
@@ -515,7 +515,7 @@ values:
 		"with header rendering error": {
 			config: []byte(`
 code: 500
-header:
+headers:
   - X-Foo: "{{ .Values.foo.bar }}"
 values:
   foo: bar
@@ -556,7 +556,7 @@ values:
 		"with all rendered attributes": {
 			config: []byte(`
 code: 451
-header:
+headers:
   - X-Auth-Reason: "{{ .Values.reason }}"
   - X-Request-Host: "{{ .Request.URL.Host }}"
 body: "{{ .Values.reason }} for {{ .Request.URL.Host }}"
@@ -581,7 +581,7 @@ values:
 					assert.Equal(t, map[string][]string{
 						"X-Auth-Reason":  {"blocked"},
 						"X-Request-Host": {"foo.bar"},
-					}, genErr.Header)
+					}, genErr.Headers)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
 
