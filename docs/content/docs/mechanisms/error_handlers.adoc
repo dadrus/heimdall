@@ -123,10 +123,10 @@ config:
 
 ====
 
-.Agentic MCP gateway error response
+.Agentic MCP or A2A gateway error response
 ====
 
-The error handler below emits a JSON-RPC error payload suitable for scenarios in which heimdall acts as an MCP gateway.
+The example below is shown for an MCP gateway scenario and emits a JSON-RPC error payload. For A2A gateway scenarios, the configuration is more or less identical; in most cases only protocol-specific error codes/messages need to be adjusted.
 
 [source, yaml]
 ----
@@ -147,7 +147,7 @@ config:
     }
   values:
     errorCode: -32603
-    message: "something went wrong"
+    message: "internal error"
 ----
 
 In your rule, you would then use it like this:
@@ -161,12 +161,6 @@ on_error:
       values:
         errorCode: -32001
         message: unauthorized
-  - if: type(Error) == authorization_error
-    error_handler: mcp_error
-    config:
-      values:
-        errorCode: -32003
-        message: forbidden
 ----
 
 ====
