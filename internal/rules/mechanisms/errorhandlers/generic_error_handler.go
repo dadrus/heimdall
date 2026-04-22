@@ -58,7 +58,7 @@ func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]a
 		Msg("Creating error handler")
 
 	type Config struct {
-		Code   int                          `mapstructure:"code"`
+		Code   int                          `mapstructure:"code"   validate:"required,gte=100,lt=600"`
 		Header map[string]template.Template `mapstructure:"header"`
 		Body   template.Template            `mapstructure:"body"`
 		Values values.Values                `mapstructure:"values"`
@@ -101,7 +101,7 @@ func (eh *genericErrorHandler) CreateStep(def types.StepDefinition) (pipeline.St
 	}
 
 	type Config struct {
-		Code   int                          `mapstructure:"code"`
+		Code   int                          `mapstructure:"code"   validate:"omitempty,gte=100,lt=600"`
 		Header map[string]template.Template `mapstructure:"header"`
 		Body   template.Template            `mapstructure:"body"`
 		Values values.Values                `mapstructure:"values"`
@@ -141,34 +141,64 @@ func (eh *genericErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 			CausedBy(err)
 	}
 
-	body, err := eh.body.Render(map[string]any{
-		"Request": ctx.Request(),
-		"Values":  vals,
-	})
+	headers, err := eh.renderHeaders(ctx, vals)
 	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed to render body").
-			CausedBy(err)
+		return err
 	}
 
-	headers := make(map[string]string, len(eh.header))
-	for key, ht := range eh.header {
-		header, err := ht.Render(map[string]any{
-			"Request": ctx.Request(),
-			"Values":  vals,
-		})
-		if err != nil {
-			return errorchain.NewWithMessage(pipeline.ErrInternal, "failed to render header '"+key+"'").
-				CausedBy(err)
-		}
-
-		headers[key] = header
+	body, err := eh.renderBody(ctx, vals)
+	if err != nil {
+		return err
 	}
 
 	ctx.SetError(&pipeline.GenericError{
 		Code:   eh.code,
 		Header: headers,
 		Body:   body,
+		Cause:  ctx.Error(),
 	})
 
 	return nil
+}
+
+func (eh *genericErrorHandler) renderHeaders(ctx pipeline.Context, vals map[string]string) (map[string]string, error) {
+	var headers map[string]string
+
+	if len(eh.header) == 0 {
+		return headers, nil
+	}
+
+	headers = make(map[string]string, len(eh.header))
+	for key, ht := range eh.header {
+		header, err := ht.Render(map[string]any{
+			"Request": ctx.Request(),
+			"Values":  vals,
+		})
+		if err != nil {
+			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
+				"failed to render header '"+key+"'").
+				CausedBy(err)
+		}
+
+		headers[key] = header
+	}
+
+	return headers, nil
+}
+
+func (eh *genericErrorHandler) renderBody(ctx pipeline.Context, vals map[string]string) (string, error) {
+	if eh.body == nil {
+		return "", nil
+	}
+
+	body, err := eh.body.Render(map[string]any{
+		"Request": ctx.Request(),
+		"Values":  vals,
+	})
+	if err != nil {
+		return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to render body").
+			CausedBy(err)
+	}
+
+	return body, err
 }
