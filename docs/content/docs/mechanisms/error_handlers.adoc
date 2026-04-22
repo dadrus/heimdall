@@ -177,7 +177,7 @@ This error handler mechanism allows redirecting the client to another endpoint, 
 
 [WARNING]
 ====
-The `redirect` error handler is deprecated and will be removed in `v0.19.0` version. Migrate to the `generic` error handler instead.
+The `redirect` error handler is deprecated and will be removed in heimdall `v0.19.0`. Migrate to the `generic` error handler instead.
 
 Equivalent configuration using `generic` error handler:
 
@@ -209,7 +209,7 @@ The code to be used for the redirect. Defaults to `302 Found`. Both `301 Moved P
 .Redirect error handler configuration
 ====
 
-The redirect error handler below is configured to kick in if the error is either `authentication_error` or `authorization_error` and the request come from a browser (HTTP `Accept` header contains `text/html`). If this condition holds true it will redirect the client to `\https://127.0.0.1:4433/self-service/login/browser` and add the `return_to` query parameter set to the URL encoded value of the current url as well.
+The redirect error handler below returns a redirect to `\https://127.0.0.1:4433/self-service/login/browser` with the `return_to` query parameter set to the URL encoded value of the current URL.
 
 So, e.g. if heimdall was handling the request for `\https://my-service.local/foo` and run into an error like described above, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`
 
@@ -221,6 +221,15 @@ config:
   to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 ----
 
+To execute this error handler, reference it in the error pipeline of your rule. The optional `if` clause defines under which conditions it is applied, for example for browser-based authentication failures:
+
+[source, yaml]
+----
+on_error:
+  - if: type(Error) == authentication_error && Request.Header("Accept").contains("text/html")
+    error_handler: authenticate_with_kratos
+----
+
 ====
 
 
@@ -230,7 +239,7 @@ This error handler mechanism responds with HTTP `401 Unauthorized` and a `WWW-Au
 
 [WARNING]
 ====
-The `www_authenticate` error handler is deprecated and will be removed in `v0.19.0` version. Migrate to the `generic` error handler instead.
+The `www_authenticate` error handler is deprecated and will be removed in heimdall `v0.19.0`. Migrate to the `generic` error handler instead.
 
 Equivalent configuration using `generic` error handler:
 
@@ -247,7 +256,7 @@ config:
 
 To enable the usage of this error handler, you have to set the `type` property to `www_authenticate`.
 
-Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
+Configuration is mandatory by making use of the `config` property supporting the following settings:
 
 * *`realm`*: _string_ (optional, overridable)
 +
@@ -264,6 +273,15 @@ id: basic_authenticate
 type: www_authenticate
 config:
   realm: "My fancy app"
+----
+
+To execute this error handler, reference it in the error pipeline of your rule. The optional `if` clause defines under which conditions it is applied:
+
+[source, yaml]
+----
+on_error:
+  - if: type(Error) == authentication_error
+    error_handler: basic_authenticate
 ----
 
 ====
