@@ -125,7 +125,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, &pipeline.RedirectError{
-					Message:    "test redirect",
 					Code:       http.StatusFound,
 					RedirectTo: "http://foo.bar",
 				})

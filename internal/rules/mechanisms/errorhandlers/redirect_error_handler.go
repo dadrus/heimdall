@@ -106,9 +106,9 @@ func (eh *redirectErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject
 	}
 
 	ctx.SetError(&pipeline.RedirectError{
-		Message:    "redirect",
 		Code:       eh.code,
 		RedirectTo: toURL,
+		Cause:      ctx.Error(),
 	})
 
 	return nil
