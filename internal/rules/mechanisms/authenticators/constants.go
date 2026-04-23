@@ -25,4 +25,9 @@ const (
 	AuthenticatorGeneric             = "generic"
 )
 
+const (
+	wwwAuthenticateHeader      = "WWW-Authenticate"
+	defaultAuthenticationRealm = "Please authenticate"
+)
+
 const DefaultPrincipalName = "default"
