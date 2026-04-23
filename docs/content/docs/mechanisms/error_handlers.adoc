@@ -83,7 +83,7 @@ config:
 
 The generic error handler below responds with HTTP `302 Found` and sets `Location` to `\https://127.0.0.1:4433/self-service/login/browser` with the `return_to` query parameter set to the URL encoded value of the current URL.
 
-So, e.g. if heimdall handles a request for `\https://my-service.local/foo` and runs into an error like described above, the HTTP response will have code `302 Found` and `Location` set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`.
+So, e.g. if heimdall handles a request for `\https://my-service.local/foo` and this handler is selected by the error pipeline, the HTTP response will have code `302 Found` and `Location` set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`.
 
 [source, yaml]
 ----
@@ -205,7 +205,7 @@ The code to be used for the redirect. Defaults to `302 Found`. Both `301 Moved P
 
 The redirect error handler below returns a redirect to `\https://127.0.0.1:4433/self-service/login/browser` with the `return_to` query parameter set to the URL encoded value of the current URL.
 
-So, e.g. if heimdall was handling the request for `\https://my-service.local/foo` and run into an error like described above, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`
+So, e.g. if heimdall handles a request for `\https://my-service.local/foo` and this handler is selected by the error pipeline, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`
 
 [source, yaml]
 ----
