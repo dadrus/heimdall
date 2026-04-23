@@ -68,8 +68,8 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 
 		rw.Header().Set("Location", redirectError.RedirectTo)
 		rw.WriteHeader(redirectError.Code)
-	case errors.Is(err, &pipeline.GenericError{}):
-		var genericError *pipeline.GenericError
+	case errors.Is(err, &pipeline.ResponseError{}):
+		var genericError *pipeline.ResponseError
 
 		errors.As(err, &genericError)
 

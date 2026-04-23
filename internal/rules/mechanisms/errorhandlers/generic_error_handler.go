@@ -151,12 +151,14 @@ func (eh *genericErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 		return err
 	}
 
-	ctx.SetError(&pipeline.GenericError{
-		Code:    eh.code,
-		Headers: headers,
-		Body:    body,
-		Cause:   ctx.Error(),
-	})
+	ctx.SetError(pipeline.NewResponseError(
+		ctx.Error(),
+		pipeline.ErrorResponse{
+			Code:    eh.code,
+			Headers: headers,
+			Body:    body,
+		},
+	))
 
 	return nil
 }

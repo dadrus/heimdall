@@ -25,19 +25,29 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type testErrorResponseDecorator struct {
+	code    int
+	headers map[string][]string
+	body    string
+}
+
+func (d testErrorResponseDecorator) DecorateErrorResponse(er *ErrorResponse) {
+	er.Code = d.code
+	er.Headers = d.headers
+	er.Body = d.body
+}
+
 func TestErrorContext(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
 		err             error
 		expectedContext any
-		expectedOK      bool
 	}{
 		"extracts context from errorchain": {
 			err: errorchain.New(ErrAuthentication).
 				WithErrorContext("test-mechanism"),
 			expectedContext: "test-mechanism",
-			expectedOK:      true,
 		},
 		"extracts context from wrapped errorchain": {
 			err: errors.Join(
@@ -46,16 +56,67 @@ func TestErrorContext(t *testing.T) {
 					WithErrorContext(map[string]string{"foo": "bar"}),
 			),
 			expectedContext: map[string]string{"foo": "bar"},
-			expectedOK:      true,
 		},
 		"returns false if no context carrier": {
 			err: ErrInternal,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			context, ok := ErrorContext(tc.err)
-			assert.Equal(t, tc.expectedOK, ok)
+			context := errorContext(tc.err)
 			assert.Equal(t, tc.expectedContext, context)
+		})
+	}
+}
+
+func TestNewResponseError(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		cause            error
+		input            []ErrorResponse
+		expectedResponse ErrorResponse
+	}{
+		"without explicit response": {
+			cause:            ErrInternal,
+			expectedResponse: ErrorResponse{},
+		},
+		"with explicit response": {
+			cause: ErrInternal,
+			input: []ErrorResponse{{
+				Code:    500,
+				Headers: map[string][]string{"X-Error": {"foo"}},
+				Body:    "bar",
+			}},
+			expectedResponse: ErrorResponse{
+				Code:    500,
+				Headers: map[string][]string{"X-Error": {"foo"}},
+				Body:    "bar",
+			},
+		},
+		"applies decorator from cause context": {
+			cause: errorchain.New(ErrAuthentication).WithErrorContext(testErrorResponseDecorator{
+				code:    401,
+				headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
+				body:    "denied",
+			}),
+			input: []ErrorResponse{{
+				Code:    500,
+				Headers: map[string][]string{"X-Error": {"foo"}},
+				Body:    "bar",
+			}},
+			expectedResponse: ErrorResponse{
+				Code:    401,
+				Headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
+				Body:    "denied",
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			responseError := NewResponseError(tc.cause, tc.input...)
+
+			assert.Equal(t, tc.expectedResponse, responseError.ErrorResponse)
+			assert.Equal(t, tc.expectedResponse, responseError.Response())
+			assert.ErrorIs(t, responseError.Cause, tc.cause)
 		})
 	}
 }

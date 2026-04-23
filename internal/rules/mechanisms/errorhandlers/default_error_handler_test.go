@@ -21,6 +21,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -28,26 +29,88 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
+
+type testResponseDecorator struct {
+	code    int
+	headers map[string][]string
+	body    string
+}
+
+func (d testResponseDecorator) DecorateErrorResponse(er *pipeline.ErrorResponse) {
+	er.Code = d.code
+	er.Headers = d.headers
+	er.Body = d.body
+}
 
 func TestDefaultErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Logger().Return(log.Logger)
+	for uc, tc := range map[string]struct {
+		cause            error
+		configureContext func(t *testing.T, ctx *mocks.ContextMock, cause error)
+	}{
+		"without decorator keeps original error": {
+			cause: pipeline.ErrAuthentication,
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock, cause error) {
+				t.Helper()
 
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Context().Return(t.Context())
+				ctx.EXPECT().Error().Return(cause)
+				ctx.EXPECT().SetError(mock.MatchedBy(func(response *pipeline.ResponseError) bool {
+					t.Helper()
 
-	mech, err := newDefaultErrorHandler(appCtx, "foo", nil)
-	require.NoError(t, err)
+					assert.Equal(t, 0, response.Code)
+					assert.Nil(t, response.Headers)
+					assert.Empty(t, response.Body)
+					assert.ErrorIs(t, response.Cause, pipeline.ErrAuthentication)
 
-	step, err := mech.CreateStep(types.StepDefinition{ID: ""})
-	require.NoError(t, err)
+					return true
+				}))
+			},
+		},
+		"response decorator from error context is applied": {
+			cause: errorchain.New(pipeline.ErrAuthentication).WithErrorContext(testResponseDecorator{
+				code:    418,
+				headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
+				body:    "custom body",
+			}),
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock, cause error) {
+				t.Helper()
 
-	// WHEN & THEN
-	require.NoError(t, step.Execute(ctx, nil))
+				ctx.EXPECT().Error().Return(cause)
+				ctx.EXPECT().SetError(mock.MatchedBy(func(response *pipeline.ResponseError) bool {
+					t.Helper()
+
+					assert.Equal(t, 418, response.Code)
+					assert.Equal(t, map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}}, response.Headers)
+					assert.Equal(t, "custom body", response.Body)
+					assert.ErrorIs(t, response.Cause, pipeline.ErrAuthentication)
+
+					return true
+				}))
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			ctx := mocks.NewContextMock(t)
+			ctx.EXPECT().Context().Return(t.Context())
+			tc.configureContext(t, ctx, tc.cause)
+
+			mech, err := newDefaultErrorHandler(appCtx, "foo", nil)
+			require.NoError(t, err)
+
+			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			require.NoError(t, err)
+
+			// WHEN & THEN
+			require.NoError(t, step.Execute(ctx, nil))
+		})
+	}
 }
 
 func TestDefaultErrorHandlerCreateStep(t *testing.T) {

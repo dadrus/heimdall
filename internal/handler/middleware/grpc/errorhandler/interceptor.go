@@ -89,8 +89,8 @@ func (h *interceptor) customErrorResponse(ctx context.Context, err error) (any, 
 				},
 			},
 		}, true
-	case errors.Is(err, &pipeline.GenericError{}):
-		var genericError *pipeline.GenericError
+	case errors.Is(err, &pipeline.ResponseError{}):
+		var genericError *pipeline.ResponseError
 
 		errors.As(err, &genericError)
 		accesscontext.SetError(ctx, genericError.Cause)

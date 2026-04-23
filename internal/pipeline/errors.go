@@ -50,29 +50,35 @@ type ErrorResponse struct {
 	Body    string
 }
 
-type ErrorResponseDecorator interface {
-	DecorateErrorResponse(er *ErrorResponse)
-}
-
-type ErrorContextCarrier interface {
-	ErrorContext() any
-}
-
-func ErrorContext(err error) (any, bool) {
-	var contextCarrier ErrorContextCarrier
-
-	if !errors.As(err, &contextCarrier) {
-		return nil, false
+func errorContext(err error) any {
+	type errorContextCarrier interface {
+		ErrorContext() any
 	}
 
-	return contextCarrier.ErrorContext(), true
+	var contextCarrier errorContextCarrier
+
+	if !errors.As(err, &contextCarrier) {
+		return nil
+	}
+
+	return contextCarrier.ErrorContext()
 }
 
 type ResponseError struct {
-	Code    int
-	Headers map[string][]string
-	Body    string
-	Cause   error
+	ErrorResponse
+
+	Cause error
+}
+
+func NewResponseError(cause error, response ...ErrorResponse) *ResponseError {
+	responseError := &ResponseError{Cause: cause}
+	if len(response) != 0 {
+		responseError.ErrorResponse = response[0]
+	}
+
+	responseError.decorate()
+
+	return responseError
 }
 
 func (e *ResponseError) Error() string { return "generic_error" }
@@ -84,11 +90,23 @@ func (e *ResponseError) Is(target error) bool {
 func (e *ResponseError) Unwrap() error { return e.Cause }
 
 func (e *ResponseError) Response() ErrorResponse {
-	return ErrorResponse{
-		Code:    e.Code,
-		Headers: e.Headers,
-		Body:    e.Body,
-	}
+	return e.ErrorResponse
 }
 
-type GenericError = ResponseError
+func (e *ResponseError) decorate() {
+	type errorResponseDecorator interface {
+		DecorateErrorResponse(er *ErrorResponse)
+	}
+
+	errContext := errorContext(e.Cause)
+	if errContext == nil {
+		return
+	}
+
+	decorator, ok := errContext.(errorResponseDecorator)
+	if !ok {
+		return
+	}
+
+	decorator.DecorateErrorResponse(&e.ErrorResponse)
+}
