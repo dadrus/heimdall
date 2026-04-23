@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"net/http"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -31,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
@@ -50,14 +52,16 @@ func init() {
 }
 
 type basicAuthAuthenticator struct {
-	name            string
-	id              string
-	principalName   string
-	app             app.Context
-	userID          string
-	password        string
-	emptyAttributes map[string]any
-	ads             extractors.HeaderValueExtractStrategy
+	name                  string
+	id                    string
+	principalName         string
+	app                   app.Context
+	userID                string
+	password              string
+	realm                 string
+	errorSignalingEnabled bool
+	emptyAttributes       map[string]any
+	ads                   extractors.HeaderValueExtractStrategy
 }
 
 func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
@@ -68,8 +72,12 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		Msg("Creating authenticator")
 
 	type Config struct {
-		UserID   string `mapstructure:"user_id"  validate:"required"`
-		Password string `mapstructure:"password" validate:"required"`
+		UserID         string `mapstructure:"user_id"  validate:"required"`
+		Password       string `mapstructure:"password" validate:"required"`
+		ErrorSignaling struct {
+			Enabled bool   `mapstructure:"enabled"`
+			Realm   string `mapstructure:"realm"`
+		} `mapstructure:"error_signaling"`
 	}
 
 	var conf Config
@@ -79,12 +87,18 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 	}
 
 	auth := basicAuthAuthenticator{
-		name:            name,
-		id:              name,
-		app:             app,
-		principalName:   DefaultPrincipalName,
-		emptyAttributes: make(map[string]any),
-		ads:             extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
+		name:                  name,
+		id:                    name,
+		app:                   app,
+		principalName:         DefaultPrincipalName,
+		emptyAttributes:       make(map[string]any),
+		ads:                   extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
+		errorSignalingEnabled: conf.ErrorSignaling.Enabled,
+		realm: x.IfThenElse(
+			len(conf.ErrorSignaling.Realm) != 0,
+			conf.ErrorSignaling.Realm,
+			defaultAuthenticationRealm,
+		),
 	}
 
 	// rewrite user id and password as hashes to mitigate potential side-channel attacks
@@ -174,8 +188,11 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 	}
 
 	type Config struct {
-		UserID   string `mapstructure:"user_id"`
-		Password string `mapstructure:"password"`
+		UserID         string `mapstructure:"user_id"`
+		Password       string `mapstructure:"password"`
+		ErrorSignaling struct {
+			Realm string `mapstructure:"realm"`
+		} `mapstructure:"error_signaling"`
 	}
 
 	var conf Config
@@ -185,12 +202,18 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 	}
 
 	return &basicAuthAuthenticator{
-		app:             a.app,
-		name:            a.name,
-		id:              x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
-		principalName:   x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
-		emptyAttributes: a.emptyAttributes,
-		ads:             a.ads,
+		app:                   a.app,
+		name:                  a.name,
+		id:                    x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName:         x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		emptyAttributes:       a.emptyAttributes,
+		ads:                   a.ads,
+		errorSignalingEnabled: a.errorSignalingEnabled,
+		realm: x.IfThenElse(
+			len(conf.ErrorSignaling.Realm) == 0,
+			a.realm,
+			conf.ErrorSignaling.Realm,
+		),
 		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()
@@ -210,6 +233,21 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 				return a.password
 			}),
 	}, nil
+}
+
+func (a *basicAuthAuthenticator) DecorateErrorResponse(_ error, er *pipeline.ErrorResponse) {
+	if !a.errorSignalingEnabled {
+		return
+	}
+
+	er.Code = http.StatusUnauthorized
+
+	er.AddHeader(wwwAuthenticateHeader,
+		httpx.NewHeader(
+			httpx.WithPrefix("Basic"),
+			httpx.WithKeyValue("realm", a.realm),
+		),
+	)
 }
 
 func (a *basicAuthAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
