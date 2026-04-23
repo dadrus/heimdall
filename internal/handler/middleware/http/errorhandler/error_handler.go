@@ -48,6 +48,7 @@ type errorHandler struct {
 //nolint:cyclop
 func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
 	ctx := req.Context()
+	logger := zerolog.Ctx(ctx)
 
 	switch {
 	case errors.Is(err, pipeline.ErrAuthentication):
@@ -82,14 +83,12 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 
 		if len(genericError.Body) != 0 {
 			if _, err := rw.Write(stringx.ToBytes(genericError.Body)); err != nil {
-				logger := zerolog.Ctx(ctx)
 				logger.Error().Err(err).Msg("Internal error occurred")
 			}
 		}
 
 		err = genericError.Cause
 	default:
-		logger := zerolog.Ctx(ctx)
 		logger.Error().Err(err).Msg("Internal error occurred")
 
 		h.onInternalError(rw, req, err)
