@@ -51,14 +51,10 @@ type redirectErrorHandler struct {
 
 func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
-	logger.Info().
-		Str("_type", ErrorHandlerRedirect).
-		Str("_name", name).
-		Msg("Creating error handler")
 	logger.Warn().
 		Str("_type", ErrorHandlerRedirect).
 		Str("_name", name).
-		Msg("Error handler is deprecated and will be removed in a future release. " +
+		Msg("Creating deprecated error handler which will be removed in a future release. " +
 			"Migrate to 'generic' error handler instead.")
 
 	type Config struct {
