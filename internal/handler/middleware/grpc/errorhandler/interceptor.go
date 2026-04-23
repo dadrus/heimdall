@@ -48,6 +48,12 @@ type interceptor struct {
 	opts
 }
 
+func hasCustomResponse(responseError *pipeline.ResponseError) bool {
+	return responseError.Code != 0 ||
+		len(responseError.Headers) != 0 ||
+		len(responseError.Body) != 0
+}
+
 func (h *interceptor) intercept(
 	ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) {
@@ -56,76 +62,65 @@ func (h *interceptor) intercept(
 		return res, nil
 	}
 
-	if resp, ok := h.customErrorResponse(ctx, err); ok {
+	if resp, cause, handled := h.handleCustomError(ctx, err); handled {
+		return resp, nil
+	} else {
+		err = cause
+	}
+
+	if resp, handled := h.handleRedirectError(ctx, err); handled {
 		return resp, nil
 	}
 
-	return h.defaultErrorResponse(ctx, err, acceptType(req))
+	return h.handleDefaultErrors(ctx, err, acceptType(req))
 }
 
-func (h *interceptor) customErrorResponse(ctx context.Context, err error) (any, bool) {
-	switch {
-	case errors.Is(err, &pipeline.RedirectError{}):
-		var redirectError *pipeline.RedirectError
-
-		errors.As(err, &redirectError)
-		accesscontext.SetError(ctx, redirectError.Cause)
-
-		return &envoy_auth.CheckResponse{
-			Status: &status.Status{Code: int32(codes.FailedPrecondition)},
-			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-				DeniedResponse: &envoy_auth.DeniedHttpResponse{
-					//nolint:gosec
-					// no integer overflow during conversion possible
-					Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(redirectError.Code)},
-					Headers: []*envoy_core.HeaderValueOption{
-						{
-							Header: &envoy_core.HeaderValue{
-								Key:   "Location",
-								Value: redirectError.RedirectTo,
-							},
-						},
-					},
-				},
-			},
-		}, true
-	case errors.Is(err, &pipeline.ResponseError{}):
-		var genericError *pipeline.ResponseError
-
-		errors.As(err, &genericError)
-		accesscontext.SetError(ctx, genericError.Cause)
-
-		headers := make([]*envoy_core.HeaderValueOption, 0)
-
-		for name, values := range genericError.Headers {
-			for _, value := range values {
-				headers = append(headers, &envoy_core.HeaderValueOption{
-					Header: &envoy_core.HeaderValue{
-						Key:   name,
-						Value: value,
-					},
-				})
-			}
-		}
-
-		return &envoy_auth.CheckResponse{
-			Status: &status.Status{Code: int32(codes.FailedPrecondition)},
-			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-				DeniedResponse: &envoy_auth.DeniedHttpResponse{
-					//nolint:gosec
-					// no integer overflow during conversion possible
-					Status:  &envoy_type.HttpStatus{Code: envoy_type.StatusCode(genericError.Code)},
-					Headers: headers,
-					Body:    genericError.Body,
-				},
-			},
-		}, true
+func (h *interceptor) handleCustomError(ctx context.Context, err error) (any, error, bool) {
+	responseError, ok := errors.AsType[*pipeline.ResponseError](err)
+	if !ok {
+		return nil, err, false
 	}
 
-	return nil, false
+	if !hasCustomResponse(responseError) {
+		return nil, responseError.Cause, false
+	}
+
+	accesscontext.SetError(ctx, responseError.Cause)
+
+	return buildDeniedResponse(
+		//nolint:gosec
+		// no integer overflow during conversion possible
+		envoy_type.StatusCode(responseError.Code),
+		buildHeaderOptions(responseError.Headers),
+		responseError.Body,
+	), nil, true
 }
 
-func (h *interceptor) defaultErrorResponse(ctx context.Context, err error, mimeType string) (any, error) {
+func (h *interceptor) handleRedirectError(ctx context.Context, err error) (any, bool) {
+	redirectError, ok := errors.AsType[*pipeline.RedirectError](err)
+	if !ok {
+		return nil, false
+	}
+
+	accesscontext.SetError(ctx, redirectError.Cause)
+
+	return buildDeniedResponse(
+		//nolint:gosec
+		// no integer overflow during conversion possible
+		envoy_type.StatusCode(redirectError.Code),
+		[]*envoy_core.HeaderValueOption{
+			{
+				Header: &envoy_core.HeaderValue{
+					Key:   "Location",
+					Value: redirectError.RedirectTo,
+				},
+			},
+		},
+		"",
+	), true
+}
+
+func (h *interceptor) handleDefaultErrors(ctx context.Context, err error, mimeType string) (any, error) {
 	accesscontext.SetError(ctx, err)
 
 	switch {
@@ -154,4 +149,38 @@ func acceptType(req any) string {
 
 	// This should never happen as the API is typed
 	return ""
+}
+
+func buildDeniedResponse(
+	statusCode envoy_type.StatusCode,
+	headers []*envoy_core.HeaderValueOption,
+	body string,
+) *envoy_auth.CheckResponse {
+	return &envoy_auth.CheckResponse{
+		Status: &status.Status{Code: int32(codes.FailedPrecondition)},
+		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
+			DeniedResponse: &envoy_auth.DeniedHttpResponse{
+				Status:  &envoy_type.HttpStatus{Code: statusCode},
+				Headers: headers,
+				Body:    body,
+			},
+		},
+	}
+}
+
+func buildHeaderOptions(headers map[string][]string) []*envoy_core.HeaderValueOption {
+	result := make([]*envoy_core.HeaderValueOption, 0)
+
+	for name, values := range headers {
+		for _, value := range values {
+			result = append(result, &envoy_core.HeaderValueOption{
+				Header: &envoy_core.HeaderValue{
+					Key:   name,
+					Value: value,
+				},
+			})
+		}
+	}
+
+	return result
 }

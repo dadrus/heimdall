@@ -237,6 +237,14 @@ func TestErrorInterceptor(t *testing.T) {
 				assert.True(t, slices.Equal([]string{"a=1", "b=2"}, headerValues(t, deniedResp.GetHeaders(), "Set-Cookie")))
 			},
 		},
+		"response error without custom response falls back to default mapping": {
+			interceptor: New(),
+			err: &pipeline.ResponseError{
+				Cause: pipeline.ErrAuthentication,
+			},
+			expGRPCCode: codes.Unauthenticated,
+			expHTTPCode: http.StatusUnauthorized,
+		},
 		"internal error default": {
 			interceptor: New(),
 			err:         pipeline.ErrInternal,

@@ -235,6 +235,14 @@ func TestHandlerHandle(t *testing.T) {
 			expBody:   `{"foo": "bar"}`,
 			expHeader: http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
 		},
+		"response error without custom response falls back to default mapping": {
+			handler: New(),
+			err: &pipeline.ResponseError{
+				Cause: errorchain.New(pipeline.ErrAuthentication),
+			},
+			expCode:   http.StatusUnauthorized,
+			expHeader: http.Header{},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
