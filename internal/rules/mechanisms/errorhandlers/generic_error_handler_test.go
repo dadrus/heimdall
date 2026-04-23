@@ -43,7 +43,7 @@ type appendResponseDecorator struct {
 	code        int
 }
 
-func (d appendResponseDecorator) DecorateErrorResponse(er *pipeline.ErrorResponse) {
+func (d appendResponseDecorator) DecorateErrorResponse(_ error, er *pipeline.ErrorResponse) {
 	if er.Headers == nil {
 		er.Headers = make(map[string][]string)
 	}

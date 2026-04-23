@@ -95,7 +95,7 @@ func (e *ResponseError) Response() ErrorResponse {
 
 func (e *ResponseError) decorate() {
 	type errorResponseDecorator interface {
-		DecorateErrorResponse(er *ErrorResponse)
+		DecorateErrorResponse(cause error, er *ErrorResponse)
 	}
 
 	errContext := errorContext(e.Cause)
@@ -108,5 +108,5 @@ func (e *ResponseError) decorate() {
 		return
 	}
 
-	decorator.DecorateErrorResponse(&e.ErrorResponse)
+	decorator.DecorateErrorResponse(e.Cause, &e.ErrorResponse)
 }

@@ -38,7 +38,7 @@ type testResponseDecorator struct {
 	body    string
 }
 
-func (d testResponseDecorator) DecorateErrorResponse(er *pipeline.ErrorResponse) {
+func (d testResponseDecorator) DecorateErrorResponse(_ error, er *pipeline.ErrorResponse) {
 	er.Code = d.code
 	er.Headers = d.headers
 	er.Body = d.body

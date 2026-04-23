@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -29,12 +30,17 @@ type testErrorResponseDecorator struct {
 	code    int
 	headers map[string][]string
 	body    string
+	seen    *error
 }
 
-func (d testErrorResponseDecorator) DecorateErrorResponse(er *ErrorResponse) {
+func (d testErrorResponseDecorator) DecorateErrorResponse(cause error, er *ErrorResponse) {
 	er.Code = d.code
 	er.Headers = d.headers
 	er.Body = d.body
+
+	if d.seen != nil {
+		*d.seen = cause
+	}
 }
 
 func TestErrorContext(t *testing.T) {
@@ -71,10 +77,16 @@ func TestErrorContext(t *testing.T) {
 func TestNewResponseError(t *testing.T) {
 	t.Parallel()
 
+	originalCause := errors.New("test cause")
+
+	var seen error
+
 	for uc, tc := range map[string]struct {
 		cause            error
 		input            []ErrorResponse
 		expectedResponse ErrorResponse
+		expectedCause    error
+		seenCause        *error
 	}{
 		"without explicit response": {
 			cause:            ErrInternal,
@@ -94,10 +106,11 @@ func TestNewResponseError(t *testing.T) {
 			},
 		},
 		"applies decorator from cause context": {
-			cause: errorchain.New(ErrAuthentication).WithErrorContext(testErrorResponseDecorator{
+			cause: errorchain.New(ErrAuthentication).CausedBy(originalCause).WithErrorContext(testErrorResponseDecorator{
 				code:    401,
 				headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
 				body:    "denied",
+				seen:    &seen,
 			}),
 			input: []ErrorResponse{{
 				Code:    500,
@@ -109,6 +122,8 @@ func TestNewResponseError(t *testing.T) {
 				Headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
 				Body:    "denied",
 			},
+			expectedCause: originalCause,
+			seenCause:     &seen,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -116,7 +131,11 @@ func TestNewResponseError(t *testing.T) {
 
 			assert.Equal(t, tc.expectedResponse, responseError.ErrorResponse)
 			assert.Equal(t, tc.expectedResponse, responseError.Response())
-			assert.ErrorIs(t, responseError.Cause, tc.cause)
+			require.ErrorIs(t, responseError.Cause, tc.cause)
+
+			if tc.seenCause != nil {
+				require.ErrorIs(t, *tc.seenCause, tc.expectedCause)
+			}
 		})
 	}
 }
