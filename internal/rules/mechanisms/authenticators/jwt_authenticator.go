@@ -62,6 +62,8 @@ func init() {
 }
 
 type jwtAuthenticator struct {
+	oauth2.BearerTokenUsageErrorDecorator
+
 	name            string
 	id              string
 	principalName   string
@@ -84,14 +86,15 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		Msg("Creating authenticator")
 
 	type Config struct {
-		JWKSEndpoint     *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
-		MetadataEndpoint *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
-		Assertions       oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
-		PrincipalInfo    PrincipalInfo                       `mapstructure:"principal"            validate:"-"`                                                                //nolint:lll,tagalign
-		AuthDataSource   extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
-		CacheTTL         *time.Duration                      `mapstructure:"cache_ttl"`
-		ValidateJWK      *bool                               `mapstructure:"validate_jwk"`
-		TrustStore       truststore.TrustStore               `mapstructure:"trust_store"`
+		JWKSEndpoint     *endpoint.Endpoint                    `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
+		MetadataEndpoint *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
+		Assertions       oauth2.Expectation                    `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
+		PrincipalInfo    PrincipalInfo                         `mapstructure:"principal"            validate:"-"`                                                                //nolint:lll,tagalign
+		AuthDataSource   extractors.CompositeExtractStrategy   `mapstructure:"jwt_source"`
+		ErrorDecorator   oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
+		CacheTTL         *time.Duration                        `mapstructure:"cache_ttl"`
+		ValidateJWK      *bool                                 `mapstructure:"validate_jwk"`
+		TrustStore       truststore.TrustStore                 `mapstructure:"trust_store"`
 	}
 
 	var conf Config
@@ -174,17 +177,18 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	)
 
 	return &jwtAuthenticator{
-		name:            name,
-		id:              name,
-		principalName:   DefaultPrincipalName,
-		app:             app,
-		r:               resolver,
-		a:               conf.Assertions,
-		ttl:             conf.CacheTTL,
-		sf:              &conf.PrincipalInfo,
-		ads:             ads,
-		validateJWKCert: validateJWKCert,
-		trustStore:      conf.TrustStore,
+		BearerTokenUsageErrorDecorator: conf.ErrorDecorator,
+		name:                           name,
+		id:                             name,
+		principalName:                  DefaultPrincipalName,
+		app:                            app,
+		r:                              resolver,
+		a:                              conf.Assertions,
+		ttl:                            conf.CacheTTL,
+		sf:                             &conf.PrincipalInfo,
+		ads:                            ads,
+		validateJWKCert:                validateJWKCert,
+		trustStore:                     conf.TrustStore,
 	}, nil
 }
 
@@ -268,18 +272,27 @@ func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, 
 	}
 
 	return &jwtAuthenticator{
-		name:            a.name,
-		id:              x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
-		principalName:   x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
-		app:             a.app,
-		r:               a.r,
-		a:               conf.Assertions.Merge(a.a),
-		ttl:             x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
-		sf:              a.sf,
-		ads:             a.ads,
-		validateJWKCert: a.validateJWKCert,
-		trustStore:      a.trustStore,
+		BearerTokenUsageErrorDecorator: a.BearerTokenUsageErrorDecorator,
+		name:                           a.name,
+		id:                             x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName:                  x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		app:                            a.app,
+		r:                              a.r,
+		a:                              conf.Assertions.Merge(a.a),
+		ttl:                            x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		sf:                             a.sf,
+		ads:                            a.ads,
+		validateJWKCert:                a.validateJWKCert,
+		trustStore:                     a.trustStore,
 	}, nil
+}
+
+func (a *jwtAuthenticator) DecorateErrorResponse(err error, er *pipeline.ErrorResponse) {
+	var matcher any = a.a.ScopesMatcher
+
+	requiredScopes, _ := matcher.([]string)
+
+	a.Decorate(err, requiredScopes, er)
 }
 
 func (a *jwtAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
