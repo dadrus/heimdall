@@ -50,6 +50,14 @@ type ErrorResponse struct {
 	Body    string
 }
 
+func (e *ErrorResponse) AddHeader(name, value string) {
+	if e.Headers == nil {
+		e.Headers = make(map[string][]string)
+	}
+
+	e.Headers[name] = append(e.Headers[name], value)
+}
+
 func errorContext(err error) any {
 	type errorContextCarrier interface {
 		ErrorContext() any
