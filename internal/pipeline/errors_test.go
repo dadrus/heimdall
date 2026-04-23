@@ -86,7 +86,7 @@ func TestNewResponseError(t *testing.T) {
 		input            []ErrorResponse
 		expectedResponse ErrorResponse
 		expectedCause    error
-		seenCause        *error
+		expectSeenCause  bool
 	}{
 		"without explicit response": {
 			cause:            ErrInternal,
@@ -122,8 +122,8 @@ func TestNewResponseError(t *testing.T) {
 				Headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
 				Body:    "denied",
 			},
-			expectedCause: originalCause,
-			seenCause:     &seen,
+			expectedCause:   originalCause,
+			expectSeenCause: true,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -133,8 +133,8 @@ func TestNewResponseError(t *testing.T) {
 			assert.Equal(t, tc.expectedResponse, responseError.Response())
 			require.ErrorIs(t, responseError.Cause, tc.cause)
 
-			if tc.seenCause != nil {
-				require.ErrorIs(t, *tc.seenCause, tc.expectedCause)
+			if tc.expectSeenCause {
+				require.ErrorIs(t, seen, tc.expectedCause)
 			}
 		})
 	}
