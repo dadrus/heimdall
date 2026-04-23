@@ -44,15 +44,37 @@ func (e *RedirectError) Is(target error) bool {
 	return reflect.TypeFor[*RedirectError]() == reflect.TypeOf(target)
 }
 
-type GenericError struct {
+type ErrorResponse struct {
+	Code    int
+	Headers map[string][]string
+	Body    string
+}
+
+type ErrorResponseDecorator interface {
+	DecorateErrorResponse(er *ErrorResponse)
+}
+
+type ResponseError struct {
 	Code    int
 	Headers map[string][]string
 	Body    string
 	Cause   error
 }
 
-func (e *GenericError) Error() string { return "generic_error" }
+func (e *ResponseError) Error() string { return "generic_error" }
 
-func (e *GenericError) Is(target error) bool {
-	return reflect.TypeFor[*GenericError]() == reflect.TypeOf(target)
+func (e *ResponseError) Is(target error) bool {
+	return reflect.TypeFor[*ResponseError]() == reflect.TypeOf(target)
 }
+
+func (e *ResponseError) Unwrap() error { return e.Cause }
+
+func (e *ResponseError) Response() ErrorResponse {
+	return ErrorResponse{
+		Code:    e.Code,
+		Headers: e.Headers,
+		Body:    e.Body,
+	}
+}
+
+type GenericError = ResponseError
