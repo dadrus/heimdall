@@ -404,28 +404,20 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
-		"enabling of error signaling is not allowed": {
+		"reconfiguration of error signaling is possible": {
 			config: config.MechanismConfig{
 				"user_id":         "foo",
 				"password":        "bar",
-				"error_signaling": map[string]any{"enabled": true},
+				"error_signaling": map[string]any{"enabled": false},
 			},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"error_signaling": map[string]any{"enabled": false}}},
-			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "'error_signaling'.'enabled' is not allowed")
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"error_signaling": map[string]any{
+						"enabled": true,
+						"realm":   "example",
+					},
+				},
 			},
-		},
-		"reconfiguration of realm is possible": {
-			config: config.MechanismConfig{
-				"user_id":         "foo",
-				"password":        "bar",
-				"error_signaling": map[string]any{"enabled": false, "realm": "example"},
-			},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"error_signaling": map[string]any{"realm": "foo"}}},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -440,8 +432,8 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 				assert.NotEqual(t, prototype.realm, configured.realm)
-				assert.Equal(t, "foo", configured.realm)
-				assert.False(t, configured.errorSignalingEnabled)
+				assert.Equal(t, "example", configured.realm)
+				assert.True(t, configured.errorSignalingEnabled)
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, "default", configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())

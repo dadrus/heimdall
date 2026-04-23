@@ -191,7 +191,7 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 		UserID         string `mapstructure:"user_id"`
 		Password       string `mapstructure:"password"`
 		ErrorSignaling struct {
-			Enabled *bool  `mapstructure:"enabled" validate:"not_allowed"`
+			Enabled *bool  `mapstructure:"enabled"`
 			Realm   string `mapstructure:"realm"`
 		} `mapstructure:"error_signaling"`
 	}
@@ -203,13 +203,17 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 	}
 
 	return &basicAuthAuthenticator{
-		app:                   a.app,
-		name:                  a.name,
-		id:                    x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
-		principalName:         x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
-		emptyAttributes:       a.emptyAttributes,
-		ads:                   a.ads,
-		errorSignalingEnabled: a.errorSignalingEnabled,
+		app:             a.app,
+		name:            a.name,
+		id:              x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
+		principalName:   x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		emptyAttributes: a.emptyAttributes,
+		ads:             a.ads,
+		errorSignalingEnabled: x.IfThenElseExec(
+			conf.ErrorSignaling.Enabled != nil,
+			func() bool { return *conf.ErrorSignaling.Enabled },
+			func() bool { return a.errorSignalingEnabled },
+		),
 		realm: x.IfThenElse(
 			len(conf.ErrorSignaling.Realm) == 0,
 			a.realm,
