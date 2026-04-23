@@ -34,6 +34,7 @@ type BearerTokenUsageErrorDecorator struct {
 	RevealRequiredScope bool   `mapstructure:"reveal_required_scope"`
 	ErrorURI            string `mapstructure:"error_uri"                validate:"omitempty,uri"`
 	Realm               string `mapstructure:"realm"`
+	ResourceMetadataURI string `mapstructure:"resource_metadata"        validate:"omitempty,uri"`
 }
 
 func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []string, er *pipeline.ErrorResponse) {
@@ -41,11 +42,12 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 		return
 	}
 
-	opts := make([]httpx.Option, 0, 6)
+	opts := make([]httpx.Option, 0, 7)
 	opts = append(opts,
 		httpx.WithPrefix("Bearer"),
 		httpx.WithKeyValue("realm", d.Realm),
 		httpx.WithKeyValue("error_uri", d.ErrorURI),
+		httpx.WithKeyValue("resource_metadata", d.ResourceMetadataURI),
 	)
 
 	switch {
