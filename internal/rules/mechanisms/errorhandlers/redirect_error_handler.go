@@ -55,6 +55,11 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 		Str("_type", ErrorHandlerRedirect).
 		Str("_name", name).
 		Msg("Creating error handler")
+	logger.Warn().
+		Str("_type", ErrorHandlerRedirect).
+		Str("_name", name).
+		Msg("Error handler is deprecated and will be removed in a future release. " +
+			"Migrate to 'generic' error handler instead.")
 
 	type Config struct {
 		To   template.Template `mapstructure:"to"   validate:"required,enforced=istls"`
@@ -91,11 +96,11 @@ func (eh *redirectErrorHandler) Type() string              { return eh.name }
 
 func (eh *redirectErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().
+	logger.Warn().
 		Str("_type", ErrorHandlerRedirect).
 		Str("_name", eh.name).
 		Str("_id", eh.id).
-		Msg("Executing error handler")
+		Msg("Executing deprecated error handler. Migrate to 'generic' error handler.")
 
 	toURL, err := eh.to.Render(map[string]any{
 		"Request": ctx.Request(),
