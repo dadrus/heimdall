@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 20 Apr 2026 20:49:40 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 23 Apr 2026 01:10:01 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_what_is_heimdall"&gt;What is heimdall?&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
@@ -1004,6 +1004,13 @@ heimdall &lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="nt"&gt;--flag&lt;/s
  &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;redirect&lt;/span&gt;
  &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;to&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;protocol_error&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;generic&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;code&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="m"&gt;400&lt;/span&gt;
+ &lt;span class="na"&gt;headers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;Content-Type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;application/json&lt;/span&gt;
+ &lt;span class="na"&gt;body&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="s"&gt;{&amp;#34;error&amp;#34;:&amp;#34;bad&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;request&amp;#34;}&amp;#39;&lt;/span&gt;
 
 &lt;span class="na"&gt;default_rule&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;execute&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
@@ -1015,6 +1022,8 @@ heimdall &lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="nt"&gt;--flag&lt;/s
  &lt;span class="s"&gt;((type(Error) == authentication_error &amp;amp;&amp;amp; Error.Source == &amp;#34;kratos_session_authenticator&amp;#34;) ||&lt;/span&gt;
  &lt;span class="s"&gt;type(Error) == authorization_error) &amp;amp;&amp;amp;&lt;/span&gt;
  &lt;span class="s"&gt;Request.Header(&amp;#34;Accept&amp;#34;).contains(&amp;#34;*/*&amp;#34;)&lt;/span&gt;
+ &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;error_handler&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;protocol_error&lt;/span&gt;
+ &lt;span class="na"&gt;if&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;type(Error) == precondition_error&lt;/span&gt;
 
 &lt;span class="na"&gt;providers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;file_system&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
