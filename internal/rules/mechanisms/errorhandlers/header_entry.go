@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,21 +16,9 @@
 
 package errorhandlers
 
-import (
-	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/validation"
-)
+import "github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 
-func decodeConfig(validator validation.Validator, input map[string]any, output any) error {
-	dec := encoding.NewDecoder(
-		encoding.WithTagName("mapstructure"),
-		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
-		encoding.WithDecodeHooks(
-			template.DecodeTemplateHookFunc(),
-			DecodeHeaderEntryHookFunc(),
-		),
-	)
-
-	return dec.DecodeMap(output, input)
+type HeaderEntry struct {
+	Name  string
+	Value template.Template
 }

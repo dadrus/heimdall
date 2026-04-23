@@ -18,6 +18,7 @@ package errorhandlers
 
 const (
 	ErrorHandlerDefault         = "default"
+	ErrorHandlerGeneric         = "generic"
 	ErrorHandlerRedirect        = "redirect"
 	ErrorHandlerWWWAuthenticate = "www_authenticate"
 )

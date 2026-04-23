@@ -448,6 +448,17 @@ mechanisms:
       type: redirect
       config:
         to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+    - id: generic_error
+      type: generic
+      config:
+        code: 500
+        headers:
+          - X-Foo: bar
+          - X-Foo: baz
+          - X-Bar: "{{ .Values.bar }}"
+        body: "{{ .Values.message }}"
+        values:
+          message: something went wrong
 
 default_rule:
   execute:

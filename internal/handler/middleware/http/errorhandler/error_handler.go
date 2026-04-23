@@ -24,6 +24,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type ErrorHandler interface {
@@ -44,8 +45,10 @@ type errorHandler struct {
 	*opts
 }
 
+//nolint:cyclop
 func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
 	ctx := req.Context()
+	logger := zerolog.Ctx(ctx)
 
 	switch {
 	case errors.Is(err, pipeline.ErrAuthentication):
@@ -65,10 +68,27 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 
 		rw.Header().Set("Location", redirectError.RedirectTo)
 		rw.WriteHeader(redirectError.Code)
+	case errors.Is(err, &pipeline.GenericError{}):
+		var genericError *pipeline.GenericError
 
-		return
+		errors.As(err, &genericError)
+
+		for name, values := range genericError.Headers {
+			for _, value := range values {
+				rw.Header().Add(name, value)
+			}
+		}
+
+		rw.WriteHeader(genericError.Code)
+
+		if len(genericError.Body) != 0 {
+			if _, err := rw.Write(stringx.ToBytes(genericError.Body)); err != nil {
+				logger.Error().Err(err).Msg("Internal error occurred")
+			}
+		}
+
+		err = genericError.Cause
 	default:
-		logger := zerolog.Ctx(ctx)
 		logger.Error().Err(err).Msg("Internal error occurred")
 
 		h.onInternalError(rw, req, err)

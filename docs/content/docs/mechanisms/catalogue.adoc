@@ -126,4 +126,11 @@ mechanisms:
     type: redirect
     config:
       to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+  - id: protocol_error
+    type: generic
+    config:
+      code: 400
+      headers:
+        - Content-Type: application/json
+      body: '{"error":"bad request"}'
 ----

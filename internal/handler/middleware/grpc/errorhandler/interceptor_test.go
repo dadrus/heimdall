@@ -20,8 +20,10 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"slices"
 	"testing"
 
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/assert"
@@ -37,6 +39,22 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
+func headerValues(t *testing.T, headers []*envoy_core.HeaderValueOption, name string) []string {
+	t.Helper()
+
+	values := make([]string, 0)
+
+	for _, header := range headers {
+		if header.GetHeader().GetKey() != name {
+			continue
+		}
+
+		values = append(values, header.GetHeader().GetValue())
+	}
+
+	return values
+}
+
 func TestErrorInterceptor(t *testing.T) {
 	t.Parallel()
 
@@ -46,6 +64,7 @@ func TestErrorInterceptor(t *testing.T) {
 		expGRPCCode codes.Code
 		expHTTPCode envoy_type.StatusCode
 		expBody     string
+		assert      func(t *testing.T, resp *envoy_auth.CheckResponse)
 	}{
 		"no error": {
 			interceptor: New(),
@@ -178,6 +197,42 @@ func TestErrorInterceptor(t *testing.T) {
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusFound,
 		},
+		"generic error": {
+			interceptor: New(),
+			err: &pipeline.GenericError{
+				Code:    http.StatusUnprocessableEntity,
+				Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
+				Body:    `{"error":"denied"}`,
+			},
+			expGRPCCode: codes.FailedPrecondition,
+			expHTTPCode: http.StatusUnprocessableEntity,
+			expBody:     `{"error":"denied"}`,
+			assert: func(t *testing.T, resp *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				deniedResp := resp.GetDeniedResponse()
+				require.NotNil(t, deniedResp)
+				assert.Equal(t, []string{"blocked"}, headerValues(t, deniedResp.GetHeaders(), "X-Error-Reason"))
+			},
+		},
+		"generic error with multiple header values": {
+			interceptor: New(),
+			err: &pipeline.GenericError{
+				Code:    http.StatusTooManyRequests,
+				Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
+				Body:    "rate limited",
+			},
+			expGRPCCode: codes.FailedPrecondition,
+			expHTTPCode: http.StatusTooManyRequests,
+			expBody:     "rate limited",
+			assert: func(t *testing.T, resp *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				deniedResp := resp.GetDeniedResponse()
+				require.NotNil(t, deniedResp)
+				assert.True(t, slices.Equal([]string{"a=1", "b=2"}, headerValues(t, deniedResp.GetHeaders(), "Set-Cookie")))
+			},
+		},
 		"internal error default": {
 			interceptor: New(),
 			err:         pipeline.ErrInternal,
@@ -258,6 +313,10 @@ func TestErrorInterceptor(t *testing.T) {
 				require.NotNil(t, deniedResp)
 				assert.Equal(t, tc.expHTTPCode, deniedResp.GetStatus().GetCode())
 				assert.Equal(t, tc.expBody, deniedResp.GetBody())
+			}
+
+			if tc.assert != nil {
+				tc.assert(t, resp)
 			}
 		})
 	}

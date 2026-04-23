@@ -56,23 +56,20 @@ func (h *interceptor) intercept(
 		return res, nil
 	}
 
-	accesscontext.SetError(ctx, err)
+	if resp, ok := h.customErrorResponse(ctx, err); ok {
+		return resp, nil
+	}
 
+	return h.defaultErrorResponse(ctx, err, acceptType(req))
+}
+
+func (h *interceptor) customErrorResponse(ctx context.Context, err error) (any, bool) {
 	switch {
-	case errors.Is(err, pipeline.ErrAuthentication):
-		return h.authenticationError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, pipeline.ErrAuthorization):
-		return h.authorizationError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, pipeline.ErrCommunicationTimeout) || errors.Is(err, pipeline.ErrCommunication):
-		return h.communicationError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, pipeline.ErrArgument):
-		return h.preconditionError(err, h.verboseErrors, acceptType(req))
-	case errors.Is(err, pipeline.ErrNoRuleFound):
-		return h.noRuleError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, &pipeline.RedirectError{}):
 		var redirectError *pipeline.RedirectError
 
 		errors.As(err, &redirectError)
+		accesscontext.SetError(ctx, redirectError.Cause)
 
 		return &envoy_auth.CheckResponse{
 			Status: &status.Status{Code: int32(codes.FailedPrecondition)},
@@ -91,13 +88,62 @@ func (h *interceptor) intercept(
 					},
 				},
 			},
-		}, nil
+		}, true
+	case errors.Is(err, &pipeline.GenericError{}):
+		var genericError *pipeline.GenericError
 
+		errors.As(err, &genericError)
+		accesscontext.SetError(ctx, genericError.Cause)
+
+		headers := make([]*envoy_core.HeaderValueOption, 0)
+
+		for name, values := range genericError.Headers {
+			for _, value := range values {
+				headers = append(headers, &envoy_core.HeaderValueOption{
+					Header: &envoy_core.HeaderValue{
+						Key:   name,
+						Value: value,
+					},
+				})
+			}
+		}
+
+		return &envoy_auth.CheckResponse{
+			Status: &status.Status{Code: int32(codes.FailedPrecondition)},
+			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
+				DeniedResponse: &envoy_auth.DeniedHttpResponse{
+					//nolint:gosec
+					// no integer overflow during conversion possible
+					Status:  &envoy_type.HttpStatus{Code: envoy_type.StatusCode(genericError.Code)},
+					Headers: headers,
+					Body:    genericError.Body,
+				},
+			},
+		}, true
+	}
+
+	return nil, false
+}
+
+func (h *interceptor) defaultErrorResponse(ctx context.Context, err error, mimeType string) (any, error) {
+	accesscontext.SetError(ctx, err)
+
+	switch {
+	case errors.Is(err, pipeline.ErrAuthentication):
+		return h.authenticationError(err, h.verboseErrors, mimeType)
+	case errors.Is(err, pipeline.ErrAuthorization):
+		return h.authorizationError(err, h.verboseErrors, mimeType)
+	case errors.Is(err, pipeline.ErrCommunicationTimeout) || errors.Is(err, pipeline.ErrCommunication):
+		return h.communicationError(err, h.verboseErrors, mimeType)
+	case errors.Is(err, pipeline.ErrArgument):
+		return h.preconditionError(err, h.verboseErrors, mimeType)
+	case errors.Is(err, pipeline.ErrNoRuleFound):
+		return h.noRuleError(err, h.verboseErrors, mimeType)
 	default:
 		logger := zerolog.Ctx(ctx)
 		logger.Error().Err(err).Msg("Internal error occurred")
 
-		return h.internalError(err, h.verboseErrors, acceptType(req))
+		return h.internalError(err, h.verboseErrors, mimeType)
 	}
 }
 

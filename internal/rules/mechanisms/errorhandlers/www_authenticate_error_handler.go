@@ -47,10 +47,11 @@ type wwwAuthenticateErrorHandler struct {
 
 func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
 	logger := app.Logger()
-	logger.Info().
+	logger.Warn().
 		Str("_type", ErrorHandlerWWWAuthenticate).
 		Str("_name", name).
-		Msg("Creating error handler")
+		Msg("Creating deprecated error handler which will be removed in a future release. " +
+			"Migrate to 'generic' error handler instead.")
 
 	type Config struct {
 		Realm string `mapstructure:"realm"`
@@ -78,11 +79,11 @@ func (eh *wwwAuthenticateErrorHandler) Type() string              { return eh.na
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().
+	logger.Warn().
 		Str("_type", ErrorHandlerWWWAuthenticate).
 		Str("_name", eh.name).
 		Str("_id", eh.id).
-		Msg("Executing error handler")
+		Msg("Executing deprecated error handler. Migrate to 'generic' error handler.")
 
 	ctx.AddHeaderForUpstream("WWW-Authenticate", "Basic realm="+eh.realm)
 	ctx.SetError(pipeline.ErrAuthentication)

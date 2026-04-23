@@ -2048,6 +2048,63 @@
         }
       }
     },
+    "errorHandlerGeneric": {
+      "description": "Generic Error Handler",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "config"
+      ],
+      "properties": {
+        "type": {
+          "const": "generic"
+        },
+        "id": {
+          "description": "The unique id of the error handler to be used in the rule definition",
+          "type": "string"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code"
+          ],
+          "properties": {
+            "code": {
+              "description": "HTTP status code to return.",
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 599
+            },
+            "headers": {
+              "description": "List of header entries. Each entry must contain exactly one header name/value pair. A header value can be templated.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "body": {
+              "description": "Optional response body. Can be templated.",
+              "type": "string"
+            },
+            "values": {
+              "description": "Optional key/value map available as .Values during header/body templating.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "fileSystemProvider": {
       "description": "Enables file backend to load rules from",
       "type": "object",
@@ -2189,6 +2246,9 @@
               },
               {
                 "$ref": "#/definitions/errorsHandlerDefault"
+              },
+              {
+                "$ref": "#/definitions/errorHandlerGeneric"
               }
             ]
           }

@@ -33,13 +33,26 @@ var (
 )
 
 type RedirectError struct {
-	Message    string
 	Code       int
 	RedirectTo string
+	Cause      error
 }
 
-func (e *RedirectError) Error() string { return e.Message }
+func (e *RedirectError) Error() string { return "redirect_error" }
 
 func (e *RedirectError) Is(target error) bool {
 	return reflect.TypeFor[*RedirectError]() == reflect.TypeOf(target)
+}
+
+type GenericError struct {
+	Code    int
+	Headers map[string][]string
+	Body    string
+	Cause   error
+}
+
+func (e *GenericError) Error() string { return "generic_error" }
+
+func (e *GenericError) Is(target error) bool {
+	return reflect.TypeFor[*GenericError]() == reflect.TypeOf(target)
 }

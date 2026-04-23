@@ -17,6 +17,7 @@
 package errorhandlers
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -281,10 +282,10 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 
 					assert.Equal(t, "http://foo.bar", redirErr.RedirectTo)
 					assert.Equal(t, http.StatusFound, redirErr.Code)
-					assert.Equal(t, "redirect", redirErr.Message)
 
 					return true
 				}))
+				ctx.EXPECT().Error().Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -315,10 +316,10 @@ code: 300
 					assert.Len(t, redirectURL.Query(), 1)
 					assert.Equal(t, "http://test.org", redirectURL.Query().Get("origin"))
 					assert.Equal(t, http.StatusMultipleChoices, redirErr.Code)
-					assert.Equal(t, "redirect", redirErr.Message)
 
 					return true
 				}))
+				ctx.EXPECT().Error().Return(errors.New("test error"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

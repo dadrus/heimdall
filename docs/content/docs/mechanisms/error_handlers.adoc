@@ -31,9 +31,160 @@ type: default
 
 ====
 
+
+
+== Generic
+
+This error handler mechanism allows defining fully custom HTTP error responses (status code, headers, and body). It is useful for protocol-specific error semantics, e.g. JSON-RPC style payloads.
+
+To enable the usage of this mechanism, you have to set the `type` property to `generic`.
+
+Configuration is mandatory by making use of the `config` property supporting the following settings:
+
+* *`code`*: _int_ (mandatory, overridable)
++
+The HTTP status code to return. Allowed range: `100` to `599`.
+
+* *`headers`*: _array[object]_ (optional, overridable)
++
+List of header entries. Each entry must contain exactly one `name: value` pair.
+The header values can be templated and have access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] object and configured `Values`.
++
+NOTE: Use multiple list entries with the same header name if you need repeated headers.
+
+* *`body`*: _string_ (optional, overridable)
++
+Optional response body template with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] object and configured `Values`.
+
+* *`values`*: _map[string]string_ (optional, partially overridable)
++
+Template values available as `Values`.
+
+.Simple generic error response
+====
+
+The configuration below lets heimdall respond with a fixed HTTP `400 Bad Request` and a small JSON body.
+
+[source, yaml]
+----
+id: bad_request
+type: generic
+config:
+  code: 400
+  headers:
+    - Content-Type: application/json
+  body: '{"error": "bad request"}'
+----
+
+====
+
+.Implementing redirect behavior
+====
+
+The generic error handler below responds with HTTP `302 Found` and sets `Location` to `\https://127.0.0.1:4433/self-service/login/browser` with the `return_to` query parameter set to the URL encoded value of the current URL.
+
+So, e.g. if heimdall handles a request for `\https://my-service.local/foo` and this handler is selected by the error pipeline, the HTTP response will have code `302 Found` and `Location` set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`.
+
+[source, yaml]
+----
+id: redirect
+type: generic
+config:
+  code: 302
+  headers:
+    - Location: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+----
+
+To execute this error handler, reference it in the error pipeline of your rule. The optional `if` clause defines under which conditions it is applied. In the example below, browser-based authentication failures are addressed:
+
+[source, yaml]
+----
+on_error:
+  - if: type(Error) == authentication_error && Request.Header("Accept").contains("text/html")
+    error_handler: redirect
+----
+
+====
+
+.Using generic to model WWW-Authenticate behavior
+====
+
+If the error handler defined below kicks in, heimdall will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
+
+[source, yaml]
+----
+id: basic_auth_like
+type: generic
+config:
+  code: 401
+  headers:
+    - WWW-Authenticate: Basic realm="My fancy app"
+----
+
+====
+
+.Agentic MCP or A2A gateway error response
+====
+
+The example below is shown for an MCP gateway scenario and emits a JSON-RPC error payload. For A2A gateway scenarios, the configuration is more or less identical; in most cases only protocol-specific error codes/messages need to be adjusted.
+
+[source, yaml]
+----
+id: mcp_error
+type: generic
+config:
+  code: 200
+  headers:
+    - Content-Type: application/json
+  body: |
+    {
+      "jsonrpc": "2.0",
+      "id": {{ .Request.Body.id | toJson }},
+      "error": {
+        "code": {{ .Values.errorCode }},
+        "message": {{ .Values.message | quote }}
+      }
+    }
+  values:
+    errorCode: -32603
+    message: "internal error"
+----
+
+In your rule, you would then use it like this:
+
+[source, yaml]
+----
+on_error:
+  - if: type(Error) == authentication_error
+    error_handler: mcp_error
+    config:
+      values:
+        errorCode: -32001
+        message: unauthorized
+----
+
+====
+
 == Redirect
 
 This error handler mechanism allows redirecting the client to another endpoint, e.g. to let the user authenticate. Technically this error handler returns e.g. a HTTP `302 Found` response code and sets the HTTP `Location` header.
+
+[WARNING]
+====
+The `redirect` error handler is deprecated and will be removed in heimdall `v0.19.0`. Migrate to the `generic` error handler instead.
+
+Equivalent configuration using `generic` error handler:
+
+[source, yaml]
+----
+id: authenticate_with_kratos
+type: generic
+config:
+  code: 302
+  headers:
+    - Location: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+----
+====
 
 To enable the usage of this mechanism, you have to set the `type` property to `redirect`.
 
@@ -52,9 +203,9 @@ The code to be used for the redirect. Defaults to `302 Found`. Both `301 Moved P
 .Redirect error handler configuration
 ====
 
-The redirect error handler below is configured to kick in if the error is either `authentication_error` or `authorization_error` and the request come from a browser (HTTP `Accept` header contains `text/html`). If this condition holds true it will redirect the client to `\https://127.0.0.1:4433/self-service/login/browser` and add the `return_to` query parameter set to the URL encoded value of the current url as well.
+The redirect error handler below returns a redirect to `\https://127.0.0.1:4433/self-service/login/browser` with the `return_to` query parameter set to the URL encoded value of the current URL.
 
-So, e.g. if heimdall was handling the request for `\https://my-service.local/foo` and run into an error like described above, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`
+So, e.g. if heimdall handles a request for `\https://my-service.local/foo` and this handler is selected by the error pipeline, the HTTP response to the client will have the code `302 Found` set and the `Location` header set to `\https://127.0.0.1:4433/self-service/login/browser?return_to=https%3A%2F%2Fmy-service.local%2Ffoo`
 
 [source, yaml]
 ----
@@ -64,16 +215,42 @@ config:
   to: https://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
 ----
 
+To execute this error handler, reference it in the error pipeline of your rule. The optional `if` clause defines under which conditions it is applied, for example for browser-based authentication failures:
+
+[source, yaml]
+----
+on_error:
+  - if: type(Error) == authentication_error && Request.Header("Accept").contains("text/html")
+    error_handler: authenticate_with_kratos
+----
+
 ====
 
 
 == WWW-Authenticate
 
-This error handler mechanism responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms heimdall into an authentication system, a very simple one though. By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#_basic_auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
+This error handler mechanism responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#_basic_auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
+
+[WARNING]
+====
+The `www_authenticate` error handler is deprecated and will be removed in heimdall `v0.19.0`. Migrate to the `generic` error handler instead.
+
+Equivalent configuration using `generic` error handler:
+
+[source, yaml]
+----
+id: basic_authenticate
+type: generic
+config:
+  code: 401
+  headers:
+    - WWW-Authenticate: Basic realm="My fancy app"
+----
+====
 
 To enable the usage of this error handler, you have to set the `type` property to `www_authenticate`.
 
-Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
+Configuration is mandatory by making use of the `config` property supporting the following settings:
 
 * *`realm`*: _string_ (optional, overridable)
 +
@@ -82,17 +259,23 @@ The "realm" according to https://datatracker.ietf.org/doc/html/rfc7235#section-2
 .Configuration of WWW-Authenticate error handler
 ====
 
-The www authenticate error handler below is configured to kick in if an `authentication_error` error occurred (an error raised by authenticators) and has been raised by an authenticator with id equal to `basic_auth_authenticator`. In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
+If the www authenticate error handler below kicks in, heimdall will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
 
 [source, yaml]
 ----
 id: basic_authenticate
 type: www_authenticate
-if: |
-  Error.Source == "basic_auth_authenticator" &&
-  type(Error) == authentication_error
 config:
   realm: "My fancy app"
+----
+
+To execute this error handler, reference it in the error pipeline of your rule. The optional `if` clause defines under which conditions it is applied:
+
+[source, yaml]
+----
+on_error:
+  - if: type(Error) == authentication_error
+    error_handler: basic_authenticate
 ----
 
 ====
