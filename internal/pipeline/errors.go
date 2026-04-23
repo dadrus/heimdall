@@ -54,6 +54,20 @@ type ErrorResponseDecorator interface {
 	DecorateErrorResponse(er *ErrorResponse)
 }
 
+type ErrorContextCarrier interface {
+	ErrorContext() any
+}
+
+func ErrorContext(err error) (any, bool) {
+	var contextCarrier ErrorContextCarrier
+
+	if !errors.As(err, &contextCarrier) {
+		return nil, false
+	}
+
+	return contextCarrier.ErrorContext(), true
+}
+
 type ResponseError struct {
 	Code    int
 	Headers map[string][]string
