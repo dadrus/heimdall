@@ -191,7 +191,8 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 		UserID         string `mapstructure:"user_id"`
 		Password       string `mapstructure:"password"`
 		ErrorSignaling struct {
-			Realm string `mapstructure:"realm"`
+			Enabled *bool  `mapstructure:"enabled" validate:"not_allowed"`
+			Realm   string `mapstructure:"realm"`
 		} `mapstructure:"error_signaling"`
 	}
 

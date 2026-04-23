@@ -42,7 +42,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 		config config.MechanismConfig
 		assert func(t *testing.T, err error, auth *basicAuthAuthenticator)
 	}{
-		"valid configuration": {
+		"valid configuration without error signaling": {
 			config: config.MechanismConfig{"user_id": "foo", "password": "bar"},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
@@ -59,10 +59,81 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
-				assert.Equal(t, "valid configuration", auth.ID())
+				assert.Equal(t, "valid configuration without error signaling", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
 				assert.NotNil(t, auth.emptyAttributes)
+				assert.Equal(t, defaultAuthenticationRealm, auth.realm)
+				assert.False(t, auth.errorSignalingEnabled)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
+			},
+		},
+		"valid configuration with error signaling and default realm": {
+			config: config.MechanismConfig{
+				"user_id":         "foo",
+				"password":        "bar",
+				"error_signaling": map[string]any{"enabled": true},
+			},
+			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				md := sha256.New()
+				md.Write([]byte("foo"))
+				userID := hex.EncodeToString(md.Sum(nil))
+
+				md.Reset()
+				md.Write([]byte("bar"))
+				password := hex.EncodeToString(md.Sum(nil))
+
+				assert.Equal(t, userID, auth.userID)
+				assert.Equal(t, password, auth.password)
+				assert.Equal(t, "valid configuration with error signaling and default realm", auth.ID())
+				assert.Equal(t, auth.ID(), auth.Name())
+				assert.Empty(t, auth.emptyAttributes)
+				assert.NotNil(t, auth.emptyAttributes)
+				assert.Equal(t, defaultAuthenticationRealm, auth.realm)
+				assert.True(t, auth.errorSignalingEnabled)
+				assert.False(t, auth.IsInsecure())
+				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
+				assert.Equal(t, types.KindAuthenticator, auth.Kind())
+				assert.Equal(t, auth.ID(), auth.Type())
+			},
+		},
+		"valid configuration with error signaling and custom realm": {
+			config: config.MechanismConfig{
+				"user_id":  "foo",
+				"password": "bar",
+				"error_signaling": map[string]any{
+					"enabled": true,
+					"realm":   "custom",
+				},
+			},
+			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				md := sha256.New()
+				md.Write([]byte("foo"))
+				userID := hex.EncodeToString(md.Sum(nil))
+
+				md.Reset()
+				md.Write([]byte("bar"))
+				password := hex.EncodeToString(md.Sum(nil))
+
+				assert.Equal(t, userID, auth.userID)
+				assert.Equal(t, password, auth.password)
+				assert.Equal(t, "valid configuration with error signaling and custom realm", auth.ID())
+				assert.Equal(t, auth.ID(), auth.Name())
+				assert.Empty(t, auth.emptyAttributes)
+				assert.NotNil(t, auth.emptyAttributes)
+				assert.Equal(t, "custom", auth.realm)
+				assert.True(t, auth.errorSignalingEnabled)
 				assert.False(t, auth.IsInsecure())
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
@@ -157,6 +228,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "password differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
+				assert.False(t, configured.errorSignalingEnabled)
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
@@ -177,6 +251,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no user_id provided", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
+				assert.False(t, configured.errorSignalingEnabled)
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
@@ -197,6 +274,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "no password provided", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
+				assert.False(t, configured.errorSignalingEnabled)
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
@@ -217,6 +297,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, "user_id differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
+				assert.False(t, configured.errorSignalingEnabled)
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
@@ -238,6 +321,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "user_id and password differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
+				assert.False(t, configured.errorSignalingEnabled)
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
@@ -260,14 +346,17 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				require.Equal(t, prototype.Name(), configured.Name())
-				require.NotEqual(t, prototype.ID(), configured.ID())
-				require.Equal(t, "foo", configured.ID())
-				require.Equal(t, prototype.userID, configured.userID)
-				require.Equal(t, prototype.password, configured.password)
-				require.Equal(t, prototype.ads, configured.ads)
-				require.Equal(t, prototype.app, configured.app)
-				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.NotEqual(t, prototype.ID(), configured.ID())
+				assert.Equal(t, "foo", configured.ID())
+				assert.Equal(t, prototype.userID, configured.userID)
+				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
+				assert.False(t, configured.errorSignalingEnabled)
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
@@ -275,7 +364,11 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 			},
 		},
 		"only principal name configured": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			config: config.MechanismConfig{
+				"user_id":         "foo",
+				"password":        "bar",
+				"error_signaling": map[string]any{"enabled": true},
+			},
 			stepDef: types.StepDefinition{Principal: "foo"},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
@@ -283,13 +376,16 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				require.Equal(t, prototype.Name(), configured.Name())
-				require.Equal(t, prototype.ID(), configured.ID())
-				require.Equal(t, prototype.userID, configured.userID)
-				require.Equal(t, prototype.password, configured.password)
-				require.Equal(t, prototype.ads, configured.ads)
-				require.Equal(t, prototype.app, configured.app)
-				require.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.userID, configured.userID)
+				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.Equal(t, prototype.realm, configured.realm)
+				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
+				assert.True(t, configured.errorSignalingEnabled)
 				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, "foo", configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
@@ -306,6 +402,51 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed decoding")
+			},
+		},
+		"enabling of error signaling is not allowed": {
+			config: config.MechanismConfig{
+				"user_id":         "foo",
+				"password":        "bar",
+				"error_signaling": map[string]any{"enabled": true},
+			},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"error_signaling": map[string]any{"enabled": false}}},
+			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'error_signaling'.'enabled' is not allowed")
+			},
+		},
+		"reconfiguration of realm is possible": {
+			config: config.MechanismConfig{
+				"user_id":         "foo",
+				"password":        "bar",
+				"error_signaling": map[string]any{"enabled": false, "realm": "example"},
+			},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{"error_signaling": map[string]any{"realm": "foo"}}},
+			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.Name(), configured.Name())
+				assert.Equal(t, prototype.ID(), configured.ID())
+				assert.Equal(t, prototype.userID, configured.userID)
+				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
+				assert.NotEqual(t, prototype.realm, configured.realm)
+				assert.Equal(t, "foo", configured.realm)
+				assert.False(t, configured.errorSignalingEnabled)
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
+				assert.Equal(t, "default", configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
 	} {
