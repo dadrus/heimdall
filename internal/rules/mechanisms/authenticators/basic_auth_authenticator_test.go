@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"net/http"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -562,4 +563,78 @@ func TestBasicAuthAuthenticatorAccept(t *testing.T) {
 	auth.Accept(visitor)
 
 	// THEN expected calls are done
+}
+
+func TestBasicAuthAuthenticatorDecorateErrorResponse(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		conf           map[string]any
+		expectedHeader string
+		expectedCode   int
+	}{
+		"uses configured realm if error signaling is enabled": {
+			conf: map[string]any{
+				"user_id":  "foo",
+				"password": "bar",
+				"error_signaling": map[string]any{
+					"enabled": true,
+					"realm":   "example",
+				},
+			},
+			expectedHeader: `Basic realm="example"`,
+			expectedCode:   http.StatusUnauthorized,
+		},
+		"uses default realm if error signaling is enabled, but the realm is empty": {
+			conf: map[string]any{
+				"user_id":  "foo",
+				"password": "bar",
+				"error_signaling": map[string]any{
+					"enabled": true,
+				},
+			},
+			expectedHeader: `Basic realm="Please authenticate"`,
+			expectedCode:   http.StatusUnauthorized,
+		},
+		"response is not decorated if error signaling is disabled": {
+			conf: map[string]any{
+				"user_id":  "foo",
+				"password": "bar",
+				"error_signaling": map[string]any{
+					"enabled": false,
+					"realm":   "example",
+				},
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().Logger().Return(log.Logger)
+
+			auth, err := newBasicAuthAuthenticator(
+				appCtx, "test", tc.conf)
+			require.NoError(t, err)
+
+			response := pipeline.ErrorResponse{
+				Headers: map[string][]string{"X-Test": {"preserved"}},
+			}
+
+			auth.(*basicAuthAuthenticator).DecorateErrorResponse(pipeline.ErrAuthentication, &response)
+
+			assert.Equal(t, tc.expectedCode, response.Code)
+
+			if len(tc.expectedHeader) != 0 {
+				require.Len(t, response.Headers, 2)
+				assert.Equal(t, []string{tc.expectedHeader}, response.Headers[wwwAuthenticateHeader])
+			} else {
+				require.Len(t, response.Headers, 1)
+			}
+
+			assert.Equal(t, []string{"preserved"}, response.Headers["X-Test"])
+		})
+	}
 }
