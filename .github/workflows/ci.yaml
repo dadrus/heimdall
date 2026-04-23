@@ -197,7 +197,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup k8s tools
-        uses: yokawasa/action-setup-kube-tools@5778123f7b071387e9c8e522492d8f39427dc6c7 # v0.13.4
+        uses: yokawasa/action-setup-kube-tools@9d39563c24d4a419d1a8289c34d6da5a6171252c # v0.13.5
         with:
           setup-tools: |
             helm
@@ -234,7 +234,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup k8s tools
-        uses: yokawasa/action-setup-kube-tools@5778123f7b071387e9c8e522492d8f39427dc6c7 # v0.13.4
+        uses: yokawasa/action-setup-kube-tools@9d39563c24d4a419d1a8289c34d6da5a6171252c # v0.13.5
         with:
           setup-tools: |
             helm
