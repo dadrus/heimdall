@@ -24,6 +24,10 @@ import (
 
 type ExactScopeStrategyMatcher []string
 
+func (m ExactScopeStrategyMatcher) Scopes() []string {
+	return []string(m)
+}
+
 func (m ExactScopeStrategyMatcher) Match(scopes []string) error {
 	for _, required := range m {
 		if !slices.Contains(scopes, required) {

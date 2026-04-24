@@ -24,6 +24,10 @@ import (
 
 type WildcardScopeStrategyMatcher []string
 
+func (m WildcardScopeStrategyMatcher) Scopes() []string {
+	return []string(m)
+}
+
 func (m WildcardScopeStrategyMatcher) Match(scopes []string) error {
 	for _, required := range m {
 		if !m.doMatch(scopes, required) {
