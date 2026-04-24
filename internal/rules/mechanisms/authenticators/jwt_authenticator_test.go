@@ -57,6 +57,7 @@ import (
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -546,6 +547,39 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
+		"minimal jwks endpoint based configuration with full error signaling": {
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+error_signaling:
+  enabled: true
+  reveal_error_description: true
+  reveal_required_scope: true
+  realm: example
+  error_uri: https://example.com/errors
+  resource_metadata: https://example.com/.well-known/oauth-protected-resource`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, auth.ed.Enabled)
+				assert.True(t, *auth.ed.Enabled)
+
+				require.NotNil(t, auth.ed.RevealErrorDetails)
+				assert.True(t, *auth.ed.RevealErrorDetails)
+
+				require.NotNil(t, auth.ed.RevealRequiredScope)
+				assert.True(t, *auth.ed.RevealRequiredScope)
+
+				assert.Equal(t, "example", auth.ed.Realm)
+				assert.Equal(t, "https://example.com/errors", auth.ed.ErrorURI)
+				assert.Equal(t, "https://example.com/.well-known/oauth-protected-resource", auth.ed.ResourceMetadataURI)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -946,6 +980,56 @@ metadata_endpoint:
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'validate_jwk' is not allowed")
+			},
+		},
+		"mechanism config with error signaling, step config overwrites parts": {
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+error_signaling:
+  enabled: true
+  reveal_error_description: true
+  realm: parent
+  error_uri: https://parent.example/error
+  resource_metadata: https://parent.example/resource-metadata`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"error_signaling": map[string]any{
+						"reveal_required_scope": true,
+						"realm":                 "child",
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype.ed, configured.ed)
+
+				require.NotNil(t, configured.ed.Enabled)
+				assert.True(t, *configured.ed.Enabled)
+
+				require.NotNil(t, configured.ed.RevealErrorDetails)
+				assert.True(t, *configured.ed.RevealErrorDetails)
+
+				require.NotNil(t, configured.ed.RevealRequiredScope)
+				assert.True(t, *configured.ed.RevealRequiredScope)
+
+				assert.Equal(t, "child", configured.ed.Realm)
+				assert.Equal(t, "https://parent.example/error", configured.ed.ErrorURI)
+				assert.Equal(t, "https://parent.example/resource-metadata", configured.ed.ResourceMetadataURI)
+
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
+				assert.Equal(t, prototype.trustStore, configured.trustStore)
 			},
 		},
 	} {
@@ -2897,4 +2981,91 @@ func TestJwtAuthenticatorAccept(t *testing.T) {
 	auth.Accept(visitor)
 
 	// THEN expected calls are done
+}
+
+func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		authenticator  *jwtAuthenticator
+		cause          error
+		expectedCode   int
+		expectedHeader string
+	}{
+		"not configured error signaling": {
+			authenticator: &jwtAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{},
+				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
+			},
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+		},
+		"explicitly disabled error signaling": {
+			authenticator: &jwtAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{Enabled: new(false)},
+				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
+			},
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+		},
+		"insufficient scope without configured scopes": {
+			authenticator: &jwtAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{
+					Enabled:             new(true),
+					RevealRequiredScope: new(true),
+				},
+				a: oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
+			},
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			expectedCode:   http.StatusForbidden,
+			expectedHeader: `Bearer error="insufficient_scope"`,
+		},
+		"insufficient scope with exact scopes": {
+			authenticator: &jwtAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{
+					Enabled:             new(true),
+					RevealRequiredScope: new(true),
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
+				},
+			},
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			expectedCode:   http.StatusForbidden,
+			expectedHeader: `Bearer error="insufficient_scope", scope="foo bar"`,
+		},
+		"invalid token does not expose scopes": {
+			authenticator: &jwtAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{
+					Enabled:             new(true),
+					RevealRequiredScope: new(true),
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
+				},
+			},
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrAssertion),
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer error="invalid_token"`,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			response := pipeline.ErrorResponse{}
+
+			// WHEN
+			tc.authenticator.DecorateErrorResponse(tc.cause, &response)
+
+			// THEN
+			assert.Equal(t, tc.expectedCode, response.Code)
+
+			if len(tc.expectedHeader) == 0 {
+				assert.Empty(t, response.Headers)
+
+				return
+			}
+
+			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["WWW-Authenticate"])
+		})
+	}
 }
