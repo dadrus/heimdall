@@ -34,7 +34,6 @@ type BearerTokenUsageErrorDecorator struct {
 	RevealRequiredScope *bool  `mapstructure:"reveal_required_scope"`
 	ErrorURI            string `mapstructure:"error_uri"                validate:"omitempty,uri"`
 	Realm               string `mapstructure:"realm"`
-	ResourceMetadataURI string `mapstructure:"resource_metadata"        validate:"omitempty,url"`
 }
 
 func (d BearerTokenUsageErrorDecorator) Merge(other BearerTokenUsageErrorDecorator) BearerTokenUsageErrorDecorator {
@@ -58,10 +57,6 @@ func (d BearerTokenUsageErrorDecorator) Merge(other BearerTokenUsageErrorDecorat
 		d.Realm = other.Realm
 	}
 
-	if len(d.ResourceMetadataURI) == 0 {
-		d.ResourceMetadataURI = other.ResourceMetadataURI
-	}
-
 	return d
 }
 
@@ -70,12 +65,11 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 		return
 	}
 
-	opts := make([]httpx.Option, 0, 7)
+	opts := make([]httpx.Option, 0, 6)
 	opts = append(opts,
 		httpx.WithPrefix("Bearer"),
 		httpx.WithKeyValue("realm", d.Realm),
 		httpx.WithKeyValue("error_uri", d.ErrorURI),
-		httpx.WithKeyValue("resource_metadata", d.ResourceMetadataURI),
 	)
 
 	switch {

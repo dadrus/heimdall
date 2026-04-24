@@ -26,7 +26,6 @@ func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
 				RevealRequiredScope: new(false),
 				ErrorURI:            "https://decorator.example/error",
 				Realm:               "decorator",
-				ResourceMetadataURI: "https://decorator.example/resource-metadata",
 			},
 			other: BearerTokenUsageErrorDecorator{
 				Enabled:             new(true),
@@ -34,7 +33,6 @@ func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
 				RevealRequiredScope: new(true),
 				ErrorURI:            "https://other.example/error",
 				Realm:               "other",
-				ResourceMetadataURI: "https://other.example/resource-metadata",
 			},
 			expected: BearerTokenUsageErrorDecorator{
 				Enabled:             new(false),
@@ -42,7 +40,6 @@ func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
 				RevealRequiredScope: new(false),
 				ErrorURI:            "https://decorator.example/error",
 				Realm:               "decorator",
-				ResourceMetadataURI: "https://decorator.example/resource-metadata",
 			},
 		},
 		"uses other values for zero values": {
@@ -53,7 +50,6 @@ func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
 				RevealRequiredScope: new(true),
 				ErrorURI:            "https://other.example/error",
 				Realm:               "other",
-				ResourceMetadataURI: "https://other.example/resource-metadata",
 			},
 			expected: BearerTokenUsageErrorDecorator{
 				Enabled:             new(true),
@@ -61,7 +57,6 @@ func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
 				RevealRequiredScope: new(true),
 				ErrorURI:            "https://other.example/error",
 				Realm:               "other",
-				ResourceMetadataURI: "https://other.example/resource-metadata",
 			},
 		},
 		"merges partially configured values": {
@@ -76,7 +71,6 @@ func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
 				RevealRequiredScope: new(true),
 				ErrorURI:            "https://other.example/error",
 				Realm:               "other",
-				ResourceMetadataURI: "https://other.example/resource-metadata",
 			},
 			expected: BearerTokenUsageErrorDecorator{
 				Enabled:             new(false),
@@ -84,7 +78,6 @@ func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
 				RevealRequiredScope: new(true),
 				ErrorURI:            "https://decorator.example/error",
 				Realm:               "decorator",
-				ResourceMetadataURI: "https://other.example/resource-metadata",
 			},
 		},
 		"keeps nil and empty values if other is empty": {
@@ -135,12 +128,11 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 				RevealRequiredScope: new(true),
 				ErrorURI:            "https://example.com/error",
 				Realm:               "example",
-				ResourceMetadataURI: "https://example.com/resource-metadata",
 			},
 			scopes:         []string{"foo", "bar"},
 			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(pipeline.ErrArgument),
 			expectedCode:   http.StatusBadRequest,
-			expectedHeader: `Bearer realm="example", error_uri="https://example.com/error", resource_metadata="https://example.com/resource-metadata", error="invalid_request", error_description="argument error"`,
+			expectedHeader: `Bearer realm="example", error_uri="https://example.com/error", error="invalid_request", error_description="argument error"`,
 		},
 		"insufficient scope without anything else": {
 			decorator:      BearerTokenUsageErrorDecorator{Enabled: new(true)},
@@ -187,21 +179,11 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 				RevealRequiredScope: new(true),
 				ErrorURI:            "https://example.com/error",
 				Realm:               "Please authenticate",
-				ResourceMetadataURI: "https://example.com/resource-metadata",
 			},
 			scopes:         []string{"foo", "bar"},
 			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(ErrAssertion),
 			expectedCode:   http.StatusUnauthorized,
-			expectedHeader: `Bearer realm="Please authenticate", error_uri="https://example.com/error", resource_metadata="https://example.com/resource-metadata", error="invalid_token", error_description="assertion error"`,
-		},
-		"invalid token with resource metadata only": {
-			decorator: BearerTokenUsageErrorDecorator{
-				Enabled:             new(true),
-				ResourceMetadataURI: "https://example.com/resource-metadata",
-			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(ErrAssertion),
-			expectedCode:   http.StatusUnauthorized,
-			expectedHeader: `Bearer resource_metadata="https://example.com/resource-metadata", error="invalid_token"`,
+			expectedHeader: `Bearer realm="Please authenticate", error_uri="https://example.com/error", error="invalid_token", error_description="assertion error"`,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
