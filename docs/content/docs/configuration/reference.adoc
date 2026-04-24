@@ -142,6 +142,9 @@ mechanisms:
     config:
       user_id: bar
       password: baz
+      error_signaling:
+        enabled: true
+        realm: example
   - id: kratos_session_authenticator
     type: generic
     config:
@@ -195,6 +198,12 @@ mechanisms:
       principal:
         id: "sub"
         attributes: "@this"
+      error_signaling:
+        enabled: true
+        realm: api
+        error_uri: https://docs.example.org/oauth2/errors
+        include_error_description: false
+        include_required_scope: true
   - id: jwt_authenticator
     type: jwt
     config:
@@ -234,6 +243,12 @@ mechanisms:
         id: "sub"
         attributes: "@this"
       cache_ttl: 5m
+      error_signaling:
+        enabled: true
+        realm: api
+        error_uri: urn:heimdall:oauth2:error
+        include_error_description: false
+        include_required_scope: false
 
   authorizers:
   - id: allow_all_authorizer
