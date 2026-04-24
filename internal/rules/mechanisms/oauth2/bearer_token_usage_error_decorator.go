@@ -29,16 +29,44 @@ import (
 const wwwAuthenticateHeader = "WWW-Authenticate"
 
 type BearerTokenUsageErrorDecorator struct {
-	Enabled             bool   `mapstructure:"enabled"`
-	RevealErrorDetails  bool   `mapstructure:"reveal_error_description"`
-	RevealRequiredScope bool   `mapstructure:"reveal_required_scope"`
+	Enabled             *bool  `mapstructure:"enabled"`
+	RevealErrorDetails  *bool  `mapstructure:"reveal_error_description"`
+	RevealRequiredScope *bool  `mapstructure:"reveal_required_scope"`
 	ErrorURI            string `mapstructure:"error_uri"                validate:"omitempty,uri"`
 	Realm               string `mapstructure:"realm"`
-	ResourceMetadataURI string `mapstructure:"resource_metadata"        validate:"omitempty,uri"`
+	ResourceMetadataURI string `mapstructure:"resource_metadata"        validate:"omitempty,url"`
+}
+
+func (d BearerTokenUsageErrorDecorator) Merge(other BearerTokenUsageErrorDecorator) BearerTokenUsageErrorDecorator {
+	if d.Enabled == nil {
+		d.Enabled = other.Enabled
+	}
+
+	if d.RevealErrorDetails == nil {
+		d.RevealErrorDetails = other.RevealErrorDetails
+	}
+
+	if d.RevealRequiredScope == nil {
+		d.RevealRequiredScope = other.RevealRequiredScope
+	}
+
+	if len(d.ErrorURI) == 0 {
+		d.ErrorURI = other.ErrorURI
+	}
+
+	if len(d.Realm) == 0 {
+		d.Realm = other.Realm
+	}
+
+	if len(d.ResourceMetadataURI) == 0 {
+		d.ResourceMetadataURI = other.ResourceMetadataURI
+	}
+
+	return d
 }
 
 func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []string, er *pipeline.ErrorResponse) {
-	if !d.Enabled {
+	if d.Enabled == nil || !*d.Enabled {
 		return
 	}
 
@@ -60,7 +88,7 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 
 		opts = append(opts, httpx.WithKeyValue("error", "insufficient_scope"))
 
-		if d.RevealRequiredScope {
+		if d.RevealRequiredScope != nil && *d.RevealRequiredScope {
 			opts = append(opts, httpx.WithKeyValue("scope",
 				strings.Join(requiredScopes, " ")))
 		}
@@ -70,7 +98,7 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 		opts = append(opts, httpx.WithKeyValue("error", "invalid_token"))
 	}
 
-	if d.RevealErrorDetails {
+	if d.RevealErrorDetails != nil && *d.RevealErrorDetails {
 		cause := errors.Unwrap(err)
 		opts = append(opts, httpx.WithKeyValue("error_description",
 			x.IfThenElseExec(cause == nil,

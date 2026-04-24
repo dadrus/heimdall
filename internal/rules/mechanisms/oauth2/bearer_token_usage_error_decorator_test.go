@@ -11,6 +11,96 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+func TestBearerTokenUsageErrorDecoratorMerge(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		decorator BearerTokenUsageErrorDecorator
+		other     BearerTokenUsageErrorDecorator
+		expected  BearerTokenUsageErrorDecorator
+	}{
+		"keeps explicitly configured values": {
+			decorator: BearerTokenUsageErrorDecorator{
+				Enabled:             new(false),
+				RevealErrorDetails:  new(false),
+				RevealRequiredScope: new(false),
+				ErrorURI:            "https://decorator.example/error",
+				Realm:               "decorator",
+				ResourceMetadataURI: "https://decorator.example/resource-metadata",
+			},
+			other: BearerTokenUsageErrorDecorator{
+				Enabled:             new(true),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
+				ErrorURI:            "https://other.example/error",
+				Realm:               "other",
+				ResourceMetadataURI: "https://other.example/resource-metadata",
+			},
+			expected: BearerTokenUsageErrorDecorator{
+				Enabled:             new(false),
+				RevealErrorDetails:  new(false),
+				RevealRequiredScope: new(false),
+				ErrorURI:            "https://decorator.example/error",
+				Realm:               "decorator",
+				ResourceMetadataURI: "https://decorator.example/resource-metadata",
+			},
+		},
+		"uses other values for zero values": {
+			decorator: BearerTokenUsageErrorDecorator{},
+			other: BearerTokenUsageErrorDecorator{
+				Enabled:             new(true),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
+				ErrorURI:            "https://other.example/error",
+				Realm:               "other",
+				ResourceMetadataURI: "https://other.example/resource-metadata",
+			},
+			expected: BearerTokenUsageErrorDecorator{
+				Enabled:             new(true),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
+				ErrorURI:            "https://other.example/error",
+				Realm:               "other",
+				ResourceMetadataURI: "https://other.example/resource-metadata",
+			},
+		},
+		"merges partially configured values": {
+			decorator: BearerTokenUsageErrorDecorator{
+				Enabled:  new(false),
+				Realm:    "decorator",
+				ErrorURI: "https://decorator.example/error",
+			},
+			other: BearerTokenUsageErrorDecorator{
+				Enabled:             new(true),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
+				ErrorURI:            "https://other.example/error",
+				Realm:               "other",
+				ResourceMetadataURI: "https://other.example/resource-metadata",
+			},
+			expected: BearerTokenUsageErrorDecorator{
+				Enabled:             new(false),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
+				ErrorURI:            "https://decorator.example/error",
+				Realm:               "decorator",
+				ResourceMetadataURI: "https://other.example/resource-metadata",
+			},
+		},
+		"keeps nil and empty values if other is empty": {
+			decorator: BearerTokenUsageErrorDecorator{},
+			other:     BearerTokenUsageErrorDecorator{},
+			expected:  BearerTokenUsageErrorDecorator{},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.expected, tc.decorator.Merge(tc.other))
+		})
+	}
+}
+
 func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 	t.Parallel()
 
@@ -23,8 +113,8 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 	}{
 		"disabled": {
 			decorator: BearerTokenUsageErrorDecorator{
-				RevealErrorDetails:  true,
-				RevealRequiredScope: true,
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
 				Realm:               "example",
 				ErrorURI:            "https://example.com/error",
 			},
@@ -32,7 +122,7 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 			cause:  errorchain.New(pipeline.ErrAuthentication).CausedBy(pipeline.ErrArgument),
 		},
 		"invalid request without error details and request uri": {
-			decorator:      BearerTokenUsageErrorDecorator{Enabled: true, Realm: "example"},
+			decorator:      BearerTokenUsageErrorDecorator{Enabled: new(true), Realm: "example"},
 			scopes:         []string{"foo", "bar"},
 			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(pipeline.ErrArgument),
 			expectedCode:   http.StatusBadRequest,
@@ -40,9 +130,9 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 		},
 		"invalid request with all keys set": {
 			decorator: BearerTokenUsageErrorDecorator{
-				Enabled:             true,
-				RevealErrorDetails:  true,
-				RevealRequiredScope: true,
+				Enabled:             new(true),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
 				ErrorURI:            "https://example.com/error",
 				Realm:               "example",
 				ResourceMetadataURI: "https://example.com/resource-metadata",
@@ -53,7 +143,7 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 			expectedHeader: `Bearer realm="example", error_uri="https://example.com/error", resource_metadata="https://example.com/resource-metadata", error="invalid_request", error_description="argument error"`,
 		},
 		"insufficient scope without anything else": {
-			decorator:      BearerTokenUsageErrorDecorator{Enabled: true},
+			decorator:      BearerTokenUsageErrorDecorator{Enabled: new(true)},
 			scopes:         []string{"foo", "bar"},
 			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(ErrScopeMatch),
 			expectedCode:   http.StatusForbidden,
@@ -61,8 +151,8 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 		},
 		"insufficient scope with scopes scopes, but without error details and request uri": {
 			decorator: BearerTokenUsageErrorDecorator{
-				Enabled:             true,
-				RevealRequiredScope: true,
+				Enabled:             new(true),
+				RevealRequiredScope: new(true),
 				Realm:               "example",
 			},
 			scopes:         []string{"foo", "bar"},
@@ -72,9 +162,9 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 		},
 		"insufficient scope with all keys set": {
 			decorator: BearerTokenUsageErrorDecorator{
-				Enabled:             true,
-				RevealErrorDetails:  true,
-				RevealRequiredScope: true,
+				Enabled:             new(true),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
 				Realm:               "example",
 				ErrorURI:            "https://example.com/error",
 			},
@@ -84,7 +174,7 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 			expectedHeader: `Bearer realm="example", error_uri="https://example.com/error", error="insufficient_scope", scope="foo bar", error_description="scope matching error"`,
 		},
 		"invalid token without error details and request uri": {
-			decorator:      BearerTokenUsageErrorDecorator{Enabled: true, Realm: "Please authenticate"},
+			decorator:      BearerTokenUsageErrorDecorator{Enabled: new(true), Realm: "Please authenticate"},
 			scopes:         []string{"foo", "bar"},
 			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(ErrAssertion),
 			expectedCode:   http.StatusUnauthorized,
@@ -92,9 +182,9 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 		},
 		"invalid token with all keys set": {
 			decorator: BearerTokenUsageErrorDecorator{
-				Enabled:             true,
-				RevealErrorDetails:  true,
-				RevealRequiredScope: true,
+				Enabled:             new(true),
+				RevealErrorDetails:  new(true),
+				RevealRequiredScope: new(true),
 				ErrorURI:            "https://example.com/error",
 				Realm:               "Please authenticate",
 				ResourceMetadataURI: "https://example.com/resource-metadata",
@@ -103,6 +193,15 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(ErrAssertion),
 			expectedCode:   http.StatusUnauthorized,
 			expectedHeader: `Bearer realm="Please authenticate", error_uri="https://example.com/error", resource_metadata="https://example.com/resource-metadata", error="invalid_token", error_description="assertion error"`,
+		},
+		"invalid token with resource metadata only": {
+			decorator: BearerTokenUsageErrorDecorator{
+				Enabled:             new(true),
+				ResourceMetadataURI: "https://example.com/resource-metadata",
+			},
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(ErrAssertion),
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer resource_metadata="https://example.com/resource-metadata", error="invalid_token"`,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
