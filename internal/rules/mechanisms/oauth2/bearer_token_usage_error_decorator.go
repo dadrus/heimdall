@@ -29,11 +29,11 @@ import (
 const wwwAuthenticateHeader = "WWW-Authenticate"
 
 type BearerTokenUsageErrorDecorator struct {
-	Enabled             *bool  `mapstructure:"enabled"`
-	RevealErrorDetails  *bool  `mapstructure:"reveal_error_description"`
-	RevealRequiredScope *bool  `mapstructure:"reveal_required_scope"`
-	ErrorURI            string `mapstructure:"error_uri"                validate:"omitempty,uri"`
-	Realm               string `mapstructure:"realm"`
+	Enabled              *bool  `mapstructure:"enabled"`
+	IncludeErrorDetails  *bool  `mapstructure:"include_error_description"`
+	IncludeRequiredScope *bool  `mapstructure:"include_required_scope"`
+	ErrorURI             string `mapstructure:"error_uri"                 validate:"omitempty,uri"`
+	Realm                string `mapstructure:"realm"`
 }
 
 func (d BearerTokenUsageErrorDecorator) Merge(other BearerTokenUsageErrorDecorator) BearerTokenUsageErrorDecorator {
@@ -41,12 +41,12 @@ func (d BearerTokenUsageErrorDecorator) Merge(other BearerTokenUsageErrorDecorat
 		d.Enabled = other.Enabled
 	}
 
-	if d.RevealErrorDetails == nil {
-		d.RevealErrorDetails = other.RevealErrorDetails
+	if d.IncludeErrorDetails == nil {
+		d.IncludeErrorDetails = other.IncludeErrorDetails
 	}
 
-	if d.RevealRequiredScope == nil {
-		d.RevealRequiredScope = other.RevealRequiredScope
+	if d.IncludeRequiredScope == nil {
+		d.IncludeRequiredScope = other.IncludeRequiredScope
 	}
 
 	if len(d.ErrorURI) == 0 {
@@ -82,7 +82,7 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 
 		opts = append(opts, httpx.WithKeyValue("error", "insufficient_scope"))
 
-		if d.RevealRequiredScope != nil && *d.RevealRequiredScope {
+		if d.IncludeRequiredScope != nil && *d.IncludeRequiredScope {
 			opts = append(opts, httpx.WithKeyValue("scope",
 				strings.Join(requiredScopes, " ")))
 		}
@@ -92,7 +92,7 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 		opts = append(opts, httpx.WithKeyValue("error", "invalid_token"))
 	}
 
-	if d.RevealErrorDetails != nil && *d.RevealErrorDetails {
+	if d.IncludeErrorDetails != nil && *d.IncludeErrorDetails {
 		cause := errors.Unwrap(err)
 		opts = append(opts, httpx.WithKeyValue("error_description",
 			x.IfThenElseExec(cause == nil,

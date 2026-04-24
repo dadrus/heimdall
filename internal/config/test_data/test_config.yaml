@@ -234,6 +234,12 @@ mechanisms:
         principal:
           attributes: "@this"
           id: sub
+        error_signaling:
+          enabled: true
+          include_error_description: false
+          include_required_scope: true
+          error_uri: https://docs.example.org/oauth2/errors
+          realm: example
     - id: oauth2_introspection_using_metadata_endpoint
       type: oauth2_introspection
       config:
@@ -310,11 +316,20 @@ mechanisms:
           issuers:
             - bla
         validate_jwk: true
+        error_signaling:
+          enabled: true
+          include_error_description: true
+          include_required_scope: false
+          error_uri: urn:heimdall:oauth2:error
+          realm: jwt-example
     - id: basic_auth_authenticator
       type: basic_auth
       config:
         user_id: foo
         password: bar
+        error_signaling:
+          enabled: true
+          realm: basic-example
   authorizers:
     - id: allow_all_authorizer
       type: allow

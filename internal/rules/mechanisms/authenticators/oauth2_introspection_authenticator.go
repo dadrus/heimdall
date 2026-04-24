@@ -89,7 +89,6 @@ func newOAuth2IntrospectionAuthenticator(
 		Assertions            oauth2.Expectation                    `mapstructure:"assertions"`
 		ErrorDecorator        oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
 		AuthDataSource        extractors.CompositeExtractStrategy   `mapstructure:"token_source"`
-		Realm                 string                                `mapstructure:"realm"`
 		CacheTTL              *time.Duration                        `mapstructure:"cache_ttl"`
 	}
 

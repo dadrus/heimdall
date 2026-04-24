@@ -556,11 +556,10 @@ assertions:
     - foobar
 error_signaling:
   enabled: true
-  reveal_error_description: true
-  reveal_required_scope: true
+  include_error_description: true
+  include_required_scope: true
   realm: example
-  error_uri: https://example.com/errors
-  resource_metadata: https://example.com/.well-known/oauth-protected-resource`),
+  error_uri: https://example.com/errors`),
 			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
 				t.Helper()
 
@@ -569,15 +568,14 @@ error_signaling:
 				require.NotNil(t, auth.ed.Enabled)
 				assert.True(t, *auth.ed.Enabled)
 
-				require.NotNil(t, auth.ed.RevealErrorDetails)
-				assert.True(t, *auth.ed.RevealErrorDetails)
+				require.NotNil(t, auth.ed.IncludeErrorDetails)
+				assert.True(t, *auth.ed.IncludeErrorDetails)
 
-				require.NotNil(t, auth.ed.RevealRequiredScope)
-				assert.True(t, *auth.ed.RevealRequiredScope)
+				require.NotNil(t, auth.ed.IncludeRequiredScope)
+				assert.True(t, *auth.ed.IncludeRequiredScope)
 
 				assert.Equal(t, "example", auth.ed.Realm)
 				assert.Equal(t, "https://example.com/errors", auth.ed.ErrorURI)
-				assert.Equal(t, "https://example.com/.well-known/oauth-protected-resource", auth.ed.ResourceMetadataURI)
 			},
 		},
 	} {
@@ -991,15 +989,14 @@ assertions:
     - foobar
 error_signaling:
   enabled: true
-  reveal_error_description: true
+  include_error_description: true
   realm: parent
-  error_uri: https://parent.example/error
-  resource_metadata: https://parent.example/resource-metadata`),
+  error_uri: https://parent.example/error`),
 			stepDef: types.StepDefinition{
 				Config: config.MechanismConfig{
 					"error_signaling": map[string]any{
-						"reveal_required_scope": true,
-						"realm":                 "child",
+						"include_required_scope": true,
+						"realm":                  "child",
 					},
 				},
 			},
@@ -1013,15 +1010,14 @@ error_signaling:
 				require.NotNil(t, configured.ed.Enabled)
 				assert.True(t, *configured.ed.Enabled)
 
-				require.NotNil(t, configured.ed.RevealErrorDetails)
-				assert.True(t, *configured.ed.RevealErrorDetails)
+				require.NotNil(t, configured.ed.IncludeErrorDetails)
+				assert.True(t, *configured.ed.IncludeErrorDetails)
 
-				require.NotNil(t, configured.ed.RevealRequiredScope)
-				assert.True(t, *configured.ed.RevealRequiredScope)
+				require.NotNil(t, configured.ed.IncludeRequiredScope)
+				assert.True(t, *configured.ed.IncludeRequiredScope)
 
 				assert.Equal(t, "child", configured.ed.Realm)
 				assert.Equal(t, "https://parent.example/error", configured.ed.ErrorURI)
-				assert.Equal(t, "https://parent.example/resource-metadata", configured.ed.ResourceMetadataURI)
 
 				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
@@ -3009,8 +3005,8 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 		"insufficient scope without configured scopes": {
 			authenticator: &jwtAuthenticator{
 				ed: oauth2.BearerTokenUsageErrorDecorator{
-					Enabled:             new(true),
-					RevealRequiredScope: new(true),
+					Enabled:              new(true),
+					IncludeRequiredScope: new(true),
 				},
 				a: oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
@@ -3021,8 +3017,8 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 		"insufficient scope with exact scopes": {
 			authenticator: &jwtAuthenticator{
 				ed: oauth2.BearerTokenUsageErrorDecorator{
-					Enabled:             new(true),
-					RevealRequiredScope: new(true),
+					Enabled:              new(true),
+					IncludeRequiredScope: new(true),
 				},
 				a: oauth2.Expectation{
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
@@ -3035,8 +3031,8 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 		"invalid token does not expose scopes": {
 			authenticator: &jwtAuthenticator{
 				ed: oauth2.BearerTokenUsageErrorDecorator{
-					Enabled:             new(true),
-					RevealRequiredScope: new(true),
+					Enabled:              new(true),
+					IncludeRequiredScope: new(true),
 				},
 				a: oauth2.Expectation{
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
