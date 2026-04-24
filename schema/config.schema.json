@@ -1248,6 +1248,53 @@
         }
       }
     },
+    "bearerTokenUsageErrorSignaling": {
+      "description": "Configures RFC 6750 Bearer token error signaling using the WWW-Authenticate response header.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Enables or disables RFC 6750 Bearer token error signaling.",
+          "type": "boolean",
+          "default": false
+        },
+        "include_error_description": {
+          "description": "Whether to include the optional error_description parameter. This may disclose additional error details.",
+          "type": "boolean",
+          "default": false
+        },
+        "include_required_scope": {
+          "description": "Whether to include the optional scope parameter for insufficient_scope errors.",
+          "type": "boolean",
+          "default": false
+        },
+        "error_uri": {
+          "description": "Optional URI identifying a human-readable web page with information about the error.",
+          "type": "string",
+          "format": "uri"
+        },
+        "realm": {
+          "description": "Optional Bearer realm value included in the WWW-Authenticate header.",
+          "type": "string"
+        }
+      }
+    },
+    "basicAuthErrorSignaling": {
+      "description": "Configures Basic authentication error signaling using the WWW-Authenticate response header.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Enables or disables Basic authentication error signaling.",
+          "type": "boolean",
+          "default": false
+        },
+        "realm": {
+          "description": "Optional Basic authentication realm value included in the WWW-Authenticate header.",
+          "type": "string"
+        }
+      }
+    },
     "authenticatorAnonymous": {
       "description": "Anonymous Authenticator",
       "type": "object",
@@ -1415,6 +1462,9 @@
                 "1m",
                 "30s"
               ]
+            },
+            "error_signaling": {
+              "$ref": "#/definitions/bearerTokenUsageErrorSignaling"
             }
           }
         }
@@ -1484,6 +1534,9 @@
               "type": "string",
               "description": "The path to the trust store PEM file, which contains the trust anchors used for JWK certificate verification purposes",
               "default": "system trust store"
+            },
+            "error_signaling": {
+              "$ref": "#/definitions/bearerTokenUsageErrorSignaling"
             }
           }
         }
@@ -1517,6 +1570,9 @@
             "password": {
               "description": "The password for the client_id for the authentication scheme",
               "type": "string"
+            },
+            "error_signaling": {
+              "$ref": "#/definitions/basicAuthErrorSignaling"
             }
           }
         }
