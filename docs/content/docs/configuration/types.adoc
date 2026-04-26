@@ -495,7 +495,7 @@ Enables the generation of the `WWW-Authenticate` response header using the `Bear
 
 * *`realm`*: _string_ (optional)
 +
-The realm to include in the `WWW-Authenticate` header.
+The realm to include in the `WWW-Authenticate` header. Defaults to `"Please authenticate"`.
 
 * *`error_uri`*: _URI_ (optional)
 +
