@@ -30,6 +30,7 @@ var (
 	ErrConfiguration        = errors.New("configuration error")
 	ErrInternal             = errors.New("internal error")
 	ErrNoRuleFound          = errors.New("no rule found")
+	ErrMalformedRequest     = errors.New("malformed request")
 )
 
 type RedirectError struct {
