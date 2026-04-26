@@ -80,17 +80,20 @@ Enables the error signaling. Defaults to `false`.
 
 ** *`realm`*: _string_ (optional, overridable)
 +
-The realm to include in the `WWW-Authenticate` header.
+The realm to include in the `WWW-Authenticate` header. Defaults to `"Please authenticate"`.
 
 .Full configuration of Basic Auth authenticator
 ====
 [source, yaml]
 ----
-user_id: bar
-password: baz
-error_signaling:
-  enabled: true
-  realm: example
+id: simple_auth
+type: basic_auth
+config:
+  user_id: bar
+  password: baz
+  error_signaling:
+    enabled: true
+    realm: example
 ----
 ====
 
