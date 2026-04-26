@@ -238,7 +238,6 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) 
 		MetadataEndpoint      *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint"      validate:"not_allowed"` //nolint:lll
 		SubjectInfo           *PrincipalInfo                        `mapstructure:"principal"              validate:"not_allowed"` //nolint:lll
 		AuthDataSource        extractors.CompositeExtractStrategy   `mapstructure:"token_source"           validate:"not_allowed"` //nolint:lll
-		Realm                 string                                `mapstructure:"realm"`
 		Assertions            oauth2.Expectation                    `mapstructure:"assertions"`
 		CacheTTL              *time.Duration                        `mapstructure:"cache_ttl"`
 		ErrorDecorator        oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
