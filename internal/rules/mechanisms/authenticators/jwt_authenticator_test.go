@@ -1209,7 +1209,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrAuthentication)
-				require.ErrorIs(t, err, pipeline.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrMalformedRequest)
 				require.ErrorContains(t, err, "JWS format must have three parts")
 
 				var identifier HandlerIdentifier
@@ -1237,7 +1237,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrAuthentication)
-				require.ErrorIs(t, err, pipeline.ErrArgument)
+				require.ErrorIs(t, err, pipeline.ErrMalformedRequest)
 				require.ErrorContains(t, err, "parse JWT")
 
 				var identifier HandlerIdentifier

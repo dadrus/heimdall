@@ -217,8 +217,8 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
 			WithErrorContext(a).
-			CausedBy(pipeline.ErrArgument).
-			CausedBy(err)
+			CausedBy(errorchain.NewWithMessage(pipeline.ErrMalformedRequest, "invalid JWT format").
+				CausedBy(err))
 	}
 
 	rawClaims, err := a.verifyToken(ctx, token)
