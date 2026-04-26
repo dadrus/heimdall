@@ -60,6 +60,7 @@ func (d BearerTokenUsageErrorDecorator) Merge(other BearerTokenUsageErrorDecorat
 	return d
 }
 
+//nolint:cyclop
 func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []string, er *pipeline.ErrorResponse) {
 	if d.Enabled == nil || !*d.Enabled {
 		return
