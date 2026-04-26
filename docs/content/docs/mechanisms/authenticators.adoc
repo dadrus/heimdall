@@ -68,15 +68,32 @@ The identifier of the principal to be verified.
 +
 The password of the principal to be verified.
 
-.Configuration of Basic Auth authenticator
+* *`error_signaling`*: _BasicAuthErrorSignaling_ (optional, overridable)
++
+Configures whether authentication failures should be signaled using the `WWW-Authenticate` response header with the `Basic` authentication scheme.
++
+Following properties are available:
+
+** *`enabled`*: _boolean_ (optional, overridable)
++
+Enables the error signaling. Defaults to `false`.
+
+** *`realm`*: _string_ (optional, overridable)
++
+The realm to include in the `WWW-Authenticate` header. Defaults to `"Please authenticate"`.
+
+.Full configuration of Basic Auth authenticator
 ====
 [source, yaml]
 ----
-id: foo
+id: simple_auth
 type: basic_auth
 config:
   user_id: bar
   password: baz
+  error_signaling:
+    enabled: true
+    realm: example
 ----
 ====
 
@@ -294,6 +311,10 @@ Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_
 +
 How long to cache the response. If not set, caching of the introspection response is based on the available token expiration information. To disable caching, set it to `0s`. If you set the ttl to a custom value > 0, the expiration time (if available) of the token will be considered. The cache key is calculated from the `introspection_endpoint` configuration and the value of the access token.
 
+* *`error_signaling`*: _link:{{< relref "/docs/configuration/types.adoc#_bearer_token_usage_error_signaling" >}}[Bearer Token Usage Error Signaling]_ (optional, overridable)
++
+Configures whether failures should be signaled using the `WWW-Authenticate` response header according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750].
+
 .Minimal possible configuration based on the Introspection endpoint
 ====
 [source, yaml]
@@ -399,6 +420,10 @@ Enables or disables the verification of the JWK certificate used for JWT signatu
 * *`trust_store`*: _string_ (optional, not overridable)
 +
 The path to a PEM file containing the trust anchors, to be used for the JWK certificate validation. Defaults to system trust store.
+
+* *`error_signaling`*: _link:{{< relref "/docs/configuration/types.adoc#_bearer_token_usage_error_signaling" >}}[Bearer Token Usage Error Signaling]_ (optional, overridable)
++
+Configures whether failures should be signaled using the `WWW-Authenticate` response header according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750].
 
 NOTE: If a JWT does not reference a `kid`, heimdall always fetches a JWKS from the configured endpoint (so no caching is done) and iterates over the received keys until one matches. If none matches, the authenticator fails.
 

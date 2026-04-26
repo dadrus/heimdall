@@ -67,6 +67,7 @@ type oauth2IntrospectionAuthenticator struct {
 	sf            PrincipalFactory
 	ads           extractors.AuthDataExtractStrategy
 	ttl           *time.Duration
+	ed            oauth2.BearerTokenUsageErrorDecorator
 }
 
 // nolint: funlen, cyclop
@@ -82,12 +83,13 @@ func newOAuth2IntrospectionAuthenticator(
 		Msg("Creating authenticator")
 
 	type Config struct {
-		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
-		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
-		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`                                                                                                    //nolint:lll,tagalign
-		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"               validate:"-"`                                                                          //nolint:lll,tagalign
-		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
-		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		IntrospectionEndpoint *endpoint.Endpoint                    `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
+		MetadataEndpoint      *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
+		PrincipalInfo         PrincipalInfo                         `mapstructure:"principal"               validate:"-"`                                                                          //nolint:lll,tagalign
+		Assertions            oauth2.Expectation                    `mapstructure:"assertions"`
+		ErrorDecorator        oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
+		AuthDataSource        extractors.CompositeExtractStrategy   `mapstructure:"token_source"`
+		CacheTTL              *time.Duration                        `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
@@ -167,6 +169,7 @@ func newOAuth2IntrospectionAuthenticator(
 		name:          name,
 		id:            name,
 		principalName: DefaultPrincipalName,
+		ed:            conf.ErrorDecorator,
 		app:           app,
 		ads:           ads,
 		r:             resolver,
@@ -231,12 +234,13 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) 
 	}
 
 	type Config struct {
-		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint" validate:"not_allowed"` //nolint:lll
-		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"      validate:"not_allowed"` //nolint:lll
-		SubjectInfo           *PrincipalInfo                      `mapstructure:"principal"              validate:"not_allowed"` //nolint:lll
-		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"           validate:"not_allowed"` //nolint:lll
-		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`
-		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		IntrospectionEndpoint *endpoint.Endpoint                    `mapstructure:"introspection_endpoint" validate:"not_allowed"` //nolint:lll
+		MetadataEndpoint      *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint"      validate:"not_allowed"` //nolint:lll
+		SubjectInfo           *PrincipalInfo                        `mapstructure:"principal"              validate:"not_allowed"` //nolint:lll
+		AuthDataSource        extractors.CompositeExtractStrategy   `mapstructure:"token_source"           validate:"not_allowed"` //nolint:lll
+		Assertions            oauth2.Expectation                    `mapstructure:"assertions"`
+		CacheTTL              *time.Duration                        `mapstructure:"cache_ttl"`
+		ErrorDecorator        oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
 	}
 
 	var conf Config
@@ -250,6 +254,7 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) 
 		name:          a.name,
 		id:            x.IfThenElse(len(def.ID) == 0, a.id, def.ID),
 		principalName: x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
+		ed:            conf.ErrorDecorator.Merge(a.ed),
 		app:           a.app,
 		r:             a.r,
 		a:             conf.Assertions.Merge(a.a),
@@ -257,6 +262,10 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) 
 		ads:           a.ads,
 		ttl:           x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
+}
+
+func (a *oauth2IntrospectionAuthenticator) DecorateErrorResponse(err error, er *pipeline.ErrorResponse) {
+	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
 }
 
 func (a *oauth2IntrospectionAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }

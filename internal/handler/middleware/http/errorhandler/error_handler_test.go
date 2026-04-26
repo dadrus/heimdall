@@ -188,10 +188,12 @@ func TestHandlerHandle(t *testing.T) {
 		},
 		"generic error with body": {
 			handler: New(),
-			err: &pipeline.GenericError{
-				Code:    http.StatusOK,
-				Body:    `{"foo": "bar"}`,
-				Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
+			err: &pipeline.ResponseError{
+				ErrorResponse: pipeline.ErrorResponse{
+					Code:    http.StatusOK,
+					Body:    `{"foo": "bar"}`,
+					Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
+				},
 			},
 			expCode:   http.StatusOK,
 			expBody:   `{"foo": "bar"}`,
@@ -199,10 +201,12 @@ func TestHandlerHandle(t *testing.T) {
 		},
 		"generic error with multiple header values": {
 			handler: New(),
-			err: &pipeline.GenericError{
-				Code: http.StatusOK,
-				Headers: map[string][]string{
-					"Set-Cookie": {"a=1", "b=2"},
+			err: &pipeline.ResponseError{
+				ErrorResponse: pipeline.ErrorResponse{
+					Code: http.StatusOK,
+					Headers: map[string][]string{
+						"Set-Cookie": {"a=1", "b=2"},
+					},
 				},
 			},
 			expCode:   http.StatusOK,
@@ -210,22 +214,34 @@ func TestHandlerHandle(t *testing.T) {
 		},
 		"generic error without body and header": {
 			handler: New(),
-			err: &pipeline.GenericError{
-				Code: http.StatusOK,
+			err: &pipeline.ResponseError{
+				ErrorResponse: pipeline.ErrorResponse{
+					Code: http.StatusOK,
+				},
 			},
 			expHeader: http.Header{},
 			expCode:   http.StatusOK,
 		},
 		"generic error verbose": {
 			handler: New(WithVerboseErrors(true)),
-			err: &pipeline.GenericError{
-				Code:    http.StatusAccepted,
-				Body:    `{"foo": "bar"}`,
-				Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
+			err: &pipeline.ResponseError{
+				ErrorResponse: pipeline.ErrorResponse{
+					Code:    http.StatusAccepted,
+					Body:    `{"foo": "bar"}`,
+					Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
+				},
 			},
 			expCode:   http.StatusAccepted,
 			expBody:   `{"foo": "bar"}`,
 			expHeader: http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
+		},
+		"response error without custom response falls back to default mapping": {
+			handler: New(),
+			err: &pipeline.ResponseError{
+				Cause: errorchain.New(pipeline.ErrAuthentication),
+			},
+			expCode:   http.StatusUnauthorized,
+			expHeader: http.Header{},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {

@@ -199,10 +199,12 @@ func TestErrorInterceptor(t *testing.T) {
 		},
 		"generic error": {
 			interceptor: New(),
-			err: &pipeline.GenericError{
-				Code:    http.StatusUnprocessableEntity,
-				Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
-				Body:    `{"error":"denied"}`,
+			err: &pipeline.ResponseError{
+				ErrorResponse: pipeline.ErrorResponse{
+					Code:    http.StatusUnprocessableEntity,
+					Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
+					Body:    `{"error":"denied"}`,
+				},
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusUnprocessableEntity,
@@ -217,10 +219,12 @@ func TestErrorInterceptor(t *testing.T) {
 		},
 		"generic error with multiple header values": {
 			interceptor: New(),
-			err: &pipeline.GenericError{
-				Code:    http.StatusTooManyRequests,
-				Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
-				Body:    "rate limited",
+			err: &pipeline.ResponseError{
+				ErrorResponse: pipeline.ErrorResponse{
+					Code:    http.StatusTooManyRequests,
+					Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
+					Body:    "rate limited",
+				},
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusTooManyRequests,
@@ -232,6 +236,14 @@ func TestErrorInterceptor(t *testing.T) {
 				require.NotNil(t, deniedResp)
 				assert.True(t, slices.Equal([]string{"a=1", "b=2"}, headerValues(t, deniedResp.GetHeaders(), "Set-Cookie")))
 			},
+		},
+		"response error without custom response falls back to default mapping": {
+			interceptor: New(),
+			err: &pipeline.ResponseError{
+				Cause: pipeline.ErrAuthentication,
+			},
+			expGRPCCode: codes.Unauthenticated,
+			expHTTPCode: http.StatusUnauthorized,
 		},
 		"internal error default": {
 			interceptor: New(),

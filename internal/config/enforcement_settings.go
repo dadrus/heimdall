@@ -44,6 +44,7 @@ type EnforcementSettings struct {
 	EnforceIngressTLS           bool
 	EnforceEgressTLS            bool
 	EnforceUpstreamTLS          bool
+	EnforceHTTPSReferences      bool
 }
 
 func (v EnforcementSettings) Tag() string { return "enforced" }
@@ -62,7 +63,7 @@ func (v EnforcementSettings) Validate(param string, field reflect.Value) bool { 
 			value = field.String()
 		}
 
-		return strings.HasPrefix(value, "https")
+		return strings.HasPrefix(value, "https://")
 	case paramNotNil:
 		if !v.EnforceIngressTLS {
 			return true

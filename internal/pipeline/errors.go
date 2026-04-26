@@ -30,6 +30,7 @@ var (
 	ErrConfiguration        = errors.New("configuration error")
 	ErrInternal             = errors.New("internal error")
 	ErrNoRuleFound          = errors.New("no rule found")
+	ErrMalformedRequest     = errors.New("malformed request")
 )
 
 type RedirectError struct {
@@ -44,15 +45,77 @@ func (e *RedirectError) Is(target error) bool {
 	return reflect.TypeFor[*RedirectError]() == reflect.TypeOf(target)
 }
 
-type GenericError struct {
+type ErrorResponse struct {
 	Code    int
 	Headers map[string][]string
 	Body    string
-	Cause   error
 }
 
-func (e *GenericError) Error() string { return "generic_error" }
+func (e *ErrorResponse) AddHeader(name, value string) {
+	if e.Headers == nil {
+		e.Headers = make(map[string][]string)
+	}
 
-func (e *GenericError) Is(target error) bool {
-	return reflect.TypeFor[*GenericError]() == reflect.TypeOf(target)
+	e.Headers[name] = append(e.Headers[name], value)
+}
+
+func errorContext(err error) any {
+	type errorContextCarrier interface {
+		ErrorContext() any
+	}
+
+	var contextCarrier errorContextCarrier
+
+	if !errors.As(err, &contextCarrier) {
+		return nil
+	}
+
+	return contextCarrier.ErrorContext()
+}
+
+type ResponseError struct {
+	ErrorResponse
+
+	Cause error
+}
+
+func NewResponseError(cause error, response ...ErrorResponse) *ResponseError {
+	responseError := &ResponseError{Cause: cause}
+	if len(response) != 0 {
+		responseError.ErrorResponse = response[0]
+	}
+
+	responseError.decorate()
+
+	return responseError
+}
+
+func (e *ResponseError) Error() string { return "generic_error" }
+
+func (e *ResponseError) Is(target error) bool {
+	return reflect.TypeFor[*ResponseError]() == reflect.TypeOf(target)
+}
+
+func (e *ResponseError) Unwrap() error { return e.Cause }
+
+func (e *ResponseError) Response() ErrorResponse {
+	return e.ErrorResponse
+}
+
+func (e *ResponseError) decorate() {
+	type errorResponseDecorator interface {
+		DecorateErrorResponse(cause error, er *ErrorResponse)
+	}
+
+	errContext := errorContext(e.Cause)
+	if errContext == nil {
+		return
+	}
+
+	decorator, ok := errContext.(errorResponseDecorator)
+	if !ok {
+		return
+	}
+
+	decorator.DecorateErrorResponse(e.Cause, &e.ErrorResponse)
 }

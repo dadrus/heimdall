@@ -45,10 +45,49 @@ type errorHandler struct {
 	*opts
 }
 
-//nolint:cyclop
+func writeCustomResponse(
+	rw http.ResponseWriter,
+	responseError *pipeline.ResponseError,
+	logger *zerolog.Logger,
+) {
+	for name, values := range responseError.Headers {
+		for _, value := range values {
+			rw.Header().Add(name, value)
+		}
+	}
+
+	rw.WriteHeader(responseError.Code)
+
+	if len(responseError.Body) == 0 {
+		return
+	}
+
+	if _, err := rw.Write(stringx.ToBytes(responseError.Body)); err != nil {
+		logger.Error().Err(err).Msg("Internal error occurred")
+	}
+}
+
+func hasCustomResponse(responseError *pipeline.ResponseError) bool {
+	return responseError.Code != 0 ||
+		len(responseError.Headers) != 0 ||
+		len(responseError.Body) != 0
+}
+
 func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
 	ctx := req.Context()
 	logger := zerolog.Ctx(ctx)
+
+	if responseError, ok := errors.AsType[*pipeline.ResponseError](err); ok {
+		if hasCustomResponse(responseError) {
+			writeCustomResponse(rw, responseError, logger)
+
+			accesscontext.SetError(ctx, responseError.Cause)
+
+			return
+		}
+
+		err = responseError.Cause
+	}
 
 	switch {
 	case errors.Is(err, pipeline.ErrAuthentication):
@@ -62,32 +101,10 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 	case errors.Is(err, pipeline.ErrNoRuleFound):
 		h.onNoRuleError(rw, req, err)
 	case errors.Is(err, &pipeline.RedirectError{}):
-		var redirectError *pipeline.RedirectError
-
-		errors.As(err, &redirectError)
+		redirectError, _ := errors.AsType[*pipeline.RedirectError](err)
 
 		rw.Header().Set("Location", redirectError.RedirectTo)
 		rw.WriteHeader(redirectError.Code)
-	case errors.Is(err, &pipeline.GenericError{}):
-		var genericError *pipeline.GenericError
-
-		errors.As(err, &genericError)
-
-		for name, values := range genericError.Headers {
-			for _, value := range values {
-				rw.Header().Add(name, value)
-			}
-		}
-
-		rw.WriteHeader(genericError.Code)
-
-		if len(genericError.Body) != 0 {
-			if _, err := rw.Write(stringx.ToBytes(genericError.Body)); err != nil {
-				logger.Error().Err(err).Msg("Internal error occurred")
-			}
-		}
-
-		err = genericError.Cause
 	default:
 		logger.Error().Err(err).Msg("Internal error occurred")
 

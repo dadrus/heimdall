@@ -483,6 +483,48 @@ message: No groups ending with @acme.co present
 ----
 ====
 
+== Bearer Token Usage Error Signaling
+
+This type configures how heimdall signals errors for authenticators using OAuth2 Bearer tokens according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750].
+
+Following properties are available:
+
+* *`enabled`*: _boolean_ (optional)
++
+Enables the generation of the `WWW-Authenticate` response header using the `Bearer` authentication scheme. Defaults to `false`.
+
+* *`realm`*: _string_ (optional)
++
+The realm to include in the `WWW-Authenticate` header. Defaults to `"Please authenticate"`.
+
+* *`error_uri`*: _URI_ (optional)
++
+A URI identifying a human-readable page with information about the error.
+
+* *`include_error_description`*: _boolean_ (optional)
++
+Whether to include the optional `error_description` parameter. Defaults to `false`.
++
+CAUTION: Enabling this option may disclose implementation details and should be used with care.
+
+* *`include_required_scope`*: _boolean_ (optional)
++
+Whether to include the required scopes using the optional `scope` parameter if the error is `insufficient_scope`. Defaults to `false`.
++
+CAUTION: Enabling this option may disclose details about the protected resource's authorization model.
+
+.Bearer token usage error signaling configuration
+====
+[source, yaml]
+----
+enabled: true
+realm: example
+error_uri: https://docs.example.org/oauth2/errors
+include_error_description: false
+include_required_scope: false
+----
+====
+
 == ByteSize
 
 ByteSize is actually a string type, which adheres to the following pattern: `^[0-9]+(B|KB|MB)$`

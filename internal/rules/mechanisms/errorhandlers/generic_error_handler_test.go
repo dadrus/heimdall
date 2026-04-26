@@ -33,8 +33,24 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
+
+type appendResponseDecorator struct {
+	headerName  string
+	headerValue string
+	code        int
+}
+
+func (d appendResponseDecorator) DecorateErrorResponse(_ error, er *pipeline.ErrorResponse) {
+	if er.Headers == nil {
+		er.Headers = make(map[string][]string)
+	}
+
+	er.Headers[d.headerName] = append(er.Headers[d.headerName], d.headerValue)
+	er.Code = d.code
+}
 
 func renderHeaderValues(t *testing.T, entries []HeaderEntry, name string, vals map[string]any) []string {
 	t.Helper()
@@ -388,7 +404,7 @@ code: 500
 
 				ctx.EXPECT().Request().Return(nil)
 				ctx.EXPECT().Error().Return(errors.New("test error"))
-				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.GenericError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
@@ -417,7 +433,7 @@ headers:
 
 				ctx.EXPECT().Request().Return(nil).Times(2)
 				ctx.EXPECT().Error().Return(errors.New("test error"))
-				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.GenericError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
@@ -447,7 +463,7 @@ headers:
 
 				ctx.EXPECT().Request().Return(nil).Times(3)
 				ctx.EXPECT().Error().Return(errors.New("test error"))
-				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.GenericError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
@@ -475,7 +491,7 @@ body: blocked
 
 				ctx.EXPECT().Request().Return(nil).Times(2)
 				ctx.EXPECT().Error().Return(errors.New("test error"))
-				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.GenericError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
 					assert.Equal(t, 500, genErr.Code)
@@ -483,6 +499,43 @@ body: blocked
 					assert.Equal(t, "blocked", genErr.Body)
 					require.Error(t, genErr.Cause)
 					assert.Equal(t, "test error", genErr.Cause.Error())
+
+					return true
+				}))
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"with response decorator from error context": {
+			config: []byte(`
+code: 500
+headers:
+  - X-First: foo
+`),
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+				t.Helper()
+
+				cause := errorchain.New(pipeline.ErrAuthentication).WithErrorContext(appendResponseDecorator{
+					headerName:  "WWW-Authenticate",
+					headerValue: "Basic realm=\"foo\"",
+					code:        401,
+				})
+
+				ctx.EXPECT().Request().Return(nil).Times(2)
+				ctx.EXPECT().Error().Return(cause)
+				ctx.EXPECT().SetError(mock.MatchedBy(func(respErr *pipeline.ResponseError) bool {
+					t.Helper()
+
+					assert.Equal(t, 401, respErr.Code)
+					assert.Empty(t, respErr.Body)
+					assert.Equal(t, map[string][]string{
+						"X-First":          {"foo"},
+						"WWW-Authenticate": {"Basic realm=\"foo\""},
+					}, respErr.Headers)
+					assert.ErrorIs(t, respErr.Cause, pipeline.ErrAuthentication)
 
 					return true
 				}))
@@ -573,7 +626,7 @@ values:
 
 				ctx.EXPECT().Request().Return(req).Times(4)
 				ctx.EXPECT().Error().Return(errors.New("test error"))
-				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.GenericError) bool {
+				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
 					assert.Equal(t, 451, genErr.Code)

@@ -65,6 +65,8 @@ func (eh *defaultErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 		Str("_id", eh.id).
 		Msg("Executing error handler")
 
+	ctx.SetError(pipeline.NewResponseError(ctx.Error()))
+
 	return nil
 }
 

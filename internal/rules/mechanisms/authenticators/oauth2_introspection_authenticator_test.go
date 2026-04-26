@@ -47,6 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -402,6 +403,37 @@ metadata_endpoint:
 				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
+		"minimal jwks endpoint based configuration with full error signaling": {
+			config: []byte(`
+introspection_endpoint:
+  url: http://foobar.local
+assertions:
+  issuers:
+    - foobar
+error_signaling:
+  enabled: true
+  include_error_description: true
+  include_required_scope: true
+  realm: example
+  error_uri: https://example.com/errors`),
+			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, auth.ed.Enabled)
+				assert.True(t, *auth.ed.Enabled)
+
+				require.NotNil(t, auth.ed.IncludeErrorDetails)
+				assert.True(t, *auth.ed.IncludeErrorDetails)
+
+				require.NotNil(t, auth.ed.IncludeRequiredScope)
+				assert.True(t, *auth.ed.IncludeRequiredScope)
+
+				assert.Equal(t, "example", auth.ed.Realm)
+				assert.Equal(t, "https://example.com/errors", auth.ed.ErrorURI)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -690,6 +722,57 @@ assertions:
 				assert.Equal(t, "step with custom principal name", configured.ID())
 				assert.NotEqual(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, "foo", configured.PrincipalName())
+				assert.False(t, configured.IsInsecure())
+				assert.Equal(t, types.KindAuthenticator, configured.Kind())
+				assert.Equal(t, prototype.Type(), configured.Type())
+			},
+		},
+		"mechanism config with error signaling, step config overwrites parts": {
+			config: []byte(`
+introspection_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+error_signaling:
+  enabled: true
+  include_error_description: true
+  realm: parent
+  error_uri: https://parent.example/error`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"error_signaling": map[string]any{
+						"include_required_scope": true,
+						"realm":                  "child",
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype.ed, configured.ed)
+
+				require.NotNil(t, configured.ed.Enabled)
+				assert.True(t, *configured.ed.Enabled)
+
+				require.NotNil(t, configured.ed.IncludeErrorDetails)
+				assert.True(t, *configured.ed.IncludeErrorDetails)
+
+				require.NotNil(t, configured.ed.IncludeRequiredScope)
+				assert.True(t, *configured.ed.IncludeRequiredScope)
+
+				assert.Equal(t, "child", configured.ed.Realm)
+				assert.Equal(t, "https://parent.example/error", configured.ed.ErrorURI)
+
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "mechanism config with error signaling, step config overwrites parts", configured.ID())
+				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
 				assert.Equal(t, prototype.Type(), configured.Type())
@@ -2356,4 +2439,91 @@ func TestOauth2IntrospectionAuthenticatorAccept(t *testing.T) {
 	auth.Accept(visitor)
 
 	// THEN expected calls are done
+}
+
+func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		authenticator  *oauth2IntrospectionAuthenticator
+		cause          error
+		expectedCode   int
+		expectedHeader string
+	}{
+		"not configured error signaling": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{},
+				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
+			},
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+		},
+		"explicitly disabled error signaling": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{Enabled: new(false)},
+				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
+			},
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+		},
+		"insufficient scope without configured scopes": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{
+					Enabled:              new(true),
+					IncludeRequiredScope: new(true),
+				},
+				a: oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
+			},
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			expectedCode:   http.StatusForbidden,
+			expectedHeader: `Bearer error="insufficient_scope"`,
+		},
+		"insufficient scope with exact scopes": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{
+					Enabled:              new(true),
+					IncludeRequiredScope: new(true),
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
+				},
+			},
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			expectedCode:   http.StatusForbidden,
+			expectedHeader: `Bearer error="insufficient_scope", scope="foo bar"`,
+		},
+		"invalid token does not expose scopes": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				ed: oauth2.BearerTokenUsageErrorDecorator{
+					Enabled:              new(true),
+					IncludeRequiredScope: new(true),
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
+				},
+			},
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrAssertion),
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer error="invalid_token"`,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			response := pipeline.ErrorResponse{}
+
+			// WHEN
+			tc.authenticator.DecorateErrorResponse(tc.cause, &response)
+
+			// THEN
+			assert.Equal(t, tc.expectedCode, response.Code)
+
+			if len(tc.expectedHeader) == 0 {
+				assert.Empty(t, response.Headers)
+
+				return
+			}
+
+			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["WWW-Authenticate"])
+		})
+	}
 }
