@@ -1275,7 +1275,8 @@
         },
         "realm": {
           "description": "Optional Bearer realm value included in the WWW-Authenticate header.",
-          "type": "string"
+          "type": "string",
+          "default": "Please authenticate"
         }
       }
     },
@@ -1291,7 +1292,8 @@
         },
         "realm": {
           "description": "Optional Basic authentication realm value included in the WWW-Authenticate header.",
-          "type": "string"
+          "type": "string",
+          "default": "Please authenticate"
         }
       }
     },
