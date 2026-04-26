@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 23 Apr 2026 01:10:01 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration Reference on Heimdall</title><link>https://dadrus.github.io/docs/configuration/</link><description>Recent content in Configuration Reference on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 26 Apr 2026 14:51:39 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Type Definitions</title><link>https://dadrus.github.io/docs/configuration/types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/types/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_assertions"&gt;Assertions&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
@@ -148,6 +148,9 @@
  &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;user_id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;bar&lt;/span&gt;
  &lt;span class="na"&gt;password&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;baz&lt;/span&gt;
+ &lt;span class="na"&gt;error_signaling&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;realm&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;example&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;kratos_session_authenticator&lt;/span&gt;
  &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;generic&lt;/span&gt;
  &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
@@ -201,6 +204,12 @@
  &lt;span class="na"&gt;principal&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;sub&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
+ &lt;span class="na"&gt;error_signaling&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;realm&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;api&lt;/span&gt;
+ &lt;span class="na"&gt;error_uri&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;https://docs.example.org/oauth2/errors&lt;/span&gt;
+ &lt;span class="na"&gt;include_error_description&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;
+ &lt;span class="na"&gt;include_required_scope&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt_authenticator&lt;/span&gt;
  &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwt&lt;/span&gt;
  &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
@@ -240,6 +249,12 @@
  &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;sub&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;cache_ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;5m&lt;/span&gt;
+ &lt;span class="na"&gt;error_signaling&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="na"&gt;realm&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;api&lt;/span&gt;
+ &lt;span class="na"&gt;error_uri&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;urn:heimdall:oauth2:error&lt;/span&gt;
+ &lt;span class="na"&gt;include_error_description&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;
+ &lt;span class="na"&gt;include_required_scope&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;
 
  &lt;span class="na"&gt;authorizers&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;allow_all_authorizer&lt;/span&gt;
