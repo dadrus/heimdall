@@ -69,18 +69,27 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 	opts = append(opts,
 		httpx.WithPrefix("Bearer"),
 		httpx.WithKeyValue("realm", d.Realm),
-		httpx.WithKeyValue("error_uri", d.ErrorURI),
 	)
 
-	switch {
-	case errors.Is(err, pipeline.ErrArgument):
-		er.Code = http.StatusBadRequest
+	hasErrorCode := false
 
-		opts = append(opts, httpx.WithKeyValue("error", "invalid_request"))
+	switch {
+	case errors.Is(err, pipeline.ErrMalformedRequest):
+		er.Code = http.StatusBadRequest
+		hasErrorCode = true
+
+		opts = append(opts,
+			httpx.WithKeyValue("error_uri", d.ErrorURI),
+			httpx.WithKeyValue("error", "invalid_request"),
+		)
 	case errors.Is(err, ErrScopeMatch):
 		er.Code = http.StatusForbidden
+		hasErrorCode = true
 
-		opts = append(opts, httpx.WithKeyValue("error", "insufficient_scope"))
+		opts = append(opts,
+			httpx.WithKeyValue("error_uri", d.ErrorURI),
+			httpx.WithKeyValue("error", "insufficient_scope"),
+		)
 
 		if d.IncludeRequiredScope != nil && *d.IncludeRequiredScope {
 			opts = append(opts, httpx.WithKeyValue("scope",
@@ -89,10 +98,17 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 	default:
 		er.Code = http.StatusUnauthorized
 
-		opts = append(opts, httpx.WithKeyValue("error", "invalid_token"))
+		if !errors.Is(err, pipeline.ErrArgument) {
+			hasErrorCode = true
+
+			opts = append(opts,
+				httpx.WithKeyValue("error_uri", d.ErrorURI),
+				httpx.WithKeyValue("error", "invalid_token"),
+			)
+		}
 	}
 
-	if d.IncludeErrorDetails != nil && *d.IncludeErrorDetails {
+	if hasErrorCode && d.IncludeErrorDetails != nil && *d.IncludeErrorDetails {
 		cause := errors.Unwrap(err)
 		opts = append(opts, httpx.WithKeyValue("error_description",
 			x.IfThenElseExec(cause == nil,
