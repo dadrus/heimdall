@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.15](https://github.com/dadrus/heimdall/compare/v0.17.14...v0.17.15) (2026-04-27)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to e10c466 ([#3214](https://github.com/dadrus/heimdall/issues/3214)) ([6a027f0](https://github.com/dadrus/heimdall/commit/6a027f0a861c78f9ffe1ee8b006b47f20373147d))
+* update module github.com/go-co-op/gocron/v2 to v2.21.1 ([#3219](https://github.com/dadrus/heimdall/issues/3219)) ([2b41e1e](https://github.com/dadrus/heimdall/commit/2b41e1ec96567a5db158a1bb2a168a9112cba511))
+* update module github.com/rs/zerolog to v1.35.1 ([#3216](https://github.com/dadrus/heimdall/issues/3216)) ([a7b7392](https://github.com/dadrus/heimdall/commit/a7b7392cd3158477035437b1722af3f294c57cdc))
+
 ## [0.17.14](https://github.com/dadrus/heimdall/compare/v0.17.13...v0.17.14) (2026-04-19)
 
 
