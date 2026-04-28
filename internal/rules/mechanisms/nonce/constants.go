@@ -10,5 +10,3 @@ const (
 	maxEncryptedNonceLen = 4096
 	nonceAEADKeySize     = 32
 )
-
-var nonceHKDFInfo = "heimdall/nonce/aes-256-gcm/v1"

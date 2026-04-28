@@ -108,7 +108,7 @@ func (p *payload) encode(key Key) (string, error) {
 	}
 
 	rawPayload[0] = noncePayloadVersion
-	binary.BigEndian.PutUint64(rawPayload[1:9], uint64(p.IssuedAt))
+	binary.BigEndian.PutUint64(rawPayload[1:9], uint64(p.IssuedAt)) //nolint: gosec
 	copy(rawPayload[9:41], p.Binding[:])
 
 	ciphertext := aead.Seal(ciphertextBuf[:0], nonce[:nonceAEADNonceSize], rawPayload[:], nil)
@@ -134,6 +134,7 @@ func (p *payload) encode(key Key) (string, error) {
 	return string(out), nil
 }
 
+//nolint:cyclop
 func (p *payload) decode(resolver KeyResolver, value string) error {
 	var (
 		nonce         [nonceRandomSize]byte
@@ -163,25 +164,26 @@ func (p *payload) decode(resolver KeyResolver, value string) error {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "key not found").CausedBy(err)
 	}
 
-	n, err := base64.RawURLEncoding.Decode(nonce[:], stringx.ToBytes(nonceB64))
+	nonceSize, err := base64.RawURLEncoding.Decode(nonce[:], stringx.ToBytes(nonceB64))
 	if err != nil {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "decoding nonce failed").
 			CausedBy(err)
 	}
 
-	if n != nonceRandomSize {
+	if nonceSize != nonceRandomSize {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
 	}
 
 	ciphertextDecodedLen := base64.RawURLEncoding.DecodedLen(len(ciphertextB64))
 
-	n, err = base64.RawURLEncoding.Decode(ciphertextBuf[:ciphertextDecodedLen], stringx.ToBytes(ciphertextB64))
+	ciphertextSize, err := base64.RawURLEncoding.Decode(
+		ciphertextBuf[:ciphertextDecodedLen], stringx.ToBytes(ciphertextB64))
 	if err != nil {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "decoding ciphertext failed").
 			CausedBy(err)
 	}
 
-	ciphertext := ciphertextBuf[:n]
+	ciphertext := ciphertextBuf[:ciphertextSize]
 
 	aead, err := newCipher(key.Value, nonce[:])
 	if err != nil {
@@ -202,7 +204,7 @@ func (p *payload) decode(resolver KeyResolver, value string) error {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "unsupported payload version")
 	}
 
-	iat := int64(binary.BigEndian.Uint64(rawPayload[1:9]))
+	iat := int64(binary.BigEndian.Uint64(rawPayload[1:9])) //nolint: gosec
 	if iat <= 0 {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "bad issued at value")
 	}
@@ -214,7 +216,13 @@ func (p *payload) decode(resolver KeyResolver, value string) error {
 }
 
 func newCipher(masterKey, nonce []byte) (cipher.AEAD, error) {
-	key, err := hkdf.Key(sha256.New, masterKey, nonce, nonceHKDFInfo, nonceAEADKeySize)
+	key, err := hkdf.Key(
+		sha256.New,
+		masterKey,
+		nonce,
+		"heimdall/nonce/aes-256-gcm/v1",
+		nonceAEADKeySize,
+	)
 	if err != nil {
 		return nil, err
 	}

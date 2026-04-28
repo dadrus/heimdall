@@ -240,7 +240,7 @@ func TestValidateNonce(t *testing.T) {
 			nonce: buildNonce(t, key, func() []byte {
 				rawPayload := make([]byte, noncePayloadSize)
 				rawPayload[0] = noncePayloadVersion + 1
-				binary.BigEndian.PutUint64(rawPayload[1:9], uint64(time.Now().Unix()))
+				binary.BigEndian.PutUint64(rawPayload[1:9], uint64(time.Now().Unix())) //nolint: gosec
 				copy(rawPayload[9:41], binding[:])
 
 				return rawPayload
@@ -277,7 +277,7 @@ func TestValidateNonce(t *testing.T) {
 			nonce: buildNonce(t, key, func() []byte {
 				rawPayload := make([]byte, noncePayloadSize)
 				rawPayload[0] = noncePayloadVersion
-				binary.BigEndian.PutUint64(rawPayload[1:9], uint64(time.Now().Add(time.Minute).Unix()))
+				binary.BigEndian.PutUint64(rawPayload[1:9], uint64(time.Now().Add(time.Minute).Unix())) //nolint: gosec
 				copy(rawPayload[9:41], binding[:])
 
 				return rawPayload
