@@ -171,7 +171,7 @@ func TestCelExecutionConditionCanExecuteOnError(t *testing.T) {
 			// WHEN
 			can, err := condition.CanExecuteOnError(ctx, errorchain.
 				NewWithMessage(pipeline.ErrCommunication, "test").
-				CausedBy(pipeline.ErrAuthorization).WithErrorContext(testIdentifier("foobar")))
+				CausedBy(pipeline.ErrAuthorization).WithAspects(testIdentifier("foobar")))
 
 			// THEN
 			require.NoError(t, err)

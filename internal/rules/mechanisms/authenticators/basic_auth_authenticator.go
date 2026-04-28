@@ -131,7 +131,7 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "expected header not present in request").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -139,14 +139,14 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "failed to decode received credentials value").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	userIDAndPassword := strings.Split(string(res), ":")
 	if len(userIDAndPassword) != basicAuthSchemeCredentialsElements {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "malformed user-id - password scheme").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	md := sha256.New()
@@ -163,7 +163,7 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 	if !userIDOK || !passwordOK {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "invalid user credentials").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	sub[a.principalName] = &pipeline.Principal{

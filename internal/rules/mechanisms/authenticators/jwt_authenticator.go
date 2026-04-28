@@ -208,7 +208,7 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -216,7 +216,7 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(errorchain.NewWithMessage(pipeline.ErrMalformedRequest, "invalid JWT format").
 				CausedBy(err))
 	}
@@ -230,7 +230,7 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to extract principal information from jwt").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -348,13 +348,13 @@ func (a *jwtAuthenticator) serverMetadata(
 	metadata, err := a.r.Get(ctx.Context(), map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
-			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
+			"failed retrieving oauth2 server metadata").CausedBy(err).WithAspects(a)
 	}
 
 	if metadata.JWKSEndpoint == nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"received server metadata does not contain the required jwks_uri").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	return metadata, nil
@@ -364,7 +364,7 @@ func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, token *jwt.JSONWebT
 	claims := map[string]any{}
 	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to deserialize JWT").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -432,7 +432,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication,
 				"None of the keys received from the JWKS endpoint could be used to verify the JWT").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	return rawClaims, nil
@@ -477,14 +477,14 @@ func (a *jwtAuthenticator) getKey(
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrAuthentication,
 				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	jwk := &keys[0]
 	if err = a.validateJWK(jwk); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -512,13 +512,13 @@ func (a *jwtAuthenticator) fetchJWKS(
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.
 				NewWithMessage(pipeline.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrCommunication, "request to JWKS endpoint failed").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -547,7 +547,7 @@ func (a *jwtAuthenticator) createRequest(
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -558,7 +558,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	// unmarshal the received key set
@@ -567,7 +567,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to unmarshal received jwks").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -583,13 +583,13 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication,
 				"algorithm in the JWT header does not match the algorithm referenced in the key").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	if err := assertions.AssertAlgorithm(key.Algorithm); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -601,14 +601,14 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	if err := token.Claims(key, &mapClaims, &claims); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "failed to verify JWT signature").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
 	if err := claims.Validate(*assertions); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -616,7 +616,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to marshal jwt payload").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 

@@ -196,7 +196,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "no access token present").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -210,7 +210,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 		return errorchain.
 			NewWithMessage(pipeline.ErrInternal,
 				"failed to extract principal information from introspection response").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -287,13 +287,13 @@ func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 	metadata, err := a.r.Get(ctx.Context(), args)
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
-			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
+			"failed retrieving oauth2 server metadata").CausedBy(err).WithAspects(a)
 	}
 
 	if metadata.IntrospectionEndpoint == nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"received server metadata does not contain the required introspection_endpoint").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	return metadata, nil
@@ -364,7 +364,7 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	if err = introspectResp.Validate(assertions); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -396,7 +396,7 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 			tpl, err := template.New(value)
 			if err != nil {
 				return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-					WithErrorContext(a).
+					WithAspects(a).
 					CausedBy(err)
 			}
 
@@ -406,7 +406,7 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -427,13 +427,13 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 			return nil, nil, errorchain.
 				NewWithMessage(pipeline.ErrCommunicationTimeout,
 					"request to the introspection endpoint timed out").
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 
 		return nil, nil, errorchain.
 			NewWithMessage(pipeline.ErrCommunication, "request to the introspection endpoint failed").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -448,7 +448,7 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, nil, errorchain.
 			NewWithMessagef(pipeline.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	var (
@@ -459,7 +459,7 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	if err := json.NewDecoder(io.TeeReader(resp.Body, &buf)).Decode(&introspectionResponse); err != nil {
 		return nil, nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to unmarshal received introspection response").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 

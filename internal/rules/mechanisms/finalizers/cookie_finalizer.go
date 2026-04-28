@@ -90,7 +90,7 @@ func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 		if err != nil {
 			return errorchain.
 				NewWithMessagef(pipeline.ErrInternal, "failed to render value for '%s' cookie", name).
-				WithErrorContext(f).
+				WithAspects(f).
 				CausedBy(err)
 		}
 
