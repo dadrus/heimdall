@@ -85,20 +85,19 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 			httpx.WithKeyValue("error", "use_dpop_nonce"),
 		)
 
-		type binder interface {
+		type nonceBinder interface {
 			Binding() [32]byte
 		}
 
-		var b binder
-
-		if !errors.As(err, &b) {
+		var nb nonceBinder
+		if !errors.As(err, &nb) {
 			er.Code = http.StatusInternalServerError
 
 			return
 		}
 
 		nonce, nonceErr := nonce2.NewNonce(nonce2.Key{},
-			nonce2.WithBinding(b.Binding()),
+			nonce2.WithBinding(nb.Binding()),
 		)
 		if nonceErr != nil {
 			er.Code = http.StatusInternalServerError
