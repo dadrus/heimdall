@@ -35,6 +35,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -152,9 +153,12 @@ func TestServiceTestSuite(t *testing.T) {
 
 func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	// GIVEN
+	var err error
+
 	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
 	for idx, entry := range suite.ks.Entries() {
-		keys[idx] = entry.JWK()
+		keys[idx], err = joseadapter.ToJWK(entry)
+		suite.Require().NoError(err)
 	}
 
 	suite.khr.EXPECT().Keys().Return(keys)
@@ -185,7 +189,8 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	entry, err := suite.ks.GetKey("bar")
 	suite.Require().NoError(err)
 
-	expected := entry.JWK()
+	expected, err := joseadapter.ToJWK(entry)
+	suite.Require().NoError(err)
 	suite.Equal(expected.KeyID, jwk[0].KeyID)
 	suite.Equal(expected.Key, jwk[0].Key)
 	suite.Equal(expected.Algorithm, jwk[0].Algorithm)
@@ -200,7 +205,8 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	entry, err = suite.ks.GetKey("foo")
 	suite.Require().NoError(err)
 
-	expected = entry.JWK()
+	expected, err = joseadapter.ToJWK(entry)
+	suite.Require().NoError(err)
 	suite.Equal(expected.KeyID, jwk[0].KeyID)
 	suite.Equal(expected.Key, jwk[0].Key)
 	suite.Equal(expected.Algorithm, jwk[0].Algorithm)
@@ -216,9 +222,12 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 
 func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	// GIVEN
+	var err error
+
 	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
 	for idx, entry := range suite.ks.Entries() {
-		keys[idx] = entry.JWK()
+		keys[idx], err = joseadapter.ToJWK(entry)
+		suite.Require().NoError(err)
 	}
 
 	suite.khr.EXPECT().Keys().Return(keys)

@@ -44,6 +44,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
@@ -1092,22 +1093,22 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	require.NoError(t, err)
 
 	jwksWithDuplicateEntries, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		keyOnlyEntry.JWK(), keyOnlyEntry.JWK(),
+		mustToJWK(t, keyOnlyEntry), mustToJWK(t, keyOnlyEntry),
 	}})
 	require.NoError(t, err)
 
 	jwksWithOneKeyOnlyEntry, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		keyOnlyEntry.JWK(),
+		mustToJWK(t, keyOnlyEntry),
 	}})
 	require.NoError(t, err)
 
 	jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		keyOnlyEntry.JWK(), keyAndCertEntry.JWK(),
+		mustToJWK(t, keyOnlyEntry), mustToJWK(t, keyAndCertEntry),
 	}})
 	require.NoError(t, err)
 
 	jwksWithRSAKey, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		keyRSAEntry.JWK(),
+		mustToJWK(t, keyRSAEntry),
 	}})
 	require.NoError(t, err)
 
@@ -2812,7 +2813,7 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
-			Algorithm: jose.SignatureAlgorithm(keyEntry.JWK().Algorithm),
+			Algorithm: jose.SignatureAlgorithm(mustToJWK(t, keyEntry).Algorithm),
 			Key:       keyEntry.PrivateKey,
 		},
 		signerOpts)
@@ -2835,6 +2836,15 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 	require.NoError(t, err)
 
 	return rawJwt
+}
+
+func mustToJWK(t *testing.T, keyEntry *keystore.Entry) jose.JSONWebKey {
+	t.Helper()
+
+	jwk, err := joseadapter.ToJWK(keyEntry)
+	require.NoError(t, err)
+
+	return jwk
 }
 
 func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {

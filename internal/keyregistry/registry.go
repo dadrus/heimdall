@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -153,7 +154,12 @@ func (r *registry) rebuildExportableKeys() {
 			continue
 		}
 
-		snapshot = append(snapshot, key.JWK())
+		jwk, err := joseadapter.ToJWK(&key.Entry)
+		if err != nil {
+			continue
+		}
+
+		snapshot = append(snapshot, jwk)
 	}
 
 	r.keysSnapshot = snapshot

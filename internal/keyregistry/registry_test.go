@@ -595,7 +595,7 @@ func (s *RegistryTestSuite) TestNotify() {
 				require.Len(t, reg.state, 1)
 				assert.Contains(t, reg.state, "kid-1")
 				ki := reg.state["kid-1"]
-				assert.Equal(t, s.ee1.Certificate.PublicKey, ki.JWK().Key)
+				assert.Equal(t, s.ee1.Certificate.PublicKey, ki.PrivateKey.Public())
 				assert.True(t, reg.state["kid-1"].Exportable)
 				assert.Empty(t, reg.state["kid-1"].CertChain)
 

@@ -19,21 +19,6 @@ package keystore
 import (
 	"crypto"
 	"crypto/x509"
-	"fmt"
-
-	"github.com/go-jose/go-jose/v4"
-
-	"github.com/dadrus/heimdall/internal/x"
-)
-
-const (
-	rsa2048 = 2048
-	rsa3072 = 3072
-	rsa4096 = 4096
-
-	ecdsa256 = 256
-	ecdsa384 = 384
-	ecdsa512 = 521
 )
 
 type Entry struct {
@@ -42,54 +27,4 @@ type Entry struct {
 	KeySize    int
 	PrivateKey crypto.Signer
 	CertChain  []*x509.Certificate
-}
-
-func (e *Entry) JWK() jose.JSONWebKey {
-	return jose.JSONWebKey{
-		KeyID:     e.KeyID,
-		Algorithm: string(joseAlgorithm(e.Alg, e.KeySize)),
-		Key: x.IfThenElseExec(e.PrivateKey != nil,
-			func() crypto.PublicKey { return e.PrivateKey.Public() },
-			func() crypto.PublicKey { return e.CertChain[0].PublicKey },
-		),
-		Use:          "sig",
-		Certificates: e.CertChain,
-	}
-}
-
-func joseAlgorithm(alg string, keySize int) jose.SignatureAlgorithm {
-	switch alg {
-	case AlgRSA:
-		return getRSAAlgorithm(keySize)
-	case AlgECDSA:
-		return getECDSAAlgorithm(keySize)
-	default:
-		panic("Unsupported algorithm: " + alg)
-	}
-}
-
-func getECDSAAlgorithm(keySize int) jose.SignatureAlgorithm {
-	switch keySize {
-	case ecdsa256:
-		return jose.ES256
-	case ecdsa384:
-		return jose.ES384
-	case ecdsa512:
-		return jose.ES512
-	default:
-		panic(fmt.Sprintf("unsupported ECDSA key size: %d", keySize))
-	}
-}
-
-func getRSAAlgorithm(keySize int) jose.SignatureAlgorithm {
-	switch keySize {
-	case rsa2048:
-		return jose.PS256
-	case rsa3072:
-		return jose.PS384
-	case rsa4096:
-		return jose.PS512
-	default:
-		panic(fmt.Sprintf("unsupported RSA key size: %d", keySize))
-	}
 }
