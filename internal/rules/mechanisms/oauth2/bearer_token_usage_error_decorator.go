@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
+	nonce2 "github.com/dadrus/heimdall/internal/rules/mechanisms/nonce"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
@@ -68,13 +69,51 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 
 	opts := make([]httpx.Option, 0, 6)
 	opts = append(opts,
-		httpx.WithPrefix("Bearer"),
+		httpx.WithPrefix(x.IfThenElse(errors.Is(err, ErrDPoPProof), "DPoP", "Bearer")),
 		httpx.WithKeyValue("realm", d.Realm),
 	)
 
 	hasErrorCode := false
 
 	switch {
+	case errors.Is(err, ErrDPoPNonce):
+		er.Code = http.StatusUnauthorized
+		hasErrorCode = true
+
+		opts = append(opts,
+			httpx.WithKeyValue("error_uri", d.ErrorURI),
+			httpx.WithKeyValue("error", "use_dpop_nonce"),
+		)
+
+		type nonceBinder interface {
+			Binding() [32]byte
+		}
+
+		var nb nonceBinder
+		if !errors.As(err, &nb) {
+			er.Code = http.StatusInternalServerError
+
+			return
+		}
+
+		nonce, nonceErr := nonce2.NewNonce(nonce2.Key{},
+			nonce2.WithBinding(nb.Binding()),
+		)
+		if nonceErr != nil {
+			er.Code = http.StatusInternalServerError
+
+			return
+		}
+
+		er.AddHeader("DPoP-Nonce", httpx.NewHeader(httpx.WithValue(nonce)))
+	case errors.Is(err, ErrDPoPProof):
+		er.Code = http.StatusBadRequest
+		hasErrorCode = true
+
+		opts = append(opts,
+			httpx.WithKeyValue("error_uri", d.ErrorURI),
+			httpx.WithKeyValue("error", "invalid_dpop_proof"),
+		)
 	case errors.Is(err, pipeline.ErrMalformedRequest):
 		er.Code = http.StatusBadRequest
 		hasErrorCode = true

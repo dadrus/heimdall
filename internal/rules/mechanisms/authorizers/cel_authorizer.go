@@ -107,7 +107,7 @@ func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) erro
 	if err != nil {
 		return errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render values").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 

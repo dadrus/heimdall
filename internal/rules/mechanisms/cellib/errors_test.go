@@ -77,7 +77,7 @@ func TestErrors(t *testing.T) {
 				CausedBy(errorchain.New(pipeline.ErrAuthentication)).
 				CausedBy(errorchain.New(pipeline.ErrConfiguration)).
 				CausedBy(errorchain.New(pipeline.ErrInternal)).
-				WithErrorContext(errorProvider{name: "test", id: "foo"})
+				WithAspects(errorProvider{name: "test", id: "foo"})
 
 			out, _, err := prg.Eval(map[string]any{"Error": WrapError(causeErr)})
 			require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestWrapError(t *testing.T) {
 		id   string
 	}{
 		"no source":   {err: pipeline.ErrArgument},
-		"with source": {err: errorchain.New(pipeline.ErrAuthorization).WithErrorContext(errorProvider{name: "test", id: "foo"}), name: "test", id: "foo"},
+		"with source": {err: errorchain.New(pipeline.ErrAuthorization).WithAspects(errorProvider{name: "test", id: "foo"}), name: "test", id: "foo"},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// WHEN

@@ -40,11 +40,11 @@ func (ce compiledExpressions) eval(obj, ctx any) error {
 		err := expression.Eval(obj)
 		if err != nil {
 			if errors.Is(err, &cellib.EvalError{}) {
-				return errorchain.New(pipeline.ErrAuthorization).CausedBy(err).WithErrorContext(ctx)
+				return errorchain.New(pipeline.ErrAuthorization).CausedBy(err).WithAspects(ctx)
 			}
 
 			return errorchain.NewWithMessagef(pipeline.ErrInternal, "failed evaluating expression %d", i+1).
-				CausedBy(err).WithErrorContext(ctx)
+				CausedBy(err).WithAspects(ctx)
 		}
 	}
 

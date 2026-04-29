@@ -17,23 +17,30 @@
 package oauth2
 
 import (
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-// Claims represents public claim values (as specified in RFC 7519).
-type Claims struct {
-	Issuer    string       `json:"iss,omitempty"`
-	Subject   string       `json:"sub,omitempty"`
-	Audience  Audience     `json:"aud,omitempty"`
-	Scp       Scopes       `json:"scp,omitempty"`
-	Scope     Scopes       `json:"scope,omitempty"`
-	Expiry    *NumericDate `json:"exp,omitempty"`
-	NotBefore *NumericDate `json:"nbf,omitempty"`
-	IssuedAt  *NumericDate `json:"iat,omitempty"`
-	ID        string       `json:"jti,omitempty"`
+type Confirmation struct {
+	JWKThumbprint               string `json:"jkt,omitempty"`
+	CertificateThumbprintSHA256 string `json:"x5t#S256,omitempty"`
 }
 
-func (c Claims) Validate(exp Expectation) error {
+// Claims represents public claim values (as specified in RFC 7519).
+type Claims struct {
+	Issuer       string        `json:"iss,omitempty"`
+	Subject      string        `json:"sub,omitempty"`
+	Audience     Audience      `json:"aud,omitempty"`
+	Scp          Scopes        `json:"scp,omitempty"`
+	Scope        Scopes        `json:"scope,omitempty"`
+	Expiry       *NumericDate  `json:"exp,omitempty"`
+	NotBefore    *NumericDate  `json:"nbf,omitempty"`
+	IssuedAt     *NumericDate  `json:"iat,omitempty"`
+	JTI          string        `json:"jti,omitempty"`
+	Confirmation *Confirmation `json:"cnf,omitempty"`
+}
+
+func (c Claims) Validate(ctx pipeline.Context, rawToken string, exp Expectation) error {
 	if err := exp.AssertIssuer(c.Issuer); err != nil {
 		return err
 	}
@@ -47,6 +54,10 @@ func (c Claims) Validate(exp Expectation) error {
 	}
 
 	if err := exp.AssertIssuanceTime(c.IssuedAt.Time()); err != nil {
+		return err
+	}
+
+	if err := exp.AssertProofOfPossession(ctx, c.Confirmation, rawToken); err != nil {
 		return err
 	}
 

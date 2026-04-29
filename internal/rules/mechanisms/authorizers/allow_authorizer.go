@@ -76,7 +76,7 @@ func (a *allowAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrConfiguration, "allow authorizer cannot be reconfigured").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	auth := *a

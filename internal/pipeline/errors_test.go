@@ -43,37 +43,6 @@ func (d testErrorResponseDecorator) DecorateErrorResponse(cause error, er *Error
 	}
 }
 
-func TestErrorContext(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		err             error
-		expectedContext any
-	}{
-		"extracts context from errorchain": {
-			err: errorchain.New(ErrAuthentication).
-				WithErrorContext("test-mechanism"),
-			expectedContext: "test-mechanism",
-		},
-		"extracts context from wrapped errorchain": {
-			err: errors.Join(
-				ErrInternal,
-				errorchain.New(ErrAuthentication).
-					WithErrorContext(map[string]string{"foo": "bar"}),
-			),
-			expectedContext: map[string]string{"foo": "bar"},
-		},
-		"returns false if no context carrier": {
-			err: ErrInternal,
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			context := errorContext(tc.err)
-			assert.Equal(t, tc.expectedContext, context)
-		})
-	}
-}
-
 func TestNewResponseError(t *testing.T) {
 	t.Parallel()
 
@@ -106,7 +75,7 @@ func TestNewResponseError(t *testing.T) {
 			},
 		},
 		"applies decorator from cause context": {
-			cause: errorchain.New(ErrAuthentication).CausedBy(originalCause).WithErrorContext(testErrorResponseDecorator{
+			cause: errorchain.New(ErrAuthentication).CausedBy(originalCause).WithAspects(testErrorResponseDecorator{
 				code:    401,
 				headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
 				body:    "denied",

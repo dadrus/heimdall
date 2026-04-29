@@ -267,7 +267,7 @@ func (a *remoteAuthorizer) doAuthorize(
 		tpl, err := template.New(tplString)
 		if err != nil {
 			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 
@@ -281,7 +281,7 @@ func (a *remoteAuthorizer) doAuthorize(
 	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -291,13 +291,13 @@ func (a *remoteAuthorizer) doAuthorize(
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.NewWithMessage(pipeline.ErrCommunicationTimeout,
 				"request to the authorization endpoint timed out").
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.NewWithMessage(pipeline.ErrCommunication,
 			"request to the authorization endpoint failed").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -322,7 +322,7 @@ func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Respons
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrAuthorization,
 			"authorization failed based on received response code: %v", resp.StatusCode).
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	if resp.ContentLength == 0 {
@@ -334,7 +334,7 @@ func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Respons
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to read response").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -351,7 +351,7 @@ func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Respons
 	result, err := decoder.Decode(rawData)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to unmarshal response").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -406,7 +406,7 @@ func (a *remoteAuthorizer) renderTemplates(
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render values for the authorization endpoint").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -419,7 +419,7 @@ func (a *remoteAuthorizer) renderTemplates(
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the authorization endpoint").
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 	}

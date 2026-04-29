@@ -21,6 +21,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
+
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -31,11 +34,12 @@ const defaultLeeway = 10 * time.Second
 var ErrAssertion = errors.New("assertion error")
 
 type Expectation struct {
-	TrustedIssuers    []string      `mapstructure:"issuers"`
-	ScopesMatcher     ScopesMatcher `mapstructure:"scopes"`
-	Audiences         []string      `mapstructure:"audience"`
-	AllowedAlgorithms []string      `mapstructure:"allowed_algorithms"`
-	ValidityLeeway    time.Duration `mapstructure:"validity_leeway"`
+	TrustedIssuers    []string                  `mapstructure:"issuers"`
+	ScopesMatcher     ScopesMatcher             `mapstructure:"scopes"`
+	Audiences         []string                  `mapstructure:"audience"`
+	AllowedAlgorithms []jose.SignatureAlgorithm `mapstructure:"allowed_algorithms"`
+	ValidityLeeway    time.Duration             `mapstructure:"validity_leeway"`
+	ProofOfPossession ProofOfPossession         `mapstructure:"proof_of_possession"`
 }
 
 func (e Expectation) Merge(other Expectation) Expectation {
@@ -44,11 +48,12 @@ func (e Expectation) Merge(other Expectation) Expectation {
 	e.Audiences = x.IfThenElse(len(e.Audiences) != 0, e.Audiences, other.Audiences)
 	e.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
 	e.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
+	e.ProofOfPossession.Merge(other.ProofOfPossession)
 
 	return e
 }
 
-func (e Expectation) AssertAlgorithm(alg string) error {
+func (e Expectation) AssertAlgorithm(alg jose.SignatureAlgorithm) error {
 	if !slices.Contains(e.AllowedAlgorithms, alg) {
 		return errorchain.NewWithMessagef(ErrAssertion, "algorithm %s is not allowed", alg)
 	}
@@ -110,3 +115,11 @@ func (e Expectation) AssertIssuanceTime(issuedAt time.Time) error {
 }
 
 func (e Expectation) AssertScopes(scopes []string) error { return e.ScopesMatcher.Match(scopes) }
+
+func (e Expectation) AssertProofOfPossession(ctx pipeline.Context, cnf *Confirmation, rawToken string) error {
+	if err := e.ProofOfPossession.Assert(ctx, cnf, rawToken, e.ValidityLeeway, e.AllowedAlgorithms); err != nil {
+		return errorchain.New(ErrAssertion).CausedBy(err)
+	}
+
+	return nil
+}

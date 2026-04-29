@@ -518,7 +518,7 @@ headers:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				cause := errorchain.New(pipeline.ErrAuthentication).WithErrorContext(appendResponseDecorator{
+				cause := errorchain.New(pipeline.ErrAuthentication).WithAspects(appendResponseDecorator{
 					headerName:  "WWW-Authenticate",
 					headerValue: "Basic realm=\"foo\"",
 					code:        401,
