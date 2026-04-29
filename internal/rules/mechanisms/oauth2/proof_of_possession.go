@@ -42,8 +42,8 @@ type ProofOfPossession struct {
 }
 
 type DPoPConfig struct {
-	RequireNonce  *bool         `mapstructure:"require_nonce"`
 	MaxAge        time.Duration `mapstructure:"max_age"`
+	RequireNonce  *bool         `mapstructure:"nonce_required"`
 	ReplayAllowed *bool         `mapstructure:"replay_allowed"`
 }
 
