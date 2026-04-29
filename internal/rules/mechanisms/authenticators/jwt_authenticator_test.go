@@ -2812,7 +2812,7 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
-			Algorithm: keyEntry.JOSEAlgorithm(),
+			Algorithm: jose.SignatureAlgorithm(keyEntry.JWK().Algorithm),
 			Key:       keyEntry.PrivateKey,
 		},
 		signerOpts)

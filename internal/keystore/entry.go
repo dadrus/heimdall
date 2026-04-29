@@ -47,7 +47,7 @@ type Entry struct {
 func (e *Entry) JWK() jose.JSONWebKey {
 	return jose.JSONWebKey{
 		KeyID:     e.KeyID,
-		Algorithm: string(e.JOSEAlgorithm()),
+		Algorithm: string(joseAlgorithm(e.Alg, e.KeySize)),
 		Key: x.IfThenElseExec(e.PrivateKey != nil,
 			func() crypto.PublicKey { return e.PrivateKey.Public() },
 			func() crypto.PublicKey { return e.CertChain[0].PublicKey },
@@ -57,14 +57,14 @@ func (e *Entry) JWK() jose.JSONWebKey {
 	}
 }
 
-func (e *Entry) JOSEAlgorithm() jose.SignatureAlgorithm {
-	switch e.Alg {
+func joseAlgorithm(alg string, keySize int) jose.SignatureAlgorithm {
+	switch alg {
 	case AlgRSA:
-		return getRSAAlgorithm(e.KeySize)
+		return getRSAAlgorithm(keySize)
 	case AlgECDSA:
-		return getECDSAAlgorithm(e.KeySize)
+		return getECDSAAlgorithm(keySize)
 	default:
-		panic("Unsupported algorithm: " + e.Alg)
+		panic("Unsupported algorithm: " + alg)
 	}
 }
 
