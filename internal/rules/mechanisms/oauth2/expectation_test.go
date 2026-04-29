@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,11 +30,11 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		exp    Expectation
-		alg    string
+		alg    jose.SignatureAlgorithm
 		assert func(t *testing.T, err error)
 	}{
 		"assertion fails": {
-			exp: Expectation{AllowedAlgorithms: []string{"bar"}},
+			exp: Expectation{AllowedAlgorithms: []jose.SignatureAlgorithm{"bar"}},
 			alg: "foo",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -42,7 +43,7 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 			},
 		},
 		"assertion succeeds": {
-			exp: Expectation{AllowedAlgorithms: []string{"foo"}},
+			exp: Expectation{AllowedAlgorithms: []jose.SignatureAlgorithm{"foo"}},
 			alg: "foo",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -502,7 +503,7 @@ func TestExpectationMerge(t *testing.T) {
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
-				AllowedAlgorithms: []string{"RS512"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: Expectation{},
@@ -517,7 +518,7 @@ func TestExpectationMerge(t *testing.T) {
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
-				AllowedAlgorithms: []string{"RS512"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: Expectation{ScopesMatcher: HierarchicScopeStrategyMatcher{}},
@@ -538,7 +539,7 @@ func TestExpectationMerge(t *testing.T) {
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
-				AllowedAlgorithms: []string{"RS512"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: Expectation{
@@ -563,7 +564,7 @@ func TestExpectationMerge(t *testing.T) {
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
-				AllowedAlgorithms: []string{"RS512"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: Expectation{
@@ -590,14 +591,14 @@ func TestExpectationMerge(t *testing.T) {
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
-				AllowedAlgorithms: []string{"RS512"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: Expectation{
 				ScopesMatcher:     HierarchicScopeStrategyMatcher{},
 				Audiences:         []string{"baz"},
 				TrustedIssuers:    []string{"zab"},
-				AllowedAlgorithms: []string{"BAR128"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{"BAR128"},
 			},
 			assert: func(t *testing.T, merged Expectation, source Expectation, target Expectation) {
 				t.Helper()
@@ -619,14 +620,14 @@ func TestExpectationMerge(t *testing.T) {
 				ScopesMatcher:     ExactScopeStrategyMatcher{},
 				Audiences:         []string{"foo"},
 				TrustedIssuers:    []string{"bar"},
-				AllowedAlgorithms: []string{"RS512"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: Expectation{
 				ScopesMatcher:     HierarchicScopeStrategyMatcher{},
 				Audiences:         []string{"baz"},
 				TrustedIssuers:    []string{"zab"},
-				AllowedAlgorithms: []string{"BAR128"},
+				AllowedAlgorithms: []jose.SignatureAlgorithm{"BAR128"},
 				ValidityLeeway:    20 * time.Minute,
 			},
 			assert: func(t *testing.T, merged Expectation, source Expectation, target Expectation) {
@@ -665,7 +666,7 @@ func TestExpectationMergeIdempotency(t *testing.T) {
 		ScopesMatcher:     ExactScopeStrategyMatcher{},
 		Audiences:         []string{"foo"},
 		TrustedIssuers:    []string{"bar"},
-		AllowedAlgorithms: []string{"RS512"},
+		AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 		ValidityLeeway:    10 * time.Second,
 	})
 

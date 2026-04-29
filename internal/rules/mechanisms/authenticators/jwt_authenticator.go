@@ -143,6 +143,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		func() extractors.CompositeExtractStrategy {
 			return extractors.CompositeExtractStrategy{
 				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
 				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
@@ -204,7 +205,7 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	jwtAd, err := a.ads.GetAuthData(ctx)
+	token, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
@@ -212,21 +213,12 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 			CausedBy(err)
 	}
 
-	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
-	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
-			WithAspects(a).
-			CausedBy(errorchain.NewWithMessage(pipeline.ErrMalformedRequest, "invalid JWT format").
-				CausedBy(err))
-	}
-
-	rawClaims, err := a.verifyToken(ctx, token)
+	plainPayload, err := a.verifyToken(ctx, token)
 	if err != nil {
 		return err
 	}
 
-	principal, err := a.sf.CreatePrincipal(rawClaims)
+	principal, err := a.sf.CreatePrincipal(plainPayload)
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to extract principal information from jwt").
@@ -360,15 +352,24 @@ func (a *jwtAuthenticator) serverMetadata(
 	return metadata, nil
 }
 
-func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
-	claims := map[string]any{}
-	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
+func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, rawToken string) (json.RawMessage, error) {
+	token, err := jwt.ParseSigned(rawToken, oauth2.SupportedAlgorithms())
+	if err != nil {
+		return json.RawMessage{}, errorchain.
+			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
+			WithAspects(a).
+			CausedBy(errorchain.NewWithMessage(pipeline.ErrMalformedRequest, "invalid JWT format").
+				CausedBy(err))
+	}
+
+	plainPayload := map[string]any{}
+	if err := token.UnsafeClaimsWithoutVerification(&plainPayload); err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to deserialize JWT").
 			WithAspects(a).
 			CausedBy(err)
 	}
 
-	metadata, err := a.serverMetadata(ctx, claims)
+	metadata, err := a.serverMetadata(ctx, plainPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -379,19 +380,20 @@ func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, token *jwt.JSONWebT
 	})
 
 	if len(token.Headers[0].KeyID) == 0 {
-		return a.verifyTokenWithoutKID(ctx, token, claims, metadata.JWKSEndpoint, &assertions)
+		return a.verifyTokenWithoutKID(ctx, rawToken, token, plainPayload, metadata.JWKSEndpoint, &assertions)
 	}
 
-	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID, claims, metadata.JWKSEndpoint)
+	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID, plainPayload, metadata.JWKSEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.verifyTokenWithKey(token, sigKey, &assertions)
+	return a.verifyTokenWithKey(ctx, rawToken, token, plainPayload, sigKey, &assertions)
 }
 
 func (a *jwtAuthenticator) verifyTokenWithoutKID(
 	ctx pipeline.Context,
+	rawToken string,
 	token *jwt.JSONWebToken,
 	tokenClaims map[string]any,
 	ep *endpoint.Endpoint,
@@ -420,7 +422,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 			continue
 		}
 
-		rawClaims, err = a.verifyTokenWithKey(token, &sigKey, assertions)
+		rawClaims, err = a.verifyTokenWithKey(ctx, rawToken, token, tokenClaims, &sigKey, assertions)
 		if err == nil {
 			break
 		}
@@ -575,7 +577,12 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 }
 
 func (a *jwtAuthenticator) verifyTokenWithKey(
-	token *jwt.JSONWebToken, key *jose.JSONWebKey, assertions *oauth2.Expectation,
+	ctx pipeline.Context,
+	rawToken string,
+	token *jwt.JSONWebToken,
+	tokenClaims map[string]any,
+	key *jose.JSONWebKey,
+	assertions *oauth2.Expectation,
 ) (json.RawMessage, error) {
 	header := token.Headers[0]
 
@@ -586,36 +593,32 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 			WithAspects(a)
 	}
 
-	if err := assertions.AssertAlgorithm(key.Algorithm); err != nil {
+	if err := assertions.AssertAlgorithm(jose.SignatureAlgorithm(key.Algorithm)); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
 			WithAspects(a).
 			CausedBy(err)
 	}
 
-	var (
-		mapClaims map[string]any
-		claims    oauth2.Claims
-	)
-
-	if err := token.Claims(key, &mapClaims, &claims); err != nil {
+	var claims oauth2.Claims
+	if err := token.Claims(key, &claims); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "failed to verify JWT signature").
 			WithAspects(a).
 			CausedBy(err)
 	}
 
-	if err := claims.Validate(*assertions); err != nil {
+	if err := claims.Validate(ctx, rawToken, *assertions); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
 			WithAspects(a).
 			CausedBy(err)
 	}
 
-	rawPayload, err := json.Marshal(mapClaims)
+	rawPayload, err := json.Marshal(tokenClaims)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(pipeline.ErrInternal, "failed to marshal jwt payload").
+			NewWithMessage(pipeline.ErrInternal, "failed to marshal jwt plain payload").
 			WithAspects(a).
 			CausedBy(err)
 	}

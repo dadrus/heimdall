@@ -129,6 +129,7 @@ func newOAuth2IntrospectionAuthenticator(
 		func() extractors.CompositeExtractStrategy {
 			return extractors.CompositeExtractStrategy{
 				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
 				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
@@ -192,7 +193,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	accessToken, err := a.ads.GetAuthData(ctx)
+	token, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "no access token present").
@@ -200,7 +201,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 			CausedBy(err)
 	}
 
-	rawResp, err := a.getPrincipalInformation(ctx, accessToken)
+	rawResp, err := a.getPrincipalInformation(ctx, token)
 	if err != nil {
 		return err
 	}
@@ -300,7 +301,7 @@ func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 }
 
 func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map[string]any, error) {
-	jwtToken, err := jwt.ParseSigned(token, supportedAlgorithms())
+	jwtToken, err := jwt.ParseSigned(token, oauth2.SupportedAlgorithms())
 	if err == nil {
 		claims := map[string]any{}
 		if err = jwtToken.UnsafeClaimsWithoutVerification(&claims); err == nil {
@@ -361,7 +362,7 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 		assertions = assertions.Merge(a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}}))
 	}
 
-	if err = introspectResp.Validate(assertions); err != nil {
+	if err = introspectResp.Validate(ctx, token, assertions); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
 			WithAspects(a).
