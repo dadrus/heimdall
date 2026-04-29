@@ -105,7 +105,7 @@ func (cr *keyStore) load() error {
 			"failed retrieving key from key store").CausedBy(err)
 	}
 
-	cert, err := entry.TLSCertificate()
+	cert, err := tlsCertificateFromEntry(entry)
 	if err != nil {
 		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"key store entry is not suitable for TLS").CausedBy(err)

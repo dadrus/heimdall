@@ -18,9 +18,7 @@ package keystore
 
 import (
 	"crypto"
-	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 
 	"github.com/go-jose/go-jose/v4"
@@ -37,8 +35,6 @@ const (
 	ecdsa384 = 384
 	ecdsa512 = 521
 )
-
-var ErrNoCertificatePresent = errors.New("no certificate present")
 
 type Entry struct {
 	KeyID      string
@@ -70,23 +66,6 @@ func (e *Entry) JOSEAlgorithm() jose.SignatureAlgorithm {
 	default:
 		panic("Unsupported algorithm: " + e.Alg)
 	}
-}
-
-func (e *Entry) TLSCertificate() (tls.Certificate, error) {
-	if len(e.CertChain) == 0 {
-		return tls.Certificate{}, ErrNoCertificatePresent
-	}
-
-	cert := tls.Certificate{
-		PrivateKey: e.PrivateKey,
-		Leaf:       e.CertChain[0],
-	}
-
-	for _, cer := range e.CertChain {
-		cert.Certificate = append(cert.Certificate, cer.Raw)
-	}
-
-	return cert, nil
 }
 
 func getECDSAAlgorithm(keySize int) jose.SignatureAlgorithm {
