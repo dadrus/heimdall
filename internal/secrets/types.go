@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
@@ -37,7 +38,7 @@ type (
 var (
 	ErrProviderNotFound        = errors.New("secret provider not found")
 	ErrSubscribeFailed         = errors.New("secret changes subscription failed")
-	ErrUnsupportedProviderType = types.ErrUnsupportedProviderType
+	ErrUnsupportedProviderType = registry.ErrUnsupportedProviderType
 	ErrSecretTypeMismatch      = types.ErrSecretTypeMismatch
 )
 

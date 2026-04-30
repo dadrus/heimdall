@@ -18,14 +18,13 @@ package types //nolint:revive
 
 import (
 	"context"
-	"errors"
 )
-
-var ErrUnsupportedProviderType = errors.New("secret provider type unsupported")
 
 type Provider interface {
 	Name() string
 	Type() string
+	Start(ctx context.Context, onChange func(ChangeEvent)) error
+	Stop(ctx context.Context) error
 	ResolveSecret(ctx context.Context, ref string) (Secret, error)
 	ResolveSecrets(ctx context.Context, ref string, keys ...string) (map[string]Secret, error)
 }
@@ -33,8 +32,4 @@ type Provider interface {
 type ChangeEvent struct {
 	Source string
 	Refs   []string
-}
-
-type Watchable interface {
-	Watch(ctx context.Context, onChange func(ChangeEvent)) error
 }

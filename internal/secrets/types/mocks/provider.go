@@ -235,6 +235,114 @@ func (_c *ProviderMock_ResolveSecrets_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// Start provides a mock function for the type ProviderMock
+func (_mock *ProviderMock) Start(ctx context.Context, onChange func(types.ChangeEvent)) error {
+	ret := _mock.Called(ctx, onChange)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Start")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(types.ChangeEvent)) error); ok {
+		r0 = returnFunc(ctx, onChange)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ProviderMock_Start_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Start'
+type ProviderMock_Start_Call struct {
+	*mock.Call
+}
+
+// Start is a helper method to define mock.On call
+//   - ctx context.Context
+//   - onChange func(types.ChangeEvent)
+func (_e *ProviderMock_Expecter) Start(ctx interface{}, onChange interface{}) *ProviderMock_Start_Call {
+	return &ProviderMock_Start_Call{Call: _e.mock.On("Start", ctx, onChange)}
+}
+
+func (_c *ProviderMock_Start_Call) Run(run func(ctx context.Context, onChange func(types.ChangeEvent))) *ProviderMock_Start_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(types.ChangeEvent)
+		if args[1] != nil {
+			arg1 = args[1].(func(types.ChangeEvent))
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ProviderMock_Start_Call) Return(err error) *ProviderMock_Start_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ProviderMock_Start_Call) RunAndReturn(run func(ctx context.Context, onChange func(types.ChangeEvent)) error) *ProviderMock_Start_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Stop provides a mock function for the type ProviderMock
+func (_mock *ProviderMock) Stop(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Stop")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ProviderMock_Stop_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Stop'
+type ProviderMock_Stop_Call struct {
+	*mock.Call
+}
+
+// Stop is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *ProviderMock_Expecter) Stop(ctx interface{}) *ProviderMock_Stop_Call {
+	return &ProviderMock_Stop_Call{Call: _e.mock.On("Stop", ctx)}
+}
+
+func (_c *ProviderMock_Stop_Call) Run(run func(ctx context.Context)) *ProviderMock_Stop_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ProviderMock_Stop_Call) Return(err error) *ProviderMock_Stop_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ProviderMock_Stop_Call) RunAndReturn(run func(ctx context.Context) error) *ProviderMock_Stop_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Type provides a mock function for the type ProviderMock
 func (_mock *ProviderMock) Type() string {
 	ret := _mock.Called()
