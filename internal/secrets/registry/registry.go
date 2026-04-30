@@ -17,12 +17,15 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
+
+var ErrUnsupportedProviderType = errors.New("secret provider type unsupported")
 
 var (
 	// by intention. Used only during application bootstrap.
@@ -47,7 +50,7 @@ func Create(app app.Context, typ, sourceName string, conf map[string]any) (types
 	factoriesMu.RUnlock()         //nolint:wsl_v5
 
 	if !ok {
-		return nil, fmt.Errorf("%w: '%s'", types.ErrUnsupportedProviderType, typ)
+		return nil, fmt.Errorf("%w: '%s'", ErrUnsupportedProviderType, typ)
 	}
 
 	return factory.Create(app, sourceName, conf)

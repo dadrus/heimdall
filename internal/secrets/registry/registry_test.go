@@ -82,7 +82,7 @@ func TestCreate(t *testing.T) {
 
 				require.Nil(t, provider)
 				require.Error(t, err)
-				require.ErrorIs(t, err, types.ErrUnsupportedProviderType)
+				require.ErrorIs(t, err, ErrUnsupportedProviderType)
 			},
 		},
 		"returns factory creation error": {
