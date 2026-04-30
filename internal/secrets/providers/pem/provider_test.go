@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package pem_test
+package pem
 
 import (
 	"context"
@@ -29,23 +29,23 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
-	_ "github.com/dadrus/heimdall/internal/secrets/providers/pem"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 )
 
-func TestCreateProvider(t *testing.T) {
+func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
 		conf   func(*testing.T) (*app.ContextMock, map[string]any)
 		assert func(*testing.T, types.Provider, error)
 	}{
-		"creates provider and resolves selected key by ref": {
+		"successfully creates provider": {
 			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
 				t.Helper()
+
 				return newAppContext(t), map[string]any{"path": createPEMFile(t, "first", "second")}
 			},
 			assert: func(t *testing.T, provider types.Provider, err error) {
@@ -53,32 +53,12 @@ func TestCreateProvider(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "tls", provider.Name())
 				require.Equal(t, "pem", provider.Type())
+			},
+		},
+		"fails for missing path config": {
+			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
+				t.Helper()
 
-				secret, err := provider.ResolveSecret(context.Background(), "second")
-				require.NoError(t, err)
-				require.Equal(t, types.SecretTypeAsymmetric, secret.Type)
-				require.Equal(t, "second", secret.KeyID)
-				require.Equal(t, "RSA", secret.Algorithm)
-				_, err = secret.AsSigner()
-				require.NoError(t, err)
-			},
-		},
-		"resolves first entry if ref is empty": {
-			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
-				t.Helper()
-				return newAppContext(t), map[string]any{"path": createPEMFile(t, "first", "second")}
-			},
-			assert: func(t *testing.T, provider types.Provider, err error) {
-				t.Helper()
-				require.NoError(t, err)
-				secret, err := provider.ResolveSecret(context.Background(), "")
-				require.NoError(t, err)
-				require.Equal(t, "first", secret.KeyID)
-			},
-		},
-		"returns error for missing path config": {
-			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
-				t.Helper()
 				return newAppContext(t), map[string]any{}
 			},
 			assert: func(t *testing.T, _ types.Provider, err error) {
@@ -87,9 +67,10 @@ func TestCreateProvider(t *testing.T) {
 				require.ErrorContains(t, err, "path")
 			},
 		},
-		"returns error for invalid watch field": {
+		"fails for invalid watch field": {
 			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
 				t.Helper()
+
 				return newAppContext(t), map[string]any{
 					"path":  createPEMFile(t, "first"),
 					"watch": "yes",
@@ -101,29 +82,18 @@ func TestCreateProvider(t *testing.T) {
 				require.ErrorContains(t, err, "watch")
 			},
 		},
-		"returns error for unknown key ref": {
+		"fails for invalid path": {
 			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
 				t.Helper()
-				return newAppContext(t), map[string]any{"path": createPEMFile(t, "first", "second")}
+
+				return newAppContext(t), map[string]any{
+					"path": "does_not_exist.pem",
+				}
 			},
-			assert: func(t *testing.T, provider types.Provider, err error) {
+			assert: func(t *testing.T, _ types.Provider, err error) {
 				t.Helper()
-				require.NoError(t, err)
-				_, err = provider.ResolveSecret(context.Background(), "missing")
 				require.Error(t, err)
-			},
-		},
-		"returns error for ResolveSecrets": {
-			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
-				t.Helper()
-				return newAppContext(t), map[string]any{"path": createPEMFile(t, "first", "second")}
-			},
-			assert: func(t *testing.T, provider types.Provider, err error) {
-				t.Helper()
-				require.NoError(t, err)
-				_, err = provider.ResolveSecrets(context.Background(), "first", "a", "b")
-				require.Error(t, err)
-				require.ErrorContains(t, err, "single secret")
+				require.ErrorContains(t, err, "does_not_exist.pem")
 			},
 		},
 	} {
@@ -131,8 +101,8 @@ func TestCreateProvider(t *testing.T) {
 			t.Parallel()
 
 			appCtx, conf := tc.conf(t)
-			provider, err := registry.Create(appCtx, "pem", "tls", conf)
-			tc.assert(t, provider, err)
+			prv, err := newProvider(appCtx, "tls", conf)
+			tc.assert(t, prv, err)
 		})
 	}
 }
@@ -149,6 +119,7 @@ func TestProviderWatch(t *testing.T) {
 				t.Helper()
 
 				path := createPEMFile(t, "first")
+
 				return map[string]any{
 					"path":  path,
 					"watch": true,
@@ -156,6 +127,7 @@ func TestProviderWatch(t *testing.T) {
 			},
 			action: func(t *testing.T, provider types.Provider, _ string) {
 				t.Helper()
+
 				err := provider.Start(context.Background(), nil)
 				require.Error(t, err)
 				require.ErrorContains(t, err, "must not be nil")
@@ -166,6 +138,7 @@ func TestProviderWatch(t *testing.T) {
 				t.Helper()
 
 				path := createPEMFile(t, "first")
+
 				return map[string]any{
 					"path":  path,
 					"watch": true,
@@ -200,6 +173,7 @@ func TestProviderWatch(t *testing.T) {
 			conf: func(t *testing.T) (map[string]any, string) {
 				t.Helper()
 				path := createPEMFile(t, "first")
+
 				return map[string]any{
 					"path":  path,
 					"watch": true,
@@ -207,6 +181,7 @@ func TestProviderWatch(t *testing.T) {
 			},
 			action: func(t *testing.T, provider types.Provider, path string) {
 				t.Helper()
+
 				changes := make(chan types.ChangeEvent, 2)
 
 				err := provider.Start(context.Background(), func(event types.ChangeEvent) {

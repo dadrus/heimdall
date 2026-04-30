@@ -149,7 +149,7 @@ func (p *provider) Start(ctx context.Context, onChange func(types.ChangeEvent)) 
 	return nil
 }
 
-func (p *provider) Stop(ctx context.Context) error {
+func (p *provider) Stop(_ context.Context) error {
 	p.watchMu.Lock()
 	cancel := p.watchStop
 	started := p.started
