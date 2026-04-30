@@ -43,11 +43,6 @@ type Secret struct {
 }
 
 func (s Secret) AsString() (string, error) {
-	if s.Type != SecretTypePlain {
-		return "", fmt.Errorf("%w: expected '%s', got '%s'",
-			ErrSecretTypeMismatch, SecretTypePlain, s.Type)
-	}
-
 	value, ok := s.Value.(string)
 	if !ok {
 		return "", fmt.Errorf("%w: value does not implement string", ErrSecretTypeMismatch)
@@ -57,11 +52,6 @@ func (s Secret) AsString() (string, error) {
 }
 
 func (s Secret) AsBytes() ([]byte, error) {
-	if s.Type != SecretTypeSymmetric {
-		return nil, fmt.Errorf("%w: expected '%s', got '%s'",
-			ErrSecretTypeMismatch, SecretTypeSymmetric, s.Type)
-	}
-
 	value, ok := s.Value.([]byte)
 	if !ok {
 		return nil, fmt.Errorf("%w: value does not implement []byte", ErrSecretTypeMismatch)
@@ -71,11 +61,6 @@ func (s Secret) AsBytes() ([]byte, error) {
 }
 
 func (s Secret) AsSigner() (crypto.Signer, error) {
-	if s.Type != SecretTypeAsymmetric {
-		return nil, fmt.Errorf("%w: expected '%s', got '%s'",
-			ErrSecretTypeMismatch, SecretTypeAsymmetric, s.Type)
-	}
-
 	value, ok := s.Value.(crypto.Signer)
 	if !ok {
 		return nil, fmt.Errorf("%w: value does not implement crypto.Signer", ErrSecretTypeMismatch)
