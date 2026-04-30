@@ -17,7 +17,6 @@
 package registry
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -25,23 +24,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	"github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
-
-type testProvider struct {
-	name string
-	typ  string
-}
-
-func (p *testProvider) Name() string { return p.name }
-func (p *testProvider) Type() string { return p.typ }
-
-func (p *testProvider) ResolveSecret(context.Context, string) (types.Secret, error) {
-	return types.Secret{}, nil
-}
-
-func (p *testProvider) ResolveSecrets(context.Context, string, ...string) (map[string]types.Secret, error) {
-	return nil, nil
-}
 
 func withCleanRegistry(t *testing.T) {
 	t.Helper()
@@ -69,13 +53,15 @@ func TestRegister(t *testing.T) {
 
 	t.Run("registers factory", func(t *testing.T) {
 		factory := FactoryFunc(func(_ app.Context, sourceName string, _ map[string]any) (types.Provider, error) {
-			return &testProvider{name: sourceName, typ: "foo"}, nil
+			return mocks.NewProviderMock(t), nil
 		})
 
 		Register("foo", factory)
 
 		factoriesMu.RLock()
+
 		registered, found := factories["foo"]
+
 		factoriesMu.RUnlock()
 
 		require.True(t, found)
@@ -115,7 +101,11 @@ func TestCreate(t *testing.T) {
 		"creates provider with source name": {
 			typ: "foo",
 			factory: FactoryFunc(func(_ app.Context, sourceName string, _ map[string]any) (types.Provider, error) {
-				return &testProvider{name: sourceName, typ: "foo"}, nil
+				provider := mocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return(sourceName)
+				provider.EXPECT().Type().Return("foo")
+
+				return provider, nil
 			}),
 			assert: func(t *testing.T, provider types.Provider, err error) {
 				t.Helper()
