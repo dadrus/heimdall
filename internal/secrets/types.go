@@ -36,6 +36,7 @@ type (
 
 var (
 	ErrProviderNotFound        = errors.New("secret provider not found")
+	ErrSubscribeFailed         = errors.New("secret changes subscription failed")
 	ErrUnsupportedProviderType = types.ErrUnsupportedProviderType
 	ErrSecretTypeMismatch      = types.ErrSecretTypeMismatch
 )
