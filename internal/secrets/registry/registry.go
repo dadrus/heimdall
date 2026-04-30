@@ -17,11 +17,11 @@
 package registry
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/types"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var (
@@ -47,7 +47,7 @@ func Create(app app.Context, typ, sourceName string, conf map[string]any) (types
 	factoriesMu.RUnlock()         //nolint:wsl_v5
 
 	if !ok {
-		return nil, errorchain.NewWithMessagef(types.ErrUnsupportedProviderType, "'%s'", typ)
+		return nil, fmt.Errorf("%w: '%s'", types.ErrUnsupportedProviderType, typ)
 	}
 
 	return factory.Create(app, sourceName, conf)
