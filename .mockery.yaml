@@ -56,7 +56,6 @@ packages:
   github.com/dadrus/heimdall/internal/secrets/types:
     interfaces:
       Provider: {}
-      Watchable: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}
