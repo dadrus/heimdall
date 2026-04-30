@@ -21,10 +21,7 @@ import (
 	"errors"
 )
 
-var (
-	ErrUnsupportedProviderType = errors.New("secret provider type unsupported")
-	ErrProviderNotFound        = errors.New("secret provider not found")
-)
+var ErrUnsupportedProviderType = errors.New("secret provider type unsupported")
 
 type Provider interface {
 	Name() string

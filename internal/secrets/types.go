@@ -18,6 +18,7 @@ package secrets
 
 import (
 	"context"
+	"errors"
 
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
@@ -34,8 +35,8 @@ type (
 )
 
 var (
+	ErrProviderNotFound        = errors.New("secret provider not found")
 	ErrUnsupportedProviderType = types.ErrUnsupportedProviderType
-	ErrProviderNotFound        = types.ErrProviderNotFound
 	ErrSecretTypeMismatch      = types.ErrSecretTypeMismatch
 )
 
