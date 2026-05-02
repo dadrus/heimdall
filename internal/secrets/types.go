@@ -25,12 +25,13 @@ import (
 )
 
 type (
-	Secret     = types.Secret
-	SecretType = types.SecretType
+	SecretKind  = types.SecretKind
+	Secret      = types.Secret
+	Credentials = types.Credentials
 
 	Manager interface {
-		ResolveSecret(ctx context.Context, source, ref string) (types.Secret, error)
-		ResolveSecrets(ctx context.Context, source, ref string, keys ...string) (map[string]types.Secret, error)
+		ResolveSecret(ctx context.Context, source, ref string) (Secret, error)
+		ResolveCredentials(ctx context.Context, source, ref string) (Credentials, error)
 		Subscribe(source, ref string, cb func(context.Context) error) (unsubscribe func(), err error)
 	}
 )
@@ -39,11 +40,12 @@ var (
 	ErrProviderNotFound        = errors.New("secret provider not found")
 	ErrSubscribeFailed         = errors.New("secret changes subscription failed")
 	ErrUnsupportedProviderType = registry.ErrUnsupportedProviderType
-	ErrSecretTypeMismatch      = types.ErrSecretTypeMismatch
+	ErrSecretKindMismatch      = types.ErrSecretKindMismatch
 )
 
 const (
-	SecretTypePlain      = types.SecretTypePlain
-	SecretTypeSymmetric  = types.SecretTypeSymmetric
-	SecretTypeAsymmetric = types.SecretTypeAsymmetric
+	SecretKindString     = types.SecretKindString
+	SecretKindBytes      = types.SecretKindBytes
+	SecretKindSigner     = types.SecretKindSigner
+	SecretKindTrustStore = types.SecretKindTrustStore
 )
