@@ -18,11 +18,7 @@ package secrets
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"errors"
-	"os"
-	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -33,26 +29,31 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	_ "github.com/dadrus/heimdall/internal/secrets/providers/pem"
+	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	typemocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 )
 
 func TestNewManager(t *testing.T) {
 	t.Parallel()
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
+	const testProviderType = "test-provider"
 
-	data, err := pemx.BuildPEM(pemx.WithRSAPrivateKey(key,
-		pemx.WithHeader("X-Key-ID", "foo")))
-	require.NoError(t, err)
+	factory := registry.FactoryFunc(func(
+		_ app.Context,
+		sourceName string,
+		conf map[string]any,
+	) (types.Provider, error) {
+		provider := typemocks.NewProviderMock(t)
+		provider.EXPECT().Name().Return(sourceName).Maybe()
 
-	path := filepath.Join(t.TempDir(), "keys.pem")
-	err = os.WriteFile(path, data, 0o600)
-	require.NoError(t, err)
+		return provider, nil
+	})
+
+	registry.Register(testProviderType, factory)
+	t.Cleanup(func() {
+		registry.Unregister(testProviderType)
+	})
 
 	for uc, tc := range map[string]struct {
 		config config.SecretManagement
@@ -60,13 +61,14 @@ func TestNewManager(t *testing.T) {
 	}{
 		"supported provider type": {
 			config: config.SecretManagement{
-				"tls": {Type: "pem", Config: map[string]any{"path": path}},
+				"test": {Type: testProviderType, Config: map[string]any{"foo": "bar"}},
 			},
 			assert: func(t *testing.T, err error, mgr *manager) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, mgr)
+				require.Contains(t, mgr.providers, "test")
 			},
 		},
 		"unsupported provider type": {
@@ -82,12 +84,8 @@ func TestNewManager(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			validator, err := validation.NewValidator()
-			require.NoError(t, err)
-
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(&config.Configuration{SecretManagement: tc.config})
-			appCtx.EXPECT().Validator().Return(validator).Maybe()
 			appCtx.EXPECT().Logger().Return(zerolog.Nop()).Maybe()
 
 			mgr, err := newManager(appCtx)
@@ -102,26 +100,34 @@ func TestManagerResolveSecret(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		provider func(t *testing.T) *typemocks.ProviderMock
-		assert   func(t *testing.T, err error, secret types.Secret)
+		assert   func(t *testing.T, err error, secret Secret)
 	}{
 		"delegates to configured provider": {
 			provider: func(t *testing.T) *typemocks.ProviderMock {
 				t.Helper()
 
+				secret := types.NewStringSecret("tls", "first_entry", "value")
+
 				provider := typemocks.NewProviderMock(t)
 				provider.EXPECT().Name().Return("tls")
 				provider.EXPECT().
 					ResolveSecret(mock.Anything, "first_entry").
-					Return(types.Secret{Type: types.SecretTypePlain, Value: "value"}, nil)
+					Return(secret, nil)
 
 				return provider
 			},
-			assert: func(t *testing.T, err error, secret types.Secret) {
+			assert: func(t *testing.T, err error, secret Secret) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, types.SecretTypePlain, secret.Type)
-				require.Equal(t, "value", secret.Value)
+				require.NotNil(t, secret)
+				require.Equal(t, "tls", secret.Source())
+				require.Equal(t, "first_entry", secret.Ref())
+				require.Equal(t, types.SecretKindString, secret.Kind())
+
+				stringSecret, ok := secret.(types.StringSecret)
+				require.True(t, ok)
+				require.Equal(t, "value", stringSecret.String())
 			},
 		},
 		"returns provider not found for unknown source": {
@@ -130,7 +136,7 @@ func TestManagerResolveSecret(t *testing.T) {
 
 				return nil
 			},
-			assert: func(t *testing.T, err error, _ types.Secret) {
+			assert: func(t *testing.T, err error, _ Secret) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -155,39 +161,54 @@ func TestManagerResolveSecret(t *testing.T) {
 	}
 }
 
-func TestManagerResolveSecrets(t *testing.T) {
+func TestManagerResolveCredentials(t *testing.T) {
 	t.Parallel()
+
+	type clientCredentials struct {
+		ClientID     string `mapstructure:"client_id"`
+		ClientSecret string `mapstructure:"client_secret"`
+	}
 
 	for uc, tc := range map[string]struct {
 		provider func(t *testing.T) *typemocks.ProviderMock
-		assert   func(t *testing.T, err error, secrets map[string]types.Secret)
+		assert   func(t *testing.T, err error, credentials Credentials)
 	}{
 		"delegates to configured provider": {
 			provider: func(t *testing.T) *typemocks.ProviderMock {
 				t.Helper()
 
+				credentials := types.NewCredentials("file", "client_credentials", map[string]types.Secret{
+					"client_id": types.NewStringSecret(
+						"file",
+						"client_credentials/client_id",
+						"foo",
+					),
+					"client_secret": types.NewStringSecret(
+						"file",
+						"client_credentials/client_secret",
+						"bar",
+					),
+				})
+
 				provider := typemocks.NewProviderMock(t)
 				provider.EXPECT().Name().Return("file")
 				provider.EXPECT().
-					ResolveSecrets(mock.Anything, "client_credentials", "client_id", "client_secret").
-					Return(map[string]types.Secret{
-						"client_id":     {Type: types.SecretTypePlain, Value: "foo"},
-						"client_secret": {Type: types.SecretTypePlain, Value: "bar"},
-					}, nil)
+					ResolveCredentials(mock.Anything, "client_credentials").
+					Return(credentials, nil)
 
 				return provider
 			},
-			assert: func(t *testing.T, err error, secrets map[string]types.Secret) {
+			assert: func(t *testing.T, err error, credentials Credentials) {
 				t.Helper()
 
 				require.NoError(t, err)
+				require.NotNil(t, credentials)
 
-				clientID, err := secrets["client_id"].AsString()
-				require.NoError(t, err)
-				clientSecret, err := secrets["client_secret"].AsString()
-				require.NoError(t, err)
-				require.Equal(t, "foo", clientID)
-				require.Equal(t, "bar", clientSecret)
+				var decoded clientCredentials
+				require.NoError(t, credentials.Decode(&decoded))
+
+				require.Equal(t, "foo", decoded.ClientID)
+				require.Equal(t, "bar", decoded.ClientSecret)
 			},
 		},
 		"returns provider not found for unknown source": {
@@ -196,7 +217,7 @@ func TestManagerResolveSecrets(t *testing.T) {
 
 				return nil
 			},
-			assert: func(t *testing.T, err error, _ map[string]types.Secret) {
+			assert: func(t *testing.T, err error, _ Credentials) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -214,15 +235,13 @@ func TestManagerResolveSecrets(t *testing.T) {
 				mgr = createManager(zerolog.Nop())
 			}
 
-			values, err := mgr.ResolveSecrets(
+			credentials, err := mgr.ResolveCredentials(
 				context.Background(),
 				"file",
 				"client_credentials",
-				"client_id",
-				"client_secret",
 			)
 
-			tc.assert(t, err, values)
+			tc.assert(t, err, credentials)
 		})
 	}
 }
@@ -527,97 +546,50 @@ func TestManagerStartStop(t *testing.T) {
 	})
 
 	t.Run("stops already started providers when startup fails", func(t *testing.T) {
-		first := typemocks.NewProviderMock(t)
-		first.EXPECT().Name().Return("first")
-		first.EXPECT().Start(mock.Anything, mock.Anything).Return(nil).Once()
-		first.EXPECT().Stop(mock.Anything).Return(nil).Once()
+		var started atomic.Int32
+		var stopped atomic.Int32
 
-		second := typemocks.NewProviderMock(t)
-		second.EXPECT().Name().Return("second")
-		second.EXPECT().Start(mock.Anything, mock.Anything).Return(errors.New("boom")).Once()
-
-		mgr := createManager(zerolog.Nop(), first, second)
+		mgr := createManager(
+			zerolog.Nop(),
+			&startStopProvider{name: "a", started: &started, stopped: &stopped},
+			&startStopProvider{name: "b", started: &started, stopped: &stopped},
+			&startStopProvider{name: "c", startErr: errors.New("boom")},
+		)
 
 		err := mgr.Start(context.Background())
+
 		require.Error(t, err)
+		require.ErrorContains(t, err, "boom")
+		require.Equal(t, started.Load(), stopped.Load())
 	})
 
 	t.Run("stops subscriber callbacks on manager stop", func(t *testing.T) {
+		t.Parallel()
+
 		var callCount int32
 
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
-		require.NoError(t, err)
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 
-		data, err := pemx.BuildPEM(pemx.WithRSAPrivateKey(key,
-			pemx.WithHeader("X-Key-ID", "foo")))
-		require.NoError(t, err)
-
-		path := filepath.Join(t.TempDir(), "keys.pem")
-		err = os.WriteFile(path, data, 0o600)
-		require.NoError(t, err)
-
-		validator, err := validation.NewValidator()
-		require.NoError(t, err)
-
-		appCtx := app.NewContextMock(t)
-		appCtx.EXPECT().Config().Return(
-			&config.Configuration{
-				SecretManagement: config.SecretManagement{
-					"tls": {
-						Type:   "pem",
-						Config: map[string]any{"path": path, "watch": true},
-					},
-				},
-			})
-		appCtx.EXPECT().Validator().Return(validator).Maybe()
-		appCtx.EXPECT().Logger().Return(zerolog.Nop())
-
-		mgr, err := newManager(appCtx)
-		require.NoError(t, err)
-
-		err = mgr.Start(context.Background())
-		require.NoError(t, err)
-
-		_, err = mgr.Subscribe("tls", "foo", func(context.Context) error {
+		_, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
 			atomic.AddInt32(&callCount, 1)
 
 			return errors.New("boom")
 		})
 		require.NoError(t, err)
 
-		// update the key
-		key, err = rsa.GenerateKey(rand.Reader, 2048)
-		require.NoError(t, err)
-
-		data, err = pemx.BuildPEM(pemx.WithRSAPrivateKey(key,
-			pemx.WithHeader("X-Key-ID", "foo")))
-		require.NoError(t, err)
-
-		err = os.WriteFile(path, data, 0o600)
-		require.NoError(t, err)
+		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
 
 		require.Eventually(t, func() bool {
-			return atomic.LoadInt32(&callCount) > 0
-		}, time.Second, 25*time.Millisecond)
-
-		updatesBeforeStop := atomic.LoadInt32(&callCount)
+			return atomic.LoadInt32(&callCount) == 1
+		}, time.Second, 10*time.Millisecond)
 
 		err = mgr.Stop(context.Background())
 		require.NoError(t, err)
 
-		// update once more after stop
-		key, err = rsa.GenerateKey(rand.Reader, 2048)
-		require.NoError(t, err)
+		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
 
-		data, err = pemx.BuildPEM(pemx.WithRSAPrivateKey(key,
-			pemx.WithHeader("X-Key-ID", "foo")))
-		require.NoError(t, err)
-
-		err = os.WriteFile(path, data, 0o600)
-		require.NoError(t, err)
-
-		time.Sleep(300 * time.Millisecond)
-		require.Equal(t, updatesBeforeStop, atomic.LoadInt32(&callCount))
+		time.Sleep(200 * time.Millisecond)
+		require.EqualValues(t, 1, atomic.LoadInt32(&callCount))
 	})
 
 	t.Run("returns provider stop error", func(t *testing.T) {
@@ -664,4 +636,43 @@ func newStartedManagerWithChangeTrigger(t *testing.T, source string) (*manager, 
 		require.NotNil(t, onChange)
 		onChange(evt)
 	}
+}
+
+type startStopProvider struct {
+	name     string
+	startErr error
+	started  *atomic.Int32
+	stopped  *atomic.Int32
+}
+
+func (p *startStopProvider) Name() string { return p.name }
+
+func (p *startStopProvider) Type() string { return "test" }
+
+func (p *startStopProvider) ResolveSecret(context.Context, string) (types.Secret, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (p *startStopProvider) ResolveCredentials(context.Context, string) (types.Credentials, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (p *startStopProvider) Start(context.Context, func(types.ChangeEvent)) error {
+	if p.startErr != nil {
+		return p.startErr
+	}
+
+	if p.started != nil {
+		p.started.Add(1)
+	}
+
+	return nil
+}
+
+func (p *startStopProvider) Stop(context.Context) error {
+	if p.stopped != nil {
+		p.stopped.Add(1)
+	}
+
+	return nil
 }

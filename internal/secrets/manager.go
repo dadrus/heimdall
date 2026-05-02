@@ -141,26 +141,22 @@ func (m *manager) Stop(ctx context.Context) error {
 	return stopErr
 }
 
-func (m *manager) ResolveSecret(ctx context.Context, source, ref string) (types.Secret, error) {
-	provider, err := m.provider(source)
-	if err != nil {
-		return types.Secret{}, err
-	}
-
-	return provider.ResolveSecret(ctx, ref)
-}
-
-func (m *manager) ResolveSecrets(
-	ctx context.Context,
-	source, ref string,
-	keys ...string,
-) (map[string]types.Secret, error) {
+func (m *manager) ResolveSecret(ctx context.Context, source, ref string) (Secret, error) {
 	provider, err := m.provider(source)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.ResolveSecrets(ctx, ref, keys...)
+	return provider.ResolveSecret(ctx, ref)
+}
+
+func (m *manager) ResolveCredentials(ctx context.Context, source, ref string) (Credentials, error) {
+	provider, err := m.provider(source)
+	if err != nil {
+		return nil, err
+	}
+
+	return provider.ResolveCredentials(ctx, ref)
 }
 
 func (m *manager) Subscribe(source, ref string, cb func(context.Context) error) (func(), error) {
