@@ -44,6 +44,13 @@ func Register(typ string, factory Factory) {
 	factories[typ] = factory
 }
 
+func Unregister(typ string) {
+	factoriesMu.Lock()
+	defer factoriesMu.Unlock()
+
+	delete(factories, typ)
+}
+
 func Create(app app.Context, typ, sourceName string, conf map[string]any) (types.Provider, error) {
 	factoriesMu.RLock()
 	factory, ok := factories[typ] //nolint:wsl_v5
