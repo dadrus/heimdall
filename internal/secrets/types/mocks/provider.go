@@ -82,6 +82,74 @@ func (_c *ProviderMock_Name_Call) RunAndReturn(run func() string) *ProviderMock_
 	return _c
 }
 
+// ResolveCredentials provides a mock function for the type ProviderMock
+func (_mock *ProviderMock) ResolveCredentials(ctx context.Context, ref string) (types.Credentials, error) {
+	ret := _mock.Called(ctx, ref)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResolveCredentials")
+	}
+
+	var r0 types.Credentials
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (types.Credentials, error)); ok {
+		return returnFunc(ctx, ref)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) types.Credentials); ok {
+		r0 = returnFunc(ctx, ref)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(types.Credentials)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, ref)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProviderMock_ResolveCredentials_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolveCredentials'
+type ProviderMock_ResolveCredentials_Call struct {
+	*mock.Call
+}
+
+// ResolveCredentials is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ref string
+func (_e *ProviderMock_Expecter) ResolveCredentials(ctx interface{}, ref interface{}) *ProviderMock_ResolveCredentials_Call {
+	return &ProviderMock_ResolveCredentials_Call{Call: _e.mock.On("ResolveCredentials", ctx, ref)}
+}
+
+func (_c *ProviderMock_ResolveCredentials_Call) Run(run func(ctx context.Context, ref string)) *ProviderMock_ResolveCredentials_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ProviderMock_ResolveCredentials_Call) Return(credentials types.Credentials, err error) *ProviderMock_ResolveCredentials_Call {
+	_c.Call.Return(credentials, err)
+	return _c
+}
+
+func (_c *ProviderMock_ResolveCredentials_Call) RunAndReturn(run func(ctx context.Context, ref string) (types.Credentials, error)) *ProviderMock_ResolveCredentials_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResolveSecret provides a mock function for the type ProviderMock
 func (_mock *ProviderMock) ResolveSecret(ctx context.Context, ref string) (types.Secret, error) {
 	ret := _mock.Called(ctx, ref)
@@ -98,7 +166,9 @@ func (_mock *ProviderMock) ResolveSecret(ctx context.Context, ref string) (types
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) types.Secret); ok {
 		r0 = returnFunc(ctx, ref)
 	} else {
-		r0 = ret.Get(0).(types.Secret)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(types.Secret)
+		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, ref)
@@ -144,93 +214,6 @@ func (_c *ProviderMock_ResolveSecret_Call) Return(secret types.Secret, err error
 }
 
 func (_c *ProviderMock_ResolveSecret_Call) RunAndReturn(run func(ctx context.Context, ref string) (types.Secret, error)) *ProviderMock_ResolveSecret_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ResolveSecrets provides a mock function for the type ProviderMock
-func (_mock *ProviderMock) ResolveSecrets(ctx context.Context, ref string, keys ...string) (map[string]types.Secret, error) {
-	// string
-	_va := make([]interface{}, len(keys))
-	for _i := range keys {
-		_va[_i] = keys[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, ref)
-	_ca = append(_ca, _va...)
-	ret := _mock.Called(_ca...)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ResolveSecrets")
-	}
-
-	var r0 map[string]types.Secret
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...string) (map[string]types.Secret, error)); ok {
-		return returnFunc(ctx, ref, keys...)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...string) map[string]types.Secret); ok {
-		r0 = returnFunc(ctx, ref, keys...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]types.Secret)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, ...string) error); ok {
-		r1 = returnFunc(ctx, ref, keys...)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ProviderMock_ResolveSecrets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolveSecrets'
-type ProviderMock_ResolveSecrets_Call struct {
-	*mock.Call
-}
-
-// ResolveSecrets is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ref string
-//   - keys ...string
-func (_e *ProviderMock_Expecter) ResolveSecrets(ctx interface{}, ref interface{}, keys ...interface{}) *ProviderMock_ResolveSecrets_Call {
-	return &ProviderMock_ResolveSecrets_Call{Call: _e.mock.On("ResolveSecrets",
-		append([]interface{}{ctx, ref}, keys...)...)}
-}
-
-func (_c *ProviderMock_ResolveSecrets_Call) Run(run func(ctx context.Context, ref string, keys ...string)) *ProviderMock_ResolveSecrets_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 []string
-		variadicArgs := make([]string, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(string)
-			}
-		}
-		arg2 = variadicArgs
-		run(
-			arg0,
-			arg1,
-			arg2...,
-		)
-	})
-	return _c
-}
-
-func (_c *ProviderMock_ResolveSecrets_Call) Return(stringToSecret map[string]types.Secret, err error) *ProviderMock_ResolveSecrets_Call {
-	_c.Call.Return(stringToSecret, err)
-	return _c
-}
-
-func (_c *ProviderMock_ResolveSecrets_Call) RunAndReturn(run func(ctx context.Context, ref string, keys ...string) (map[string]types.Secret, error)) *ProviderMock_ResolveSecrets_Call {
 	_c.Call.Return(run)
 	return _c
 }

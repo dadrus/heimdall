@@ -26,7 +26,7 @@ type Provider interface {
 	Start(ctx context.Context, onChange func(ChangeEvent)) error
 	Stop(ctx context.Context) error
 	ResolveSecret(ctx context.Context, ref string) (Secret, error)
-	ResolveSecrets(ctx context.Context, ref string, keys ...string) (map[string]Secret, error)
+	ResolveCredentials(ctx context.Context, ref string) (Credentials, error)
 }
 
 type ChangeEvent struct {
