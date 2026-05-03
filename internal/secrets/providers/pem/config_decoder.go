@@ -17,32 +17,15 @@
 package pem
 
 import (
-	"github.com/go-viper/mapstructure/v2"
-
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func decodeConfig(validator validation.Validator, input map[string]any, output any) error {
-	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		Result:      output,
-		ErrorUnused: true,
-	})
-	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed decoding pem provider config").CausedBy(err)
-	}
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
+	)
 
-	if err = dec.Decode(input); err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed decoding pem provider config").CausedBy(err)
-	}
-
-	if err = validator.ValidateStruct(output); err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed validating pem provider config").CausedBy(err)
-	}
-
-	return nil
+	return dec.DecodeMap(output, input)
 }

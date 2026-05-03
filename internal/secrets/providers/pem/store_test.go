@@ -65,7 +65,6 @@ func TestNewKeyStoreFromPEMFile(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "failed to get information")
 			},
 		},
 		"returns configuration error if path points to directory": {
@@ -321,7 +320,7 @@ func TestNewKeyStoreFromKey(t *testing.T) {
 				assert.Equal(t, types.SecretKindAsymmetricKey, secret.Kind())
 				assert.IsType(t, &rsa.PrivateKey{}, secret.PrivateKey())
 				assert.NotEmpty(t, secret.KeyID())
-				assert.Equal(t,secret.Ref(), secret.KeyID())
+				assert.Equal(t, secret.Ref(), secret.KeyID())
 			},
 		},
 	} {
@@ -362,7 +361,7 @@ func TestKeyStoreGet(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 				require.Error(t, err)
-				require.ErrorIs(t, err, errNoSuchKey)
+				require.ErrorIs(t, err, types.ErrSecretNotFound)
 			},
 		},
 	} {

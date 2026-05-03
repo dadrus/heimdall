@@ -93,8 +93,7 @@ func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (ty
 	p.mu.RUnlock()
 
 	if len(ks) == 0 {
-		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"no key material present in pem source")
+		return nil, types.ErrSecretNotFound
 	}
 
 	if selector.Value != "" {
@@ -113,8 +112,7 @@ func (p *provider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]type
 }
 
 func (p *provider) ResolveCredentials(_ context.Context, _ types.Selector) (types.Credentials, error) {
-	return nil, errorchain.NewWithMessage(types.ErrUnsupportedOperation,
-		"pem provider supports only single secret resolution")
+	return nil, types.ErrUnsupportedOperation
 }
 
 func (p *provider) Start(ctx context.Context, onChange func(types.ChangeEvent)) error {

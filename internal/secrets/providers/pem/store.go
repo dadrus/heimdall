@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
-	"errors"
 	"os"
 
 	"github.com/youmark/pkcs8"
@@ -25,8 +24,6 @@ const (
 	pemBlockTypeRSAPrivateKey       = "RSA PRIVATE KEY"
 	pemBlockTypeCertificate         = "CERTIFICATE"
 )
-
-var errNoSuchKey = errors.New("no such key")
 
 type keyStore []types.Secret
 
@@ -119,7 +116,7 @@ func (s keyStore) get(ref string) (types.Secret, error) {
 		}
 	}
 
-	return nil, errorchain.NewWithMessagef(errNoSuchKey, "%s", ref)
+	return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound, "%s", ref)
 }
 
 func readPEMBlocks(data []byte) []*pem.Block {
@@ -254,7 +251,8 @@ func validateChain(chain []*x509.Certificate) error {
 		pkix.WithIntermediateCACertificates(intermediates),
 	)
 	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "invalid certificate chain").CausedBy(err)
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
+			"invalid certificate chain").CausedBy(err)
 	}
 
 	return nil
