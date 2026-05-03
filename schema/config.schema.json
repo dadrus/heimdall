@@ -17,6 +17,11 @@
         "type": {
           "const": "pem"
         },
+        "allow_in_rules": {
+          "description": "Whether this secret source can be used in rules",
+          "type": "boolean",
+          "default": false
+        },
         "config": {
           "type": "object",
           "additionalProperties": false,
@@ -52,6 +57,11 @@
       "properties": {
         "type": {
           "const": "inline"
+        },
+        "allow_in_rules": {
+          "description": "Whether this secret source can be used in rules",
+          "type": "boolean",
+          "default": false
         },
         "config": {
           "description": "Inline secrets keyed by secret id. Values may be arbitrary structured data.",
