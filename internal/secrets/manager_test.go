@@ -98,12 +98,16 @@ func TestNewManager(t *testing.T) {
 func TestManagerResolveSecret(t *testing.T) {
 	t.Parallel()
 
+	undefined := managedProvider{}
+
 	for uc, tc := range map[string]struct {
-		provider func(t *testing.T) *typemocks.ProviderMock
-		assert   func(t *testing.T, err error, secret Secret)
+		ruleContext bool
+		provider    func(t *testing.T) managedProvider
+		assert      func(t *testing.T, err error, secret Secret)
 	}{
-		"delegates to configured provider": {
-			provider: func(t *testing.T) *typemocks.ProviderMock {
+		"delegates rule scoped secret access to provider allowing access from rules": {
+			ruleContext: true,
+			provider: func(t *testing.T) managedProvider {
 				t.Helper()
 
 				secret := types.NewStringSecret("tls", "first_entry", "value")
@@ -114,7 +118,7 @@ func TestManagerResolveSecret(t *testing.T) {
 					ResolveSecret(mock.Anything, types.Selector{Value: "first_entry"}).
 					Return(secret, nil)
 
-				return provider
+				return managedProvider{provider: provider, accessFromRulesAllowed: true}
 			},
 			assert: func(t *testing.T, err error, secret Secret) {
 				t.Helper()
@@ -130,11 +134,70 @@ func TestManagerResolveSecret(t *testing.T) {
 				require.Equal(t, "value", stringSecret.String())
 			},
 		},
-		"returns provider not found for unknown source": {
-			provider: func(t *testing.T) *typemocks.ProviderMock {
+		"delegates internal scoped secret access to provider allowing access from rules": {
+			provider: func(t *testing.T) managedProvider {
 				t.Helper()
 
-				return nil
+				secret := types.NewStringSecret("tls", "first_entry", "value")
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("tls")
+				provider.EXPECT().
+					ResolveSecret(mock.Anything, types.Selector{Value: "first_entry"}).
+					Return(secret, nil)
+
+				return managedProvider{provider: provider, accessFromRulesAllowed: true}
+			},
+			assert: func(t *testing.T, err error, secret Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Equal(t, "first_entry", secret.Ref())
+			},
+		},
+		"delegates internal scoped secret access to provider not allowing access from rules": {
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				secret := types.NewStringSecret("tls", "first_entry", "value")
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("tls")
+				provider.EXPECT().
+					ResolveSecret(mock.Anything, types.Selector{Value: "first_entry"}).
+					Return(secret, nil)
+
+				return managedProvider{provider: provider}
+			},
+			assert: func(t *testing.T, err error, secret Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Equal(t, "first_entry", secret.Ref())
+			},
+		},
+		"delegation of secret access fails due to not allowed secret scope": {
+			ruleContext: true,
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("tls")
+
+				return managedProvider{provider: provider}
+			},
+			assert: func(t *testing.T, err error, _ Secret) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrSecretSourceForbidden)
+			},
+		},
+		"returns provider not found for unknown source": {
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				return undefined
 			},
 			assert: func(t *testing.T, err error, _ Secret) {
 				t.Helper()
@@ -148,15 +211,154 @@ func TestManagerResolveSecret(t *testing.T) {
 			var mgr *manager
 
 			prov := tc.provider(t)
-			if prov != nil {
-				mgr = createManager(zerolog.Nop(), managedProvider{provider: prov})
+			if prov != undefined {
+				mgr = createManager(zerolog.Nop(), prov)
 			} else {
 				mgr = createManager(zerolog.Nop())
 			}
 
-			secret, err := mgr.ResolveSecret(context.Background(), Reference{Source: "tls", Selector: "first_entry"})
+			secret, err := mgr.ResolveSecret(
+				context.Background(),
+				Reference{Source: "tls", Selector: "first_entry", RuleContext: tc.ruleContext},
+			)
 
 			tc.assert(t, err, secret)
+		})
+	}
+}
+
+func TestManagerResolveSecretSet(t *testing.T) {
+	t.Parallel()
+
+	undefined := managedProvider{}
+
+	for uc, tc := range map[string]struct {
+		ruleContext bool
+		provider    func(t *testing.T) managedProvider
+		assert      func(t *testing.T, err error, secrets []Secret)
+	}{
+		"delegates rule scoped secret access to provider allowing access from rules": {
+			ruleContext: true,
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				secretSet := []types.Secret{
+					types.NewStringSecret("jwks", "key-a", "value-a"),
+					types.NewStringSecret("jwks", "key-b", "value-b"),
+				}
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("jwks")
+				provider.EXPECT().
+					ResolveSecretSet(mock.Anything, types.Selector{Value: "key-a"}).
+					Return(secretSet, nil)
+
+				return managedProvider{provider: provider, accessFromRulesAllowed: true}
+			},
+			assert: func(t *testing.T, err error, secrets []Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Len(t, secrets, 2)
+				require.Equal(t, "key-a", secrets[0].Ref())
+				require.Equal(t, "key-b", secrets[1].Ref())
+			},
+		},
+		"delegates internal scoped secret access to provider allowing access from rules": {
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				secretSet := []types.Secret{
+					types.NewStringSecret("jwks", "key-a", "value-a"),
+				}
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("jwks")
+				provider.EXPECT().
+					ResolveSecretSet(mock.Anything, types.Selector{Value: "key-a"}).
+					Return(secretSet, nil)
+
+				return managedProvider{provider: provider, accessFromRulesAllowed: true}
+			},
+			assert: func(t *testing.T, err error, secrets []Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Len(t, secrets, 1)
+				require.Equal(t, "key-a", secrets[0].Ref())
+			},
+		},
+		"delegates internal scoped secret access to provider not allowing access from rules": {
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				secretSet := []types.Secret{
+					types.NewStringSecret("jwks", "key-a", "value-a"),
+				}
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("jwks")
+				provider.EXPECT().
+					ResolveSecretSet(mock.Anything, types.Selector{Value: "key-a"}).
+					Return(secretSet, nil)
+
+				return managedProvider{provider: provider}
+			},
+			assert: func(t *testing.T, err error, secrets []Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Len(t, secrets, 1)
+				require.Equal(t, "key-a", secrets[0].Ref())
+			},
+		},
+		"delegation of secret access fails due to not allowed secret scope": {
+			ruleContext: true,
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("jwks")
+
+				return managedProvider{provider: provider}
+			},
+			assert: func(t *testing.T, err error, _ []Secret) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrSecretSourceForbidden)
+			},
+		},
+		"returns provider not found for unknown source": {
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				return undefined
+			},
+			assert: func(t *testing.T, err error, _ []Secret) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrProviderNotFound)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			prov := tc.provider(t)
+
+			var mgr *manager
+			if prov != undefined {
+				mgr = createManager(zerolog.Nop(), prov)
+			} else {
+				mgr = createManager(zerolog.Nop())
+			}
+
+			secrets, err := mgr.ResolveSecretSet(
+				context.Background(),
+				Reference{Source: "jwks", Selector: "key-a", RuleContext: tc.ruleContext},
+			)
+
+			tc.assert(t, err, secrets)
 		})
 	}
 }
@@ -164,31 +366,35 @@ func TestManagerResolveSecret(t *testing.T) {
 func TestManagerResolveCredentials(t *testing.T) {
 	t.Parallel()
 
+	undefined := managedProvider{}
+
 	type clientCredentials struct {
 		ClientID     string `mapstructure:"client_id"`
 		ClientSecret string `mapstructure:"client_secret"`
 	}
 
-	for uc, tc := range map[string]struct {
-		provider func(t *testing.T) *typemocks.ProviderMock
-		assert   func(t *testing.T, err error, credentials Credentials)
-	}{
-		"delegates to configured provider": {
-			provider: func(t *testing.T) *typemocks.ProviderMock {
-				t.Helper()
+	credentials := types.NewCredentials("file", "client_credentials", map[string]types.Secret{
+		"client_id": types.NewStringSecret(
+			"file",
+			"client_credentials/client_id",
+			"foo",
+		),
+		"client_secret": types.NewStringSecret(
+			"file",
+			"client_credentials/client_secret",
+			"bar",
+		),
+	})
 
-				credentials := types.NewCredentials("file", "client_credentials", map[string]types.Secret{
-					"client_id": types.NewStringSecret(
-						"file",
-						"client_credentials/client_id",
-						"foo",
-					),
-					"client_secret": types.NewStringSecret(
-						"file",
-						"client_credentials/client_secret",
-						"bar",
-					),
-				})
+	for uc, tc := range map[string]struct {
+		ruleContext bool
+		provider    func(t *testing.T) managedProvider
+		assert      func(t *testing.T, err error, credentials Credentials)
+	}{
+		"delegates rule scoped secret access to provider allowing access from rules": {
+			ruleContext: true,
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
 
 				provider := typemocks.NewProviderMock(t)
 				provider.EXPECT().Name().Return("file")
@@ -196,7 +402,7 @@ func TestManagerResolveCredentials(t *testing.T) {
 					ResolveCredentials(mock.Anything, types.Selector{Value: "client_credentials"}).
 					Return(credentials, nil)
 
-				return provider
+				return managedProvider{provider: provider, accessFromRulesAllowed: true}
 			},
 			assert: func(t *testing.T, err error, credentials Credentials) {
 				t.Helper()
@@ -211,11 +417,78 @@ func TestManagerResolveCredentials(t *testing.T) {
 				require.Equal(t, "bar", decoded.ClientSecret)
 			},
 		},
-		"returns provider not found for unknown source": {
-			provider: func(t *testing.T) *typemocks.ProviderMock {
+		"delegates internal scoped secret access to provider allowing access from rules": {
+			provider: func(t *testing.T) managedProvider {
 				t.Helper()
 
-				return nil
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("file")
+				provider.EXPECT().
+					ResolveCredentials(mock.Anything, types.Selector{Value: "client_credentials"}).
+					Return(credentials, nil)
+
+				return managedProvider{provider: provider, accessFromRulesAllowed: true}
+			},
+			assert: func(t *testing.T, err error, credentials Credentials) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, credentials)
+
+				var decoded clientCredentials
+				require.NoError(t, credentials.Decode(&decoded))
+
+				require.Equal(t, "foo", decoded.ClientID)
+				require.Equal(t, "bar", decoded.ClientSecret)
+			},
+		},
+		"delegates internal scoped secret access to provider not allowing access from rules": {
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("file")
+				provider.EXPECT().
+					ResolveCredentials(mock.Anything, types.Selector{Value: "client_credentials"}).
+					Return(credentials, nil)
+
+				return managedProvider{provider: provider}
+			},
+			assert: func(t *testing.T, err error, credentials Credentials) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, credentials)
+
+				var decoded clientCredentials
+				require.NoError(t, credentials.Decode(&decoded))
+
+				require.Equal(t, "foo", decoded.ClientID)
+				require.Equal(t, "bar", decoded.ClientSecret)
+			},
+		},
+		"delegation of secret access fails due to not allowed secret scope": {
+			ruleContext: true,
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				provider := typemocks.NewProviderMock(t)
+				provider.EXPECT().Name().Return("file")
+
+				return managedProvider{provider: provider}
+			},
+			assert: func(t *testing.T, err error, _ Credentials) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrSecretSourceForbidden)
+			},
+		},
+		"returns provider not found for unknown source": {
+			provider: func(t *testing.T) managedProvider {
+				t.Helper()
+
+				return undefined
 			},
 			assert: func(t *testing.T, err error, _ Credentials) {
 				t.Helper()
@@ -229,15 +502,15 @@ func TestManagerResolveCredentials(t *testing.T) {
 			var mgr *manager
 
 			prov := tc.provider(t)
-			if prov != nil {
-				mgr = createManager(zerolog.Nop(), managedProvider{provider: prov})
+			if prov != undefined {
+				mgr = createManager(zerolog.Nop(), prov)
 			} else {
 				mgr = createManager(zerolog.Nop())
 			}
 
 			credentials, err := mgr.ResolveCredentials(
 				context.Background(),
-				Reference{Source: "file", Selector: "client_credentials"})
+				Reference{Source: "file", Selector: "client_credentials", RuleContext: tc.ruleContext})
 
 			tc.assert(t, err, credentials)
 		})
@@ -272,7 +545,7 @@ func TestManagerSubscribe(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("invokes callback for matching source and ref", func(t *testing.T) {
+	t.Run("invokes callback for matching reference", func(t *testing.T) {
 		t.Parallel()
 
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
@@ -299,7 +572,7 @@ func TestManagerSubscribe(t *testing.T) {
 		}
 	})
 
-	t.Run("does not invoke callback for non matching ref", func(t *testing.T) {
+	t.Run("does not invoke callback for non matching reference", func(t *testing.T) {
 		t.Parallel()
 
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
@@ -537,6 +810,265 @@ func TestManagerSubscribe(t *testing.T) {
 
 		require.NotPanics(t, func() { unsubscribe() })
 		require.NotPanics(t, func() { unsubscribe() })
+	})
+
+	t.Run("fan-out for empty selectors event is limited to namespace", func(t *testing.T) {
+		t.Parallel()
+
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "k8s")
+		calledA := make(chan struct{}, 1)
+		calledB := make(chan struct{}, 1)
+
+		unsubA, err := mgr.Subscribe(
+			Reference{Source: "k8s", Namespace: "team-a", Selector: "secret-a"},
+			func(context.Context) error {
+				calledA <- struct{}{}
+
+				return nil
+			},
+		)
+		require.NoError(t, err)
+
+		defer unsubA()
+
+		unsubB, err := mgr.Subscribe(
+			Reference{Source: "k8s", Namespace: "team-b", Selector: "secret-b"},
+			func(context.Context) error {
+				calledB <- struct{}{}
+
+				return nil
+			},
+		)
+		require.NoError(t, err)
+
+		defer unsubB()
+
+		trigger(types.ChangeEvent{Source: "k8s", Namespace: "team-a"})
+
+		select {
+		case <-calledA:
+		case <-time.After(500 * time.Millisecond):
+			t.Fatal("team-a callback not called")
+		}
+
+		select {
+		case <-calledB:
+			t.Fatal("team-b callback unexpectedly called")
+		case <-time.After(200 * time.Millisecond):
+		}
+	})
+
+	t.Run("invokes callback for matching namespaced reference", func(t *testing.T) {
+		t.Parallel()
+
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "k8s")
+		called := make(chan struct{}, 1)
+
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "k8s", Namespace: "team-a", Selector: "secret-a"},
+			func(context.Context) error {
+				called <- struct{}{}
+
+				return nil
+			},
+		)
+		require.NoError(t, err)
+
+		defer unsubscribe()
+
+		trigger(types.ChangeEvent{
+			Source:    "k8s",
+			Namespace: "team-a",
+			Selectors: []string{"secret-a"},
+		})
+
+		select {
+		case <-called:
+		case <-time.After(500 * time.Millisecond):
+			t.Fatal("callback not called")
+		}
+	})
+
+	t.Run("does not invoke callback for same selector in different namespace", func(t *testing.T) {
+		t.Parallel()
+
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "k8s")
+		called := make(chan struct{}, 1)
+
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "k8s", Namespace: "team-a", Selector: "secret-a"},
+			func(context.Context) error {
+				called <- struct{}{}
+
+				return nil
+			},
+		)
+		require.NoError(t, err)
+
+		defer unsubscribe()
+
+		trigger(types.ChangeEvent{
+			Source:    "k8s",
+			Namespace: "team-b",
+			Selectors: []string{"secret-a"},
+		})
+
+		select {
+		case <-called:
+			t.Fatal("callback unexpectedly called")
+		case <-time.After(200 * time.Millisecond):
+		}
+	})
+
+	t.Run("ignores selector event without matching binding", func(t *testing.T) {
+		t.Parallel()
+
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "k8s")
+		called := make(chan struct{}, 1)
+
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "k8s", Namespace: "team-a", Selector: "secret-a"},
+			func(context.Context) error {
+				called <- struct{}{}
+
+				return nil
+			},
+		)
+		require.NoError(t, err)
+
+		defer unsubscribe()
+
+		trigger(types.ChangeEvent{
+			Source:    "k8s",
+			Namespace: "team-a",
+			Selectors: []string{"does-not-exist"},
+		})
+
+		select {
+		case <-called:
+			t.Fatal("callback unexpectedly called")
+		case <-time.After(200 * time.Millisecond):
+		}
+	})
+
+	t.Run("fan-out for empty selectors event is limited to matching source", func(t *testing.T) {
+		t.Parallel()
+
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "a")
+		mgr.providers["b"] = managedProvider{provider: typemocks.NewProviderMock(t)}
+
+		aCalled := make(chan struct{}, 1)
+		bCalled := make(chan struct{}, 1)
+
+		unsubPEM, err := mgr.Subscribe(
+			Reference{Source: "a", Selector: "entry-a"},
+			func(context.Context) error {
+				aCalled <- struct{}{}
+
+				return nil
+			},
+		)
+		require.NoError(t, err)
+
+		defer unsubPEM()
+
+		unsubVault, err := mgr.Subscribe(
+			Reference{Source: "b", Selector: "entry-b"},
+			func(context.Context) error {
+				bCalled <- struct{}{}
+
+				return nil
+			},
+		)
+		require.NoError(t, err)
+
+		defer unsubVault()
+
+		trigger(types.ChangeEvent{Source: "a"})
+
+		select {
+		case <-aCalled:
+		case <-time.After(500 * time.Millisecond):
+			t.Fatal("a callback not called")
+		}
+
+		select {
+		case <-bCalled:
+			t.Fatal("b callback unexpectedly called")
+		case <-time.After(200 * time.Millisecond):
+		}
+	})
+}
+
+func TestBindingPendingEvents(t *testing.T) {
+	t.Parallel()
+
+	t.Run("processes pending event after current run", func(t *testing.T) {
+		t.Parallel()
+
+		started := make(chan struct{}, 1)
+		release := make(chan struct{})
+
+		var calls atomic.Int32
+
+		bdg := newBinding(bindingKey{source: "source", selector: "ref"}, zerolog.Nop())
+		defer bdg.stop()
+
+		bdg.addSubscriber(func(context.Context) error {
+			call := calls.Add(1)
+			if call == 1 {
+				started <- struct{}{}
+
+				<-release
+			}
+
+			return nil
+		})
+
+		bdg.enqueue()
+
+		select {
+		case <-started:
+		case <-time.After(500 * time.Millisecond):
+			t.Fatal("callback not started")
+		}
+
+		bdg.enqueue()
+		close(release)
+
+		require.Eventually(t, func() bool {
+			return calls.Load() == 2
+		}, time.Second, 10*time.Millisecond)
+
+		time.Sleep(100 * time.Millisecond)
+		require.EqualValues(t, 2, calls.Load())
+	})
+
+	t.Run("handles pending flag without queued event", func(t *testing.T) {
+		t.Parallel()
+
+		var calls atomic.Int32
+
+		bdg := newBinding(bindingKey{source: "source", selector: "ref"}, zerolog.Nop())
+		defer bdg.stop()
+
+		bdg.addSubscriber(func(context.Context) error {
+			call := calls.Add(1)
+			if call == 1 {
+				bdg.pending.Store(true)
+			}
+
+			return nil
+		})
+
+		bdg.enqueue()
+
+		require.Eventually(t, func() bool {
+			return calls.Load() == 2
+		}, time.Second, 10*time.Millisecond)
+
+		time.Sleep(100 * time.Millisecond)
+		require.EqualValues(t, 2, calls.Load())
 	})
 }
 

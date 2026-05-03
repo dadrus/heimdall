@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/rs/zerolog"
 
@@ -288,8 +289,11 @@ type binding struct {
 	nextSubscriberID uint64
 	mut              sync.RWMutex
 	callbacks        map[uint64]func(context.Context) error
-	events           chan struct{}
-	done             chan struct{}
+
+	events chan struct{}
+	done   chan struct{}
+
+	pending atomic.Bool
 }
 
 func newBinding(bk bindingKey, logger zerolog.Logger) *binding {
@@ -328,9 +332,8 @@ func (b *binding) removeSubscriber(id uint64) bool {
 }
 
 func (b *binding) enqueue() {
-	select {
-	case b.events <- struct{}{}:
-	default:
+	if b.pending.CompareAndSwap(false, true) {
+		b.events <- struct{}{}
 	}
 }
 
@@ -338,24 +341,41 @@ func (b *binding) run() {
 	defer close(b.done)
 
 	for range b.events {
-		b.mut.RLock()
+		for {
+			b.pending.Store(false)
+			b.runCallbacks()
 
-		callbacks := make([]func(context.Context) error, 0, len(b.callbacks))
-		for _, cb := range b.callbacks {
-			callbacks = append(callbacks, cb)
-		}
-
-		b.mut.RUnlock()
-
-		for _, cb := range callbacks {
-			if err := cb(context.Background()); err != nil {
-				b.logger.Warn().
-					Err(err).
-					Str("_source", b.source).
-					Str("_namespace", b.namespace).
-					Str("_ref", b.selector).
-					Msg("Secret update callback failed")
+			if !b.pending.Load() {
+				break
 			}
+
+			// Drain the signal enqueued while callbacks were running.
+			select {
+			case <-b.events:
+			default:
+			}
+		}
+	}
+}
+
+func (b *binding) runCallbacks() {
+	b.mut.RLock()
+
+	callbacks := make([]func(context.Context) error, 0, len(b.callbacks))
+	for _, cb := range b.callbacks {
+		callbacks = append(callbacks, cb)
+	}
+
+	b.mut.RUnlock()
+
+	for _, cb := range callbacks {
+		if err := cb(context.Background()); err != nil {
+			b.logger.Warn().
+				Err(err).
+				Str("_source", b.source).
+				Str("_namespace", b.namespace).
+				Str("_ref", b.selector).
+				Msg("Secret update callback failed")
 		}
 	}
 }
