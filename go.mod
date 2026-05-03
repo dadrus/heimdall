@@ -8,7 +8,8 @@ require (
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/ccoveille/go-safecast/v2 v2.0.0
 	github.com/dadrus/httpsig v0.0.0-20260320084101-37048551fc59
-	github.com/dlclark/regexp2 v1.12.0
+	github.com/dlclark/regexp2 v1.11.0
+	github.com/dlclark/regexp2/v2 v2.0.0
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane/envoy v1.37.0
