@@ -68,7 +68,7 @@ func newProvider(appCtx app.Context, sourceName string, rawConf map[string]any) 
 		return nil, err
 	}
 
-	ks, err := newKeyStoreFromPEMFile(cfg.Path, cfg.Password)
+	ks, err := newKeyStoreFromPEMFile(sourceName, cfg.Path, cfg.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -92,20 +92,19 @@ func (p *provider) ResolveSecret(_ context.Context, ref string) (types.Secret, e
 	ks := p.ks
 	p.mu.RUnlock()
 
+	if len(ks) == 0 {
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
+			"no key material present in pem source")
+	}
+
 	if ref != "" {
 		return ks.get(ref)
 	}
 
-	entries := ks.allEntries()
-	if len(entries) == 0 {
-		return types.Secret{}, errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"no key material present in pem source")
-	}
-
-	return entries[0], nil
+	return ks[0], nil
 }
 
-func (p *provider) ResolveSecrets(_ context.Context, _ string, _ ...string) (map[string]types.Secret, error) {
+func (p *provider) ResolveCredentials(_ context.Context, _ string) (types.Credentials, error) {
 	return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 		"pem provider supports only single secret resolution")
 }
@@ -166,7 +165,7 @@ func (p *provider) Stop(_ context.Context) error {
 }
 
 func (p *provider) reload() error {
-	ks, err := newKeyStoreFromPEMFile(p.path, p.password)
+	ks, err := newKeyStoreFromPEMFile(ProviderType, p.path, p.password)
 	if err != nil {
 		return err
 	}

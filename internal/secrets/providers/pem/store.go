@@ -1,26 +1,8 @@
-// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package pem
 
 import (
 	"bytes"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -46,18 +28,15 @@ const (
 
 var errNoSuchKey = errors.New("no such key")
 
-type keyStore []types.Secret
+type keyStore []types.SignerSecret
 
-func newKeyStoreFromKey(privateKey crypto.Signer) (keyStore, error) {
-	entry, err := createEntry(privateKey, "")
-	if err != nil {
-		return nil, err
-	}
+func newKeyStoreFromKey(source, ref string, privateKey crypto.Signer) (keyStore, error) {
+	entry := types.NewSignerSecret(source, ref, ref, privateKey, nil)
 
-	return buildStore([]types.Secret{entry}, nil)
+	return buildStore(source, []types.SignerSecret{entry}, nil)
 }
 
-func newKeyStoreFromPEMFile(path, password string) (keyStore, error) {
+func newKeyStoreFromPEMFile(source, path, password string) (keyStore, error) {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
@@ -74,14 +53,14 @@ func newKeyStoreFromPEMFile(path, password string) (keyStore, error) {
 			"failed to read %s", path).CausedBy(err)
 	}
 
-	return newKeyStoreFromPEMBytes(contents, password)
+	return newKeyStoreFromPEMBytes(source, contents, password)
 }
 
-func newKeyStoreFromPEMBytes(contents []byte, password string) (keyStore, error) {
+func newKeyStoreFromPEMBytes(source string, contents []byte, password string) (keyStore, error) {
 	blocks := readPEMBlocks(contents)
 
 	var (
-		entries []types.Secret
+		entries []types.SignerSecret
 		certs   []*x509.Certificate
 	)
 
@@ -119,29 +98,28 @@ func newKeyStoreFromPEMBytes(contents []byte, password string) (keyStore, error)
 			continue
 		}
 
-		entry, err := createEntry(key, block.Headers["X-Key-ID"])
-		if err != nil {
-			return nil, err
+		keyID := block.Headers["X-Key-ID"]
+
+		signer, ok := key.(crypto.Signer)
+		if !ok {
+			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
+				"unsupported key type; key does not implement crypto.Signer")
 		}
 
-		entries = append(entries, entry)
+		entries = append(entries, types.NewSignerSecret(source, keyID, keyID, signer, nil))
 	}
 
-	return buildStore(entries, certs)
+	return buildStore(source, entries, certs)
 }
 
-func (s keyStore) get(id string) (types.Secret, error) {
+func (s keyStore) get(ref string) (types.Secret, error) {
 	for _, entry := range s {
-		if entry.KeyID == id {
+		if entry.Ref() == ref || entry.KeyID() == ref {
 			return entry, nil
 		}
 	}
 
-	return types.Secret{}, errorchain.NewWithMessagef(errNoSuchKey, "%s", id)
-}
-
-func (s keyStore) allEntries() []types.Secret {
-	return s
+	return nil, errorchain.NewWithMessagef(errNoSuchKey, "%s", ref)
 }
 
 func readPEMBlocks(data []byte) []*pem.Block {
@@ -160,86 +138,60 @@ func readPEMBlocks(data []byte) []*pem.Block {
 	return blocks
 }
 
-func buildStore(entries []types.Secret, certs []*x509.Certificate) (keyStore, error) {
+func buildStore(source string, entries []types.SignerSecret, certs []*x509.Certificate) (keyStore, error) {
 	if len(entries) == 0 {
 		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no key material present in the keystore")
 	}
 
 	known := make(map[string]struct{}, len(entries))
+	result := make([]types.SignerSecret, len(entries))
 
 	for idx, entry := range entries {
-		signer, err := entry.AsSigner()
-		if err != nil {
-			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
-				"invalid key material type in pem source").CausedBy(err)
-		}
-
-		chain := findChain(signer.Public(), certs)
+		chain := findChain(entry.Signer().Public(), certs)
 		if len(chain) != 0 {
-			if err = validateChain(chain); err != nil {
+			if err := validateChain(chain); err != nil {
 				return nil, err
 			}
 		}
 
-		if entry.KeyID == "" {
-			kid, kidErr := generateKeyID(chain, entry)
-			if kidErr != nil {
+		keyID := entry.KeyID()
+		if keyID == "" {
+			generated, err := generateKeyID(chain, entry.Signer())
+			if err != nil {
 				return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
-					"failed generating kid for %d entry", idx+1).CausedBy(kidErr)
+					"failed generating kid for %d entry", idx+1).CausedBy(err)
 			}
 
-			entry.KeyID = kid
+			keyID = generated
 		}
 
-		if _, ok := known[entry.KeyID]; ok {
+		if _, ok := known[keyID]; ok {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-				"duplicate entry for key_id=%s found", entry.KeyID)
+				"duplicate entry for key_id=%s found", keyID)
 		}
 
-		known[entry.KeyID] = struct{}{}
-		entry.CertChain = chain
-		entries[idx] = entry
+		known[keyID] = struct{}{}
+
+		ref := entry.Ref()
+		if ref == "" {
+			ref = keyID
+		}
+
+		result[idx] = types.NewSignerSecret(source, ref, keyID, entry.Signer(), chain)
 	}
 
-	return entries, nil
+	return result, nil
 }
 
-func createEntry(key any, keyID string) (types.Secret, error) {
-	switch typed := key.(type) {
-	case *rsa.PrivateKey:
-		return types.Secret{
-			KeyID:     keyID,
-			Algorithm: "RSA",
-			KeySize:   typed.Size() * 8,
-			Type:      types.SecretTypeAsymmetric,
-			Value:     typed,
-		}, nil
-	case *ecdsa.PrivateKey:
-		return types.Secret{
-			KeyID:     keyID,
-			Algorithm: "ECDSA",
-			KeySize:   typed.Params().BitSize,
-			Type:      types.SecretTypeAsymmetric,
-			Value:     typed,
-		}, nil
-	default:
-		return types.Secret{}, errorchain.NewWithMessage(pipeline.ErrInternal,
-			"unsupported key type; only rsa and ecdsa keys are supported")
-	}
-}
-
-func generateKeyID(chain []*x509.Certificate, entry types.Secret) (string, error) {
+func generateKeyID(chain []*x509.Certificate, signer crypto.Signer) (string, error) {
 	keyID := []byte(nil)
 	if len(chain) != 0 {
 		keyID = chain[0].SubjectKeyId
 	}
 
 	if len(keyID) == 0 {
-		signer, err := entry.AsSigner()
-		if err != nil {
-			return "", err
-		}
+		var err error
 
 		keyID, err = pkix.SubjectKeyID(signer.Public())
 		if err != nil {

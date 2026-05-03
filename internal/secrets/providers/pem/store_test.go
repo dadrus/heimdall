@@ -17,26 +17,25 @@
 package pem
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	x509pkix "crypto/x509/pkix"
 	"encoding/hex"
-	"encoding/pem"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -111,7 +110,7 @@ func TestNewKeyStoreFromPEMFile(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ks, err := newKeyStoreFromPEMFile(tc.pemFile(t), "")
+			ks, err := newKeyStoreFromPEMFile("test", tc.pemFile(t), "")
 			tc.assert(t, ks, err)
 		})
 	}
@@ -130,44 +129,14 @@ func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 			pemBytes: func(t *testing.T) []byte {
 				t.Helper()
 
-				var raw bytes.Buffer
-				raw.WriteString(pemPKCS8ECEncryptedPrivateKey)
-
-				rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
-				require.NoError(t, err)
-
-				rsaPEM, err := pemx.BuildPEM(pemx.WithRSAPrivateKey(rsaKey, pemx.WithHeader("X-Key-ID", "rsa-kid")))
-				require.NoError(t, err)
-				_, err = raw.Write(rsaPEM)
-				require.NoError(t, err)
-
-				return raw.Bytes()
+				return []byte(pemPKCS8ECEncryptedPrivateKey)
 			},
 			assert: func(t *testing.T, ks keyStore, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Len(t, ks, 2)
-
-				var ecdsaFound bool
-
-				for _, entry := range ks {
-					if entry.Algorithm != "ECDSA" {
-						continue
-					}
-
-					ecdsaFound = true
-
-					require.NotEmpty(t, entry.KeyID)
-					require.Equal(t, 256, entry.KeySize)
-				}
-
-				require.True(t, ecdsaFound)
-
-				rsaEntry, err := ks.get("rsa-kid")
-				require.NoError(t, err)
-				require.Equal(t, "RSA", rsaEntry.Algorithm)
-				require.Equal(t, 2048, rsaEntry.KeySize)
+				require.Len(t, ks, 1)
+				assert.IsType(t, &ecdsa.PrivateKey{}, ks[0].Signer())
 			},
 		},
 		"returns internal error for unsupported pem block type": {
@@ -208,29 +177,6 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "failed to parse")
-			},
-		},
-		"returns internal error for unsupported key type": {
-			pemBytes: func(t *testing.T) []byte {
-				t.Helper()
-
-				_, key, err := ed25519.GenerateKey(rand.Reader)
-				require.NoError(t, err)
-
-				rawKey, err := x509.MarshalPKCS8PrivateKey(key)
-				require.NoError(t, err)
-
-				return pem.EncodeToMemory(&pem.Block{
-					Type:  "PRIVATE KEY",
-					Bytes: rawKey,
-				})
-			},
-			assert: func(t *testing.T, _ keyStore, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "unsupported key type")
 			},
 		},
 		"returns configuration error for duplicate key id": {
@@ -278,8 +224,8 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
-				require.Equal(t, hex.EncodeToString(ks[0].CertChain[0].SubjectKeyId), ks[0].KeyID)
-				require.Len(t, ks[0].CertChain, 2)
+				assert.Equal(t, hex.EncodeToString(ks[0].CertChain()[0].SubjectKeyId), ks[0].KeyID())
+				assert.Len(t, ks[0].CertChain(), 2)
 			},
 		},
 		"generates key id from public key if cert subject key id missing": {
@@ -303,11 +249,9 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
 
-				signer, err := ks[0].AsSigner()
+				expectedKid, err := pkix.SubjectKeyID(ks[0].Signer().Public())
 				require.NoError(t, err)
-				expectedKid, err := pkix.SubjectKeyID(signer.Public())
-				require.NoError(t, err)
-				require.Equal(t, hex.EncodeToString(expectedKid), ks[0].KeyID)
+				assert.Equal(t, hex.EncodeToString(expectedKid), ks[0].KeyID())
 			},
 		},
 		"keeps explicit X-Key-ID over generated key id": {
@@ -317,7 +261,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				key, cert, ca := createLeafAndCA(t, []byte("kid-by-cert"))
 
 				pemBytes, err := pemx.BuildPEM(
-					pemx.WithECDSAPrivateKey(key, pemx.WithHeader("X-Key-ID", "manual-kid")),
+					pemx.WithECDSAPrivateKey(key, pemx.WithHeader("X-Key-ID", "custom-kid")),
 					pemx.WithX509Certificate(cert),
 					pemx.WithX509Certificate(ca.Certificate),
 				)
@@ -330,14 +274,15 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
-				require.Equal(t, "manual-kid", ks[0].KeyID)
+				assert.Equal(t, "custom-kid", ks[0].KeyID())
+				assert.Equal(t, ks[0].Ref(), ks[0].KeyID())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ks, err := newKeyStoreFromPEMBytes(tc.pemBytes(t), tc.password)
+			ks, err := newKeyStoreFromPEMBytes("test", tc.pemBytes(t), tc.password)
 			tc.assert(t, ks, err)
 		})
 	}
@@ -350,19 +295,6 @@ func TestNewKeyStoreFromKey(t *testing.T) {
 		key    func(*testing.T) crypto.Signer
 		assert func(*testing.T, keyStore, error)
 	}{
-		"returns internal error for unsupported key type": {
-			key: func(t *testing.T) crypto.Signer {
-				t.Helper()
-
-				return testSigner{}
-			},
-			assert: func(t *testing.T, _ keyStore, err error) {
-				t.Helper()
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "unsupported key type")
-			},
-		},
 		"creates store for rsa key": {
 			key: func(t *testing.T) crypto.Signer {
 				t.Helper()
@@ -376,16 +308,18 @@ func TestNewKeyStoreFromKey(t *testing.T) {
 				t.Helper()
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
-				require.Equal(t, "RSA", ks[0].Algorithm)
-				require.Equal(t, 2048, ks[0].KeySize)
-				require.NotEmpty(t, ks[0].KeyID)
+
+				assert.Equal(t, types.SecretKindSigner, ks[0].Kind())
+				assert.IsType(t, &rsa.PrivateKey{}, ks[0].Signer())
+				assert.NotEmpty(t, ks[0].KeyID())
+				assert.Equal(t, ks[0].Ref(), ks[0].KeyID())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ks, err := newKeyStoreFromKey(tc.key(t))
+			ks, err := newKeyStoreFromKey("test", "test", tc.key(t))
 			tc.assert(t, ks, err)
 		})
 	}
@@ -400,7 +334,7 @@ func TestKeyStoreGet(t *testing.T) {
 	pemBytes, err := pemx.BuildPEM(pemx.WithRSAPrivateKey(key, pemx.WithHeader("X-Key-ID", "first")))
 	require.NoError(t, err)
 
-	ks, err := newKeyStoreFromPEMBytes(pemBytes, "")
+	ks, err := newKeyStoreFromPEMBytes("test", pemBytes, "")
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
