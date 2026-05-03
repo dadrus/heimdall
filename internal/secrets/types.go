@@ -29,23 +29,49 @@ type (
 	Secret      = types.Secret
 	Credentials = types.Credentials
 
+	Reference struct {
+		Source      string
+		Selector    string
+		Namespace   string
+		RuleContext bool
+	}
+
 	Manager interface {
-		ResolveSecret(ctx context.Context, source, ref string) (Secret, error)
-		ResolveCredentials(ctx context.Context, source, ref string) (Credentials, error)
-		Subscribe(source, ref string, cb func(context.Context) error) (unsubscribe func(), err error)
+		ResolveSecret(ctx context.Context, ref Reference) (Secret, error)
+		ResolveSecretSet(ctx context.Context, ref Reference) ([]Secret, error)
+		ResolveCredentials(ctx context.Context, ref Reference) (Credentials, error)
+		Subscribe(ref Reference, cb func(context.Context) error) (unsubscribe func(), err error)
 	}
 )
 
 var (
 	ErrProviderNotFound        = errors.New("secret provider not found")
 	ErrSubscribeFailed         = errors.New("secret changes subscription failed")
+	ErrSecretSourceForbidden   = errors.New("secret source forbidden in rule context")
 	ErrUnsupportedProviderType = registry.ErrUnsupportedProviderType
 	ErrSecretKindMismatch      = types.ErrSecretKindMismatch
+	ErrUnsupportedOperation    = types.ErrUnsupportedOperation
 )
 
 const (
-	SecretKindString     = types.SecretKindString
-	SecretKindBytes      = types.SecretKindBytes
-	SecretKindSigner     = types.SecretKindSigner
-	SecretKindTrustStore = types.SecretKindTrustStore
+	SecretKindString        = types.SecretKindString
+	SecretKindSymmetricKey  = types.SecretKindSymmetricKey
+	SecretKindAsymmetricKey = types.SecretKindAsymmetricKey
+	SecretKindTrustStore    = types.SecretKindTrustStore
 )
+
+func InternalRef(source, selector string) Reference {
+	return Reference{
+		Source:   source,
+		Selector: selector,
+	}
+}
+
+func RuleRef(namespace, source, selector string) Reference {
+	return Reference{
+		Source:      source,
+		Selector:    selector,
+		Namespace:   namespace,
+		RuleContext: true,
+	}
+}

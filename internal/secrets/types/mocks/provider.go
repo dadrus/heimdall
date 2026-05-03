@@ -83,8 +83,8 @@ func (_c *ProviderMock_Name_Call) RunAndReturn(run func() string) *ProviderMock_
 }
 
 // ResolveCredentials provides a mock function for the type ProviderMock
-func (_mock *ProviderMock) ResolveCredentials(ctx context.Context, ref string) (types.Credentials, error) {
-	ret := _mock.Called(ctx, ref)
+func (_mock *ProviderMock) ResolveCredentials(ctx context.Context, selector types.Selector) (types.Credentials, error) {
+	ret := _mock.Called(ctx, selector)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveCredentials")
@@ -92,18 +92,18 @@ func (_mock *ProviderMock) ResolveCredentials(ctx context.Context, ref string) (
 
 	var r0 types.Credentials
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (types.Credentials, error)); ok {
-		return returnFunc(ctx, ref)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Selector) (types.Credentials, error)); ok {
+		return returnFunc(ctx, selector)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) types.Credentials); ok {
-		r0 = returnFunc(ctx, ref)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Selector) types.Credentials); ok {
+		r0 = returnFunc(ctx, selector)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(types.Credentials)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, ref)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Selector) error); ok {
+		r1 = returnFunc(ctx, selector)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -117,20 +117,20 @@ type ProviderMock_ResolveCredentials_Call struct {
 
 // ResolveCredentials is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ref string
-func (_e *ProviderMock_Expecter) ResolveCredentials(ctx interface{}, ref interface{}) *ProviderMock_ResolveCredentials_Call {
-	return &ProviderMock_ResolveCredentials_Call{Call: _e.mock.On("ResolveCredentials", ctx, ref)}
+//   - selector types.Selector
+func (_e *ProviderMock_Expecter) ResolveCredentials(ctx interface{}, selector interface{}) *ProviderMock_ResolveCredentials_Call {
+	return &ProviderMock_ResolveCredentials_Call{Call: _e.mock.On("ResolveCredentials", ctx, selector)}
 }
 
-func (_c *ProviderMock_ResolveCredentials_Call) Run(run func(ctx context.Context, ref string)) *ProviderMock_ResolveCredentials_Call {
+func (_c *ProviderMock_ResolveCredentials_Call) Run(run func(ctx context.Context, selector types.Selector)) *ProviderMock_ResolveCredentials_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 types.Selector
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(types.Selector)
 		}
 		run(
 			arg0,
@@ -145,14 +145,14 @@ func (_c *ProviderMock_ResolveCredentials_Call) Return(credentials types.Credent
 	return _c
 }
 
-func (_c *ProviderMock_ResolveCredentials_Call) RunAndReturn(run func(ctx context.Context, ref string) (types.Credentials, error)) *ProviderMock_ResolveCredentials_Call {
+func (_c *ProviderMock_ResolveCredentials_Call) RunAndReturn(run func(ctx context.Context, selector types.Selector) (types.Credentials, error)) *ProviderMock_ResolveCredentials_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ResolveSecret provides a mock function for the type ProviderMock
-func (_mock *ProviderMock) ResolveSecret(ctx context.Context, ref string) (types.Secret, error) {
-	ret := _mock.Called(ctx, ref)
+func (_mock *ProviderMock) ResolveSecret(ctx context.Context, selector types.Selector) (types.Secret, error) {
+	ret := _mock.Called(ctx, selector)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveSecret")
@@ -160,18 +160,18 @@ func (_mock *ProviderMock) ResolveSecret(ctx context.Context, ref string) (types
 
 	var r0 types.Secret
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (types.Secret, error)); ok {
-		return returnFunc(ctx, ref)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Selector) (types.Secret, error)); ok {
+		return returnFunc(ctx, selector)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) types.Secret); ok {
-		r0 = returnFunc(ctx, ref)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Selector) types.Secret); ok {
+		r0 = returnFunc(ctx, selector)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(types.Secret)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, ref)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Selector) error); ok {
+		r1 = returnFunc(ctx, selector)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -185,20 +185,20 @@ type ProviderMock_ResolveSecret_Call struct {
 
 // ResolveSecret is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ref string
-func (_e *ProviderMock_Expecter) ResolveSecret(ctx interface{}, ref interface{}) *ProviderMock_ResolveSecret_Call {
-	return &ProviderMock_ResolveSecret_Call{Call: _e.mock.On("ResolveSecret", ctx, ref)}
+//   - selector types.Selector
+func (_e *ProviderMock_Expecter) ResolveSecret(ctx interface{}, selector interface{}) *ProviderMock_ResolveSecret_Call {
+	return &ProviderMock_ResolveSecret_Call{Call: _e.mock.On("ResolveSecret", ctx, selector)}
 }
 
-func (_c *ProviderMock_ResolveSecret_Call) Run(run func(ctx context.Context, ref string)) *ProviderMock_ResolveSecret_Call {
+func (_c *ProviderMock_ResolveSecret_Call) Run(run func(ctx context.Context, selector types.Selector)) *ProviderMock_ResolveSecret_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 types.Selector
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(types.Selector)
 		}
 		run(
 			arg0,
@@ -213,7 +213,75 @@ func (_c *ProviderMock_ResolveSecret_Call) Return(secret types.Secret, err error
 	return _c
 }
 
-func (_c *ProviderMock_ResolveSecret_Call) RunAndReturn(run func(ctx context.Context, ref string) (types.Secret, error)) *ProviderMock_ResolveSecret_Call {
+func (_c *ProviderMock_ResolveSecret_Call) RunAndReturn(run func(ctx context.Context, selector types.Selector) (types.Secret, error)) *ProviderMock_ResolveSecret_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ResolveSecretSet provides a mock function for the type ProviderMock
+func (_mock *ProviderMock) ResolveSecretSet(ctx context.Context, selector types.Selector) ([]types.Secret, error) {
+	ret := _mock.Called(ctx, selector)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResolveSecretSet")
+	}
+
+	var r0 []types.Secret
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Selector) ([]types.Secret, error)); ok {
+		return returnFunc(ctx, selector)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Selector) []types.Secret); ok {
+		r0 = returnFunc(ctx, selector)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.Secret)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Selector) error); ok {
+		r1 = returnFunc(ctx, selector)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProviderMock_ResolveSecretSet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolveSecretSet'
+type ProviderMock_ResolveSecretSet_Call struct {
+	*mock.Call
+}
+
+// ResolveSecretSet is a helper method to define mock.On call
+//   - ctx context.Context
+//   - selector types.Selector
+func (_e *ProviderMock_Expecter) ResolveSecretSet(ctx interface{}, selector interface{}) *ProviderMock_ResolveSecretSet_Call {
+	return &ProviderMock_ResolveSecretSet_Call{Call: _e.mock.On("ResolveSecretSet", ctx, selector)}
+}
+
+func (_c *ProviderMock_ResolveSecretSet_Call) Run(run func(ctx context.Context, selector types.Selector)) *ProviderMock_ResolveSecretSet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.Selector
+		if args[1] != nil {
+			arg1 = args[1].(types.Selector)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ProviderMock_ResolveSecretSet_Call) Return(secrets []types.Secret, err error) *ProviderMock_ResolveSecretSet_Call {
+	_c.Call.Return(secrets, err)
+	return _c
+}
+
+func (_c *ProviderMock_ResolveSecretSet_Call) RunAndReturn(run func(ctx context.Context, selector types.Selector) ([]types.Secret, error)) *ProviderMock_ResolveSecretSet_Call {
 	_c.Call.Return(run)
 	return _c
 }

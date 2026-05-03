@@ -159,12 +159,12 @@ func TestProviderWatch(t *testing.T) {
 				select {
 				case evt := <-changes:
 					require.Equal(t, "tls", evt.Source)
-					require.Empty(t, evt.Refs)
+					require.Empty(t, evt.Selectors)
 				case <-time.After(500 * time.Millisecond):
 					t.Fatal("watch callback was not called")
 				}
 
-				secret, err := provider.ResolveSecret(context.Background(), "")
+				secret, err := provider.ResolveSecret(context.Background(), types.Selector{})
 				require.NoError(t, err)
 				require.Equal(t, "second", secret.Ref())
 			},
@@ -199,7 +199,7 @@ func TestProviderWatch(t *testing.T) {
 				case <-time.After(200 * time.Millisecond):
 				}
 
-				secret, err := provider.ResolveSecret(context.Background(), "")
+				secret, err := provider.ResolveSecret(context.Background(), types.Selector{})
 				require.NoError(t, err)
 				require.Equal(t, "first", secret.Ref())
 			},

@@ -111,7 +111,7 @@ func TestManagerResolveSecret(t *testing.T) {
 				provider := typemocks.NewProviderMock(t)
 				provider.EXPECT().Name().Return("tls")
 				provider.EXPECT().
-					ResolveSecret(mock.Anything, "first_entry").
+					ResolveSecret(mock.Anything, types.Selector{Value: "first_entry"}).
 					Return(secret, nil)
 
 				return provider
@@ -149,12 +149,12 @@ func TestManagerResolveSecret(t *testing.T) {
 
 			prov := tc.provider(t)
 			if prov != nil {
-				mgr = createManager(zerolog.Nop(), prov)
+				mgr = createManager(zerolog.Nop(), managedProvider{provider: prov})
 			} else {
 				mgr = createManager(zerolog.Nop())
 			}
 
-			secret, err := mgr.ResolveSecret(context.Background(), "tls", "first_entry")
+			secret, err := mgr.ResolveSecret(context.Background(), Reference{Source: "tls", Selector: "first_entry"})
 
 			tc.assert(t, err, secret)
 		})
@@ -193,7 +193,7 @@ func TestManagerResolveCredentials(t *testing.T) {
 				provider := typemocks.NewProviderMock(t)
 				provider.EXPECT().Name().Return("file")
 				provider.EXPECT().
-					ResolveCredentials(mock.Anything, "client_credentials").
+					ResolveCredentials(mock.Anything, types.Selector{Value: "client_credentials"}).
 					Return(credentials, nil)
 
 				return provider
@@ -230,16 +230,14 @@ func TestManagerResolveCredentials(t *testing.T) {
 
 			prov := tc.provider(t)
 			if prov != nil {
-				mgr = createManager(zerolog.Nop(), prov)
+				mgr = createManager(zerolog.Nop(), managedProvider{provider: prov})
 			} else {
 				mgr = createManager(zerolog.Nop())
 			}
 
 			credentials, err := mgr.ResolveCredentials(
 				context.Background(),
-				"file",
-				"client_credentials",
-			)
+				Reference{Source: "file", Selector: "client_credentials"})
 
 			tc.assert(t, err, credentials)
 		})
@@ -253,7 +251,10 @@ func TestManagerSubscribe(t *testing.T) {
 		t.Parallel()
 
 		mgr := createManager(zerolog.Nop())
-		unsubscribe, err := mgr.Subscribe("unknown", "ref", func(context.Context) error { return nil })
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "unknown", Selector: "ref"},
+			func(context.Context) error { return nil },
+		)
 		require.Nil(t, unsubscribe)
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrProviderNotFound)
@@ -264,9 +265,9 @@ func TestManagerSubscribe(t *testing.T) {
 
 		provider := typemocks.NewProviderMock(t)
 		provider.EXPECT().Name().Return("pem")
-		mgr := createManager(zerolog.Nop(), provider)
+		mgr := createManager(zerolog.Nop(), managedProvider{provider: provider})
 
-		unsubscribe, err := mgr.Subscribe("pem", "entry", nil)
+		unsubscribe, err := mgr.Subscribe(Reference{Source: "pem", Selector: "entry"}, nil)
 		require.Nil(t, unsubscribe)
 		require.Error(t, err)
 	})
@@ -277,16 +278,19 @@ func TestManagerSubscribe(t *testing.T) {
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 		called := make(chan struct{}, 1)
 
-		unsubscribe, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			called <- struct{}{}
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				called <- struct{}{}
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
 		defer unsubscribe()
 
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 
 		select {
 		case <-called:
@@ -298,19 +302,22 @@ func TestManagerSubscribe(t *testing.T) {
 	t.Run("does not invoke callback for non matching ref", func(t *testing.T) {
 		t.Parallel()
 
-		manager, trigger := newStartedManagerWithChangeTrigger(t, "pem")
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 		called := make(chan struct{}, 1)
 
-		unsubscribe, err := manager.Subscribe("pem", "entry-a", func(context.Context) error {
-			called <- struct{}{}
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				called <- struct{}{}
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
 		defer unsubscribe()
 
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-b"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-b"}})
 
 		select {
 		case <-called:
@@ -322,24 +329,30 @@ func TestManagerSubscribe(t *testing.T) {
 	t.Run("fan-out for empty refs event", func(t *testing.T) {
 		t.Parallel()
 
-		manager, trigger := newStartedManagerWithChangeTrigger(t, "pem")
+		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 		calledA := make(chan struct{}, 1)
 		calledB := make(chan struct{}, 1)
 
-		unsubA, err := manager.Subscribe("pem", "entry-a", func(context.Context) error {
-			calledA <- struct{}{}
+		unsubA, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				calledA <- struct{}{}
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
 		defer unsubA()
 
-		unsubB, err := manager.Subscribe("pem", "entry-b", func(context.Context) error {
-			calledB <- struct{}{}
+		unsubB, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-b"},
+			func(context.Context) error {
+				calledB <- struct{}{}
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
 		defer unsubB()
@@ -366,29 +379,32 @@ func TestManagerSubscribe(t *testing.T) {
 
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 
-		unsubscribe, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			calls := atomic.AddInt32(&currentCalls, 1)
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				calls := atomic.AddInt32(&currentCalls, 1)
 
-			for {
-				old := atomic.LoadInt32(&maxConcurrent)
-				if calls <= old || atomic.CompareAndSwapInt32(&maxConcurrent, old, calls) {
-					break
+				for {
+					old := atomic.LoadInt32(&maxConcurrent)
+					if calls <= old || atomic.CompareAndSwapInt32(&maxConcurrent, old, calls) {
+						break
+					}
 				}
-			}
 
-			time.Sleep(50 * time.Millisecond)
-			atomic.AddInt32(&callCount, 1)
-			atomic.AddInt32(&currentCalls, -1)
+				time.Sleep(50 * time.Millisecond)
+				atomic.AddInt32(&callCount, 1)
+				atomic.AddInt32(&currentCalls, -1)
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
 		defer unsubscribe()
 
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 		time.Sleep(10 * time.Millisecond)
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 
 		require.Eventually(t, func() bool { return atomic.LoadInt32(&callCount) == 2 }, time.Second, 10*time.Millisecond)
 		require.EqualValues(t, 1, atomic.LoadInt32(&maxConcurrent))
@@ -401,16 +417,19 @@ func TestManagerSubscribe(t *testing.T) {
 
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 
-		unsubscribe, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			atomic.AddInt32(&callCount, 1)
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				atomic.AddInt32(&callCount, 1)
 
-			return errors.New("boom")
-		})
+				return errors.New("boom")
+			},
+		)
 		require.NoError(t, err)
 
 		defer unsubscribe()
 
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 		require.Eventually(t, func() bool { return atomic.LoadInt32(&callCount) == 1 }, time.Second, 10*time.Millisecond)
 
 		time.Sleep(200 * time.Millisecond)
@@ -423,15 +442,18 @@ func TestManagerSubscribe(t *testing.T) {
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 		called := make(chan struct{}, 1)
 
-		unsubscribe, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			called <- struct{}{}
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				called <- struct{}{}
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
 		unsubscribe()
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 
 		select {
 		case <-called:
@@ -447,24 +469,30 @@ func TestManagerSubscribe(t *testing.T) {
 		calledA := make(chan struct{}, 1)
 		calledB := make(chan struct{}, 1)
 
-		unsubA, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			calledA <- struct{}{}
+		unsubA, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				calledA <- struct{}{}
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
-		unsubB, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			calledB <- struct{}{}
+		unsubB, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				calledB <- struct{}{}
 
-			return nil
-		})
+				return nil
+			},
+		)
 		require.NoError(t, err)
 
 		defer unsubB()
 
 		unsubA()
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 
 		select {
 		case <-calledA:
@@ -484,9 +512,10 @@ func TestManagerSubscribe(t *testing.T) {
 
 		mgr, _ := newStartedManagerWithChangeTrigger(t, "pem")
 
-		unsubscribe, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			return nil
-		})
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error { return nil },
+		)
 		require.NoError(t, err)
 
 		err = mgr.Stop(context.Background())
@@ -500,9 +529,10 @@ func TestManagerSubscribe(t *testing.T) {
 
 		mgr, _ := newStartedManagerWithChangeTrigger(t, "pem")
 
-		unsubscribe, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			return nil
-		})
+		unsubscribe, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error { return nil },
+		)
 		require.NoError(t, err)
 
 		require.NotPanics(t, func() { unsubscribe() })
@@ -519,7 +549,7 @@ func TestManagerStartStop(t *testing.T) {
 		provider.EXPECT().Start(mock.Anything, mock.Anything).Return(nil).Once()
 		provider.EXPECT().Stop(mock.Anything).Return(nil).Once()
 
-		mgr := createManager(zerolog.Nop(), provider)
+		mgr := createManager(zerolog.Nop(), managedProvider{provider: provider})
 
 		err := mgr.Start(context.Background())
 		require.NoError(t, err)
@@ -536,7 +566,7 @@ func TestManagerStartStop(t *testing.T) {
 		provider.EXPECT().Name().Return("pem")
 		provider.EXPECT().Start(mock.Anything, mock.Anything).Return(nil).Once()
 		provider.EXPECT().Stop(mock.Anything).Return(nil).Once()
-		mgr := createManager(zerolog.Nop(), provider)
+		mgr := createManager(zerolog.Nop(), managedProvider{provider: provider})
 
 		err := mgr.Start(context.Background())
 		require.NoError(t, err)
@@ -546,14 +576,16 @@ func TestManagerStartStop(t *testing.T) {
 	})
 
 	t.Run("stops already started providers when startup fails", func(t *testing.T) {
-		var started atomic.Int32
-		var stopped atomic.Int32
+		var (
+			started atomic.Int32
+			stopped atomic.Int32
+		)
 
 		mgr := createManager(
 			zerolog.Nop(),
-			&startStopProvider{name: "a", started: &started, stopped: &stopped},
-			&startStopProvider{name: "b", started: &started, stopped: &stopped},
-			&startStopProvider{name: "c", startErr: errors.New("boom")},
+			managedProvider{provider: &startStopProvider{name: "a", started: &started, stopped: &stopped}},
+			managedProvider{provider: &startStopProvider{name: "b", started: &started, stopped: &stopped}},
+			managedProvider{provider: &startStopProvider{name: "c", startErr: errors.New("boom")}},
 		)
 
 		err := mgr.Start(context.Background())
@@ -570,14 +602,17 @@ func TestManagerStartStop(t *testing.T) {
 
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
 
-		_, err := mgr.Subscribe("pem", "entry-a", func(context.Context) error {
-			atomic.AddInt32(&callCount, 1)
+		_, err := mgr.Subscribe(
+			Reference{Source: "pem", Selector: "entry-a"},
+			func(context.Context) error {
+				atomic.AddInt32(&callCount, 1)
 
-			return errors.New("boom")
-		})
+				return errors.New("boom")
+			},
+		)
 		require.NoError(t, err)
 
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 
 		require.Eventually(t, func() bool {
 			return atomic.LoadInt32(&callCount) == 1
@@ -586,7 +621,7 @@ func TestManagerStartStop(t *testing.T) {
 		err = mgr.Stop(context.Background())
 		require.NoError(t, err)
 
-		trigger(types.ChangeEvent{Source: "pem", Refs: []string{"entry-a"}})
+		trigger(types.ChangeEvent{Source: "pem", Selectors: []string{"entry-a"}})
 
 		time.Sleep(200 * time.Millisecond)
 		require.EqualValues(t, 1, atomic.LoadInt32(&callCount))
@@ -603,7 +638,10 @@ func TestManagerStartStop(t *testing.T) {
 		second.EXPECT().Name().Return("second")
 		second.EXPECT().Stop(mock.Anything).Return(nil).Once()
 
-		mgr := createManager(zerolog.Nop(), first, second)
+		mgr := createManager(zerolog.Nop(),
+			managedProvider{provider: first},
+			managedProvider{provider: second},
+		)
 
 		err := mgr.Stop(context.Background())
 		require.Error(t, err)
@@ -627,7 +665,7 @@ func newStartedManagerWithChangeTrigger(t *testing.T, source string) (*manager, 
 		Once()
 	provider.EXPECT().Stop(mock.Anything).Return(nil).Maybe()
 
-	mgr := createManager(zerolog.Nop(), provider)
+	mgr := createManager(zerolog.Nop(), managedProvider{provider: provider})
 
 	err := mgr.Start(context.Background())
 	require.NoError(t, err)
@@ -649,11 +687,15 @@ func (p *startStopProvider) Name() string { return p.name }
 
 func (p *startStopProvider) Type() string { return "test" }
 
-func (p *startStopProvider) ResolveSecret(context.Context, string) (types.Secret, error) {
+func (p *startStopProvider) ResolveSecret(_ context.Context, _ types.Selector) (types.Secret, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (p *startStopProvider) ResolveCredentials(context.Context, string) (types.Credentials, error) {
+func (p *startStopProvider) ResolveCredentials(_ context.Context, _ types.Selector) (types.Credentials, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (p *startStopProvider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]Secret, error) {
 	return nil, errors.New("not implemented")
 }
 

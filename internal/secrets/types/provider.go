@@ -18,18 +18,28 @@ package types //nolint:revive
 
 import (
 	"context"
+	"errors"
 )
+
+var ErrUnsupportedOperation = errors.New("unsupported operation")
+
+type Selector struct {
+	Value     string
+	Namespace string
+}
 
 type Provider interface {
 	Name() string
 	Type() string
 	Start(ctx context.Context, onChange func(ChangeEvent)) error
 	Stop(ctx context.Context) error
-	ResolveSecret(ctx context.Context, ref string) (Secret, error)
-	ResolveCredentials(ctx context.Context, ref string) (Credentials, error)
+	ResolveSecret(ctx context.Context, selector Selector) (Secret, error)
+	ResolveSecretSet(ctx context.Context, selector Selector) ([]Secret, error)
+	ResolveCredentials(ctx context.Context, selector Selector) (Credentials, error)
 }
 
 type ChangeEvent struct {
-	Source string
-	Refs   []string
+	Source    string
+	Namespace string
+	Selectors []string
 }

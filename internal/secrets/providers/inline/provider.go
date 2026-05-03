@@ -87,21 +87,30 @@ func (p *provider) Type() string                                             { r
 func (p *provider) Start(_ context.Context, _ func(types.ChangeEvent)) error { return nil }
 func (p *provider) Stop(_ context.Context) error                             { return nil }
 
-func (p *provider) ResolveSecret(_ context.Context, ref string) (types.Secret, error) {
-	secret := p.secrets[ref]
+func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
+	secret := p.secrets[selector.Value]
 	if secret == nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"no inline string secret found for ref '%s'", ref)
+			"no inline string secret found for ref '%s'", selector.Value)
 	}
 
 	return secret, nil
 }
 
-func (p *provider) ResolveCredentials(_ context.Context, ref string) (types.Credentials, error) {
-	credentials := p.credentials[ref]
+func (p *provider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]types.Secret, error) {
+	secrets := make([]types.Secret, 0, len(p.secrets))
+	for _, entry := range p.secrets {
+		secrets = append(secrets, entry)
+	}
+
+	return secrets, nil
+}
+
+func (p *provider) ResolveCredentials(_ context.Context, selector types.Selector) (types.Credentials, error) {
+	credentials := p.credentials[selector.Value]
 	if credentials == nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"no inline credentials found for ref '%s'", ref)
+			"no inline credentials found for ref '%s'", selector.Value)
 	}
 
 	return credentials, nil

@@ -136,7 +136,9 @@ func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
-				assert.IsType(t, &ecdsa.PrivateKey{}, ks[0].Signer())
+				secret, ok := ks[0].(types.AsymmetricKeySecret)
+				require.True(t, ok)
+				assert.IsType(t, &ecdsa.PrivateKey{}, secret.PrivateKey())
 			},
 		},
 		"returns internal error for unsupported pem block type": {
@@ -224,8 +226,10 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
-				assert.Equal(t, hex.EncodeToString(ks[0].CertChain()[0].SubjectKeyId), ks[0].KeyID())
-				assert.Len(t, ks[0].CertChain(), 2)
+				secret, ok := ks[0].(types.AsymmetricKeySecret)
+				require.True(t, ok)
+				assert.Equal(t, hex.EncodeToString(secret.CertChain()[0].SubjectKeyId), secret.KeyID())
+				assert.Len(t, secret.CertChain(), 2)
 			},
 		},
 		"generates key id from public key if cert subject key id missing": {
@@ -248,10 +252,11 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
-
-				expectedKid, err := pkix.SubjectKeyID(ks[0].Signer().Public())
+				secret, ok := ks[0].(types.AsymmetricKeySecret)
+				require.True(t, ok)
+				expectedKid, err := pkix.SubjectKeyID(secret.PrivateKey().Public())
 				require.NoError(t, err)
-				assert.Equal(t, hex.EncodeToString(expectedKid), ks[0].KeyID())
+				assert.Equal(t, hex.EncodeToString(expectedKid), secret.KeyID())
 			},
 		},
 		"keeps explicit X-Key-ID over generated key id": {
@@ -274,8 +279,10 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
-				assert.Equal(t, "custom-kid", ks[0].KeyID())
-				assert.Equal(t, ks[0].Ref(), ks[0].KeyID())
+				secret, ok := ks[0].(types.AsymmetricKeySecret)
+				require.True(t, ok)
+				assert.Equal(t, "custom-kid", secret.KeyID())
+				assert.Equal(t, ks[0].Ref(), secret.KeyID())
 			},
 		},
 	} {
@@ -308,11 +315,13 @@ func TestNewKeyStoreFromKey(t *testing.T) {
 				t.Helper()
 				require.NoError(t, err)
 				require.Len(t, ks, 1)
+				secret, ok := ks[0].(types.AsymmetricKeySecret)
+				require.True(t, ok)
 
-				assert.Equal(t, types.SecretKindSigner, ks[0].Kind())
-				assert.IsType(t, &rsa.PrivateKey{}, ks[0].Signer())
-				assert.NotEmpty(t, ks[0].KeyID())
-				assert.Equal(t, ks[0].Ref(), ks[0].KeyID())
+				assert.Equal(t, types.SecretKindAsymmetricKey, secret.Kind())
+				assert.IsType(t, &rsa.PrivateKey{}, secret.PrivateKey())
+				assert.NotEmpty(t, secret.KeyID())
+				assert.Equal(t,secret.Ref(), secret.KeyID())
 			},
 		},
 	} {

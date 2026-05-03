@@ -87,7 +87,7 @@ func (p *provider) Name() string { return p.name }
 
 func (p *provider) Type() string { return ProviderType }
 
-func (p *provider) ResolveSecret(_ context.Context, ref string) (types.Secret, error) {
+func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
 	p.mu.RLock()
 	ks := p.ks
 	p.mu.RUnlock()
@@ -97,15 +97,23 @@ func (p *provider) ResolveSecret(_ context.Context, ref string) (types.Secret, e
 			"no key material present in pem source")
 	}
 
-	if ref != "" {
-		return ks.get(ref)
+	if selector.Value != "" {
+		return ks.get(selector.Value)
 	}
 
 	return ks[0], nil
 }
 
-func (p *provider) ResolveCredentials(_ context.Context, _ string) (types.Credentials, error) {
-	return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
+func (p *provider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]types.Secret, error) {
+	p.mu.RLock()
+	ks := p.ks
+	p.mu.RUnlock()
+
+	return ks, nil
+}
+
+func (p *provider) ResolveCredentials(_ context.Context, _ types.Selector) (types.Credentials, error) {
+	return nil, errorchain.NewWithMessage(types.ErrUnsupportedOperation,
 		"pem provider supports only single secret resolution")
 }
 
@@ -165,7 +173,7 @@ func (p *provider) Stop(_ context.Context) error {
 }
 
 func (p *provider) reload() error {
-	ks, err := newKeyStoreFromPEMFile(ProviderType, p.path, p.password)
+	ks, err := newKeyStoreFromPEMFile(p.name, p.path, p.password)
 	if err != nil {
 		return err
 	}

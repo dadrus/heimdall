@@ -31,11 +31,16 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type managedProvider struct {
+	provider               types.Provider
+	accessFromRulesAllowed bool
+}
+
 type manager struct {
 	mu sync.RWMutex
 
 	logger      zerolog.Logger
-	providers   map[string]types.Provider
+	providers   map[string]managedProvider
 	bindings    map[bindingKey]*binding
 	started     bool
 	watchCancel context.CancelFunc
@@ -48,7 +53,7 @@ func newManager(appCtx app.Context) (*manager, error) {
 			"application config is not initialized")
 	}
 
-	providers := make([]types.Provider, 0, len(cfg.SecretManagement))
+	providers := make([]managedProvider, 0, len(cfg.SecretManagement))
 	for provName, provCfg := range cfg.SecretManagement {
 		provider, err := registry.Create(appCtx, provCfg.Type, provName, provCfg.Config)
 		if err != nil {
@@ -57,21 +62,24 @@ func newManager(appCtx app.Context) (*manager, error) {
 				CausedBy(err)
 		}
 
-		providers = append(providers, provider)
+		providers = append(providers, managedProvider{
+			provider:               provider,
+			accessFromRulesAllowed: provCfg.AllowInRules,
+		})
 	}
 
 	return createManager(appCtx.Logger(), providers...), nil
 }
 
-func createManager(logger zerolog.Logger, providers ...types.Provider) *manager {
+func createManager(logger zerolog.Logger, providers ...managedProvider) *manager {
 	mgr := &manager{
 		logger:    logger,
-		providers: make(map[string]types.Provider, len(providers)),
-		bindings:  make(map[bindingKey]*binding),
+		providers: make(map[string]managedProvider, len(providers)),
+		bindings:  make(map[bindingKey]*binding, 10),
 	}
 
-	for _, provider := range providers {
-		mgr.providers[provider.Name()] = provider
+	for _, mp := range providers {
+		mgr.providers[mp.provider.Name()] = mp
 	}
 
 	return mgr
@@ -88,9 +96,9 @@ func (m *manager) Start(ctx context.Context) error {
 	watchCtx, cancel := context.WithCancel(context.Background())
 	startedProviders := make([]types.Provider, 0, len(m.providers))
 
-	for source, provider := range m.providers {
-		err := provider.Start(watchCtx, func(evt types.ChangeEvent) { //nolint:contextcheck
-			m.dispatchChange(source, evt)
+	for _, mp := range m.providers {
+		err := mp.provider.Start(watchCtx, func(evt types.ChangeEvent) { //nolint:contextcheck
+			m.dispatchChange(evt)
 		})
 		ctxErr := ctx.Err()
 
@@ -104,7 +112,7 @@ func (m *manager) Start(ctx context.Context) error {
 			return x.IfThenElse(err != nil, err, ctxErr)
 		}
 
-		startedProviders = append(startedProviders, provider)
+		startedProviders = append(startedProviders, mp.provider)
 	}
 
 	m.watchCancel = cancel
@@ -141,41 +149,50 @@ func (m *manager) Stop(ctx context.Context) error {
 	return stopErr
 }
 
-func (m *manager) ResolveSecret(ctx context.Context, source, ref string) (Secret, error) {
-	provider, err := m.provider(source)
+func (m *manager) ResolveSecret(ctx context.Context, ref Reference) (Secret, error) {
+	provider, err := m.provider(ref)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.ResolveSecret(ctx, ref)
+	return provider.ResolveSecret(ctx, types.Selector{Value: ref.Selector, Namespace: ref.Namespace})
 }
 
-func (m *manager) ResolveCredentials(ctx context.Context, source, ref string) (Credentials, error) {
-	provider, err := m.provider(source)
+func (m *manager) ResolveSecretSet(ctx context.Context, ref Reference) ([]Secret, error) {
+	provider, err := m.provider(ref)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.ResolveCredentials(ctx, ref)
+	return provider.ResolveSecretSet(ctx, types.Selector{Value: ref.Selector, Namespace: ref.Namespace})
 }
 
-func (m *manager) Subscribe(source, ref string, cb func(context.Context) error) (func(), error) {
+func (m *manager) ResolveCredentials(ctx context.Context, ref Reference) (Credentials, error) {
+	provider, err := m.provider(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	return provider.ResolveCredentials(ctx, types.Selector{Value: ref.Selector, Namespace: ref.Namespace})
+}
+
+func (m *manager) Subscribe(ref Reference, cb func(context.Context) error) (func(), error) {
 	if cb == nil {
 		return nil, fmt.Errorf("%w: callback must not be nil", ErrSubscribeFailed)
 	}
 
-	if _, err := m.provider(source); err != nil {
+	if _, err := m.provider(ref); err != nil {
 		return nil, err
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	key := bindingKey{source: source, ref: ref}
+	key := bindingKey{source: ref.Source, selector: ref.Selector, namespace: ref.Namespace}
 
 	bdg := m.bindings[key]
 	if bdg == nil {
-		bdg = newBinding(source, ref, m.logger)
+		bdg = newBinding(key, m.logger)
 		m.bindings[key] = bdg
 	}
 
@@ -199,44 +216,58 @@ func (m *manager) Subscribe(source, ref string, cb func(context.Context) error) 
 	}, nil
 }
 
-func (m *manager) provider(source string) (types.Provider, error) {
+func (m *manager) provider(ref Reference) (types.Provider, error) {
 	m.mu.RLock()
-	provider := m.providers[source]
+	mp, ok := m.providers[ref.Source]
 	m.mu.RUnlock()
 
-	if provider != nil {
-		return provider, nil
+	if !ok {
+		return nil, fmt.Errorf("%w: '%s'", ErrProviderNotFound, ref.Source)
 	}
 
-	return nil, fmt.Errorf("%w: '%s'", ErrProviderNotFound, source)
+	if ref.RuleContext && !mp.accessFromRulesAllowed {
+		return nil, ErrSecretSourceForbidden
+	}
+
+	return mp.provider, nil
 }
 
-func (m *manager) dispatchChange(source string, evt types.ChangeEvent) {
+func (m *manager) dispatchChange(evt types.ChangeEvent) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	if len(evt.Refs) == 0 {
-		for key, b := range m.bindings {
-			if key.source == source {
-				b.enqueue()
+	if len(evt.Selectors) == 0 {
+		for key, bdg := range m.bindings {
+			if key.source != evt.Source {
+				continue
 			}
+
+			if evt.Namespace != "" && key.namespace != evt.Namespace {
+				continue
+			}
+
+			bdg.enqueue()
 		}
 
 		return
 	}
 
-	for _, ref := range evt.Refs {
-		b := m.bindings[bindingKey{source: source, ref: ref}]
-		if b != nil {
-			b.enqueue()
+	for _, selector := range evt.Selectors {
+		bdg := m.bindings[bindingKey{
+			source:    evt.Source,
+			selector:  selector,
+			namespace: evt.Namespace,
+		}]
+		if bdg != nil {
+			bdg.enqueue()
 		}
 	}
 }
 
 func (m *manager) stopProviders(ctx context.Context) error {
 	var stopErr error
-	for _, provider := range m.providers {
-		if err := provider.Stop(ctx); err != nil && stopErr == nil {
+	for _, mp := range m.providers {
+		if err := mp.provider.Stop(ctx); err != nil && stopErr == nil {
 			stopErr = err
 		}
 	}
@@ -245,15 +276,15 @@ func (m *manager) stopProviders(ctx context.Context) error {
 }
 
 type bindingKey struct {
-	source string
-	ref    string
+	source    string
+	selector  string
+	namespace string
 }
 
 type binding struct {
-	source string
-	ref    string
-	logger zerolog.Logger
+	bindingKey
 
+	logger           zerolog.Logger
 	nextSubscriberID uint64
 	mut              sync.RWMutex
 	callbacks        map[uint64]func(context.Context) error
@@ -261,14 +292,13 @@ type binding struct {
 	done             chan struct{}
 }
 
-func newBinding(source, ref string, logger zerolog.Logger) *binding {
+func newBinding(bk bindingKey, logger zerolog.Logger) *binding {
 	bdg := &binding{
-		source:    source,
-		ref:       ref,
-		logger:    logger,
-		callbacks: make(map[uint64]func(context.Context) error),
-		events:    make(chan struct{}, 1),
-		done:      make(chan struct{}),
+		bindingKey: bk,
+		logger:     logger,
+		callbacks:  make(map[uint64]func(context.Context) error),
+		events:     make(chan struct{}, 1),
+		done:       make(chan struct{}),
 	}
 
 	go bdg.run()
@@ -322,7 +352,8 @@ func (b *binding) run() {
 				b.logger.Warn().
 					Err(err).
 					Str("_source", b.source).
-					Str("_ref", b.ref).
+					Str("_namespace", b.namespace).
+					Str("_ref", b.selector).
 					Msg("Secret update callback failed")
 			}
 		}

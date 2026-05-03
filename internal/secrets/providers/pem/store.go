@@ -28,12 +28,12 @@ const (
 
 var errNoSuchKey = errors.New("no such key")
 
-type keyStore []types.SignerSecret
+type keyStore []types.Secret
 
 func newKeyStoreFromKey(source, ref string, privateKey crypto.Signer) (keyStore, error) {
-	entry := types.NewSignerSecret(source, ref, ref, privateKey, nil)
+	entry := types.NewAsymmetricKeySecret(source, ref, ref, privateKey, nil)
 
-	return buildStore(source, []types.SignerSecret{entry}, nil)
+	return buildStore(source, []types.AsymmetricKeySecret{entry}, nil)
 }
 
 func newKeyStoreFromPEMFile(source, path, password string) (keyStore, error) {
@@ -60,7 +60,7 @@ func newKeyStoreFromPEMBytes(source string, contents []byte, password string) (k
 	blocks := readPEMBlocks(contents)
 
 	var (
-		entries []types.SignerSecret
+		entries []types.AsymmetricKeySecret
 		certs   []*x509.Certificate
 	)
 
@@ -106,7 +106,7 @@ func newKeyStoreFromPEMBytes(source string, contents []byte, password string) (k
 				"unsupported key type; key does not implement crypto.Signer")
 		}
 
-		entries = append(entries, types.NewSignerSecret(source, keyID, keyID, signer, nil))
+		entries = append(entries, types.NewAsymmetricKeySecret(source, keyID, keyID, signer, nil))
 	}
 
 	return buildStore(source, entries, certs)
@@ -114,7 +114,7 @@ func newKeyStoreFromPEMBytes(source string, contents []byte, password string) (k
 
 func (s keyStore) get(ref string) (types.Secret, error) {
 	for _, entry := range s {
-		if entry.Ref() == ref || entry.KeyID() == ref {
+		if entry.Ref() == ref {
 			return entry, nil
 		}
 	}
@@ -138,17 +138,17 @@ func readPEMBlocks(data []byte) []*pem.Block {
 	return blocks
 }
 
-func buildStore(source string, entries []types.SignerSecret, certs []*x509.Certificate) (keyStore, error) {
+func buildStore(source string, entries []types.AsymmetricKeySecret, certs []*x509.Certificate) (keyStore, error) {
 	if len(entries) == 0 {
 		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no key material present in the keystore")
 	}
 
 	known := make(map[string]struct{}, len(entries))
-	result := make([]types.SignerSecret, len(entries))
+	result := make([]types.Secret, len(entries))
 
 	for idx, entry := range entries {
-		chain := findChain(entry.Signer().Public(), certs)
+		chain := findChain(entry.PrivateKey().Public(), certs)
 		if len(chain) != 0 {
 			if err := validateChain(chain); err != nil {
 				return nil, err
@@ -157,7 +157,7 @@ func buildStore(source string, entries []types.SignerSecret, certs []*x509.Certi
 
 		keyID := entry.KeyID()
 		if keyID == "" {
-			generated, err := generateKeyID(chain, entry.Signer())
+			generated, err := generateKeyID(chain, entry.PrivateKey())
 			if err != nil {
 				return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 					"failed generating kid for %d entry", idx+1).CausedBy(err)
@@ -178,7 +178,7 @@ func buildStore(source string, entries []types.SignerSecret, certs []*x509.Certi
 			ref = keyID
 		}
 
-		result[idx] = types.NewSignerSecret(source, ref, keyID, entry.Signer(), chain)
+		result[idx] = types.NewAsymmetricKeySecret(source, ref, keyID, entry.PrivateKey(), chain)
 	}
 
 	return result, nil

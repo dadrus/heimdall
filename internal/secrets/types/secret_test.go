@@ -37,12 +37,13 @@ func TestNewStringSecret(t *testing.T) {
 }
 
 func TestNewBytesSecret(t *testing.T) {
-	secret := NewBytesSecret("file", "foo/bar", []byte("secret"))
+	secret := NewSymmetricKeySecret("file", "foo/bar", "bar", []byte("secret"))
 
 	assert.Equal(t, "file", secret.Source())
 	assert.Equal(t, "foo/bar", secret.Ref())
-	assert.Equal(t, SecretKindBytes, secret.Kind())
-	assert.Equal(t, []byte("secret"), secret.Bytes())
+	assert.Equal(t, "bar", secret.KeyID())
+	assert.Equal(t, SecretKindSymmetricKey, secret.Kind())
+	assert.Equal(t, []byte("secret"), secret.Key())
 }
 
 func TestNewSignerSecret(t *testing.T) {
@@ -50,13 +51,13 @@ func TestNewSignerSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := &x509.Certificate{}
-	secret := NewSignerSecret("pem", "first", "kid-1", signer, []*x509.Certificate{cert})
+	secret := NewAsymmetricKeySecret("pem", "first", "kid-1", signer, []*x509.Certificate{cert})
 
 	assert.Equal(t, "pem", secret.Source())
 	assert.Equal(t, "first", secret.Ref())
-	assert.Equal(t, SecretKindSigner, secret.Kind())
+	assert.Equal(t, SecretKindAsymmetricKey, secret.Kind())
 	assert.Equal(t, "kid-1", secret.KeyID())
-	assert.Same(t, crypto.Signer(signer), secret.Signer())
+	assert.Same(t, crypto.Signer(signer), secret.PrivateKey())
 	assert.Equal(t, []*x509.Certificate{cert}, secret.CertChain())
 }
 
@@ -98,8 +99,8 @@ func TestSecretPayloadDecode(t *testing.T) {
 		},
 		"decodes bytes secrets": {
 			payload: NewCredentials("inline", "foo", map[string]Secret{
-				"username_bytes": NewBytesSecret("inline", "foo/username_bytes", []byte("foo")),
-				"password_bytes": NewBytesSecret("inline", "foo/password_bytes", []byte("bar")),
+				"username_bytes": NewSymmetricKeySecret("inline", "foo/username_bytes", "username_bytes", []byte("foo")),
+				"password_bytes": NewSymmetricKeySecret("inline", "foo/password_bytes", "password_bytes", []byte("bar")),
 			}),
 			want: testCredentials{
 				UsernameBytes: []byte("foo"),
@@ -175,5 +176,5 @@ func newTestSignerSecret(t *testing.T) Secret {
 	signer, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
-	return NewSignerSecret("pem", "first", "kid-1", signer, nil)
+	return NewAsymmetricKeySecret("pem", "first", "kid-1", signer, nil)
 }

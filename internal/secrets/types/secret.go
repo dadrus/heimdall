@@ -29,10 +29,10 @@ var ErrSecretKindMismatch = errors.New("secret kind mismatch")
 type SecretKind string
 
 const (
-	SecretKindString     SecretKind = "string"
-	SecretKindBytes      SecretKind = "bytes"
-	SecretKindSigner     SecretKind = "signer"
-	SecretKindTrustStore SecretKind = "trust_store"
+	SecretKindString        SecretKind = "string"
+	SecretKindSymmetricKey  SecretKind = "symmetric_key"
+	SecretKindAsymmetricKey SecretKind = "asymmetric_key"
+	SecretKindTrustStore    SecretKind = "trust_store"
 )
 
 type Secret interface {
@@ -46,15 +46,16 @@ type StringSecret interface {
 	String() string
 }
 
-type BytesSecret interface {
-	Secret
-	Bytes() []byte
-}
-
-type SignerSecret interface {
+type SymmetricKeySecret interface {
 	Secret
 	KeyID() string
-	Signer() crypto.Signer
+	Key() []byte
+}
+
+type AsymmetricKeySecret interface {
+	Secret
+	KeyID() string
+	PrivateKey() crypto.Signer
 	CertChain() []*x509.Certificate
 }
 
@@ -98,26 +99,29 @@ func NewStringSecret(source, ref, value string) StringSecret {
 
 func (s *stringSecret) String() string { return s.value }
 
-type bytesSecret struct {
+type symmetricKeySecret struct {
 	baseSecret
 
+	keyID string
 	value []byte
 }
 
-func NewBytesSecret(source, ref string, value []byte) BytesSecret {
-	return &bytesSecret{
+func NewSymmetricKeySecret(source, ref, kid string, value []byte) SymmetricKeySecret {
+	return &symmetricKeySecret{
 		baseSecret: baseSecret{
 			source: source,
 			ref:    ref,
-			kind:   SecretKindBytes,
+			kind:   SecretKindSymmetricKey,
 		},
+		keyID: kid,
 		value: value,
 	}
 }
 
-func (s *bytesSecret) Bytes() []byte { return s.value }
+func (s *symmetricKeySecret) KeyID() string { return s.keyID }
+func (s *symmetricKeySecret) Key() []byte   { return s.value }
 
-type signerSecret struct {
+type asymmetricKeySecret struct {
 	baseSecret
 
 	keyID     string
@@ -125,12 +129,12 @@ type signerSecret struct {
 	certChain []*x509.Certificate
 }
 
-func NewSignerSecret(source, ref, kid string, signer crypto.Signer, certChain []*x509.Certificate) SignerSecret {
-	return &signerSecret{
+func NewAsymmetricKeySecret(source, ref, kid string, signer crypto.Signer, certChain []*x509.Certificate) AsymmetricKeySecret {
+	return &asymmetricKeySecret{
 		baseSecret: baseSecret{
 			source: source,
 			ref:    ref,
-			kind:   SecretKindSigner,
+			kind:   SecretKindAsymmetricKey,
 		},
 		keyID:     kid,
 		signer:    signer,
@@ -138,9 +142,9 @@ func NewSignerSecret(source, ref, kid string, signer crypto.Signer, certChain []
 	}
 }
 
-func (s *signerSecret) KeyID() string                  { return s.keyID }
-func (s *signerSecret) Signer() crypto.Signer          { return s.signer }
-func (s *signerSecret) CertChain() []*x509.Certificate { return s.certChain }
+func (s *asymmetricKeySecret) KeyID() string                  { return s.keyID }
+func (s *asymmetricKeySecret) PrivateKey() crypto.Signer      { return s.signer }
+func (s *asymmetricKeySecret) CertChain() []*x509.Certificate { return s.certChain }
 
 type trustStoreSecret struct {
 	baseSecret
@@ -190,8 +194,8 @@ func (p *credentials) Decode(out any) error {
 		switch typed := secret.(type) {
 		case StringSecret:
 			raw[key] = typed.String()
-		case BytesSecret:
-			raw[key] = typed.Bytes()
+		case SymmetricKeySecret:
+			raw[key] = typed.Key()
 		default:
 			return ErrSecretKindMismatch
 		}
