@@ -21,25 +21,30 @@ import (
 	"errors"
 )
 
-var ErrUnsupportedOperation = errors.New("unsupported operation")
+var (
+	ErrUnsupportedOperation = errors.New("unsupported operation")
+	ErrSecretNotFound       = errors.New("secret not found")
+)
 
-type Selector struct {
-	Value     string
-	Namespace string
-}
+type (
+	Selector struct {
+		Value     string
+		Namespace string
+	}
 
-type Provider interface {
-	Name() string
-	Type() string
-	Start(ctx context.Context, onChange func(ChangeEvent)) error
-	Stop(ctx context.Context) error
-	ResolveSecret(ctx context.Context, selector Selector) (Secret, error)
-	ResolveSecretSet(ctx context.Context, selector Selector) ([]Secret, error)
-	ResolveCredentials(ctx context.Context, selector Selector) (Credentials, error)
-}
+	ChangeEvent struct {
+		Source    string
+		Namespace string
+		Selectors []string
+	}
 
-type ChangeEvent struct {
-	Source    string
-	Namespace string
-	Selectors []string
-}
+	Provider interface {
+		Name() string
+		Type() string
+		Start(ctx context.Context, onChange func(ChangeEvent)) error
+		Stop(ctx context.Context) error
+		ResolveSecret(ctx context.Context, selector Selector) (Secret, error)
+		ResolveSecretSet(ctx context.Context, selector Selector) ([]Secret, error)
+		ResolveCredentials(ctx context.Context, selector Selector) (Credentials, error)
+	}
+)
