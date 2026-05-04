@@ -17,10 +17,13 @@
 package joseadapter
 
 import (
+	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"io"
 	"testing"
 
 	"github.com/go-jose/go-jose/v4"
@@ -37,13 +40,21 @@ func TestToJWK(t *testing.T) {
 	rsaPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
+	//nolint:gosec // Intentionally small key size to exercise unsupported RSA-size handling.
+	rsaSmallPrivKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	require.NoError(t, err)
+
 	ecdsaPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 
+	_, ed25519PrivKey, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	for uc, tc := range map[string]struct {
-		secret    secrets.AsymmetricKeySecret
-		assertErr func(t *testing.T, err error)
-		assertJWK func(t *testing.T, jwk jose.JSONWebKey)
+		secret      secrets.AsymmetricKeySecret
+		assertPanic func(t *testing.T)
+		assertErr   func(t *testing.T, err error)
+		assertJWK   func(t *testing.T, jwk jose.JSONWebKey)
 	}{
 		"nil entry": {
 			assertErr: func(t *testing.T, err error) {
@@ -52,17 +63,26 @@ func TestToJWK(t *testing.T) {
 			},
 		},
 		"unsupported algorithm": {
-			secret: types.NewAsymmetricKeySecret("test", "test", "1", ecdsaPrivKey, nil),
+			secret: types.NewAsymmetricKeySecret("test", "test", "1", unsupportedSigner{key: ed25519PrivKey}, nil),
 			assertErr: func(t *testing.T, err error) {
 				t.Helper()
 				require.ErrorIs(t, err, ErrUnsupportedAlg)
 			},
 		},
 		"unsupported rsa size": {
-			secret: types.NewAsymmetricKeySecret("test", "test", "1", rsaPrivKey, nil),
+			secret: types.NewAsymmetricKeySecret("test", "test", "1", rsaSmallPrivKey, nil),
 			assertErr: func(t *testing.T, err error) {
 				t.Helper()
 				require.ErrorIs(t, err, ErrUnsupportedKeySize)
+			},
+		},
+		"missing key material": {
+			secret: types.NewAsymmetricKeySecret("test", "test", "1", nil, nil),
+			assertPanic: func(t *testing.T) {
+				t.Helper()
+				require.Panics(t, func() {
+					_, _ = ToJWK(types.NewAsymmetricKeySecret("test", "test", "1", nil, nil))
+				})
 			},
 		},
 		"rsa from private key": {
@@ -75,8 +95,24 @@ func TestToJWK(t *testing.T) {
 				assert.Equal(t, "sig", jwk.Use)
 			},
 		},
+		"ecdsa from private key": {
+			secret: types.NewAsymmetricKeySecret("test", "test", "kid-ecdsa", ecdsaPrivKey, nil),
+			assertJWK: func(t *testing.T, jwk jose.JSONWebKey) {
+				t.Helper()
+				assert.Equal(t, "kid-ecdsa", jwk.KeyID)
+				assert.Equal(t, string(jose.ES256), jwk.Algorithm)
+				assert.Equal(t, ecdsaPrivKey.Public(), jwk.Key)
+				assert.Equal(t, "sig", jwk.Use)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			if tc.assertPanic != nil {
+				tc.assertPanic(t)
+
+				return
+			}
+
 			jwk, err := ToJWK(tc.secret)
 
 			if tc.assertErr != nil {
@@ -91,3 +127,113 @@ func TestToJWK(t *testing.T) {
 		})
 	}
 }
+
+func TestECDSAAlgorithm(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		curve  elliptic.Curve
+		assert func(t *testing.T, alg jose.SignatureAlgorithm, err error)
+	}{
+		"p256": {
+			curve: elliptic.P256(),
+			assert: func(t *testing.T, alg jose.SignatureAlgorithm, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, jose.ES256, alg)
+			},
+		},
+		"p384": {
+			curve: elliptic.P384(),
+			assert: func(t *testing.T, alg jose.SignatureAlgorithm, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, jose.ES384, alg)
+			},
+		},
+		"p521": {
+			curve: elliptic.P521(),
+			assert: func(t *testing.T, alg jose.SignatureAlgorithm, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, jose.ES512, alg)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			key, err := ecdsa.GenerateKey(tc.curve, rand.Reader)
+			require.NoError(t, err)
+
+			alg, algErr := ecdsaAlgorithm(&key.PublicKey)
+
+			tc.assert(t, alg, algErr)
+		})
+	}
+}
+
+func TestRSAAlgorithm(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		keySize int
+		assert  func(t *testing.T, alg jose.SignatureAlgorithm, err error)
+	}{
+		"2048 bit": {
+			keySize: 2048,
+			assert: func(t *testing.T, alg jose.SignatureAlgorithm, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, jose.PS256, alg)
+			},
+		},
+		"3072 bit": {
+			keySize: 3072,
+			assert: func(t *testing.T, alg jose.SignatureAlgorithm, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, jose.PS384, alg)
+			},
+		},
+		"4096 bit": {
+			keySize: 4096,
+			assert: func(t *testing.T, alg jose.SignatureAlgorithm, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, jose.PS512, alg)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			key, err := rsa.GenerateKey(rand.Reader, tc.keySize)
+			require.NoError(t, err)
+
+			alg, algErr := rsaAlgorithm(&key.PublicKey)
+
+			tc.assert(t, alg, algErr)
+		})
+	}
+}
+
+type unsupportedSigner struct {
+	key ed25519.PrivateKey
+}
+
+func (s unsupportedSigner) Public() crypto.PublicKey {
+	return unsupportedPublicKey{}
+}
+
+func (s unsupportedSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	return s.key.Sign(rand, digest, opts)
+}
+
+type unsupportedPublicKey struct{}

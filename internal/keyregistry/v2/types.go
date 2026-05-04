@@ -17,8 +17,9 @@
 package keyregistry
 
 import (
-	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/go-jose/go-jose/v4"
+
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 type KeyObserver interface {
@@ -30,7 +31,7 @@ type JWKSProvider interface {
 }
 
 type KeyInfo struct {
-	Key secrets.AsymmetricKeySecret
+	Key        secrets.AsymmetricKeySecret
 	Exportable bool
 }
 

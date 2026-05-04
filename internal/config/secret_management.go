@@ -19,7 +19,7 @@ package config
 type SecretManagement map[string]SecretSourceConfig
 
 type SecretSourceConfig struct {
-	Type         string         `koanf:"type"   validate:"required"`
+	Type         string         `koanf:"type"           validate:"required"`
 	AllowInRules bool           `koanf:"allow_in_rules"`
 	Config       map[string]any `koanf:"config"`
 }
