@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,24 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package keystore
+package secrets
 
 import (
-	"crypto"
-	"crypto/x509"
+	"context"
+
+	"go.uber.org/fx"
+
+	_ "github.com/dadrus/heimdall/internal/secrets/providers/inline"
+	_ "github.com/dadrus/heimdall/internal/secrets/providers/pem"
 )
 
-type Entry struct {
-	KeyID      string
-	Alg        string
-	KeySize    int
-	PrivateKey crypto.Signer
-	CertChain  []*x509.Certificate
-}
+var Module = fx.Options( //nolint:gochecknoglobals
+	fx.Provide(
+		fx.Annotate(
+			newManager,
+			fx.As(new(Manager)),
+			fx.OnStart(func(ctx context.Context, mgr *manager) error { return mgr.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, mgr *manager) error { return mgr.Stop(ctx) }),
+		),
+	),
+)

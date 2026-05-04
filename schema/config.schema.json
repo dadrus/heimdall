@@ -5,6 +5,72 @@
   "type": "object",
   "additionalProperties": false,
   "definitions": {
+    "secretSourcePem": {
+      "description": "PEM based secret source",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "config"
+      ],
+      "properties": {
+        "type": {
+          "const": "pem"
+        },
+        "allow_in_rules": {
+          "description": "Whether this secret source can be used in rules",
+          "type": "boolean",
+          "default": false
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "description": "Path to the PEM file containing secrets",
+              "type": "string"
+            },
+            "password": {
+              "description": "Password for encrypted key material",
+              "type": "string"
+            },
+            "watch": {
+              "description": "Whether this secret source should be watched for changes",
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "secretSourceInline": {
+      "description": "Inline secret source",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "config"
+      ],
+      "properties": {
+        "type": {
+          "const": "inline"
+        },
+        "allow_in_rules": {
+          "description": "Whether this secret source can be used in rules",
+          "type": "boolean",
+          "default": false
+        },
+        "config": {
+          "description": "Inline secrets keyed by secret id. Values may be arbitrary structured data.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true
+        }
+      }
+    },
     "keyStore": {
       "description": "Key store holding the keys and certificates",
       "type": "object",
@@ -2658,6 +2724,20 @@
             "type": "object"
           }
         }
+      }
+    },
+    "secret_management": {
+      "description": "Defines secret sources available via the secrets manager",
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "$ref": "#/definitions/secretSourcePem"
+          },
+          {
+            "$ref": "#/definitions/secretSourceInline"
+          }
+        ]
       }
     },
     "secrets_reload_enabled": {

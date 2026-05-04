@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package keystore
+package registry
 
 import (
-	"crypto"
-	"crypto/x509"
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
-type Entry struct {
-	KeyID      string
-	Alg        string
-	KeySize    int
-	PrivateKey crypto.Signer
-	CertChain  []*x509.Certificate
+type Factory interface {
+	Create(app app.Context, sourceName string, conf map[string]any) (types.Provider, error)
+}
+
+type FactoryFunc func(app app.Context, sourceName string, conf map[string]any) (types.Provider, error)
+
+func (f FactoryFunc) Create(app app.Context, sourceName string, conf map[string]any) (types.Provider, error) {
+	return f(app, sourceName, conf)
 }

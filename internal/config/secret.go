@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package keystore
+package config
 
-import (
-	"crypto"
-	"crypto/x509"
-)
-
-type Entry struct {
-	KeyID      string
-	Alg        string
-	KeySize    int
-	PrivateKey crypto.Signer
-	CertChain  []*x509.Certificate
+type Secret struct {
+	Source   string `koanf:"source"   mapstructure:"source"`
+	Selector string `koanf:"selector" mapstructure:"selector"`
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/knadh/koanf/maps"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -169,7 +170,12 @@ func (s *jwtSigner) load() error {
 		}
 	}
 
-	jwk := kse.JWK()
+	jwk, err := joseadapter.ToJWK(kse)
+	if err != nil {
+		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
+			"failed creating jwk from key store entry").CausedBy(err)
+	}
+
 	key := kse.PrivateKey
 
 	signer, err := jose.NewSigner(

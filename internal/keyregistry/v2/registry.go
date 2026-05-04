@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter/v2"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -105,12 +105,14 @@ func (r *registry) Notify(ki KeyInfo) {
 	r.mut.Lock()
 	defer r.mut.Unlock()
 
-	old := r.state[ki.KeyID]
-	r.state[ki.KeyID] = ki
+	old := r.state[ki.Key.KeyID()]
+	r.state[ki.Key.KeyID()] = ki
 
-	r.updateMetricsData(old.CertChain, -1)
-	r.updateMetricsData(ki.CertChain, 1)
+	if old.Key != nil {
+		r.updateMetricsData(old.Key.CertChain(), -1)
+	}
 
+	r.updateMetricsData(ki.Key.CertChain(), 1)
 	r.rebuildExportableKeys()
 }
 
@@ -154,7 +156,7 @@ func (r *registry) rebuildExportableKeys() {
 			continue
 		}
 
-		jwk, err := joseadapter.ToJWK(&key.Entry)
+		jwk, err := joseadapter.ToJWK(key.Key)
 		if err != nil {
 			continue
 		}

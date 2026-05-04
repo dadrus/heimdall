@@ -53,6 +53,9 @@ packages:
       KeyObserver: {}
       JWKSProvider: {}
       Registry: {}
+  github.com/dadrus/heimdall/internal/secrets/types:
+    interfaces:
+      Provider: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}

@@ -31,6 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/otel"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
@@ -73,6 +74,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 		}
 	}),
 	cache.Module,
+	secrets.Module,
 	mechanisms.Module,
 	rules.Module,
 	management.Module,

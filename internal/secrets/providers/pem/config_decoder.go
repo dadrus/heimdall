@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package keystore
+package pem
 
 import (
-	"crypto"
-	"crypto/x509"
+	"github.com/dadrus/heimdall/internal/encoding"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
-type Entry struct {
-	KeyID      string
-	Alg        string
-	KeySize    int
-	PrivateKey crypto.Signer
-	CertChain  []*x509.Certificate
+func decodeConfig(validator validation.Validator, input map[string]any, output any) error {
+	dec := encoding.NewDecoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
+	)
+
+	return dec.DecodeMap(output, input)
 }
