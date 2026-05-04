@@ -74,7 +74,7 @@ func InternalRef(source, selector string) Reference {
 	}
 }
 
-func RuleRef(namespace, source, selector string) Reference {
+func RuleRef(source, selector, namespace string) Reference {
 	return Reference{
 		Source:      source,
 		Selector:    selector,
