@@ -57,6 +57,7 @@ type TrustStore struct {
 }
 
 type TLS struct {
+	Secret       Secret          `koanf:"secret"        mapstructure:"secret"`
 	KeyStore     KeyStore        `koanf:"key_store"     mapstructure:"key_store"`
 	KeyID        string          `koanf:"key_id"        mapstructure:"key_id"`
 	CipherSuites TLSCipherSuites `koanf:"cipher_suites" mapstructure:"cipher_suites"`
