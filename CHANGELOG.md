@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.15](https://github.com/dadrus/heimdall/compare/v0.17.14...v0.17.15) (2026-05-04)
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 60b97b3 ([#3230](https://github.com/dadrus/heimdall/issues/3230)) ([8897450](https://github.com/dadrus/heimdall/commit/889745071a9a310dd99266a04f46a2983796cab1))
+* update google.golang.org/genproto/googleapis/rpc digest to e10c466 ([#3214](https://github.com/dadrus/heimdall/issues/3214)) ([6a027f0](https://github.com/dadrus/heimdall/commit/6a027f0a861c78f9ffe1ee8b006b47f20373147d))
+* update module github.com/fsnotify/fsnotify to v1.10.0 ([#3232](https://github.com/dadrus/heimdall/issues/3232)) ([3987e7f](https://github.com/dadrus/heimdall/commit/3987e7f423e3d8bc5bfabe312d5413f7aa3e6550))
+* update module github.com/fsnotify/fsnotify to v1.10.1 ([#3239](https://github.com/dadrus/heimdall/issues/3239)) ([48d6eee](https://github.com/dadrus/heimdall/commit/48d6eeee46104406d258f7f507f2c3a0c8acf48a))
+* update module github.com/go-co-op/gocron/v2 to v2.21.1 ([#3219](https://github.com/dadrus/heimdall/issues/3219)) ([2b41e1e](https://github.com/dadrus/heimdall/commit/2b41e1ec96567a5db158a1bb2a168a9112cba511))
+* update module github.com/rs/zerolog to v1.35.1 ([#3216](https://github.com/dadrus/heimdall/issues/3216)) ([a7b7392](https://github.com/dadrus/heimdall/commit/a7b7392cd3158477035437b1722af3f294c57cdc))
+* update module google.golang.org/grpc to v1.81.0 ([#3237](https://github.com/dadrus/heimdall/issues/3237)) ([279990d](https://github.com/dadrus/heimdall/commit/279990dc8043a5a4579b738dc4d6fdd195f70074))
+
 ## [0.17.14](https://github.com/dadrus/heimdall/compare/v0.17.13...v0.17.14) (2026-04-19)
 
 
