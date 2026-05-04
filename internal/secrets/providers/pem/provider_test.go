@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
@@ -101,7 +102,12 @@ func TestNewProvider(t *testing.T) {
 			t.Parallel()
 
 			appCtx, conf := tc.conf(t)
-			prv, err := newProvider(appCtx, "tls", conf)
+			prv, err := newProvider(registry.ProviderArgs{
+				SourceName:     "tls",
+				Config:         conf,
+				Logger:         zerolog.Nop(),
+				DecoderFactory: appCtx.DecoderFactory(),
+			})
 			tc.assert(t, prv, err)
 		})
 	}
@@ -210,7 +216,12 @@ func TestProviderWatch(t *testing.T) {
 
 			appCtx := newAppContext(t)
 			conf, path := tc.conf(t)
-			provider, err := registry.Create(appCtx, "pem", "tls", conf)
+			provider, err := registry.Create("pem", registry.ProviderArgs{
+				SourceName:     "tls",
+				Config:         conf,
+				Logger:         zerolog.Nop(),
+				DecoderFactory: appCtx.DecoderFactory(),
+			})
 			require.NoError(t, err)
 
 			tc.action(t, provider, path)
@@ -252,7 +263,10 @@ func newAppContext(t *testing.T) *app.ContextMock {
 	require.NoError(t, err)
 
 	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Validator().Return(validator).Maybe()
+	appCtx.EXPECT().
+		DecoderFactory().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))).
+		Maybe()
 	appCtx.EXPECT().Logger().Return(zerolog.Nop()).Maybe()
 
 	return appCtx

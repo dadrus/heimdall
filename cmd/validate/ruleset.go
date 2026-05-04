@@ -28,6 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
@@ -100,6 +101,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	appCtx := &appContext{
 		w:  &watcher.NoopWatcher{},
 		kr: &noopRegistry{},
+		d:  encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
 		v:  validator,
 		l:  logger,
 		c:  conf,

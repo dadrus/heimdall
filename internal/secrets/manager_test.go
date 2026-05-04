@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
@@ -39,13 +38,9 @@ func TestNewManager(t *testing.T) {
 
 	const testProviderType = "test-provider"
 
-	factory := registry.FactoryFunc(func(
-		_ app.Context,
-		sourceName string,
-		conf map[string]any,
-	) (types.Provider, error) {
+	factory := registry.FactoryFunc(func(args registry.ProviderArgs) (types.Provider, error) {
 		provider := typemocks.NewProviderMock(t)
-		provider.EXPECT().Name().Return(sourceName).Maybe()
+		provider.EXPECT().Name().Return(args.SourceName).Maybe()
 
 		return provider, nil
 	})
@@ -84,11 +79,10 @@ func TestNewManager(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Config().Return(&config.Configuration{SecretManagement: tc.config})
-			appCtx.EXPECT().Logger().Return(zerolog.Nop()).Maybe()
-
-			mgr, err := newManager(appCtx)
+			mgr, err := newManager(managerParams{
+				Config: &config.Configuration{SecretManagement: tc.config},
+				Logger: zerolog.Nop(),
+			})
 
 			tc.assert(t, err, mgr)
 		})

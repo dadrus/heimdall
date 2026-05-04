@@ -23,8 +23,10 @@ import (
 	"sync/atomic"
 
 	"github.com/rs/zerolog"
+	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
@@ -47,8 +49,16 @@ type manager struct {
 	watchCancel context.CancelFunc
 }
 
-func newManager(appCtx app.Context) (*manager, error) {
-	cfg := appCtx.Config()
+type managerParams struct {
+	fx.In
+
+	Config         *config.Configuration
+	Logger         zerolog.Logger
+	DecoderFactory encoding.DecoderFactory
+}
+
+func newManager(params managerParams) (*manager, error) {
+	cfg := params.Config
 	if cfg == nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"application config is not initialized")
@@ -56,7 +66,12 @@ func newManager(appCtx app.Context) (*manager, error) {
 
 	providers := make([]managedProvider, 0, len(cfg.SecretManagement))
 	for provName, provCfg := range cfg.SecretManagement {
-		provider, err := registry.Create(appCtx, provCfg.Type, provName, provCfg.Config)
+		provider, err := registry.Create(provCfg.Type, registry.ProviderArgs{
+			SourceName:     provName,
+			Config:         provCfg.Config,
+			Logger:         params.Logger,
+			DecoderFactory: params.DecoderFactory,
+		})
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"failed creating secret source '%s' of type '%s'", provName, provCfg.Type).
@@ -69,7 +84,7 @@ func newManager(appCtx app.Context) (*manager, error) {
 		})
 	}
 
-	return createManager(appCtx.Logger(), providers...), nil
+	return createManager(params.Logger, providers...), nil
 }
 
 func createManager(logger zerolog.Logger, providers ...managedProvider) *manager {

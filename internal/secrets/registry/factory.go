@@ -17,16 +17,27 @@
 package registry
 
 import (
-	"github.com/dadrus/heimdall/internal/app"
+	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
-type Factory interface {
-	Create(app app.Context, sourceName string, conf map[string]any) (types.Provider, error)
-}
+type (
+	ProviderArgs struct {
+		SourceName     string
+		Config         map[string]any
+		Logger         zerolog.Logger
+		DecoderFactory encoding.DecoderFactory
+	}
 
-type FactoryFunc func(app app.Context, sourceName string, conf map[string]any) (types.Provider, error)
+	Factory interface {
+		Create(args ProviderArgs) (types.Provider, error)
+	}
 
-func (f FactoryFunc) Create(app app.Context, sourceName string, conf map[string]any) (types.Provider, error) {
-	return f(app, sourceName, conf)
+	FactoryFunc func(args ProviderArgs) (types.Provider, error)
+)
+
+func (f FactoryFunc) Create(args ProviderArgs) (types.Provider, error) {
+	return f(args)
 }

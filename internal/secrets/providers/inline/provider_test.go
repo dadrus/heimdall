@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
@@ -96,7 +95,10 @@ func TestNewProvider(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			provider, err := newProvider(app.NewContextMock(t), "inline-defaults", tc.conf)
+			provider, err := newProvider(registry.ProviderArgs{
+				SourceName: "inline-defaults",
+				Config:     tc.conf,
+			})
 
 			tc.assert(t, err, provider)
 		})
@@ -200,8 +202,11 @@ func TestProviderStartStop(t *testing.T) {
 func TestRegistryCreate(t *testing.T) {
 	t.Parallel()
 
-	provider, err := registry.Create(app.NewContextMock(t), ProviderType, "inline-defaults", map[string]any{
-		"api_token": "secret",
+	provider, err := registry.Create(ProviderType, registry.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+		},
 	})
 
 	require.NoError(t, err)
@@ -212,12 +217,15 @@ func TestRegistryCreate(t *testing.T) {
 func newTestProvider(t *testing.T) types.Provider {
 	t.Helper()
 
-	provider, err := newProvider(app.NewContextMock(t), "inline-defaults", map[string]any{
-		"api_token": "secret",
-		"api_other": "other",
-		"github": map[string]any{
-			"client_id":     "heimdall",
-			"client_secret": "secret",
+	provider, err := newProvider(registry.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+			"api_other": "other",
+			"github": map[string]any{
+				"client_id":     "heimdall",
+				"client_secret": "secret",
+			},
 		},
 	})
 	require.NoError(t, err)

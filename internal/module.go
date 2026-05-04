@@ -24,6 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
 	"github.com/dadrus/heimdall/internal/handler/profiling"
@@ -39,18 +40,20 @@ import (
 type appContext struct {
 	w  watcher.Watcher
 	kr keyregistry.Registry
+	d  encoding.DecoderFactory
 	v  validation.Validator
 	l  zerolog.Logger
 	m  metric.Meter
 	c  *config.Configuration
 }
 
-func (c *appContext) Watcher() watcher.Watcher          { return c.w }
-func (c *appContext) KeyRegistry() keyregistry.Registry { return c.kr }
-func (c *appContext) Validator() validation.Validator   { return c.v }
-func (c *appContext) Logger() zerolog.Logger            { return c.l }
-func (c *appContext) Meter() metric.Meter               { return c.m }
-func (c *appContext) Config() *config.Configuration     { return c.c }
+func (c *appContext) Watcher() watcher.Watcher                { return c.w }
+func (c *appContext) KeyRegistry() keyregistry.Registry       { return c.kr }
+func (c *appContext) DecoderFactory() encoding.DecoderFactory { return c.d }
+func (c *appContext) Validator() validation.Validator         { return c.v }
+func (c *appContext) Logger() zerolog.Logger                  { return c.l }
+func (c *appContext) Meter() metric.Meter                     { return c.m }
+func (c *appContext) Config() *config.Configuration           { return c.c }
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	otel.Module,
@@ -67,6 +70,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 		return &appContext{
 			w:  watcher,
 			kr: kr,
+			d:  encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
 			v:  validator,
 			l:  logger,
 			m:  meter,

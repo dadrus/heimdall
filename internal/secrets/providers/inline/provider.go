@@ -20,7 +20,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -41,16 +40,16 @@ type provider struct {
 	credentials map[string]types.Credentials
 }
 
-func newProvider(_ app.Context, sourceName string, rawConf map[string]any) (types.Provider, error) {
-	if len(rawConf) == 0 {
+func newProvider(args registry.ProviderArgs) (types.Provider, error) {
+	if len(args.Config) == 0 {
 		return nil, errorchain.NewWithMessage(types.ErrInvalidSecretPayload,
 			"inline provider config must not be empty")
 	}
 
-	secrets := make(map[string]types.Secret, len(rawConf))
-	credentials := make(map[string]types.Credentials, len(rawConf))
+	secrets := make(map[string]types.Secret, len(args.Config))
+	credentials := make(map[string]types.Credentials, len(args.Config))
 
-	for selector, value := range rawConf {
+	for selector, value := range args.Config {
 		if strings.Contains(selector, "/") {
 			return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
 				"inline selector '%s' must not contain '/'", selector)
@@ -58,7 +57,7 @@ func newProvider(_ app.Context, sourceName string, rawConf map[string]any) (type
 
 		switch typed := value.(type) {
 		case string:
-			secrets[selector] = types.NewStringSecret(sourceName, selector, typed)
+			secrets[selector] = types.NewStringSecret(args.SourceName, selector, typed)
 
 		case map[string]any:
 			values := make(map[string]types.Secret, len(typed))
@@ -69,10 +68,10 @@ func newProvider(_ app.Context, sourceName string, rawConf map[string]any) (type
 						"inline credential '%s/%s' is not a string", selector, key)
 				}
 
-				values[key] = types.NewStringSecret(sourceName, selector+"/"+key, str)
+				values[key] = types.NewStringSecret(args.SourceName, selector+"/"+key, str)
 			}
 
-			credentials[selector] = types.NewCredentials(sourceName, selector, values)
+			credentials[selector] = types.NewCredentials(args.SourceName, selector, values)
 
 		default:
 			return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
@@ -81,7 +80,7 @@ func newProvider(_ app.Context, sourceName string, rawConf map[string]any) (type
 	}
 
 	return &provider{
-		name:        sourceName,
+		name:        args.SourceName,
 		secrets:     secrets,
 		credentials: credentials,
 	}, nil

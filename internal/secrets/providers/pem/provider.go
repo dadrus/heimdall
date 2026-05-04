@@ -23,7 +23,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
@@ -55,7 +55,7 @@ type provider struct {
 	watcherWg sync.WaitGroup
 }
 
-func newProvider(appCtx app.Context, sourceName string, rawConf map[string]any) (types.Provider, error) {
+func newProvider(args registry.ProviderArgs) (types.Provider, error) {
 	type config struct {
 		Path     string `mapstructure:"path"     validate:"required"`
 		Password string `mapstructure:"password"`
@@ -64,22 +64,23 @@ func newProvider(appCtx app.Context, sourceName string, rawConf map[string]any) 
 
 	var cfg config
 
-	if err := decodeConfig(appCtx.Validator(), rawConf, &cfg); err != nil {
+	dec := args.DecoderFactory.Decoder(encoding.WithTagName("mapstructure"))
+	if err := dec.DecodeMap(&cfg, args.Config); err != nil {
 		return nil, err
 	}
 
-	ks, err := newKeyStoreFromPEMFile(sourceName, cfg.Path, cfg.Password)
+	ks, err := newKeyStoreFromPEMFile(args.SourceName, cfg.Path, cfg.Password)
 	if err != nil {
 		return nil, err
 	}
 
 	return &provider{
-		name:     sourceName,
+		name:     args.SourceName,
 		path:     cfg.Path,
 		password: cfg.Password,
 		watch:    cfg.Watch,
 		ks:       ks,
-		logger:   appCtx.Logger(),
+		logger:   args.Logger,
 	}, nil
 }
 

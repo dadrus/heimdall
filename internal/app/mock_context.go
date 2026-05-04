@@ -6,6 +6,7 @@ package app
 
 import (
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
@@ -83,6 +84,52 @@ func (_c *ContextMock_Config_Call) Return(configuration *config.Configuration) *
 }
 
 func (_c *ContextMock_Config_Call) RunAndReturn(run func() *config.Configuration) *ContextMock_Config_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DecoderFactory provides a mock function for the type ContextMock
+func (_mock *ContextMock) DecoderFactory() encoding.DecoderFactory {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for DecoderFactory")
+	}
+
+	var r0 encoding.DecoderFactory
+	if returnFunc, ok := ret.Get(0).(func() encoding.DecoderFactory); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(encoding.DecoderFactory)
+		}
+	}
+	return r0
+}
+
+// ContextMock_DecoderFactory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DecoderFactory'
+type ContextMock_DecoderFactory_Call struct {
+	*mock.Call
+}
+
+// DecoderFactory is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) DecoderFactory() *ContextMock_DecoderFactory_Call {
+	return &ContextMock_DecoderFactory_Call{Call: _e.mock.On("DecoderFactory")}
+}
+
+func (_c *ContextMock_DecoderFactory_Call) Run(run func()) *ContextMock_DecoderFactory_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_DecoderFactory_Call) Return(decoderFactory encoding.DecoderFactory) *ContextMock_DecoderFactory_Call {
+	_c.Call.Return(decoderFactory)
+	return _c
+}
+
+func (_c *ContextMock_DecoderFactory_Call) RunAndReturn(run func() encoding.DecoderFactory) *ContextMock_DecoderFactory_Call {
 	_c.Call.Return(run)
 	return _c
 }

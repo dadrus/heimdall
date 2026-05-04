@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
@@ -30,14 +31,16 @@ import (
 type appContext struct {
 	w  watcher.Watcher
 	kr keyregistry.Registry
+	d  encoding.DecoderFactory
 	v  validation.Validator
 	l  zerolog.Logger
 	c  *config.Configuration
 }
 
-func (c *appContext) Watcher() watcher.Watcher          { return c.w }
-func (c *appContext) KeyRegistry() keyregistry.Registry { return c.kr }
-func (c *appContext) Validator() validation.Validator   { return c.v }
-func (c *appContext) Logger() zerolog.Logger            { return c.l }
-func (c *appContext) Meter() metric.Meter               { return noop.Meter{} }
-func (c *appContext) Config() *config.Configuration     { return c.c }
+func (c *appContext) Watcher() watcher.Watcher                { return c.w }
+func (c *appContext) KeyRegistry() keyregistry.Registry       { return c.kr }
+func (c *appContext) DecoderFactory() encoding.DecoderFactory { return c.d }
+func (c *appContext) Validator() validation.Validator         { return c.v }
+func (c *appContext) Logger() zerolog.Logger                  { return c.l }
+func (c *appContext) Meter() metric.Meter                     { return noop.Meter{} }
+func (c *appContext) Config() *config.Configuration           { return c.c }

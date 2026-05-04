@@ -26,6 +26,7 @@ import (
 	_ "github.com/dadrus/heimdall/internal/cache" // without this import, available cache configs are not registered.
 	"github.com/dadrus/heimdall/internal/cache/registry"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
@@ -48,6 +49,7 @@ func NewValidateConfigCommand() *cobra.Command {
 	}
 }
 
+//nolint:funlen // Validation flow is intentionally kept linear in the CLI command handler.
 func validateConfig(cmd *cobra.Command, _ []string) error {
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	configPath, _ := cmd.Flags().GetString(flags.Config)
@@ -81,6 +83,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 	appCtx := &appContext{
 		w:  &watcher.NoopWatcher{},
 		kr: &noopRegistry{},
+		d:  encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
 		v:  validator,
 		l:  logger,
 		c:  conf,

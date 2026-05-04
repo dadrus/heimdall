@@ -14,18 +14,22 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package pem
+package encoding
 
-import (
-	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/validation"
-)
+type DecoderFactory interface {
+	Decoder(opts ...DecoderOption) *Decoder
+}
 
-func decodeConfig(validator validation.Validator, input map[string]any, output any) error {
-	dec := encoding.NewDecoder(
-		encoding.WithTagName("mapstructure"),
-		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
-	)
+type decoderFactory struct {
+	validator Validator
+}
 
-	return dec.DecodeMap(output, input)
+func NewDecoderFactory(validator Validator) DecoderFactory {
+	return decoderFactory{validator: validator}
+}
+
+func (f decoderFactory) Decoder(opts ...DecoderOption) *Decoder {
+	opts = append(opts, WithValidator(f.validator))
+
+	return NewDecoder(opts...)
 }

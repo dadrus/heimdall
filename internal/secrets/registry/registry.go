@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
@@ -51,7 +50,7 @@ func Unregister(typ string) {
 	delete(factories, typ)
 }
 
-func Create(app app.Context, typ, sourceName string, conf map[string]any) (types.Provider, error) {
+func Create(typ string, args ProviderArgs) (types.Provider, error) {
 	factoriesMu.RLock()
 	factory, ok := factories[typ] //nolint:wsl_v5
 	factoriesMu.RUnlock()         //nolint:wsl_v5
@@ -60,5 +59,5 @@ func Create(app app.Context, typ, sourceName string, conf map[string]any) (types
 		return nil, fmt.Errorf("%w: '%s'", ErrUnsupportedProviderType, typ)
 	}
 
-	return factory.Create(app, sourceName, conf)
+	return factory.Create(args)
 }

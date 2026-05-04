@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
@@ -52,7 +51,7 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("registers factory", func(t *testing.T) {
-		factory := FactoryFunc(func(_ app.Context, sourceName string, _ map[string]any) (types.Provider, error) {
+		factory := FactoryFunc(func(_ ProviderArgs) (types.Provider, error) {
 			return mocks.NewProviderMock(t), nil
 		})
 
@@ -87,7 +86,7 @@ func TestCreate(t *testing.T) {
 		},
 		"returns factory creation error": {
 			typ: "foo",
-			factory: FactoryFunc(func(_ app.Context, _ string, _ map[string]any) (types.Provider, error) {
+			factory: FactoryFunc(func(_ ProviderArgs) (types.Provider, error) {
 				return nil, errors.New("test error")
 			}),
 			assert: func(t *testing.T, provider types.Provider, err error) {
@@ -100,9 +99,9 @@ func TestCreate(t *testing.T) {
 		},
 		"creates provider with source name": {
 			typ: "foo",
-			factory: FactoryFunc(func(_ app.Context, sourceName string, _ map[string]any) (types.Provider, error) {
+			factory: FactoryFunc(func(args ProviderArgs) (types.Provider, error) {
 				provider := mocks.NewProviderMock(t)
-				provider.EXPECT().Name().Return(sourceName)
+				provider.EXPECT().Name().Return(args.SourceName)
 				provider.EXPECT().Type().Return("foo")
 
 				return provider, nil
@@ -124,9 +123,10 @@ func TestCreate(t *testing.T) {
 				Register(tc.typ, tc.factory)
 			}
 
-			appCtx := app.NewContextMock(t)
-
-			provider, err := Create(appCtx, tc.typ, "source-a", map[string]any{"x": "y"})
+			provider, err := Create(tc.typ, ProviderArgs{
+				SourceName: "source-a",
+				Config:     map[string]any{"x": "y"},
+			})
 
 			tc.assert(t, provider, err)
 		})
