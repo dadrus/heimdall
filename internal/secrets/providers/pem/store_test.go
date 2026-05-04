@@ -25,7 +25,6 @@ import (
 	"crypto/x509"
 	x509pkix "crypto/x509/pkix"
 	"encoding/hex"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,12 +39,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
-
-type testSigner struct{}
-
-func (s testSigner) Public() crypto.PublicKey { return nil }
-
-func (s testSigner) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, error) { return nil, nil }
 
 func TestNewKeyStoreFromPEMFile(t *testing.T) {
 	t.Parallel()
@@ -253,6 +246,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				require.Len(t, ks, 1)
 				secret, ok := ks[0].(types.AsymmetricKeySecret)
 				require.True(t, ok)
+
 				expectedKid, err := pkix.SubjectKeyID(secret.PrivateKey().Public())
 				require.NoError(t, err)
 				assert.Equal(t, hex.EncodeToString(expectedKid), secret.KeyID())

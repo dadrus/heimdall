@@ -241,8 +241,8 @@ func isIssuerOf(child, issuer *x509.Certificate) bool {
 }
 
 func validateChain(chain []*x509.Certificate) error {
-	intermediates := make([]*x509.Certificate, 0, max(0, len(chain)-2))
-	if len(chain) > 2 {
+	intermediates := make([]*x509.Certificate, 0, max(0, len(chain)-2)) //nolint:mnd
+	if len(chain) > 2 {                                                 //nolint:mnd
 		intermediates = append(intermediates, chain[1:len(chain)-1]...)
 	}
 
