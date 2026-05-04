@@ -36,6 +36,11 @@ func newCertificateProvider(
 			"no tls secret source specified")
 	}
 
+	if sm == nil {
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
+			"no secrets manager provided for TLS secret resolution")
+	}
+
 	provider := &certificateProvider{
 		reference: reference,
 		sm:        sm,
