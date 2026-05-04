@@ -517,6 +517,7 @@ func TestManagerResolveCredentials(t *testing.T) {
 	}
 }
 
+//nolint:gocyclo
 func TestManagerSubscribe(t *testing.T) {
 	t.Parallel()
 

@@ -28,8 +28,8 @@ type SecretKind string
 
 const (
 	SecretKindString        SecretKind = "string"
-	SecretKindSymmetricKey  SecretKind = "symmetric_key"
-	SecretKindAsymmetricKey SecretKind = "asymmetric_key"
+	SecretKindSymmetricKey  SecretKind = "symmetric_key"  //nolint:gosec
+	SecretKindAsymmetricKey SecretKind = "asymmetric_key" //nolint:gosec
 	SecretKindTrustStore    SecretKind = "trust_store"
 )
 
