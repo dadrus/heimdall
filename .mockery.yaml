@@ -53,6 +53,14 @@ packages:
       KeyObserver: {}
       JWKSProvider: {}
       Registry: {}
+  github.com/dadrus/heimdall/internal/keyregistry/v2:
+    interfaces:
+      KeyObserver: {}
+      JWKSProvider: {}
+      Registry: {}
+  github.com/dadrus/heimdall/internal/secrets:
+    interfaces:
+      Manager: {}
   github.com/dadrus/heimdall/internal/secrets/types:
     interfaces:
       Provider: {}
@@ -111,6 +119,14 @@ packages:
           pkgname: "{{ .SrcPackageName }}"
       Watcher: {}
   github.com/dadrus/heimdall/internal/x/tlsx:
+    interfaces:
+      compatibilityChecker:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+          structname: "{{ .InterfaceName }}Mock"
+  github.com/dadrus/heimdall/internal/x/tlsx/v2:
     interfaces:
       compatibilityChecker:
         config:
