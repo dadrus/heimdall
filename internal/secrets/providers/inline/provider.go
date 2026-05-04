@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -43,35 +42,35 @@ type provider struct {
 
 func newProvider(_ app.Context, sourceName string, rawConf map[string]any) (types.Provider, error) {
 	if len(rawConf) == 0 {
-		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(types.ErrInvalidSecretPayload,
 			"inline provider config must not be empty")
 	}
 
 	secrets := make(map[string]types.Secret, len(rawConf))
 	credentials := make(map[string]types.Credentials, len(rawConf))
 
-	for ref, value := range rawConf {
+	for selector, value := range rawConf {
 		switch typed := value.(type) {
 		case string:
-			secrets[ref] = types.NewStringSecret(sourceName, ref, typed)
+			secrets[selector] = types.NewStringSecret(sourceName, selector, typed)
 
 		case map[string]any:
 			values := make(map[string]types.Secret, len(typed))
 			for key, raw := range typed {
 				str, ok := raw.(string)
 				if !ok {
-					return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-						"inline credential '%s/%s' is not a string", ref, key)
+					return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
+						"inline credential '%s/%s' is not a string", selector, key)
 				}
 
-				values[key] = types.NewStringSecret(sourceName, ref+"/"+key, str)
+				values[key] = types.NewStringSecret(sourceName, selector+"/"+key, str)
 			}
 
-			credentials[ref] = types.NewCredentials(sourceName, ref, values)
+			credentials[selector] = types.NewCredentials(sourceName, selector, values)
 
 		default:
-			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-				"inline secret '%s' must be either string or structured object", ref)
+			return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
+				"inline secret '%s' must be either string or structured object", selector)
 		}
 	}
 
@@ -90,8 +89,8 @@ func (p *provider) Stop(_ context.Context) error                             { r
 func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
 	secret := p.secrets[selector.Value]
 	if secret == nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"no inline string secret found for ref '%s'", selector.Value)
+		return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound,
+			"no inline string secret found for selector '%s'", selector.Value)
 	}
 
 	return secret, nil
@@ -109,8 +108,8 @@ func (p *provider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]type
 func (p *provider) ResolveCredentials(_ context.Context, selector types.Selector) (types.Credentials, error) {
 	credentials := p.credentials[selector.Value]
 	if credentials == nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"no inline credentials found for ref '%s'", selector.Value)
+		return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound,
+			"no inline credentials found for selector '%s'", selector.Value)
 	}
 
 	return credentials, nil

@@ -16,29 +16,11 @@
 
 package types //nolint:revive
 
-import (
-	"context"
-)
+import "errors"
 
-type (
-	Selector struct {
-		Value     string
-		Namespace string
-	}
-
-	ChangeEvent struct {
-		Source    string
-		Namespace string
-		Selectors []string
-	}
-
-	Provider interface {
-		Name() string
-		Type() string
-		Start(ctx context.Context, onChange func(ChangeEvent)) error
-		Stop(ctx context.Context) error
-		ResolveSecret(ctx context.Context, selector Selector) (Secret, error)
-		ResolveSecretSet(ctx context.Context, selector Selector) ([]Secret, error)
-		ResolveCredentials(ctx context.Context, selector Selector) (Credentials, error)
-	}
+var (
+	ErrSecretNotFound        = errors.New("secret not found")
+	ErrUnsupportedOperation  = errors.New("unsupported secret operation")
+	ErrSecretKindMismatch    = errors.New("secret kind mismatch")
+	ErrInvalidSecretPayload  = errors.New("invalid secret payload")
 )

@@ -27,8 +27,8 @@ const (
 
 type keyStore []types.Secret
 
-func newKeyStoreFromKey(source, ref string, privateKey crypto.Signer) (keyStore, error) {
-	entry := types.NewAsymmetricKeySecret(source, ref, ref, privateKey, nil)
+func newKeyStoreFromKey(source, selector string, privateKey crypto.Signer) (keyStore, error) {
+	entry := types.NewAsymmetricKeySecret(source, selector, selector, privateKey, nil)
 
 	return buildStore(source, []types.AsymmetricKeySecret{entry}, nil)
 }
@@ -109,14 +109,14 @@ func newKeyStoreFromPEMBytes(source string, contents []byte, password string) (k
 	return buildStore(source, entries, certs)
 }
 
-func (s keyStore) get(ref string) (types.Secret, error) {
+func (s keyStore) get(selector string) (types.Secret, error) {
 	for _, entry := range s {
-		if entry.Ref() == ref {
+		if entry.Selector() == selector {
 			return entry, nil
 		}
 	}
 
-	return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound, "%s", ref)
+	return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound, "%s", selector)
 }
 
 func readPEMBlocks(data []byte) []*pem.Block {
@@ -170,12 +170,12 @@ func buildStore(source string, entries []types.AsymmetricKeySecret, certs []*x50
 
 		known[keyID] = struct{}{}
 
-		ref := entry.Ref()
-		if ref == "" {
-			ref = keyID
+		selector := entry.Selector()
+		if selector == "" {
+			selector = keyID
 		}
 
-		result[idx] = types.NewAsymmetricKeySecret(source, ref, keyID, entry.PrivateKey(), chain)
+		result[idx] = types.NewAsymmetricKeySecret(source, selector, keyID, entry.PrivateKey(), chain)
 	}
 
 	return result, nil

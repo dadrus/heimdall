@@ -281,7 +281,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				secret, ok := ks[0].(types.AsymmetricKeySecret)
 				require.True(t, ok)
 				assert.Equal(t, "custom-kid", secret.KeyID())
-				assert.Equal(t, ks[0].Ref(), secret.KeyID())
+				assert.Equal(t, ks[0].Selector(), secret.KeyID())
 			},
 		},
 	} {
@@ -320,7 +320,7 @@ func TestNewKeyStoreFromKey(t *testing.T) {
 				assert.Equal(t, types.SecretKindAsymmetricKey, secret.Kind())
 				assert.IsType(t, &rsa.PrivateKey{}, secret.PrivateKey())
 				assert.NotEmpty(t, secret.KeyID())
-				assert.Equal(t, secret.Ref(), secret.KeyID())
+				assert.Equal(t, secret.Selector(), secret.KeyID())
 			},
 		},
 	} {

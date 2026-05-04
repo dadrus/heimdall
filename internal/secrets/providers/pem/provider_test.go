@@ -166,7 +166,7 @@ func TestProviderWatch(t *testing.T) {
 
 				secret, err := provider.ResolveSecret(context.Background(), types.Selector{})
 				require.NoError(t, err)
-				require.Equal(t, "second", secret.Ref())
+				require.Equal(t, "second", secret.Selector())
 			},
 		},
 		"keeps last-known-good key material if reload fails": {
@@ -201,7 +201,7 @@ func TestProviderWatch(t *testing.T) {
 
 				secret, err := provider.ResolveSecret(context.Background(), types.Selector{})
 				require.NoError(t, err)
-				require.Equal(t, "first", secret.Ref())
+				require.Equal(t, "first", secret.Selector())
 			},
 		},
 	} {

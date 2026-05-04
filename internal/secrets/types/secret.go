@@ -19,12 +19,10 @@ package types //nolint:revive
 import (
 	"crypto"
 	"crypto/x509"
-	"errors"
+	"fmt"
 
 	"github.com/go-viper/mapstructure/v2"
 )
-
-var ErrSecretKindMismatch = errors.New("secret kind mismatch")
 
 type SecretKind string
 
@@ -37,7 +35,7 @@ const (
 
 type Secret interface {
 	Source() string
-	Ref() string
+	Selector() string
 	Kind() SecretKind
 }
 
@@ -66,18 +64,18 @@ type TrustStoreSecret interface {
 
 type Credentials interface {
 	Source() string
-	Ref() string
+	Selector() string
 	Decode(out any) error
 }
 
 type baseSecret struct {
-	source string
-	ref    string
-	kind   SecretKind
+	source   string
+	selector string
+	kind     SecretKind
 }
 
 func (s baseSecret) Source() string   { return s.source }
-func (s baseSecret) Ref() string      { return s.ref }
+func (s baseSecret) Selector() string { return s.selector }
 func (s baseSecret) Kind() SecretKind { return s.kind }
 
 type stringSecret struct {
@@ -86,12 +84,12 @@ type stringSecret struct {
 	value string
 }
 
-func NewStringSecret(source, ref, value string) StringSecret {
+func NewStringSecret(source, selector, value string) StringSecret {
 	return &stringSecret{
 		baseSecret: baseSecret{
-			source: source,
-			ref:    ref,
-			kind:   SecretKindString,
+			source:   source,
+			selector: selector,
+			kind:     SecretKindString,
 		},
 		value: value,
 	}
@@ -106,12 +104,12 @@ type symmetricKeySecret struct {
 	value []byte
 }
 
-func NewSymmetricKeySecret(source, ref, kid string, value []byte) SymmetricKeySecret {
+func NewSymmetricKeySecret(source, selector, kid string, value []byte) SymmetricKeySecret {
 	return &symmetricKeySecret{
 		baseSecret: baseSecret{
-			source: source,
-			ref:    ref,
-			kind:   SecretKindSymmetricKey,
+			source:   source,
+			selector: selector,
+			kind:     SecretKindSymmetricKey,
 		},
 		keyID: kid,
 		value: value,
@@ -129,12 +127,16 @@ type asymmetricKeySecret struct {
 	certChain []*x509.Certificate
 }
 
-func NewAsymmetricKeySecret(source, ref, kid string, signer crypto.Signer, certChain []*x509.Certificate) AsymmetricKeySecret {
+func NewAsymmetricKeySecret(
+	source, selector, kid string,
+	signer crypto.Signer,
+	certChain []*x509.Certificate,
+) AsymmetricKeySecret {
 	return &asymmetricKeySecret{
 		baseSecret: baseSecret{
-			source: source,
-			ref:    ref,
-			kind:   SecretKindAsymmetricKey,
+			source:   source,
+			selector: selector,
+			kind:     SecretKindAsymmetricKey,
 		},
 		keyID:     kid,
 		signer:    signer,
@@ -152,7 +154,7 @@ type trustStoreSecret struct {
 	certPool *x509.CertPool
 }
 
-func NewTrustStoreSecret(source, ref string, certs []*x509.Certificate) TrustStoreSecret {
+func NewTrustStoreSecret(source, selector string, certs []*x509.Certificate) TrustStoreSecret {
 	pool := x509.NewCertPool()
 	for _, cert := range certs {
 		pool.AddCert(cert)
@@ -160,9 +162,9 @@ func NewTrustStoreSecret(source, ref string, certs []*x509.Certificate) TrustSto
 
 	return &trustStoreSecret{
 		baseSecret: baseSecret{
-			source: source,
-			ref:    ref,
-			kind:   SecretKindTrustStore,
+			source:   source,
+			selector: selector,
+			kind:     SecretKindTrustStore,
 		},
 		certPool: pool,
 	}
@@ -171,21 +173,21 @@ func NewTrustStoreSecret(source, ref string, certs []*x509.Certificate) TrustSto
 func (s *trustStoreSecret) CertPool() *x509.CertPool { return s.certPool }
 
 type credentials struct {
-	source string
-	ref    string
-	values map[string]Secret
+	source   string
+	selector string
+	values   map[string]Secret
 }
 
-func NewCredentials(source, ref string, values map[string]Secret) Credentials {
+func NewCredentials(source, selector string, values map[string]Secret) Credentials {
 	return &credentials{
-		source: source,
-		ref:    ref,
-		values: values,
+		source:   source,
+		selector: selector,
+		values:   values,
 	}
 }
 
-func (p *credentials) Source() string { return p.source }
-func (p *credentials) Ref() string    { return p.ref }
+func (p *credentials) Source() string   { return p.source }
+func (p *credentials) Selector() string { return p.selector }
 
 func (p *credentials) Decode(out any) error {
 	raw := make(map[string]any, len(p.values))
@@ -206,8 +208,12 @@ func (p *credentials) Decode(out any) error {
 		ErrorUnused: true,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrInvalidSecretPayload, err)
 	}
 
-	return dec.Decode(raw)
+	if err = dec.Decode(raw); err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidSecretPayload, err)
+	}
+
+	return nil
 }

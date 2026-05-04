@@ -150,46 +150,46 @@ func (m *manager) Stop(ctx context.Context) error {
 	return stopErr
 }
 
-func (m *manager) ResolveSecret(ctx context.Context, ref Reference) (Secret, error) {
-	provider, err := m.provider(ref)
+func (m *manager) ResolveSecret(ctx context.Context, reference Reference) (Secret, error) {
+	provider, err := m.provider(reference)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.ResolveSecret(ctx, types.Selector{Value: ref.Selector, Namespace: ref.Namespace})
+	return provider.ResolveSecret(ctx, types.Selector{Value: reference.Selector, Namespace: reference.Namespace})
 }
 
-func (m *manager) ResolveSecretSet(ctx context.Context, ref Reference) ([]Secret, error) {
-	provider, err := m.provider(ref)
+func (m *manager) ResolveSecretSet(ctx context.Context, reference Reference) ([]Secret, error) {
+	provider, err := m.provider(reference)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.ResolveSecretSet(ctx, types.Selector{Value: ref.Selector, Namespace: ref.Namespace})
+	return provider.ResolveSecretSet(ctx, types.Selector{Value: reference.Selector, Namespace: reference.Namespace})
 }
 
-func (m *manager) ResolveCredentials(ctx context.Context, ref Reference) (Credentials, error) {
-	provider, err := m.provider(ref)
+func (m *manager) ResolveCredentials(ctx context.Context, reference Reference) (Credentials, error) {
+	provider, err := m.provider(reference)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.ResolveCredentials(ctx, types.Selector{Value: ref.Selector, Namespace: ref.Namespace})
+	return provider.ResolveCredentials(ctx, types.Selector{Value: reference.Selector, Namespace: reference.Namespace})
 }
 
-func (m *manager) Subscribe(ref Reference, cb func(context.Context) error) (func(), error) {
+func (m *manager) Subscribe(reference Reference, cb func(context.Context) error) (func(), error) {
 	if cb == nil {
 		return nil, fmt.Errorf("%w: callback must not be nil", ErrSubscribeFailed)
 	}
 
-	if _, err := m.provider(ref); err != nil {
+	if _, err := m.provider(reference); err != nil {
 		return nil, err
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	key := bindingKey{source: ref.Source, selector: ref.Selector, namespace: ref.Namespace}
+	key := bindingKey{source: reference.Source, selector: reference.Selector, namespace: reference.Namespace}
 
 	bdg := m.bindings[key]
 	if bdg == nil {
@@ -217,16 +217,16 @@ func (m *manager) Subscribe(ref Reference, cb func(context.Context) error) (func
 	}, nil
 }
 
-func (m *manager) provider(ref Reference) (types.Provider, error) {
+func (m *manager) provider(reference Reference) (types.Provider, error) {
 	m.mu.RLock()
-	mp, ok := m.providers[ref.Source]
+	mp, ok := m.providers[reference.Source]
 	m.mu.RUnlock()
 
 	if !ok {
-		return nil, fmt.Errorf("%w: '%s'", ErrProviderNotFound, ref.Source)
+		return nil, fmt.Errorf("%w: '%s'", ErrProviderNotFound, reference.Source)
 	}
 
-	if ref.RuleContext && !mp.accessFromRulesAllowed {
+	if reference.RuleContext && !mp.accessFromRulesAllowed {
 		return nil, ErrSecretSourceForbidden
 	}
 
@@ -374,7 +374,7 @@ func (b *binding) runCallbacks() {
 				Err(err).
 				Str("_source", b.source).
 				Str("_namespace", b.namespace).
-				Str("_ref", b.selector).
+				Str("_selector", b.selector).
 				Msg("Secret update callback failed")
 		}
 	}

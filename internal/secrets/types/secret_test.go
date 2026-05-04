@@ -31,7 +31,7 @@ func TestNewStringSecret(t *testing.T) {
 	secret := NewStringSecret("inline", "foo", "bar")
 
 	assert.Equal(t, "inline", secret.Source())
-	assert.Equal(t, "foo", secret.Ref())
+	assert.Equal(t, "foo", secret.Selector())
 	assert.Equal(t, SecretKindString, secret.Kind())
 	assert.Equal(t, "bar", secret.String())
 }
@@ -40,7 +40,7 @@ func TestNewBytesSecret(t *testing.T) {
 	secret := NewSymmetricKeySecret("file", "foo/bar", "bar", []byte("secret"))
 
 	assert.Equal(t, "file", secret.Source())
-	assert.Equal(t, "foo/bar", secret.Ref())
+	assert.Equal(t, "foo/bar", secret.Selector())
 	assert.Equal(t, "bar", secret.KeyID())
 	assert.Equal(t, SecretKindSymmetricKey, secret.Kind())
 	assert.Equal(t, []byte("secret"), secret.Key())
@@ -54,7 +54,7 @@ func TestNewSignerSecret(t *testing.T) {
 	secret := NewAsymmetricKeySecret("pem", "first", "kid-1", signer, []*x509.Certificate{cert})
 
 	assert.Equal(t, "pem", secret.Source())
-	assert.Equal(t, "first", secret.Ref())
+	assert.Equal(t, "first", secret.Selector())
 	assert.Equal(t, SecretKindAsymmetricKey, secret.Kind())
 	assert.Equal(t, "kid-1", secret.KeyID())
 	assert.Same(t, crypto.Signer(signer), secret.PrivateKey())
@@ -66,7 +66,7 @@ func TestNewTrustStoreSecret(t *testing.T) {
 	secret := NewTrustStoreSecret("pem", "trust", []*x509.Certificate{cert})
 
 	assert.Equal(t, "pem", secret.Source())
-	assert.Equal(t, "trust", secret.Ref())
+	assert.Equal(t, "trust", secret.Selector())
 	assert.Equal(t, SecretKindTrustStore, secret.Kind())
 	assert.NotNil(t, secret.CertPool())
 }
@@ -78,7 +78,7 @@ func TestNewCredentials(t *testing.T) {
 	})
 
 	assert.Equal(t, "inline", secret.Source())
-	assert.Equal(t, "foo", secret.Ref())
+	assert.Equal(t, "foo", secret.Selector())
 }
 
 func TestSecretPayloadDecode(t *testing.T) {
@@ -147,7 +147,23 @@ func TestSecretPayloadDecode(t *testing.T) {
 		err := payload.Decode(nil)
 
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidSecretPayload)
 	})
+}
+
+func TestSecretPayloadDecodeInvalidPayloadError(t *testing.T) {
+	payload := NewCredentials("inline", "foo", map[string]Secret{
+		"username": NewStringSecret("inline", "foo/username", "foo"),
+		"password": NewStringSecret("inline", "foo/password", "bar"),
+		"extra":    NewStringSecret("inline", "foo/extra", "baz"),
+	})
+
+	var out testCredentials
+
+	err := payload.Decode(&out)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidSecretPayload)
 }
 
 func TestSecretPayloadDecodeUnsupportedKindError(t *testing.T) {

@@ -19,15 +19,20 @@ package secrets
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
 type (
-	SecretKind  = types.SecretKind
-	Secret      = types.Secret
-	Credentials = types.Credentials
+	SecretKind          = types.SecretKind
+	Secret              = types.Secret
+	StringSecret        = types.StringSecret
+	SymmetricKeySecret  = types.SymmetricKeySecret
+	AsymmetricKeySecret = types.AsymmetricKeySecret
+	TrustStoreSecret    = types.TrustStoreSecret
+	Credentials         = types.Credentials
 
 	Reference struct {
 		Source      string
@@ -37,20 +42,22 @@ type (
 	}
 
 	Manager interface {
-		ResolveSecret(ctx context.Context, ref Reference) (Secret, error)
-		ResolveSecretSet(ctx context.Context, ref Reference) ([]Secret, error)
-		ResolveCredentials(ctx context.Context, ref Reference) (Credentials, error)
-		Subscribe(ref Reference, cb func(context.Context) error) (unsubscribe func(), err error)
+		ResolveSecret(ctx context.Context, reference Reference) (Secret, error)
+		ResolveSecretSet(ctx context.Context, reference Reference) ([]Secret, error)
+		ResolveCredentials(ctx context.Context, reference Reference) (Credentials, error)
+		Subscribe(reference Reference, cb func(context.Context) error) (unsubscribe func(), err error)
 	}
 )
 
 var (
-	ErrProviderNotFound        = errors.New("secret provider not found")
 	ErrSubscribeFailed         = errors.New("secret changes subscription failed")
+	ErrProviderNotFound        = errors.New("secret provider not found")
 	ErrSecretSourceForbidden   = errors.New("secret source forbidden in rule context")
 	ErrUnsupportedProviderType = registry.ErrUnsupportedProviderType
+	ErrSecretNotFound          = types.ErrSecretNotFound
 	ErrSecretKindMismatch      = types.ErrSecretKindMismatch
 	ErrUnsupportedOperation    = types.ErrUnsupportedOperation
+	ErrInvalidSecretPayload    = types.ErrInvalidSecretPayload
 )
 
 const (
@@ -74,4 +81,14 @@ func RuleRef(namespace, source, selector string) Reference {
 		Namespace:   namespace,
 		RuleContext: true,
 	}
+}
+
+func (r Reference) Parent() Reference {
+	if idx := strings.LastIndex(r.Selector, "/"); idx < 0 {
+		r.Selector = ""
+	} else {
+		r.Selector = r.Selector[:idx]
+	}
+
+	return r
 }

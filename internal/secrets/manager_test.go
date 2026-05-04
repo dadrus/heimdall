@@ -126,7 +126,7 @@ func TestManagerResolveSecret(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, secret)
 				require.Equal(t, "tls", secret.Source())
-				require.Equal(t, "first_entry", secret.Ref())
+				require.Equal(t, "first_entry", secret.Selector())
 				require.Equal(t, types.SecretKindString, secret.Kind())
 
 				stringSecret, ok := secret.(types.StringSecret)
@@ -152,7 +152,7 @@ func TestManagerResolveSecret(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, "first_entry", secret.Ref())
+				require.Equal(t, "first_entry", secret.Selector())
 			},
 		},
 		"delegates internal scoped secret access to provider not allowing access from rules": {
@@ -173,7 +173,7 @@ func TestManagerResolveSecret(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, "first_entry", secret.Ref())
+				require.Equal(t, "first_entry", secret.Selector())
 			},
 		},
 		"delegation of secret access fails due to not allowed secret scope": {
@@ -260,8 +260,8 @@ func TestManagerResolveSecretSet(t *testing.T) {
 
 				require.NoError(t, err)
 				require.Len(t, secrets, 2)
-				require.Equal(t, "key-a", secrets[0].Ref())
-				require.Equal(t, "key-b", secrets[1].Ref())
+				require.Equal(t, "key-a", secrets[0].Selector())
+				require.Equal(t, "key-b", secrets[1].Selector())
 			},
 		},
 		"delegates internal scoped secret access to provider allowing access from rules": {
@@ -285,7 +285,7 @@ func TestManagerResolveSecretSet(t *testing.T) {
 
 				require.NoError(t, err)
 				require.Len(t, secrets, 1)
-				require.Equal(t, "key-a", secrets[0].Ref())
+				require.Equal(t, "key-a", secrets[0].Selector())
 			},
 		},
 		"delegates internal scoped secret access to provider not allowing access from rules": {
@@ -309,7 +309,7 @@ func TestManagerResolveSecretSet(t *testing.T) {
 
 				require.NoError(t, err)
 				require.Len(t, secrets, 1)
-				require.Equal(t, "key-a", secrets[0].Ref())
+				require.Equal(t, "key-a", secrets[0].Selector())
 			},
 		},
 		"delegation of secret access fails due to not allowed secret scope": {
@@ -599,7 +599,7 @@ func TestManagerSubscribe(t *testing.T) {
 		}
 	})
 
-	t.Run("fan-out for empty refs event", func(t *testing.T) {
+	t.Run("fan-out for empty selectors event", func(t *testing.T) {
 		t.Parallel()
 
 		mgr, trigger := newStartedManagerWithChangeTrigger(t, "pem")
@@ -645,7 +645,7 @@ func TestManagerSubscribe(t *testing.T) {
 		}
 	})
 
-	t.Run("serializes callback execution per source/ref", func(t *testing.T) {
+	t.Run("serializes callback execution per source/selector", func(t *testing.T) {
 		t.Parallel()
 
 		var maxConcurrent, currentCalls, callCount int32
@@ -1011,7 +1011,7 @@ func TestBindingPendingEvents(t *testing.T) {
 
 		var calls atomic.Int32
 
-		bdg := newBinding(bindingKey{source: "source", selector: "ref"}, zerolog.Nop())
+		bdg := newBinding(bindingKey{source: "source", selector: "selector"}, zerolog.Nop())
 		defer bdg.stop()
 
 		bdg.addSubscriber(func(context.Context) error {
@@ -1049,7 +1049,7 @@ func TestBindingPendingEvents(t *testing.T) {
 
 		var calls atomic.Int32
 
-		bdg := newBinding(bindingKey{source: "source", selector: "ref"}, zerolog.Nop())
+		bdg := newBinding(bindingKey{source: "source", selector: "selector"}, zerolog.Nop())
 		defer bdg.stop()
 
 		bdg.addSubscriber(func(context.Context) error {
