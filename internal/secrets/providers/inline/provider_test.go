@@ -36,8 +36,8 @@ func TestNewProvider(t *testing.T) {
 	}{
 		"creates provider": {
 			conf: map[string]any{
-				"api/token": "secret",
-				"oauth/github": map[string]any{
+				"api_token": "secret",
+				"github": map[string]any{
 					"client_id":     "heimdall",
 					"client_secret": "secret",
 				},
@@ -61,25 +61,35 @@ func TestNewProvider(t *testing.T) {
 			},
 		},
 		"fails for non-string secret value": {
-			conf: map[string]any{"api/token": 42},
+			conf: map[string]any{"api_token": 42},
 			assert: func(t *testing.T, err error, _ types.Provider) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, types.ErrInvalidSecretPayload)
-				require.ErrorContains(t, err, "api/token")
+				require.ErrorContains(t, err, "api_token")
+			},
+		},
+		"fails for selector containing slash": {
+			conf: map[string]any{"api/token": "secret"},
+			assert: func(t *testing.T, err error, _ types.Provider) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, types.ErrInvalidSecretPayload)
+				require.ErrorContains(t, err, "must not contain '/'")
 			},
 		},
 		"fails for non-string credential value": {
 			conf: map[string]any{
-				"oauth/github": map[string]any{"client_id": 42},
+				"github": map[string]any{"client_id": 42},
 			},
 			assert: func(t *testing.T, err error, _ types.Provider) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, types.ErrInvalidSecretPayload)
-				require.ErrorContains(t, err, "oauth/github/client_id")
+				require.ErrorContains(t, err, "github/client_id")
 			},
 		},
 	} {
@@ -98,13 +108,13 @@ func TestProviderResolveSecret(t *testing.T) {
 
 	provider := newTestProvider(t)
 
-	secret, err := provider.ResolveSecret(context.Background(), types.Selector{Value: "api/token"})
+	secret, err := provider.ResolveSecret(context.Background(), types.Selector{Value: "api_token"})
 	require.NoError(t, err)
 
 	stringSecret, ok := secret.(types.StringSecret)
 	require.True(t, ok)
 	require.Equal(t, "inline-defaults", stringSecret.Source())
-	require.Equal(t, "api/token", stringSecret.Selector())
+	require.Equal(t, "api_token", stringSecret.Selector())
 	require.Equal(t, types.SecretKindString, stringSecret.Kind())
 	require.Equal(t, "secret", stringSecret.String())
 }
@@ -123,8 +133,20 @@ func TestProviderResolveSecretSet(t *testing.T) {
 		bySelector[secret.Selector()] = secret
 	}
 
-	require.Contains(t, bySelector, "api/token")
-	require.Contains(t, bySelector, "api/other")
+	require.Contains(t, bySelector, "api_token")
+	require.Contains(t, bySelector, "api_other")
+}
+
+func TestProviderResolveSecretSetNonRootUnsupported(t *testing.T) {
+	t.Parallel()
+
+	provider := newTestProvider(t)
+
+	secrets, err := provider.ResolveSecretSet(context.Background(), types.Selector{Value: "api_token"})
+	require.Nil(t, secrets)
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrUnsupportedOperation)
+	require.ErrorContains(t, err, "provider root")
 }
 
 func TestProviderResolveCredentials(t *testing.T) {
@@ -137,10 +159,10 @@ func TestProviderResolveCredentials(t *testing.T) {
 
 	provider := newTestProvider(t)
 
-	credentials, err := provider.ResolveCredentials(context.Background(), types.Selector{Value: "oauth/github"})
+	credentials, err := provider.ResolveCredentials(context.Background(), types.Selector{Value: "github"})
 	require.NoError(t, err)
 	require.Equal(t, "inline-defaults", credentials.Source())
-	require.Equal(t, "oauth/github", credentials.Selector())
+	require.Equal(t, "github", credentials.Selector())
 
 	var decoded oauthCredentials
 	require.NoError(t, credentials.Decode(&decoded))
@@ -179,7 +201,7 @@ func TestRegistryCreate(t *testing.T) {
 	t.Parallel()
 
 	provider, err := registry.Create(app.NewContextMock(t), ProviderType, "inline-defaults", map[string]any{
-		"api/token": "secret",
+		"api_token": "secret",
 	})
 
 	require.NoError(t, err)
@@ -191,9 +213,9 @@ func newTestProvider(t *testing.T) types.Provider {
 	t.Helper()
 
 	provider, err := newProvider(app.NewContextMock(t), "inline-defaults", map[string]any{
-		"api/token": "secret",
-		"api/other": "other",
-		"oauth/github": map[string]any{
+		"api_token": "secret",
+		"api_other": "other",
+		"github": map[string]any{
 			"client_id":     "heimdall",
 			"client_secret": "secret",
 		},

@@ -18,6 +18,7 @@ package inline
 
 import (
 	"context"
+	"strings"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
@@ -50,6 +51,11 @@ func newProvider(_ app.Context, sourceName string, rawConf map[string]any) (type
 	credentials := make(map[string]types.Credentials, len(rawConf))
 
 	for selector, value := range rawConf {
+		if strings.Contains(selector, "/") {
+			return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
+				"inline selector '%s' must not contain '/'", selector)
+		}
+
 		switch typed := value.(type) {
 		case string:
 			secrets[selector] = types.NewStringSecret(sourceName, selector, typed)
@@ -96,7 +102,12 @@ func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (ty
 	return secret, nil
 }
 
-func (p *provider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]types.Secret, error) {
+func (p *provider) ResolveSecretSet(_ context.Context, selector types.Selector) ([]types.Secret, error) {
+	if selector.Value != "" {
+		return nil, errorchain.NewWithMessagef(types.ErrUnsupportedOperation,
+			"inline secret sets are only supported for the provider root, got selector '%s'", selector.Value)
+	}
+
 	secrets := make([]types.Secret, 0, len(p.secrets))
 	for _, entry := range p.secrets {
 		secrets = append(secrets, entry)
