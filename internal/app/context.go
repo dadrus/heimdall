@@ -23,6 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
@@ -30,6 +31,7 @@ import (
 type Context interface {
 	Watcher() watcher.Watcher
 	KeyRegistry() keyregistry.Registry
+	SecretsManager() secrets.Manager
 	DecoderFactory() encoding.DecoderFactory
 	Validator() validation.Validator
 	Config() *config.Configuration

@@ -8,6 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/rs/zerolog"
@@ -266,6 +267,52 @@ func (_c *ContextMock_Meter_Call) Return(meter metric.Meter) *ContextMock_Meter_
 }
 
 func (_c *ContextMock_Meter_Call) RunAndReturn(run func() metric.Meter) *ContextMock_Meter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SecretsManager provides a mock function for the type ContextMock
+func (_mock *ContextMock) SecretsManager() secrets.Manager {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for SecretsManager")
+	}
+
+	var r0 secrets.Manager
+	if returnFunc, ok := ret.Get(0).(func() secrets.Manager); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(secrets.Manager)
+		}
+	}
+	return r0
+}
+
+// ContextMock_SecretsManager_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SecretsManager'
+type ContextMock_SecretsManager_Call struct {
+	*mock.Call
+}
+
+// SecretsManager is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) SecretsManager() *ContextMock_SecretsManager_Call {
+	return &ContextMock_SecretsManager_Call{Call: _e.mock.On("SecretsManager")}
+}
+
+func (_c *ContextMock_SecretsManager_Call) Run(run func()) *ContextMock_SecretsManager_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_SecretsManager_Call) Return(manager secrets.Manager) *ContextMock_SecretsManager_Call {
+	_c.Call.Return(manager)
+	return _c
+}
+
+func (_c *ContextMock_SecretsManager_Call) RunAndReturn(run func() secrets.Manager) *ContextMock_SecretsManager_Call {
 	_c.Call.Return(run)
 	return _c
 }

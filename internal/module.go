@@ -40,6 +40,7 @@ import (
 type appContext struct {
 	w  watcher.Watcher
 	kr keyregistry.Registry
+	sm secrets.Manager
 	d  encoding.DecoderFactory
 	v  validation.Validator
 	l  zerolog.Logger
@@ -49,6 +50,7 @@ type appContext struct {
 
 func (c *appContext) Watcher() watcher.Watcher                { return c.w }
 func (c *appContext) KeyRegistry() keyregistry.Registry       { return c.kr }
+func (c *appContext) SecretsManager() secrets.Manager         { return c.sm }
 func (c *appContext) DecoderFactory() encoding.DecoderFactory { return c.d }
 func (c *appContext) Validator() validation.Validator         { return c.v }
 func (c *appContext) Logger() zerolog.Logger                  { return c.l }
@@ -62,6 +64,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(func(
 		watcher watcher.Watcher,
 		kr keyregistry.Registry,
+		sm secrets.Manager,
 		validator validation.Validator,
 		logger zerolog.Logger,
 		meter metric.Meter,
@@ -70,6 +73,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 		return &appContext{
 			w:  watcher,
 			kr: kr,
+			sm: sm,
 			d:  encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
 			v:  validator,
 			l:  logger,
