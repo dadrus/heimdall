@@ -57,8 +57,7 @@ type TrustStore struct {
 }
 
 type TLS struct {
-	Secret       Secret          `koanf:"secret"        mapstructure:"secret"`
-	KeyStore     KeyStore        `koanf:"key_store"     mapstructure:"key_store"`
+	Secret       Secret          `koanf:"secret"        mapstructure:"secret"        validate:"omitempty"`
 	KeyID        string          `koanf:"key_id"        mapstructure:"key_id"`
 	CipherSuites TLSCipherSuites `koanf:"cipher_suites" mapstructure:"cipher_suites"`
 	MinVersion   TLSMinVersion   `koanf:"min_version"   mapstructure:"min_version"`

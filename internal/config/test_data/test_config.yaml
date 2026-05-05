@@ -1,3 +1,24 @@
+secret_management:
+  inline_secrets:
+    type: inline
+    config:
+      client_credentials:
+        client_id: test-client-id
+        client_secret: test-client-secret
+      basic_auth:
+        user: foo
+        password: bar
+      foo_api_key: very-secret
+      bar_foo_key: bar
+  jwt_secrets:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
+  tls_keys:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
+
 serve:
   host: 127.0.0.1
   port: 4469
@@ -25,8 +46,8 @@ serve:
     allow_credentials: true
     max_age: 1m
   tls:
-    key_store:
-      path: /path/to/keystore/file.pem
+    secret:
+      source: tls_keys
     min_version: TLS1.2
     cipher_suites:
       - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
@@ -80,8 +101,8 @@ management:
     allow_credentials: true
     max_age: 1m
   tls:
-    key_store:
-      path: /path/to/keystore/file.pem
+    secret:
+      source: tls_keys
 
 cache:
   type: redis
@@ -102,10 +123,9 @@ cache:
     max_flush_delay: 20us
     tls:
       disabled: true
-      key_store:
-        path: /path/to/keystore/file.pem
-        password: VerySecret!
-      key_id: foo
+      secret:
+        source: tls_keys
+        selector: key
       min_version: TLS1.2
       cipher_suites:
         - "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
@@ -216,8 +236,9 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: inline_secrets
+                selector: basic_auth
           http_cache:
             enabled: false
         token_source:
@@ -252,8 +273,9 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: inline_secrets
+                selector: basic_auth
           http_cache:
             enabled: true
             default_ttl: 1m
@@ -325,8 +347,9 @@ mechanisms:
     - id: basic_auth_authenticator
       type: basic_auth
       config:
-        user_id: foo
-        password: bar
+        credentials:
+          source: inline_secrets
+          selector: basic_auth
         error_signaling:
           enabled: true
           realm: basic-example
@@ -345,7 +368,9 @@ mechanisms:
             config:
               in: header
               name: X-Api-Key
-              value: VerySecret!
+              secret:
+                source: inline_secrets
+                selector: foo_api_key
           method: POST
           headers:
             foo-bar: "{{ .Subject.ID }}"
@@ -372,8 +397,9 @@ mechanisms:
             config:
               auth_method: request_body
               token_url: http://foo.bar
-              client_id: foo
-              client_secret: bar
+              credentials:
+                source: inline_secrets
+                selector: client_credentials
               cache_ttl: 20s
               header:
                 name: X-Foo
@@ -401,7 +427,9 @@ mechanisms:
             config:
               in: query
               name: key
-              value: super duper secret
+              secret:
+                source: inline_secrets
+                selector: bar_foo_key
         values:
           some-key: some-value
   finalizers:
@@ -410,10 +438,9 @@ mechanisms:
       config:
         signer:
           name: foobar
-          key_store:
-            path: /opt/heimdall/keystore.pem
-            password: VeryInsecure!
-          key_id: foo
+          secret:
+            source: jwt
+            selector: foo
         ttl: 5m
         claims: |
           {"user": {{ quote .Subject.ID }} }
@@ -422,10 +449,9 @@ mechanisms:
       config:
         signer:
           name: foobar
-          key_store:
-            path: /opt/heimdall/keystore.pem
-            password: VeryInsecure!
-          key_id: foo
+          secret:
+            source: jwt
+            selector: foo
         ttl: 5m
         header:
           name: Foo
@@ -446,8 +472,9 @@ mechanisms:
       type: oauth2_client_credentials
       config:
         token_url: https://my-auth-provider/token
-        client_id: foo
-        client_secret: bar
+        credentials:
+          source: oauth
+          selector: client_credentials
         auth_method: basic_auth
         cache_ttl: 5m
         scopes:
@@ -505,7 +532,9 @@ providers:
           type: api_key
           config:
             name: foo
-            value: bar
+            secret:
+              source: inline_secrets
+              selector: bar_foo_key
             in: header
 
   cloud_blob:
@@ -520,8 +549,7 @@ providers:
   kubernetes:
     auth_class: foo
     tls:
-      key_id: foo
-      key_store:
-        path: /path/to/pem.file
-        password: VerySecret!
+      secret:
+        source: tls_keys
+        selector: key
       min_version: TLS1.3
