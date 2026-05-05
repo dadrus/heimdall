@@ -214,7 +214,7 @@ func TestCertificateProviderReload(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "failed resolving secret")
+				require.ErrorContains(t, err, "failed resolving TLS secret")
 			},
 		},
 		"fails for non asymmetric secret": {

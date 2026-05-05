@@ -52,7 +52,7 @@ func (p *certificateProvider) reload(ctx context.Context) error {
 	secret, err := p.sm.ResolveSecret(ctx, p.sr)
 	if err != nil {
 		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed resolving secret").CausedBy(err)
+			"failed resolving TLS secret").CausedBy(err)
 	}
 
 	aks, ok := secret.(secrets.AsymmetricKeySecret)

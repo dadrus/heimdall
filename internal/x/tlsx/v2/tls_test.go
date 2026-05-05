@@ -87,7 +87,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Nil(t, cfg)
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "failed resolving secret")
+				require.ErrorContains(t, err, "failed resolving TLS secret")
 			},
 		},
 		"successful with server auth": {
@@ -109,14 +109,10 @@ func TestToTLSConfig(t *testing.T) {
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
 				t.Helper()
 
-				cc := newCompatibilityCheckerMock(t)
-				cc.EXPECT().SupportsCertificate(cert).Return(nil)
-
 				require.NoError(t, err)
 				require.NotNil(t, cfg)
 
 				assert.NotNil(t, cfg.GetCertificate)
-				require.NoError(t, err)
 				assert.Nil(t, cfg.GetClientCertificate)
 				assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
 				assert.NotEmpty(t, cfg.CipherSuites)
