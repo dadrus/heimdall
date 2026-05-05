@@ -29,10 +29,9 @@ import (
 )
 
 var (
-	ErrNilEntry            = errors.New("nil keystore entry")
-	ErrNoPublicKeyMaterial = errors.New("no public key material in keystore entry")
-	ErrUnsupportedAlg      = errors.New("unsupported key algorithm")
-	ErrUnsupportedKeySize  = errors.New("unsupported key size")
+	ErrNilEntry             = errors.New("nil keystore entry")
+	ErrUnsupportedAlgorithm = errors.New("unsupported key algorithm")
+	ErrUnsupportedKeySize   = errors.New("unsupported key size")
 )
 
 func ToJWK(secret secrets.AsymmetricKeySecret) (jose.JSONWebKey, error) {
@@ -63,7 +62,7 @@ func joseAlgorithm(pubKey crypto.PublicKey) (jose.SignatureAlgorithm, error) {
 	case *ecdsa.PublicKey:
 		return ecdsaAlgorithm(key)
 	default:
-		return "", fmt.Errorf("%w: %T", ErrUnsupportedAlg, pubKey)
+		return "", fmt.Errorf("%w: %T", ErrUnsupportedAlgorithm, pubKey)
 	}
 }
 

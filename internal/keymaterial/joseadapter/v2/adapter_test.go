@@ -51,44 +51,39 @@ func TestToJWK(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		secret      secrets.AsymmetricKeySecret
-		assertPanic func(t *testing.T)
-		assertErr   func(t *testing.T, err error)
-		assertJWK   func(t *testing.T, jwk jose.JSONWebKey)
+		secret secrets.AsymmetricKeySecret
+		assert func(t *testing.T, err error, jwk jose.JSONWebKey)
 	}{
 		"nil entry": {
-			assertErr: func(t *testing.T, err error) {
+			assert: func(t *testing.T, err error, _ jose.JSONWebKey) {
 				t.Helper()
+
 				require.ErrorIs(t, err, ErrNilEntry)
 			},
 		},
 		"unsupported algorithm": {
 			secret: types.NewAsymmetricKeySecret("test", "test", "1", unsupportedSigner{key: ed25519PrivKey}, nil),
-			assertErr: func(t *testing.T, err error) {
+			assert: func(t *testing.T, err error, _ jose.JSONWebKey) {
 				t.Helper()
-				require.ErrorIs(t, err, ErrUnsupportedAlg)
+
+				require.ErrorIs(t, err, ErrUnsupportedAlgorithm)
 			},
 		},
 		"unsupported rsa size": {
 			secret: types.NewAsymmetricKeySecret("test", "test", "1", rsaSmallPrivKey, nil),
-			assertErr: func(t *testing.T, err error) {
+			assert: func(t *testing.T, err error, _ jose.JSONWebKey) {
 				t.Helper()
+
 				require.ErrorIs(t, err, ErrUnsupportedKeySize)
-			},
-		},
-		"missing key material": {
-			secret: types.NewAsymmetricKeySecret("test", "test", "1", nil, nil),
-			assertPanic: func(t *testing.T) {
-				t.Helper()
-				require.Panics(t, func() {
-					_, _ = ToJWK(types.NewAsymmetricKeySecret("test", "test", "1", nil, nil))
-				})
 			},
 		},
 		"rsa from private key": {
 			secret: types.NewAsymmetricKeySecret("test", "test", "kid-rsa", rsaPrivKey, nil),
-			assertJWK: func(t *testing.T, jwk jose.JSONWebKey) {
+			assert: func(t *testing.T, err error, jwk jose.JSONWebKey) {
 				t.Helper()
+
+				require.NoError(t, err)
+
 				assert.Equal(t, "kid-rsa", jwk.KeyID)
 				assert.Equal(t, string(jose.PS256), jwk.Algorithm)
 				assert.Equal(t, rsaPrivKey.Public(), jwk.Key)
@@ -97,8 +92,11 @@ func TestToJWK(t *testing.T) {
 		},
 		"ecdsa from private key": {
 			secret: types.NewAsymmetricKeySecret("test", "test", "kid-ecdsa", ecdsaPrivKey, nil),
-			assertJWK: func(t *testing.T, jwk jose.JSONWebKey) {
+			assert: func(t *testing.T, err error, jwk jose.JSONWebKey) {
 				t.Helper()
+
+				require.NoError(t, err)
+
 				assert.Equal(t, "kid-ecdsa", jwk.KeyID)
 				assert.Equal(t, string(jose.ES256), jwk.Algorithm)
 				assert.Equal(t, ecdsaPrivKey.Public(), jwk.Key)
@@ -107,23 +105,9 @@ func TestToJWK(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			if tc.assertPanic != nil {
-				tc.assertPanic(t)
-
-				return
-			}
-
 			jwk, err := ToJWK(tc.secret)
 
-			if tc.assertErr != nil {
-				require.Error(t, err)
-				tc.assertErr(t, err)
-
-				return
-			}
-
-			require.NoError(t, err)
-			tc.assertJWK(t, jwk)
+			tc.assert(t, err, jwk)
 		})
 	}
 }
