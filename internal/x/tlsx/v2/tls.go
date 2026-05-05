@@ -11,8 +11,8 @@ import (
 
 func ToTLSConfig(ctx context.Context, tlsCfg *config.TLS, opts ...Option) (*tls.Config, error) {
 	var (
-		certProvider *certificateProvider
-		err          error
+		cp  *certificateProvider
+		err error
 	)
 
 	args := newOptions()
@@ -21,7 +21,7 @@ func ToTLSConfig(ctx context.Context, tlsCfg *config.TLS, opts ...Option) (*tls.
 	}
 
 	if args.serverAuthRequired || args.clientAuthRequired {
-		certProvider, err = newCertificateProvider(
+		cp, err = newCertificateProvider(
 			ctx,
 			secrets.InternalRef(tlsCfg.Secret.Source, tlsCfg.Secret.Selector),
 			args.secretsManager,
@@ -38,15 +38,11 @@ func ToTLSConfig(ctx context.Context, tlsCfg *config.TLS, opts ...Option) (*tls.
 		MinVersion: tlsCfg.MinVersion.OrDefault(),
 		NextProtos: []string{"h2", "http/1.1"},
 		GetCertificate: x.IfThenElse(args.serverAuthRequired,
-			func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
-				return certProvider.certificate(info)
-			},
+			func(info *tls.ClientHelloInfo) (*tls.Certificate, error) { return cp.certificate(info) },
 			nil,
 		),
 		GetClientCertificate: x.IfThenElse(args.clientAuthRequired,
-			func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-				return certProvider.certificate(info)
-			},
+			func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) { return cp.certificate(info) },
 			nil,
 		),
 	}

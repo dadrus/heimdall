@@ -36,7 +36,9 @@ func WithClientAuthentication(flag bool) Option {
 
 func WithSecretsManager(manager secrets.Manager) Option {
 	return func(o *options) {
-		o.secretsManager = manager
+		if manager != nil {
+			o.secretsManager = manager
+		}
 	}
 }
 

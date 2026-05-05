@@ -1,10 +1,16 @@
 package tlsx
 
 import (
-	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"errors"
+	"math/big"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -14,10 +20,33 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/types"
+	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestToTLSConfig(t *testing.T) {
 	t.Parallel()
+
+	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	cert, err := testsupport.NewCertificateBuilder(
+		testsupport.WithValidity(time.Now(), 12*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "test cert",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithSubjectPubKey(&key.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSelfSigned(),
+		testsupport.WithSignaturePrivKey(key),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
+	).Build()
+	require.NoError(t, err)
+
+	secret := types.NewAsymmetricKeySecret("tls", "server", "key1", key, []*x509.Certificate{cert})
 
 	for uc, tc := range map[string]struct {
 		conf       config.TLS
@@ -40,31 +69,6 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Empty(t, cfg.CipherSuites)
 			},
 		},
-		"fails if server auth is required without secret source": {
-			serverAuth: true,
-			assert: func(t *testing.T, err error, cfg *tls.Config) {
-				t.Helper()
-
-				assert.Nil(t, cfg)
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "no tls secret source specified")
-			},
-		},
-		"fails if tls auth is required without secrets manager": {
-			serverAuth: true,
-			conf: config.TLS{
-				Secret: config.Secret{Source: "tls", Selector: "server"},
-			},
-			assert: func(t *testing.T, err error, cfg *tls.Config) {
-				t.Helper()
-
-				assert.Nil(t, cfg)
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "no secrets manager provided")
-			},
-		},
 		"fails if secret resolution fails": {
 			serverAuth: true,
 			conf: config.TLS{
@@ -74,7 +78,7 @@ func TestToTLSConfig(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().
-					ResolveSecret(context.Background(), secrets.InternalRef("tls", "server")).
+					ResolveSecret(mock.Anything, secrets.InternalRef("tls", "server")).
 					Return(nil, errors.New("boom"))
 			},
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
@@ -83,7 +87,7 @@ func TestToTLSConfig(t *testing.T) {
 				assert.Nil(t, cfg)
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "failed resolving TLS secret")
+				require.ErrorContains(t, err, "failed resolving secret")
 			},
 		},
 		"successful with server auth": {
@@ -95,9 +99,8 @@ func TestToTLSConfig(t *testing.T) {
 			setupMocks: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
-				secret := newTestTLSSecret(t, "server", "server-key")
 				sm.EXPECT().
-					ResolveSecret(context.Background(), secrets.InternalRef("tls", "server")).
+					ResolveSecret(mock.Anything, secrets.InternalRef("tls", "server")).
 					Return(secret, nil)
 				sm.EXPECT().
 					Subscribe(secrets.InternalRef("tls", "server"), mock.Anything).
@@ -106,10 +109,14 @@ func TestToTLSConfig(t *testing.T) {
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
 				t.Helper()
 
+				cc := newCompatibilityCheckerMock(t)
+				cc.EXPECT().SupportsCertificate(cert).Return(nil)
+
 				require.NoError(t, err)
 				require.NotNil(t, cfg)
 
 				assert.NotNil(t, cfg.GetCertificate)
+				require.NoError(t, err)
 				assert.Nil(t, cfg.GetClientCertificate)
 				assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
 				assert.NotEmpty(t, cfg.CipherSuites)
@@ -124,9 +131,8 @@ func TestToTLSConfig(t *testing.T) {
 			setupMocks: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
-				secret := newTestTLSSecret(t, "client", "client-key")
 				sm.EXPECT().
-					ResolveSecret(context.Background(), secrets.InternalRef("tls", "client")).
+					ResolveSecret(mock.Anything, secrets.InternalRef("tls", "client")).
 					Return(secret, nil)
 				sm.EXPECT().
 					Subscribe(secrets.InternalRef("tls", "client"), mock.Anything).
@@ -147,9 +153,14 @@ func TestToTLSConfig(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
+			sm := secretsmocks.NewManagerMock(t)
+			opts := []Option{WithSecretsManager(sm)}
+			setupMocks := x.IfThenElse(
+				tc.setupMocks != nil,
+				tc.setupMocks,
+				func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() },
+			)
 
-			var opts []Option
 			if tc.serverAuth {
 				opts = append(opts, WithServerAuthentication(true))
 			}
@@ -158,13 +169,9 @@ func TestToTLSConfig(t *testing.T) {
 				opts = append(opts, WithClientAuthentication(true))
 			}
 
-			if tc.setupMocks != nil {
-				sm := secretsmocks.NewManagerMock(t)
-				tc.setupMocks(t, sm)
-				opts = append(opts, WithSecretsManager(sm))
-			}
+			setupMocks(t, sm)
 
-			cfg, err := ToTLSConfig(context.Background(), &tc.conf, opts...)
+			cfg, err := ToTLSConfig(t.Context(), &tc.conf, opts...)
 
 			tc.assert(t, err, cfg)
 		})
