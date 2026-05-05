@@ -20,68 +20,23 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
-	"sync/atomic"
-	"time"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/watcher"
-	"github.com/dadrus/heimdall/internal/x/tlsx"
+	"github.com/dadrus/heimdall/internal/keyregistry/v2"
+	"github.com/dadrus/heimdall/internal/secrets"
+	tlsxv2 "github.com/dadrus/heimdall/internal/x/tlsx/v2"
 )
 
-type conn struct {
-	net.Conn
-
-	writeTimeout  atomic.Int64
-	resetDeadline atomic.Bool
-	bytesWritten  atomic.Int32
-}
-
-func (c *conn) Write(data []byte) (int, error) {
-	if c.resetDeadline.Load() && c.bytesWritten.Load() > 0 {
-		c.bytesWritten.Store(0)
-
-		if err := c.Conn.SetWriteDeadline(time.Now().Add(time.Duration(c.writeTimeout.Load()))); err != nil {
-			return 0, err
-		}
-	}
-
-	bytesWritten, err := c.Conn.Write(data)
-	if c.resetDeadline.Load() {
-		//nolint:gosec
-		// no integer overflow during conversion possible
-		c.bytesWritten.Add(int32(bytesWritten))
-	}
-
-	return bytesWritten, err
-}
-
-func (c *conn) SetDeadline(deadline time.Time) error {
-	if deadline.Equal(time.Time{}) {
-		c.resetDeadline.Store(false)
-	} else {
-		c.writeTimeout.Store(int64(time.Until(deadline)))
-	}
-
-	return c.Conn.SetDeadline(deadline)
-}
-
-func (c *conn) SetWriteDeadline(deadline time.Time) error {
-	if deadline.Equal(time.Time{}) {
-		c.resetDeadline.Store(false)
-	} else {
-		c.writeTimeout.Store(int64(time.Until(deadline)))
-	}
-
-	return c.Conn.SetWriteDeadline(deadline)
-}
-
-func (c *conn) MonitorAndResetDeadlines(flag bool) {
-	c.resetDeadline.Store(flag)
-}
 
 type listener struct {
 	net.Listener
+}
+
+//nolint:gochecknoglobals // package-local seam for listener unit tests
+var listen = func(ctx context.Context, address string) (net.Listener, error) {
+	var lc net.ListenConfig
+
+	return lc.Listen(ctx, "tcp", address)
 }
 
 func (l *listener) Accept() (net.Conn, error) {
@@ -97,12 +52,10 @@ func New(
 	ctx context.Context,
 	address string,
 	tlsConf *config.TLS,
-	cw watcher.Watcher,
+	sm secrets.Manager,
 	ko keyregistry.KeyObserver,
 ) (net.Listener, error) {
-	var lc net.ListenConfig
-
-	listnr, err := lc.Listen(ctx, "tcp", address)
+	listnr, err := listen(ctx, address)
 	if err != nil {
 		return nil, err
 	}
@@ -110,26 +63,14 @@ func New(
 	listnr = &listener{Listener: listnr}
 
 	if tlsConf != nil {
-		return newTLSListener(tlsConf, listnr, cw, ko)
+		cfg, err := tlsxv2.ToServerTLSConfig(ctx, sm, tlsConf, ko)
+		if err != nil {
+			return nil, err
+		}
+
+		return tls.NewListener(listnr, cfg), nil
 	}
 
 	return listnr, nil
 }
 
-func newTLSListener(
-	tlsConf *config.TLS,
-	listener net.Listener,
-	cw watcher.Watcher,
-	ko keyregistry.KeyObserver,
-) (net.Listener, error) {
-	cfg, err := tlsx.ToTLSConfig(tlsConf,
-		tlsx.WithServerAuthentication(true),
-		tlsx.WithSecretsWatcher(cw),
-		tlsx.WithKeyObserver(ko),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return tls.NewListener(listener, cfg), nil
-}
