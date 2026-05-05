@@ -1,12 +1,18 @@
+secret_management:
+  tls_keys:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
+
 serve:
   port: 4469
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
   trusted_proxies:
     - 10.10.0.0/0
 
 management:
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys

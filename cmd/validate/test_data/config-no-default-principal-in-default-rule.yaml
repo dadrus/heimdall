@@ -1,4 +1,3 @@
-
 secret_management:
   inline_secrets:
     type: inline
@@ -10,12 +9,16 @@ secret_management:
     type: pem
     config:
       path: "${TEST_KEYSTORE_FILE}"
+  tls_keys:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
 
 serve:
   port: 4468
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
     min_version: TLS1.2
     cipher_suites:
       - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -36,8 +39,8 @@ serve:
 
 management:
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
 
 log:
   level: debug
