@@ -97,7 +97,7 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"no https in oauth2 client credentials authentication strategy": {
 			args:   []string{"--" + flags.Config, "test_data/config-no-https-in-oauth2-client-credentials-authentication-strategy.yaml"},
-			expErr: "failed validating 'oauth2_client_credentials' strategy",
+			expErr: "'token_url' scheme must be https",
 		},
 		"no https in http endpoint rule provider": {
 			args:   []string{"--" + flags.Config, "test_data/config-no-https-in-http-endpoint-provider.yaml"},

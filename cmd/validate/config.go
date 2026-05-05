@@ -33,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -71,6 +72,8 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
 	conf, err := config.NewConfiguration(
 		config.EnvVarPrefix(envPrefix),
 		config.ConfigurationPath(configPath),
@@ -80,10 +83,16 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	manager, err := secrets.NewManager(conf, logger, df)
+	if err != nil {
+		return err
+	}
+
 	appCtx := &appContext{
 		w:  &watcher.NoopWatcher{},
 		kr: &noopRegistry{},
-		d:  encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+		sm: manager,
+		d:  df,
 		v:  validator,
 		l:  logger,
 		c:  conf,

@@ -29,12 +29,13 @@ import (
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/keyregistry"
+	keyregistry "github.com/dadrus/heimdall/internal/keyregistry/v2"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher"
 )
@@ -87,6 +88,8 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
 	conf, err := config.NewConfiguration(
 		config.EnvVarPrefix(envPrefix),
 		config.ConfigurationPath(configPath),
@@ -96,12 +99,18 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	manager, err := secrets.NewManager(conf, logger, df)
+	if err != nil {
+		return err
+	}
+
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	appCtx := &appContext{
 		w:  &watcher.NoopWatcher{},
 		kr: &noopRegistry{},
-		d:  encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+		sm: manager,
+		d:  df,
 		v:  validator,
 		l:  logger,
 		c:  conf,

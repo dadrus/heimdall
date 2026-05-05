@@ -1,3 +1,15 @@
+secret_management:
+  inline_secrets:
+    type: inline
+    config:
+      client_credentials:
+        client_id: test-client-id
+        client_secret: test-client-secret
+  jwt_secrets:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
+
 serve:
   port: 4468
   tls:
@@ -114,8 +126,9 @@ mechanisms:
                 type: oauth2_client_credentials
                 config:
                   token_url: https://example.com/token
-                  client_id: foo
-                  client_secret: bar
+                  credentials:
+                    source: inline_secrets
+                    selector: client_credentials
               http_cache:
                 enabled: false
               retry:
@@ -247,9 +260,8 @@ mechanisms:
       config:
         signer:
           name: heimdall
-          key_id: "key"
-          key_store:
-            path: "${TEST_KEYSTORE_FILE}"
+          secret:
+            source: jwt_secrets
         ttl: 5m
         claims: |
           {"user": {{ quote .Subject.ID }} }
