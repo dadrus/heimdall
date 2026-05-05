@@ -29,9 +29,9 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(
 		fx.Annotate(
 			newManager,
-			fx.As(new(Manager)),
 			fx.OnStart(func(ctx context.Context, mgr *manager) error { return mgr.Start(ctx) }),
 			fx.OnStop(func(ctx context.Context, mgr *manager) error { return mgr.Stop(ctx) }),
 		),
+		func(mr *manager) Manager { return mr },
 	),
 )

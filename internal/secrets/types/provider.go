@@ -18,6 +18,9 @@ package types //nolint:revive
 
 import (
 	"context"
+
+	"github.com/dadrus/heimdall/internal/encoding"
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -30,6 +33,13 @@ type (
 		Source    string
 		Namespace string
 		Selectors []string
+	}
+
+	ProviderArgs struct {
+		SourceName     string
+		Config         map[string]any
+		Logger         zerolog.Logger
+		DecoderFactory encoding.DecoderFactory
 	}
 
 	Provider interface {

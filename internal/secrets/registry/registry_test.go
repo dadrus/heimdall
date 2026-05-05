@@ -51,7 +51,7 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("registers factory", func(t *testing.T) {
-		factory := FactoryFunc(func(_ ProviderArgs) (types.Provider, error) {
+		factory := FactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
 			return mocks.NewProviderMock(t), nil
 		})
 
@@ -86,7 +86,7 @@ func TestCreate(t *testing.T) {
 		},
 		"returns factory creation error": {
 			typ: "foo",
-			factory: FactoryFunc(func(_ ProviderArgs) (types.Provider, error) {
+			factory: FactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
 				return nil, errors.New("test error")
 			}),
 			assert: func(t *testing.T, provider types.Provider, err error) {
@@ -99,7 +99,7 @@ func TestCreate(t *testing.T) {
 		},
 		"creates provider with source name": {
 			typ: "foo",
-			factory: FactoryFunc(func(args ProviderArgs) (types.Provider, error) {
+			factory: FactoryFunc(func(args types.ProviderArgs) (types.Provider, error) {
 				provider := mocks.NewProviderMock(t)
 				provider.EXPECT().Name().Return(args.SourceName)
 				provider.EXPECT().Type().Return("foo")
@@ -123,7 +123,7 @@ func TestCreate(t *testing.T) {
 				Register(tc.typ, tc.factory)
 			}
 
-			provider, err := Create(tc.typ, ProviderArgs{
+			provider, err := Create(tc.typ, types.ProviderArgs{
 				SourceName: "source-a",
 				Config:     map[string]any{"x": "y"},
 			})

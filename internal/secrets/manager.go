@@ -66,7 +66,7 @@ func newManager(params managerParams) (*manager, error) {
 
 	providers := make([]managedProvider, 0, len(cfg.SecretManagement))
 	for provName, provCfg := range cfg.SecretManagement {
-		provider, err := registry.Create(provCfg.Type, registry.ProviderArgs{
+		provider, err := registry.Create(provCfg.Type, types.ProviderArgs{
 			SourceName:     provName,
 			Config:         provCfg.Config,
 			Logger:         params.Logger,

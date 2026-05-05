@@ -38,7 +38,7 @@ func TestNewManager(t *testing.T) {
 
 	const testProviderType = "test-provider"
 
-	factory := registry.FactoryFunc(func(args registry.ProviderArgs) (types.Provider, error) {
+	factory := registry.FactoryFunc(func(args types.ProviderArgs) (types.Provider, error) {
 		provider := typemocks.NewProviderMock(t)
 		provider.EXPECT().Name().Return(args.SourceName).Maybe()
 

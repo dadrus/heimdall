@@ -50,7 +50,7 @@ func Unregister(typ string) {
 	delete(factories, typ)
 }
 
-func Create(typ string, args ProviderArgs) (types.Provider, error) {
+func Create(typ string, args types.ProviderArgs) (types.Provider, error) {
 	factoriesMu.RLock()
 	factory, ok := factories[typ] //nolint:wsl_v5
 	factoriesMu.RUnlock()         //nolint:wsl_v5
