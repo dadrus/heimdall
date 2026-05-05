@@ -23,7 +23,6 @@ import (
 	"sync/atomic"
 
 	"github.com/rs/zerolog"
-	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
@@ -49,14 +48,6 @@ type manager struct {
 	bindings    map[bindingKey]*binding
 	started     bool
 	watchCancel context.CancelFunc
-}
-
-type managerParams struct {
-	fx.In
-
-	Config         *config.Configuration
-	Logger         zerolog.Logger
-	DecoderFactory encoding.DecoderFactory
 }
 
 func NewManager(
