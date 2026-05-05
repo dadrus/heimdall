@@ -79,10 +79,9 @@ func TestNewManager(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			mgr, err := newManager(managerParams{
-				Config: &config.Configuration{SecretManagement: tc.config},
-				Logger: zerolog.Nop(),
-			})
+			cfg := &config.Configuration{SecretManagement: tc.config}
+			logger := zerolog.Nop()
+			mgr, err := NewManager(cfg, logger, nil)
 
 			tc.assert(t, err, mgr)
 		})

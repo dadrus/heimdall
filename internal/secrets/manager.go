@@ -28,6 +28,8 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	_ "github.com/dadrus/heimdall/internal/secrets/providers/inline"
+	_ "github.com/dadrus/heimdall/internal/secrets/providers/pem"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x"
@@ -57,20 +59,18 @@ type managerParams struct {
 	DecoderFactory encoding.DecoderFactory
 }
 
-func newManager(params managerParams) (*manager, error) {
-	cfg := params.Config
-	if cfg == nil {
-		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"application config is not initialized")
-	}
-
+func NewManager(
+	cfg *config.Configuration,
+	logger zerolog.Logger,
+	df encoding.DecoderFactory,
+) (*manager, error) {
 	providers := make([]managedProvider, 0, len(cfg.SecretManagement))
 	for provName, provCfg := range cfg.SecretManagement {
 		provider, err := registry.Create(provCfg.Type, types.ProviderArgs{
 			SourceName:     provName,
 			Config:         provCfg.Config,
-			Logger:         params.Logger,
-			DecoderFactory: params.DecoderFactory,
+			Logger:         logger,
+			DecoderFactory: df,
 		})
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
@@ -84,7 +84,7 @@ func newManager(params managerParams) (*manager, error) {
 		})
 	}
 
-	return createManager(params.Logger, providers...), nil
+	return createManager(logger, providers...), nil
 }
 
 func createManager(logger zerolog.Logger, providers ...managedProvider) *manager {

@@ -20,15 +20,12 @@ import (
 	"context"
 
 	"go.uber.org/fx"
-
-	_ "github.com/dadrus/heimdall/internal/secrets/providers/inline"
-	_ "github.com/dadrus/heimdall/internal/secrets/providers/pem"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(
 		fx.Annotate(
-			newManager,
+			NewManager,
 			fx.OnStart(func(ctx context.Context, mgr *manager) error { return mgr.Start(ctx) }),
 			fx.OnStop(func(ctx context.Context, mgr *manager) error { return mgr.Stop(ctx) }),
 		),
