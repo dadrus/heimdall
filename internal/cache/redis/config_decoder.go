@@ -33,7 +33,6 @@ func decodeConfig(validator validation.Validator, input any, output any) error {
 				config.StringToByteSizeHookFunc(),
 				config.DecodeTLSCipherSuiteHookFunc,
 				config.DecodeTLSMinVersionHookFunc,
-				decodeCredentialsHookFunc,
 			),
 			Result:      output,
 			ErrorUnused: true,

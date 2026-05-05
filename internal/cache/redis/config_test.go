@@ -22,16 +22,9 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
-	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	watchermocks "github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/redis/rueidis"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -39,70 +32,12 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keyregistry/v2"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 )
-
-func TestFileCredentialsReload(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	testDir := t.TempDir()
-
-	cf1, err := os.Create(filepath.Join(testDir, "credentials1.yaml"))
-	require.NoError(t, err)
-
-	_, err = cf1.WriteString(`
-username: oof
-password: rab
-`)
-	require.NoError(t, err)
-
-	cf2, err := os.Create(filepath.Join(testDir, "credentials2.yaml"))
-	require.NoError(t, err)
-
-	_, err = cf2.WriteString(`
-username: foo
-password: bar
-`)
-	require.NoError(t, err)
-
-	cf3, err := os.Create(filepath.Join(testDir, "credentials3.yaml"))
-	require.NoError(t, err)
-
-	_, err = cf3.WriteString(`
-  foo: bar
-  bar: foo
-`)
-	require.NoError(t, err)
-
-	fc := &fileCredentials{Path: cf1.Name()}
-
-	// WHEN
-	err = fc.load()
-
-	// THEN
-	require.NoError(t, err)
-
-	assert.Equal(t, "oof", fc.creds.Username)
-	assert.Equal(t, "rab", fc.creds.Password)
-
-	// WHEN
-	fc.Path = cf2.Name()
-	fc.OnChanged(log.Logger)
-
-	// THEN
-	assert.Equal(t, "foo", fc.creds.Username)
-	assert.Equal(t, "bar", fc.creds.Password)
-
-	// WHEN
-	fc.Path = cf3.Name()
-	fc.OnChanged(log.Logger)
-
-	// THEN
-	assert.Equal(t, "foo", fc.creds.Username)
-	assert.Equal(t, "bar", fc.creds.Password)
-}
 
 func TestBaseConfigClientOptions(t *testing.T) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -115,24 +50,30 @@ func TestBaseConfigClientOptions(t *testing.T) {
 		cfg   baseConfig
 		setup func(
 			t *testing.T,
-			watcher *watchermocks.WatcherMock,
 			sm *secretsmocks.ManagerMock,
 			observer *keyregistrymocks.RegistryMock,
 		)
 		assert func(t *testing.T, err error, opts rueidis.ClientOption)
 	}{
-		"registers external credentials with watcher": {
+		"successfully resolves credentials": {
 			cfg: baseConfig{
-				TLS: tlsConfig{Disabled: true},
-				Credentials: &fileCredentials{
-					Path:  "/tmp/credentials.yaml",
-					creds: &staticCredentials{Username: "foo", Password: "bar"},
-				},
+				TLS:         tlsConfig{Disabled: true},
+				Credentials: &config.Secret{Source: "creds", Selector: "redis"},
 			},
-			setup: func(t *testing.T, watcher *watchermocks.WatcherMock, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
 				t.Helper()
 
-				watcher.EXPECT().Add("/tmp/credentials.yaml", mock.Anything).Return(nil)
+				secret := secrettypes.NewCredentials("inline", "foo", map[string]secrets.Secret{
+					"username": secrettypes.NewStringSecret("creds", "redis/username", "foo"),
+					"password": secrettypes.NewStringSecret("creds", "redis/password", "bar"),
+				})
+
+				sm.EXPECT().
+					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
+					Return(secret, nil)
+				sm.EXPECT().
+					Subscribe(secrets.InternalRef("creds", "redis"), mock.Anything).
+					Return(func() {}, nil)
 			},
 			assert: func(t *testing.T, err error, opts rueidis.ClientOption) {
 				t.Helper()
@@ -146,24 +87,23 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				assert.Equal(t, "bar", creds.Password)
 			},
 		},
-		"returns credentials watcher registration error": {
+		"fails to resolve credentials": {
 			cfg: baseConfig{
-				TLS: tlsConfig{Disabled: true},
-				Credentials: &fileCredentials{
-					Path:  "/tmp/credentials.yaml",
-					creds: &staticCredentials{Username: "foo", Password: "bar"},
-				},
+				TLS:         tlsConfig{Disabled: true},
+				Credentials: &config.Secret{Source: "creds", Selector: "redis"},
 			},
-			setup: func(t *testing.T, watcher *watchermocks.WatcherMock, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
 				t.Helper()
 
-				watcher.EXPECT().Add("/tmp/credentials.yaml", mock.Anything).Return(errors.New("boom"))
+				sm.EXPECT().
+					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
+					Return(nil, errors.New("boom"))
 			},
 			assert: func(t *testing.T, err error, _ rueidis.ClientOption) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "failed registering client credentials watcher")
+				require.ErrorContains(t, err, "failed resolving redis credentials")
 			},
 		},
 		"fails if tls secret cannot be resolved": {
@@ -174,7 +114,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					},
 				},
 			},
-			setup: func(t *testing.T, _ *watchermocks.WatcherMock, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
 				t.Helper()
 
 				sm.EXPECT().
@@ -197,7 +137,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					},
 				},
 			},
-			setup: func(t *testing.T, _ *watchermocks.WatcherMock, sm *secretsmocks.ManagerMock, observer *keyregistrymocks.RegistryMock) {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, observer *keyregistrymocks.RegistryMock) {
 				t.Helper()
 
 				sm.EXPECT().
@@ -226,17 +166,15 @@ func TestBaseConfigClientOptions(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			watcher := watchermocks.NewWatcherMock(t)
 			sm := secretsmocks.NewManagerMock(t)
 			observer := keyregistrymocks.NewRegistryMock(t)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Watcher().Maybe().Return(watcher)
 			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(observer)
 
 			if tc.setup != nil {
-				tc.setup(t, watcher, sm, observer)
+				tc.setup(t, sm, observer)
 			}
 
 			opts, err := tc.cfg.clientOptions(appCtx)

@@ -21,20 +21,17 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net"
-	"os"
-	"sync"
 	"time"
 
 	"github.com/ccoveille/go-safecast/v2"
 	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
-	"github.com/rs/zerolog"
-	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	tlsxv2 "github.com/dadrus/heimdall/internal/x/tlsx/v2"
 )
@@ -42,88 +39,15 @@ import (
 // for test purposes only.
 var rootCertPool *x509.CertPool //nolint:gochecknoglobals
 
+type redisCredentials struct {
+	Username string `mapstructure:"username" validate:"required"`
+	Password string `mapstructure:"password" validate:"required"`
+}
+
 type clientCache struct {
 	Disabled          bool              `mapstructure:"disabled"`
 	TTL               time.Duration     `mapstructure:"ttl"`
 	SizePerConnection bytesize.ByteSize `mapstructure:"size_per_connection"`
-}
-
-type credentials interface {
-	register(cw watcher.Watcher) error
-	get() rueidis.AuthCredentials
-}
-
-type staticCredentials struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-}
-
-func (c *staticCredentials) register(_ watcher.Watcher) error { return nil }
-
-func (c *staticCredentials) get() rueidis.AuthCredentials {
-	return rueidis.AuthCredentials{
-		Username: c.Username,
-		Password: c.Password,
-	}
-}
-
-type fileCredentials struct {
-	Path string
-
-	creds *staticCredentials
-	mut   sync.Mutex
-}
-
-func (c *fileCredentials) OnChanged(log zerolog.Logger) {
-	if err := c.load(); err != nil {
-		log.Warn().Err(err).
-			Str("_source", "redis-cache").
-			Str("_file", c.Path).
-			Msg("Config reload failed")
-	} else {
-		log.Info().
-			Str("_source", "redis-cache").
-			Str("_file", c.Path).
-			Msg("Config reloaded")
-	}
-}
-
-func (c *fileCredentials) load() error {
-	cf, err := os.Open(c.Path)
-	if err != nil {
-		return err
-	}
-
-	var creds staticCredentials
-
-	dec := yaml.NewDecoder(cf)
-	dec.KnownFields(true)
-
-	if err = dec.Decode(&creds); err != nil {
-		return err
-	}
-
-	c.mut.Lock()
-	c.creds = &creds
-	c.mut.Unlock()
-
-	return nil
-}
-
-func (c *fileCredentials) register(cw watcher.Watcher) error {
-	if err := cw.Add(c.Path, c); err != nil {
-		return errorchain.NewWithMessagef(pipeline.ErrInternal,
-			"failed registering client credentials watcher on %s for Redis client", c.Path).CausedBy(err)
-	}
-
-	return nil
-}
-
-func (c *fileCredentials) get() rueidis.AuthCredentials {
-	c.mut.Lock()
-	defer c.mut.Unlock()
-
-	return c.creds.get()
 }
 
 type tlsConfig struct {
@@ -133,7 +57,7 @@ type tlsConfig struct {
 }
 
 type baseConfig struct {
-	Credentials   credentials        `mapstructure:"credentials"`
+	Credentials   *config.Secret     `mapstructure:"credentials"`
 	ClientCache   clientCache        `mapstructure:"client_cache"`
 	BufferLimit   config.BufferLimit `mapstructure:"buffer_limit"`
 	Timeout       config.Timeout     `mapstructure:"timeout"`
@@ -142,28 +66,14 @@ type baseConfig struct {
 }
 
 func (c baseConfig) clientOptions(app app.Context) (rueidis.ClientOption, error) {
-	var (
-		tlsCfg *tls.Config
-		err    error
-	)
-
-	if !c.TLS.Disabled {
-		tlsCfg, err = tlsxv2.ToTLSConfig(context.Background(), &c.TLS.TLS,
-			tlsxv2.WithClientAuthentication(c.TLS.Secret.Source != ""),
-			tlsxv2.WithSecretsManager(app.SecretsManager()),
-			tlsxv2.WithKeyObserver(app.KeyRegistry()),
-		)
-		if err != nil {
-			return rueidis.ClientOption{}, err
-		}
-
-		tlsCfg.RootCAs = rootCertPool
+	tlsCfg, err := c.tlsConfig(app)
+	if err != nil {
+		return rueidis.ClientOption{}, err
 	}
 
-	if c.Credentials != nil {
-		if err = c.Credentials.register(app.Watcher()); err != nil {
-			return rueidis.ClientOption{}, err
-		}
+	cr, err := c.credentialsResolver(app)
+	if err != nil {
+		return rueidis.ClientOption{}, err
 	}
 
 	return rueidis.ClientOption{
@@ -174,26 +84,109 @@ func (c baseConfig) clientOptions(app app.Context) (rueidis.ClientOption, error)
 		ReadBufferEachConn:  safecast.MustConvert[int](uint64(c.BufferLimit.Read)),
 		ConnWriteTimeout:    c.Timeout.Write,
 		MaxFlushDelay:       c.MaxFlushDelay,
-
-		AuthCredentialsFn: func(_ rueidis.AuthCredentialsContext) (rueidis.AuthCredentials, error) {
-			if c.Credentials != nil {
-				return c.Credentials.get(), nil
-			}
-
-			return rueidis.AuthCredentials{}, nil
-		},
-
-		DialCtxFn: func(ctx context.Context, addr string, dialer *net.Dialer, _ *tls.Config) (net.Conn, error) {
-			if tlsCfg != nil {
-				td := tls.Dialer{
-					NetDialer: dialer,
-					Config:    tlsCfg,
-				}
-
-				return td.DialContext(ctx, "tcp", addr)
-			}
-
-			return dialer.DialContext(ctx, "tcp", addr)
-		},
+		AuthCredentialsFn:   authCredentials(cr),
+		DialCtxFn:           dialCtx(tlsCfg),
 	}, nil
+}
+
+func (c baseConfig) tlsConfig(appCtx app.Context) (*tls.Config, error) {
+	if c.TLS.Disabled {
+		return nil, nil //nolint:nilnil
+	}
+
+	tlsCfg, err := tlsxv2.ToClientTLSConfig(
+		context.Background(),
+		appCtx.SecretsManager(),
+		&c.TLS.TLS,
+		appCtx.KeyRegistry(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsCfg.RootCAs = rootCertPool
+
+	return tlsCfg, nil
+}
+
+func (c baseConfig) credentialsResolver(
+	appCtx app.Context,
+) (*cache.CredentialsResolver[rueidis.AuthCredentials], error) {
+	if c.Credentials == nil {
+		return nil, nil //nolint:nilnil
+	}
+
+	cr := &cache.CredentialsResolver[rueidis.AuthCredentials]{
+		Manager:   appCtx.SecretsManager(),
+		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
+		Converter: toRedisCredentials,
+		MissingSecretPolicy: cache.KeepPrevious[
+			secrets.Credentials,
+			rueidis.AuthCredentials,
+		]{},
+	}
+
+	if err := cr.Start(context.Background()); err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving redis credentials",
+		).CausedBy(err)
+	}
+
+	return cr, nil
+}
+
+func toRedisCredentials(creds secrets.Credentials) (rueidis.AuthCredentials, error) {
+	var data redisCredentials
+
+	if err := creds.Decode(&data); err != nil {
+		return rueidis.AuthCredentials{}, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed decoding redis credentials",
+		).CausedBy(err)
+	}
+
+	return rueidis.AuthCredentials{
+		Username: data.Username,
+		Password: data.Password,
+	}, nil
+}
+
+func authCredentials(
+	cr *cache.CredentialsResolver[rueidis.AuthCredentials],
+) func(credentialsContext rueidis.AuthCredentialsContext) (rueidis.AuthCredentials, error) {
+	return func(_ rueidis.AuthCredentialsContext) (rueidis.AuthCredentials, error) {
+		if cr == nil {
+			return rueidis.AuthCredentials{}, nil
+		}
+
+		creds, ok := cr.Get()
+		if !ok {
+			return rueidis.AuthCredentials{}, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"redis credentials are not available",
+			)
+		}
+
+		return creds, nil
+	}
+}
+
+func dialCtx(tlsCfg *tls.Config) func(context.Context, string, *net.Dialer, *tls.Config) (conn net.Conn, err error) {
+	type Dialer interface {
+		DialContext(ctx context.Context, network, addr string) (net.Conn, error)
+	}
+
+	return func(ctx context.Context, addr string, dialer *net.Dialer, _ *tls.Config) (conn net.Conn, err error) {
+		var cd Dialer = dialer
+
+		if tlsCfg != nil {
+			cd = &tls.Dialer{
+				NetDialer: dialer,
+				Config:    tlsCfg,
+			}
+		}
+
+		return cd.DialContext(ctx, "tcp", addr)
+	}
 }
