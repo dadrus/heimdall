@@ -71,6 +71,22 @@
         }
       }
     },
+    "secretReference": {
+      "description": "Reference to a secret",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        }
+      }
+    },
     "keyStore": {
       "description": "Key store holding the keys and certificates",
       "type": "object",
@@ -93,12 +109,9 @@
       "description": "TLS Configuration",
       "type": "object",
       "properties": {
-        "key_store": {
-          "$ref": "#/definitions/keyStore"
-        },
-        "key_id": {
-          "description": "The key id referencing the entry in the key store",
-          "type": "string"
+        "secret": {
+          "description": "The secret containing the TLS certificate and key",
+          "$ref": "#/definitions/secretReference"
         },
         "min_version": {
           "title": "minimum TLS version to support",
@@ -194,34 +207,8 @@
           ],
           "properties": {
             "credentials": {
-              "oneOf": [
-                {
-                  "description": "Path to the file with credentials in the format defined below",
-                  "type": "object",
-                  "properties": {
-                    "path": {
-                      "description": "Path to the actual credentials file",
-                      "type": "string"
-                    }
-                  }
-                },
-                {
-                  "description": "Credentials for Cache connection purposes",
-                  "type": "object",
-                  "properties": {
-                    "username": {
-                      "description": "Username for connection",
-                      "type": "string",
-                      "default": ""
-                    },
-                    "password": {
-                      "description": "Password for connection",
-                      "type": "string",
-                      "default": ""
-                    }
-                  }
-                }
-              ]
+              "description": "The credentials to use for authentication. If not set, no authentication is performed.",
+              "$ref": "#/definitions/secretReference"
             },
             "client_cache": {
               "description": "Local client cache configuration to enhance performance and reduce roundtrips",
@@ -743,18 +730,13 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "client_id",
-        "client_secret",
+        "credentials",
         "token_url"
       ],
       "properties": {
-        "client_id": {
-          "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant",
-          "type": "string"
-        },
-        "client_secret": {
-          "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
-          "type": "string"
+        "credentials": {
+          "description": "The OAuth 2.0 Client Credentials Grant credentials",
+          "$ref": "#/definitions/secretReference"
         },
         "auth_method": {
           "description": "How to transfer the client_id and client_secret to the oauth provider",
@@ -1107,19 +1089,14 @@
         "config": {
           "type": "object",
           "properties": {
-            "user": {
-              "description": "user name for basic auth",
-              "type": "string"
-            },
-            "password": {
-              "description": "password for basic auth",
-              "type": "string"
+            "credentials": {
+              "description": "The username and password to use for basic authentication",
+              "$ref": "#/definitions/secretReference"
             }
           },
           "additionalProperties": false,
           "required": [
-            "user",
-            "password"
+            "credentials"
           ]
         }
       },
@@ -1141,9 +1118,9 @@
               "description": "The name of the api key",
               "type": "string"
             },
-            "value": {
+            "secret": {
               "description": "The value of the api key",
-              "type": "string"
+              "$ref": "#/definitions/secretReference"
             },
             "in": {
               "description": "How the api key should be transferred",
@@ -1158,7 +1135,7 @@
           "additionalProperties": false,
           "required": [
             "name",
-            "value",
+            "secret",
             "in"
           ]
         }
@@ -1627,17 +1604,12 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "user_id",
-            "password"
+            "credentials"
           ],
           "properties": {
-            "user_id": {
-              "description": "The user id, respectively the user name for the authentication scheme",
-              "type": "string"
-            },
-            "password": {
-              "description": "The password for the client_id for the authentication scheme",
-              "type": "string"
+            "credentials": {
+              "description": "The username and password to use for basic authentication",
+              "$ref": "#/definitions/secretReference"
             },
             "error_signaling": {
               "$ref": "#/definitions/basicAuthErrorSignaling"
@@ -1908,7 +1880,7 @@
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "key_store"
+                "secret"
               ],
               "properties": {
                 "name": {
@@ -1916,12 +1888,9 @@
                   "type": "string",
                   "default": "heimdall"
                 },
-                "key_store": {
-                  "$ref": "#/definitions/keyStore"
-                },
-                "key_id": {
-                  "description": "The key id referencing the entry in the key store.",
-                  "type": "string"
+                "secret": {
+                  "description": "Reference to a secret in the secret store to sign the JWTs with.",
+                  "$ref": "#/definitions/secretReference"
                 }
               }
             },
