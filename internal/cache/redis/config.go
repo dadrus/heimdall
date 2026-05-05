@@ -36,7 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/tlsx"
+	tlsxv2 "github.com/dadrus/heimdall/internal/x/tlsx/v2"
 )
 
 // for test purposes only.
@@ -148,10 +148,10 @@ func (c baseConfig) clientOptions(app app.Context) (rueidis.ClientOption, error)
 	)
 
 	if !c.TLS.Disabled {
-		tlsCfg, err = tlsx.ToTLSConfig(&c.TLS.TLS,
-			tlsx.WithClientAuthentication(len(c.TLS.KeyStore.Path) != 0),
-			tlsx.WithSecretsWatcher(app.Watcher()),
-			tlsx.WithKeyObserver(app.KeyRegistry()),
+		tlsCfg, err = tlsxv2.ToTLSConfig(context.Background(), &c.TLS.TLS,
+			tlsxv2.WithClientAuthentication(c.TLS.Secret.Source != ""),
+			tlsxv2.WithSecretsManager(app.SecretsManager()),
+			tlsxv2.WithKeyObserver(app.KeyRegistry()),
 		)
 		if err != nil {
 			return rueidis.ClientOption{}, err

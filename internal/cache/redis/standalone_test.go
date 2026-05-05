@@ -39,6 +39,9 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -84,11 +87,11 @@ func TestStandaloneCache(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
-		config     func(t *testing.T, mock *mocks.WatcherMock) []byte
+		config     func(t *testing.T, mock *mocks.WatcherMock, sm *secretsmocks.ManagerMock) []byte
 		assert     func(t *testing.T, err error, cch types.Cache)
 	}{
 		"empty config": {
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				return []byte(``)
@@ -102,7 +105,7 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"empty address provided": {
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				return []byte(`address: ""`)
@@ -116,7 +119,7 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"config contains unsupported properties": {
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				return []byte(`foo: bar`)
@@ -130,7 +133,7 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"not existing address provided": {
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				return []byte(`address: "foo.local:12345"`)
@@ -144,7 +147,7 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation without TLS and without credentials": {
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				db := miniredis.RunT(t)
@@ -167,7 +170,7 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation without TLS but with static credentials": {
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				db := miniredis.RunT(t)
@@ -190,7 +193,7 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"cache creation fails due to failing watcher registration for external credentials": {
-			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, wm *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				cf, err := os.Create(filepath.Join(testDir, "credentials.yaml"))
@@ -214,22 +217,25 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"with failing TLS config": {
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, sm *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
-				return []byte(`{ tls: { key_store: { path: /does/not/exist.pem } }, address: "foo.local:12345"}`)
+				sm.EXPECT().
+					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
+					Return(nil, errors.New("boom"))
+
+				return []byte(`{ tls: { secret: { source: redis, selector: tls } }, address: "foo.local:12345"}`)
 			},
 			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "failed loading keystore")
+				require.ErrorContains(t, err, "failed resolving TLS secret")
 			},
 		},
 		"with TLS enforced, but disabled": {
 			enforceTLS: true,
-			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				return []byte(
@@ -245,15 +251,13 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation with TLS and external credentials": {
-			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, wm *mocks.WatcherMock, _ *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
 				cf, err := os.Create(filepath.Join(testDir, "credentials1.yaml"))
 				require.NoError(t, err)
 
-				_, err = cf.WriteString(`
-  password: rab
-`)
+				_, err = cf.WriteString(`password: rab`)
 				require.NoError(t, err)
 
 				rootCertPool = x509.NewCertPool()
@@ -292,10 +296,17 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation with mutual TLS": {
-			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
+			config: func(t *testing.T, wm *mocks.WatcherMock, sm *secretsmocks.ManagerMock) []byte {
 				t.Helper()
 
-				wm.EXPECT().Add(mock.Anything, mock.Anything).Return(nil)
+				secret := secrettypes.NewAsymmetricKeySecret("redis", "tls", "key1", key, []*x509.Certificate{cert})
+
+				sm.EXPECT().
+					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
+					Return(secret, nil)
+				sm.EXPECT().
+					Subscribe(secrets.InternalRef("redis", "tls"), mock.Anything).
+					Return(func() {}, nil)
 
 				rootCertPool = x509.NewCertPool()
 				rootCertPool.AddCert(cert)
@@ -315,7 +326,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				t.Cleanup(db.Close)
 
-				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, tls: {key_store: {path: " + pemFile.Name() + "}}}")
+				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, tls: {secret: {source: redis, selector: tls}}}")
 			},
 			assert: func(t *testing.T, err error, cch types.Cache) {
 				t.Helper()
@@ -336,6 +347,7 @@ func TestStandaloneCache(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			wm := mocks.NewWatcherMock(t)
+			sm := secretsmocks.NewManagerMock(t)
 			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
 
 			validator, err := validation.NewValidator(
@@ -344,13 +356,14 @@ func TestStandaloneCache(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			conf, err := testsupport.DecodeTestConfig(tc.config(t, wm))
+			conf, err := testsupport.DecodeTestConfig(tc.config(t, wm, sm))
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Validator().Return(validator)
 			appCtx.EXPECT().Watcher().Maybe().Return(wm)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 
 			// WHEN
 			cch, err := NewStandaloneCache(appCtx, conf)
