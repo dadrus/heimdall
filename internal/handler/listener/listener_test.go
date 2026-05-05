@@ -25,7 +25,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
-	"io"
 	"math/big"
 	"net"
 	"testing"
@@ -47,36 +46,41 @@ import (
 
 func TestNew(t *testing.T) {
 	secret := newTLSSecret(t)
+	address := "127.0.0.1:8443"
 
-	tests := map[string]struct {
+	for uc, tc := range map[string]struct {
 		serviceConf config.ServeConfig
-		setupMocks  func(t *testing.T) (secrets.Manager, keyregistry.KeyObserver, func())
+		setup       func(t *testing.T, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock)
 		listener    net.Listener
 		listenErr   error
-		assert      func(t *testing.T, err error, ln net.Listener, port string)
+		assert      func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string)
 	}{
 		"creation fails": {
 			serviceConf: config.ServeConfig{
 				Host: ".....",
 			},
 			listenErr: errors.New("no such host"),
-			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
+			assert: func(t *testing.T, err error, _ net.Listener, _ net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "no such host")
+				assert.Equal(t, address, capturedAddress)
 			},
 		},
 		"without tls": {
 			serviceConf: config.ServeConfig{Host: "127.0.0.1"},
-			listener:    newStaticListener(),
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+			listener:    &acceptRecorder{},
+			assert: func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, ln)
-				assert.Equal(t, "tcp", ln.Addr().Network())
-				assert.Equal(t, "127.0.0.1:"+port, ln.Addr().String())
+				assert.Equal(t, address, capturedAddress)
+
+				wrapped, ok := ln.(*listener)
+				require.True(t, ok)
+				assert.Same(t, base, wrapped.Listener)
 			},
 		},
 		"fails if secret cannot be resolved": {
@@ -85,23 +89,21 @@ func TestNew(t *testing.T) {
 					Secret: config.Secret{Source: "listener", Selector: "tls"},
 				},
 			},
-			listener: newStaticListener(),
-			setupMocks: func(t *testing.T) (secrets.Manager, keyregistry.KeyObserver, func()) {
+			listener: &acceptRecorder{},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.KeyObserverMock) {
 				t.Helper()
 
-				sm := secretsmocks.NewManagerMock(t)
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("listener", "tls")).
 					Return(nil, errors.New("boom"))
-
-				return sm, nil, func() {}
 			},
-			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
+			assert: func(t *testing.T, err error, _ net.Listener, _ net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed resolving TLS secret")
+				assert.Equal(t, address, capturedAddress)
 			},
 		},
 		"successful with secret backed tls config": {
@@ -111,12 +113,9 @@ func TestNew(t *testing.T) {
 					MinVersion: tls.VersionTLS12,
 				},
 			},
-			listener: newStaticListener(),
-			setupMocks: func(t *testing.T) (secrets.Manager, keyregistry.KeyObserver, func()) {
+			listener: &acceptRecorder{},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock) {
 				t.Helper()
-
-				sm := secretsmocks.NewManagerMock(t)
-				ko := keyregistrymocks.NewKeyObserverMock(t)
 
 				ko.EXPECT().
 					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
@@ -133,27 +132,26 @@ func TestNew(t *testing.T) {
 				sm.EXPECT().
 					Subscribe(secrets.InternalRef("listener", "tls"), mock.Anything).
 					Return(func() {}, nil)
-
-				return sm, ko, func() {}
 			},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+			assert: func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, ln)
-				assert.Equal(t, "tcp", ln.Addr().Network())
-				assert.Contains(t, ln.Addr().String(), port)
+				assert.Equal(t, address, capturedAddress)
+				assert.NotSame(t, base, ln)
 			},
 		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	}{
+		t.Run(uc, func(t *testing.T) {
 			prevListen := listen
+			var capturedAddress string
 
 			t.Cleanup(func() { listen = prevListen })
 
-			listen = func(_ context.Context, _ string) (net.Listener, error) {
+			listen = func(_ context.Context, currentAddress string) (net.Listener, error) {
+				capturedAddress = currentAddress
+
 				if tc.listenErr != nil {
 					return nil, tc.listenErr
 				}
@@ -161,28 +159,22 @@ func TestNew(t *testing.T) {
 				return tc.listener, nil
 			}
 
-			var (
-				sm      secrets.Manager
-				ko      keyregistry.KeyObserver
-				cleanup = func() {}
-			)
+			sm := secretsmocks.NewManagerMock(t)
+			ko := keyregistrymocks.NewKeyObserverMock(t)
 
-			if tc.setupMocks != nil {
-				sm, ko, cleanup = tc.setupMocks(t)
+			if tc.setup != nil {
+				tc.setup(t, sm, ko)
 			}
 
-			port := "8443"
-			ln, err := New(t.Context(), "127.0.0.1:"+port, tc.serviceConf.TLS, sm, ko)
+			ln, err := New(t.Context(), address, tc.serviceConf.TLS, sm, ko)
 
 			defer func() {
-				cleanup()
-
 				if ln != nil {
 					ln.Close()
 				}
 			}()
 
-			tc.assert(t, err, ln, port)
+			tc.assert(t, err, ln, tc.listener, capturedAddress)
 		})
 	}
 }
@@ -236,24 +228,6 @@ type acceptRecorder struct {
 func (r *acceptRecorder) Accept() (net.Conn, error) { return r.conn, r.err }
 func (r *acceptRecorder) Close() error              { return nil }
 func (r *acceptRecorder) Addr() net.Addr            { return &net.TCPAddr{} }
-
-
-type staticListener struct {
-	addr net.Addr
-}
-
-func newStaticListener() net.Listener {
-	return &staticListener{
-		addr: &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 8443,
-		},
-	}
-}
-
-func (l *staticListener) Accept() (net.Conn, error) { return nil, io.EOF }
-func (l *staticListener) Close() error              { return nil }
-func (l *staticListener) Addr() net.Addr            { return l.addr }
 
 func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {
 	t.Helper()
