@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
 	"github.com/dadrus/heimdall/internal/handler/profiling"
-	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/keyregistry/v2"
 	"github.com/dadrus/heimdall/internal/otel"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
@@ -61,10 +61,15 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	otel.Module,
 	watcher.Module,
 	keyregistry.Module,
+	secrets.Module,
+	fx.Provide(func(validator validation.Validator) encoding.DecoderFactory {
+		return encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+	}),
 	fx.Provide(func(
 		watcher watcher.Watcher,
 		kr keyregistry.Registry,
 		sm secrets.Manager,
+		decoderFactory encoding.DecoderFactory,
 		validator validation.Validator,
 		logger zerolog.Logger,
 		meter metric.Meter,
@@ -74,7 +79,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 			w:  watcher,
 			kr: kr,
 			sm: sm,
-			d:  encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+			d:  decoderFactory,
 			v:  validator,
 			l:  logger,
 			m:  meter,
@@ -82,7 +87,6 @@ var Module = fx.Options( //nolint:gochecknoglobals
 		}
 	}),
 	cache.Module,
-	secrets.Module,
 	mechanisms.Module,
 	rules.Module,
 	management.Module,
