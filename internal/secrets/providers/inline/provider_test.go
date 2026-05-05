@@ -17,7 +17,6 @@
 package inline
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -95,12 +94,12 @@ func TestNewProvider(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			provider, err := newProvider(registry.ProviderArgs{
+			prv, err := newProvider(types.ProviderArgs{
 				SourceName: "inline-defaults",
 				Config:     tc.conf,
 			})
 
-			tc.assert(t, err, provider)
+			tc.assert(t, err, prv)
 		})
 	}
 }
@@ -108,9 +107,20 @@ func TestNewProvider(t *testing.T) {
 func TestProviderResolveSecret(t *testing.T) {
 	t.Parallel()
 
-	provider := newTestProvider(t)
+	prv, err := newProvider(types.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+			"api_other": "other",
+			"github": map[string]any{
+				"client_id":     "heimdall",
+				"client_secret": "secret",
+			},
+		},
+	})
+	require.NoError(t, err)
 
-	secret, err := provider.ResolveSecret(context.Background(), types.Selector{Value: "api_token"})
+	secret, err := prv.ResolveSecret(t.Context(), types.Selector{Value: "api_token"})
 	require.NoError(t, err)
 
 	stringSecret, ok := secret.(types.StringSecret)
@@ -124,9 +134,20 @@ func TestProviderResolveSecret(t *testing.T) {
 func TestProviderResolveSecretSet(t *testing.T) {
 	t.Parallel()
 
-	provider := newTestProvider(t)
+	prv, err := newProvider(types.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+			"api_other": "other",
+			"github": map[string]any{
+				"client_id":     "heimdall",
+				"client_secret": "secret",
+			},
+		},
+	})
+	require.NoError(t, err)
 
-	secrets, err := provider.ResolveSecretSet(context.Background(), types.Selector{})
+	secrets, err := prv.ResolveSecretSet(t.Context(), types.Selector{})
 	require.NoError(t, err)
 	require.Len(t, secrets, 2)
 
@@ -142,9 +163,20 @@ func TestProviderResolveSecretSet(t *testing.T) {
 func TestProviderResolveSecretSetNonRootUnsupported(t *testing.T) {
 	t.Parallel()
 
-	provider := newTestProvider(t)
+	prv, err := newProvider(types.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+			"api_other": "other",
+			"github": map[string]any{
+				"client_id":     "heimdall",
+				"client_secret": "secret",
+			},
+		},
+	})
+	require.NoError(t, err)
 
-	secrets, err := provider.ResolveSecretSet(context.Background(), types.Selector{Value: "api_token"})
+	secrets, err := prv.ResolveSecretSet(t.Context(), types.Selector{Value: "api_token"})
 	require.Nil(t, secrets)
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrUnsupportedOperation)
@@ -159,9 +191,20 @@ func TestProviderResolveCredentials(t *testing.T) {
 		ClientSecret string `mapstructure:"client_secret"`
 	}
 
-	provider := newTestProvider(t)
+	prv, err := newProvider(types.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+			"api_other": "other",
+			"github": map[string]any{
+				"client_id":     "heimdall",
+				"client_secret": "secret",
+			},
+		},
+	})
+	require.NoError(t, err)
 
-	credentials, err := provider.ResolveCredentials(context.Background(), types.Selector{Value: "github"})
+	credentials, err := prv.ResolveCredentials(t.Context(), types.Selector{Value: "github"})
 	require.NoError(t, err)
 	require.Equal(t, "inline-defaults", credentials.Source())
 	require.Equal(t, "github", credentials.Selector())
@@ -175,15 +218,26 @@ func TestProviderResolveCredentials(t *testing.T) {
 func TestProviderResolveMissing(t *testing.T) {
 	t.Parallel()
 
-	provider := newTestProvider(t)
+	prv, err := newProvider(types.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+			"api_other": "other",
+			"github": map[string]any{
+				"client_id":     "heimdall",
+				"client_secret": "secret",
+			},
+		},
+	})
+	require.NoError(t, err)
 
-	secret, err := provider.ResolveSecret(context.Background(), types.Selector{Value: "missing"})
+	secret, err := prv.ResolveSecret(t.Context(), types.Selector{Value: "missing"})
 	require.Nil(t, secret)
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrSecretNotFound)
 	require.ErrorContains(t, err, "selector 'missing'")
 
-	credentials, err := provider.ResolveCredentials(context.Background(), types.Selector{Value: "missing"})
+	credentials, err := prv.ResolveCredentials(t.Context(), types.Selector{Value: "missing"})
 	require.Nil(t, credentials)
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrSecretNotFound)
@@ -193,16 +247,27 @@ func TestProviderResolveMissing(t *testing.T) {
 func TestProviderStartStop(t *testing.T) {
 	t.Parallel()
 
-	provider := newTestProvider(t)
+	prv, err := newProvider(types.ProviderArgs{
+		SourceName: "inline-defaults",
+		Config: map[string]any{
+			"api_token": "secret",
+			"api_other": "other",
+			"github": map[string]any{
+				"client_id":     "heimdall",
+				"client_secret": "secret",
+			},
+		},
+	})
+	require.NoError(t, err)
 
-	require.NoError(t, provider.Start(context.Background(), nil))
-	require.NoError(t, provider.Stop(context.Background()))
+	require.NoError(t, prv.Start(t.Context(), nil))
+	require.NoError(t, prv.Stop(t.Context()))
 }
 
 func TestRegistryCreate(t *testing.T) {
 	t.Parallel()
 
-	provider, err := registry.Create(ProviderType, registry.ProviderArgs{
+	provider, err := registry.Create(ProviderType, types.ProviderArgs{
 		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
@@ -217,7 +282,7 @@ func TestRegistryCreate(t *testing.T) {
 func newTestProvider(t *testing.T) types.Provider {
 	t.Helper()
 
-	provider, err := newProvider(registry.ProviderArgs{
+	prv, err := newProvider(types.ProviderArgs{
 		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
@@ -230,5 +295,5 @@ func newTestProvider(t *testing.T) types.Provider {
 	})
 	require.NoError(t, err)
 
-	return provider
+	return prv
 }

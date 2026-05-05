@@ -26,11 +26,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -39,60 +38,45 @@ import (
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
+	pemFile := createPEMFile(t, "first", "second")
+
 	for uc, tc := range map[string]struct {
-		conf   func(*testing.T) (*app.ContextMock, map[string]any)
-		assert func(*testing.T, types.Provider, error)
+		conf   map[string]any
+		assert func(*testing.T, error, types.Provider)
 	}{
 		"successfully creates provider": {
-			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
+			conf: map[string]any{"path": pemFile},
+			assert: func(t *testing.T, err error, provider types.Provider) {
 				t.Helper()
 
-				return newAppContext(t), map[string]any{"path": createPEMFile(t, "first", "second")}
-			},
-			assert: func(t *testing.T, provider types.Provider, err error) {
-				t.Helper()
 				require.NoError(t, err)
 				require.Equal(t, "tls", provider.Name())
 				require.Equal(t, "pem", provider.Type())
 			},
 		},
 		"fails for missing path config": {
-			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
+			conf: map[string]any{},
+			assert: func(t *testing.T, err error, _ types.Provider) {
 				t.Helper()
 
-				return newAppContext(t), map[string]any{}
-			},
-			assert: func(t *testing.T, _ types.Provider, err error) {
-				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "path")
 			},
 		},
 		"fails for invalid watch field": {
-			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
+			conf: map[string]any{"path": pemFile, "watch": "yes"},
+			assert: func(t *testing.T, err error, _ types.Provider) {
 				t.Helper()
 
-				return newAppContext(t), map[string]any{
-					"path":  createPEMFile(t, "first"),
-					"watch": "yes",
-				}
-			},
-			assert: func(t *testing.T, _ types.Provider, err error) {
-				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "watch")
 			},
 		},
 		"fails for invalid path": {
-			conf: func(t *testing.T) (*app.ContextMock, map[string]any) {
+			conf: map[string]any{"path": "does_not_exist.pem"},
+			assert: func(t *testing.T, err error, _ types.Provider) {
 				t.Helper()
 
-				return newAppContext(t), map[string]any{
-					"path": "does_not_exist.pem",
-				}
-			},
-			assert: func(t *testing.T, _ types.Provider, err error) {
-				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "does_not_exist.pem")
 			},
@@ -101,14 +85,16 @@ func TestNewProvider(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			appCtx, conf := tc.conf(t)
-			prv, err := newProvider(registry.ProviderArgs{
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			prv, err := newProvider(types.ProviderArgs{
 				SourceName:     "tls",
-				Config:         conf,
+				Config:         tc.conf,
 				Logger:         zerolog.Nop(),
-				DecoderFactory: appCtx.DecoderFactory(),
+				DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
 			})
-			tc.assert(t, prv, err)
+			tc.assert(t, err, prv)
 		})
 	}
 }
@@ -117,20 +103,17 @@ func TestProviderWatch(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		conf   func(*testing.T) (map[string]any, string)
 		action func(*testing.T, types.Provider, string)
 	}{
-		"returns error if callback is nil": {
-			conf: func(t *testing.T) (map[string]any, string) {
+		"does nothing if watch is disabled": {
+			action: func(t *testing.T, provider types.Provider, _ string) {
 				t.Helper()
 
-				path := createPEMFile(t, "first")
-
-				return map[string]any{
-					"path":  path,
-					"watch": true,
-				}, path
+				require.NoError(t, provider.Start(context.Background(), nil))
+				require.NoError(t, provider.Stop(context.Background()))
 			},
+		},
+		"returns error if callback is nil": {
 			action: func(t *testing.T, provider types.Provider, _ string) {
 				t.Helper()
 
@@ -139,17 +122,18 @@ func TestProviderWatch(t *testing.T) {
 				require.ErrorContains(t, err, "must not be nil")
 			},
 		},
-		"reloads source on file change and emits source event": {
-			conf: func(t *testing.T) (map[string]any, string) {
+		"returns error if watch target cannot be registered": {
+			action: func(t *testing.T, provider types.Provider, path string) {
 				t.Helper()
 
-				path := createPEMFile(t, "first")
+				require.NoError(t, os.Remove(path))
 
-				return map[string]any{
-					"path":  path,
-					"watch": true,
-				}, path
+				err := provider.Start(context.Background(), func(types.ChangeEvent) {})
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed to register pem provider watch")
 			},
+		},
+		"reloads source on file change and emits source event": {
 			action: func(t *testing.T, provider types.Provider, path string) {
 				t.Helper()
 
@@ -159,6 +143,10 @@ func TestProviderWatch(t *testing.T) {
 				})
 				require.NoError(t, err)
 				t.Cleanup(func() { _ = provider.Stop(context.Background()) })
+
+				require.NoError(t, provider.Start(context.Background(), func(event types.ChangeEvent) {
+					changes <- event
+				}))
 
 				writePEMFile(t, path, "second")
 
@@ -176,15 +164,6 @@ func TestProviderWatch(t *testing.T) {
 			},
 		},
 		"keeps last-known-good key material if reload fails": {
-			conf: func(t *testing.T) (map[string]any, string) {
-				t.Helper()
-				path := createPEMFile(t, "first")
-
-				return map[string]any{
-					"path":  path,
-					"watch": true,
-				}, path
-			},
 			action: func(t *testing.T, provider types.Provider, path string) {
 				t.Helper()
 
@@ -214,19 +193,144 @@ func TestProviderWatch(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			appCtx := newAppContext(t)
-			conf, path := tc.conf(t)
-			provider, err := registry.Create("pem", registry.ProviderArgs{
+			pemFile := createPEMFile(t, "first")
+			watch := uc != "does nothing if watch is disabled"
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			prv, err := newProvider(types.ProviderArgs{
 				SourceName:     "tls",
-				Config:         conf,
+				Config:         map[string]any{"path": pemFile, "watch": watch},
 				Logger:         zerolog.Nop(),
-				DecoderFactory: appCtx.DecoderFactory(),
+				DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
 			})
 			require.NoError(t, err)
 
-			tc.action(t, provider, path)
+			tc.action(t, prv, pemFile)
 		})
 	}
+}
+
+func TestProviderResolveSecret(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		selector types.Selector
+		provider *provider
+		assert   func(*testing.T, error, types.Secret)
+	}{
+		"returns first secret for empty selector": {
+			provider: newPEMProviderForTest(t, "first", "second"),
+			selector: types.Selector{},
+			assert: func(t *testing.T, err error, secret types.Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "first", secret.Selector())
+			},
+		},
+		"returns matching secret for explicit selector": {
+			provider: newPEMProviderForTest(t, "first", "second"),
+			selector: types.Selector{Value: "second"},
+			assert: func(t *testing.T, err error, secret types.Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "second", secret.Selector())
+			},
+		},
+		"fails for unknown selector": {
+			provider: newPEMProviderForTest(t, "first", "second"),
+			selector: types.Selector{Value: "third"},
+			assert: func(t *testing.T, err error, _ types.Secret) {
+				t.Helper()
+
+				require.ErrorIs(t, err, types.ErrSecretNotFound)
+			},
+		},
+		"fails if key store is empty": {
+			provider: &provider{},
+			assert: func(t *testing.T, err error, _ types.Secret) {
+				t.Helper()
+
+				require.ErrorIs(t, err, types.ErrSecretNotFound)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN
+			secret, err := tc.provider.ResolveSecret(t.Context(), tc.selector)
+
+			// THEN
+			tc.assert(t, err, secret)
+		})
+	}
+}
+
+func TestProviderResolveSecretSet(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		selector types.Selector
+		provider *provider
+		assert   func(*testing.T, error, []types.Secret)
+	}{
+		"returns all secrets for empty selector": {
+			provider: newPEMProviderForTest(t, "first", "second"),
+			assert: func(t *testing.T, err error, secretSet []types.Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Len(t, secretSet, 2)
+				assert.Equal(t, []string{"first", "second"}, selectorsFromSecretSet(secretSet))
+			},
+		},
+		"returns all secrets regardless of selector": {
+			provider: newPEMProviderForTest(t, "first", "second"),
+			selector: types.Selector{Value: "ignored"},
+			assert: func(t *testing.T, err error, secretSet []types.Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Len(t, secretSet, 2)
+				assert.Equal(t, []string{"first", "second"}, selectorsFromSecretSet(secretSet))
+			},
+		},
+		"returns empty set if key store is empty": {
+			provider: &provider{},
+			assert: func(t *testing.T, err error, secretSet []types.Secret) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Empty(t, secretSet)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN
+			secretSet, err := tc.provider.ResolveSecretSet(t.Context(), tc.selector)
+
+			// THEN
+			tc.assert(t, err, secretSet)
+		})
+	}
+}
+
+func TestProviderResolveCredentials(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	prov := &provider{}
+
+	// WHEN
+	_, err := prov.ResolveCredentials(t.Context(), types.Selector{})
+
+	// THEN
+	require.ErrorIs(t, err, types.ErrUnsupportedOperation)
 }
 
 func createPEMFile(t *testing.T, keyIDs ...string) string {
@@ -236,6 +340,36 @@ func createPEMFile(t *testing.T, keyIDs ...string) string {
 	writePEMFile(t, path, keyIDs...)
 
 	return path
+}
+
+func newPEMProviderForTest(t *testing.T, keyIDs ...string) *provider {
+	t.Helper()
+
+	pemFile := createPEMFile(t, keyIDs...)
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	prov, err := newProvider(types.ProviderArgs{
+		SourceName:     "tls",
+		Config:         map[string]any{"path": pemFile},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+	})
+	require.NoError(t, err)
+
+	concrete, ok := prov.(*provider)
+	require.True(t, ok)
+
+	return concrete
+}
+
+func selectorsFromSecretSet(secretSet []types.Secret) []string {
+	selectors := make([]string, len(secretSet))
+	for idx, secret := range secretSet {
+		selectors[idx] = secret.Selector()
+	}
+
+	return selectors
 }
 
 func writePEMFile(t *testing.T, path string, keyIDs ...string) {
@@ -254,20 +388,4 @@ func writePEMFile(t *testing.T, path string, keyIDs ...string) {
 
 	err = os.WriteFile(path, data, 0o600)
 	require.NoError(t, err)
-}
-
-func newAppContext(t *testing.T) *app.ContextMock {
-	t.Helper()
-
-	validator, err := validation.NewValidator()
-	require.NoError(t, err)
-
-	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().
-		DecoderFactory().
-		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))).
-		Maybe()
-	appCtx.EXPECT().Logger().Return(zerolog.Nop()).Maybe()
-
-	return appCtx
 }

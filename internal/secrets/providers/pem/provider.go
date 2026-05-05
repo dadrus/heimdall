@@ -55,7 +55,7 @@ type provider struct {
 	watcherWg sync.WaitGroup
 }
 
-func newProvider(args registry.ProviderArgs) (types.Provider, error) {
+func newProvider(args types.ProviderArgs) (types.Provider, error) {
 	type config struct {
 		Path     string `mapstructure:"path"     validate:"required"`
 		Password string `mapstructure:"password"`

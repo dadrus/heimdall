@@ -40,7 +40,7 @@ type provider struct {
 	credentials map[string]types.Credentials
 }
 
-func newProvider(args registry.ProviderArgs) (types.Provider, error) {
+func newProvider(args types.ProviderArgs) (types.Provider, error) {
 	if len(args.Config) == 0 {
 		return nil, errorchain.NewWithMessage(types.ErrInvalidSecretPayload,
 			"inline provider config must not be empty")
