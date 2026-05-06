@@ -19,8 +19,9 @@ package types //nolint:revive
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/encoding"
 )
 
 type (
