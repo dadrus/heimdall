@@ -144,7 +144,7 @@ func (r *Resolver[S, T]) reload(ctx context.Context, strict bool) error {
 			r.OnError(ctx, err)
 		}
 
-		if errors.Is(err, secrets.ErrSecretNotFound) {
+		if !strict && errors.Is(err, secrets.ErrSecretNotFound) {
 			return r.MissingSecretPolicy.HandleMissingSecret(ctx, r, err)
 		}
 

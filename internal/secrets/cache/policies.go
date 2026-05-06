@@ -38,6 +38,6 @@ type (
 	FailCredentials[T any] = Fail[secrets.Credentials, T]
 )
 
-func (Fail[S, T]) HandleMissingSecret(context.Context, *Resolver[S, T], error) error {
-	return nil
+func (Fail[S, T]) HandleMissingSecret(_ context.Context, _ *Resolver[S, T], err error) error {
+	return err
 }

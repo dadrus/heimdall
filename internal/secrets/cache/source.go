@@ -18,12 +18,20 @@ func (SecretSource) Resolve(ctx context.Context, sm secrets.Manager, ref secrets
 
 type SecretSetSource struct{}
 
-func (SecretSetSource) Resolve(ctx context.Context, sm secrets.Manager, ref secrets.Reference) ([]secrets.Secret, error) {
+func (SecretSetSource) Resolve(
+	ctx context.Context,
+	sm secrets.Manager,
+	ref secrets.Reference,
+) ([]secrets.Secret, error) {
 	return sm.ResolveSecretSet(ctx, ref)
 }
 
 type CredentialsSource struct{}
 
-func (CredentialsSource) Resolve(ctx context.Context, sm secrets.Manager, ref secrets.Reference) (secrets.Credentials, error) {
+func (CredentialsSource) Resolve(
+	ctx context.Context,
+	sm secrets.Manager,
+	ref secrets.Reference,
+) (secrets.Credentials, error) {
 	return sm.ResolveCredentials(ctx, ref)
 }
