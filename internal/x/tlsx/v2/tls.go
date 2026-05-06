@@ -46,7 +46,10 @@ func toTLSCertificate(secret secrets.Secret) (*tls.Certificate, error) {
 
 	chain := aks.CertChain()
 	if len(chain) == 0 {
-		return nil, errNoCertificatePresent
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"secret is not suitable for TLS",
+		)
 	}
 
 	cert := &tls.Certificate{
