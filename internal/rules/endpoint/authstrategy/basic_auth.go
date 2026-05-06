@@ -20,26 +20,87 @@ import (
 	"context"
 	"crypto/sha256"
 	"net/http"
+	"sync/atomic"
 
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/cache"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type BasicAuth struct {
-	User     string `mapstructure:"user"     validate:"required"`
+type basicAuthCredentials struct {
+	User     string `mapstructure:"username" validate:"required"`
 	Password string `mapstructure:"password" validate:"required"`
 }
 
+type BasicAuth struct {
+	Credentials config.Secret `mapstructure:"credentials" validate:"required"`
+
+	resolver *cache.CredentialsResolver[basicAuthCredentials]
+	hash     atomic.Value
+}
+
+func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
+	resolver := &cache.CredentialsResolver[basicAuthCredentials]{
+		Manager:   appCtx.SecretsManager(),
+		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
+		Converter: toBasicAuthCredentials,
+		OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) {
+			hash := sha256.New()
+
+			hash.Write(stringx.ToBytes(creds.User))
+			hash.Write(stringx.ToBytes(creds.Password))
+
+			c.hash.Store(hash.Sum(nil))
+		},
+	}
+
+	if err := resolver.Start(ctx); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving basic auth credentials",
+		).CausedBy(err)
+	}
+
+	c.resolver = resolver
+
+	return nil
+}
+
 func (c *BasicAuth) Apply(_ context.Context, req *http.Request) error {
-	req.SetBasicAuth(c.User, c.Password)
+	creds, ok := c.resolver.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"basic auth credentials are not available",
+		)
+	}
+
+	req.SetBasicAuth(creds.User, creds.Password)
 
 	return nil
 }
 
 func (c *BasicAuth) Hash() []byte {
-	hash := sha256.New()
+	if hash, ok := c.hash.Load().([]byte); ok {
+		return hash
+	}
 
-	hash.Write(stringx.ToBytes(c.User))
-	hash.Write(stringx.ToBytes(c.Password))
+	return nil
+}
 
-	return hash.Sum(nil)
+func toBasicAuthCredentials(creds secrets.Credentials) (basicAuthCredentials, error) {
+	var data basicAuthCredentials
+
+	if err := creds.Decode(&data); err != nil {
+		return data, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed decoding basic auth credentials",
+		).CausedBy(err)
+	}
+
+	return data, nil
 }

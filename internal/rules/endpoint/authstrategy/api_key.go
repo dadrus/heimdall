@@ -20,27 +20,70 @@ import (
 	"context"
 	"crypto/sha256"
 	"net/http"
+	"sync/atomic"
 
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type APIKey struct {
-	In    string `mapstructure:"in"    validate:"required,oneof=cookie header query"`
-	Name  string `mapstructure:"name"  validate:"required"`
-	Value string `mapstructure:"value" validate:"required"`
+	In     string        `mapstructure:"in" validate:"required,oneof=cookie header query"`
+	Name   string        `mapstructure:"name" validate:"required"`
+	Secret config.Secret `mapstructure:"secret" validate:"required"`
+
+	resolver *cache.SecretResolver[string]
+	hash     atomic.Value
+}
+
+func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
+	resolver := &cache.SecretResolver[string]{
+		Manager:   appCtx.SecretsManager(),
+		Reference: secrets.InternalRef(c.Secret.Source, c.Secret.Selector),
+		Converter: toStringSecret,
+		OnUpdate: func(_ context.Context, _ secrets.Secret, value string) {
+			hash := sha256.New()
+
+			hash.Write(stringx.ToBytes(c.In))
+			hash.Write(stringx.ToBytes(c.Name))
+			hash.Write(stringx.ToBytes(value))
+
+			c.hash.Store(hash.Sum(nil))
+		},
+	}
+
+	if err := resolver.Start(ctx); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving api key secret",
+		).CausedBy(err)
+	}
+
+	c.resolver = resolver
+	return nil
 }
 
 func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
+	creds, ok := c.resolver.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"api key secret is not available",
+		)
+	}
+
 	switch c.In {
 	case "cookie":
-		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value})
+		req.AddCookie(&http.Cookie{Name: c.Name, Value: creds})
 	case "header":
-		req.Header.Set(c.Name, c.Value)
+		req.Header.Set(c.Name, creds)
 	case "query":
 		query := req.URL.Query()
-		query.Set(c.Name, c.Value)
+		query.Set(c.Name, creds)
 		req.URL.RawQuery = query.Encode()
 	default:
 		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
@@ -51,11 +94,18 @@ func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
 }
 
 func (c *APIKey) Hash() []byte {
-	hash := sha256.New()
+	if hash, ok := c.hash.Load().([]byte); ok {
+		return hash
+	}
 
-	hash.Write(stringx.ToBytes(c.In))
-	hash.Write(stringx.ToBytes(c.Name))
-	hash.Write(stringx.ToBytes(c.Value))
+	return nil
+}
 
-	return hash.Sum(nil)
+func toStringSecret(secret secrets.Secret) (string, error) {
+	ss, ok := secret.(secrets.StringSecret)
+	if !ok {
+		return "", secrets.ErrSecretKindMismatch
+	}
+
+	return ss.String(), nil
 }
