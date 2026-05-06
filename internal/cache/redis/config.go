@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	tlsxv2 "github.com/dadrus/heimdall/internal/x/tlsx/v2"
+	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
 
 // for test purposes only.
@@ -94,7 +94,7 @@ func (c baseConfig) tlsConfig(appCtx app.Context) (*tls.Config, error) {
 		return nil, nil //nolint:nilnil
 	}
 
-	tlsCfg, err := tlsxv2.ToClientTLSConfig(
+	tlsCfg, err := tlsx.ToClientTLSConfig(
 		context.Background(),
 		appCtx.SecretsManager(),
 		&c.TLS.TLS,

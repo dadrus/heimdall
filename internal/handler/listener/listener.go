@@ -24,9 +24,8 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keyregistry/v2"
 	"github.com/dadrus/heimdall/internal/secrets"
-	tlsxv2 "github.com/dadrus/heimdall/internal/x/tlsx/v2"
+	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
-
 
 type listener struct {
 	net.Listener
@@ -63,7 +62,7 @@ func New(
 	listnr = &listener{Listener: listnr}
 
 	if tlsConf != nil {
-		cfg, err := tlsxv2.ToServerTLSConfig(ctx, sm, tlsConf, ko)
+		cfg, err := tlsx.ToServerTLSConfig(ctx, sm, tlsConf, ko)
 		if err != nil {
 			return nil, err
 		}
@@ -73,4 +72,3 @@ func New(
 
 	return listnr, nil
 }
-

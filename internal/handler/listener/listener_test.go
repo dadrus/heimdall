@@ -35,7 +35,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	keyregistry "github.com/dadrus/heimdall/internal/keyregistry/v2"
+	"github.com/dadrus/heimdall/internal/keyregistry/v2"
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -142,9 +142,10 @@ func TestNew(t *testing.T) {
 				assert.NotSame(t, base, ln)
 			},
 		},
-	}{
+	} {
 		t.Run(uc, func(t *testing.T) {
 			prevListen := listen
+
 			var capturedAddress string
 
 			t.Cleanup(func() { listen = prevListen })
@@ -178,7 +179,6 @@ func TestNew(t *testing.T) {
 		})
 	}
 }
-
 
 func TestListenerAccept(t *testing.T) {
 	expectedConn := &connRecorder{}
