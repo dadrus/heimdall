@@ -116,6 +116,7 @@ func TestNewProvider(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(nil)
 
 			// WHEN
 			prov, err := NewProvider(appCtx, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
@@ -1138,6 +1139,7 @@ func TestProviderLifecycle(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(nil)
 
 			prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
@@ -1189,6 +1191,7 @@ func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Config().Return(conf)
 	appCtx.EXPECT().Logger().Return(logger)
+	appCtx.EXPECT().SecretsManager().Maybe().Return(nil)
 
 	prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 	require.NoError(t, err)
