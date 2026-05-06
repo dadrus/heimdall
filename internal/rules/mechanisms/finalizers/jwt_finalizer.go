@@ -17,6 +17,7 @@
 package finalizers
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -86,14 +87,15 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfigWithFactory(app.DecoderFactory(), rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for jwt finalizer '%s'", name).CausedBy(err)
 	}
 
 	signer, err := newJWTSigner(
+		context.Background(),
 		&conf.Signer,
-		app.Watcher(),
+		app.SecretsManager(),
 		app.KeyRegistry(),
 	)
 	if err != nil {
@@ -195,7 +197,7 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, erro
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
+	if err := decodeConfigWithFactory(f.app.DecoderFactory(), def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for jwt finalizer '%s'", f.name).CausedBy(err)
 	}
