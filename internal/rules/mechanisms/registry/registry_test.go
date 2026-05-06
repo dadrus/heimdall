@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
@@ -134,6 +135,8 @@ func TestAllMechanismsAreRegistered(t *testing.T) {
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
 	ctx.EXPECT().Validator().Maybe().Return(validator)
+	ctx.EXPECT().DecoderFactory().Maybe().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 	for kind, types := range map[types.Kind][]string{
 		types.KindAuthenticator: {
