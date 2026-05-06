@@ -5,6 +5,7 @@ secret_management:
       client_credentials:
         client_id: test-client-id
         client_secret: test-client-secret
+      api_key: test-api-key
   jwt_secrets:
     type: pem
     config:
@@ -321,7 +322,9 @@ providers:
           type: api_key
           config:
             name: foo
-            value: bar
+            secret:
+              source: inline_secrets
+              selector: api_key
             in: header
 
   cloud_blob:
