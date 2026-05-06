@@ -30,8 +30,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -50,18 +48,20 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	keyregistry "github.com/dadrus/heimdall/internal/keyregistry/v2"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestProxyService(t *testing.T) {
 	t.Parallel()
-
-	testDir := t.TempDir()
 
 	proxyKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
@@ -84,25 +84,13 @@ func TestProxyService(t *testing.T) {
 	).Build()
 	require.NoError(t, err)
 
-	pemBytes, err := pemx.BuildPEM(
-		pemx.WithECDSAPrivateKey(proxyKey),
-		pemx.WithX509Certificate(proxyCert),
-	)
-	require.NoError(t, err)
-
-	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
-	require.NoError(t, err)
-
-	_, err = pemFile.Write(pemBytes)
-	require.NoError(t, err)
-
 	for uc, tc := range map[string]struct {
 		serviceConf    config.ServeConfig
 		enableMetrics  bool
 		disableHTTP2   bool
 		createRequest  func(t *testing.T, host string) *http.Request
 		createClient   func(t *testing.T) *http.Client
-		configureMocks func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL)
+		configureMocks func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, upstreamURL *url.URL)
 		processRequest func(t *testing.T, rw http.ResponseWriter, req *http.Request)
 		assertResponse func(t *testing.T, err error, upstreamCalled bool, resp *http.Response)
 	}{
@@ -120,7 +108,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
@@ -152,7 +140,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.KeyObserverMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
@@ -184,7 +172,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrConfiguration)
@@ -216,7 +204,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
@@ -248,7 +236,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, _ *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
@@ -286,7 +274,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, upstreamURL *url.URL) {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -368,7 +356,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, upstreamURL *url.URL) {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -449,7 +437,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, upstreamURL *url.URL) {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -537,7 +525,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, upstreamURL *url.URL) {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -622,7 +610,9 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock, _ *url.URL) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, _ *url.URL) {
+				t.Helper()
+			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
 
@@ -664,7 +654,9 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock, _ *url.URL) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, _ *url.URL) {
+				t.Helper()
+			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
 
@@ -678,9 +670,7 @@ func TestProxyService(t *testing.T) {
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1000 * time.Second, Write: 1000 * time.Second, Idle: 1000 * time.Second},
 				TLS: &config.TLS{
-					KeyStore: config.KeyStore{
-						Path: pemFile.Name(),
-					},
+					Secret: config.Secret{Source: "proxy", Selector: "server"},
 				},
 			},
 			createClient: func(t *testing.T) *http.Client {
@@ -711,7 +701,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, upstreamURL *url.URL) {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -732,6 +722,29 @@ func TestProxyService(t *testing.T) {
 						return pathMatched && methodMatched
 					}),
 				).Return(backend, nil)
+
+				secret := secrettypes.NewAsymmetricKeySecret(
+					"proxy",
+					"server",
+					"proxy",
+					proxyKey,
+					[]*x509.Certificate{proxyCert},
+				)
+
+				ko.EXPECT().
+					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
+						return ki.Key.KeyID() == secret.KeyID() &&
+							ki.Key.PrivateKey() == secret.PrivateKey() &&
+							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
+							!ki.Exportable
+					}))
+
+				sm.EXPECT().
+					ResolveSecret(mock.Anything, secrets.InternalRef("proxy", "server")).
+					Return(secret, nil)
+				sm.EXPECT().
+					Subscribe(secrets.InternalRef("proxy", "server"), mock.Anything).
+					Return(func() {}, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -773,9 +786,7 @@ func TestProxyService(t *testing.T) {
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TLS: &config.TLS{
-					KeyStore: config.KeyStore{
-						Path: pemFile.Name(),
-					},
+					Secret: config.Secret{Source: "proxy", Selector: "server"},
 				},
 			},
 			createClient: func(t *testing.T) *http.Client {
@@ -806,7 +817,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock, upstreamURL *url.URL) {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -827,6 +838,29 @@ func TestProxyService(t *testing.T) {
 						return pathMatched && methodMatched
 					}),
 				).Return(backend, nil)
+
+				secret := secrettypes.NewAsymmetricKeySecret(
+					"proxy",
+					"server",
+					"proxy",
+					proxyKey,
+					[]*x509.Certificate{proxyCert},
+				)
+
+				ko.EXPECT().
+					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
+						return ki.Key.KeyID() == secret.KeyID() &&
+							ki.Key.PrivateKey() == secret.PrivateKey() &&
+							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
+							!ki.Exportable
+					}))
+
+				sm.EXPECT().
+					ResolveSecret(mock.Anything, secrets.InternalRef("proxy", "server")).
+					Return(secret, nil)
+				sm.EXPECT().
+					Subscribe(secrets.InternalRef("proxy", "server"), mock.Anything).
+					Return(func() {}, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -916,17 +950,19 @@ func TestProxyService(t *testing.T) {
 			proxyConf.Host = "127.0.0.1"
 			proxyConf.Port = port
 
-			lstnr, err := listener.New(t.Context(), proxyConf.Address(), proxyConf.TLS, nil, nil)
-			require.NoError(t, err)
-
 			conf := &config.Configuration{
 				Serve:   proxyConf,
 				Metrics: config.MetricsConfig{Enabled: tc.enableMetrics},
 			}
 			cch := mocks.NewCacheMock(t)
 			exec := mocks2.NewExecutorMock(t)
+			sm := secretsmocks.NewManagerMock(t)
+			ko := keyregistrymocks.NewKeyObserverMock(t)
 
-			tc.configureMocks(t, exec, upstreamURL)
+			tc.configureMocks(t, exec, sm, ko, upstreamURL)
+
+			lstnr, err := listener.New(t.Context(), proxyConf.Address(), proxyConf.TLS, sm, ko)
+			require.NoError(t, err)
 
 			client := createClient(t)
 
