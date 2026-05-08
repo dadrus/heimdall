@@ -366,6 +366,44 @@ func (p *Provider) mapVersion(_ string) string {
 	return "1alpha4"
 }
 
+func statusContribution(condition *metav1.Condition) (int, int) {
+	var (
+		usage int
+		match int
+	)
+
+	if condition == nil {
+		return usage, match
+	}
+
+	match = 1
+
+	if condition.Status == metav1.ConditionTrue {
+		usage = 1
+	}
+
+	return usage, match
+}
+
+func desiredStatusContribution(status metav1.ConditionStatus, reason v1alpha4.ConditionReason) (int, int) {
+	var (
+		usage int
+		match int
+	)
+
+	if reason == v1alpha4.ConditionControllerStopped || reason == v1alpha4.ConditionRuleSetUnloaded {
+		return usage, match
+	}
+
+	match = 1
+
+	if status == metav1.ConditionTrue {
+		usage = 1
+	}
+
+	return usage, match
+}
+
 func (p *Provider) updateStatus(
 	ctx context.Context,
 	rs *v1alpha4.RuleSet,
@@ -375,10 +413,25 @@ func (p *Provider) updateStatus(
 	usageIncrement int,
 	msg string,
 ) {
+	p.updateStatusWithRetry(ctx, rs, status, reason, matchIncrement, usageIncrement, msg, false)
+}
+
+//nolint:cyclop, funlen
+func (p *Provider) updateStatusWithRetry(
+	ctx context.Context,
+	rs *v1alpha4.RuleSet,
+	status metav1.ConditionStatus,
+	reason v1alpha4.ConditionReason,
+	matchIncrement int,
+	usageIncrement int,
+	msg string,
+	retry bool,
+) {
 	logger := zerolog.Ctx(ctx)
 	modRS := rs.DeepCopy()
 	repository := p.cl.RuleSetRepository(modRS.Namespace)
 	conditionType := p.id + "/Reconciliation"
+	currentCondition := meta.FindStatusCondition(modRS.Status.Conditions, conditionType)
 
 	logger.Debug().Msg("Updating RuleSet status")
 
@@ -408,7 +461,18 @@ func (p *Provider) updateStatus(
 	usedBy := strings.Split(modRS.Status.ActiveIn, "/")
 	loadedBy, _ := strconv.Atoi(usedBy[0])
 	matchedBy, _ := strconv.Atoi(usedBy[1])
-	modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
+	if !retry || currentCondition == nil {
+		modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
+	} else {
+		prevUsage, prevMatch := statusContribution(currentCondition)
+		nextUsage, nextMatch := desiredStatusContribution(status, reason)
+
+		modRS.Status.ActiveIn = fmt.Sprintf(
+			"%d/%d",
+			loadedBy-prevUsage+nextUsage,
+			matchedBy-prevMatch+nextMatch,
+		)
+	}
 
 	_, err := repository.PatchStatus(ctx, v1alpha4.NewJSONPatch(rs, modRS, true), metav1.PatchOptions{})
 	if err == nil {
@@ -442,7 +506,7 @@ func (p *Provider) updateStatus(
 		if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
 			logger.Warn().Err(err).Msgf("Failed retrieving new RuleSet version for status update")
 		} else {
-			p.updateStatus(ctx, rs, status, reason, matchIncrement, usageIncrement, msg)
+			p.updateStatusWithRetry(ctx, rs, status, reason, matchIncrement, usageIncrement, msg, true)
 		}
 	case http.StatusUnprocessableEntity:
 		logger.Error().Err(err).

@@ -1478,6 +1478,163 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				assert.Equal(t, "/status/conditions", patch[1].Path)
 			},
 		},
+		"successive errors on updating one of two successfully loaded rule set instances": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Times(2).Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				provider.id = "heimdall-a"
+				provider.rsInUse[rs.UID] = true
+
+				oldRS := rs.DeepCopy()
+				oldRS.Status.ActiveIn = "2/2"
+				oldRS.Status.Conditions = []metav1.Condition{
+					{Type: "heimdall-a/Reconciliation", Status: metav1.ConditionTrue, Reason: string(v1alpha4.ConditionRuleSetActive)},
+					{Type: "heimdall-b/Reconciliation", Status: metav1.ConditionTrue, Reason: string(v1alpha4.ConditionRuleSetActive)},
+				}
+
+				newRS := oldRS.DeepCopy()
+				newRS.Name = "error"
+				newRS.ResourceVersion = "101"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+
+				oldRS = newRS.DeepCopy()
+				oldRS.Status.ActiveIn = "1/2"
+				oldRS.Status.Conditions[0].Status = metav1.ConditionFalse
+				oldRS.Status.Conditions[0].Reason = string(v1alpha4.ConditionRuleSetActivationFailed)
+
+				newRS = oldRS.DeepCopy()
+				newRS.ResourceVersion = "102"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 2)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+
+				var found bool
+				for _, op := range patch {
+					if op.Path == "/status/activeIn" {
+						found = true
+						assert.Equal(t, "replace", op.Type)
+						assert.Equal(t, "1/2", op.Value)
+					}
+				}
+				assert.True(t, found)
+
+				data, err = rawPatch[1].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				for _, op := range patch {
+					assert.NotEqual(t, "/status/activeIn", op.Path)
+				}
+			},
+		},
+		"conflict retry on one of two successfully loaded rule set instances keeps status stable": {
+			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Once().Return(nil, errors2.NewConflict(
+					schema.GroupResource{Group: v1alpha4.GroupName, Resource: "ruleset"},
+					"test-rule",
+					errors.New("RuleSet conflict"),
+				))
+				repository.EXPECT().Get(
+					mock.Anything,
+					types.NamespacedName{Namespace: "foo", Name: "error"},
+					mock.Anything,
+				).Return(&v1alpha4.RuleSet{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: fmt.Sprintf("%s/%s", v1alpha4.GroupName, v1alpha4.GroupVersion),
+						Kind:       "RuleSet",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "error",
+						Namespace:         "foo",
+						ResourceVersion:   "101",
+						UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
+						Generation:        2,
+						CreationTimestamp: metav1.NewTime(time.Now()),
+					},
+					Status: v1alpha4.RuleSetStatus{
+						ActiveIn: "2/2",
+						Conditions: []metav1.Condition{
+							{Type: "heimdall-a/Reconciliation", Status: metav1.ConditionTrue, Reason: string(v1alpha4.ConditionRuleSetActive)},
+							{Type: "heimdall-b/Reconciliation", Status: metav1.ConditionTrue, Reason: string(v1alpha4.ConditionRuleSetActive)},
+						},
+					},
+				}, nil)
+				repository.EXPECT().PatchStatus(
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(
+					mock2.NewArgumentCaptor3[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Capture,
+				).Once().Return(nil, nil)
+			},
+			useRuleSet: func(t *testing.T, provider *Provider, rs *v1alpha4.RuleSet) {
+				t.Helper()
+
+				provider.id = "heimdall-a"
+				provider.rsInUse[rs.UID] = true
+
+				oldRS := rs.DeepCopy()
+				oldRS.Status.ActiveIn = "2/2"
+				oldRS.Status.Conditions = []metav1.Condition{
+					{Type: "heimdall-a/Reconciliation", Status: metav1.ConditionTrue, Reason: string(v1alpha4.ConditionRuleSetActive)},
+					{Type: "heimdall-b/Reconciliation", Status: metav1.ConditionTrue, Reason: string(v1alpha4.ConditionRuleSetActive)},
+				}
+
+				newRS := oldRS.DeepCopy()
+				newRS.Name = "error"
+				newRS.ResourceVersion = "101"
+				newRS.Generation = oldRS.Generation + 1
+				provider.updateRuleSet(t.Context(), oldRS, newRS)
+			},
+			assert: func(t *testing.T, repository *mocks2.RuleSetRepositoryMock) {
+				t.Helper()
+
+				var patch jsondiff.Patch
+
+				_, rawPatch, _ := mock2.ArgumentCaptor3From[context.Context, v1alpha4.Patch, metav1.PatchOptions](&repository.Mock, "patch").Values()
+				require.Len(t, rawPatch, 1)
+
+				data, err := rawPatch[0].Data()
+				require.NoError(t, err)
+				err = json.Unmarshal(data, &patch)
+				require.NoError(t, err)
+				assert.NotEmpty(t, patch)
+			},
+		},
 		"successive errors on updating previously loaded and once successfully updated rule set": {
 			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RuleSetRepositoryMock) {
 				t.Helper()
