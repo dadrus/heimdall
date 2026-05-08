@@ -17,7 +17,8 @@
 package cellib
 
 import (
-	"github.com/dlclark/regexp2/v2"
+	"regexp"
+
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
@@ -68,41 +69,20 @@ func (stringsLib) CompileOptions() []cel.EnvOption {
 	}
 }
 
-func regexFind(regex string, value string) (string, error) {
-	reg, err := regexp2.Compile(regex, regexp2.RE2)
+func regexFind(pattern string, value string) (string, error) {
+	reg, err := regexp.Compile(pattern)
 	if err != nil {
 		return "", err
 	}
 
-	match, err := reg.FindStringMatch(value)
-	if err != nil {
-		return "", err
-	}
-
-	return match.String(), nil
+	return reg.FindString(value), nil
 }
 
-func regexFindAll(regex string, value string) ([]string, error) {
-	re, err := regexp2.Compile(regex, regexp2.RE2)
+func regexFindAll(pattern string, value string) ([]string, error) {
+	re, err := regexp.Compile(pattern)
 	if err != nil {
 		return nil, err
 	}
 
-	var matches []string
-
-	match, err := re.FindStringMatch(value)
-	if err != nil {
-		return nil, err
-	}
-
-	for match != nil {
-		matches = append(matches, match.String())
-
-		match, err = re.FindNextMatch(match)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return matches, nil
+	return re.FindAllString(value, -1), nil
 }
