@@ -6,7 +6,7 @@ secret_management:
         client_id: test-client-id
         client_secret: test-client-secret
       basic_auth:
-        username: foo
+        user_id: foo
         password: bar
       foo_api_key: very-secret
       bar_foo_key: bar

@@ -6,7 +6,7 @@ secret_management:
         client_id: test-client-id
         client_secret: test-client-secret
       basic_auth:
-        username: foo
+        user_id: foo
         password: bar
       foo_api_key: very-secret
       bar_foo_key: bar
@@ -338,8 +338,8 @@ providers:
           config:
             name: foo
             secret:
-              selector: inline_secrets
-              source: bar_foo_key
+              source: inline_secrets
+              selector: bar_foo_key
             in: header
 
   cloud_blob:

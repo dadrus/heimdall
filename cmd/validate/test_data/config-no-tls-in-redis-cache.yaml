@@ -7,7 +7,7 @@ secret_management:
     type: inline
     config:
       redis_credentials:
-        user: foo
+        username: foo
         password: very-secure-one
 
 cache:

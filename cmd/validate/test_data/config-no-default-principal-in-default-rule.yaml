@@ -6,6 +6,9 @@ secret_management:
         client_id: test-client-id
         client_secret: test-client-secret
       api_key: test-api-key
+      basic_auth:
+        user_id: foo
+        password: bar
   jwt_secrets:
     type: pem
     config:
@@ -95,8 +98,9 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: inline_secrets
+                selector: basic_auth
         token_source:
           - header: Authorization
             scheme: Bearer
@@ -122,8 +126,9 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: inline_secrets
+                selector: basic_auth
           resolved_endpoints:
             introspection_endpoint:
               auth:
@@ -167,7 +172,9 @@ mechanisms:
                 config:
                   in: header
                   name: X-API-Key
-                  value: very-secret
+                  secret:
+                    source: inline_secrets
+                    selector: api_key
               http_cache:
                 enabled: true
                 default_ttl: 10m
@@ -207,8 +214,9 @@ mechanisms:
     - id: basic_auth_authenticator
       type: basic_auth
       config:
-        user_id: foo
-        password: bar
+        credentials:
+          source: inline_secrets
+          selector: basic_auth
   authorizers:
     - id: allow_all_authorizer
       type: allow
