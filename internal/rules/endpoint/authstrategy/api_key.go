@@ -29,49 +29,26 @@ import (
 	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
+	"github.com/rs/zerolog"
 )
 
 type APIKey struct {
-	In     string        `mapstructure:"in" validate:"required,oneof=cookie header query"`
-	Name   string        `mapstructure:"name" validate:"required"`
+	In     string        `mapstructure:"in"     validate:"required,oneof=cookie header query"`
+	Name   string        `mapstructure:"name"   validate:"required"`
 	Secret config.Secret `mapstructure:"secret" validate:"required"`
 
 	resolver *cache.SecretResolver[string]
 	hash     atomic.Value
 }
 
-func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
-	resolver := &cache.SecretResolver[string]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(c.Secret.Source, c.Secret.Selector),
-		Converter: toStringSecret,
-		OnUpdate: func(_ context.Context, _ secrets.Secret, value string) {
-			hash := sha256.New()
+func (c *APIKey) Apply(req *http.Request) error {
+	logger := zerolog.Ctx(req.Context())
+	logger.Debug().Msg("Applying api_key strategy to authenticate request")
 
-			hash.Write(stringx.ToBytes(c.In))
-			hash.Write(stringx.ToBytes(c.Name))
-			hash.Write(stringx.ToBytes(value))
-
-			c.hash.Store(hash.Sum(nil))
-		},
-	}
-
-	if err := resolver.Start(ctx); err != nil {
-		return errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"failed resolving api key secret",
-		).CausedBy(err)
-	}
-
-	c.resolver = resolver
-	return nil
-}
-
-func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
 	creds, ok := c.resolver.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
+			pipeline.ErrInternal,
 			"api key secret is not available",
 		)
 	}
@@ -96,6 +73,34 @@ func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
 func (c *APIKey) Hash() []byte {
 	if hash, ok := c.hash.Load().([]byte); ok {
 		return hash
+	}
+
+	return nil
+}
+
+func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
+	c.resolver = &cache.SecretResolver[string]{
+		Manager:   appCtx.SecretsManager(),
+		Reference: secrets.InternalRef(c.Secret.Source, c.Secret.Selector),
+		Converter: toStringSecret,
+		OnUpdate: func(_ context.Context, _ secrets.Secret, value string) {
+			hash := sha256.New()
+
+			hash.Write(stringx.ToBytes(c.In))
+			hash.Write(stringx.ToBytes(c.Name))
+			hash.Write(stringx.ToBytes(value))
+
+			var result [sha256.Size]byte
+
+			c.hash.Store(hash.Sum(result[:0]))
+		},
+	}
+
+	if err := c.resolver.Start(ctx); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving api key secret",
+		).CausedBy(err)
 	}
 
 	return nil

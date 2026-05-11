@@ -17,34 +17,169 @@
 package authstrategy
 
 import (
+	"errors"
 	"net/http"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
-func TestApplyApiKeyStrategy(t *testing.T) {
+func TestAPIKeyInit(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		strategy endpoint.AuthenticationStrategy
-		assert   func(t *testing.T, err error, req *http.Request)
+		setup  func(t *testing.T, sm *mocks.ManagerMock)
+		assert func(t *testing.T, err error, ak *APIKey)
 	}{
+		"fails to resolve secret": {
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(nil, errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error, ak *APIKey) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "failed resolving api key secret")
+
+				assert.Nil(t, ak.Hash())
+				_, ok := ak.resolver.Get()
+				assert.False(t, ok)
+			},
+		},
+		"fails due to an invalid secret kind": {
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(types.NewSymmetricKeySecret("foo", "bar", "baz", []byte{}), nil)
+			},
+			assert: func(t *testing.T, err error, ak *APIKey) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorIs(t, err, secrets.ErrSecretKindMismatch)
+				require.ErrorContains(t, err, "failed resolving api key secret")
+
+				assert.Nil(t, ak.Hash())
+				_, ok := ak.resolver.Get()
+				require.False(t, ok)
+			},
+		},
+		"succeeds": {
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+			},
+			assert: func(t *testing.T, err error, ak *APIKey) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.Equal(t, "header", ak.In)
+				require.Equal(t, "foo", ak.Name)
+				require.NotNil(t, ak.resolver)
+
+				val, ok := ak.resolver.Get()
+				require.True(t, ok)
+				assert.Equal(t, "baz", val)
+				assert.NotEmpty(t, ak.Hash())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			secret := config.Secret{Source: "foo", Selector: "bar"}
+			sm := mocks.NewManagerMock(t)
+			// sm.EXPECT().Subscribe(secret, mock.Anything).Return(func() {}, nil)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().SecretsManager().Return(sm)
+
+			ak := &APIKey{
+				In:     "header",
+				Name:   "foo",
+				Secret: secret,
+			}
+
+			tc.setup(t, sm)
+
+			// WHEN
+			err := ak.init(t.Context(), appCtx)
+
+			// THEN
+			tc.assert(t, err, ak)
+		})
+	}
+}
+
+func TestApiKeyApply(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		ignoreInitError bool
+		config          *APIKey
+		setup           func(t *testing.T, sm *mocks.ManagerMock)
+		assert          func(t *testing.T, err error, req *http.Request)
+	}{
+		"no secret available": {
+			ignoreInitError: true,
+			config:          &APIKey{In: "header", Name: "Foo"},
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(nil, errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error, _ *http.Request) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
+				require.ErrorContains(t, err, "api key secret is not available")
+			},
+		},
 		"header strategy": {
-			strategy: &APIKey{In: "header", Name: "Foo", Value: "Bar"},
+			config: &APIKey{In: "header", Name: "Foo"},
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "Bar", req.Header.Get("Foo"))
+				assert.Equal(t, "baz", req.Header.Get("Foo"))
 			},
 		},
 		"cookie strategy": {
-			strategy: &APIKey{In: "cookie", Name: "Foo", Value: "Bar"},
+			config: &APIKey{In: "cookie", Name: "Foo"},
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -52,11 +187,18 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 
 				cookie, err := req.Cookie("Foo")
 				require.NoError(t, err)
-				assert.Equal(t, "Bar", cookie.Value)
+				assert.Equal(t, "baz", cookie.Value)
 			},
 		},
 		"query strategy": {
-			strategy: &APIKey{In: "query", Name: "Foo", Value: "Bar"},
+			config: &APIKey{In: "query", Name: "Foo"},
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -64,54 +206,54 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 
 				query := req.URL.Query()
 				assert.Len(t, query, 2)
-				assert.Equal(t, "Bar", query.Get("Foo"))
+				assert.Equal(t, "baz", query.Get("Foo"))
 				assert.Equal(t, "foo", query.Get("bar"))
 			},
 		},
 		"invalid strategy": {
-			strategy: &APIKey{In: "foo", Name: "Foo", Value: "Bar"},
+			config: &APIKey{In: "foo", Name: "Foo"},
+			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
 
 				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "unsupported")
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := &http.Request{
-				Header: http.Header{},
-				URL: &url.URL{
-					Scheme:   "http",
-					Host:     "foo.bar",
-					Path:     "test",
-					RawQuery: url.Values{"bar": []string{"foo"}}.Encode(),
-				},
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"http//example.com/test?bar=foo",
+				nil,
+			)
+			require.NoError(t, err)
+
+			sm := mocks.NewManagerMock(t)
+			tc.setup(t, sm)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().SecretsManager().Return(sm)
+
+			err = tc.config.init(t.Context(), appCtx)
+			if !tc.ignoreInitError {
+				require.NoError(t, err)
 			}
 
 			// WHEN
-			err := tc.strategy.Apply(t.Context(), req)
+			err = tc.config.Apply(req)
 
 			// THEN
 			tc.assert(t, err, req)
 		})
 	}
-}
-
-func TestAPIKeyStrategyHash(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	s1 := &APIKey{In: "header", Name: "Foo", Value: "Bar"}
-	s2 := &APIKey{In: "cookie", Name: "Foo", Value: "Bar"}
-
-	// WHEN
-	hash1 := s1.Hash()
-	hash2 := s2.Hash()
-
-	// THEN
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEqual(t, hash1, hash2)
 }
