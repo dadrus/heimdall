@@ -29,11 +29,23 @@ import (
 	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
+	"github.com/rs/zerolog"
 )
 
 type basicAuthCredentials struct {
-	User     string `mapstructure:"username" validate:"required"`
+	UserID   string `mapstructure:"user_id"  validate:"required"`
 	Password string `mapstructure:"password" validate:"required"`
+}
+
+func (c basicAuthCredentials) Hash() []byte {
+	hash := sha256.New()
+
+	hash.Write(stringx.ToBytes(c.UserID))
+	hash.Write(stringx.ToBytes(c.Password))
+
+	var result [sha256.Size]byte
+
+	return hash.Sum(result[:0])
 }
 
 type BasicAuth struct {
@@ -43,43 +55,19 @@ type BasicAuth struct {
 	hash     atomic.Value
 }
 
-func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
-	resolver := &cache.CredentialsResolver[basicAuthCredentials]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
-		Converter: toBasicAuthCredentials,
-		OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) {
-			hash := sha256.New()
+func (c *BasicAuth) Apply(req *http.Request) error {
+	logger := zerolog.Ctx(req.Context())
+	logger.Debug().Msg("Applying basic_auth strategy to authenticate request")
 
-			hash.Write(stringx.ToBytes(creds.User))
-			hash.Write(stringx.ToBytes(creds.Password))
-
-			c.hash.Store(hash.Sum(nil))
-		},
-	}
-
-	if err := resolver.Start(ctx); err != nil {
-		return errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"failed resolving basic auth credentials",
-		).CausedBy(err)
-	}
-
-	c.resolver = resolver
-
-	return nil
-}
-
-func (c *BasicAuth) Apply(_ context.Context, req *http.Request) error {
 	creds, ok := c.resolver.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
+			pipeline.ErrInternal,
 			"basic auth credentials are not available",
 		)
 	}
 
-	req.SetBasicAuth(creds.User, creds.Password)
+	req.SetBasicAuth(creds.UserID, creds.Password)
 
 	return nil
 }
@@ -92,15 +80,30 @@ func (c *BasicAuth) Hash() []byte {
 	return nil
 }
 
-func toBasicAuthCredentials(creds secrets.Credentials) (basicAuthCredentials, error) {
-	var data basicAuthCredentials
+func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
+	c.resolver = &cache.CredentialsResolver[basicAuthCredentials]{
+		Manager:   appCtx.SecretsManager(),
+		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
+		Converter: toBasicAuthCredentials,
+		OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) {
+			c.hash.Store(creds.Hash())
+		},
+	}
 
-	if err := creds.Decode(&data); err != nil {
-		return data, errorchain.NewWithMessage(
+	if err := c.resolver.Start(ctx); err != nil {
+		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"failed decoding basic auth credentials",
+			"failed resolving basic auth credentials",
 		).CausedBy(err)
 	}
 
-	return data, nil
+	return nil
+}
+
+func toBasicAuthCredentials(creds secrets.Credentials) (basicAuthCredentials, error) {
+	var data basicAuthCredentials
+
+	err := creds.Decode(&data)
+
+	return data, err
 }
