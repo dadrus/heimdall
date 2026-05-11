@@ -108,9 +108,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	}
 
 	if e.AuthStrategy != nil {
-		logger.Debug().Msg("Authenticating request")
-
-		err = e.AuthStrategy.Apply(ctx, req)
+		err = e.AuthStrategy.Apply(req)
 		if err != nil {
 			return nil, errorchain.
 				NewWithMessage(pipeline.ErrInternal, "failed to authenticate request").
