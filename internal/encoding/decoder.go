@@ -74,8 +74,7 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 		reader = bytes.NewReader(stringx.ToBytes(content))
 	}
 
-	dec := yaml.NewDecoder(reader)
-	if err := dec.Decode(&rawConfig); err != nil {
+	if err := yaml.NewDecoder(reader).Decode(&rawConfig); err != nil {
 		if errors.Is(err, io.EOF) {
 			return err
 		}
@@ -95,19 +94,12 @@ func (d *Decoder) DecodeMap(out any, in map[string]any) error {
 		DecodeHook:  x.IfThenElse(d.decodeHooks != nil, d.decodeHooks, mapstructure.ComposeDecodeHookFunc()),
 	})
 	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrInternal,
-			"failed creating object decoder").CausedBy(err)
+		return err
 	}
 
 	if err = dec.Decode(in); err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"decoding of object failed").CausedBy(err)
+		return err
 	}
 
-	if err = d.validator.Validate(out); err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"object validation failed").CausedBy(err)
-	}
-
-	return nil
+	return d.validator.Validate(out)
 }
