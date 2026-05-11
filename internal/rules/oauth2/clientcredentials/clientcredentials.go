@@ -44,6 +44,45 @@ const (
 	AuthMethodRequestBody AuthMethod = "request_body"
 )
 
+type clientCredentialsAuthStrategy struct {
+	ClientID     string
+	ClientSecret string
+	AuthMethod   AuthMethod
+}
+
+func (a clientCredentialsAuthStrategy) Apply(req *http.Request) error {
+	if a.AuthMethod == AuthMethodRequestBody {
+		// This is not recommended, but there are non-compliant servers out there
+		// which do support the Basic Auth authentication method required by
+		// the spec. See also https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+		data, _ := io.ReadAll(req.Body)
+		values, _ := url.ParseQuery(stringx.ToString(data))
+
+		values.Add("client_id", a.ClientID)
+		values.Add("client_secret", a.ClientSecret)
+
+		body := strings.NewReader(values.Encode())
+		req.Body = io.NopCloser(body)
+		req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(body), nil }
+		req.ContentLength = int64(body.Len())
+	} else {
+		req.SetBasicAuth(url.QueryEscape(a.ClientID), url.QueryEscape(a.ClientSecret))
+	}
+
+	return nil
+}
+
+func (a clientCredentialsAuthStrategy) Hash() []byte {
+	digest := sha256.New()
+	digest.Write(stringx.ToBytes(a.ClientID))
+	digest.Write(stringx.ToBytes(a.ClientSecret))
+	digest.Write(stringx.ToBytes(string(a.AuthMethod)))
+
+	var result [sha256.Size]byte
+
+	return digest.Sum(result[:0])
+}
+
 type Config struct {
 	TokenURL     string
 	ClientID     string
@@ -88,28 +127,6 @@ func (c Config) Token(ctx context.Context) (*TokenInfo, error) {
 	}
 
 	return tokenInfo, nil
-}
-
-func (c Config) Apply(_ context.Context, req *http.Request) error {
-	if c.AuthMethod == AuthMethodRequestBody {
-		// This is not recommended, but there are non-compliant servers out there
-		// which do support the Basic Auth authentication method required by
-		// the spec. See also https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
-		data, _ := io.ReadAll(req.Body)
-		values, _ := url.ParseQuery(stringx.ToString(data))
-
-		values.Add("client_id", c.ClientID)
-		values.Add("client_secret", c.ClientSecret)
-
-		body := strings.NewReader(values.Encode())
-		req.Body = io.NopCloser(body)
-		req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(body), nil }
-		req.ContentLength = int64(body.Len())
-	} else {
-		req.SetBasicAuth(url.QueryEscape(c.ClientID), url.QueryEscape(c.ClientSecret))
-	}
-
-	return nil
 }
 
 func (c Config) Hash() []byte {
@@ -173,9 +190,13 @@ func (c Config) isCacheEnabled() bool {
 
 func (c Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 	ept := endpoint.Endpoint{
-		URL:          c.TokenURL,
-		Method:       http.MethodPost,
-		AuthStrategy: c,
+		URL:    c.TokenURL,
+		Method: http.MethodPost,
+		AuthStrategy: clientCredentialsAuthStrategy{
+			AuthMethod:   c.AuthMethod,
+			ClientID:     c.ClientID,
+			ClientSecret: c.ClientSecret,
+		},
 		Headers: map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
 			"Accept":       "application/json",
