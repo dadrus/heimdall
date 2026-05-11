@@ -87,24 +87,6 @@
         }
       }
     },
-    "keyStore": {
-      "description": "Key store holding the keys and certificates",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "path"
-      ],
-      "properties": {
-        "path": {
-          "description": "The path to the key store in PEM format",
-          "type": "string"
-        },
-        "password": {
-          "description": "Password for the key material in the key store if PKCS#8 encrypted format is used.",
-          "type": "string"
-        }
-      }
-    },
     "tlsConfig": {
       "description": "TLS Configuration",
       "type": "object",
