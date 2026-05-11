@@ -20,12 +20,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"errors"
-	"math/big"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -37,13 +32,15 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	mocks2 "github.com/dadrus/heimdall/internal/keyregistry/mocks"
+	"github.com/dadrus/heimdall/internal/encoding"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -57,6 +54,7 @@ func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) 
 	// du to a bug in the linter
 	for uc, tc := range map[string]struct {
 		config []byte
+		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"all required properties configured": {
@@ -64,16 +62,29 @@ func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) 
 auth:
   type: basic_auth
   config:
-    user: foo
-    password: bar`),
+    credentials:
+      source: foo
+      selector: bar
+`),
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(
+						secrettypes.NewCredentials("foo", "bar", map[string]any{
+							"user_id":  "baz",
+							"password": "zab",
+						}),
+						nil)
+			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &BasicAuth{}, as)
 				bas := as.(*BasicAuth) // nolint: forcetypeassert
-				assert.Equal(t, "foo", bas.User)
-				assert.Equal(t, "bar", bas.Password)
+				require.NotNil(t, bas.resolver)
 			},
 		},
 		"with unsupported properties": {
@@ -81,8 +92,9 @@ auth:
 auth:
   type: basic_auth
   config:
-    user: foo
-    password: bar
+    credentials:
+      source: foo
+      selector: bar
     foo: bar
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
@@ -93,32 +105,19 @@ auth:
 				require.ErrorContains(t, err, "invalid keys: foo")
 			},
 		},
-		"without user property": {
+		"without source property": {
 			config: []byte(`
 auth:
   type: basic_auth
   config:
-    password: bar
+    credentials:
+      selector: bar
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'user' is a required field")
-			},
-		},
-		"without password property": {
-			config: []byte(`
-auth:
-  type: basic_auth
-  config:
-    user: foo
-`),
-			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorContains(t, err, "'password' is a required field")
+				require.ErrorContains(t, err, "'source' is a required field")
 			},
 		},
 		"without config property": {
@@ -139,9 +138,16 @@ auth:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
+
+			sm := secretsmocks.NewManagerMock(t)
+			setup(t, sm)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 
 			var typ Type
 
@@ -175,6 +181,7 @@ func TestDecodeAuthenticationStrategyHookFuncForAPIKeyStrategy(t *testing.T) {
 	// du to a bug in the linter
 	for uc, tc := range map[string]struct {
 		config []byte
+		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"all required properties, with in=header": {
@@ -183,9 +190,19 @@ auth:
   type: api_key
   config:
     name: foo
-    value: bar
+    secret:
+      source: foo
+      selector: bar
     in: header
 `),
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+					Return(func() {}, nil)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(secrettypes.NewStringSecret("foo", "bar", "baz"), nil)
+			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
@@ -193,7 +210,7 @@ auth:
 				assert.IsType(t, &APIKey{}, as)
 				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
-				assert.Equal(t, "bar", aks.Value)
+				assert.NotNil(t, aks.resolver)
 				assert.Equal(t, "header", aks.In)
 			},
 		},
@@ -203,7 +220,9 @@ auth:
   type: api_key
   config:
     name: foo
-    value: bar
+    secret:
+      source: foo
+      selector: bar
     in: header
     foo: bar
 `),
@@ -221,9 +240,19 @@ auth:
   type: api_key
   config:
     name: foo
-    value: bar
+    secret:
+      source: foo
+      selector: bar
     in: cookie
 `),
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+					Return(func() {}, nil)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(secrettypes.NewStringSecret("foo", "bar", "baz"), nil)
+			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
@@ -231,7 +260,7 @@ auth:
 				assert.IsType(t, &APIKey{}, as)
 				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
-				assert.Equal(t, "bar", aks.Value)
+				assert.NotNil(t, aks.resolver)
 				assert.Equal(t, "cookie", aks.In)
 			},
 		},
@@ -241,9 +270,19 @@ auth:
   type: api_key
   config:
     name: foo
-    value: bar
+    secret:
+      source: foo
+      selector: bar
     in: query
 `),
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+					Return(func() {}, nil)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+					Return(secrettypes.NewStringSecret("foo", "bar", "baz"), nil)
+			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
@@ -251,8 +290,8 @@ auth:
 				assert.IsType(t, &APIKey{}, as)
 				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
-				assert.Equal(t, "bar", aks.Value)
 				assert.Equal(t, "query", aks.In)
+				assert.NotNil(t, aks.resolver)
 			},
 		},
 		"all required properties, with in=foobar": {
@@ -261,7 +300,9 @@ auth:
   type: api_key
   config:
     name: foo
-    value: bar
+    secret:
+      source: foo
+      selector: bar
     in: foobar
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
@@ -277,7 +318,9 @@ auth:
   type: api_key
   config:
     name: foo
-    value: bar
+    secret:
+      source: foo
+      selector: bar
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -291,7 +334,9 @@ auth:
 auth:
   type: api_key
   config:
-    value: bar
+    secret:
+      source: foo
+      selector: bar
     in: header
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
@@ -301,7 +346,7 @@ auth:
 				require.ErrorContains(t, err, "'name' is a required field")
 			},
 		},
-		"without value property": {
+		"without secret property": {
 			config: []byte(`
 auth:
   type: api_key
@@ -313,7 +358,7 @@ auth:
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'value' is a required field")
+				require.ErrorContains(t, err, "'secret' is a required field")
 			},
 		},
 		"without config property": {
@@ -334,9 +379,16 @@ auth:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
+
+			sm := secretsmocks.NewManagerMock(t)
+			setup(t, sm)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 
 			var typ Type
 
@@ -370,26 +422,43 @@ func TestDecodeAuthenticationStrategyHookFuncForClientCredentialsStrategy(t *tes
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
 		config     []byte
+		setup      func(t *testing.T, sm *secretsmocks.ManagerMock)
 		assert     func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
-		"all required properties": {
+		"minimal possible configuration": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
   config:
-    client_id: foo
-    client_secret: bar
+    credentials:
+      source: foo
+      selector: bar
     token_url: http://foobar.foo
 `),
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+					Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).Return(
+					secrettypes.NewCredentials("foo", "bar", map[string]any{
+						"client_id":     "foo",
+						"client_secret": "bar",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &OAuth2ClientCredentials{}, as)
 				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
-				assert.Equal(t, "foo", ccs.ClientID)
-				assert.Equal(t, "bar", ccs.ClientSecret)
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
+				assert.Empty(t, ccs.Scopes)
+				require.NotNil(t, ccs.Header)
+				assert.Equal(t, "Authorization", ccs.Header.Name)
+				assert.Equal(t, "Bearer", ccs.Header.Scheme)
+				assert.Equal(t, clientcredentials.AuthMethod("basic_auth"), ccs.AuthMethod)
+				assert.Nil(t, ccs.TTL)
 			},
 		},
 		"with unsupported properties": {
@@ -397,8 +466,9 @@ auth:
 auth:
   type: oauth2_client_credentials
   config:
-    client_id: foo
-    client_secret: bar
+    credentials:
+      source: oauth
+      selector: client-creds
     token_url: http://foobar.foo
     foo: bar
 `),
@@ -415,53 +485,75 @@ auth:
 auth:
   type: oauth2_client_credentials
   config:
-    client_id: foo
-    client_secret: bar
+    credentials:
+      source: oauth
+      selector: client-creds
     token_url: http://foobar.foo
+    auth_method: request_body
+    cache_ttl: 1h
+    header:
+      name: X-Foo
+      scheme: Bar
     scopes:
       - foo
       - bar
 `),
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+					Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).Return(
+					secrettypes.NewCredentials("foo", "bar", map[string]any{
+						"client_id":     "foo",
+						"client_secret": "bar",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &OAuth2ClientCredentials{}, as)
 				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
-				assert.Equal(t, "foo", ccs.ClientID)
-				assert.Equal(t, "bar", ccs.ClientSecret)
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
-				assert.ElementsMatch(t, ccs.Scopes, []string{"foo", "bar"})
+				assert.Equal(t, []string{"foo", "bar"}, ccs.Scopes)
+				require.NotNil(t, ccs.Header)
+				assert.Equal(t, "X-Foo", ccs.Header.Name)
+				assert.Equal(t, "Bar", ccs.Header.Scheme)
+				assert.Equal(t, clientcredentials.AuthMethod("request_body"), ccs.AuthMethod)
+				require.NotNil(t, ccs.TTL)
+				assert.Equal(t, time.Hour, *ccs.TTL)
+				assert.NotNil(t, ccs.resolver)
 			},
 		},
-		"without client_id property": {
+		"without credentials property": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
   config:
-    client_secret: bar
     token_url: http://foobar.foo
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'client_id' is a required field")
+				require.ErrorContains(t, err, "'credentials' is a required field")
 			},
 		},
-		"without client_secret property": {
+		"without credentials source property": {
 			config: []byte(`
 auth:
   type: oauth2_client_credentials
   config:
-    client_id: foo
+    credentials:
+      selector: client-creds
     token_url: http://foobar.foo
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'client_secret' is a required field")
+				require.ErrorContains(t, err, "'credentials'.'source' is a required field")
 			},
 		},
 		"without token_url property": {
@@ -469,8 +561,9 @@ auth:
 auth:
   type: oauth2_client_credentials
   config:
-    client_id: foo
-    client_secret: bar
+    credentials:
+      source: oauth
+      selector: client-creds
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -497,8 +590,9 @@ auth:
 auth:
   type: oauth2_client_credentials
   config:
-    client_id: foo
-    client_secret: bar
+    credentials:
+      source: oauth
+      selector: client-creds
     token_url: http://foobar.foo
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
@@ -518,9 +612,16 @@ auth:
 			)
 			require.NoError(t, err)
 
+			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
+
+			sm := secretsmocks.NewManagerMock(t)
+			setup(t, sm)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 
 			var typ Type
 
@@ -547,45 +648,19 @@ auth:
 func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing.T) {
 	t.Parallel()
 
-	testDir := t.TempDir()
-
-	privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	cert1, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
-		testsupport.WithSerialNumber(big.NewInt(1)),
-		testsupport.WithSubject(pkix.Name{
-			CommonName:   "test cert 1",
-			Organization: []string{"Test"},
-			Country:      []string{"EU"},
-		}),
-		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
-		testsupport.WithSelfSigned(),
-		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
-		testsupport.WithSignaturePrivKey(privKey1)).
-		Build()
-	require.NoError(t, err)
-
-	pemBytes1, err := pemx.BuildPEM(
-		pemx.WithECDSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key1")),
-		pemx.WithX509Certificate(cert1),
-	)
-	require.NoError(t, err)
-
-	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
-	require.NoError(t, err)
-
-	_, err = pemFile.Write(pemBytes1)
-	require.NoError(t, err)
+	secret := secrettypes.NewAsymmetricKeySecret("foo", "bar", "kid-1", privKey, nil)
 
 	type Type struct {
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
 	}
 
 	for uc, tc := range map[string]struct {
-		config     []byte
-		setupMocks func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock)
-		assert     func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
+		config []byte
+		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
+		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"without signer": {
 			config: []byte(`
@@ -596,12 +671,11 @@ auth:
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
-
 				require.Error(t, err)
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
 		},
-		"without key store": {
+		"without secret": {
 			config: []byte(`
 auth:
   type: http_message_signatures
@@ -612,26 +686,24 @@ auth:
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
-
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'signer'.'key_store' is a required field")
+				require.ErrorContains(t, err, "'signer'.'secret' is a required field")
 			},
 		},
-		"without key store path": {
+		"without secret source": {
 			config: []byte(`
 auth:
   type: http_message_signatures
   config:
     signer:
-      key_store:
-        password: foo
+      secret:
+        selector: bar
     components: ["@method"]
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
-
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'signer'.'key_store'.'path' is a required field")
+				require.ErrorContains(t, err, "'signer'.'secret'.'source' is a required field")
 			},
 		},
 		"without component identifiers": {
@@ -640,12 +712,12 @@ auth:
   type: http_message_signatures
   config:
     signer:
-      key_store:
-        path: /some/file.pem
+      secret:
+        source: foo
+        selector: bar
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
-
 				require.Error(t, err)
 				require.ErrorContains(t, err, "'components' must contain more than 0 items")
 			},
@@ -657,15 +729,20 @@ auth:
   config:
     components: ["@method"]
     signer:
-      key_store:
-        path: /some/path.pem
+      secret:
+        source: foo
+        selector: bar
 `),
-			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
+				t.Helper()
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "/some/path.pem")
+				require.ErrorContains(t, err, "failed resolving signing secret")
 			},
 		},
 		"with unsupported properties": {
@@ -676,42 +753,15 @@ auth:
     components: ["@method"]
     foo: bar
     signer:
-      key_store:
-        path: /some/path.pem
+      secret:
+        source: foo
+        selector: bar
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
-
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "invalid keys: foo")
-			},
-		},
-		"error while registering signer for updates watching": {
-			config: []byte(`
-auth:
-  type: http_message_signatures
-  config:
-    components: ["@method"]
-    signer:
-      key_store:
-        path: ` + pemFile.Name() + `
-`),
-			setupMocks: func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock) {
-				t.Helper()
-
-				watcher := mocks.NewWatcherMock(t)
-				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(errors.New("test error"))
-
-				ccm.EXPECT().Watcher().Return(watcher)
-				krm.EXPECT().Notify(mock.Anything)
-			},
-			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "failed registering")
 			},
 		},
 		"minimal possible configuration": {
@@ -721,84 +771,44 @@ auth:
   config:
     components: ["@method"]
     signer:
-      key_store:
-        path: ` + pemFile.Name() + `
+      secret:
+        source: foo
+        selector: bar
 `),
-			setupMocks: func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock) {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
-				watcher := mocks.NewWatcherMock(t)
-				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
-
-				ccm.EXPECT().Watcher().Return(watcher)
-				krm.EXPECT().Notify(mock.Anything)
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(secret, nil)
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
-
 				require.NoError(t, err)
 
 				httpSig, ok := as.(*HTTPMessageSignatures)
 				require.True(t, ok)
-
-				assert.NotNil(t, httpSig.signer)
-			},
-		},
-		"full possible configuration": {
-			config: []byte(`
-auth:
-  type: http_message_signatures
-  config:
-    ttl: 1m
-    label: bar
-    components: ["@method"]
-    signer:
-      name: foobar
-      key_id: key1
-      key_store:
-        password: secret
-        path: ` + pemFile.Name() + `
-`),
-			setupMocks: func(t *testing.T, ccm *app.ContextMock, krm *mocks2.RegistryMock) {
-				t.Helper()
-
-				watcher := mocks.NewWatcherMock(t)
-				watcher.EXPECT().Add(pemFile.Name(), mock.Anything).Return(nil)
-
-				ccm.EXPECT().Watcher().Return(watcher)
-				krm.EXPECT().Notify(mock.Anything)
-			},
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				httpSig, ok := as.(*HTTPMessageSignatures)
-				require.True(t, ok)
-
-				assert.NotNil(t, httpSig.signer)
+				assert.NotNil(t, httpSig.resolver)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			validator, err := validation.NewValidator(
-				validation.WithTagValidator(config.EnforcementSettings{}),
-			)
+			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
-			kr := mocks2.NewRegistryMock(t)
+			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
+
+			sm := secretsmocks.NewManagerMock(t)
+			setup(t, sm)
+
+			krm := keyregistrymocks.NewRegistryMock(t)
+			krm.EXPECT().Notify(mock.Anything).Maybe()
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
-			appCtx.EXPECT().KeyRegistry().Return(kr)
-
-			setupMocks := x.IfThenElse(tc.setupMocks != nil,
-				tc.setupMocks,
-				func(t *testing.T, _ *app.ContextMock, _ *mocks2.RegistryMock) { t.Helper() },
-			)
-			setupMocks(t, appCtx, kr)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(krm)
 
 			var typ Type
 
@@ -813,10 +823,7 @@ auth:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			// WHEN
 			err = dec.Decode(conf)
-
-			// THEN
 			tc.assert(t, err, typ.AuthStrategy)
 		})
 	}

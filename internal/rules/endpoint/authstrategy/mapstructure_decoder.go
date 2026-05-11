@@ -19,6 +19,7 @@ package authstrategy
 import (
 	"context"
 	"errors"
+	"net/http"
 	"reflect"
 
 	"github.com/go-viper/mapstructure/v2"
@@ -30,15 +31,10 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type initializableStrategy interface {
-	init(context.Context, app.Context) error
-}
-
-var authStrategyTypes = map[string]func() endpoint.AuthenticationStrategy{
-	"basic_auth":                func() endpoint.AuthenticationStrategy { return &BasicAuth{} },
-	"api_key":                   func() endpoint.AuthenticationStrategy { return &APIKey{} },
-	"oauth2_client_credentials": func() endpoint.AuthenticationStrategy { return &OAuth2ClientCredentials{} },
-	"http_message_signatures":   func() endpoint.AuthenticationStrategy { return &HTTPMessageSignatures{} },
+type authStrategy interface {
+	init(ctx context.Context, appCtx app.Context) error
+	Apply(req *http.Request) error
+	Hash() []byte
 }
 
 func asStringMap(data any) (map[string]any, error) {
@@ -92,15 +88,7 @@ func decodeConfig(
 		encoding.WithErrorOnUnused(true),
 	)
 
-	if err := dec.DecodeMap(out, typed); err != nil {
-		return errorchain.NewWithMessagef(
-			pipeline.ErrConfiguration,
-			"failed to unmarshal '%s' strategy config",
-			name,
-		).CausedBy(err)
-	}
-
-	return nil
+	return dec.DecodeMap(out, typed)
 }
 
 func DecodeAuthenticationStrategyHookFunc(appCtx app.Context) mapstructure.DecodeHookFunc {
@@ -109,30 +97,31 @@ func DecodeAuthenticationStrategyHookFunc(appCtx app.Context) mapstructure.Decod
 			return data, nil
 		}
 
-		if !reflect.TypeOf((*endpoint.AuthenticationStrategy)(nil)).Elem().AssignableTo(to) {
+		if !reflect.TypeFor[*endpoint.AuthenticationStrategy]().Elem().AssignableTo(to) {
 			return data, nil
 		}
 
-		raw, ok := data.(map[string]any)
-		if !ok {
-			return nil, errorchain.NewWithMessage(
-				pipeline.ErrConfiguration,
-				"unexpected authentication strategy configuration type",
-			)
-		}
-
+		raw := data.(map[string]any) //nolint: forcetypeassert
 		typ, _ := raw["type"].(string)
 
-		factory, ok := authStrategyTypes[typ]
-		if !ok {
+		var strategy authStrategy
+
+		switch typ {
+		case "basic_auth":
+			strategy = &BasicAuth{}
+		case "api_key":
+			strategy = &APIKey{}
+		case "oauth2_client_credentials":
+			strategy = &OAuth2ClientCredentials{}
+		case "http_message_signatures":
+			strategy = &HTTPMessageSignatures{}
+		default:
 			return nil, errorchain.NewWithMessagef(
 				pipeline.ErrConfiguration,
 				"unsupported authentication type: '%s'",
 				typ,
 			)
 		}
-
-		strategy := factory()
 
 		if err := decodeConfig(appCtx.DecoderFactory(), typ, strategy, raw["config"]); err != nil {
 			return nil, errorchain.NewWithMessagef(
@@ -142,10 +131,8 @@ func DecodeAuthenticationStrategyHookFunc(appCtx app.Context) mapstructure.Decod
 			).CausedBy(err)
 		}
 
-		if initable, ok := strategy.(initializableStrategy); ok {
-			if err := initable.init(context.Background(), appCtx); err != nil {
-				return nil, err
-			}
+		if err := strategy.init(context.Background(), appCtx); err != nil {
+			return nil, err
 		}
 
 		return strategy, nil
