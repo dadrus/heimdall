@@ -19,8 +19,8 @@ package types //nolint:revive
 import "errors"
 
 var (
-	ErrSecretNotFound       = errors.New("secret not found")
-	ErrUnsupportedOperation = errors.New("unsupported secret operation")
-	ErrSecretKindMismatch   = errors.New("secret kind mismatch")
-	ErrInvalidSecretPayload = errors.New("invalid secret payload")
+	ErrSecretNotFound            = errors.New("secret not found")
+	ErrUnsupportedOperation      = errors.New("unsupported secret operation")
+	ErrSecretKindMismatch        = errors.New("secret kind mismatch")
+	ErrInvalidCredentialsPayload = errors.New("invalid credentials payload")
 )

@@ -72,9 +72,9 @@ func TestNewTrustStoreSecret(t *testing.T) {
 }
 
 func TestNewCredentials(t *testing.T) {
-	secret := NewCredentials("inline", "foo", map[string]Secret{
-		"username": NewStringSecret("inline", "foo/username", "foo"),
-		"password": NewStringSecret("inline", "foo/password", "bar"),
+	secret := NewCredentials("inline", "foo", map[string]any{
+		"username": "foo",
+		"password": "bar",
 	})
 
 	assert.Equal(t, "inline", secret.Source())
@@ -82,43 +82,31 @@ func TestNewCredentials(t *testing.T) {
 }
 
 func TestSecretPayloadDecode(t *testing.T) {
+	type testCredentials struct {
+		Username string `mapstructure:"username"`
+		Password string `mapstructure:"password"`
+	}
+
 	for uc, tc := range map[string]struct {
 		payload Credentials
 		want    testCredentials
 		wantErr bool
 	}{
 		"decodes string secrets": {
-			payload: NewCredentials("inline", "foo", map[string]Secret{
-				"username": NewStringSecret("inline", "foo/username", "foo"),
-				"password": NewStringSecret("inline", "foo/password", "bar"),
+			payload: NewCredentials("inline", "foo", map[string]any{
+				"username": "foo",
+				"password": "bar",
 			}),
 			want: testCredentials{
 				Username: "foo",
 				Password: "bar",
 			},
 		},
-		"decodes bytes secrets": {
-			payload: NewCredentials("inline", "foo", map[string]Secret{
-				"username_bytes": NewSymmetricKeySecret("inline", "foo/username_bytes", "username_bytes", []byte("foo")),
-				"password_bytes": NewSymmetricKeySecret("inline", "foo/password_bytes", "password_bytes", []byte("bar")),
-			}),
-			want: testCredentials{
-				UsernameBytes: []byte("foo"),
-				PasswordBytes: []byte("bar"),
-			},
-		},
-		"fails for unsupported secret kind": {
-			payload: NewCredentials("inline", "foo", map[string]Secret{
-				"username": NewStringSecret("inline", "foo/username", "foo"),
-				"signer":   newTestSignerSecret(t),
-			}),
-			wantErr: true,
-		},
 		"fails on unused payload field": {
-			payload: NewCredentials("inline", "foo", map[string]Secret{
-				"username": NewStringSecret("inline", "foo/username", "foo"),
-				"password": NewStringSecret("inline", "foo/password", "bar"),
-				"extra":    NewStringSecret("inline", "foo/extra", "baz"),
+			payload: NewCredentials("inline", "foo", map[string]any{
+				"username": "foo",
+				"password": "bar",
+				"extra":    "baz",
 			}),
 			wantErr: true,
 		},
@@ -140,57 +128,13 @@ func TestSecretPayloadDecode(t *testing.T) {
 	}
 
 	t.Run("fails creating decoder", func(t *testing.T) {
-		payload := NewCredentials("inline", "foo", map[string]Secret{
-			"username": NewStringSecret("inline", "foo/username", "foo"),
+		payload := NewCredentials("inline", "foo", map[string]any{
+			"username": "foo",
 		})
 
 		err := payload.Decode(nil)
 
 		require.Error(t, err)
-		require.ErrorIs(t, err, ErrInvalidSecretPayload)
+		require.ErrorIs(t, err, ErrInvalidCredentialsPayload)
 	})
-}
-
-func TestSecretPayloadDecodeInvalidPayloadError(t *testing.T) {
-	payload := NewCredentials("inline", "foo", map[string]Secret{
-		"username": NewStringSecret("inline", "foo/username", "foo"),
-		"password": NewStringSecret("inline", "foo/password", "bar"),
-		"extra":    NewStringSecret("inline", "foo/extra", "baz"),
-	})
-
-	var out testCredentials
-
-	err := payload.Decode(&out)
-
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrInvalidSecretPayload)
-}
-
-func TestSecretPayloadDecodeUnsupportedKindError(t *testing.T) {
-	payload := NewCredentials("inline", "foo", map[string]Secret{
-		"signer": newTestSignerSecret(t),
-	})
-
-	var out map[string]any
-
-	err := payload.Decode(&out)
-
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrSecretKindMismatch)
-}
-
-type testCredentials struct {
-	Username      string `mapstructure:"username"`
-	Password      string `mapstructure:"password"`
-	UsernameBytes []byte `mapstructure:"username_bytes"`
-	PasswordBytes []byte `mapstructure:"password_bytes"`
-}
-
-func newTestSignerSecret(t *testing.T) Secret {
-	t.Helper()
-
-	signer, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
-	return NewAsymmetricKeySecret("pem", "first", "kid-1", signer, nil)
 }

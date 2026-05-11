@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
@@ -54,7 +55,7 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, types.ErrInvalidSecretPayload)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "must not be empty")
 			},
 		},
@@ -64,8 +65,8 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, types.ErrInvalidSecretPayload)
-				require.ErrorContains(t, err, "api_token")
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "must be either string or structured object")
 			},
 		},
 		"fails for selector containing slash": {
@@ -74,20 +75,8 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, types.ErrInvalidSecretPayload)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "must not contain '/'")
-			},
-		},
-		"fails for non-string credential value": {
-			conf: map[string]any{
-				"github": map[string]any{"client_id": 42},
-			},
-			assert: func(t *testing.T, err error, _ types.Provider) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, types.ErrInvalidSecretPayload)
-				require.ErrorContains(t, err, "github/client_id")
 			},
 		},
 	} {

@@ -57,7 +57,7 @@ var (
 	ErrSecretNotFound          = types.ErrSecretNotFound
 	ErrSecretKindMismatch      = types.ErrSecretKindMismatch
 	ErrUnsupportedOperation    = types.ErrUnsupportedOperation
-	ErrInvalidSecretPayload    = types.ErrInvalidSecretPayload
+	ErrInvalidSecretPayload    = types.ErrInvalidCredentialsPayload
 )
 
 const (

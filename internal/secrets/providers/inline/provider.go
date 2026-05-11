@@ -20,6 +20,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -42,7 +43,7 @@ type provider struct {
 
 func newProvider(args types.ProviderArgs) (types.Provider, error) {
 	if len(args.Config) == 0 {
-		return nil, errorchain.NewWithMessage(types.ErrInvalidSecretPayload,
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"inline provider config must not be empty")
 	}
 
@@ -51,7 +52,7 @@ func newProvider(args types.ProviderArgs) (types.Provider, error) {
 
 	for selector, value := range args.Config {
 		if strings.Contains(selector, "/") {
-			return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"inline selector '%s' must not contain '/'", selector)
 		}
 
@@ -60,21 +61,10 @@ func newProvider(args types.ProviderArgs) (types.Provider, error) {
 			secrets[selector] = types.NewStringSecret(args.SourceName, selector, typed)
 
 		case map[string]any:
-			values := make(map[string]types.Secret, len(typed))
-			for key, raw := range typed {
-				str, ok := raw.(string)
-				if !ok {
-					return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
-						"inline credential '%s/%s' is not a string", selector, key)
-				}
-
-				values[key] = types.NewStringSecret(args.SourceName, selector+"/"+key, str)
-			}
-
-			credentials[selector] = types.NewCredentials(args.SourceName, selector, values)
+			credentials[selector] = types.NewCredentials(args.SourceName, selector, typed)
 
 		default:
-			return nil, errorchain.NewWithMessagef(types.ErrInvalidSecretPayload,
+			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 				"inline secret '%s' must be either string or structured object", selector)
 		}
 	}
@@ -119,7 +109,7 @@ func (p *provider) ResolveCredentials(_ context.Context, selector types.Selector
 	credentials := p.credentials[selector.Value]
 	if credentials == nil {
 		return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound,
-			"no inline credentials found for selector '%s'", selector.Value)
+			"no credentials found for selector '%s'", selector.Value)
 	}
 
 	return credentials, nil

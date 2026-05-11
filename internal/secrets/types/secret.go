@@ -175,10 +175,10 @@ func (s *trustStoreSecret) CertPool() *x509.CertPool { return s.certPool }
 type credentials struct {
 	source   string
 	selector string
-	values   map[string]Secret
+	values   map[string]any
 }
 
-func NewCredentials(source, selector string, values map[string]Secret) Credentials {
+func NewCredentials(source, selector string, values map[string]any) Credentials {
 	return &credentials{
 		source:   source,
 		selector: selector,
@@ -190,29 +190,16 @@ func (p *credentials) Source() string   { return p.source }
 func (p *credentials) Selector() string { return p.selector }
 
 func (p *credentials) Decode(out any) error {
-	raw := make(map[string]any, len(p.values))
-
-	for key, secret := range p.values {
-		switch typed := secret.(type) {
-		case StringSecret:
-			raw[key] = typed.String()
-		case SymmetricKeySecret:
-			raw[key] = typed.Key()
-		default:
-			return ErrSecretKindMismatch
-		}
-	}
-
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Result:      out,
 		ErrorUnused: true,
 	})
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidSecretPayload, err)
+		return fmt.Errorf("%w: %w", ErrInvalidCredentialsPayload, err)
 	}
 
-	if err = dec.Decode(raw); err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidSecretPayload, err)
+	if err = dec.Decode(p.values); err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidCredentialsPayload, err)
 	}
 
 	return nil
