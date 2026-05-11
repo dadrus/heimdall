@@ -31,13 +31,167 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmock "github.com/dadrus/heimdall/internal/secrets/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestApplyClientCredentialsStrategy(t *testing.T) {
+func TestOAuth2ClientCredentialsInit(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		header *headerConfig
+		setup  func(t *testing.T, sm *secretsmock.ManagerMock)
+		assert func(t *testing.T, err error, cc *OAuth2ClientCredentials)
+	}{
+		"fails to resolve credentials": {
+			setup: func(t *testing.T, sm *secretsmock.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(nil, errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed resolving oauth2 client credentials")
+
+				assert.Nil(t, cc.Hash())
+				_, ok := cc.resolver.Get()
+				require.False(t, ok)
+			},
+		},
+		"fails decoding credentials": {
+			setup: func(t *testing.T, sm *secretsmock.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types.NewCredentials("foo", "bar", map[string]any{
+						"foo": "baz",
+						"bar": "foo",
+					}), nil)
+			},
+			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "invalid credentials payload")
+
+				assert.Nil(t, cc.Hash())
+				_, ok := cc.resolver.Get()
+				require.False(t, ok)
+			},
+		},
+		"succeeds without custom header": {
+			setup: func(t *testing.T, sm *secretsmock.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types.NewCredentials("foo", "bar", map[string]any{
+						"client_id":     "baz",
+						"client_secret": "foo",
+					}), nil)
+			},
+			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, cc.Header)
+				assert.Equal(t, "Authorization", cc.Header.Name)
+				assert.Equal(t, "Bearer", cc.Header.Scheme)
+				require.NotNil(t, cc.resolver)
+
+				exp := clientcredentials.Config{
+					TokenURL:     "https://example.com/token",
+					ClientID:     "baz",
+					ClientSecret: "foo",
+					AuthMethod:   "basic_auth",
+					Scopes:       []string{"foo", "bar"},
+					TTL:          new(1 * time.Minute),
+				}
+
+				val, ok := cc.resolver.Get()
+				require.True(t, ok)
+				assert.Equal(t, exp, val)
+				assert.NotEmpty(t, cc.Hash())
+			},
+		},
+		"succeeds with custom header": {
+			header: &headerConfig{Name: "X-My-Header", Scheme: "Foo"},
+			setup: func(t *testing.T, sm *secretsmock.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types.NewCredentials("foo", "bar", map[string]any{
+						"client_id":     "baz",
+						"client_secret": "foo",
+					}), nil)
+			},
+			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, cc.Header)
+				assert.Equal(t, "X-My-Header", cc.Header.Name)
+				assert.Equal(t, "Foo", cc.Header.Scheme)
+				require.NotNil(t, cc.resolver)
+
+				exp := clientcredentials.Config{
+					TokenURL:     "https://example.com/token",
+					ClientID:     "baz",
+					ClientSecret: "foo",
+					AuthMethod:   "basic_auth",
+					Scopes:       []string{"foo", "bar"},
+					TTL:          new(1 * time.Minute),
+				}
+
+				val, ok := cc.resolver.Get()
+				require.True(t, ok)
+				assert.Equal(t, exp, val)
+				assert.NotEmpty(t, cc.Hash())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			secret := config.Secret{Source: "foo", Selector: "bar"}
+			sm := secretsmock.NewManagerMock(t)
+
+			tc.setup(t, sm)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().SecretsManager().Return(sm)
+
+			ak := &OAuth2ClientCredentials{
+				TokenURL:    "https://example.com/token",
+				Credentials: secret,
+				AuthMethod:  "basic_auth",
+				Scopes:      []string{"foo", "bar"},
+				Header:      tc.header,
+				TTL:         new(1 * time.Minute),
+			}
+
+			// WHEN
+			err := ak.init(t.Context(), appCtx)
+
+			// THEN
+			tc.assert(t, err, ak)
+		})
+	}
+}
+
+func TestOAuth2ClientCredentialsApply(t *testing.T) {
 	t.Parallel()
 
 	type (
@@ -94,15 +248,15 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	defer srv.Close()
 
 	for uc, tc := range map[string]struct {
-		strategy       *OAuth2ClientCredentials
-		configureMocks func(t *testing.T, cch *mocks.CacheMock)
+		header         *headerConfig
+		ttl            *time.Duration
+		configureMocks func(t *testing.T, cch *mocks.CacheMock, sm *secretsmock.ManagerMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool, req *http.Request)
 	}{
 		"reusing response from cache, no custom header": {
-			strategy: &OAuth2ClientCredentials{},
-			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
+			configureMocks: func(t *testing.T, cch *mocks.CacheMock, sm *secretsmock.ManagerMock) {
 				t.Helper()
 
 				rawData, err := json.Marshal(clientcredentials.TokenInfo{
@@ -121,12 +275,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			},
 		},
 		"error while unmarshalling successful response": {
-			strategy: &OAuth2ClientCredentials{
-				Config: clientcredentials.Config{
-					TokenURL: srv.URL, ClientID: "bar", ClientSecret: "foo",
-				},
-			},
-			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
+			configureMocks: func(t *testing.T, cch *mocks.CacheMock, sm *secretsmock.ManagerMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -146,21 +295,9 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			},
 		},
 		"full configuration, no cache hit and token has expires_in claim": {
-			strategy: &OAuth2ClientCredentials{
-				Config: clientcredentials.Config{
-					TokenURL:     srv.URL,
-					ClientID:     "bar",
-					ClientSecret: "foo",
-					TTL: func() *time.Duration {
-						ttl := 3 * time.Minute
-
-						return &ttl
-					}(),
-					Scopes: []string{"baz", "zab"},
-				},
-				Header: &HeaderConfig{Name: "X-My-Header", Scheme: "Foo"},
-			},
-			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
+			ttl:    new(3 * time.Minute),
+			header: &headerConfig{Name: "X-My-Header", Scheme: "Foo"},
+			configureMocks: func(t *testing.T, cch *mocks.CacheMock, sm *secretsmock.ManagerMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -173,7 +310,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
-				assert.Equal(t, "bar", clientIDAndSecret[0])
+				assert.Equal(t, "baz", clientIDAndSecret[0])
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
@@ -202,26 +339,51 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			cc := &OAuth2ClientCredentials{
+				TokenURL:    srv.URL,
+				Credentials: config.Secret{Source: "foo", Selector: "bar"},
+				AuthMethod:  "basic_auth",
+				Scopes:      []string{"baz", "zab"},
+				TTL:         tc.ttl,
+				Header:      tc.header,
+			}
+
+			cch := mocks.NewCacheMock(t)
+			ctx := cache.WithContext(t.Context(), cch)
+
+			ref := secrets.InternalRef(cc.Credentials.Source, cc.Credentials.Selector)
+			sm := secretsmock.NewManagerMock(t)
+			sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() {}, nil)
+			sm.EXPECT().ResolveCredentials(mock.Anything, ref).
+				Return(types.NewCredentials("foo", "bar", map[string]any{
+					"client_id":     "baz",
+					"client_secret": "foo",
+				}), nil)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().SecretsManager().Return(sm)
+
 			endpointCalled = false
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
-				tc.configureMocks,
-				func(t *testing.T, _ *mocks.CacheMock) { t.Helper() },
-			)
 			assertRequest = x.IfThenElse(tc.assertRequest != nil,
 				tc.assertRequest,
 				func(t *testing.T, _ *http.Request) { t.Helper() },
 			)
 			buildResponse = tc.buildResponse
 
-			cch := mocks.NewCacheMock(t)
-			ctx := cache.WithContext(t.Context(), cch)
+			tc.configureMocks(t, cch, sm)
+			err := cc.init(t.Context(), appCtx)
+			require.NoError(t, err)
 
-			configureMocks(t, cch)
-
-			req := &http.Request{Header: http.Header{}}
+			req, err := http.NewRequestWithContext(
+				ctx,
+				http.MethodPost,
+				"http//example.com/test?bar=foo",
+				nil,
+			)
+			require.NoError(t, err)
 
 			// WHEN
-			err := tc.strategy.Apply(ctx, req)
+			err = cc.Apply(req)
 
 			// THEN
 			tc.assert(t, err, endpointCalled, req)

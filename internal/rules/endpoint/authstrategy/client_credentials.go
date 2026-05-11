@@ -22,67 +22,44 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	cc "github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/rs/zerolog"
 )
 
-type HeaderConfig struct {
+type headerConfig struct {
 	Name   string `mapstructure:"name"   validate:"required"`
 	Scheme string `mapstructure:"scheme"`
 }
 
 type OAuth2ClientCredentials struct {
-	TokenURL    string         `mapstructure:"token_url"   validate:"required,url,enforced=istls"`
-	Credentials config.Secret  `mapstructure:"credentials" validate:"required"`
-	AuthMethod  cc.AuthMethod  `mapstructure:"auth_method" validate:"omitempty,oneof=basic_auth request_body"`
-	Scopes      []string       `mapstructure:"scopes"`
-	TTL         *time.Duration `mapstructure:"cache_ttl"`
-	Header      *HeaderConfig  `mapstructure:"header"`
+	TokenURL    string                       `mapstructure:"token_url"   validate:"required,url,enforced=istls"`
+	Credentials config.Secret                `mapstructure:"credentials" validate:"required"`
+	AuthMethod  clientcredentials.AuthMethod `mapstructure:"auth_method" validate:"omitempty,oneof=basic_auth request_body"` //nolint:lll
+	Scopes      []string                     `mapstructure:"scopes"`
+	TTL         *time.Duration               `mapstructure:"cache_ttl"`
+	Header      *headerConfig                `mapstructure:"header"`
 
-	resolver *cache.CredentialsResolver[cc.Config]
+	resolver *cache.CredentialsResolver[clientcredentials.Config]
 	hash     atomic.Value
 }
 
-func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) error {
-	if c.Header == nil {
-		c.Header = &HeaderConfig{Name: "Authorization", Scheme: "Bearer"}
-	}
-
-	resolver := &cache.CredentialsResolver[cc.Config]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
-		Converter: c.toClientCredentialsConfig,
-		OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg cc.Config) {
-			c.hash.Store(cfg.Hash())
-		},
-	}
-
-	if err := resolver.Start(ctx); err != nil {
-		return errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"failed resolving oauth2 client credentials",
-		).CausedBy(err)
-	}
-
-	c.resolver = resolver
-
-	return nil
-}
-
-func (c *OAuth2ClientCredentials) Apply(ctx context.Context, req *http.Request) error {
+func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
+	ctx := req.Context()
 	logger := zerolog.Ctx(ctx)
+
 	logger.Debug().Msg("Applying oauth2_client_credentials strategy to authenticate request")
 
 	cfg, ok := c.resolver.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
+			pipeline.ErrInternal,
 			"oauth2 client credentials are not available",
 		)
 	}
@@ -105,7 +82,37 @@ func (c *OAuth2ClientCredentials) Hash() []byte {
 	return nil
 }
 
-func (c *OAuth2ClientCredentials) toClientCredentialsConfig(creds secrets.Credentials) (cc.Config, error) {
+func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) error {
+	if c.Header == nil {
+		c.Header = &headerConfig{Name: "Authorization", Scheme: "Bearer"}
+	}
+
+	if len(c.AuthMethod) == 0 {
+		c.AuthMethod = clientcredentials.AuthMethodBasicAuth
+	}
+
+	c.resolver = &cache.CredentialsResolver[clientcredentials.Config]{
+		Manager:   appCtx.SecretsManager(),
+		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
+		Converter: c.createClientCredentialsConfig,
+		OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) {
+			c.hash.Store(cfg.Hash())
+		},
+	}
+
+	if err := c.resolver.Start(ctx); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving oauth2 client credentials",
+		).CausedBy(err)
+	}
+
+	return nil
+}
+
+func (c *OAuth2ClientCredentials) createClientCredentialsConfig(
+	creds secrets.Credentials,
+) (clientcredentials.Config, error) {
 	type credentials struct {
 		ClientID     string `mapstructure:"client_id"     validate:"required"`
 		ClientSecret string `mapstructure:"client_secret" validate:"required"`
@@ -114,13 +121,13 @@ func (c *OAuth2ClientCredentials) toClientCredentialsConfig(creds secrets.Creden
 	var data credentials
 
 	if err := creds.Decode(&data); err != nil {
-		return cc.Config{}, errorchain.NewWithMessage(
+		return clientcredentials.Config{}, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed decoding oauth2 client credentials",
 		).CausedBy(err)
 	}
 
-	return cc.Config{
+	return clientcredentials.Config{
 		TokenURL:     c.TokenURL,
 		ClientID:     data.ClientID,
 		ClientSecret: data.ClientSecret,
