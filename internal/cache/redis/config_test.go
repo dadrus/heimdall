@@ -31,8 +31,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry/v2"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
+	"github.com/dadrus/heimdall/internal/keyregistry"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -63,9 +63,9 @@ func TestBaseConfigClientOptions(t *testing.T) {
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
 				t.Helper()
 
-				secret := secrettypes.NewCredentials("inline", "foo", map[string]secrets.Secret{
-					"username": secrettypes.NewStringSecret("creds", "redis/username", "foo"),
-					"password": secrettypes.NewStringSecret("creds", "redis/password", "bar"),
+				secret := secrettypes.NewCredentials("inline", "foo", map[string]any{
+					"username": "foo",
+					"password": "bar",
 				})
 
 				sm.EXPECT().

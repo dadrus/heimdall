@@ -38,7 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -175,8 +175,8 @@ func TestStandaloneCache(t *testing.T) {
 
 				db := miniredis.RunT(t)
 
-				secret := secrettypes.NewCredentials("inline", "foo", map[string]secrets.Secret{
-					"password": secrettypes.NewStringSecret("creds", "redis/password", "foo"),
+				secret := secrettypes.NewCredentials("inline", "foo", map[string]any{
+					"password": "foo",
 				})
 
 				sm.EXPECT().
@@ -274,8 +274,8 @@ func TestStandaloneCache(t *testing.T) {
 
 				t.Cleanup(db.Close)
 
-				secret := secrettypes.NewCredentials("inline", "foo", map[string]secrets.Secret{
-					"password": secrettypes.NewStringSecret("creds", "redis/password", "foo"),
+				secret := secrettypes.NewCredentials("inline", "foo", map[string]any{
+					"password": "foo",
 				})
 
 				sm.EXPECT().
