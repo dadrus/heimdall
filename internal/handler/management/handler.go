@@ -27,7 +27,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter"
-	"github.com/dadrus/heimdall/internal/keyregistry/v2"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 )
 
 type handler struct {

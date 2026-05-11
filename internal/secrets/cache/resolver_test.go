@@ -516,9 +516,9 @@ func TestCredentialsResolverStart(t *testing.T) {
 	t.Parallel()
 
 	ref := secrets.InternalRef("source", "redis")
-	creds := types.NewCredentials("source", "redis", map[string]types.Secret{
-		"username": types.NewStringSecret("source", "username", "foo"),
-		"password": types.NewStringSecret("source", "password", "bar"),
+	creds := types.NewCredentials("source", "redis", map[string]any{
+		"username": "foo",
+		"password": "bar",
 	})
 
 	sm := secretsmocks.NewManagerMock(t)

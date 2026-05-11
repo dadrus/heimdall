@@ -366,17 +366,9 @@ func TestManagerResolveCredentials(t *testing.T) {
 		ClientSecret string `mapstructure:"client_secret"`
 	}
 
-	credentials := types.NewCredentials("file", "client_credentials", map[string]types.Secret{
-		"client_id": types.NewStringSecret(
-			"file",
-			"client_credentials/client_id",
-			"foo",
-		),
-		"client_secret": types.NewStringSecret(
-			"file",
-			"client_credentials/client_secret",
-			"bar",
-		),
+	credentials := types.NewCredentials("file", "client_credentials", map[string]any{
+		"client_id":     "foo",
+		"client_secret": "bar",
 	})
 
 	for uc, tc := range map[string]struct {

@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
@@ -742,7 +742,7 @@ auth:
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "failed resolving signing secret")
+				require.ErrorContains(t, err, "failed resolving secret")
 			},
 		},
 		"with unsupported properties": {
