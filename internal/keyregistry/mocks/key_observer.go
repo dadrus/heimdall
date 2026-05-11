@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/keyregistry/v2"
 	mock "github.com/stretchr/testify/mock"
 )
 

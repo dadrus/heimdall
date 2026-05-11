@@ -38,7 +38,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 
-	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -182,12 +182,10 @@ func (s *RegistryTestSuite) TestKeysNoAllocs() {
 	s.Require().NoError(err)
 
 	reg.Notify(KeyInfo{
-		Entry: keystore.Entry{
-			Alg:       keystore.AlgECDSA,
-			KeySize:   384,
-			KeyID:     "kid-1",
-			CertChain: []*x509.Certificate{s.ee1.Certificate},
-		},
+		Key: types.NewAsymmetricKeySecret(
+			"test", "kid-1", "kid-1",
+			s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+		),
 		Exportable: true,
 	})
 
@@ -208,13 +206,10 @@ func (s *RegistryTestSuite) TestNotify() {
 		"single exportable certificate added": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+					),
 					Exportable: true,
 				},
 			},
@@ -253,13 +248,10 @@ func (s *RegistryTestSuite) TestNotify() {
 		"single not exportable certificate added": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+					),
 					Exportable: false,
 				},
 			},
@@ -297,23 +289,17 @@ func (s *RegistryTestSuite) TestNotify() {
 		"multiple certificates with overlapping key chains added, with one being exportable": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate},
+					),
 					Exportable: false,
 				},
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-2",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee2.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee2.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-2", "kid-2",
+						s.ee2.PrivKey, []*x509.Certificate{s.ee2.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate},
+					),
 					Exportable: true,
 				},
 			},
@@ -421,23 +407,17 @@ func (s *RegistryTestSuite) TestNotify() {
 		"exportable certificate updated": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate},
+					),
 					Exportable: true,
 				},
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee3.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee3.Certificate, s.intCA2.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee3.PrivKey, []*x509.Certificate{s.ee3.Certificate, s.intCA2.Certificate},
+					),
 					Exportable: true,
 				},
 			},
@@ -500,23 +480,18 @@ func (s *RegistryTestSuite) TestNotify() {
 		"same not exportable certificate added multiple times": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+					),
 					Exportable: false,
 				},
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate},
-					}, Exportable: false,
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+					),
+					Exportable: false,
 				},
 			},
 			assert: func(t *testing.T, reg *registry) {
@@ -538,37 +513,27 @@ func (s *RegistryTestSuite) TestNotify() {
 		"same certificate added multiple times but one time exportable and one time not": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+					),
 					Exportable: true,
 				},
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate},
-					},
-					Exportable: true,
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+					),
+					Exportable: false,
 				},
 			},
 			assert: func(t *testing.T, reg *registry) {
 				t.Helper()
 
-				// the effect must be the same as in "single exportable certificate added" test
-				// the certificate is exportable
 				require.Len(t, reg.state, 1)
 				assert.Contains(t, reg.state, "kid-1")
 
-				require.Len(t, reg.keysSnapshot, 1)
-				assert.Equal(t, "kid-1", reg.keysSnapshot[0].KeyID)
-				assert.Equal(t, s.ee1.Certificate.PublicKey, reg.keysSnapshot[0].Key)
+				require.Empty(t, reg.keysSnapshot)
 
 				assert.Len(t, reg.metricsState, 1)
 				ms := reg.metricsState[createCertID(s.ee1.Certificate)]
@@ -580,12 +545,10 @@ func (s *RegistryTestSuite) TestNotify() {
 		"single exportable key added": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, nil,
+					),
 					Exportable: true,
 				},
 			},
@@ -595,9 +558,9 @@ func (s *RegistryTestSuite) TestNotify() {
 				require.Len(t, reg.state, 1)
 				assert.Contains(t, reg.state, "kid-1")
 				ki := reg.state["kid-1"]
-				assert.Equal(t, s.ee1.Certificate.PublicKey, ki.PrivateKey.Public())
+				assert.Equal(t, s.ee1.Certificate.PublicKey, ki.Key.PrivateKey().Public())
 				assert.True(t, reg.state["kid-1"].Exportable)
-				assert.Empty(t, reg.state["kid-1"].CertChain)
+				assert.Empty(t, reg.state["kid-1"].Key.CertChain())
 
 				require.Len(t, reg.keysSnapshot, 1)
 				assert.Equal(t, "kid-1", reg.keysSnapshot[0].KeyID)
@@ -610,12 +573,10 @@ func (s *RegistryTestSuite) TestNotify() {
 		"single not exportable key added": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, nil,
+					),
 					Exportable: false,
 				},
 			},
@@ -634,21 +595,17 @@ func (s *RegistryTestSuite) TestNotify() {
 		"single exportable key updated": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee1.PrivKey, nil,
+					),
 					Exportable: true,
 				},
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee2.PrivKey,
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-1", "kid-1",
+						s.ee2.PrivKey, nil,
+					),
 					Exportable: true,
 				},
 			},
@@ -699,13 +656,10 @@ func (s *RegistryTestSuite) TestMetricsCollection() {
 		"single chain reports expected datapoints and attributes": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-m-1",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid--m-1", "kid-m-1",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate},
+					),
 					Exportable: true,
 				},
 			},
@@ -721,23 +675,17 @@ func (s *RegistryTestSuite) TestMetricsCollection() {
 		"overlapping chains are deduplicated": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-m-2",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate, s.ee1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-m-2", "kid-m-2",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate, s.ee1.Certificate},
+					),
 					Exportable: true,
 				},
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-m-3",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee2.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee2.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate, s.ee1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-m-3", "kid-m-3",
+						s.ee2.PrivKey, []*x509.Certificate{s.ee2.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate, s.ee1.Certificate},
+					),
 					Exportable: true,
 				},
 			},
@@ -754,23 +702,17 @@ func (s *RegistryTestSuite) TestMetricsCollection() {
 		"updated exposes only final chain in metrics": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-m-4",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee1.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee1.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-m-4", "kid-m-4",
+						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
+					),
 					Exportable: false,
 				},
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-m-4",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee2.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee2.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-m-4", "kid-m-4",
+						s.ee2.PrivKey, []*x509.Certificate{s.ee2.Certificate},
+					),
 					Exportable: false,
 				},
 			},
@@ -785,13 +727,10 @@ func (s *RegistryTestSuite) TestMetricsCollection() {
 		"expired certificate reports negative expiry": {
 			events: []KeyInfo{
 				{
-					Entry: keystore.Entry{
-						KeyID:      "kid-m-5",
-						Alg:        keystore.AlgECDSA,
-						KeySize:    384,
-						PrivateKey: s.ee4.PrivKey,
-						CertChain:  []*x509.Certificate{s.ee4.Certificate},
-					},
+					Key: types.NewAsymmetricKeySecret(
+						"test", "kid-m-5", "kid-m-5",
+						s.ee4.PrivKey, []*x509.Certificate{s.ee4.Certificate},
+					),
 					Exportable: false,
 				},
 			},

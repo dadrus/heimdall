@@ -18,70 +18,70 @@ package joseadapter
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"errors"
 	"fmt"
 
 	"github.com/go-jose/go-jose/v4"
 
-	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 var (
-	ErrNilEntry            = errors.New("nil keystore entry")
-	ErrNoPublicKeyMaterial = errors.New("no public key material in keystore entry")
-	ErrUnsupportedAlg      = errors.New("unsupported key algorithm")
-	ErrUnsupportedKeySize  = errors.New("unsupported key size")
+	ErrNilEntry             = errors.New("nil keystore entry")
+	ErrUnsupportedAlgorithm = errors.New("unsupported key algorithm")
+	ErrUnsupportedKeySize   = errors.New("unsupported key size")
 )
 
-func ToJWK(entry *keystore.Entry) (jose.JSONWebKey, error) {
-	if entry == nil {
+func ToJWK(secret secrets.AsymmetricKeySecret) (jose.JSONWebKey, error) {
+	if secret == nil {
 		return jose.JSONWebKey{}, ErrNilEntry
 	}
 
-	alg, err := joseAlgorithm(entry.Alg, entry.KeySize)
-	if err != nil {
-		return jose.JSONWebKey{}, err
-	}
+	pubKey := secret.PrivateKey().Public()
 
-	pubKey, err := publicKeyFromEntry(entry)
+	alg, err := joseAlgorithm(pubKey)
 	if err != nil {
 		return jose.JSONWebKey{}, err
 	}
 
 	return jose.JSONWebKey{
-		KeyID:        entry.KeyID,
+		KeyID:        secret.KeyID(),
 		Algorithm:    string(alg),
 		Key:          pubKey,
 		Use:          "sig",
-		Certificates: entry.CertChain,
+		Certificates: secret.CertChain(),
 	}, nil
 }
 
-func joseAlgorithm(alg string, keySize int) (jose.SignatureAlgorithm, error) {
-	switch alg {
-	case keystore.AlgRSA:
-		return rsaAlgorithm(keySize)
-	case keystore.AlgECDSA:
-		return ecdsaAlgorithm(keySize)
+func joseAlgorithm(pubKey crypto.PublicKey) (jose.SignatureAlgorithm, error) {
+	switch key := pubKey.(type) {
+	case *rsa.PublicKey:
+		return rsaAlgorithm(key)
+	case *ecdsa.PublicKey:
+		return ecdsaAlgorithm(key)
 	default:
-		return "", fmt.Errorf("%w: %s", ErrUnsupportedAlg, alg)
+		return "", fmt.Errorf("%w: %T", ErrUnsupportedAlgorithm, pubKey)
 	}
 }
 
-func ecdsaAlgorithm(keySize int) (jose.SignatureAlgorithm, error) {
-	switch keySize {
+func ecdsaAlgorithm(key *ecdsa.PublicKey) (jose.SignatureAlgorithm, error) {
+	switch key.Params().BitSize {
 	case 256: //nolint:mnd
 		return jose.ES256, nil
 	case 384: //nolint:mnd
 		return jose.ES384, nil
-	case 521: // nolint:mnd
+	case 521: //nolint:mnd
 		return jose.ES512, nil
 	default:
-		return "", fmt.Errorf("%w for ecdsa: %d", ErrUnsupportedKeySize, keySize)
+		return "", fmt.Errorf("%w for ecdsa: %d", ErrUnsupportedKeySize, key.Params().BitSize)
 	}
 }
 
-func rsaAlgorithm(keySize int) (jose.SignatureAlgorithm, error) {
+func rsaAlgorithm(key *rsa.PublicKey) (jose.SignatureAlgorithm, error) {
+	keySize := key.Size() * 8 //nolint:mnd
+
 	switch keySize {
 	case 2048: //nolint:mnd
 		return jose.PS256, nil
@@ -92,16 +92,4 @@ func rsaAlgorithm(keySize int) (jose.SignatureAlgorithm, error) {
 	default:
 		return "", fmt.Errorf("%w for rsa: %d", ErrUnsupportedKeySize, keySize)
 	}
-}
-
-func publicKeyFromEntry(entry *keystore.Entry) (crypto.PublicKey, error) {
-	if entry.PrivateKey != nil {
-		return entry.PrivateKey.Public(), nil
-	}
-
-	if len(entry.CertChain) != 0 {
-		return entry.CertChain[0].PublicKey, nil
-	}
-
-	return nil, ErrNoPublicKeyMaterial
 }

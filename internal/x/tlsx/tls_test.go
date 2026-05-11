@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	keyregistry "github.com/dadrus/heimdall/internal/keyregistry/v2"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/v2/mocks"
+	"github.com/dadrus/heimdall/internal/keyregistry"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/secrets/cache"
