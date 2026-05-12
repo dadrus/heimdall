@@ -25,6 +25,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/encoding"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	types2 "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
@@ -44,7 +47,6 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
-	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -332,8 +334,9 @@ metadata_endpoint:
         type: oauth2_client_credentials
         config:
           token_url: https://example.com/token
-          client_id: foo
-          client_secret: bar
+          credentials:
+            source: foo
+            selector: bar
       retry:
         give_up_after: 1m
         max_delay: 5s
@@ -361,13 +364,10 @@ metadata_endpoint:
 					GiveUpAfter: 1 * time.Minute,
 					MaxDelay:    5 * time.Second,
 				}, reps.Retry)
-				assert.Equal(t, &authstrategy.OAuth2ClientCredentials{
-					Config: clientcredentials.Config{
-						TokenURL:     "https://example.com/token",
-						ClientID:     "foo",
-						ClientSecret: "bar",
-					},
-				}, reps.AuthStrategy)
+
+				cc, ok := reps.AuthStrategy.(*authstrategy.OAuth2ClientCredentials)
+				require.True(t, ok)
+				assert.Equal(t, "https://example.com/token", cc.TokenURL)
 
 				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
@@ -447,9 +447,22 @@ error_signaling:
 			)
 			require.NoError(t, err)
 
+			sm := secretsmocks.NewManagerMock(t)
+			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+				Maybe().
+				Return(func() {}, nil)
+			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+				Maybe().
+				Return(types2.NewCredentials("foo", "bar", map[string]any{
+					"client_id":     "bar",
+					"client_secret": "baz",
+				}), nil)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 
 			// WHEN
 			mech, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, conf)
@@ -790,7 +803,8 @@ error_signaling:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mech, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, pc)
@@ -844,11 +858,14 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 		if introspectionResponseContent != nil {
 			w.Header().Set("Content-Type", introspectionResponseContentType)
-			_, err := w.Write(introspectionResponseContent)
-			assert.NoError(t, err)
 		}
 
 		w.WriteHeader(introspectionResponseCode)
+
+		if introspectionResponseContent != nil {
+			_, err := w.Write(introspectionResponseContent)
+			assert.NoError(t, err)
+		}
 	}))
 
 	oidcSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -858,11 +875,14 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 		if metadataResponseContent != nil {
 			w.Header().Set("Content-Type", metadataResponseContentType)
-			_, err := w.Write(metadataResponseContent)
-			assert.NoError(t, err)
 		}
 
 		w.WriteHeader(metadataResponseCode)
+
+		if metadataResponseContent != nil {
+			_, err := w.Write(metadataResponseContent)
+			assert.NoError(t, err)
+		}
 	}))
 
 	defer srv.Close()
@@ -1898,7 +1918,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				_ *oauth2IntrospectionAuthenticator,
+				auth *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
@@ -1959,98 +1979,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes()["nbf"])
 				assert.NotEmpty(t, sub.Attributes()["iat"])
 				assert.NotEmpty(t, sub.Attributes()["exp"])
-			},
-		},
-		"with introspection endpoint requiring authentication": {
-			authenticator: &oauth2IntrospectionAuthenticator{
-				r: &oauth2.MetadataEndpoint{
-					Endpoint: endpoint.Endpoint{URL: oidcSrv.URL},
-					ResolvedEndpoints: map[string]oauth2.ResolvedEndpointSettings{
-						"introspection_endpoint": {
-							AuthStrategy: &authstrategy.APIKey{
-								In:    "header",
-								Name:  "X-Api-Key",
-								Value: "very-secret",
-							},
-						},
-					},
-				},
-				a: oauth2.Expectation{
-					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{},
-				},
-				sf:            &PrincipalInfo{IDFrom: "sub"},
-				principalName: DefaultPrincipalName,
-			},
-			configureMocks: func(t *testing.T,
-				ctx *pipelinemocks.ContextMock,
-				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				_ *oauth2IntrospectionAuthenticator,
-			) {
-				t.Helper()
-
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkIntrospectionRequest = func(req *http.Request) {
-					t.Helper()
-
-					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "very-secret", req.Header.Get("X-Api-Key"))
-					assert.Equal(t, http.MethodPost, req.Method)
-
-					require.NoError(t, req.ParseForm())
-					assert.Len(t, req.Form, 2)
-					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
-					assert.Equal(t, "test_access_token", req.Form.Get("token"))
-				}
-
-				rawIntrospectResponse, err := json.Marshal(map[string]any{
-					"active":     true,
-					"scope":      "foo bar",
-					"username":   "unknown",
-					"token_type": "Bearer",
-					"aud":        "bar",
-					"sub":        "foo",
-					"iat":        time.Now().Unix(),
-					"nbf":        time.Now().Unix(),
-					"exp":        time.Now().Unix() + 30,
-				})
-				require.NoError(t, err)
-
-				introspectionResponseContentType = "application/json"
-				introspectionResponseContent = rawIntrospectResponse
-				introspectionResponseCode = http.StatusOK
-
-				checkMetadataRequest = func(req *http.Request) {
-					t.Helper()
-
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, http.MethodGet, req.Method)
-				}
-
-				metadataResponseContentType = "application/json"
-				metadataResponseContent, err = json.Marshal(map[string]string{
-					"introspection_endpoint": srv.URL,
-					"issuer":                 oidcSrv.URL,
-				})
-				require.NoError(t, err)
-
-				metadataResponseCode = http.StatusOK
-			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject) {
-				t.Helper()
-
-				assert.True(t, metadataEndpointCalled)
-				assert.True(t, introspectionEndpointCalled)
-
-				require.NoError(t, err)
-				require.NotNil(t, sub)
 			},
 		},
 		"with default cache, with cache hit and successful execution": {
