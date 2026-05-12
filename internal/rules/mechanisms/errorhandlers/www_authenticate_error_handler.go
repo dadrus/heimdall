@@ -58,7 +58,7 @@ func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, name).CausedBy(err)
 	}
@@ -109,7 +109,7 @@ func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (pip
 
 	var conf Config
 
-	err := decodeConfig(eh.app.Validator(), def.Config, &conf)
+	err := decodeConfig(eh.app, def.Config, &conf)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, eh.name).

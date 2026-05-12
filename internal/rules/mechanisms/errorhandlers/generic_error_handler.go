@@ -65,7 +65,7 @@ func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]a
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerGeneric, name).
 			CausedBy(err)
@@ -108,7 +108,7 @@ func (eh *genericErrorHandler) CreateStep(def types.StepDefinition) (pipeline.St
 	}
 
 	var conf Config
-	if err := decodeConfig(eh.app.Validator(), def.Config, &conf); err != nil {
+	if err := decodeConfig(eh.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerGeneric, eh.name).
 			CausedBy(err)

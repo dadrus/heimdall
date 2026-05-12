@@ -63,7 +63,7 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerRedirect, name).
 			CausedBy(err)
