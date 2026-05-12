@@ -17,19 +17,23 @@
 package authenticators
 
 import (
-	"crypto/sha256"
+	"context"
+	"crypto/sha512"
+	"crypto/subtle"
 	"encoding/base64"
-	"encoding/hex"
 	"net/http"
 	"strings"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -51,13 +55,59 @@ func init() {
 	)
 }
 
+// credentialsChecker is used to check user credentials.
+//
+// It is used to mitigate potential side-channel attacks during credentials check.
+// Note: it does not correspond to security best practices and does not use a proper
+// key derivation/password hash function, like SCrypt or Argon2. This will be
+// implemented later.
+type credentialsChecker struct {
+	value [sha512.Size]byte
+}
+
+func newCredentialsChecker(userID, password string) credentialsChecker {
+	return credentialsChecker{value: hash(userID, password)}
+}
+
+func (c credentialsChecker) check(userID, password string) error {
+	value := hash(userID, password)
+
+	if subtle.ConstantTimeCompare(c.value[:], value[:]) != 1 {
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"invalid user credentials",
+		).
+			CausedBy(pipeline.ErrAuthentication)
+	}
+
+	return nil
+}
+
+func hash(userID, password string) [sha512.Size]byte {
+	md := sha512.New()
+	md.Write(stringx.ToBytes(userID))
+	md.Write(stringx.ToBytes(password))
+
+	var result [sha512.Size]byte
+	md.Sum(result[:0])
+
+	return result
+}
+
+type authenticatorConfig struct {
+	Credentials    *config.Secret `mapstructure:"credentials"`
+	ErrorSignaling struct {
+		Enabled *bool  `mapstructure:"enabled"`
+		Realm   string `mapstructure:"realm"`
+	} `mapstructure:"error_signaling"`
+}
+
 type basicAuthAuthenticator struct {
 	name                  string
 	id                    string
 	principalName         string
 	app                   app.Context
-	userID                string
-	password              string
+	resolver              *cache.CredentialsResolver[credentialsChecker]
 	realm                 string
 	errorSignalingEnabled bool
 	emptyAttributes       map[string]any
@@ -71,29 +121,32 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		Str("_name", name).
 		Msg("Creating authenticator")
 
-	type Config struct {
-		UserID         string `mapstructure:"user_id"  validate:"required"`
-		Password       string `mapstructure:"password" validate:"required"`
-		ErrorSignaling struct {
-			Enabled bool   `mapstructure:"enabled"`
-			Realm   string `mapstructure:"realm"`
-		} `mapstructure:"error_signaling"`
+	var conf authenticatorConfig
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, name,
+		).CausedBy(err)
 	}
 
-	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, name).CausedBy(err)
+	resolver, err := createResolver(app, conf.Credentials)
+	if err != nil {
+		return nil, err
 	}
 
 	auth := basicAuthAuthenticator{
-		name:                  name,
-		id:                    name,
-		app:                   app,
-		principalName:         DefaultPrincipalName,
-		emptyAttributes:       make(map[string]any),
-		ads:                   extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
-		errorSignalingEnabled: conf.ErrorSignaling.Enabled,
+		name:            name,
+		id:              name,
+		app:             app,
+		resolver:        resolver,
+		principalName:   DefaultPrincipalName,
+		emptyAttributes: make(map[string]any),
+		ads:             extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
+		errorSignalingEnabled: x.IfThenElseExec(
+			conf.ErrorSignaling.Enabled != nil,
+			func() bool { return *conf.ErrorSignaling.Enabled },
+			func() bool { return false },
+		),
 		realm: x.IfThenElse(
 			len(conf.ErrorSignaling.Realm) != 0,
 			conf.ErrorSignaling.Realm,
@@ -101,17 +154,34 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		),
 	}
 
-	// rewrite user id and password as hashes to mitigate potential side-channel attacks
-	// during credentials check
-	md := sha256.New()
-	md.Write(stringx.ToBytes(conf.UserID))
-	auth.userID = hex.EncodeToString(md.Sum(nil))
-
-	md.Reset()
-	md.Write(stringx.ToBytes(conf.Password))
-	auth.password = hex.EncodeToString(md.Sum(nil))
-
 	return &auth, nil
+}
+
+func createResolver(
+	app app.Context,
+	credentials *config.Secret,
+) (*cache.CredentialsResolver[credentialsChecker], error) {
+	if credentials == nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"credentials are required",
+		)
+	}
+
+	resolver := &cache.CredentialsResolver[credentialsChecker]{
+		Manager:   app.SecretsManager(),
+		Reference: secrets.InternalRef(credentials.Source, credentials.Selector),
+		Converter: toCredentialsChecker,
+	}
+
+	if err := resolver.Start(context.Background()); err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving basic auth credentials",
+		).CausedBy(err)
+	}
+
+	return resolver, nil
 }
 
 func (a *basicAuthAuthenticator) Accept(visitor pipeline.Visitor) {
@@ -130,7 +200,10 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "expected header not present in request").
+			NewWithMessage(
+				pipeline.ErrAuthentication,
+				"expected header not present in request",
+			).
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -138,32 +211,38 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 	res, err := base64.StdEncoding.DecodeString(authData)
 	if err != nil {
 		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "failed to decode received credentials value").
+			NewWithMessage(
+				pipeline.ErrAuthentication,
+				"failed to decode received credentials value",
+			).
 			WithErrorContext(a)
 	}
 
 	userIDAndPassword := strings.Split(string(res), ":")
 	if len(userIDAndPassword) != basicAuthSchemeCredentialsElements {
 		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "malformed user-id - password scheme").
+			NewWithMessage(
+				pipeline.ErrAuthentication,
+				"malformed user-id - password scheme",
+			).
 			WithErrorContext(a)
 	}
 
-	md := sha256.New()
-	md.Write(stringx.ToBytes(userIDAndPassword[0]))
-	userID := hex.EncodeToString(md.Sum(nil))
+	checker, ok := a.resolver.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"oauth2 client credentials are not available",
+		)
+	}
 
-	md.Reset()
-	md.Write(stringx.ToBytes(userIDAndPassword[1]))
-	password := hex.EncodeToString(md.Sum(nil))
-
-	userIDOK := userID == a.userID
-	passwordOK := password == a.password
-
-	if !userIDOK || !passwordOK {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "invalid user credentials").
-			WithErrorContext(a)
+	if err = checker.check(userIDAndPassword[0], userIDAndPassword[1]); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"invalid user credentials",
+		).
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	sub[a.principalName] = &pipeline.Principal{
@@ -187,19 +266,23 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 		return &auth, nil
 	}
 
-	type Config struct {
-		UserID         string `mapstructure:"user_id"`
-		Password       string `mapstructure:"password"`
-		ErrorSignaling struct {
-			Enabled *bool  `mapstructure:"enabled"`
-			Realm   string `mapstructure:"realm"`
-		} `mapstructure:"error_signaling"`
+	var (
+		conf authenticatorConfig
+		err  error
+	)
+
+	if err = decodeConfig(a.app, def.Config, &conf); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, a.name,
+		).CausedBy(err)
 	}
 
-	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, a.name).CausedBy(err)
+	resolver := a.resolver
+	if conf.Credentials != nil {
+		if resolver, err = createResolver(a.app, conf.Credentials); err != nil {
+			return nil, err
+		}
 	}
 
 	return &basicAuthAuthenticator{
@@ -209,6 +292,7 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 		principalName:   x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
 		emptyAttributes: a.emptyAttributes,
 		ads:             a.ads,
+		resolver:        resolver,
 		errorSignalingEnabled: x.IfThenElseExec(
 			conf.ErrorSignaling.Enabled != nil,
 			func() bool { return *conf.ErrorSignaling.Enabled },
@@ -219,24 +303,6 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 			a.realm,
 			conf.ErrorSignaling.Realm,
 		),
-		userID: x.IfThenElseExec(len(conf.UserID) != 0,
-			func() string {
-				md := sha256.New()
-				md.Write(stringx.ToBytes(conf.UserID))
-
-				return hex.EncodeToString(md.Sum(nil))
-			}, func() string {
-				return a.userID
-			}),
-		password: x.IfThenElseExec(len(conf.Password) != 0,
-			func() string {
-				md := sha256.New()
-				md.Write(stringx.ToBytes(conf.Password))
-
-				return hex.EncodeToString(md.Sum(nil))
-			}, func() string {
-				return a.password
-			}),
 	}, nil
 }
 
@@ -261,3 +327,17 @@ func (a *basicAuthAuthenticator) ID() string            { return a.id }
 func (a *basicAuthAuthenticator) Type() string          { return a.name }
 func (a *basicAuthAuthenticator) IsInsecure() bool      { return false }
 func (a *basicAuthAuthenticator) PrincipalName() string { return a.principalName }
+
+func toCredentialsChecker(creds secrets.Credentials) (credentialsChecker, error) {
+	type credentials struct {
+		UserID   string `mapstructure:"user_id"  validate:"required"`
+		Password string `mapstructure:"password" validate:"required"`
+	}
+
+	var data credentials
+	if err := creds.Decode(&data); err != nil {
+		return credentialsChecker{}, err
+	}
+
+	return newCredentialsChecker(data.UserID, data.Password), nil
+}

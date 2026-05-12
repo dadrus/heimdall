@@ -17,14 +17,15 @@
 package authenticators
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
+	"errors"
 	"net/http"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -32,33 +33,108 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	types2 "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
 )
+
+func TestCreateResolver(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		credentials *config.Secret
+		setup       func(t *testing.T, sm *secretsmocks.ManagerMock)
+		assert      func(t *testing.T, err error)
+	}{
+		"credentials are required": {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.Contains(t, err.Error(), "credentials are required")
+			},
+		},
+		"fails if credentials cannot be resolved": {
+			credentials: &config.Secret{Source: "foo", Selector: "bar"},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(nil, errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "failed resolving")
+			},
+		},
+		"succeeds": {
+			credentials: &config.Secret{Source: "foo", Selector: "bar"},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types2.NewCredentials("foo", "bar", map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			sm := secretsmocks.NewManagerMock(t)
+
+			tc.setup(t, sm)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+
+			_, err := createResolver(appCtx, tc.credentials)
+			tc.assert(t, err)
+		})
+	}
+}
 
 func TestNewBasicAuthAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
 		config config.MechanismConfig
+		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
 		assert func(t *testing.T, err error, auth *basicAuthAuthenticator)
 	}{
 		"valid configuration without error signaling": {
-			config: config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types2.NewCredentials("foo", "bar", map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				md := sha256.New()
-				md.Write([]byte("foo"))
-				userID := hex.EncodeToString(md.Sum(nil))
-
-				md.Reset()
-				md.Write([]byte("bar"))
-				password := hex.EncodeToString(md.Sum(nil))
-
-				assert.Equal(t, userID, auth.userID)
-				assert.Equal(t, password, auth.password)
 				assert.Equal(t, "valid configuration without error signaling", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
@@ -69,29 +145,31 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 				assert.Equal(t, auth.ID(), auth.Type())
+				require.NotNil(t, auth.resolver)
+				_, ok := auth.resolver.Get()
+				assert.True(t, ok)
 			},
 		},
 		"valid configuration with error signaling and default realm": {
 			config: config.MechanismConfig{
-				"user_id":         "foo",
-				"password":        "bar",
+				"credentials":     map[string]any{"source": "foo", "selector": "bar"},
 				"error_signaling": map[string]any{"enabled": true},
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types2.NewCredentials("foo", "bar", map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
 			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				md := sha256.New()
-				md.Write([]byte("foo"))
-				userID := hex.EncodeToString(md.Sum(nil))
-
-				md.Reset()
-				md.Write([]byte("bar"))
-				password := hex.EncodeToString(md.Sum(nil))
-
-				assert.Equal(t, userID, auth.userID)
-				assert.Equal(t, password, auth.password)
 				assert.Equal(t, "valid configuration with error signaling and default realm", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
@@ -102,32 +180,31 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 				assert.Equal(t, auth.ID(), auth.Type())
+				require.NotNil(t, auth.resolver)
+				_, ok := auth.resolver.Get()
+				assert.True(t, ok)
 			},
 		},
 		"valid configuration with error signaling and custom realm": {
 			config: config.MechanismConfig{
-				"user_id":  "foo",
-				"password": "bar",
-				"error_signaling": map[string]any{
-					"enabled": true,
-					"realm":   "custom",
-				},
+				"credentials":     map[string]any{"source": "foo", "selector": "bar"},
+				"error_signaling": map[string]any{"enabled": true, "realm": "custom"},
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types2.NewCredentials("foo", "bar", map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
 			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				md := sha256.New()
-				md.Write([]byte("foo"))
-				userID := hex.EncodeToString(md.Sum(nil))
-
-				md.Reset()
-				md.Write([]byte("bar"))
-				password := hex.EncodeToString(md.Sum(nil))
-
-				assert.Equal(t, userID, auth.userID)
-				assert.Equal(t, password, auth.password)
 				assert.Equal(t, "valid configuration with error signaling and custom realm", auth.ID())
 				assert.Equal(t, auth.ID(), auth.Name())
 				assert.Empty(t, auth.emptyAttributes)
@@ -138,32 +215,59 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 				assert.Equal(t, auth.ID(), auth.Type())
+				require.NotNil(t, auth.resolver)
+				_, ok := auth.resolver.Get()
+				assert.True(t, ok)
 			},
 		},
-		"without user_id": {
-			config: config.MechanismConfig{"password": "bar"},
-			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
+		"malformed credentials configuration": {
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"selector": "bar"},
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-
-				assert.Nil(t, auth)
+				require.ErrorContains(t, err, "failed decoding config")
 			},
 		},
-		"without password": {
-			config: config.MechanismConfig{"user_id": "foo"},
-			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
+		"credentials resolution fails": {
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(nil, errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-
-				assert.Nil(t, auth)
+				require.ErrorContains(t, err, "failed resolving")
 			},
 		},
 		"with unexpected config attribute": {
-			config: config.MechanismConfig{"user_id": "foo", "password": "bar", "foo": "bar"},
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+				"foo":         "bar",
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types2.NewCredentials("foo", "bar", map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -178,9 +282,14 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sm := secretsmocks.NewManagerMock(t)
+			tc.setup(t, sm)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 
 			// WHEN
 			mech, err := newBasicAuthAuthenticator(appCtx, uc, tc.config)
@@ -202,10 +311,23 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config  config.MechanismConfig
 		stepDef types.StepDefinition
+		setup   func(t *testing.T, sm *secretsmocks.ManagerMock)
 		assert  func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator)
 	}{
 		"no new configuration for the configured authenticator": {
-			config: config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+					Return(types2.NewCredentials("foo", "bar", map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -214,19 +336,41 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, "no new configuration for the configured authenticator", configured.ID())
 			},
 		},
-		"password differs": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "foo", "password": "baz"}},
+		"credentials differs": {
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+			},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "baz"},
+			}},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				ref1 := secrets.InternalRef("foo", "bar")
+				ref2 := secrets.InternalRef("foo", "baz")
+
+				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().Subscribe(ref2, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
+					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref2).
+					Return(types2.NewCredentials(ref2.Source, ref2.Selector, map[string]any{
+						"user_id":  "baz",
+						"password": "bar",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 
-				assert.Equal(t, prototype.userID, configured.userID)
-				assert.NotEqual(t, prototype.password, configured.password)
+				assert.NotEqual(t, prototype.resolver, configured.resolver)
 				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.Equal(t, "password differs", configured.ID())
+				assert.Equal(t, "credentials differs", configured.ID())
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
 				assert.Equal(t, prototype.realm, configured.realm)
 				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
@@ -237,109 +381,80 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
-		"no user_id provided": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"password": "baz"}},
-			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
+		"fails resolving new credentials": {
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+			},
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "baz"},
+			}},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.NotEqual(t, prototype, configured)
+				ref1 := secrets.InternalRef("foo", "bar")
+				ref2 := secrets.InternalRef("foo", "baz")
 
-				assert.Equal(t, prototype.userID, configured.userID)
-				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.Equal(t, "no user_id provided", configured.ID())
-				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.realm, configured.realm)
-				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
-				assert.False(t, configured.errorSignalingEnabled)
-				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
-				assert.False(t, configured.IsInsecure())
-				assert.Equal(t, types.KindAuthenticator, configured.Kind())
-				assert.Equal(t, prototype.Type(), configured.Type())
+				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
+					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref2).
+					Return(nil, errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "failed resolving")
 			},
 		},
-		"no password provided": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz"}},
-			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.NotEqual(t, prototype, configured)
-
-				assert.NotEqual(t, prototype.userID, configured.userID)
-				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.Equal(t, "no password provided", configured.ID())
-				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.realm, configured.realm)
-				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
-				assert.False(t, configured.errorSignalingEnabled)
-				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
-				assert.False(t, configured.IsInsecure())
-				assert.Equal(t, types.KindAuthenticator, configured.Kind())
-				assert.Equal(t, prototype.Type(), configured.Type())
+		"malformed step configuration": {
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
 			},
-		},
-		"user_id differs": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz", "password": "bar"}},
-			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"credentials": map[string]any{"selector": "baz"},
+			}},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.NotEqual(t, prototype, configured)
+				ref1 := secrets.InternalRef("foo", "bar")
 
-				assert.NotEqual(t, prototype.userID, configured.userID)
-				assert.Equal(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.Equal(t, "user_id differs", configured.ID())
-				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.realm, configured.realm)
-				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
-				assert.False(t, configured.errorSignalingEnabled)
-				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
-				assert.False(t, configured.IsInsecure())
-				assert.Equal(t, types.KindAuthenticator, configured.Kind())
-				assert.Equal(t, prototype.Type(), configured.Type())
+				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
+					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
 			},
-		},
-		"user_id and password differs": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz", "password": "baz"}},
-			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
+			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
 				t.Helper()
 
-				require.NoError(t, err)
-				assert.NotEqual(t, prototype, configured)
-
-				assert.NotEqual(t, prototype.userID, configured.userID)
-				assert.NotEqual(t, prototype.password, configured.password)
-				assert.Equal(t, prototype.Name(), configured.Name())
-				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, "user_id and password differs", configured.ID())
-				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
-				assert.Equal(t, prototype.realm, configured.realm)
-				assert.Equal(t, defaultAuthenticationRealm, configured.realm)
-				assert.False(t, configured.errorSignalingEnabled)
-				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
-				assert.False(t, configured.IsInsecure())
-				assert.Equal(t, types.KindAuthenticator, configured.Kind())
-				assert.Equal(t, prototype.Type(), configured.Type())
-
-				md := sha256.New()
-				md.Write([]byte("baz"))
-				value := hex.EncodeToString(md.Sum(nil))
-
-				assert.Equal(t, value, configured.userID)
-				assert.Equal(t, value, configured.password)
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
 		"only step id configured": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
+			config: config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+			},
 			stepDef: types.StepDefinition{ID: "foo"},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				ref1 := secrets.InternalRef("foo", "bar")
+
+				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
+					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -349,8 +464,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
 				assert.Equal(t, "foo", configured.ID())
-				assert.Equal(t, prototype.userID, configured.userID)
-				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.resolver, configured.resolver)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
@@ -365,11 +479,22 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 		},
 		"only principal name configured": {
 			config: config.MechanismConfig{
-				"user_id":         "foo",
-				"password":        "bar",
+				"credentials":     map[string]any{"source": "foo", "selector": "bar"},
 				"error_signaling": map[string]any{"enabled": true},
 			},
 			stepDef: types.StepDefinition{Principal: "foo"},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				ref1 := secrets.InternalRef("foo", "bar")
+
+				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
+					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -378,8 +503,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, prototype.userID, configured.userID)
-				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.resolver, configured.resolver)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
@@ -393,21 +517,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
-		"malformed step configuration": {
-			config:  config.MechanismConfig{"user_id": "foo", "password": "bar"},
-			stepDef: types.StepDefinition{Config: config.MechanismConfig{"user_id": "baz", "password": 1}},
-			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding")
-			},
-		},
 		"reconfiguration of error signaling is possible": {
 			config: config.MechanismConfig{
-				"user_id":         "foo",
-				"password":        "bar",
+				"credentials":     map[string]any{"source": "foo", "selector": "bar"},
 				"error_signaling": map[string]any{"enabled": false},
 			},
 			stepDef: types.StepDefinition{
@@ -418,6 +530,18 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					},
 				},
 			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				ref1 := secrets.InternalRef("foo", "bar")
+
+				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
+					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -426,8 +550,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, prototype.userID, configured.userID)
-				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.resolver, configured.resolver)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.app, configured.app)
 				assert.Equal(t, prototype.emptyAttributes, configured.emptyAttributes)
@@ -447,9 +570,14 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sm := secretsmocks.NewManagerMock(t)
+			tc.setup(t, sm)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Return(sm)
 
 			mech, err := newBasicAuthAuthenticator(appCtx, uc, tc.config)
 			require.NoError(t, err)
@@ -478,7 +606,9 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 		ID() string
 	}
 
-	conf := config.MechanismConfig{"user_id": "foo", "password": "bar"}
+	conf := config.MechanismConfig{
+		"credentials": map[string]any{"source": "foo", "selector": "bar"},
+	}
 
 	for uc, tc := range map[string]struct {
 		stepDef          types.StepDefinition
@@ -574,7 +704,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.NotErrorIs(t, err, pipeline.ErrArgument)
-				require.Contains(t, err.Error(), "invalid user credentials")
+				require.ErrorContains(t, err, "invalid user credentials")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -614,7 +744,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("Authorization").
-					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:bar")))
+					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("bar:baz")))
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -623,7 +753,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 
 				require.NoError(t, err)
 
-				require.Equal(t, "foo", sub.ID())
+				require.Equal(t, "bar", sub.ID())
 				assert.NotNil(t, sub.Attributes())
 				assert.Empty(t, sub.Attributes())
 			},
@@ -635,7 +765,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("Authorization").
-					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:bar")))
+					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("bar:baz")))
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -647,7 +777,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				assert.Empty(t, sub.ID())
 				assert.Empty(t, sub.Attributes())
 				assert.NotNil(t, sub["baz"])
-				assert.Equal(t, "foo", sub["baz"].ID)
+				assert.Equal(t, "bar", sub["baz"].ID)
 				assert.Empty(t, sub["baz"].Attributes)
 			},
 		},
@@ -657,9 +787,19 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sm := secretsmocks.NewManagerMock(t)
+			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+				Return(types2.NewCredentials("foo", "bar", map[string]any{
+					"user_id":  "bar",
+					"password": "baz",
+				}), nil)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Return(sm)
 
 			mech, err := newBasicAuthAuthenticator(appCtx, uc, conf)
 			require.NoError(t, err)
@@ -708,35 +848,24 @@ func TestBasicAuthAuthenticatorDecorateErrorResponse(t *testing.T) {
 	}{
 		"uses configured realm if error signaling is enabled": {
 			conf: map[string]any{
-				"user_id":  "foo",
-				"password": "bar",
-				"error_signaling": map[string]any{
-					"enabled": true,
-					"realm":   "example",
-				},
+				"credentials":     map[string]any{"source": "foo", "selector": "bar"},
+				"error_signaling": map[string]any{"enabled": true, "realm": "example"},
 			},
 			expectedHeader: `Basic realm="example"`,
 			expectedCode:   http.StatusUnauthorized,
 		},
 		"uses default realm if error signaling is enabled, but the realm is empty": {
 			conf: map[string]any{
-				"user_id":  "foo",
-				"password": "bar",
-				"error_signaling": map[string]any{
-					"enabled": true,
-				},
+				"credentials":     map[string]any{"source": "foo", "selector": "bar"},
+				"error_signaling": map[string]any{"enabled": true},
 			},
 			expectedHeader: `Basic realm="Please authenticate"`,
 			expectedCode:   http.StatusUnauthorized,
 		},
 		"response is not decorated if error signaling is disabled": {
 			conf: map[string]any{
-				"user_id":  "foo",
-				"password": "bar",
-				"error_signaling": map[string]any{
-					"enabled": false,
-					"realm":   "example",
-				},
+				"credentials":     map[string]any{"source": "foo", "selector": "bar"},
+				"error_signaling": map[string]any{"enabled": false, "realm": "example"},
 			},
 		},
 	} {
@@ -744,9 +873,19 @@ func TestBasicAuthAuthenticatorDecorateErrorResponse(t *testing.T) {
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sm := secretsmocks.NewManagerMock(t)
+			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+				Return(types2.NewCredentials("foo", "bar", map[string]any{
+					"user_id":  "bar",
+					"password": "baz",
+				}), nil)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Return(sm)
 
 			auth, err := newBasicAuthAuthenticator(
 				appCtx, "test", tc.conf)
