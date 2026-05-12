@@ -25,6 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/validation"
 )
@@ -100,7 +101,8 @@ func TestRepositoryNew(t *testing.T) {
 			ctx := app.NewContextMock(t)
 			ctx.EXPECT().Logger().Return(log.Logger)
 			ctx.EXPECT().Config().Return(&config.Configuration{Catalogue: tc.catalogue})
-			ctx.EXPECT().Validator().Maybe().Return(validator)
+			ctx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			// WHEN
 			repo, err := New(ctx)
@@ -138,7 +140,8 @@ func TestRepositoryAuthenticator(t *testing.T) {
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
 	ctx.EXPECT().Config().Return(conf)
-	ctx.EXPECT().Validator().Maybe().Return(validator)
+	ctx.EXPECT().DecoderFactory().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 	repo, err := New(ctx)
 	require.NoError(t, err)
@@ -168,15 +171,9 @@ func TestRepositoryAuthorizer(t *testing.T) {
 		},
 	}
 
-	validator, err := validation.NewValidator(
-		validation.WithTagValidator(config.EnforcementSettings{}),
-	)
-	require.NoError(t, err)
-
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
 	ctx.EXPECT().Config().Return(conf)
-	ctx.EXPECT().Validator().Maybe().Return(validator)
 
 	repo, err := New(ctx)
 	require.NoError(t, err)
@@ -224,7 +221,8 @@ func TestRepositoryContextualizer(t *testing.T) {
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
 	ctx.EXPECT().Config().Return(conf)
-	ctx.EXPECT().Validator().Maybe().Return(validator)
+	ctx.EXPECT().DecoderFactory().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 	repo, err := New(ctx)
 	require.NoError(t, err)
@@ -254,15 +252,9 @@ func TestRepositoryFinalizer(t *testing.T) {
 		},
 	}
 
-	validator, err := validation.NewValidator(
-		validation.WithTagValidator(config.EnforcementSettings{}),
-	)
-	require.NoError(t, err)
-
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
 	ctx.EXPECT().Config().Return(conf)
-	ctx.EXPECT().Validator().Maybe().Return(validator)
 
 	repo, err := New(ctx)
 	require.NoError(t, err)
@@ -292,15 +284,9 @@ func TestRepositoryErrorHandler(t *testing.T) {
 		},
 	}
 
-	validator, err := validation.NewValidator(
-		validation.WithTagValidator(config.EnforcementSettings{}),
-	)
-	require.NoError(t, err)
-
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
 	ctx.EXPECT().Config().Return(conf)
-	ctx.EXPECT().Validator().Maybe().Return(validator)
 
 	repo, err := New(ctx)
 	require.NoError(t, err)

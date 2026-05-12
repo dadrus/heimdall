@@ -134,7 +134,6 @@ func TestAllMechanismsAreRegistered(t *testing.T) {
 
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
-	ctx.EXPECT().Validator().Maybe().Return(validator)
 	ctx.EXPECT().DecoderFactory().Maybe().
 		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
