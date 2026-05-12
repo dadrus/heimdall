@@ -87,7 +87,7 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 	}
 
 	var conf Config
-	if err := decodeConfigWithFactory(app.DecoderFactory(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for jwt finalizer '%s'", name).CausedBy(err)
 	}
@@ -197,7 +197,7 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, erro
 	}
 
 	var conf Config
-	if err := decodeConfigWithFactory(f.app.DecoderFactory(), def.Config, &conf); err != nil {
+	if err := decodeConfig(f.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for jwt finalizer '%s'", f.name).CausedBy(err)
 	}
