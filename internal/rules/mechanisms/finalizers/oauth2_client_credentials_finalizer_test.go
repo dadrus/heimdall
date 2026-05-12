@@ -724,6 +724,7 @@ cache_ttl: 3m
 			require.NoError(t, err)
 
 			step, err := mech.CreateStep(types.StepDefinition{ID: "test"})
+			require.NoError(t, err)
 
 			endpointCalled = false
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
