@@ -9,8 +9,6 @@ import (
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/rs/zerolog"
 	mock "github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/otel/metric"
@@ -313,98 +311,6 @@ func (_c *ContextMock_SecretsManager_Call) Return(manager secrets.Manager) *Cont
 }
 
 func (_c *ContextMock_SecretsManager_Call) RunAndReturn(run func() secrets.Manager) *ContextMock_SecretsManager_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Validator provides a mock function for the type ContextMock
-func (_mock *ContextMock) Validator() validation.Validator {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Validator")
-	}
-
-	var r0 validation.Validator
-	if returnFunc, ok := ret.Get(0).(func() validation.Validator); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(validation.Validator)
-		}
-	}
-	return r0
-}
-
-// ContextMock_Validator_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Validator'
-type ContextMock_Validator_Call struct {
-	*mock.Call
-}
-
-// Validator is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) Validator() *ContextMock_Validator_Call {
-	return &ContextMock_Validator_Call{Call: _e.mock.On("Validator")}
-}
-
-func (_c *ContextMock_Validator_Call) Run(run func()) *ContextMock_Validator_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *ContextMock_Validator_Call) Return(validator validation.Validator) *ContextMock_Validator_Call {
-	_c.Call.Return(validator)
-	return _c
-}
-
-func (_c *ContextMock_Validator_Call) RunAndReturn(run func() validation.Validator) *ContextMock_Validator_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Watcher provides a mock function for the type ContextMock
-func (_mock *ContextMock) Watcher() watcher.Watcher {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Watcher")
-	}
-
-	var r0 watcher.Watcher
-	if returnFunc, ok := ret.Get(0).(func() watcher.Watcher); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(watcher.Watcher)
-		}
-	}
-	return r0
-}
-
-// ContextMock_Watcher_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Watcher'
-type ContextMock_Watcher_Call struct {
-	*mock.Call
-}
-
-// Watcher is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) Watcher() *ContextMock_Watcher_Call {
-	return &ContextMock_Watcher_Call{Call: _e.mock.On("Watcher")}
-}
-
-func (_c *ContextMock_Watcher_Call) Run(run func()) *ContextMock_Watcher_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *ContextMock_Watcher_Call) Return(watcher1 watcher.Watcher) *ContextMock_Watcher_Call {
-	_c.Call.Return(watcher1)
-	return _c
-}
-
-func (_c *ContextMock_Watcher_Call) RunAndReturn(run func() watcher.Watcher) *ContextMock_Watcher_Call {
 	_c.Call.Return(run)
 	return _c
 }
