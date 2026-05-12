@@ -1,8 +1,28 @@
+secret_management:
+  inline_secrets:
+    type: inline
+    config:
+      client_credentials:
+        client_id: test-client-id
+        client_secret: test-client-secret
+      api_key: test-api-key
+      basic_auth:
+        user_id: foo
+        password: bar
+  jwt_secrets:
+    type: pem
+    config:
+      path: /path/to/one.pem
+  tls_keys:
+    type: pem
+    config:
+      path: /ath/to/other.pem
+
 serve:
   port: 4468
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
     min_version: TLS1.2
     cipher_suites:
       - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -65,8 +85,9 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: inline_secrets
+                selector: basic_auth
         assertions:
           issuers:
             - http://127.0.0.1:4444/
@@ -142,15 +163,15 @@ mechanisms:
           headers:
             foo: bar
   finalizers:
-  #  - id: jwt
-  #    type: jwt
-  #    config:
-  #      ttl: 5m
-  #      claims: |
-  #        {"user": {{ quote .Subject.ID }} }
-  #      signer:
-  #        key_store:
-  #          path: /path/to/file.pem
+    - id: jwt
+      type: jwt
+      config:
+        ttl: 5m
+        claims: |
+          {"user": {{ quote .Subject.ID }} }
+        signer:
+          secret:
+            source: jwt_secrets
     - id: bla
       type: header
       config:
@@ -201,7 +222,9 @@ providers:
           type: api_key
           config:
             name: foo
-            value: bar
+            secret:
+              source: inline_secrets
+              selector: api_key
             in: header
 
   cloud_blob:
