@@ -26,10 +26,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
-	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -311,18 +311,25 @@ func TestMetadataEndpointGet(t *testing.T) {
 		"configured settings for resolved endpoints are applied": {
 			resolvedEPSettings: map[string]ResolvedEndpointSettings{
 				"jwks_uri": {
-					Retry:        &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
-					HTTPCache:    &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
-					AuthStrategy: &authstrategy.APIKey{In: "header", Name: "X-API-Key", Value: "foo"},
+					Retry:     &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
+					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
+					AuthStrategy: &authstrategy.APIKey{
+						In:   "header",
+						Name: "X-API-Key",
+						Secret: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
+						},
+					},
 				},
 				"introspection_endpoint": {
 					Retry:     &endpoint.Retry{GiveUpAfter: 2 * time.Minute, MaxDelay: 10 * time.Second},
 					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 20 * time.Second},
 					AuthStrategy: &authstrategy.OAuth2ClientCredentials{
-						Config: clientcredentials.Config{
-							TokenURL:     "https://foo.bar/token",
-							ClientID:     "foo",
-							ClientSecret: "bar",
+						TokenURL: "https://foo.bar/token",
+						Credentials: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
 						},
 					},
 				},
@@ -361,12 +368,19 @@ func TestMetadataEndpointGet(t *testing.T) {
 				assert.Equal(t, srv.URL+"/issuer1", sm.Issuer)
 
 				exp := endpoint.Endpoint{
-					URL:          "https://foo.bar/jwks",
-					Method:       http.MethodGet,
-					Headers:      map[string]string{"Accept": "application/json"},
-					Retry:        &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
-					HTTPCache:    &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
-					AuthStrategy: &authstrategy.APIKey{In: "header", Name: "X-API-Key", Value: "foo"},
+					URL:       "https://foo.bar/jwks",
+					Method:    http.MethodGet,
+					Headers:   map[string]string{"Accept": "application/json"},
+					Retry:     &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
+					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
+					AuthStrategy: &authstrategy.APIKey{
+						In:   "header",
+						Name: "X-API-Key",
+						Secret: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
+						},
+					},
 				}
 				assert.Equal(t, exp, *sm.JWKSEndpoint)
 
@@ -380,10 +394,10 @@ func TestMetadataEndpointGet(t *testing.T) {
 					Retry:     &endpoint.Retry{GiveUpAfter: 2 * time.Minute, MaxDelay: 10 * time.Second},
 					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 20 * time.Second},
 					AuthStrategy: &authstrategy.OAuth2ClientCredentials{
-						Config: clientcredentials.Config{
-							TokenURL:     "https://foo.bar/token",
-							ClientID:     "foo",
-							ClientSecret: "bar",
+						TokenURL: "https://foo.bar/token",
+						Credentials: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
 						},
 					},
 				}
