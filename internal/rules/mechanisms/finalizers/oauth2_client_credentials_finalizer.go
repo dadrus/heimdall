@@ -87,7 +87,7 @@ func newOAuth2ClientCredentialsFinalizer(
 	}
 
 	var conf Config
-	if err := decodeConfigWithFactory(app.DecoderFactory(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(
 			pipeline.ErrConfiguration,
 			"failed decoding config for oauth2_client_credentials finalizer '%s'",
@@ -121,7 +121,7 @@ func newOAuth2ClientCredentialsFinalizer(
 		app:  app,
 		cfg: cc.Config{
 			TokenURL:   conf.TokenURL,
-			AuthMethod: conf.AuthMethod,
+			AuthMethod: x.IfThenElse(len(conf.AuthMethod) == 0, cc.AuthMethodBasicAuth, conf.AuthMethod),
 			Scopes:     conf.Scopes,
 			TTL:        conf.TTL,
 		},
@@ -167,7 +167,7 @@ func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) 
 	}
 
 	var conf Config
-	if err := decodeConfigWithFactory(f.app.DecoderFactory(), def.Config, &conf); err != nil {
+	if err := decodeConfig(f.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(
 			pipeline.ErrConfiguration,
 			"failed decoding config for oauth2_client_credentials finalizer '%s'",
@@ -236,10 +236,7 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx pipeline.Context, _ pipel
 func toOAuth2ClientCredentials(creds secrets.Credentials) (oauth2ClientCredentials, error) {
 	var data oauth2ClientCredentials
 	if err := creds.Decode(&data); err != nil {
-		return oauth2ClientCredentials{}, errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"failed decoding oauth2 client credentials",
-		).CausedBy(err)
+		return oauth2ClientCredentials{}, err
 	}
 
 	return data, nil
