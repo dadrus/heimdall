@@ -19,6 +19,7 @@ package cache
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -139,7 +140,8 @@ func TestNewCache(t *testing.T) {
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(tc.conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Meter().Maybe().Return(noop2.Meter{})
 
 			// WHEN

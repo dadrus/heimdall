@@ -38,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -368,7 +369,8 @@ func TestStandaloneCache(t *testing.T) {
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(kr)
 			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 

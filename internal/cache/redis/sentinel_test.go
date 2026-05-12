@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -211,8 +212,8 @@ func TestSentinelCache(t *testing.T) {
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
-			appCtx.EXPECT().Watcher().Maybe().Return(nil)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
 			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 

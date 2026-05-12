@@ -44,7 +44,7 @@ func NewSentinelCache(app app.Context, conf map[string]any) (types.Cache, error)
 		baseConfig: baseConfig{ClientCache: clientCache{TTL: 5 * time.Minute}}, //nolint:mnd
 	}
 
-	err := decodeConfig(app.Validator(), conf, &cfg)
+	err := decodeConfig(app, conf, &cfg)
 	if err != nil {
 		return nil, err
 	}

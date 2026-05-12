@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -39,7 +40,8 @@ func TestCacheUsage(t *testing.T) {
 	require.NoError(t, err)
 
 	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Validator().Return(validator)
+	appCtx.EXPECT().DecoderFactory().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 	db := miniredis.RunT(t)
 	cch, err := NewStandaloneCache(

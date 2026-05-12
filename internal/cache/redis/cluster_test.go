@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -268,8 +269,8 @@ tls:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
-			appCtx.EXPECT().Watcher().Maybe().Return(nil)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
 			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 

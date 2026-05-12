@@ -19,37 +19,29 @@ package redis
 import (
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(validator validation.Validator, input any, output any) error {
-	dec, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeDurationHookFunc(),
-				config.StringToByteSizeHookFunc(),
-				config.DecodeTLSCipherSuiteHookFunc,
-				config.DecodeTLSMinVersionHookFunc,
-			),
-			Result:      output,
-			ErrorUnused: true,
-		})
-	if err != nil {
-		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding redis cache config").CausedBy(err)
-	}
+func decodeConfig(app app.Context, input map[string]any, output any) error {
+	dec := app.DecoderFactory().Decoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithDecodeHooks(
+			mapstructure.StringToTimeDurationHookFunc(),
+			config.StringToByteSizeHookFunc(),
+			config.DecodeTLSCipherSuiteHookFunc,
+			config.DecodeTLSMinVersionHookFunc,
+		),
+	)
 
-	if err = dec.Decode(input); err != nil {
-		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding redis cache config").CausedBy(err)
-	}
-
-	if err = validator.ValidateStruct(output); err != nil {
-		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed validating redis cache config").CausedBy(err)
+	if err := dec.DecodeMap(output, input); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed decoding redis cache config",
+		).CausedBy(err)
 	}
 
 	return nil
