@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -192,7 +193,8 @@ endpoints:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			// WHEN
 			prov, err := NewProvider(appCtx, mocks.NewRuleSetProcessorMock(t), cch)
@@ -855,7 +857,8 @@ rules:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			prov, err := NewProvider(appCtx, processor, cch)
 			require.NoError(t, err)

@@ -72,9 +72,8 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (v1
 
 	md := sha256.New()
 
-	dec := encoding.NewDecoder(
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithSourceContentType(resp.Header.Get("Content-Type")),
-		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
 		encoding.WithErrorOnUnused(true),
 	)
 
