@@ -28,14 +28,13 @@ import (
 	"math/big"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -44,17 +43,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/dadrus/heimdall/internal/config"
+	mocks2 "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestControllerLifecycle(t *testing.T) {
 	t.Parallel()
-
-	testDir := t.TempDir()
 
 	serverKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
@@ -77,18 +77,6 @@ func TestControllerLifecycle(t *testing.T) {
 	).Build()
 	require.NoError(t, err)
 
-	pemBytes, err := pemx.BuildPEM(
-		pemx.WithECDSAPrivateKey(serverKey),
-		pemx.WithX509Certificate(serverCert),
-	)
-	require.NoError(t, err)
-
-	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
-	require.NoError(t, err)
-
-	_, err = pemFile.Write(pemBytes)
-	require.NoError(t, err)
-
 	pool := x509.NewCertPool()
 	pool.AddCert(serverCert)
 
@@ -106,6 +94,7 @@ func TestControllerLifecycle(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		tls     *config.TLS
+		setup   func(t *testing.T, sm *secretsmocks.ManagerMock)
 		request func(t *testing.T, baseURL string) *http.Request
 		assert  func(t *testing.T, err error, resp *http.Response)
 	}{
@@ -131,7 +120,25 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 		"/validate endpoint is exposed": {
-			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
+			tls: &config.TLS{Secret: config.Secret{Source: "webhooks", Selector: "server"}},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				secret := secrettypes.NewAsymmetricKeySecret(
+					"webhooks",
+					"server",
+					"server",
+					serverKey,
+					[]*x509.Certificate{serverCert},
+				)
+
+				sm.EXPECT().
+					ResolveSecret(mock.Anything, secrets.InternalRef("webhooks", "server")).
+					Return(secret, nil)
+				sm.EXPECT().
+					Subscribe(secrets.InternalRef("webhooks", "server"), mock.Anything).
+					Return(func() {}, nil)
+			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
 
@@ -188,7 +195,25 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 		"/convert endpoint is exposed": {
-			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
+			tls: &config.TLS{Secret: config.Secret{Source: "webhooks", Selector: "server"}},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				secret := secrettypes.NewAsymmetricKeySecret(
+					"webhooks",
+					"server",
+					"server",
+					serverKey,
+					[]*x509.Certificate{serverCert},
+				)
+
+				sm.EXPECT().
+					ResolveSecret(mock.Anything, secrets.InternalRef("webhooks", "server")).
+					Return(secret, nil)
+				sm.EXPECT().
+					Subscribe(secrets.InternalRef("webhooks", "server"), mock.Anything).
+					Return(func() {}, nil)
+			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
 
@@ -246,12 +271,23 @@ func TestControllerLifecycle(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
+			ko := mocks2.NewKeyObserverMock(t)
+			ko.EXPECT().Notify(mock.Anything).Maybe()
+
+			sm := secretsmocks.NewManagerMock(t)
+			setup := x.IfThenElse(
+				tc.setup != nil,
+				tc.setup,
+				func(t *testing.T, sm *secretsmocks.ManagerMock) { t.Helper() },
+			)
+
+			setup(t, sm)
+
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
-
-			controller := New(tc.tls, log.Logger, "", mocks.NewFactoryMock(t))
+			controller := New(tc.tls, sm, ko, log.Logger, "", mocks.NewFactoryMock(t))
 			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,

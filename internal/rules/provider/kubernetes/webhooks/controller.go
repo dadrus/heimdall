@@ -19,11 +19,13 @@ package webhooks
 import (
 	"context"
 
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 // available here for test purposes
@@ -43,6 +45,8 @@ func (noopController) Stop(context.Context) error  { return nil }
 
 func New(
 	tlsConf *config.TLS,
+	sm secrets.Manager,
+	ko keyregistry.KeyObserver,
 	logger zerolog.Logger,
 	authClass string,
 	ruleFactory rule.Factory,
@@ -57,5 +61,7 @@ func New(
 		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
 		Logger:         logger,
 		TLSConf:        tlsConf,
+		SecretsManager: sm,
+		KeyObserver:    ko,
 	}
 }

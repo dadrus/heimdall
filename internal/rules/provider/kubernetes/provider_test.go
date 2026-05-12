@@ -46,11 +46,13 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	mocks3 "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
@@ -113,10 +115,14 @@ func TestNewProvider(t *testing.T) {
 			}
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
+			sm := secretsmocks.NewManagerMock(t)
+			ko := mocks3.NewRegistryMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(nil)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 			// WHEN
 			prov, err := NewProvider(appCtx, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
@@ -1136,10 +1142,14 @@ func TestProviderLifecycle(t *testing.T) {
 			processor := mocks.NewRuleSetProcessorMock(t)
 			setupProcessor(t, processor)
 
+			ko := mocks3.NewRegistryMock(t)
+			sm := secretsmocks.NewManagerMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(nil)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 			prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
@@ -1187,11 +1197,14 @@ func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
 	conf := &config.Configuration{Providers: config.RuleProviders{Kubernetes: map[string]any{}}}
 	k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: srv.URL}, nil }
 	processor := mocks.NewRuleSetProcessorMock(t)
+	ko := mocks3.NewRegistryMock(t)
+	sm := secretsmocks.NewManagerMock(t)
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Config().Return(conf)
 	appCtx.EXPECT().Logger().Return(logger)
-	appCtx.EXPECT().SecretsManager().Maybe().Return(nil)
+	appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+	appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 	prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
 	require.NoError(t, err)

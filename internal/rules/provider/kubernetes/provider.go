@@ -126,8 +126,15 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
-	adc := webhooks.New(providerConf.TLS, app.SecretsManager(), logger, authClass, factory)
 	instanceID, _ := os.Hostname()
+	adc := webhooks.New(
+		providerConf.TLS,
+		app.SecretsManager(),
+		app.KeyRegistry(),
+		logger,
+		authClass,
+		factory,
+	)
 
 	logger.Info().Msg("Rule provider configured.")
 
