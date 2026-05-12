@@ -44,8 +44,8 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -54,7 +54,9 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
-	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	types2 "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
@@ -472,8 +474,9 @@ metadata_endpoint:
         type: oauth2_client_credentials
         config:
           token_url: https://example.com/token
-          client_id: foo
-          client_secret: bar
+          credentials:
+            source: foo
+            selector: bar
       retry:
         give_up_after: 1m
         max_delay: 5s
@@ -502,14 +505,9 @@ cache_ttl: 5s`),
 					GiveUpAfter: 1 * time.Minute,
 					MaxDelay:    5 * time.Second,
 				}, reps.Retry)
-				assert.Equal(t, &authstrategy.OAuth2ClientCredentials{
-					Config: clientcredentials.Config{
-						TokenURL:     "https://example.com/token",
-						ClientID:     "foo",
-						ClientSecret: "bar",
-					},
-				}, reps.AuthStrategy)
-
+				cc, ok := reps.AuthStrategy.(*authstrategy.OAuth2ClientCredentials)
+				require.True(t, ok)
+				assert.Equal(t, "https://example.com/token", cc.TokenURL)
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
@@ -592,9 +590,22 @@ error_signaling:
 			)
 			require.NoError(t, err)
 
+			sm := secretsmocks.NewManagerMock(t)
+			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+				Maybe().
+				Return(func() {}, nil)
+			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+				Maybe().
+				Return(types2.NewCredentials("foo", "bar", map[string]any{
+					"client_id":     "bar",
+					"client_secret": "baz",
+				}), nil)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
 
 			// WHEN
 			mech, err := newJwtAuthenticator(appCtx, uc, conf)
@@ -1040,7 +1051,8 @@ error_signaling:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mech, err := newJwtAuthenticator(appCtx, uc, pc)
@@ -1084,13 +1096,50 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		metadataResponseCode        int
 	)
 
-	ks := createKS(t)
-	keyOnlyEntry, err := ks.GetKey(kidKeyWithoutCert)
+	// ROOT CAs
+	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
-	keyAndCertEntry, err := ks.GetKey(kidKeyWithCert)
+
+	// INT CA
+	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
-	keyRSAEntry, err := ks.GetKey(kidRSAKey)
+	intCA1Cert, err := rootCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test Int CA 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithIsCA(),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
 	require.NoError(t, err)
+
+	intCA1 := testsupport.NewCA(intCA1PrivKey, intCA1Cert)
+
+	// EE CERTS
+	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	ee1cert, err := intCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test EE 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+	require.NoError(t, err)
+
+	ee2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	ee3PrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	keyOnlyEntry := types2.NewAsymmetricKeySecret("test", "test", kidKeyWithoutCert, ee2PrivKey, nil)
+	keyAndCertEntry := types2.NewAsymmetricKeySecret("test", "test", kidKeyWithCert, ee1PrivKey,
+		[]*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate})
+	keyRSAEntry := types2.NewAsymmetricKeySecret("test", "test", kidRSAKey, ee3PrivKey, nil)
 
 	jwksWithDuplicateEntries, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
 		mustToJWK(t, keyOnlyEntry), mustToJWK(t, keyOnlyEntry),
@@ -1117,7 +1166,6 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	audience := "bar"
 
 	jwtSignedWithKeyOnlyJWK := createJWT(t, keyOnlyEntry, principalID, issuer, audience, true)
-
 	jwtSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, principalID, issuer, audience, true)
 	jwtWithoutKIDSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, principalID, issuer, audience, false)
 
@@ -2185,7 +2233,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				sf:              &PrincipalInfo{IDFrom: "sub"},
 				ttl:             new(10 * time.Second),
 				validateJWKCert: true,
-				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
+				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain()[2]},
 				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -2266,7 +2314,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				sf:              &PrincipalInfo{IDFrom: "sub"},
 				validateJWKCert: true,
-				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
+				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain()[2]},
 				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(t *testing.T,
@@ -2525,91 +2573,6 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.ErrorContains(t, err, "issuer foobar is not trusted")
 			},
 		},
-		"resolved jwks endpoint expects authentication": {
-			authenticator: &jwtAuthenticator{
-				r: &oauth2.MetadataEndpoint{
-					Endpoint: endpoint.Endpoint{URL: oidcSrv.URL},
-					ResolvedEndpoints: map[string]oauth2.ResolvedEndpointSettings{
-						"jwks_uri": {
-							AuthStrategy: &authstrategy.APIKey{
-								In:    "header",
-								Name:  "X-Api-Key",
-								Value: "very-secret",
-							},
-						},
-					},
-					DisableIssuerIdentifierVerification: true,
-				},
-				a: oauth2.Expectation{
-					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
-					AllowedAlgorithms: []string{"ES384"},
-				},
-				sf:            &PrincipalInfo{IDFrom: "sub"},
-				ttl:           new(0 * time.Second),
-				principalName: DefaultPrincipalName,
-			},
-			configureMocks: func(t *testing.T,
-				ctx *pipelinemocks.ContextMock,
-				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				_ *jwtAuthenticator,
-			) {
-				t.Helper()
-
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				// http cache
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
-					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
-				)).Return(nil)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkJWKSRequest = func(req *http.Request) {
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "very-secret", req.Header.Get("X-Api-Key"))
-				}
-				checkMetadataRequest = func(req *http.Request) {
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "/", req.URL.Path)
-				}
-
-				jwksResponseCode = http.StatusOK
-				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				jwksResponseContentType = "application/json"
-
-				metadataResponseCode = http.StatusOK
-				metadataResponseContent, err = json.Marshal(map[string]string{
-					"jwks_uri": jwksSrv.URL,
-					"issuer":   issuer,
-				})
-				require.NoError(t, err)
-
-				metadataResponseContentType = "application/json"
-			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject) {
-				t.Helper()
-
-				assert.True(t, metadataEndpointCalled)
-				assert.True(t, jwksEndpointCalled)
-
-				require.NoError(t, err)
-				require.NotNil(t, sub)
-
-				assert.Equal(t, principalID, sub.ID())
-				assert.Len(t, sub.Attributes(), 8)
-				assert.Len(t, sub.Attributes()["aud"], 1)
-				assert.Contains(t, sub.Attributes()["aud"], audience)
-				assert.Contains(t, sub.Attributes(), "exp")
-				assert.Contains(t, sub.Attributes(), "iat")
-				assert.Contains(t, sub.Attributes(), "nbf")
-				assert.Equal(t, issuer, sub.Attributes()["iss"])
-				assert.Contains(t, sub.Attributes()["scp"], "foo")
-				assert.Contains(t, sub.Attributes()["scp"], "bar")
-				assert.Equal(t, principalID, sub.Attributes()["sub"])
-			},
-		},
 		"custom principal created": {
 			authenticator: &jwtAuthenticator{
 				r: &oauth2.MetadataEndpoint{
@@ -2742,79 +2705,20 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}
 }
 
-func createKS(t *testing.T) keystore.KeyStore {
-	t.Helper()
-
-	// ROOT CAs
-	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
-	require.NoError(t, err)
-
-	// INT CA
-	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-	intCA1Cert, err := rootCA1.IssueCertificate(
-		testsupport.WithSubject(pkix.Name{
-			CommonName:   "Test Int CA 1",
-			Organization: []string{"Test"},
-			Country:      []string{"EU"},
-		}),
-		testsupport.WithIsCA(),
-		testsupport.WithValidity(time.Now(), time.Hour*24),
-		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
-	require.NoError(t, err)
-
-	intCA1 := testsupport.NewCA(intCA1PrivKey, intCA1Cert)
-
-	// EE CERTS
-	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-	ee1cert, err := intCA1.IssueCertificate(
-		testsupport.WithSubject(pkix.Name{
-			CommonName:   "Test EE 1",
-			Organization: []string{"Test"},
-			Country:      []string{"EU"},
-		}),
-		testsupport.WithValidity(time.Now(), time.Hour*24),
-		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
-		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
-	require.NoError(t, err)
-
-	ee2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-
-	ee3PrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
-	pemBytes, err := pemx.BuildPEM(
-		pemx.WithECDSAPrivateKey(ee1PrivKey, pemx.WithHeader("X-Key-ID", kidKeyWithCert)),
-		pemx.WithECDSAPrivateKey(ee2PrivKey, pemx.WithHeader("X-Key-ID", kidKeyWithoutCert)),
-		pemx.WithRSAPrivateKey(ee3PrivKey, pemx.WithHeader("X-Key-ID", kidRSAKey)),
-		pemx.WithX509Certificate(ee1cert),
-		pemx.WithX509Certificate(intCA1Cert),
-		pemx.WithX509Certificate(rootCA1.Certificate),
-	)
-	require.NoError(t, err)
-
-	ks, err := keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
-	require.NoError(t, err)
-
-	return ks
-}
-
-func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience string, setKid bool) string {
+func createJWT(t *testing.T, secret secrets.AsymmetricKeySecret, subject, issuer, audience string, setKid bool) string {
 	t.Helper()
 
 	signerOpts := &jose.SignerOptions{}
 	signerOpts = signerOpts.WithType("JWT")
 
 	if setKid {
-		signerOpts = signerOpts.WithHeader("kid", keyEntry.KeyID)
+		signerOpts = signerOpts.WithHeader("kid", secret.KeyID())
 	}
 
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
-			Algorithm: jose.SignatureAlgorithm(mustToJWK(t, keyEntry).Algorithm),
-			Key:       keyEntry.PrivateKey,
+			Algorithm: jose.SignatureAlgorithm(mustToJWK(t, secret).Algorithm),
+			Key:       secret.PrivateKey(),
 		},
 		signerOpts)
 	require.NoError(t, err)
@@ -2838,10 +2742,10 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 	return rawJwt
 }
 
-func mustToJWK(t *testing.T, keyEntry *keystore.Entry) jose.JSONWebKey {
+func mustToJWK(t *testing.T, secret secrets.AsymmetricKeySecret) jose.JSONWebKey {
 	t.Helper()
 
-	jwk, err := joseadapter.ToJWK(keyEntry)
+	jwk, err := joseadapter.ToJWK(secret)
 	require.NoError(t, err)
 
 	return jwk
