@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/binary"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -28,8 +30,8 @@ import (
 	"github.com/knadh/koanf/maps"
 
 	"github.com/dadrus/heimdall/internal/config"
-	joseadapterv2 "github.com/dadrus/heimdall/internal/keymaterial/joseadapter/v2"
-	"github.com/dadrus/heimdall/internal/keyregistry/v2"
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/secrets/cache"
@@ -44,14 +46,10 @@ type SignerConfig struct {
 	Secret config.Secret `mapstructure:"secret" validate:"required"`
 }
 
-type jwtSigningMaterial struct {
-	signer jose.Signer
-	hash   []byte
-}
-
 type jwtSigner struct {
 	iss      string
-	resolver *cache.SecretResolver[jwtSigningMaterial]
+	resolver *cache.SecretResolver[jose.Signer]
+	hash     atomic.Value
 }
 
 func newJWTSigner(
@@ -64,15 +62,14 @@ func newJWTSigner(
 		iss: x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
 	}
 
-	ref := secrets.InternalRef(conf.Secret.Source, conf.Secret.Selector)
-
-	resolver := &cache.SecretResolver[jwtSigningMaterial]{
+	signer.resolver = &cache.SecretResolver[jose.Signer]{
 		Manager:   sm,
-		Reference: ref,
-		Converter: signer.toSigningMaterial,
-		OnUpdate: func(ctx context.Context, secret secrets.Secret, _ jwtSigningMaterial) {
+		Reference: secrets.InternalRef(conf.Secret.Source, conf.Secret.Selector),
+		Converter: createJOSESigner,
+		OnUpdate: func(ctx context.Context, secret secrets.Secret, _ jose.Signer) {
 			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
+			signer.updateHash(aks)
 			ko.Notify(keyregistry.KeyInfo{
 				Key:        aks,
 				Exportable: true,
@@ -80,29 +77,26 @@ func newJWTSigner(
 		},
 	}
 
-	if err := resolver.Start(ctx); err != nil {
+	if err := signer.resolver.Start(ctx); err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed resolving jwt signing secret",
 		).CausedBy(err)
 	}
 
-	signer.resolver = resolver
-
 	return signer, nil
 }
 
 func (s *jwtSigner) Hash() []byte {
-	material, ok := s.resolver.Get()
-	if !ok {
-		return nil
+	if hash, ok := s.hash.Load().([]byte); ok {
+		return hash
 	}
 
-	return material.hash
+	return nil
 }
 
 func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]any) (string, error) {
-	material, ok := s.resolver.Get()
+	signer, ok := s.resolver.Get()
 	if !ok {
 		return "", errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
@@ -121,7 +115,7 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]
 	claims["nbf"] = now.Unix()
 	claims["sub"] = sub
 
-	rawJwt, err := jwt.Signed(material.signer).Claims(claims).Serialize()
+	rawJwt, err := jwt.Signed(signer).Claims(claims).Serialize()
 	if err != nil {
 		return "", errorchain.NewWithMessage(
 			pipeline.ErrInternal,
@@ -132,24 +126,45 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]
 	return rawJwt, nil
 }
 
-func (s *jwtSigner) toSigningMaterial(secret secrets.Secret) (jwtSigningMaterial, error) {
+func (s *jwtSigner) updateHash(secret secrets.AsymmetricKeySecret) {
+	const int64BytesCount = 8
+
+	var ttlBytes [int64BytesCount]byte
+
+	now := time.Now().UTC().Unix()
+
+	//nolint:gosec
+	// no integer overflow during conversion possible
+	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(now))
+
+	hash := sha256.New()
+	hash.Write(stringx.ToBytes(s.iss))
+	hash.Write(ttlBytes[:])
+	hash.Write(stringx.ToBytes(secret.Source()))
+	hash.Write(stringx.ToBytes(secret.Selector()))
+	hash.Write(stringx.ToBytes(string(secret.Kind())))
+
+	s.hash.Store(hash.Sum(nil))
+}
+
+func createJOSESigner(secret secrets.Secret) (jose.Signer, error) {
 	aks, ok := secret.(secrets.AsymmetricKeySecret)
 	if !ok {
-		return jwtSigningMaterial{}, errorchain.NewWithMessage(
+		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"resolved jwt signing secret is not suitable for jwt signing",
+			"secret is not suitable for signing",
 		)
 	}
 
 	if err := validateJWTSigningCertificate(aks); err != nil {
-		return jwtSigningMaterial{}, err
+		return nil, err
 	}
 
-	jwk, err := joseadapterv2.ToJWK(aks)
+	jwk, err := joseadapter.ToJWK(aks)
 	if err != nil {
-		return jwtSigningMaterial{}, errorchain.NewWithMessage(
+		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"failed creating jwk from signing secret",
+			"failed creating jwk from secret",
 		).CausedBy(err)
 	}
 
@@ -164,23 +179,13 @@ func (s *jwtSigner) toSigningMaterial(secret secrets.Secret) (jwtSigningMaterial
 			WithHeader("alg", jwk.Algorithm),
 	)
 	if err != nil {
-		return jwtSigningMaterial{}, errorchain.NewWithMessage(
+		return nil, errorchain.NewWithMessage(
 			pipeline.ErrInternal,
-			"failed to create JWT signer",
+			"failed to create JOSE signer",
 		).CausedBy(err)
 	}
 
-	var result [sha256.Size]byte
-
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes(jwk.KeyID))
-	hash.Write(stringx.ToBytes(jwk.Algorithm))
-	hash.Write(stringx.ToBytes(s.iss))
-
-	return jwtSigningMaterial{
-		signer: signer,
-		hash:   hash.Sum(result[:0]),
-	}, nil
+	return signer, nil
 }
 
 func validateJWTSigningCertificate(secret secrets.AsymmetricKeySecret) error {
