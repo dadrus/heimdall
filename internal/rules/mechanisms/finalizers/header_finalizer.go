@@ -60,7 +60,7 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for header finalizer '%s'", name).CausedBy(err)
 	}
@@ -126,7 +126,7 @@ func (f *headerFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
+	if err := decodeConfig(f.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for header finalizer '%s'", f.name).CausedBy(err)
 	}
