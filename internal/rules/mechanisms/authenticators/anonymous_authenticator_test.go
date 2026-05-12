@@ -19,6 +19,7 @@ package authenticators
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -108,7 +109,8 @@ func TestNewAnonymousAuthenticator(t *testing.T) {
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
@@ -235,7 +237,8 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mechanism, err := newAnonymousAuthenticator(appCtx, uc, tc.config)
@@ -267,7 +270,8 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	require.NoError(t, err)
 
 	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Validator().Return(validator)
+	appCtx.EXPECT().DecoderFactory().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 	appCtx.EXPECT().Logger().Return(log.Logger)
 
 	mech, err := newAnonymousAuthenticator(appCtx, "anon_auth", map[string]any{"principal": "anon"})
