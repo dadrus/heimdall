@@ -172,12 +172,12 @@ func authCredentials(
 	}
 }
 
-func dialCtx(tlsCfg *tls.Config) func(context.Context, string, *net.Dialer, *tls.Config) (conn net.Conn, err error) {
+func dialCtx(tlsCfg *tls.Config) func(context.Context, string, *net.Dialer, *tls.Config) (net.Conn, error) {
 	type Dialer interface {
 		DialContext(ctx context.Context, network, addr string) (net.Conn, error)
 	}
 
-	return func(ctx context.Context, addr string, dialer *net.Dialer, _ *tls.Config) (conn net.Conn, err error) {
+	return func(ctx context.Context, addr string, dialer *net.Dialer, _ *tls.Config) (net.Conn, error) {
 		var cd Dialer = dialer
 
 		if tlsCfg != nil {

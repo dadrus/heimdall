@@ -19,11 +19,11 @@ package webhooks
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/secrets"
 )

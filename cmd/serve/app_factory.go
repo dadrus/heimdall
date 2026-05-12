@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"slices"
 
-	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -30,6 +29,7 @@ import (
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/version"

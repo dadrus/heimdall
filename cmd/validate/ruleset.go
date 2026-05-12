@@ -61,6 +61,7 @@ func NewValidateRulesCommand() *cobra.Command {
 	return cmd
 }
 
+//nolint:funlen
 func validateRuleSet(cmd *cobra.Command, args []string) error {
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	logger := zerolog.Nop()

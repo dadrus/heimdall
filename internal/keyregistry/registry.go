@@ -26,11 +26,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/go-jose/go-jose/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )

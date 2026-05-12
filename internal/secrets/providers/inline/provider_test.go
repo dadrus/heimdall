@@ -267,22 +267,3 @@ func TestRegistryCreate(t *testing.T) {
 	require.Equal(t, "inline-defaults", provider.Name())
 	require.Equal(t, ProviderType, provider.Type())
 }
-
-func newTestProvider(t *testing.T) types.Provider {
-	t.Helper()
-
-	prv, err := newProvider(types.ProviderArgs{
-		SourceName: "inline-defaults",
-		Config: map[string]any{
-			"api_token": "secret",
-			"api_other": "other",
-			"github": map[string]any{
-				"client_id":     "heimdall",
-				"client_secret": "secret",
-			},
-		},
-	})
-	require.NoError(t, err)
-
-	return prv
-}

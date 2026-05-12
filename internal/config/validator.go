@@ -93,7 +93,7 @@ func formatValidationError(err *jsonschema.ValidationError) string {
 
 func collectValidationLeaves(
 	err *jsonschema.ValidationError,
-	p *message.Printer,
+	printer *message.Printer,
 	lines *[]string,
 ) {
 	if err == nil {
@@ -102,7 +102,7 @@ func collectValidationLeaves(
 
 	if len(err.Causes) > 0 {
 		for _, cause := range err.Causes {
-			collectValidationLeaves(cause, p, lines)
+			collectValidationLeaves(cause, printer, lines)
 		}
 
 		return
@@ -113,7 +113,7 @@ func collectValidationLeaves(
 	}
 
 	path := formatInstanceLocation(err.InstanceLocation)
-	msg := err.ErrorKind.LocalizedString(p)
+	msg := err.ErrorKind.LocalizedString(printer)
 
 	*lines = append(*lines, fmt.Sprintf("- %s: %s", path, msg))
 }
@@ -123,22 +123,23 @@ func formatInstanceLocation(loc []string) string {
 		return "$"
 	}
 
-	var b strings.Builder
+	var builder strings.Builder
 
 	for _, part := range loc {
 		if _, err := strconv.Atoi(part); err == nil {
-			b.WriteString("[")
-			b.WriteString(part)
-			b.WriteString("]")
+			builder.WriteString("[")
+			builder.WriteString(part)
+			builder.WriteString("]")
+
 			continue
 		}
 
-		if b.Len() > 0 {
-			b.WriteString(".")
+		if builder.Len() > 0 {
+			builder.WriteString(".")
 		}
 
-		b.WriteString(part)
+		builder.WriteString(part)
 	}
 
-	return b.String()
+	return builder.String()
 }

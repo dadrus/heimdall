@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"sync/atomic"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -29,7 +31,6 @@ import (
 	"github.com/dadrus/heimdall/internal/secrets/cache"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
-	"github.com/rs/zerolog"
 )
 
 type basicAuthCredentials struct {

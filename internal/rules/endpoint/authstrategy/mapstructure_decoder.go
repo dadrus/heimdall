@@ -18,7 +18,6 @@ package authstrategy
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"reflect"
 
@@ -46,7 +45,10 @@ func asStringMap(data any) (map[string]any, error) {
 		for key, value := range typed {
 			strKey, ok := key.(string)
 			if !ok {
-				return nil, errors.New("configuration contains non-string key")
+				return nil, errorchain.NewWithMessage(
+					pipeline.ErrConfiguration,
+					"configuration contains non-string key",
+				)
 			}
 
 			result[strKey] = value
@@ -54,7 +56,10 @@ func asStringMap(data any) (map[string]any, error) {
 
 		return result, nil
 	default:
-		return nil, errors.New("unexpected configuration type")
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"unexpected configuration type",
+		)
 	}
 }
 
@@ -74,10 +79,7 @@ func decodeConfig(
 
 	typed, err := asStringMap(config)
 	if err != nil {
-		return errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"unexpected configuration type",
-		).CausedBy(err)
+		return err
 	}
 
 	dec := decoderFactory.Decoder(
