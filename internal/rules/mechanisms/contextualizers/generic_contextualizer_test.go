@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -186,7 +187,8 @@ values:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
@@ -525,7 +527,8 @@ values:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mech, err := newGenericContextualizer(appCtx, uc, pc)
