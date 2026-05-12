@@ -54,8 +54,10 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 	var rawConfig map[string]any
 
 	if d.contentType != "application/json" && d.contentType != "application/yaml" {
-		return errorchain.NewWithMessagef(pipeline.ErrInternal,
-			"unsupported content type: %s", d.contentType)
+		return errorchain.NewWithMessagef(
+			pipeline.ErrInternal,
+			"unsupported content type: %s", d.contentType,
+		)
 	}
 
 	if d.substituteEnvVars {
@@ -67,8 +69,10 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 
 		content, err := envsubst.EvalEnv(stringx.ToString(raw))
 		if err != nil {
-			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-				"substitution of environment variables failed").CausedBy(err)
+			return errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"substitution of environment variables failed",
+			).CausedBy(err)
 		}
 
 		reader = bytes.NewReader(stringx.ToBytes(content))
@@ -79,8 +83,10 @@ func (d *Decoder) Decode(out any, reader io.Reader) error {
 			return err
 		}
 
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"parsing of object failed").CausedBy(err)
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"parsing of object failed",
+		).CausedBy(err)
 	}
 
 	return d.DecodeMap(out, rawConfig)
@@ -94,12 +100,25 @@ func (d *Decoder) DecodeMap(out any, in map[string]any) error {
 		DecodeHook:  x.IfThenElse(d.decodeHooks != nil, d.decodeHooks, mapstructure.ComposeDecodeHookFunc()),
 	})
 	if err != nil {
-		return err
+		return errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed creating decoder",
+		).CausedBy(err)
 	}
 
 	if err = dec.Decode(in); err != nil {
-		return err
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"decoding of object failed",
+		).CausedBy(err)
 	}
 
-	return d.validator.Validate(out)
+	if err = d.validator.Validate(out); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"validation of object failed",
+		).CausedBy(err)
+	}
+
+	return nil
 }
