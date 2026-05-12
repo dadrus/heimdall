@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,7 +55,7 @@ func TestConditionalStepExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, cm *mocks.ContextMock) {
 				t.Helper()
 
-				cm.EXPECT().Error().Return(errors.New("some error"))
+				cm.EXPECT().Error().Return(assert.AnError)
 
 				ecm.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).Return(true, nil)
 				sm.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
@@ -89,7 +88,7 @@ func TestConditionalStepExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, cm *mocks.ContextMock) {
 				t.Helper()
 
-				cm.EXPECT().Error().Return(errors.New("some error"))
+				cm.EXPECT().Error().Return(assert.AnError)
 
 				ecm.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).Return(false, nil)
 				sm.EXPECT().ID().Return("test")
@@ -107,7 +106,7 @@ func TestConditionalStepExecute(t *testing.T) {
 				t.Helper()
 
 				ecm.EXPECT().CanExecuteOnSubject(mock.Anything, mock.Anything).
-					Return(true, errors.New("test error"))
+					Return(true, assert.AnError)
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindContextualizer)
 				sm.EXPECT().Type().Return("foo")
@@ -116,17 +115,17 @@ func TestConditionalStepExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"does not execute if can check fails for error_handler kind": {
 			configureMocks: func(t *testing.T, ecm *rulemocks.ExecutionConditionMock, sm *mocks.StepMock, cm *mocks.ContextMock) {
 				t.Helper()
 
-				cm.EXPECT().Error().Return(errors.New("some error"))
+				cm.EXPECT().Error().Return(assert.AnError)
 
 				ecm.EXPECT().CanExecuteOnError(mock.Anything, mock.Anything).
-					Return(true, errors.New("test error"))
+					Return(true, assert.AnError)
 				sm.EXPECT().ID().Return("test")
 				sm.EXPECT().Kind().Return(pipeline.KindErrorHandler)
 				sm.EXPECT().Type().Return("foo")
@@ -135,7 +134,7 @@ func TestConditionalStepExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 	} {

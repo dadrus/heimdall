@@ -18,7 +18,6 @@ package httpendpoint
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -706,7 +705,7 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(assert.AnError).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -766,7 +765,7 @@ rules:
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -814,7 +813,7 @@ rules:
 				t.Helper()
 
 				call := processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error")).NotBefore(call)
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(assert.AnError).NotBefore(call)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()

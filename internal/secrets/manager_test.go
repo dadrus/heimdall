@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -681,7 +682,7 @@ func TestManagerSubscribe(t *testing.T) {
 			func(context.Context) error {
 				atomic.AddInt32(&callCount, 1)
 
-				return errors.New("boom")
+				return assert.AnError
 			},
 		)
 		require.NoError(t, err)
@@ -1103,13 +1104,13 @@ func TestManagerStartStop(t *testing.T) {
 			zerolog.Nop(),
 			managedProvider{provider: &startStopProvider{name: "a", started: &started, stopped: &stopped}},
 			managedProvider{provider: &startStopProvider{name: "b", started: &started, stopped: &stopped}},
-			managedProvider{provider: &startStopProvider{name: "c", startErr: errors.New("boom")}},
+			managedProvider{provider: &startStopProvider{name: "c", startErr: assert.AnError}},
 		)
 
 		err := mgr.Start(context.Background())
 
 		require.Error(t, err)
-		require.ErrorContains(t, err, "boom")
+		require.ErrorContains(t, err, assert.AnError.Error())
 		require.Equal(t, started.Load(), stopped.Load())
 	})
 
@@ -1125,7 +1126,7 @@ func TestManagerStartStop(t *testing.T) {
 			func(context.Context) error {
 				atomic.AddInt32(&callCount, 1)
 
-				return errors.New("boom")
+				return assert.AnError
 			},
 		)
 		require.NoError(t, err)
@@ -1150,7 +1151,7 @@ func TestManagerStartStop(t *testing.T) {
 
 		first := typemocks.NewProviderMock(t)
 		first.EXPECT().Name().Return("first")
-		first.EXPECT().Stop(mock.Anything).Return(errors.New("boom")).Once()
+		first.EXPECT().Stop(mock.Anything).Return(assert.AnError).Once()
 
 		second := typemocks.NewProviderMock(t)
 		second.EXPECT().Name().Return("second")
@@ -1163,7 +1164,7 @@ func TestManagerStartStop(t *testing.T) {
 
 		err := mgr.Stop(context.Background())
 		require.Error(t, err)
-		require.ErrorContains(t, err, "boom")
+		require.ErrorContains(t, err, assert.AnError.Error())
 	})
 }
 

@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"bytes"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,7 +44,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 			configureMocks: func(t *testing.T, _ *HandlerMock[*RequestMock, *ResponseMock[*RequestMock]], rm *ReviewMock[*RequestMock, *ResponseMock[*RequestMock]]) {
 				t.Helper()
 
-				rm.EXPECT().Decode(mock.Anything).Return(nil, errors.New("test error"))
+				rm.EXPECT().Decode(mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, resp *http.Response) {
 				t.Helper()

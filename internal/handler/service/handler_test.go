@@ -17,11 +17,11 @@
 package service
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
@@ -49,22 +49,19 @@ func TestHandlerServeHTTP(t *testing.T) {
 			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
-				err := errors.New("exec error")
-
-				exec.EXPECT().Execute(ctx).Return(nil, err)
-				eh.EXPECT().HandleError(mock.Anything, mock.Anything, err)
+				exec.EXPECT().Execute(ctx).Return(nil, assert.AnError)
+				eh.EXPECT().HandleError(mock.Anything, mock.Anything, assert.AnError)
 			},
 		},
 		"with error from finalizer": {
 			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
-				err := errors.New("finalizer error")
 				upstream := mocks4.NewBackendMock(t)
 
 				exec.EXPECT().Execute(ctx).Return(upstream, nil)
-				ctx.EXPECT().Finalize(upstream).Return(err)
-				eh.EXPECT().HandleError(mock.Anything, mock.Anything, err)
+				ctx.EXPECT().Finalize(upstream).Return(assert.AnError)
+				eh.EXPECT().HandleError(mock.Anything, mock.Anything, assert.AnError)
 			},
 		},
 	} {

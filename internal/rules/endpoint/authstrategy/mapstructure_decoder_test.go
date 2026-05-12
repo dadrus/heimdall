@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"errors"
 	"testing"
 	"time"
 
@@ -736,7 +735,7 @@ auth:
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
+				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()

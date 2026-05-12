@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -46,7 +45,7 @@ func TestToServerTLSConfig(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("tls", "server")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
 				t.Helper()
@@ -143,7 +142,7 @@ func TestToClientTLSConfig(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("tls", "client")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
 				t.Helper()
@@ -232,13 +231,13 @@ func TestGetCertificate(t *testing.T) {
 
 				sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(secret, nil)
 				sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() {}, nil)
-				cc.EXPECT().SupportsCertificate(mock.Anything).Return(errors.New("boom"))
+				cc.EXPECT().SupportsCertificate(mock.Anything).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cert *tls.Certificate) {
 				t.Helper()
 
 				assert.Nil(t, cert)
-				require.ErrorContains(t, err, "boom")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"returns cached certificate": {

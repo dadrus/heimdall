@@ -18,7 +18,6 @@ package requestcontext
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -330,7 +329,7 @@ func TestRequestContextReset(t *testing.T) {
 	ctx := New()
 	ctx.Init(req)
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
-	ctx.SetError(errors.New("pipeline error"))
+	ctx.SetError(assert.AnError)
 	_ = ctx.Body()
 	ctx.Outputs()["a"] = "b"
 	ctx.AddCookieForUpstream("foo", "bar")

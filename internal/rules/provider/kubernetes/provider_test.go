@@ -434,7 +434,7 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(assert.AnError).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -494,7 +494,7 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(assert.AnError).Once()
 			},
 			updateStatus: func(rs v1beta1.RuleSet, _ int) (*metav1.Status, error) {
 				return &errors2.NewInvalid(
@@ -618,7 +618,7 @@ func TestProviderLifecycle(t *testing.T) {
 				}
 			},
 			updateStatus: func(_ v1beta1.RuleSet, _ int) (*metav1.Status, error) {
-				return nil, errors.New("test error")
+				return nil, assert.AnError
 			},
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -687,7 +687,7 @@ func TestProviderLifecycle(t *testing.T) {
 					return &errors2.NewConflict(
 						schema.GroupResource{Group: v1beta1.GroupVersion.Group, Resource: v1beta1.ResourceName},
 						rs.Name,
-						errors.New("RuleSet conflict"),
+						assert.AnError,
 					).ErrStatus, nil
 				default:
 					return nil, nil //nolint:nilnil
@@ -762,7 +762,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(assert.AnError).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -1089,7 +1089,7 @@ func TestProviderLifecycle(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(assert.AnError).Once()
 			},
 			assert: func(t *testing.T, statusList *[]*v1beta1.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -1243,7 +1243,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Return(errors.New("test error"))
+					Return(assert.AnError)
 
 				repository.EXPECT().PatchStatus(
 					mock.Anything,
@@ -1280,13 +1280,13 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).
-					Return(errors.New("test error"))
+					Return(assert.AnError)
 
 				repository.EXPECT().PatchStatus(
 					mock.Anything,
 					mock.Anything,
 					mock.Anything,
-				).Once().Return(nil, errors.New("test error"))
+				).Once().Return(nil, assert.AnError)
 			},
 			useRuleSet: func(t *testing.T, provider *Provider, rs *v1beta1.RuleSet) {
 				t.Helper()
@@ -1303,7 +1303,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(assert.AnError)
 				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(nil)
 
 				repository.EXPECT().PatchStatus(
@@ -1373,13 +1373,13 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(assert.AnError)
 				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs cfgv1beta1.RuleSet) bool {
 					return rs.Name != "error"
 				})).Return(nil)
 				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
-				})).Return(errors.New("test error"))
+				})).Return(assert.AnError)
 
 				repository.EXPECT().PatchStatus(
 					mock.Anything,
@@ -1468,7 +1468,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(assert.AnError)
 				repository.EXPECT().PatchStatus(
 					mock.Anything,
 					mock.Anything,
@@ -1521,7 +1521,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
-				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(assert.AnError)
 				repository.EXPECT().PatchStatus(
 					mock.Anything,
 					mock.Anything,
@@ -1595,7 +1595,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				})).Return(nil)
 				processor.EXPECT().OnUpdated(mock.Anything, mock.MatchedBy(func(rs cfgv1beta1.RuleSet) bool {
 					return rs.Name == "error"
-				})).Return(errors.New("test error"))
+				})).Return(assert.AnError)
 
 				repository.EXPECT().PatchStatus(
 					mock.Anything,
@@ -1681,7 +1681,7 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil)
-				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				repository.EXPECT().PatchStatus(
 					mock.Anything,
@@ -1785,8 +1785,8 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 			setupMocks: func(t *testing.T, processor *mocks.RuleSetProcessorMock, repository *mocks2.RepositoryMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error"))
-				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(assert.AnError)
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				repository.EXPECT().PatchStatus(
 					mock.Anything,

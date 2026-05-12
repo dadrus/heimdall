@@ -18,7 +18,6 @@ package authstrategy
 
 import (
 	"encoding/base64"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -55,7 +54,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
 				t.Helper()
@@ -278,7 +277,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock, sm *secretsmock.ManagerMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -300,7 +299,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock, sm *secretsmock.ManagerMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {

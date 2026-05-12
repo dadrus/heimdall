@@ -77,7 +77,7 @@ func TestErrorContext(t *testing.T) {
 func TestNewResponseError(t *testing.T) {
 	t.Parallel()
 
-	originalCause := errors.New("test cause")
+	originalCause := assert.AnError
 
 	var seen error
 

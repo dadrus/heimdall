@@ -17,7 +17,6 @@
 package contextualizers
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -810,7 +809,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
@@ -841,7 +840,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(data []byte) bool {
 					var val contextualizerData
 

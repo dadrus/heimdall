@@ -17,7 +17,6 @@
 package recovery
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -39,7 +38,7 @@ func TestHandlerExecution(t *testing.T) {
 		err         any
 	}{
 		"panics with string as error": {true, "string error"},
-		"panics with real error type": {true, errors.New("err error")},
+		"panics with real error type": {true, assert.AnError},
 		"does not panic":              {false, ""},
 	} {
 		t.Run(uc, func(t *testing.T) {

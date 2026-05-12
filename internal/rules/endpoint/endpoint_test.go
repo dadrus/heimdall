@@ -18,7 +18,6 @@ package endpoint
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -227,7 +226,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				URL: "http://test.org",
 				AuthStrategy: func() AuthenticationStrategy {
 					as := mocks.NewAuthenticationStrategyMock(t)
-					as.EXPECT().Apply(mock.Anything).Return(errors.New("test error"))
+					as.EXPECT().Apply(mock.Anything).Return(assert.AnError)
 
 					return as
 				}(),

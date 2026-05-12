@@ -23,7 +23,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"math/big"
 	"net"
 	"os"
@@ -32,6 +31,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -210,7 +210,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 
 				return []byte("{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: { source: creds, selector: redis }}")
 			},
@@ -227,7 +227,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 
 				return []byte(`{ tls: { secret: { source: redis, selector: tls } }, address: "foo.local:12345"}`)
 			},

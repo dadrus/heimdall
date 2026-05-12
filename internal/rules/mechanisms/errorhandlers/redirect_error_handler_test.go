@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -288,7 +287,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 
 					return true
 				}))
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -322,7 +321,7 @@ code: 300
 
 					return true
 				}))
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

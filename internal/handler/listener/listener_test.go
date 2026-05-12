@@ -24,7 +24,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"math/big"
 	"net"
 	"testing"
@@ -59,12 +58,12 @@ func TestNew(t *testing.T) {
 			serviceConf: config.ServeConfig{
 				Host: ".....",
 			},
-			listenErr: errors.New("no such host"),
+			listenErr: assert.AnError,
 			assert: func(t *testing.T, err error, _ net.Listener, _ net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "no such host")
+				require.ErrorContains(t, err, assert.AnError.Error())
 				assert.Equal(t, address, capturedAddress)
 			},
 		},
@@ -95,7 +94,7 @@ func TestNew(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("listener", "tls")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ net.Listener, _ net.Listener, capturedAddress string) {
 				t.Helper()
@@ -182,7 +181,7 @@ func TestNew(t *testing.T) {
 
 func TestListenerAccept(t *testing.T) {
 	expectedConn := &connRecorder{}
-	expectedErr := errors.New("boom")
+	expectedErr := assert.AnError
 
 	tests := map[string]struct {
 		listener net.Listener

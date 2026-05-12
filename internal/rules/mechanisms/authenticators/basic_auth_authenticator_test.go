@@ -18,7 +18,6 @@ package authenticators
 
 import (
 	"encoding/base64"
-	"errors"
 	"net/http"
 	"testing"
 
@@ -65,7 +64,7 @@ func TestCreateResolver(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -243,7 +242,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator) {
 				t.Helper()
@@ -401,7 +400,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 						"password": "baz",
 					}), nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref2).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
 				t.Helper()

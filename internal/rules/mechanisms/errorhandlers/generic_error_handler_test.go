@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"errors"
 	"net/url"
 	"slices"
 	"testing"
@@ -406,7 +405,7 @@ code: 500
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -414,7 +413,7 @@ code: 500
 					assert.Nil(t, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -435,7 +434,7 @@ headers:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil).Times(2)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -443,7 +442,7 @@ headers:
 					assert.Equal(t, map[string][]string{"X-Error-Reason": {"blocked"}}, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -465,7 +464,7 @@ headers:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil).Times(3)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -473,7 +472,7 @@ headers:
 					assert.Equal(t, map[string][]string{"Set-Cookie": {"a=1", "b=2"}}, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -493,7 +492,7 @@ body: blocked
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil).Times(2)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -501,7 +500,7 @@ body: blocked
 					assert.Nil(t, genErr.Headers)
 					assert.Equal(t, "blocked", genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -628,7 +627,7 @@ values:
 				req := &pipeline.Request{URL: &pipeline.URL{URL: *reqURL}}
 
 				ctx.EXPECT().Request().Return(req).Times(4)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -639,7 +638,7 @@ values:
 						"X-Request-Host": {"foo.bar"},
 					}, genErr.Headers)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))

@@ -17,9 +17,9 @@
 package rules
 
 import (
-	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -53,7 +53,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
-					Return(nil, errors.New("test error"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -70,13 +70,13 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
 					Return(&mocks.RuleMock{}, nil)
 				repo.EXPECT().AddRuleSet(mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.New("test error"))
+					Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"successful": {
@@ -152,7 +152,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
-					Return(nil, errors.New("test error"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -169,13 +169,13 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
 					Return(&mocks.RuleMock{}, nil)
 				repo.EXPECT().UpdateRuleSet(mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.New("test error"))
+					Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"successful": {
@@ -243,13 +243,13 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 				t.Helper()
 
 				repo.EXPECT().DeleteRuleSet(t.Context(), rule.RuleSet{ID: "test", Name: "foobar"}).
-					Return(errors.New("test error"))
+					Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"successful": {

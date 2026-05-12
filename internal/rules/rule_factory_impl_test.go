@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"errors"
 	"net/url"
 	"testing"
 
@@ -152,7 +151,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, assert.AnError)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -160,7 +159,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with malformed default rule, where authorizer loading happens after finalizers": {
@@ -198,7 +197,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, assert.AnError)
 
 				repo.EXPECT().Authorizer("foo").Return(mechanism, nil)
 			},
@@ -206,7 +205,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with malformed default rule, where contextualizer loading happens after finalizers": {
@@ -244,7 +243,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, assert.AnError)
 
 				repo.EXPECT().Contextualizer("foo").Return(mechanism, nil)
 			},
@@ -252,7 +251,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with default rule, where finalizer loading results in an error": {
@@ -265,7 +264,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, assert.AnError)
 
 				repo.EXPECT().Finalizer("foo").Return(mechanism, nil)
 			},
@@ -273,7 +272,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with default rule, where error_handler loading results in an error": {
@@ -286,7 +285,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{}).Return(nil, assert.AnError)
 
 				repo.EXPECT().ErrorHandler("foo").Return(mechanism, nil)
 			},
@@ -294,7 +293,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with empty default rule": {
@@ -738,7 +737,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, assert.AnError)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -746,7 +745,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorContains(t, err, "test error")
+				assert.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"error while creating on_error pipeline": {
@@ -759,7 +758,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "bar"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "bar"}).Return(nil, assert.AnError)
 
 				repo.EXPECT().ErrorHandler("foo").Return(mechanism, nil)
 			},
@@ -767,7 +766,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorContains(t, err, "test error")
+				assert.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"without default rule and without any execute configuration": {
@@ -1474,14 +1473,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().Authenticator("foo").Return(nil, errors.New("test error"))
+				mhf.EXPECT().Authenticator("foo").Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrStepCreation)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"fallback of authenticators for the default principal": {

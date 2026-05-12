@@ -17,7 +17,6 @@
 package logger
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -131,7 +130,7 @@ func TestHandlerExecution(t *testing.T) {
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetError(req.Context(), errors.New("test error"))
+				accesscontext.SetError(req.Context(), assert.AnError)
 				rw.WriteHeader(http.StatusInternalServerError)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2, logEvent3 map[string]any) {
@@ -181,7 +180,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Contains(t, logEvent3, "_body_bytes_sent")
 				assert.InDelta(t, float64(http.StatusInternalServerError), logEvent3["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.Contains(t, logEvent3, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent3["message"])
 				assert.Equal(t, "https", logEvent3["_http_x_forwarded_proto"])
@@ -198,7 +197,7 @@ func TestHandlerExecution(t *testing.T) {
 				t.Helper()
 
 				accesscontext.SetSubject(req.Context(), "bar")
-				accesscontext.SetError(req.Context(), errors.New("test error"))
+				accesscontext.SetError(req.Context(), assert.AnError)
 				rw.WriteHeader(http.StatusUnauthorized)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2, logEvent3 map[string]any) {
@@ -245,7 +244,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.InDelta(t, float64(http.StatusUnauthorized), logEvent3["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent3["_subject"])
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.Contains(t, logEvent3, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent3["message"])
 			},

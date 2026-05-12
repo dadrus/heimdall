@@ -17,7 +17,6 @@
 package metrics
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -117,7 +116,7 @@ func TestCacheSet(t *testing.T) {
 
 				cm.EXPECT().
 					Set(t.Context(), mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.New("test error"))
+					Return(assert.AnError)
 			},
 			createMeter: func(t *testing.T, mp metric.MeterProvider) metric.Meter {
 				t.Helper()
@@ -259,7 +258,7 @@ func TestCacheGet(t *testing.T) {
 
 				cm.EXPECT().
 					Get(t.Context(), mock.Anything).
-					Return(nil, errors.New("test error"))
+					Return(nil, assert.AnError)
 			},
 			createMeter: func(t *testing.T, mp metric.MeterProvider) metric.Meter {
 				t.Helper()

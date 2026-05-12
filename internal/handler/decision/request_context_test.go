@@ -17,7 +17,6 @@
 package decision
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -40,7 +39,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 
-				rc.SetError(errors.New("test error"))
+				rc.SetError(assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *httptest.ResponseRecorder) {
 				t.Helper()

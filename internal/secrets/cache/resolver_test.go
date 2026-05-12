@@ -63,7 +63,7 @@ func TestSecretResolverStart(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(secret, nil)
-				sm.EXPECT().Subscribe(ref, mock.Anything).Return(nil, errors.New("boom"))
+				sm.EXPECT().Subscribe(ref, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, resolver *SecretResolver[string]) {
 				t.Helper()

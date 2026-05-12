@@ -23,7 +23,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"math/big"
 	"net"
 	"os"
@@ -32,6 +31,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -181,7 +181,7 @@ tls:
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 
 				return []byte(
 					"{nodes: [ 'foo:1234' ], client_cache: {disabled: true}, tls: { secret: { source: redis, selector: tls } }}",

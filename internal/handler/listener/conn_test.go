@@ -17,7 +17,6 @@
 package listener
 
 import (
-	"errors"
 	"io"
 	"net"
 	"testing"
@@ -66,7 +65,7 @@ func TestConnWrite(t *testing.T) {
 		},
 		"returns deadline reset error": {
 			setupConn: func() *conn {
-				c := &conn{Conn: &connRecorder{setWriteDeadlineErr: errors.New("boom")}}
+				c := &conn{Conn: &connRecorder{setWriteDeadlineErr: assert.AnError}}
 				c.writeTimeout.Store(int64(time.Second))
 				c.resetDeadline.Store(true)
 				c.bytesWritten.Store(1)
@@ -76,7 +75,7 @@ func TestConnWrite(t *testing.T) {
 			assert: func(t *testing.T, written int, err error, recorder *connRecorder) {
 				t.Helper()
 
-				require.ErrorContains(t, err, "boom")
+				require.ErrorContains(t, err, assert.AnError.Error())
 				assert.Zero(t, written)
 				assert.Empty(t, recorder.writes)
 			},

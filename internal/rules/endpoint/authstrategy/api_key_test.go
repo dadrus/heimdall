@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"errors"
 	"net/http"
 	"testing"
 
@@ -45,7 +44,7 @@ func TestAPIKeyInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, ak *APIKey) {
 				t.Helper()
@@ -145,7 +144,7 @@ func TestApiKeyApply(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()

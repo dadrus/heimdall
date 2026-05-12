@@ -18,7 +18,6 @@ package authenticators
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1123,7 +1122,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar" }`), auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1183,7 +1182,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1241,7 +1240,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1303,7 +1302,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1368,7 +1367,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 30*time.Second).Return(nil)
 			},
 			instructServer: func(t *testing.T) {

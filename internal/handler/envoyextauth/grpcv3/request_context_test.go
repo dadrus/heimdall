@@ -18,7 +18,6 @@ package grpcv3
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -293,7 +292,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			updateContext: func(t *testing.T, ctx pipeline.Context) {
 				t.Helper()
 
-				ctx.SetError(errors.New("test error"))
+				ctx.SetError(assert.AnError)
 				ctx.AddHeaderForUpstream("x-for-upstream", "some-value")
 				ctx.AddCookieForUpstream("some-cookie", "value-1")
 				ctx.AddCookieForUpstream("some-other-cookie", "value-2")
@@ -302,7 +301,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, "test error", err.Error())
+				require.ErrorIs(t, err, assert.AnError)
 				require.Nil(t, response)
 			},
 		},
@@ -513,7 +512,7 @@ func TestRequestContextReset(t *testing.T) {
 	ctx := newRequestContext()
 	ctx.Init(metadata.NewIncomingContext(context.TODO(), md), checkReq)
 	ctx.Request().URL.Captures = map[string]string{"b": "a"}
-	ctx.SetError(errors.New("test error"))
+	ctx.SetError(assert.AnError)
 	_ = ctx.Body()
 	ctx.Outputs()["a"] = "b"
 	ctx.AddCookieForUpstream("foo", "bar")

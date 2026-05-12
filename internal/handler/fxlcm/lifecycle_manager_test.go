@@ -17,7 +17,6 @@
 package fxlcm
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -55,14 +54,14 @@ func TestLifecycleManagerStart(t *testing.T) {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(errors.New("test error"))
+				srv.EXPECT().Serve(mock.Anything).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
 				require.True(t, exit.Called)
 				assert.Contains(t, logs, "Starting listening")
-				assert.Contains(t, logs, "test error")
+				assert.Contains(t, logs, assert.AnError.Error())
 			},
 		},
 		"started and resumed successfully": {
@@ -138,14 +137,14 @@ func TestLifecycleManagerStop(t *testing.T) {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
-				srv.EXPECT().Shutdown(mock.Anything).Return(errors.New("test error"))
+				srv.EXPECT().Shutdown(mock.Anything).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error, logs string) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.Contains(t, logs, "Tearing down service")
-				assert.Contains(t, logs, "test error")
+				assert.Contains(t, logs, assert.AnError.Error())
 			},
 		},
 	} {

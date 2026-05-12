@@ -22,7 +22,6 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"math/big"
 	"net"
 	"os"
@@ -30,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -163,7 +163,7 @@ func TestSentinelCache(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 
 				return []byte(
 					"{nodes: [ 'foo:1234' ], master: foo, client_cache: {disabled: true}, tls: { secret: { source: redis, selector: tls } }}",

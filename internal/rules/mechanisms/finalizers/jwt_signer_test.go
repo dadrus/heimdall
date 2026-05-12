@@ -23,7 +23,6 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	x509pkix "crypto/x509/pkix"
-	"errors"
 	"io"
 	"testing"
 	"time"
@@ -50,7 +49,7 @@ func (s unsupportedSigner) Public() crypto.PublicKey {
 }
 
 func (s unsupportedSigner) Sign(_ io.Reader, _ []byte, _ crypto.SignerOpts) ([]byte, error) {
-	return nil, errors.New("unsupported")
+	return nil, assert.AnError
 }
 
 func TestCreateJOSESigner(t *testing.T) {
@@ -164,7 +163,7 @@ func TestNewJWTSigner(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *jwtSigner) {
 				t.Helper()

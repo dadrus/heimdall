@@ -17,7 +17,6 @@
 package registry
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -105,14 +104,14 @@ func TestCreate(t *testing.T) {
 		"returns factory creation error": {
 			typ: "foo",
 			factory: FactoryFunc(func(_ app.Context, _ map[string]any) (types.Cache, error) {
-				return nil, errors.New("test error")
+				return nil, assert.AnError
 			}),
 			assert: func(t *testing.T, cch types.Cache, err error) {
 				t.Helper()
 
 				require.Nil(t, cch)
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		"does not decorate cache if cover_cache is disabled": {

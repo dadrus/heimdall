@@ -21,7 +21,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
-	"errors"
 	"testing"
 
 	"github.com/redis/rueidis"
@@ -97,7 +96,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ rueidis.ClientOption) {
 				t.Helper()
@@ -119,7 +118,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ rueidis.ClientOption) {
 				t.Helper()

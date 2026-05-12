@@ -17,7 +17,6 @@
 package validation
 
 import (
-	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -206,7 +205,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				t.Helper()
 
 				fm.EXPECT().CreateRule(mock.Anything, mock.Anything).
-					Times(2).Return(nil, errors.New("test error"))
+					Times(2).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, resp *response) {
 				t.Helper()
@@ -219,10 +218,10 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonForbidden, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 2)
-				assert.Contains(t, resp.Result.Details.Causes[0].Message, "test error")
+				assert.Contains(t, resp.Result.Details.Causes[0].Message, assert.AnError.Error())
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Object.Spec.Rules[0]", resp.Result.Details.Causes[0].Field)
-				assert.Contains(t, resp.Result.Details.Causes[1].Message, "test error")
+				assert.Contains(t, resp.Result.Details.Causes[1].Message, assert.AnError.Error())
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[1].Type)
 				assert.Equal(t, "Object.Spec.Rules[1]", resp.Result.Details.Causes[1].Field)
 			},

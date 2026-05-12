@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"errors"
 	"net/http"
 	"testing"
 
@@ -44,7 +43,7 @@ func TestBasicAuthInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, ba *BasicAuth) {
 				t.Helper()
@@ -141,7 +140,7 @@ func TestBasicAuthApply(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(nil, errors.New("boom"))
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()

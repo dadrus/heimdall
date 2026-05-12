@@ -17,9 +17,9 @@
 package registry
 
 import (
-	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/secrets/types"
@@ -87,14 +87,14 @@ func TestCreate(t *testing.T) {
 		"returns factory creation error": {
 			typ: "foo",
 			factory: FactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
-				return nil, errors.New("test error")
+				return nil, assert.AnError
 			}),
 			assert: func(t *testing.T, provider types.Provider, err error) {
 				t.Helper()
 
 				require.Nil(t, provider)
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"creates provider with source name": {

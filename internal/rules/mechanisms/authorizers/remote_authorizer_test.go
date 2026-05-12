@@ -17,7 +17,6 @@
 package authorizers
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -835,7 +834,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ pipeline.Subject) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything,
 					mock.MatchedBy(func(data []byte) bool {
 						var ai authorizationInformation
@@ -895,7 +894,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey(sub, nil, "")
 
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, cacheKey, mock.Anything, auth.ttl).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
