@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/johannesboyne/gofakes3"
 	"github.com/johannesboyne/gofakes3/backend/s3mem"
 	"github.com/rs/zerolog"
@@ -146,7 +147,8 @@ buckets:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			// WHEN
 			prov, err := NewProvider(appCtx, mocks.NewRuleSetProcessorMock(t))
@@ -579,7 +581,8 @@ rules:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			prov, err := NewProvider(appCtx, rspMock)
 			require.NoError(t, err)

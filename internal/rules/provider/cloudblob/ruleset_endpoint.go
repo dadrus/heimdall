@@ -134,9 +134,8 @@ func (e *ruleSetEndpoint) readRuleSet(
 
 	defer reader.Close()
 
-	dec := encoding.NewDecoder(
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithSourceContentType(attrs.ContentType),
-		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
 		encoding.WithErrorOnUnused(true),
 	)
 
