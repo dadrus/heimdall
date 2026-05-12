@@ -58,10 +58,9 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) {
 		return &Provider{}, nil
 	}
 
-	dec := encoding.NewDecoder(
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithTagName("mapstructure"),
 		encoding.WithErrorOnUnused(true),
-		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
 	)
 
 	type Config struct {
@@ -277,9 +276,8 @@ func (p *Provider) loadRuleSet(fileName string) (v1beta1.RuleSet, error) {
 
 	md := sha256.New()
 
-	dec := encoding.NewDecoder(
+	dec := p.app.DecoderFactory().Decoder(
 		encoding.WithSourceContentType("application/yaml"),
-		encoding.WithValidator(encoding.ValidatorFunc(p.app.Validator().ValidateStruct)),
 		encoding.WithEnvVarsSubstitution(p.envVarsEnabled),
 		encoding.WithErrorOnUnused(true),
 	)
