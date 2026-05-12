@@ -35,7 +35,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -89,11 +88,9 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 	}
 
 	appCtx := &appContext{
-		w:  &watcher.NoopWatcher{},
 		kr: &noopRegistry{},
 		sm: manager,
 		d:  df,
-		v:  validator,
 		l:  logger,
 		c:  conf,
 	}

@@ -37,7 +37,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 const validationForProxyMode = "proxy-mode"
@@ -107,11 +106,9 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	appCtx := &appContext{
-		w:  &watcher.NoopWatcher{},
 		kr: &noopRegistry{},
 		sm: manager,
 		d:  df,
-		v:  validator,
 		l:  logger,
 		c:  conf,
 	}

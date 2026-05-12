@@ -29,6 +29,7 @@ import (
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/version"
@@ -87,7 +88,9 @@ func createApp(cmd *cobra.Command, mainModule fx.Option) (*fx.App, error) {
 			cfg,
 			logger,
 			config.SecureDefaultRule(es.EnforceSecureDefaultRule),
-			fx.Annotate(validator, fx.As(new(validation.Validator))),
+			func() encoding.DecoderFactory {
+				return encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+			},
 		),
 		fx.WithLogger(func(logger zerolog.Logger) fxevent.Logger {
 			return &eventLogger{l: logger}
