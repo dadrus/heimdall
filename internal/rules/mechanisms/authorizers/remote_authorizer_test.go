@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/goccy/go-json"
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog/log"
@@ -257,7 +258,8 @@ values:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
@@ -553,7 +555,8 @@ values:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mech, err := newRemoteAuthorizer(appCtx, uc, pc)
