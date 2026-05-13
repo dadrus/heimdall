@@ -110,94 +110,101 @@ func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule
 		v1beta1.EncodedSlashesOff,
 	)
 
-	var err error
-
-	createdPipelines := rulePipelines{}
-	cleanupOnError := true
+	createdPipelines, err := f.createPipelines(rul.Execute, rul.ErrorHandler)
+	if err != nil {
+		return nil, err
+	}
 
 	defer func() {
-		if cleanupOnError {
+		// err is intentionally used as the cleanup signal. Keep later error returns
+		// assigned to this variable so partially built pipelines are released.
+		if err != nil {
 			createdPipelines.CleanUp(context.Background())
 		}
 	}()
 
-	if createdPipelines.execute, err = createPipeline[*executePipeline](
-		context.Background(),
-		rul.Execute,
-		newExecutePipelineBuilder(f, len(rul.Execute)),
-	); err != nil {
-		return nil, err
-	}
-
-	if createdPipelines.err, err = createPipeline[*errorPipeline](
-		context.Background(),
-		rul.ErrorHandler,
-		newErrorPipelineBuilder(f, len(rul.ErrorHandler)),
-	); err != nil {
-		return nil, err
-	}
-
-	rulPipelines := createdPipelines
-
-	if f.templateRule != nil {
-		// The template pipelines below are borrowed. They must not be cleaned up
-		// by the rule being created. Cleanup is intentionally tied to createdPipelines.
-		rulPipelines = rulPipelines.withFallback(
-			rulePipelines{
-				execute: &executePipeline{
-					authenticators:  f.templateRule.sc,
-					subjectHandlers: f.templateRule.sh,
-					finalizers:      f.templateRule.fi,
-				},
-				err: &errorPipeline{
-					errorHandlers: f.templateRule.eh,
-				},
-			},
-		)
-	}
-
+	rulPipelines := f.applyTemplateFallback(createdPipelines)
 	if err = rulPipelines.validate(); err != nil {
 		return nil, err
 	}
 
-	hash, err := rul.Hash()
-	if err != nil {
+	var (
+		hash   []byte
+		result rule.Rule
+	)
+
+	if hash, err = rul.Hash(); err != nil {
 		return nil, err
 	}
 
-	ri := &ruleImpl{
-		id:              rul.ID,
-		source:          rule.RuleSet{ID: source.ID, Name: source.Name, Provider: source.Provider},
-		slashesHandling: slashesHandling,
-		backend:         rul.Backend,
-		hash:            hash,
-		sc:              rulPipelines.execute.authenticators,
-		sh:              rulPipelines.execute.subjectHandlers,
-		fi:              rulPipelines.execute.finalizers,
-		eh:              rulPipelines.err.errorHandlers,
-		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
-	}
+	ri := newRuleImpl(
+		rul.ID,
+		rule.RuleSet{ID: source.ID, Name: source.Name, Provider: source.Provider},
+		slashesHandling,
+		rul.Backend,
+		hash,
+		rulPipelines,
+	)
 
-	mm, err := createMethodMatcher(rul.Matcher.Methods)
-	if err != nil {
+	if err = f.addRoutes(ri, rul.Matcher, slashesHandling); err != nil {
 		return nil, err
 	}
 
-	sm := schemeMatcher(rul.Matcher.Scheme)
+	result, err = newTelemetryRule(ri, f.m, f.t)
 
-	for _, rc := range rul.Matcher.Routes {
+	return result, err
+}
+
+func (f *ruleFactory) applyTemplateFallback(pipelines rulePipelines) rulePipelines {
+	if f.templateRule == nil {
+		return pipelines
+	}
+
+	// The template pipelines below are borrowed. They must not be cleaned up
+	// by the rule being created. Cleanup is intentionally tied to the originally
+	// created pipelines.
+	return pipelines.withFallback(
+		rulePipelines{
+			execute: &executePipeline{
+				authenticators:  f.templateRule.sc,
+				subjectHandlers: f.templateRule.sh,
+				finalizers:      f.templateRule.fi,
+			},
+			err: &errorPipeline{
+				errorHandlers: f.templateRule.eh,
+			},
+		},
+	)
+}
+
+func (f *ruleFactory) addRoutes(
+	ri *ruleImpl,
+	matcher v1beta1.Matcher,
+	slashesHandling v1beta1.EncodedSlashesHandling,
+) error {
+	mm, err := createMethodMatcher(matcher.Methods)
+	if err != nil {
+		return err
+	}
+
+	sm := schemeMatcher(matcher.Scheme)
+
+	hosts := matcher.Hosts
+	if len(hosts) == 0 {
+		hosts = []string{"*"}
+	}
+
+	for _, rc := range matcher.Routes {
 		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-				"failed creating route '%s'", rc.Path).
-				CausedBy(err)
+			return errorchain.NewWithMessagef(
+				pipeline.ErrConfiguration,
+				"failed creating route '%s'",
+				rc.Path,
+			).CausedBy(err)
 		}
 
-		if len(rul.Matcher.Hosts) == 0 {
-			rul.Matcher.Hosts = append(rul.Matcher.Hosts, "*")
-		}
-
-		for _, host := range rul.Matcher.Hosts {
+		for _, host := range hosts {
 			ri.routes = append(ri.routes,
 				&routeImpl{
 					rule:    ri,
@@ -208,14 +215,56 @@ func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule
 		}
 	}
 
-	result, err := newTelemetryRule(ri, f.m, f.t)
+	return nil
+}
+
+func (f *ruleFactory) createPipelines(executeSteps, errorSteps []v1beta1.Step) (rulePipelines, error) {
+	execPipeline, err := createPipeline[*executePipeline](
+		context.Background(),
+		executeSteps,
+		newExecutePipelineBuilder(f, len(executeSteps)),
+	)
 	if err != nil {
-		return nil, err
+		return rulePipelines{}, err
 	}
 
-	cleanupOnError = false
+	errPipeline, err := createPipeline[*errorPipeline](
+		context.Background(),
+		errorSteps,
+		newErrorPipelineBuilder(f, len(errorSteps)),
+	)
+	if err != nil {
+		execPipeline.CleanUp(context.Background())
 
-	return result, nil
+		return rulePipelines{}, err
+	}
+
+	return rulePipelines{
+		execute: execPipeline,
+		err:     errPipeline,
+	}, nil
+}
+
+func newRuleImpl(
+	id string,
+	source rule.RuleSet,
+	slashesHandling v1beta1.EncodedSlashesHandling,
+	backend *v1beta1.Backend,
+	hash []byte,
+	pipelines rulePipelines,
+) *ruleImpl {
+	return &ruleImpl{
+		id:              id,
+		source:          source,
+		slashesHandling: slashesHandling,
+		backend:         backend,
+		hash:            hash,
+		sc:              pipelines.execute.authenticators,
+		sh:              pipelines.execute.subjectHandlers,
+		fi:              pipelines.execute.finalizers,
+		eh:              pipelines.err.errorHandlers,
+		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
+	}
 }
 
 func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger zerolog.Logger) error {
@@ -239,30 +288,18 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return err
 	}
 
-	createdPipelines := rulePipelines{}
-	cleanupOnError := true
+	createdPipelines, err := f.createPipelines(executeSteps, ehSteps)
+	if err != nil {
+		return err
+	}
 
 	defer func() {
-		if cleanupOnError {
+		// err is intentionally used as the cleanup signal. Keep later error returns
+		// assigned to this variable so partially built pipelines are released.
+		if err != nil {
 			createdPipelines.CleanUp(context.Background())
 		}
 	}()
-
-	if createdPipelines.execute, err = createPipeline[*executePipeline](
-		context.Background(),
-		executeSteps,
-		newExecutePipelineBuilder(f, len(executeSteps)),
-	); err != nil {
-		return err
-	}
-
-	if createdPipelines.err, err = createPipeline[*errorPipeline](
-		context.Background(),
-		ehSteps,
-		newErrorPipelineBuilder(f, len(ehSteps)),
-	); err != nil {
-		return err
-	}
 
 	if err = createdPipelines.validate(); err != nil {
 		return err
@@ -270,35 +307,34 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	if createdPipelines.execute.isInsecure() {
 		if f.secureDefaultRule {
-			return errorchain.NewWithMessage(
+			err = errorchain.NewWithMessage(
 				pipeline.ErrConfiguration,
 				"insecure default rule configured",
 			)
+
+			return err
 		}
 
 		logger.Warn().Msg("Insecure default rule configured")
 	}
 
-	rul := &ruleImpl{
-		id:              "default",
-		slashesHandling: v1beta1.EncodedSlashesOff,
-		source:          rule.RuleSet{ID: "default", Name: "default", Provider: "config"},
-		isDefault:       true,
-		sc:              createdPipelines.execute.authenticators,
-		sh:              createdPipelines.execute.subjectHandlers,
-		fi:              createdPipelines.execute.finalizers,
-		eh:              createdPipelines.err.errorHandlers,
-		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
-	}
+	rul := newRuleImpl(
+		"default",
+		rule.RuleSet{ID: "default", Name: "default", Provider: "config"},
+		v1beta1.EncodedSlashesOff,
+		nil,
+		nil,
+		createdPipelines,
+	)
 
-	f.defaultRule, err = newTelemetryRule(rul, f.m, f.t)
-	if err != nil {
+	rul.isDefault = true
+
+	if f.defaultRule, err = newTelemetryRule(rul, f.m, f.t); err != nil {
 		return err
 	}
 
 	f.templateRule = rul
 	f.hasDefaultRule = true
-	cleanupOnError = false
 
 	return nil
 }
