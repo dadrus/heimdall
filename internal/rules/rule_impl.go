@@ -122,9 +122,10 @@ func (r *ruleImpl) Equals(other rule.Rule) bool {
 }
 
 func (r *ruleImpl) CleanUp(ctx context.Context) {
-	for _, stage := range []stage{r.sc, r.sh, r.fi, r.eh} {
-		stage.CleanUp(ctx)
-	}
+	r.eh.CleanUp(ctx)
+	r.fi.CleanUp(ctx)
+	r.sh.CleanUp(ctx)
+	r.sc.CleanUp(ctx)
 }
 
 func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {
