@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"sync"
@@ -619,4 +620,44 @@ func TestRuleExecute(t *testing.T) {
 			tc.assert(t, err, upstream, ctx.Request().URL.Captures)
 		})
 	}
+}
+
+func TestRuleCleanUp(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	var order []string
+
+	authenticator := heimdallmocks.NewStepMock(t)
+	authenticator.EXPECT().CleanUp(t.Context()).Run(func(_ context.Context) {
+		order = append(order, "authenticator")
+	})
+
+	authorizer := heimdallmocks.NewStepMock(t)
+	authorizer.EXPECT().CleanUp(t.Context()).Run(func(_ context.Context) {
+		order = append(order, "authorizer")
+	})
+
+	finalizer := heimdallmocks.NewStepMock(t)
+	finalizer.EXPECT().CleanUp(t.Context()).Run(func(_ context.Context) {
+		order = append(order, "finalizer")
+	})
+
+	errHandler := heimdallmocks.NewStepMock(t)
+	errHandler.EXPECT().CleanUp(t.Context()).Run(func(_ context.Context) {
+		order = append(order, "error_handler")
+	})
+
+	rul := &ruleImpl{
+		sc: stage{authenticator},
+		sh: stage{authorizer},
+		fi: stage{finalizer},
+		eh: stage{errHandler},
+	}
+
+	// WHEN
+	rul.CleanUp(t.Context())
+
+	// THEN
+	assert.Equal(t, []string{"authenticator", "authorizer", "finalizer", "error_handler"}, order)
 }

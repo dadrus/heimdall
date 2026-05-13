@@ -18,6 +18,7 @@ package rules
 
 import (
 	"bytes"
+	"context"
 	"net/url"
 	"sync"
 
@@ -118,6 +119,12 @@ func (r *ruleImpl) Routes() []rule.Route { return r.routes }
 
 func (r *ruleImpl) Equals(other rule.Rule) bool {
 	return r.SameAs(other) && bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
+}
+
+func (r *ruleImpl) CleanUp(ctx context.Context) {
+	for _, stage := range []stage{r.sc, r.sh, r.fi, r.eh} {
+		stage.CleanUp(ctx)
+	}
 }
 
 func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {

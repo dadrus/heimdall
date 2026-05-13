@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -132,3 +133,4 @@ func (tr *telemetryRule) Routes() []rule.Route                                  
 func (tr *telemetryRule) SameAs(other rule.Rule) bool                            { return tr.r.SameAs(other) }
 func (tr *telemetryRule) Equals(other rule.Rule) bool                            { return tr.r.Equals(other) }
 func (tr *telemetryRule) Execute(ctx pipeline.Context) (pipeline.Backend, error) { return tr.do(ctx) }
+func (tr *telemetryRule) CleanUp(ctx context.Context)                            { tr.r.CleanUp(ctx) }

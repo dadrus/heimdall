@@ -128,6 +128,25 @@ func TestTelemetryRuleEquals(t *testing.T) {
 	assert.True(t, tr.Equals(other))
 }
 
+func TestTelemetryRuleCleanUp(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	rm := mocks2.NewRuleMock(t)
+	rm.EXPECT().ID().Return("test rule id")
+	rm.EXPECT().Source().Return(rule.RuleSet{})
+	rm.EXPECT().CleanUp(t.Context())
+
+	tr, err := newTelemetryRule(rm, noop.Meter{}, nooptrace.Tracer{})
+	require.NoError(t, err)
+	require.NotNil(t, tr)
+
+	// WHEN
+	tr.CleanUp(t.Context())
+
+	// THEN all expectations are met
+}
+
 func TestTelemetryRuleExecute(t *testing.T) {
 	t.Parallel()
 
