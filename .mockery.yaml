@@ -105,14 +105,6 @@ packages:
       SetProcessor:
         config:
           structname: RuleSetProcessorMock
-  github.com/dadrus/heimdall/internal/watcher:
-    interfaces:
-      ChangeListener:
-        config:
-          dir: "{{ .InterfaceDir }}"
-          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
-          pkgname: "{{ .SrcPackageName }}"
-      Watcher: {}
   github.com/dadrus/heimdall/internal/x/tlsx:
     interfaces:
       compatibilityChecker:
