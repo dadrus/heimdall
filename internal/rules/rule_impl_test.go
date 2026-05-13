@@ -604,11 +604,11 @@ func TestRuleExecute(t *testing.T) {
 			rul := &ruleImpl{
 				backend:         tc.backend,
 				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, v1beta1.EncodedSlashesOff),
-				sc:              stage{authenticator},
-				sh:              stage{authorizer},
-				fi:              stage{finalizer},
-				eh:              stage{errHandler},
-				subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(stage{authenticator}, stage{authorizer}, stage{finalizer}),
+					err:     newErrorPipeline(stage{errHandler}),
+				},
+				subjectPool: &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 			}
 
 			tc.configureMocks(t, ctx, authenticator, authorizer, finalizer, errHandler)
@@ -649,10 +649,10 @@ func TestRuleCleanUp(t *testing.T) {
 	})
 
 	rul := &ruleImpl{
-		sc: stage{authenticator},
-		sh: stage{authorizer},
-		fi: stage{finalizer},
-		eh: stage{errHandler},
+		p: rulePipelineImpl{
+			execute: newExecutePipeline(stage{authenticator}, stage{authorizer}, stage{finalizer}),
+			err:     newErrorPipeline(stage{errHandler}),
+		},
 	}
 
 	// WHEN

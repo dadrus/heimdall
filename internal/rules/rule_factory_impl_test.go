@@ -444,10 +444,12 @@ func TestNewRuleFactory(t *testing.T) {
 				assert.Equal(t, "default", defRule.source.Name)
 				assert.Equal(t, "config", defRule.source.Provider)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
-				assert.Len(t, defRule.sc, 1)
-				assert.Empty(t, defRule.sh)
-				assert.Empty(t, defRule.fi)
-				assert.Empty(t, defRule.eh)
+
+				rp := requireRulePipeline(t, defRule)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Empty(t, rp.execute.subjectHandlers)
+				assert.Empty(t, rp.execute.finalizers)
+				assert.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"new factory with rule specific telemetry enabled": {
@@ -602,10 +604,12 @@ func TestNewRuleFactory(t *testing.T) {
 				assert.Equal(t, "default", defRule.source.Name)
 				assert.Equal(t, "config", defRule.source.Provider)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
-				assert.Len(t, defRule.sc, 1)
-				assert.Len(t, defRule.sh, 2)
-				assert.Len(t, defRule.fi, 1)
-				assert.Len(t, defRule.eh, 2)
+
+				rp := requireRulePipeline(t, defRule)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Len(t, rp.execute.subjectHandlers, 2)
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.Len(t, rp.err.errorHandlers, 2)
 			},
 		},
 	} {
@@ -891,10 +895,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				assert.Len(t, rul.sc, 1)
-				assert.Empty(t, rul.sh)
-				assert.Empty(t, rul.fi)
-				assert.Empty(t, rul.eh)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Empty(t, rp.execute.subjectHandlers)
+				assert.Empty(t, rp.execute.finalizers)
+				assert.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"normalizes trie host matchers to lowercase": {
@@ -976,11 +982,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				assert.Len(t, rul.sc, 1)
-				assert.Empty(t, rul.sh)
-				assert.Empty(t, rul.fi)
-				assert.Empty(t, rul.eh)
 				assert.NotNil(t, rul.backend)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Empty(t, rp.execute.subjectHandlers)
+				assert.Empty(t, rp.execute.finalizers)
+				assert.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"with default rule and regular rule with id and a single route only": {
@@ -989,22 +997,28 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
-				sc: stage{func() step {
-					as := &mocks.StepMock{}
-					as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
-						pn := mocks.NewPrincipalNamerMock(t)
-						pn.EXPECT().PrincipalName().Return("default")
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(
+						stage{func() step {
+							as := &mocks.StepMock{}
+							as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
+								pn := mocks.NewPrincipalNamerMock(t)
+								pn.EXPECT().PrincipalName().Return("default")
 
-						visitor.VisitPrincipalNamer(pn)
+								visitor.VisitPrincipalNamer(pn)
 
-						return true
-					}))
+								return true
+							}))
 
-					return as
-				}()},
-				sh: stage{mocks.NewStepMock(t)},
-				fi: stage{mocks.NewStepMock(t)},
-				eh: stage{mocks.NewStepMock(t)},
+							return as
+						}()},
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+					),
+					err: newErrorPipeline(
+						stage{mocks.NewStepMock(t)},
+					),
+				},
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -1018,10 +1032,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				assert.Len(t, rul.sc, 1)
-				assert.Len(t, rul.sh, 1)
-				assert.Len(t, rul.fi, 1)
-				assert.Len(t, rul.eh, 1)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Len(t, rp.execute.subjectHandlers, 1)
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.Len(t, rp.err.errorHandlers, 1)
 			},
 		},
 		"with default rule and with all attributes defined by the regular rule itself in decision mode": {
@@ -1054,10 +1070,16 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: stage{mocks.NewStepMock(t)},
-				sh: stage{mocks.NewStepMock(t)},
-				fi: stage{mocks.NewStepMock(t)},
-				eh: stage{mocks.NewStepMock(t)},
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+					),
+					err: newErrorPipeline(
+						stage{mocks.NewStepMock(t)},
+					),
+				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
@@ -1111,15 +1133,16 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				// nil checks above mean the responses from the mockHandlerFactory are used
 				// and not the values from the default rule
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sh, 2)
-				assert.NotNil(t, rul.sh[0])
-				assert.NotNil(t, rul.sh[1])
-				require.Len(t, rul.fi, 1)
-				assert.NotNil(t, rul.fi[0])
-				require.Len(t, rul.eh, 1)
-				assert.NotNil(t, rul.eh[0])
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
+				assert.Len(t, rp.execute.subjectHandlers, 2)
+				assert.NotNil(t, rp.execute.subjectHandlers[0])
+				assert.NotNil(t, rp.execute.subjectHandlers[1])
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.NotNil(t, rp.execute.finalizers[0])
+				assert.Len(t, rp.err.errorHandlers, 1)
+				assert.NotNil(t, rp.err.errorHandlers[0])
 			},
 		},
 		"with default rule and with all attributes defined by the rule itself in proxy mode": {
@@ -1162,10 +1185,16 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: stage{mocks.NewStepMock(t)},
-				sh: stage{mocks.NewStepMock(t)},
-				fi: stage{mocks.NewStepMock(t)},
-				eh: stage{mocks.NewStepMock(t)},
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+					),
+					err: newErrorPipeline(
+						stage{mocks.NewStepMock(t)},
+					),
+				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
@@ -1222,19 +1251,20 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Path:     "/foo/bar",
 					RawQuery: url.Values{"bar": []string{"foo"}, "foo": []string{"bar"}}.Encode(),
 				}).String())
+				assert.NotNil(t, rul.backend)
 
 				// nil checks above mean the responses from the mockHandlerFactory are used
 				// and not the values from the default rule
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sh, 2)
-				assert.NotNil(t, rul.sh[0])
-				assert.NotNil(t, rul.sh[1])
-				require.Len(t, rul.fi, 1)
-				assert.NotNil(t, rul.fi[0])
-				require.Len(t, rul.eh, 1)
-				assert.NotNil(t, rul.eh[0])
-				assert.NotNil(t, rul.backend)
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
+				assert.Len(t, rp.execute.subjectHandlers, 2)
+				assert.NotNil(t, rp.execute.subjectHandlers[0])
+				assert.NotNil(t, rp.execute.subjectHandlers[1])
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.NotNil(t, rp.execute.finalizers[0])
+				assert.Len(t, rp.err.errorHandlers, 1)
+				assert.NotNil(t, rp.err.errorHandlers[0])
 			},
 		},
 		"malformed conditional configuration in the execute pipeline": {
@@ -1366,30 +1396,31 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
+				rp := requireRulePipeline(t, rul)
 
-				require.Len(t, rul.sh, 3)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
 
-				assert.NotNil(t, rul.sh[0])
-				cs, ok := rul.sh[0].(*conditionalStep)
+				assert.Len(t, rp.execute.subjectHandlers, 3)
+				assert.NotNil(t, rp.execute.subjectHandlers[0])
+				cs, ok := rp.execute.subjectHandlers[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
-				assert.NotNil(t, rul.sh[1])
-				cs, ok = rul.sh[1].(*conditionalStep)
+				assert.NotNil(t, rp.execute.subjectHandlers[1])
+				cs, ok = rp.execute.subjectHandlers[1].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
-				assert.NotNil(t, rul.sh[2])
-				assert.IsType(t, &mocks.StepMock{}, rul.sh[2])
+				assert.NotNil(t, rp.execute.subjectHandlers[2])
+				assert.IsType(t, &mocks.StepMock{}, rp.execute.subjectHandlers[2])
 
-				require.Len(t, rul.fi, 1)
-				cs, ok = rul.fi[0].(*conditionalStep)
+				require.Len(t, rp.execute.finalizers, 1)
+				cs, ok = rp.execute.finalizers[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
-				require.Empty(t, rul.eh)
+				require.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"conditional execution of error handler": {
@@ -1453,20 +1484,21 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
+				rp := requireRulePipeline(t, rul)
 
-				require.Len(t, rul.sh, 1)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
 
-				require.NotNil(t, rul.sh[0])
-				assert.IsType(t, &mocks.StepMock{}, rul.sh[0])
+				require.Len(t, rp.execute.subjectHandlers, 1)
+				require.NotNil(t, rp.execute.subjectHandlers[0])
+				assert.IsType(t, &mocks.StepMock{}, rp.execute.subjectHandlers[0])
 
-				require.Len(t, rul.fi, 1)
-				assert.IsType(t, &mocks.StepMock{}, rul.fi[0])
+				require.Len(t, rp.execute.finalizers, 1)
+				assert.IsType(t, &mocks.StepMock{}, rp.execute.finalizers[0])
 
-				require.Len(t, rul.eh, 2)
-				assert.IsType(t, &conditionalStep{}, rul.eh[0])
-				assert.IsType(t, &conditionalStep{}, rul.eh[0])
+				require.Len(t, rp.err.errorHandlers, 2)
+				assert.IsType(t, &conditionalStep{}, rp.err.errorHandlers[0])
+				assert.IsType(t, &conditionalStep{}, rp.err.errorHandlers[0])
 			},
 		},
 		"duplicate ids in the error pipeline": {
@@ -1579,9 +1611,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sc[0], 2)
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Len(t, rp.execute.authenticators[0], 2)
 			},
 		},
 		"single authenticator for the default principal and fallback authenticators for custom named principal": {
@@ -1643,11 +1675,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 2)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sc[0], 1)
-				assert.NotNil(t, rul.sc[1])
-				require.Len(t, rul.sc[1], 2)
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 2)
+				assert.Len(t, rp.execute.authenticators[0], 1)
+				assert.Len(t, rp.execute.authenticators[1], 2)
 			},
 		},
 		"no authenticator for the default principal configured": {
@@ -1744,8 +1775,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				require.Len(t, rul.sc, 1)
-				cpc, ok := rul.sc[0].(compositePrincipalCreator)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				cpc, ok := rp.execute.authenticators[0].(compositePrincipalCreator)
 				require.True(t, ok)
 				require.Len(t, cpc, 1)
 				ts, ok := cpc[0].(*telemetryStep)
@@ -1792,4 +1825,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			tc.assert(t, err, impl)
 		})
 	}
+}
+
+func requireRulePipeline(t *testing.T, rul *ruleImpl) rulePipelineImpl {
+	t.Helper()
+
+	require.NotNil(t, rul)
+	require.IsType(t, rulePipelineImpl{}, rul.p)
+
+	return rul.p.(rulePipelineImpl) //nolint:forcetypeassert
 }

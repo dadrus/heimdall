@@ -39,10 +39,7 @@ type ruleImpl struct {
 	routes          []rule.Route
 	slashesHandling v1beta1.EncodedSlashesHandling
 	backend         *v1beta1.Backend
-	sc              stage
-	sh              stage
-	fi              stage
-	eh              stage
+	p               rulePipeline
 	subjectPool     *sync.Pool
 }
 
@@ -83,49 +80,24 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 		r.subjectPool.Put(sub)
 	}()
 
-	// authenticators
-	if err := r.sc.Execute(ctx, sub); err != nil {
-		ctx.SetError(err)
-
-		return nil, r.eh.Execute(ctx, sub)
-	}
-
-	// authorizers & contextualizer
-	if err := r.sh.Execute(ctx, sub); err != nil {
-		ctx.SetError(err)
-
-		return nil, r.eh.Execute(ctx, sub)
-	}
-
-	// finalizers
-	if err := r.fi.Execute(ctx, sub); err != nil {
-		ctx.SetError(err)
-
-		return nil, r.eh.Execute(ctx, sub)
+	if err := r.p.Execute(ctx, sub); err != nil {
+		return nil, err
 	}
 
 	return r.createBackend(request), nil
 }
 
-func (r *ruleImpl) ID() string { return r.id }
-
-func (r *ruleImpl) Source() rule.RuleSet { return r.source }
+func (r *ruleImpl) CleanUp(ctx context.Context) { r.p.CleanUp(ctx) }
+func (r *ruleImpl) ID() string                  { return r.id }
+func (r *ruleImpl) Source() rule.RuleSet        { return r.source }
+func (r *ruleImpl) Routes() []rule.Route        { return r.routes }
 
 func (r *ruleImpl) SameAs(other rule.Rule) bool {
 	return r.ID() == other.ID() && r.Source().Equals(other.Source())
 }
 
-func (r *ruleImpl) Routes() []rule.Route { return r.routes }
-
 func (r *ruleImpl) Equals(other rule.Rule) bool {
 	return r.SameAs(other) && bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
-}
-
-func (r *ruleImpl) CleanUp(ctx context.Context) {
-	r.eh.CleanUp(ctx)
-	r.fi.CleanUp(ctx)
-	r.sh.CleanUp(ctx)
-	r.sc.CleanUp(ctx)
 }
 
 func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {

@@ -123,8 +123,8 @@ func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule
 		}
 	}()
 
-	rulPipelines := f.applyTemplateFallback(createdPipelines)
-	if err = rulPipelines.validate(); err != nil {
+	rulPipeline := f.applyTemplateFallback(createdPipelines)
+	if err = rulPipeline.validate(); err != nil {
 		return nil, err
 	}
 
@@ -143,7 +143,7 @@ func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule
 		slashesHandling,
 		rul.Backend,
 		hash,
-		rulPipelines,
+		rulPipeline,
 	)
 
 	if err = f.addRoutes(ri, rul.Matcher, slashesHandling); err != nil {
@@ -155,26 +155,14 @@ func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule
 	return result, err
 }
 
-func (f *ruleFactory) applyTemplateFallback(pipelines rulePipelines) rulePipelines {
+func (f *ruleFactory) applyTemplateFallback(pipelines rulePipeline) rulePipeline {
 	if f.templateRule == nil {
 		return pipelines
 	}
 
-	// The template pipelines below are borrowed. They must not be cleaned up
-	// by the rule being created. Cleanup is intentionally tied to the originally
-	// created pipelines.
-	return pipelines.withFallback(
-		rulePipelines{
-			execute: &executePipeline{
-				authenticators:  f.templateRule.sc,
-				subjectHandlers: f.templateRule.sh,
-				finalizers:      f.templateRule.fi,
-			},
-			err: &errorPipeline{
-				errorHandlers: f.templateRule.eh,
-			},
-		},
-	)
+	// Template pipelines are inherited but not owned by the new rule.
+	// Cleanup remains tied to the originally created pipelines.
+	return pipelines.inheritFrom(f.templateRule.p)
 }
 
 func (f *ruleFactory) addRoutes(
@@ -218,14 +206,14 @@ func (f *ruleFactory) addRoutes(
 	return nil
 }
 
-func (f *ruleFactory) createPipelines(executeSteps, errorSteps []v1beta1.Step) (rulePipelines, error) {
+func (f *ruleFactory) createPipelines(executeSteps, errorSteps []v1beta1.Step) (rulePipelineImpl, error) {
 	execPipeline, err := createPipeline[*executePipeline](
 		context.Background(),
 		executeSteps,
 		newExecutePipelineBuilder(f, len(executeSteps)),
 	)
 	if err != nil {
-		return rulePipelines{}, err
+		return rulePipelineImpl{}, err
 	}
 
 	errPipeline, err := createPipeline[*errorPipeline](
@@ -236,10 +224,10 @@ func (f *ruleFactory) createPipelines(executeSteps, errorSteps []v1beta1.Step) (
 	if err != nil {
 		execPipeline.CleanUp(context.Background())
 
-		return rulePipelines{}, err
+		return rulePipelineImpl{}, err
 	}
 
-	return rulePipelines{
+	return rulePipelineImpl{
 		execute: execPipeline,
 		err:     errPipeline,
 	}, nil
@@ -251,7 +239,7 @@ func newRuleImpl(
 	slashesHandling v1beta1.EncodedSlashesHandling,
 	backend *v1beta1.Backend,
 	hash []byte,
-	pipelines rulePipelines,
+	rp rulePipeline,
 ) *ruleImpl {
 	return &ruleImpl{
 		id:              id,
@@ -259,10 +247,7 @@ func newRuleImpl(
 		slashesHandling: slashesHandling,
 		backend:         backend,
 		hash:            hash,
-		sc:              pipelines.execute.authenticators,
-		sh:              pipelines.execute.subjectHandlers,
-		fi:              pipelines.execute.finalizers,
-		eh:              pipelines.err.errorHandlers,
+		p:               rp,
 		subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 	}
 }

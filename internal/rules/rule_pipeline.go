@@ -45,11 +45,23 @@ func (p *executePipeline) CleanUp(ctx context.Context) {
 	p.owned.authenticators.CleanUp(ctx)
 }
 
+func (p *executePipeline) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
+	if err := p.authenticators.Execute(ctx, sub); err != nil {
+		return err
+	}
+
+	if err := p.subjectHandlers.Execute(ctx, sub); err != nil {
+		return err
+	}
+
+	return p.finalizers.Execute(ctx, sub)
+}
+
 func (p *executePipeline) hasAuthenticator() bool    { return len(p.authenticators) != 0 }
 func (p *executePipeline) hasDefaultPrincipal() bool { return p.authenticators.HasDefaultPrincipal() }
 func (p *executePipeline) isInsecure() bool          { return p.authenticators.IsInsecure() }
 
-func (p *executePipeline) withFallback(template *executePipeline) *executePipeline {
+func (p *executePipeline) inheritFrom(template *executePipeline) *executePipeline {
 	if template == nil {
 		return p
 	}
@@ -89,7 +101,11 @@ func newErrorPipeline(errorHandlers stage) *errorPipeline {
 
 func (p *errorPipeline) CleanUp(ctx context.Context) { p.owned.CleanUp(ctx) }
 
-func (p *errorPipeline) withFallback(template *errorPipeline) *errorPipeline {
+func (p *errorPipeline) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
+	return p.errorHandlers.Execute(ctx, sub)
+}
+
+func (p *errorPipeline) inheritFrom(template *errorPipeline) *errorPipeline {
 	if template == nil {
 		return p
 	}
@@ -104,12 +120,19 @@ func (p *errorPipeline) withFallback(template *errorPipeline) *errorPipeline {
 	}
 }
 
-type rulePipelines struct {
+type rulePipeline interface {
+	pipeline.Pipeline
+
+	inheritFrom(parent rulePipeline) rulePipeline
+	validate() error
+}
+
+type rulePipelineImpl struct {
 	execute *executePipeline
 	err     *errorPipeline
 }
 
-func (p rulePipelines) CleanUp(ctx context.Context) {
+func (p rulePipelineImpl) CleanUp(ctx context.Context) {
 	if p.err != nil {
 		p.err.CleanUp(ctx)
 	}
@@ -119,19 +142,26 @@ func (p rulePipelines) CleanUp(ctx context.Context) {
 	}
 }
 
-func (p rulePipelines) withFallback(template rulePipelines) rulePipelines {
-	if template.execute != nil {
-		p.execute = p.execute.withFallback(template.execute)
+func (p rulePipelineImpl) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
+	if err := p.execute.Execute(ctx, sub); err != nil {
+		ctx.SetError(err)
+
+		return p.err.Execute(ctx, sub)
 	}
 
-	if template.err != nil {
-		p.err = p.err.withFallback(template.err)
-	}
-
-	return p
+	return nil
 }
 
-func (p rulePipelines) validate() error {
+func (p rulePipelineImpl) inheritFrom(parent rulePipeline) rulePipeline {
+	parentPipeline := parent.(rulePipelineImpl) //nolint:forcetypeassert
+
+	return rulePipelineImpl{
+		execute: p.execute.inheritFrom(parentPipeline.execute),
+		err:     p.err.inheritFrom(parentPipeline.err),
+	}
+}
+
+func (p rulePipelineImpl) validate() error {
 	if !p.execute.hasAuthenticator() {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
