@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"strings"
@@ -454,6 +455,8 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 	if def.Condition != nil {
 		condition, err := newCelExecutionCondition(*def.Condition)
 		if err != nil {
+			step.CleanUp(context.Background())
+
 			return nil, err
 		}
 
@@ -484,4 +487,8 @@ func (f *ruleFactory) lookupMechanism(ref v1beta1.MechanismReference) (mechanism
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"unknown mechanism kind: %s", ref.Kind)
 	}
+}
+
+func cleanupCreatedSteps(ctx context.Context, steps stage) {
+	steps.CleanUp(ctx)
 }
