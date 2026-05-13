@@ -103,8 +103,12 @@ func TestNewRuleFactory(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+				step.EXPECT().CleanUp(mock.Anything)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "baz", Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "baz", Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Contextualizer("bar").Return(mechanism, nil)
 			},
@@ -128,8 +132,12 @@ func TestNewRuleFactory(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+				step.EXPECT().CleanUp(mock.Anything)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "baz", Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "baz", Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
@@ -174,8 +182,12 @@ func TestNewRuleFactory(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+				step.EXPECT().CleanUp(mock.Anything)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
@@ -220,8 +232,12 @@ func TestNewRuleFactory(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+				step.EXPECT().CleanUp(mock.Anything)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
@@ -335,9 +351,11 @@ func TestNewRuleFactory(t *testing.T) {
 
 					return true
 				}))
+				as.EXPECT().CleanUp(mock.Anything)
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
@@ -370,9 +388,11 @@ func TestNewRuleFactory(t *testing.T) {
 
 					return true
 				}))
+				as.EXPECT().CleanUp(mock.Anything)
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "foo"}).Return(as, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "foo"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
@@ -672,6 +692,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 					return true
 				}))
+				as.EXPECT().CleanUp(mock.Anything)
 
 				mechanism := mocks1.NewMechanismMock(t)
 				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
@@ -713,9 +734,11 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 					return true
 				}))
+				as.EXPECT().CleanUp(mock.Anything)
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -812,8 +835,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+				step.EXPECT().CleanUp(mock.Anything)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -1222,11 +1249,19 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				authnStep := mocks.NewStepMock(t)
+				authnStep.EXPECT().CleanUp(mock.Anything)
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(authnStep, nil)
+
+				finStep := mocks.NewStepMock(t)
+				finStep.EXPECT().CleanUp(mock.Anything)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(finStep, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Finalizer("bar").Return(fin, nil)
@@ -1251,11 +1286,19 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				authnStep := mocks.NewStepMock(t)
+				authnStep.EXPECT().CleanUp(mock.Anything)
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(authnStep, nil)
+
+				finStep := mocks.NewStepMock(t)
+				finStep.EXPECT().CleanUp(mock.Anything)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(finStep, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Finalizer("bar").Return(fin, nil)
@@ -1441,14 +1484,26 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
 				t.Helper()
 
+				authnStep := mocks.NewStepMock(t)
+				authnStep.EXPECT().CleanUp(mock.Anything)
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+					Return(authnStep, nil)
+
+				eh1Step := mocks.NewStepMock(t)
+				eh1Step.EXPECT().CleanUp(mock.Anything)
+
+				eh2Step := mocks.NewStepMock(t)
+				eh2Step.EXPECT().CleanUp(mock.Anything)
 
 				eh1 := mocks1.NewMechanismMock(t)
-				eh1.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1"}).Return(mocks.NewStepMock(t), nil)
+				eh1.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1"}).
+					Return(eh1Step, nil)
 
 				eh2 := mocks1.NewMechanismMock(t)
-				eh2.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1"}).Return(mocks.NewStepMock(t), nil)
+				eh2.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1"}).
+					Return(eh2Step, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().ErrorHandler("foo").Return(eh1, nil)
@@ -1616,6 +1671,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 					return true
 				}))
+				as1.EXPECT().CleanUp(mock.Anything)
 
 				pn2 := mocks.NewPrincipalNamerMock(t)
 				pn2.EXPECT().PrincipalName().Return("b")
@@ -1626,6 +1682,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 					return true
 				}))
+				as2.EXPECT().CleanUp(mock.Anything)
 
 				authn1 := mocks1.NewMechanismMock(t)
 				authn1.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "a"}).Return(as1, nil)
