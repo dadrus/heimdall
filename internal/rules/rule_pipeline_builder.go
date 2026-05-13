@@ -14,7 +14,7 @@ import (
 type pipelineBuilder[T any] interface {
 	add(step v1beta1.Step) error
 	build() (T, error)
-	CleanUp(ctx context.Context)
+	cleanUp(ctx context.Context)
 }
 
 func createPipeline[T any](
@@ -29,7 +29,7 @@ func createPipeline[T any](
 
 	defer func() {
 		if err != nil {
-			builder.CleanUp(ctx)
+			builder.cleanUp(ctx)
 		}
 	}()
 
@@ -44,15 +44,18 @@ func createPipeline[T any](
 	return res, err
 }
 
+type stepCreator interface {
+	createStep(ref v1beta1.MechanismReference, def StepDefinition) (pipeline.Step, error)
+}
 
 type stepBuilder struct {
-	f       *ruleFactory
+	sc      stepCreator
 	stepIDs []string
 }
 
-func newStepBuilder(factory *ruleFactory, capacity int) *stepBuilder {
+func newStepBuilder(sc stepCreator, capacity int) *stepBuilder {
 	return &stepBuilder{
-		f:       factory,
+		sc:      sc,
 		stepIDs: make([]string, 0, capacity),
 	}
 }
@@ -60,7 +63,7 @@ func newStepBuilder(factory *ruleFactory, capacity int) *stepBuilder {
 func (b *stepBuilder) create(step v1beta1.Step, def StepDefinition) (pipeline.Step, error) {
 	b.stepIDs = append(b.stepIDs, step.ID)
 
-	return b.f.createStep(step.MechanismReference(), def)
+	return b.sc.createStep(step.MechanismReference(), def)
 }
 
 func (b *stepBuilder) ensureUniqueIDs(pipelineName string) error {
@@ -82,7 +85,6 @@ func (b *stepBuilder) ensureUniqueIDs(pipelineName string) error {
 
 	return nil
 }
-
 
 type executeStepPlacement struct {
 	ensure func(string, *executePipelineBuilder) error
@@ -144,7 +146,7 @@ func (b *executePipelineBuilder) build() (*executePipeline, error) {
 	return newExecutePipeline(authenticators, b.subjectHandlerStage, b.finalizerStage), nil
 }
 
-func (b *executePipelineBuilder) CleanUp(ctx context.Context) {
+func (b *executePipelineBuilder) cleanUp(ctx context.Context) {
 	b.finalizerStage.CleanUp(ctx)
 	b.subjectHandlerStage.CleanUp(ctx)
 
@@ -284,7 +286,7 @@ func (b *errorPipelineBuilder) build() (*errorPipeline, error) {
 	return newErrorPipeline(b.errorHandlers), nil
 }
 
-func (b *errorPipelineBuilder) CleanUp(ctx context.Context) {
+func (b *errorPipelineBuilder) cleanUp(ctx context.Context) {
 	b.errorHandlers.CleanUp(ctx)
 }
 
