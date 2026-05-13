@@ -63,7 +63,7 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
 
-	rules, err := p.loadRules(ruleSet)
+	rules, err := p.loadRules(ctx, ruleSet)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,13 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 		}
 	}
 
-	return p.r.AddRuleSet(ctx, source, rules)
+	if err := p.r.AddRuleSet(ctx, source, rules); err != nil {
+		cleanUpRules(ctx, rules)
+
+		return err
+	}
+
+	return nil
 }
 
 func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSet) error {
@@ -102,7 +108,7 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
 
-	rules, err := p.loadRules(ruleSet)
+	rules, err := p.loadRules(ctx, ruleSet)
 	if err != nil {
 		return err
 	}
@@ -118,7 +124,16 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		}
 	}
 
-	return p.r.UpdateRuleSet(ctx, source, rules)
+	cleanupCandidates, err := p.r.UpdateRuleSet(ctx, source, rules)
+	if err != nil {
+		cleanUpRules(ctx, rules)
+
+		return err
+	}
+
+	cleanUpRules(ctx, cleanupCandidates)
+
+	return nil
 }
 
 func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSet) error {
@@ -135,25 +150,44 @@ func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSe
 		Str("_provider", source.Provider).
 		Msg("Deletion of a rule set received")
 
-	return p.r.DeleteRuleSet(ctx, source)
+	cleanupCandidates, err := p.r.DeleteRuleSet(ctx, source)
+	if err != nil {
+		return err
+	}
+
+	cleanUpRules(ctx, cleanupCandidates)
+
+	return nil
 }
 
 func (p *ruleSetProcessor) isVersionSupported(version string) bool {
 	return version == v1beta1.Version
 }
 
-func (p *ruleSetProcessor) loadRules(ruleSet v1beta1.RuleSet) ([]rule.Rule, error) {
-	rules := make([]rule.Rule, len(ruleSet.Rules))
+func (p *ruleSetProcessor) loadRules(ctx context.Context, ruleSet v1beta1.RuleSet) ([]rule.Rule, error) {
+	rules := make([]rule.Rule, 0, len(ruleSet.Rules))
 
-	for idx, rc := range ruleSet.Rules {
+	for _, rc := range ruleSet.Rules {
 		rul, err := p.f.CreateRule(ruleSet, rc)
 		if err != nil {
-			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
-				"loading rule ID='%s' failed", rc.ID).CausedBy(err)
+			cleanUpRules(ctx, rules)
+
+			return nil, errorchain.NewWithMessagef(
+				pipeline.ErrInternal,
+				"loading rule ID='%s' failed", rc.ID,
+			).CausedBy(err)
 		}
 
-		rules[idx] = rul
+		rules = append(rules, rul)
 	}
 
 	return rules, nil
+}
+
+func cleanUpRules(ctx context.Context, rules []rule.Rule) {
+	for idx := len(rules) - 1; idx >= 0; idx-- {
+		if rules[idx] != nil {
+			rules[idx].CleanUp(ctx)
+		}
+	}
 }

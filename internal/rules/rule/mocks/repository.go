@@ -103,20 +103,31 @@ func (_c *RepositoryMock_AddRuleSet_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // DeleteRuleSet provides a mock function for the type RepositoryMock
-func (_mock *RepositoryMock) DeleteRuleSet(ctx context.Context, src rule.RuleSet) error {
+func (_mock *RepositoryMock) DeleteRuleSet(ctx context.Context, src rule.RuleSet) ([]rule.Rule, error) {
 	ret := _mock.Called(ctx, src)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteRuleSet")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet) error); ok {
+	var r0 []rule.Rule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet) ([]rule.Rule, error)); ok {
+		return returnFunc(ctx, src)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet) []rule.Rule); ok {
 		r0 = returnFunc(ctx, src)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]rule.Rule)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, rule.RuleSet) error); ok {
+		r1 = returnFunc(ctx, src)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // RepositoryMock_DeleteRuleSet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteRuleSet'
@@ -149,12 +160,12 @@ func (_c *RepositoryMock_DeleteRuleSet_Call) Run(run func(ctx context.Context, s
 	return _c
 }
 
-func (_c *RepositoryMock_DeleteRuleSet_Call) Return(err error) *RepositoryMock_DeleteRuleSet_Call {
-	_c.Call.Return(err)
+func (_c *RepositoryMock_DeleteRuleSet_Call) Return(rules []rule.Rule, err error) *RepositoryMock_DeleteRuleSet_Call {
+	_c.Call.Return(rules, err)
 	return _c
 }
 
-func (_c *RepositoryMock_DeleteRuleSet_Call) RunAndReturn(run func(ctx context.Context, src rule.RuleSet) error) *RepositoryMock_DeleteRuleSet_Call {
+func (_c *RepositoryMock_DeleteRuleSet_Call) RunAndReturn(run func(ctx context.Context, src rule.RuleSet) ([]rule.Rule, error)) *RepositoryMock_DeleteRuleSet_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -222,20 +233,31 @@ func (_c *RepositoryMock_FindRule_Call) RunAndReturn(run func(ctx pipeline.Conte
 }
 
 // UpdateRuleSet provides a mock function for the type RepositoryMock
-func (_mock *RepositoryMock) UpdateRuleSet(ctx context.Context, src rule.RuleSet, rules []rule.Rule) error {
+func (_mock *RepositoryMock) UpdateRuleSet(ctx context.Context, src rule.RuleSet, rules []rule.Rule) ([]rule.Rule, error) {
 	ret := _mock.Called(ctx, src, rules)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateRuleSet")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet, []rule.Rule) error); ok {
+	var r0 []rule.Rule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet, []rule.Rule) ([]rule.Rule, error)); ok {
+		return returnFunc(ctx, src, rules)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, rule.RuleSet, []rule.Rule) []rule.Rule); ok {
 		r0 = returnFunc(ctx, src, rules)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]rule.Rule)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, rule.RuleSet, []rule.Rule) error); ok {
+		r1 = returnFunc(ctx, src, rules)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // RepositoryMock_UpdateRuleSet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateRuleSet'
@@ -274,12 +296,12 @@ func (_c *RepositoryMock_UpdateRuleSet_Call) Run(run func(ctx context.Context, s
 	return _c
 }
 
-func (_c *RepositoryMock_UpdateRuleSet_Call) Return(err error) *RepositoryMock_UpdateRuleSet_Call {
-	_c.Call.Return(err)
+func (_c *RepositoryMock_UpdateRuleSet_Call) Return(rules1 []rule.Rule, err error) *RepositoryMock_UpdateRuleSet_Call {
+	_c.Call.Return(rules1, err)
 	return _c
 }
 
-func (_c *RepositoryMock_UpdateRuleSet_Call) RunAndReturn(run func(ctx context.Context, src rule.RuleSet, rules []rule.Rule) error) *RepositoryMock_UpdateRuleSet_Call {
+func (_c *RepositoryMock_UpdateRuleSet_Call) RunAndReturn(run func(ctx context.Context, src rule.RuleSet, rules []rule.Rule) ([]rule.Rule, error)) *RepositoryMock_UpdateRuleSet_Call {
 	_c.Call.Return(run)
 	return _c
 }

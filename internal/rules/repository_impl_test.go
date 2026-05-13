@@ -19,6 +19,7 @@ package rules
 import (
 	"net/http"
 	"net/url"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -748,7 +749,7 @@ func TestRepositoryAddRuleSet(t *testing.T) {
 	}
 }
 
-func TestRepositoryRemoveRuleSet(t *testing.T) {
+func TestRepositoryDeleteRuleSet(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -778,7 +779,7 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), source)
+	_, err = repo.DeleteRuleSet(t.Context(), source)
 
 	// THEN
 	require.NoError(t, err)
@@ -786,7 +787,7 @@ func TestRepositoryRemoveRuleSet(t *testing.T) {
 	assert.True(t, impl.index.Empty())
 }
 
-func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
+func TestRepositoryDeleteRulesFromDifferentRuleSets(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -829,7 +830,7 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), barSource)
+	_, err = repo.DeleteRuleSet(t.Context(), barSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -852,7 +853,7 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), fooSource)
+	_, err = repo.DeleteRuleSet(t.Context(), fooSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -866,12 +867,78 @@ func TestRepositoryRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), bazSource)
+	_, err = repo.DeleteRuleSet(t.Context(), bazSource)
 
 	// THEN
 	require.NoError(t, err)
 	assert.Empty(t, impl.knownRules)
 	assert.True(t, impl.index.Empty())
+}
+
+func TestRepositoryDeleteRuleSetReturnsCleanupCandidates(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	mp := otel.GetMeterProvider()
+	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
+	require.NoError(t, err)
+
+	impl := repo.(*repository)
+
+	deletedSource := rule.RuleSet{ID: "deleted"}
+	keptSource := rule.RuleSet{ID: "kept"}
+
+	deletedRule1 := &ruleImpl{id: "1", source: deletedSource, hash: []byte{1}}
+	deletedRule1.routes = append(deletedRule1.routes, &routeImpl{
+		rule: deletedRule1,
+		host: "example.com",
+		path: "/deleted/1",
+	})
+
+	deletedRule2 := &ruleImpl{id: "2", source: deletedSource, hash: []byte{1}}
+	deletedRule2.routes = append(deletedRule2.routes, &routeImpl{
+		rule: deletedRule2,
+		host: "example.com",
+		path: "/deleted/2",
+	})
+
+	keptRule := &ruleImpl{id: "3", source: keptSource, hash: []byte{1}}
+	keptRule.routes = append(keptRule.routes, &routeImpl{
+		rule: keptRule,
+		host: "example.com",
+		path: "/kept",
+	})
+
+	deletedRules := []rule.Rule{deletedRule1, deletedRule2}
+
+	require.NoError(t, repo.AddRuleSet(t.Context(), deletedSource, deletedRules))
+	require.NoError(t, repo.AddRuleSet(t.Context(), keptSource, []rule.Rule{keptRule}))
+
+	// WHEN
+	cleanupCandidates, err := repo.DeleteRuleSet(t.Context(), deletedSource)
+
+	// THEN
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, deletedRules, cleanupCandidates)
+	assert.ElementsMatch(t, []rule.Rule{keptRule}, impl.knownRules)
+
+	_, err = impl.index.FindEntry("example.com", "/deleted/1",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
+	require.Error(t, err)
+
+	_, err = impl.index.FindEntry("example.com", "/deleted/2",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
+	require.Error(t, err)
+
+	_, err = impl.index.FindEntry("example.com", "/kept",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(route rule.Route, _, _ []string) bool {
+				return route.Rule() == keptRule
+			}))
+	require.NoError(t, err)
 }
 
 func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
@@ -916,7 +983,7 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	updatedRules := []rule.Rule{rule1, rule3, rule4}
 
 	// WHEN
-	err = repo.UpdateRuleSet(t.Context(), source, updatedRules)
+	_, err = repo.UpdateRuleSet(t.Context(), source, updatedRules)
 
 	// THEN
 	require.NoError(t, err)
@@ -1147,12 +1214,116 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			err = repo.UpdateRuleSet(t.Context(), rule.RuleSet{ID: "2"}, tc.updatedRules)
+			_, err = repo.UpdateRuleSet(t.Context(), rule.RuleSet{ID: "2"}, tc.updatedRules)
 
 			// THEN
 			tc.assert(t, err, repo.(*repository))
 		})
 	}
+}
+
+func TestRepositoryUpdateRuleSetReturnsCleanupCandidates(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	mp := otel.GetMeterProvider()
+	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
+	require.NoError(t, err)
+
+	impl := repo.(*repository)
+	source := rule.RuleSet{ID: "1"}
+
+	oldChangedRule := &ruleImpl{id: "changed", source: source, hash: []byte{1}}
+	oldChangedRule.routes = append(oldChangedRule.routes, &routeImpl{
+		rule: oldChangedRule,
+		host: "example.com",
+		path: "/changed",
+	})
+
+	oldDeletedRule := &ruleImpl{id: "deleted", source: source, hash: []byte{1}}
+	oldDeletedRule.routes = append(oldDeletedRule.routes, &routeImpl{
+		rule: oldDeletedRule,
+		host: "example.com",
+		path: "/deleted",
+	})
+
+	oldUnchangedRule := &ruleImpl{id: "unchanged", source: source, hash: []byte{1}}
+	oldUnchangedRule.routes = append(oldUnchangedRule.routes, &routeImpl{
+		rule: oldUnchangedRule,
+		host: "example.com",
+		path: "/unchanged",
+	})
+
+	require.NoError(t, repo.AddRuleSet(t.Context(), source, []rule.Rule{
+		oldChangedRule,
+		oldDeletedRule,
+		oldUnchangedRule,
+	}))
+
+	newChangedRule := &ruleImpl{id: "changed", source: source, hash: []byte{2}}
+	newChangedRule.routes = append(newChangedRule.routes, &routeImpl{
+		rule: newChangedRule,
+		host: "example.com",
+		path: "/changed-new",
+	})
+
+	newUnchangedRule := &ruleImpl{id: "unchanged", source: source, hash: []byte{1}}
+	newUnchangedRule.routes = append(newUnchangedRule.routes, &routeImpl{
+		rule: newUnchangedRule,
+		host: "example.com",
+		path: "/unchanged",
+	})
+
+	// WHEN
+	cleanupCandidates, err := repo.UpdateRuleSet(t.Context(), source, []rule.Rule{
+		newChangedRule,
+		newUnchangedRule,
+	})
+
+	// THEN
+	require.NoError(t, err)
+
+	require.Len(t, cleanupCandidates, 3)
+	assert.True(t, containsRuleInstance(cleanupCandidates, oldChangedRule))
+	assert.True(t, containsRuleInstance(cleanupCandidates, oldDeletedRule))
+	assert.True(t, containsRuleInstance(cleanupCandidates, newUnchangedRule))
+	assert.False(t, containsRuleInstance(cleanupCandidates, oldUnchangedRule))
+	assert.False(t, containsRuleInstance(cleanupCandidates, newChangedRule))
+
+	require.Len(t, impl.knownRules, 2)
+	assert.True(t, containsRuleInstance(impl.knownRules, newChangedRule))
+	assert.True(t, containsRuleInstance(impl.knownRules, oldUnchangedRule))
+	assert.False(t, containsRuleInstance(impl.knownRules, oldChangedRule))
+	assert.False(t, containsRuleInstance(impl.knownRules, oldDeletedRule))
+	assert.False(t, containsRuleInstance(impl.knownRules, newUnchangedRule))
+
+	_, err = impl.index.FindEntry("example.com", "/changed",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
+	require.Error(t, err)
+
+	_, err = impl.index.FindEntry("example.com", "/deleted",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
+	require.Error(t, err)
+
+	_, err = impl.index.FindEntry("example.com", "/changed-new",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+
+	_, err = impl.index.FindEntry("example.com", "/unchanged",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(route rule.Route, _, _ []string) bool {
+				return route.Rule() == oldUnchangedRule
+			}))
+	require.NoError(t, err)
+}
+
+func containsRuleInstance(rules []rule.Rule, expected rule.Rule) bool {
+	return slices.ContainsFunc(rules, func(candidate rule.Rule) bool {
+		return candidate == expected
+	})
 }
 
 func TestRepositoryFindRule(t *testing.T) {

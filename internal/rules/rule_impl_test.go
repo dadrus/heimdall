@@ -659,5 +659,5 @@ func TestRuleCleanUp(t *testing.T) {
 	rul.CleanUp(t.Context())
 
 	// THEN
-	assert.Equal(t, []string{"authenticator", "authorizer", "finalizer", "error_handler"}, order)
+	assert.Equal(t, []string{"error_handler", "finalizer", "authorizer", "authenticator"}, order)
 }

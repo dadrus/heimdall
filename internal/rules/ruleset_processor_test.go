@@ -67,8 +67,11 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
 
+				rm := mocks.NewRuleMock(t)
+				rm.EXPECT().CleanUp(mock.Anything)
+
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
-					Return(&mocks.RuleMock{}, nil)
+					Return(rm, nil)
 				repo.EXPECT().AddRuleSet(mock.Anything, mock.Anything, mock.Anything).
 					Return(assert.AnError)
 			},
@@ -166,10 +169,13 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			configure: func(t *testing.T, mhf *mocks.FactoryMock, repo *mocks.RepositoryMock) {
 				t.Helper()
 
+				rm := mocks.NewRuleMock(t)
+				rm.EXPECT().CleanUp(mock.Anything)
+
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything).
-					Return(&mocks.RuleMock{}, nil)
+					Return(rm, nil)
 				repo.EXPECT().UpdateRuleSet(mock.Anything, mock.Anything, mock.Anything).
-					Return(assert.AnError)
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -198,7 +204,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 						return len(rules) == 1 && rules[0] == rul
 					},
 					)).
-					Return(nil)
+					Return(nil, nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -243,7 +249,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 				t.Helper()
 
 				repo.EXPECT().DeleteRuleSet(t.Context(), rule.RuleSet{ID: "test", Name: "foobar"}).
-					Return(assert.AnError)
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -261,8 +267,11 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			configure: func(t *testing.T, repo *mocks.RepositoryMock) {
 				t.Helper()
 
+				rm := mocks.NewRuleMock(t)
+				rm.EXPECT().CleanUp(mock.Anything)
+
 				repo.EXPECT().DeleteRuleSet(t.Context(), rule.RuleSet{ID: "test", Name: "foobar"}).
-					Return(nil)
+					Return([]rule.Rule{rm}, nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
