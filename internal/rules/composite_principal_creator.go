@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -31,6 +32,13 @@ type compositePrincipalCreator []pipeline.Step
 func (cp compositePrincipalCreator) Accept(visitor pipeline.Visitor) {
 	for _, step := range cp {
 		step.Accept(visitor)
+	}
+}
+
+func (cp compositePrincipalCreator) CleanUp(ctx context.Context) {
+	// calling cleanup in reverse order
+	for idx := len(cp) - 1; idx >= 0; idx-- {
+		cp[idx].CleanUp(ctx)
 	}
 }
 

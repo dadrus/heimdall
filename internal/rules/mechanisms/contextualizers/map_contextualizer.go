@@ -1,6 +1,7 @@
 package contextualizers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/rs/zerolog"
@@ -61,8 +62,6 @@ type mapContextualizer struct {
 	values values.Values
 }
 
-func (c *mapContextualizer) Accept(_ pipeline.Visitor) {}
-
 func (c *mapContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -85,10 +84,12 @@ func (c *mapContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) 
 	return nil
 }
 
-func (c *mapContextualizer) Kind() types.Kind { return types.KindContextualizer }
-func (c *mapContextualizer) Name() string     { return c.name }
-func (c *mapContextualizer) ID() string       { return c.id }
-func (c *mapContextualizer) Type() string     { return c.name }
+func (c *mapContextualizer) Name() string            { return c.name }
+func (c *mapContextualizer) ID() string              { return c.id }
+func (c *mapContextualizer) Type() string            { return c.name }
+func (*mapContextualizer) Kind() types.Kind          { return types.KindContextualizer }
+func (*mapContextualizer) Accept(_ pipeline.Visitor) {}
+func (*mapContextualizer) CleanUp(_ context.Context) {}
 
 func (c *mapContextualizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

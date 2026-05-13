@@ -17,6 +17,8 @@
 package authenticators
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -95,9 +97,10 @@ func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (pipeli
 	return &auth, nil
 }
 
-func (a *unauthorizedAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
-func (a *unauthorizedAuthenticator) Name() string          { return a.name }
-func (a *unauthorizedAuthenticator) ID() string            { return a.id }
-func (a *unauthorizedAuthenticator) Type() string          { return a.name }
-func (a *unauthorizedAuthenticator) IsInsecure() bool      { return false }
-func (a *unauthorizedAuthenticator) PrincipalName() string { return a.principalName }
+func (a *unauthorizedAuthenticator) Name() string            { return a.name }
+func (a *unauthorizedAuthenticator) ID() string              { return a.id }
+func (a *unauthorizedAuthenticator) Type() string            { return a.name }
+func (a *unauthorizedAuthenticator) PrincipalName() string   { return a.principalName }
+func (*unauthorizedAuthenticator) IsInsecure() bool          { return false }
+func (*unauthorizedAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
+func (*unauthorizedAuthenticator) CleanUp(_ context.Context) {}

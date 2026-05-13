@@ -17,6 +17,8 @@
 package finalizers
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -55,8 +57,6 @@ type noopFinalizer struct {
 	id   string
 }
 
-func (f *noopFinalizer) Accept(_ pipeline.Visitor) {}
-
 func (f *noopFinalizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -85,7 +85,9 @@ func (f *noopFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, err
 	return &fin, nil
 }
 
-func (f *noopFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *noopFinalizer) Name() string     { return f.name }
-func (f *noopFinalizer) ID() string       { return f.id }
-func (f *noopFinalizer) Type() string     { return f.name }
+func (f *noopFinalizer) Name() string            { return f.name }
+func (f *noopFinalizer) ID() string              { return f.id }
+func (f *noopFinalizer) Type() string            { return f.name }
+func (*noopFinalizer) Accept(_ pipeline.Visitor) {}
+func (*noopFinalizer) Kind() types.Kind          { return types.KindFinalizer }
+func (*noopFinalizer) CleanUp(_ context.Context) {}

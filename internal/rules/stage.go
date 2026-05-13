@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"slices"
 	"strings"
 
@@ -41,10 +42,18 @@ func (v *stepVisitor) VisitPrincipalNamer(obj pipeline.PrincipalNamer) {
 
 type step interface {
 	Accept(visitor pipeline.Visitor)
+	CleanUp(ctx context.Context)
 	Execute(ctx pipeline.Context, sub pipeline.Subject) error
 }
 
 type stage []step
+
+func (s stage) CleanUp(ctx context.Context) {
+	// calling cleanup in reverse order
+	for idx := len(s) - 1; idx >= 0; idx-- {
+		s[idx].CleanUp(ctx)
+	}
+}
 
 func (s stage) HasDefaultPrincipal() bool {
 	sv := &stepVisitor{}

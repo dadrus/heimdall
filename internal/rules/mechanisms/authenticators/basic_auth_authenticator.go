@@ -108,6 +108,7 @@ type basicAuthAuthenticator struct {
 	principalName         string
 	app                   app.Context
 	resolver              *cache.CredentialsResolver[credentialsChecker]
+	ownsResolver          bool
 	realm                 string
 	errorSignalingEnabled bool
 	emptyAttributes       map[string]any
@@ -293,6 +294,7 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 		emptyAttributes: a.emptyAttributes,
 		ads:             a.ads,
 		resolver:        resolver,
+		ownsResolver:    conf.Credentials != nil,
 		errorSignalingEnabled: x.IfThenElseExec(
 			conf.ErrorSignaling.Enabled != nil,
 			func() bool { return *conf.ErrorSignaling.Enabled },
@@ -321,12 +323,20 @@ func (a *basicAuthAuthenticator) DecorateErrorResponse(_ error, er *pipeline.Err
 	)
 }
 
-func (a *basicAuthAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
+func (a *basicAuthAuthenticator) CleanUp(_ context.Context) {
+	if !a.ownsResolver {
+		return
+	}
+
+	a.resolver.Stop()
+}
+
 func (a *basicAuthAuthenticator) Name() string          { return a.name }
 func (a *basicAuthAuthenticator) ID() string            { return a.id }
 func (a *basicAuthAuthenticator) Type() string          { return a.name }
-func (a *basicAuthAuthenticator) IsInsecure() bool      { return false }
 func (a *basicAuthAuthenticator) PrincipalName() string { return a.principalName }
+func (*basicAuthAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
+func (*basicAuthAuthenticator) IsInsecure() bool        { return false }
 
 func toCredentialsChecker(creds secrets.Credentials) (credentialsChecker, error) {
 	type credentials struct {

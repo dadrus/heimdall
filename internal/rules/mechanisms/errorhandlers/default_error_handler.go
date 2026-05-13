@@ -17,6 +17,8 @@
 package errorhandlers
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -55,8 +57,6 @@ func newDefaultErrorHandler(app app.Context, name string, _ map[string]any) (typ
 	}, nil
 }
 
-func (eh *defaultErrorHandler) Accept(_ pipeline.Visitor) {}
-
 func (eh *defaultErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -86,7 +86,9 @@ func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (pipeline.St
 		"default error handler cannot be reconfigured")
 }
 
-func (eh *defaultErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
-func (eh *defaultErrorHandler) Name() string     { return eh.name }
-func (eh *defaultErrorHandler) ID() string       { return eh.id }
-func (eh *defaultErrorHandler) Type() string     { return eh.name }
+func (eh *defaultErrorHandler) Name() string           { return eh.name }
+func (eh *defaultErrorHandler) ID() string             { return eh.id }
+func (eh *defaultErrorHandler) Type() string           { return eh.name }
+func (*defaultErrorHandler) Accept(_ pipeline.Visitor) {}
+func (*defaultErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
+func (*defaultErrorHandler) CleanUp(_ context.Context) {}

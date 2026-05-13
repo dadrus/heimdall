@@ -17,6 +17,8 @@
 package errorhandlers
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -71,11 +73,12 @@ func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[
 	}, nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) Accept(_ pipeline.Visitor) {}
-func (eh *wwwAuthenticateErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
-func (eh *wwwAuthenticateErrorHandler) Name() string              { return eh.name }
-func (eh *wwwAuthenticateErrorHandler) ID() string                { return eh.id }
-func (eh *wwwAuthenticateErrorHandler) Type() string              { return eh.name }
+func (eh *wwwAuthenticateErrorHandler) Name() string           { return eh.name }
+func (eh *wwwAuthenticateErrorHandler) ID() string             { return eh.id }
+func (eh *wwwAuthenticateErrorHandler) Type() string           { return eh.name }
+func (*wwwAuthenticateErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
+func (*wwwAuthenticateErrorHandler) Accept(_ pipeline.Visitor) {}
+func (*wwwAuthenticateErrorHandler) CleanUp(_ context.Context) {}
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())

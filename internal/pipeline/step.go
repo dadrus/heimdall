@@ -16,6 +16,8 @@
 
 package pipeline
 
+import "context"
+
 type MechanismKind string
 
 const (
@@ -44,5 +46,6 @@ type Step interface {
 	Type() string
 	Kind() MechanismKind
 	Execute(ctx Context, sub Subject) error
+	CleanUp(ctx context.Context)
 	Accept(visitor Visitor)
 }

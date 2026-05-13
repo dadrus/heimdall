@@ -598,6 +598,109 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 	}
 }
 
+func TestBasicAuthAuthenticatorCleanUp(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		stepDef types.StepDefinition
+		setup   func(t *testing.T, sm *secretsmocks.ManagerMock)
+		assert  func(t *testing.T, prototype, configured *basicAuthAuthenticator)
+	}{
+		"cleanup on prototype is a no-op": {
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				ref := secrets.InternalRef("foo", "bar")
+
+				sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref).
+					Return(types2.NewCredentials(ref.Source, ref.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+			},
+			assert: func(t *testing.T, prototype, _ *basicAuthAuthenticator) {
+				t.Helper()
+
+				prototype.CleanUp(t.Context())
+			},
+		},
+		"cleanup stops owned resolver created for step credentials override": {
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"credentials": map[string]any{"source": "foo", "selector": "baz"},
+				},
+			},
+			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+				t.Helper()
+
+				var unsubscribed bool
+
+				ref1 := secrets.InternalRef("foo", "bar")
+				ref2 := secrets.InternalRef("foo", "baz")
+
+				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
+					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}), nil)
+
+				sm.EXPECT().Subscribe(ref2, mock.Anything).
+					Return(func() { unsubscribed = true }, nil)
+				sm.EXPECT().ResolveCredentials(mock.Anything, ref2).
+					Return(types2.NewCredentials(ref2.Source, ref2.Selector, map[string]any{
+						"user_id":  "baz",
+						"password": "bar",
+					}), nil)
+
+				t.Cleanup(func() {
+					assert.True(t, unsubscribed)
+				})
+			},
+			assert: func(t *testing.T, prototype, configured *basicAuthAuthenticator) {
+				t.Helper()
+
+				configured.CleanUp(t.Context())
+
+				after, ok := prototype.resolver.Get()
+				require.True(t, ok)
+				assert.Equal(t, newCredentialsChecker("bar", "baz"), after)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			sm := secretsmocks.NewManagerMock(t)
+			tc.setup(t, sm)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretsManager().Return(sm)
+
+			mech, err := newBasicAuthAuthenticator(appCtx, uc, config.MechanismConfig{
+				"credentials": map[string]any{"source": "foo", "selector": "bar"},
+			})
+			require.NoError(t, err)
+
+			prototype, ok := mech.(*basicAuthAuthenticator)
+			require.True(t, ok)
+
+			step, err := mech.CreateStep(tc.stepDef)
+			require.NoError(t, err)
+
+			configured, ok := step.(*basicAuthAuthenticator)
+			require.True(t, ok)
+
+			tc.assert(t, prototype, configured)
+		})
+	}
+}
+
 func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 

@@ -17,6 +17,7 @@
 package errorhandlers
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -84,11 +85,12 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (eh *redirectErrorHandler) Accept(_ pipeline.Visitor) {}
-func (eh *redirectErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
-func (eh *redirectErrorHandler) Name() string              { return eh.name }
-func (eh *redirectErrorHandler) ID() string                { return eh.id }
-func (eh *redirectErrorHandler) Type() string              { return eh.name }
+func (eh *redirectErrorHandler) Name() string           { return eh.name }
+func (eh *redirectErrorHandler) ID() string             { return eh.id }
+func (eh *redirectErrorHandler) Type() string           { return eh.name }
+func (*redirectErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
+func (*redirectErrorHandler) Accept(_ pipeline.Visitor) {}
+func (*redirectErrorHandler) CleanUp(_ context.Context) {}
 
 func (eh *redirectErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())

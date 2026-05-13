@@ -123,8 +123,6 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 	return fin, nil
 }
 
-func (f *jwtFinalizer) Accept(_ pipeline.Visitor) {}
-
 func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -217,10 +215,12 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, erro
 	}, nil
 }
 
-func (f *jwtFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *jwtFinalizer) Name() string     { return f.name }
-func (f *jwtFinalizer) ID() string       { return f.id }
-func (f *jwtFinalizer) Type() string     { return f.name }
+func (f *jwtFinalizer) Name() string            { return f.name }
+func (f *jwtFinalizer) ID() string              { return f.id }
+func (f *jwtFinalizer) Type() string            { return f.name }
+func (*jwtFinalizer) Accept(_ pipeline.Visitor) {}
+func (*jwtFinalizer) Kind() types.Kind          { return types.KindFinalizer }
+func (*jwtFinalizer) CleanUp(_ context.Context) {}
 
 func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())

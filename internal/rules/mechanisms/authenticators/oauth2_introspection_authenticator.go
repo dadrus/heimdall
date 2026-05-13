@@ -268,12 +268,13 @@ func (a *oauth2IntrospectionAuthenticator) DecorateErrorResponse(err error, er *
 	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
 }
 
-func (a *oauth2IntrospectionAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
-func (a *oauth2IntrospectionAuthenticator) Name() string          { return a.name }
-func (a *oauth2IntrospectionAuthenticator) ID() string            { return a.id }
-func (a *oauth2IntrospectionAuthenticator) Type() string          { return a.name }
-func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool      { return false }
-func (a *oauth2IntrospectionAuthenticator) PrincipalName() string { return a.principalName }
+func (a *oauth2IntrospectionAuthenticator) Name() string            { return a.name }
+func (a *oauth2IntrospectionAuthenticator) ID() string              { return a.id }
+func (a *oauth2IntrospectionAuthenticator) Type() string            { return a.name }
+func (a *oauth2IntrospectionAuthenticator) PrincipalName() string   { return a.principalName }
+func (*oauth2IntrospectionAuthenticator) IsInsecure() bool          { return false }
+func (*oauth2IntrospectionAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
+func (*oauth2IntrospectionAuthenticator) CleanUp(_ context.Context) {}
 
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 	ctx pipeline.Context, claims map[string]any,

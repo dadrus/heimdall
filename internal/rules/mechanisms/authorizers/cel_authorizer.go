@@ -17,6 +17,8 @@
 package authorizers
 
 import (
+	"context"
+
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
@@ -89,8 +91,6 @@ func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (t
 	}, nil
 }
 
-func (a *celAuthorizer) Accept(_ pipeline.Visitor) {}
-
 func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -157,7 +157,9 @@ func (a *celAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, err
 	}, nil
 }
 
-func (a *celAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-func (a *celAuthorizer) Name() string     { return a.name }
-func (a *celAuthorizer) ID() string       { return a.id }
-func (a *celAuthorizer) Type() string     { return a.name }
+func (a *celAuthorizer) Name() string            { return a.name }
+func (a *celAuthorizer) ID() string              { return a.id }
+func (a *celAuthorizer) Type() string            { return a.name }
+func (*celAuthorizer) Accept(_ pipeline.Visitor) {}
+func (*celAuthorizer) Kind() types.Kind          { return types.KindAuthorizer }
+func (*celAuthorizer) CleanUp(_ context.Context) {}

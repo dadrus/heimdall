@@ -17,6 +17,8 @@
 package finalizers
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -70,8 +72,6 @@ func newCookieFinalizer(app app.Context, name string, rawConfig map[string]any) 
 		cookies: conf.Cookies,
 	}, nil
 }
-
-func (f *cookieFinalizer) Accept(_ pipeline.Visitor) {}
 
 func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -132,7 +132,9 @@ func (f *cookieFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	}, nil
 }
 
-func (f *cookieFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *cookieFinalizer) Name() string     { return f.name }
-func (f *cookieFinalizer) ID() string       { return f.id }
-func (f *cookieFinalizer) Type() string     { return f.name }
+func (f *cookieFinalizer) Name() string            { return f.name }
+func (f *cookieFinalizer) ID() string              { return f.id }
+func (f *cookieFinalizer) Type() string            { return f.name }
+func (*cookieFinalizer) Accept(_ pipeline.Visitor) {}
+func (*cookieFinalizer) Kind() types.Kind          { return types.KindFinalizer }
+func (*cookieFinalizer) CleanUp(_ context.Context) {}

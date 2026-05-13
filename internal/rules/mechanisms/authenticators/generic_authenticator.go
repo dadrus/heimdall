@@ -17,6 +17,7 @@
 package authenticators
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -205,12 +206,13 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.St
 	}, nil
 }
 
-func (a *genericAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
-func (a *genericAuthenticator) Name() string          { return a.name }
-func (a *genericAuthenticator) ID() string            { return a.id }
-func (a *genericAuthenticator) Type() string          { return a.name }
-func (a *genericAuthenticator) IsInsecure() bool      { return false }
-func (a *genericAuthenticator) PrincipalName() string { return a.principalName }
+func (a *genericAuthenticator) Name() string            { return a.name }
+func (a *genericAuthenticator) ID() string              { return a.id }
+func (a *genericAuthenticator) Type() string            { return a.name }
+func (a *genericAuthenticator) PrincipalName() string   { return a.principalName }
+func (*genericAuthenticator) IsInsecure() bool          { return false }
+func (*genericAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
+func (*genericAuthenticator) CleanUp(_ context.Context) {}
 
 func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())

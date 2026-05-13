@@ -17,6 +17,7 @@
 package contextualizers
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -124,8 +125,6 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 	}, nil
 }
 
-func (c *genericContextualizer) Accept(_ pipeline.Visitor) {}
-
 //nolint:cyclop
 func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -224,10 +223,12 @@ func (c *genericContextualizer) CreateStep(def types.StepDefinition) (pipeline.S
 	}, nil
 }
 
-func (c *genericContextualizer) Kind() types.Kind { return types.KindContextualizer }
-func (c *genericContextualizer) Name() string     { return c.name }
-func (c *genericContextualizer) ID() string       { return c.id }
-func (c *genericContextualizer) Type() string     { return c.name }
+func (c *genericContextualizer) Name() string            { return c.name }
+func (c *genericContextualizer) ID() string              { return c.id }
+func (c *genericContextualizer) Type() string            { return c.name }
+func (*genericContextualizer) Kind() types.Kind          { return types.KindContextualizer }
+func (*genericContextualizer) Accept(_ pipeline.Visitor) {}
+func (*genericContextualizer) CleanUp(_ context.Context) {}
 
 func (c *genericContextualizer) callEndpoint(
 	ctx pipeline.Context,

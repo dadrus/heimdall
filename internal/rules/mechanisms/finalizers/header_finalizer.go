@@ -17,6 +17,7 @@
 package finalizers
 
 import (
+	"context"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -72,8 +73,6 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 		headers: conf.Headers,
 	}, nil
 }
-
-func (f *headerFinalizer) Accept(_ pipeline.Visitor) {}
 
 func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -139,7 +138,9 @@ func (f *headerFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	}, nil
 }
 
-func (f *headerFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *headerFinalizer) Name() string     { return f.name }
-func (f *headerFinalizer) ID() string       { return f.id }
-func (f *headerFinalizer) Type() string     { return f.name }
+func (f *headerFinalizer) Name() string            { return f.name }
+func (f *headerFinalizer) ID() string              { return f.id }
+func (f *headerFinalizer) Type() string            { return f.name }
+func (*headerFinalizer) Accept(_ pipeline.Visitor) {}
+func (*headerFinalizer) Kind() types.Kind          { return types.KindFinalizer }
+func (*headerFinalizer) CleanUp(_ context.Context) {}

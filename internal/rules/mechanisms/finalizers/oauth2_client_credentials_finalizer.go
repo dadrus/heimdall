@@ -139,11 +139,12 @@ func newOAuth2ClientCredentialsFinalizer(
 	}, nil
 }
 
-func (f *oauth2ClientCredentialsFinalizer) Accept(_ pipeline.Visitor) {}
-func (f *oauth2ClientCredentialsFinalizer) Kind() types.Kind          { return types.KindFinalizer }
-func (f *oauth2ClientCredentialsFinalizer) Name() string              { return f.name }
-func (f *oauth2ClientCredentialsFinalizer) ID() string                { return f.id }
-func (f *oauth2ClientCredentialsFinalizer) Type() string              { return f.name }
+func (f *oauth2ClientCredentialsFinalizer) Name() string            { return f.name }
+func (f *oauth2ClientCredentialsFinalizer) ID() string              { return f.id }
+func (f *oauth2ClientCredentialsFinalizer) Type() string            { return f.name }
+func (*oauth2ClientCredentialsFinalizer) Accept(_ pipeline.Visitor) {}
+func (*oauth2ClientCredentialsFinalizer) Kind() types.Kind          { return types.KindFinalizer }
+func (*oauth2ClientCredentialsFinalizer) CleanUp(_ context.Context) {}
 
 func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

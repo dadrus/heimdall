@@ -17,6 +17,7 @@
 package authorizers
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -146,8 +147,6 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
-func (a *remoteAuthorizer) Accept(_ pipeline.Visitor) {}
-
 func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -249,10 +248,12 @@ func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, 
 	}, nil
 }
 
-func (a *remoteAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-func (a *remoteAuthorizer) Name() string     { return a.name }
-func (a *remoteAuthorizer) ID() string       { return a.id }
-func (a *remoteAuthorizer) Type() string     { return a.name }
+func (a *remoteAuthorizer) Name() string            { return a.name }
+func (a *remoteAuthorizer) ID() string              { return a.id }
+func (a *remoteAuthorizer) Type() string            { return a.name }
+func (*remoteAuthorizer) Kind() types.Kind          { return types.KindAuthorizer }
+func (*remoteAuthorizer) Accept(_ pipeline.Visitor) {}
+func (*remoteAuthorizer) CleanUp(_ context.Context) {}
 
 func (a *remoteAuthorizer) doAuthorize(
 	ctx pipeline.Context,

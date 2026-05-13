@@ -17,6 +17,8 @@
 package authorizers
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -55,8 +57,6 @@ func newDenyAuthorizer(app app.Context, name string, _ map[string]any) (types.Me
 	}, nil
 }
 
-func (a *denyAuthorizer) Accept(_ pipeline.Visitor) {}
-
 func (a *denyAuthorizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -87,7 +87,9 @@ func (a *denyAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, er
 	return &auth, nil
 }
 
-func (a *denyAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-func (a *denyAuthorizer) Name() string     { return a.name }
-func (a *denyAuthorizer) ID() string       { return a.id }
-func (a *denyAuthorizer) Type() string     { return a.name }
+func (a *denyAuthorizer) Name() string            { return a.name }
+func (a *denyAuthorizer) ID() string              { return a.id }
+func (a *denyAuthorizer) Type() string            { return a.name }
+func (*denyAuthorizer) Accept(_ pipeline.Visitor) {}
+func (*denyAuthorizer) Kind() types.Kind          { return types.KindAuthorizer }
+func (*denyAuthorizer) CleanUp(_ context.Context) {}

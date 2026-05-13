@@ -291,12 +291,13 @@ func (a *jwtAuthenticator) DecorateErrorResponse(err error, er *pipeline.ErrorRe
 	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
 }
 
-func (a *jwtAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
-func (a *jwtAuthenticator) Name() string          { return a.name }
-func (a *jwtAuthenticator) ID() string            { return a.id }
-func (a *jwtAuthenticator) Type() string          { return a.name }
-func (a *jwtAuthenticator) IsInsecure() bool      { return false }
-func (a *jwtAuthenticator) PrincipalName() string { return a.principalName }
+func (a *jwtAuthenticator) Name() string            { return a.name }
+func (a *jwtAuthenticator) ID() string              { return a.id }
+func (a *jwtAuthenticator) Type() string            { return a.name }
+func (a *jwtAuthenticator) PrincipalName() string   { return a.principalName }
+func (*jwtAuthenticator) IsInsecure() bool          { return false }
+func (*jwtAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
+func (*jwtAuthenticator) CleanUp(_ context.Context) {}
 
 func (a *jwtAuthenticator) isCacheEnabled() bool {
 	// cache is enabled if ttl is not configured (in that case the ttl value from either

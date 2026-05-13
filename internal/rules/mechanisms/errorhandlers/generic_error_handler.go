@@ -17,6 +17,8 @@
 package errorhandlers
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -87,6 +89,7 @@ func (eh *genericErrorHandler) ID() string                { return eh.id }
 func (eh *genericErrorHandler) Name() string              { return eh.name }
 func (*genericErrorHandler) Type() string                 { return ErrorHandlerGeneric }
 func (*genericErrorHandler) Kind() types.Kind             { return types.KindErrorHandler }
+func (*genericErrorHandler) CleanUp(_ context.Context)    {}
 
 func (eh *genericErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
