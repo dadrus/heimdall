@@ -48,6 +48,7 @@ packages:
       Visitor: {}
       Backend: {}
       Executor: {}
+      Pipeline: {}
   github.com/dadrus/heimdall/internal/keyregistry:
     interfaces:
       KeyObserver: {}
