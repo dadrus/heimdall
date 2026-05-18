@@ -18,7 +18,7 @@ func TestSecretResolverStart(t *testing.T) {
 	t.Parallel()
 
 	ref := secrets.InternalRef("source", "selector")
-	secret := types.NewStringSecret("source", "selector", "value")
+	secret := types.NewStringSecret("selector", "value")
 
 	for uc, tc := range map[string]struct {
 		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
@@ -92,7 +92,7 @@ func TestSecretResolverStart(t *testing.T) {
 					stringSecret, ok := secret.(secrets.StringSecret)
 					require.True(t, ok)
 
-					return stringSecret.String(), nil
+					return stringSecret.Value(), nil
 				},
 			}
 
@@ -121,13 +121,13 @@ func TestSecretResolverReload(t *testing.T) {
 					return "", errors.New("unexpected secret type")
 				}
 
-				return stringSecret.String(), nil
+				return stringSecret.Value(), nil
 			},
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) func(context.Context) error {
 				t.Helper()
 
-				current := types.NewStringSecret("source", "selector", "initial")
-				next := types.NewStringSecret("source", "selector", "updated")
+				current := types.NewStringSecret("selector", "initial")
+				next := types.NewStringSecret("selector", "updated")
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, ref).
@@ -175,17 +175,17 @@ func TestSecretResolverReload(t *testing.T) {
 					return "", errors.New("unexpected secret type")
 				}
 
-				if stringSecret.String() == "invalid" {
+				if stringSecret.Value() == "invalid" {
 					return "", errors.New("invalid value")
 				}
 
-				return stringSecret.String(), nil
+				return stringSecret.Value(), nil
 			},
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) func(context.Context) error {
 				t.Helper()
 
-				initial := types.NewStringSecret("source", "selector", "initial")
-				invalid := types.NewStringSecret("source", "selector", "invalid")
+				initial := types.NewStringSecret("selector", "initial")
+				invalid := types.NewStringSecret("selector", "invalid")
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, ref).
@@ -235,13 +235,13 @@ func TestSecretResolverReload(t *testing.T) {
 					return "", errors.New("unexpected secret type")
 				}
 
-				return stringSecret.String(), nil
+				return stringSecret.Value(), nil
 			},
 			missingSecretPolicy: ClearSecret[string]{},
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) func(context.Context) error {
 				t.Helper()
 
-				initial := types.NewStringSecret("source", "selector", "initial")
+				initial := types.NewStringSecret("selector", "initial")
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, ref).
@@ -291,13 +291,13 @@ func TestSecretResolverReload(t *testing.T) {
 					return "", errors.New("unexpected secret type")
 				}
 
-				return stringSecret.String(), nil
+				return stringSecret.Value(), nil
 			},
 			missingSecretPolicy: FailSecret[string]{},
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) func(context.Context) error {
 				t.Helper()
 
-				initial := types.NewStringSecret("source", "selector", "initial")
+				initial := types.NewStringSecret("selector", "initial")
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, ref).
@@ -365,7 +365,7 @@ func TestSecretResolverReload(t *testing.T) {
 					stringSecret, ok := secret.(secrets.StringSecret)
 					require.True(t, ok)
 
-					return stringSecret.String(), nil
+					return stringSecret.Value(), nil
 				}
 			}
 
@@ -398,7 +398,7 @@ func TestSecretResolverStop(t *testing.T) {
 	t.Parallel()
 
 	ref := secrets.InternalRef("source", "selector")
-	secret := types.NewStringSecret("source", "selector", "value")
+	secret := types.NewStringSecret("selector", "value")
 	stopped := false
 
 	sm := secretsmocks.NewManagerMock(t)
@@ -414,7 +414,7 @@ func TestSecretResolverStop(t *testing.T) {
 			stringSecret, ok := secret.(secrets.StringSecret)
 			require.True(t, ok)
 
-			return stringSecret.String(), nil
+			return stringSecret.Value(), nil
 		},
 	}
 
@@ -435,7 +435,7 @@ func TestResolverStartPanics(t *testing.T) {
 			return "", errors.New("unexpected secret type")
 		}
 
-		return stringSecret.String(), nil
+		return stringSecret.Value(), nil
 	}
 
 	for uc, tc := range map[string]struct {
@@ -516,7 +516,7 @@ func TestCredentialsResolverStart(t *testing.T) {
 	t.Parallel()
 
 	ref := secrets.InternalRef("source", "redis")
-	creds := types.NewCredentials("source", "redis", map[string]any{
+	creds := types.NewCredentials("redis", map[string]any{
 		"username": "foo",
 		"password": "bar",
 	})

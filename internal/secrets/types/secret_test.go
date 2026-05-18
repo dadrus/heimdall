@@ -28,18 +28,16 @@ import (
 )
 
 func TestNewStringSecret(t *testing.T) {
-	secret := NewStringSecret("inline", "foo", "bar")
+	secret := NewStringSecret("foo", "bar")
 
-	assert.Equal(t, "inline", secret.Source())
 	assert.Equal(t, "foo", secret.Selector())
 	assert.Equal(t, SecretKindString, secret.Kind())
-	assert.Equal(t, "bar", secret.String())
+	assert.Equal(t, "bar", secret.Value())
 }
 
 func TestNewBytesSecret(t *testing.T) {
-	secret := NewSymmetricKeySecret("file", "foo/bar", "bar", []byte("secret"))
+	secret := NewSymmetricKeySecret("foo/bar", "bar", []byte("secret"))
 
-	assert.Equal(t, "file", secret.Source())
 	assert.Equal(t, "foo/bar", secret.Selector())
 	assert.Equal(t, "bar", secret.KeyID())
 	assert.Equal(t, SecretKindSymmetricKey, secret.Kind())
@@ -51,9 +49,8 @@ func TestNewSignerSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := &x509.Certificate{}
-	secret := NewAsymmetricKeySecret("pem", "first", "kid-1", signer, []*x509.Certificate{cert})
+	secret := NewAsymmetricKeySecret("first", "kid-1", signer, []*x509.Certificate{cert})
 
-	assert.Equal(t, "pem", secret.Source())
 	assert.Equal(t, "first", secret.Selector())
 	assert.Equal(t, SecretKindAsymmetricKey, secret.Kind())
 	assert.Equal(t, "kid-1", secret.KeyID())
@@ -63,21 +60,19 @@ func TestNewSignerSecret(t *testing.T) {
 
 func TestNewTrustStoreSecret(t *testing.T) {
 	cert := &x509.Certificate{}
-	secret := NewTrustStoreSecret("pem", "trust", []*x509.Certificate{cert})
+	secret := NewTrustStoreSecret("trust", []*x509.Certificate{cert})
 
-	assert.Equal(t, "pem", secret.Source())
 	assert.Equal(t, "trust", secret.Selector())
 	assert.Equal(t, SecretKindTrustStore, secret.Kind())
 	assert.NotNil(t, secret.CertPool())
 }
 
 func TestNewCredentials(t *testing.T) {
-	secret := NewCredentials("inline", "foo", map[string]any{
+	secret := NewCredentials("foo", map[string]any{
 		"username": "foo",
 		"password": "bar",
 	})
 
-	assert.Equal(t, "inline", secret.Source())
 	assert.Equal(t, "foo", secret.Selector())
 }
 
@@ -93,7 +88,7 @@ func TestSecretPayloadDecode(t *testing.T) {
 		wantErr bool
 	}{
 		"decodes string secrets": {
-			payload: NewCredentials("inline", "foo", map[string]any{
+			payload: NewCredentials("foo", map[string]any{
 				"username": "foo",
 				"password": "bar",
 			}),
@@ -103,7 +98,7 @@ func TestSecretPayloadDecode(t *testing.T) {
 			},
 		},
 		"fails on unused payload field": {
-			payload: NewCredentials("inline", "foo", map[string]any{
+			payload: NewCredentials("foo", map[string]any{
 				"username": "foo",
 				"password": "bar",
 				"extra":    "baz",
@@ -128,7 +123,7 @@ func TestSecretPayloadDecode(t *testing.T) {
 	}
 
 	t.Run("fails creating decoder", func(t *testing.T) {
-		payload := NewCredentials("inline", "foo", map[string]any{
+		payload := NewCredentials("foo", map[string]any{
 			"username": "foo",
 		})
 

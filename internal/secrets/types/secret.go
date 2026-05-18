@@ -34,14 +34,13 @@ const (
 )
 
 type Secret interface {
-	Source() string
 	Selector() string
 	Kind() SecretKind
 }
 
 type StringSecret interface {
 	Secret
-	String() string
+	Value() string
 }
 
 type SymmetricKeySecret interface {
@@ -63,18 +62,15 @@ type TrustStoreSecret interface {
 }
 
 type Credentials interface {
-	Source() string
 	Selector() string
 	Decode(out any) error
 }
 
 type baseSecret struct {
-	source   string
 	selector string
 	kind     SecretKind
 }
 
-func (s baseSecret) Source() string   { return s.source }
 func (s baseSecret) Selector() string { return s.selector }
 func (s baseSecret) Kind() SecretKind { return s.kind }
 
@@ -84,10 +80,9 @@ type stringSecret struct {
 	value string
 }
 
-func NewStringSecret(source, selector, value string) StringSecret {
+func NewStringSecret(selector, value string) StringSecret {
 	return &stringSecret{
 		baseSecret: baseSecret{
-			source:   source,
 			selector: selector,
 			kind:     SecretKindString,
 		},
@@ -95,7 +90,7 @@ func NewStringSecret(source, selector, value string) StringSecret {
 	}
 }
 
-func (s *stringSecret) String() string { return s.value }
+func (s *stringSecret) Value() string { return s.value }
 
 type symmetricKeySecret struct {
 	baseSecret
@@ -104,10 +99,9 @@ type symmetricKeySecret struct {
 	value []byte
 }
 
-func NewSymmetricKeySecret(source, selector, kid string, value []byte) SymmetricKeySecret {
+func NewSymmetricKeySecret(selector, kid string, value []byte) SymmetricKeySecret {
 	return &symmetricKeySecret{
 		baseSecret: baseSecret{
-			source:   source,
 			selector: selector,
 			kind:     SecretKindSymmetricKey,
 		},
@@ -128,13 +122,12 @@ type asymmetricKeySecret struct {
 }
 
 func NewAsymmetricKeySecret(
-	source, selector, kid string,
+	selector, kid string,
 	signer crypto.Signer,
 	certChain []*x509.Certificate,
 ) AsymmetricKeySecret {
 	return &asymmetricKeySecret{
 		baseSecret: baseSecret{
-			source:   source,
 			selector: selector,
 			kind:     SecretKindAsymmetricKey,
 		},
@@ -154,7 +147,7 @@ type trustStoreSecret struct {
 	certPool *x509.CertPool
 }
 
-func NewTrustStoreSecret(source, selector string, certs []*x509.Certificate) TrustStoreSecret {
+func NewTrustStoreSecret(selector string, certs []*x509.Certificate) TrustStoreSecret {
 	pool := x509.NewCertPool()
 	for _, cert := range certs {
 		pool.AddCert(cert)
@@ -162,7 +155,6 @@ func NewTrustStoreSecret(source, selector string, certs []*x509.Certificate) Tru
 
 	return &trustStoreSecret{
 		baseSecret: baseSecret{
-			source:   source,
 			selector: selector,
 			kind:     SecretKindTrustStore,
 		},
@@ -173,20 +165,17 @@ func NewTrustStoreSecret(source, selector string, certs []*x509.Certificate) Tru
 func (s *trustStoreSecret) CertPool() *x509.CertPool { return s.certPool }
 
 type credentials struct {
-	source   string
 	selector string
 	values   map[string]any
 }
 
-func NewCredentials(source, selector string, values map[string]any) Credentials {
+func NewCredentials(selector string, values map[string]any) Credentials {
 	return &credentials{
-		source:   source,
 		selector: selector,
 		values:   values,
 	}
 }
 
-func (p *credentials) Source() string   { return p.source }
 func (p *credentials) Selector() string { return p.selector }
 
 func (p *credentials) Decode(out any) error {

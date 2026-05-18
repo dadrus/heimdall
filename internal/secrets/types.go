@@ -52,6 +52,7 @@ type (
 var (
 	ErrSubscribeFailed         = errors.New("secret changes subscription failed")
 	ErrProviderNotFound        = errors.New("secret provider not found")
+	ErrSourceNotFound        = errors.New("secret source not found")
 	ErrSecretSourceForbidden   = errors.New("secret source forbidden in rule context")
 	ErrUnsupportedProviderType = registry.ErrUnsupportedProviderType
 	ErrSecretNotFound          = types.ErrSecretNotFound

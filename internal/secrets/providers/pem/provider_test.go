@@ -27,10 +27,12 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	"github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 )
@@ -50,7 +52,6 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, "tls", provider.Name())
 				require.Equal(t, "pem", provider.Type())
 			},
 		},
@@ -89,7 +90,6 @@ func TestNewProvider(t *testing.T) {
 			require.NoError(t, err)
 
 			prv, err := newProvider(types.ProviderArgs{
-				SourceName:     "tls",
 				Config:         tc.conf,
 				Logger:         zerolog.Nop(),
 				DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
@@ -103,88 +103,75 @@ func TestProviderWatch(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, om *mocks.ChangeObserverMock)
 		action func(*testing.T, types.Provider, string)
 	}{
 		"does nothing if watch is disabled": {
+			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
+				t.Helper()
+			},
 			action: func(t *testing.T, provider types.Provider, _ string) {
 				t.Helper()
 
-				require.NoError(t, provider.Start(context.Background(), nil))
+				require.NoError(t, provider.Start(context.Background()))
 				require.NoError(t, provider.Stop(context.Background()))
 			},
 		},
-		"returns error if callback is nil": {
-			action: func(t *testing.T, provider types.Provider, _ string) {
-				t.Helper()
-
-				err := provider.Start(context.Background(), nil)
-				require.Error(t, err)
-				require.ErrorContains(t, err, "must not be nil")
-			},
-		},
 		"returns error if watch target cannot be registered": {
+			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
+				t.Helper()
+			},
 			action: func(t *testing.T, provider types.Provider, path string) {
 				t.Helper()
 
 				require.NoError(t, os.Remove(path))
 
-				err := provider.Start(context.Background(), func(types.ChangeEvent) {})
+				err := provider.Start(context.Background())
 				require.Error(t, err)
 				require.ErrorContains(t, err, "failed to register pem provider watch")
 			},
 		},
 		"reloads source on file change and emits source event": {
-			action: func(t *testing.T, provider types.Provider, path string) {
+			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
 				t.Helper()
 
-				changes := make(chan types.ChangeEvent, 2)
-				err := provider.Start(context.Background(), func(event types.ChangeEvent) {
-					changes <- event
-				})
-				require.NoError(t, err)
+				om.EXPECT().Notify(mock.MatchedBy(func(e types.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
+			},
+			action: func(t *testing.T, provider types.Provider, path string) {
+				t.Helper()
 				t.Cleanup(func() { _ = provider.Stop(context.Background()) })
 
-				require.NoError(t, provider.Start(context.Background(), func(event types.ChangeEvent) {
-					changes <- event
-				}))
+				err := provider.Start(context.Background())
+				require.NoError(t, err)
+				time.Sleep(100 * time.Millisecond)
 
 				writePEMFile(t, path, "second")
+				time.Sleep(100 * time.Millisecond)
 
-				select {
-				case evt := <-changes:
-					require.Equal(t, "tls", evt.Source)
-					require.Empty(t, evt.Selectors)
-				case <-time.After(500 * time.Millisecond):
-					t.Fatal("watch callback was not called")
-				}
-
-				secret, err := provider.ResolveSecret(context.Background(), types.Selector{})
+				secret, err := provider.GetSecret(context.Background(), types.Selector{})
 				require.NoError(t, err)
 				require.Equal(t, "second", secret.Selector())
 			},
 		},
 		"keeps last-known-good key material if reload fails": {
+			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
+				t.Helper()
+			},
 			action: func(t *testing.T, provider types.Provider, path string) {
 				t.Helper()
-
-				changes := make(chan types.ChangeEvent, 2)
-
-				err := provider.Start(context.Background(), func(event types.ChangeEvent) {
-					changes <- event
-				})
-				require.NoError(t, err)
 				t.Cleanup(func() { _ = provider.Stop(context.Background()) })
+
+				err := provider.Start(context.Background())
+				require.NoError(t, err)
+				time.Sleep(100 * time.Millisecond)
 
 				err = os.WriteFile(path, []byte("not a pem file"), 0o600)
 				require.NoError(t, err)
+				time.Sleep(100 * time.Millisecond)
 
-				select {
-				case <-changes:
-					t.Fatal("unexpected change event on failed reload")
-				case <-time.After(200 * time.Millisecond):
-				}
-
-				secret, err := provider.ResolveSecret(context.Background(), types.Selector{})
+				secret, err := provider.GetSecret(context.Background(), types.Selector{})
 				require.NoError(t, err)
 				require.Equal(t, "first", secret.Selector())
 			},
@@ -198,11 +185,14 @@ func TestProviderWatch(t *testing.T) {
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			om := mocks.NewChangeObserverMock(t)
+			tc.setup(t, om)
+
 			prv, err := newProvider(types.ProviderArgs{
-				SourceName:     "tls",
 				Config:         map[string]any{"path": pemFile, "watch": watch},
 				Logger:         zerolog.Nop(),
 				DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+				Observer:       om,
 			})
 			require.NoError(t, err)
 
@@ -211,7 +201,7 @@ func TestProviderWatch(t *testing.T) {
 	}
 }
 
-func TestProviderResolveSecret(t *testing.T) {
+func TestProviderGetSecret(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -261,7 +251,7 @@ func TestProviderResolveSecret(t *testing.T) {
 			t.Parallel()
 
 			// WHEN
-			secret, err := tc.provider.ResolveSecret(t.Context(), tc.selector)
+			secret, err := tc.provider.GetSecret(t.Context(), tc.selector)
 
 			// THEN
 			tc.assert(t, err, secret)
@@ -269,7 +259,7 @@ func TestProviderResolveSecret(t *testing.T) {
 	}
 }
 
-func TestProviderResolveSecretSet(t *testing.T) {
+func TestProviderGetSecretSet(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
@@ -312,7 +302,7 @@ func TestProviderResolveSecretSet(t *testing.T) {
 			t.Parallel()
 
 			// WHEN
-			secretSet, err := tc.provider.ResolveSecretSet(t.Context(), tc.selector)
+			secretSet, err := tc.provider.GetSecretSet(t.Context(), tc.selector)
 
 			// THEN
 			tc.assert(t, err, secretSet)
@@ -320,14 +310,14 @@ func TestProviderResolveSecretSet(t *testing.T) {
 	}
 }
 
-func TestProviderResolveCredentials(t *testing.T) {
+func TestProviderGetCredentials(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	prov := &provider{}
 
 	// WHEN
-	_, err := prov.ResolveCredentials(t.Context(), types.Selector{})
+	_, err := prov.GetCredentials(t.Context(), types.Selector{})
 
 	// THEN
 	require.ErrorIs(t, err, types.ErrUnsupportedOperation)
@@ -350,7 +340,6 @@ func newPEMProviderForTest(t *testing.T, keyIDs ...string) *provider {
 	require.NoError(t, err)
 
 	prov, err := newProvider(types.ProviderArgs{
-		SourceName:     "tls",
 		Config:         map[string]any{"path": pemFile},
 		Logger:         zerolog.Nop(),
 		DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),

@@ -36,11 +36,10 @@ const ProviderType = "pem"
 //
 //nolint:gochecknoinits
 func init() {
-	registry.Register(ProviderType, registry.FactoryFunc(newProvider))
+	registry.Register(ProviderType, types.ProviderFactoryFunc(newProvider))
 }
 
 type provider struct {
-	name     string
 	path     string
 	password string
 	watch    bool
@@ -51,6 +50,7 @@ type provider struct {
 	mu sync.RWMutex
 	ks keyStore
 
+	observer  types.ChangeObserver
 	watchStop context.CancelFunc
 	watcherWg sync.WaitGroup
 }
@@ -69,26 +69,25 @@ func newProvider(args types.ProviderArgs) (types.Provider, error) {
 		return nil, err
 	}
 
-	ks, err := newKeyStoreFromPEMFile(args.SourceName, cfg.Path, cfg.Password)
+	ks, err := newKeyStoreFromPEMFile(cfg.Path, cfg.Password)
 	if err != nil {
 		return nil, err
 	}
 
 	return &provider{
-		name:     args.SourceName,
 		path:     cfg.Path,
 		password: cfg.Password,
 		watch:    cfg.Watch,
-		ks:       ks,
 		logger:   args.Logger,
+		observer: args.Observer,
+		ks:       ks,
 	}, nil
 }
 
-func (p *provider) Name() string { return p.name }
-
+func (p *provider) Dependencies() []types.Reference { return nil }
 func (p *provider) Type() string { return ProviderType }
 
-func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
+func (p *provider) GetSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
 	p.mu.RLock()
 	ks := p.ks
 	p.mu.RUnlock()
@@ -104,7 +103,7 @@ func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (ty
 	return ks[0], nil
 }
 
-func (p *provider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]types.Secret, error) {
+func (p *provider) GetSecretSet(_ context.Context, _ types.Selector) ([]types.Secret, error) {
 	p.mu.RLock()
 	ks := p.ks
 	p.mu.RUnlock()
@@ -112,17 +111,13 @@ func (p *provider) ResolveSecretSet(_ context.Context, _ types.Selector) ([]type
 	return ks, nil
 }
 
-func (p *provider) ResolveCredentials(_ context.Context, _ types.Selector) (types.Credentials, error) {
+func (p *provider) GetCredentials(_ context.Context, _ types.Selector) (types.Credentials, error) {
 	return nil, types.ErrUnsupportedOperation
 }
 
-func (p *provider) Start(ctx context.Context, onChange func(types.ChangeEvent)) error {
+func (p *provider) Start(ctx context.Context) error {
 	if !p.watch {
 		return nil
-	}
-
-	if onChange == nil {
-		return errorchain.NewWithMessage(pipeline.ErrInternal, "onChange callback must not be nil")
 	}
 
 	p.watchMu.Lock()
@@ -150,7 +145,7 @@ func (p *provider) Start(ctx context.Context, onChange func(types.ChangeEvent)) 
 	p.started = true
 	p.watcherWg.Add(1)
 
-	go p.runWatcher(runCtx, watcher, onChange)
+	go p.runWatcher(runCtx, watcher)
 
 	return nil
 }
@@ -172,7 +167,7 @@ func (p *provider) Stop(_ context.Context) error {
 }
 
 func (p *provider) reload() error {
-	ks, err := newKeyStoreFromPEMFile(p.name, p.path, p.password)
+	ks, err := newKeyStoreFromPEMFile(p.path, p.password)
 	if err != nil {
 		return err
 	}
@@ -184,7 +179,7 @@ func (p *provider) reload() error {
 	return nil
 }
 
-func (p *provider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher, onChange func(types.ChangeEvent)) {
+func (p *provider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher) {
 	defer p.watcherWg.Done()
 	defer func() {
 		_ = watcher.Close()
@@ -206,19 +201,17 @@ func (p *provider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher, on
 			if err := p.reload(); err != nil {
 				p.logger.Warn().
 					Err(err).
-					Str("_source", p.name).
 					Str("_file", p.path).
-					Msg("Reloading pem source failed")
+					Msg("Reloading pem file failed")
 
 				continue
 			}
 
-			onChange(types.ChangeEvent{Source: p.name})
+			p.observer.Notify(types.ChangeEvent{})
 
 			p.logger.Info().
-				Str("_source", p.name).
 				Str("_file", p.path).
-				Msg("PEM source reloaded")
+				Msg("pem file reloaded")
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
@@ -226,9 +219,8 @@ func (p *provider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher, on
 
 			p.logger.Warn().
 				Err(err).
-				Str("_source", p.name).
 				Str("_file", p.path).
-				Msg("PEM source watcher error")
+				Msg("pem file watching error")
 		}
 	}
 }

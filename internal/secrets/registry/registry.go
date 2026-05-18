@@ -28,11 +28,11 @@ var ErrUnsupportedProviderType = errors.New("secret provider type unsupported")
 
 var (
 	// by intention. Used only during application bootstrap.
-	factories   = make(map[string]Factory) //nolint:gochecknoglobals
-	factoriesMu sync.RWMutex               //nolint:gochecknoglobals
+	factories   = make(map[string]types.ProviderFactory) //nolint:gochecknoglobals
+	factoriesMu sync.RWMutex                             //nolint:gochecknoglobals
 )
 
-func Register(typ string, factory Factory) {
+func Register(typ string, factory types.ProviderFactory) {
 	factoriesMu.Lock()
 	defer factoriesMu.Unlock()
 

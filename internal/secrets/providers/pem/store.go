@@ -32,16 +32,16 @@ type keyEntry struct {
 	privateKey crypto.Signer
 }
 
-func newKeyStoreFromKey(source, selector string, privateKey crypto.Signer) (keyStore, error) {
+func newKeyStoreFromKey(selector string, privateKey crypto.Signer) (keyStore, error) {
 	entry := keyEntry{
 		keyID:      selector,
 		privateKey: privateKey,
 	}
 
-	return buildStore(source, []keyEntry{entry}, nil)
+	return buildStore([]keyEntry{entry}, nil)
 }
 
-func newKeyStoreFromPEMFile(source, path, password string) (keyStore, error) {
+func newKeyStoreFromPEMFile(path, password string) (keyStore, error) {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
@@ -58,10 +58,10 @@ func newKeyStoreFromPEMFile(source, path, password string) (keyStore, error) {
 			"failed to read %s", path).CausedBy(err)
 	}
 
-	return newKeyStoreFromPEMBytes(source, contents, password)
+	return newKeyStoreFromPEMBytes(contents, password)
 }
 
-func newKeyStoreFromPEMBytes(source string, contents []byte, password string) (keyStore, error) {
+func newKeyStoreFromPEMBytes(contents []byte, password string) (keyStore, error) {
 	blocks := readPEMBlocks(contents)
 
 	var (
@@ -117,7 +117,7 @@ func newKeyStoreFromPEMBytes(source string, contents []byte, password string) (k
 		})
 	}
 
-	return buildStore(source, entries, certs)
+	return buildStore(entries, certs)
 }
 
 func (s keyStore) get(selector string) (types.Secret, error) {
@@ -146,7 +146,7 @@ func readPEMBlocks(data []byte) []*pem.Block {
 	return blocks
 }
 
-func buildStore(source string, entries []keyEntry, certs []*x509.Certificate) (keyStore, error) {
+func buildStore(entries []keyEntry, certs []*x509.Certificate) (keyStore, error) {
 	if len(entries) == 0 {
 		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
 			"no key material present in the keystore")
@@ -181,7 +181,7 @@ func buildStore(source string, entries []keyEntry, certs []*x509.Certificate) (k
 
 		known[keyID] = struct{}{}
 
-		result[idx] = types.NewAsymmetricKeySecret(source, keyID, keyID, entry.privateKey, chain)
+		result[idx] = types.NewAsymmetricKeySecret(keyID, keyID, entry.privateKey, chain)
 	}
 
 	return result, nil

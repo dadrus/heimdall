@@ -32,11 +32,10 @@ const ProviderType = "inline"
 //
 //nolint:gochecknoinits
 func init() {
-	registry.Register(ProviderType, registry.FactoryFunc(newProvider))
+	registry.Register(ProviderType, types.ProviderFactoryFunc(newProvider))
 }
 
 type provider struct {
-	name        string
 	secrets     map[string]types.Secret
 	credentials map[string]types.Credentials
 }
@@ -58,10 +57,10 @@ func newProvider(args types.ProviderArgs) (types.Provider, error) {
 
 		switch typed := value.(type) {
 		case string:
-			secrets[selector] = types.NewStringSecret(args.SourceName, selector, typed)
+			secrets[selector] = types.NewStringSecret(selector, typed)
 
 		case map[string]any:
-			credentials[selector] = types.NewCredentials(args.SourceName, selector, typed)
+			credentials[selector] = types.NewCredentials(selector, typed)
 
 		default:
 			return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
@@ -70,18 +69,17 @@ func newProvider(args types.ProviderArgs) (types.Provider, error) {
 	}
 
 	return &provider{
-		name:        args.SourceName,
 		secrets:     secrets,
 		credentials: credentials,
 	}, nil
 }
 
-func (p *provider) Name() string                                             { return p.name }
-func (p *provider) Type() string                                             { return ProviderType }
-func (p *provider) Start(_ context.Context, _ func(types.ChangeEvent)) error { return nil }
-func (p *provider) Stop(_ context.Context) error                             { return nil }
+func (p *provider) Dependencies() []types.Reference { return nil }
+func (p *provider) Type() string                    { return ProviderType }
+func (p *provider) Start(_ context.Context) error   { return nil }
+func (p *provider) Stop(_ context.Context) error    { return nil }
 
-func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
+func (p *provider) GetSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
 	secret := p.secrets[selector.Value]
 	if secret == nil {
 		return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound,
@@ -91,7 +89,7 @@ func (p *provider) ResolveSecret(_ context.Context, selector types.Selector) (ty
 	return secret, nil
 }
 
-func (p *provider) ResolveSecretSet(_ context.Context, selector types.Selector) ([]types.Secret, error) {
+func (p *provider) GetSecretSet(_ context.Context, selector types.Selector) ([]types.Secret, error) {
 	if selector.Value != "" {
 		return nil, errorchain.NewWithMessagef(types.ErrUnsupportedOperation,
 			"inline secret sets are only supported for the provider root, got selector '%s'", selector.Value)
@@ -105,10 +103,10 @@ func (p *provider) ResolveSecretSet(_ context.Context, selector types.Selector) 
 	return secrets, nil
 }
 
-func (p *provider) ResolveCredentials(_ context.Context, selector types.Selector) (types.Credentials, error) {
+func (p *provider) GetCredentials(_ context.Context, selector types.Selector) (types.Credentials, error) {
 	credentials := p.credentials[selector.Value]
 	if credentials == nil {
-		return nil, errorchain.NewWithMessagef(types.ErrSecretNotFound,
+		return nil, errorchain.NewWithMessagef(types.ErrCredentialsNotFound,
 			"no credentials found for selector '%s'", selector.Value)
 	}
 

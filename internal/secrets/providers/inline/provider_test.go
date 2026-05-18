@@ -45,7 +45,6 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, "inline-defaults", provider.Name())
 				require.Equal(t, ProviderType, provider.Type())
 			},
 		},
@@ -84,8 +83,7 @@ func TestNewProvider(t *testing.T) {
 			t.Parallel()
 
 			prv, err := newProvider(types.ProviderArgs{
-				SourceName: "inline-defaults",
-				Config:     tc.conf,
+				Config: tc.conf,
 			})
 
 			tc.assert(t, err, prv)
@@ -97,7 +95,6 @@ func TestProviderResolveSecret(t *testing.T) {
 	t.Parallel()
 
 	prv, err := newProvider(types.ProviderArgs{
-		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
 			"api_other": "other",
@@ -109,22 +106,20 @@ func TestProviderResolveSecret(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	secret, err := prv.ResolveSecret(t.Context(), types.Selector{Value: "api_token"})
+	secret, err := prv.GetSecret(t.Context(), types.Selector{Value: "api_token"})
 	require.NoError(t, err)
 
 	stringSecret, ok := secret.(types.StringSecret)
 	require.True(t, ok)
-	require.Equal(t, "inline-defaults", stringSecret.Source())
 	require.Equal(t, "api_token", stringSecret.Selector())
 	require.Equal(t, types.SecretKindString, stringSecret.Kind())
-	require.Equal(t, "secret", stringSecret.String())
+	require.Equal(t, "secret", stringSecret.Value())
 }
 
 func TestProviderResolveSecretSet(t *testing.T) {
 	t.Parallel()
 
 	prv, err := newProvider(types.ProviderArgs{
-		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
 			"api_other": "other",
@@ -136,7 +131,7 @@ func TestProviderResolveSecretSet(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	secrets, err := prv.ResolveSecretSet(t.Context(), types.Selector{})
+	secrets, err := prv.GetSecretSet(t.Context(), types.Selector{})
 	require.NoError(t, err)
 	require.Len(t, secrets, 2)
 
@@ -153,7 +148,6 @@ func TestProviderResolveSecretSetNonRootUnsupported(t *testing.T) {
 	t.Parallel()
 
 	prv, err := newProvider(types.ProviderArgs{
-		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
 			"api_other": "other",
@@ -165,7 +159,7 @@ func TestProviderResolveSecretSetNonRootUnsupported(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	secrets, err := prv.ResolveSecretSet(t.Context(), types.Selector{Value: "api_token"})
+	secrets, err := prv.GetSecretSet(t.Context(), types.Selector{Value: "api_token"})
 	require.Nil(t, secrets)
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrUnsupportedOperation)
@@ -181,7 +175,6 @@ func TestProviderResolveCredentials(t *testing.T) {
 	}
 
 	prv, err := newProvider(types.ProviderArgs{
-		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
 			"api_other": "other",
@@ -193,9 +186,8 @@ func TestProviderResolveCredentials(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	credentials, err := prv.ResolveCredentials(t.Context(), types.Selector{Value: "github"})
+	credentials, err := prv.GetCredentials(t.Context(), types.Selector{Value: "github"})
 	require.NoError(t, err)
-	require.Equal(t, "inline-defaults", credentials.Source())
 	require.Equal(t, "github", credentials.Selector())
 
 	var decoded oauthCredentials
@@ -208,7 +200,6 @@ func TestProviderResolveMissing(t *testing.T) {
 	t.Parallel()
 
 	prv, err := newProvider(types.ProviderArgs{
-		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
 			"api_other": "other",
@@ -220,16 +211,16 @@ func TestProviderResolveMissing(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	secret, err := prv.ResolveSecret(t.Context(), types.Selector{Value: "missing"})
+	secret, err := prv.GetSecret(t.Context(), types.Selector{Value: "missing"})
 	require.Nil(t, secret)
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrSecretNotFound)
 	require.ErrorContains(t, err, "selector 'missing'")
 
-	credentials, err := prv.ResolveCredentials(t.Context(), types.Selector{Value: "missing"})
+	credentials, err := prv.GetCredentials(t.Context(), types.Selector{Value: "missing"})
 	require.Nil(t, credentials)
 	require.Error(t, err)
-	require.ErrorIs(t, err, types.ErrSecretNotFound)
+	require.ErrorIs(t, err, types.ErrCredentialsNotFound)
 	require.ErrorContains(t, err, "selector 'missing'")
 }
 
@@ -237,7 +228,6 @@ func TestProviderStartStop(t *testing.T) {
 	t.Parallel()
 
 	prv, err := newProvider(types.ProviderArgs{
-		SourceName: "inline-defaults",
 		Config: map[string]any{
 			"api_token": "secret",
 			"api_other": "other",
@@ -249,21 +239,19 @@ func TestProviderStartStop(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, prv.Start(t.Context(), nil))
+	require.NoError(t, prv.Start(t.Context()))
 	require.NoError(t, prv.Stop(t.Context()))
 }
 
 func TestRegistryCreate(t *testing.T) {
 	t.Parallel()
 
-	provider, err := registry.Create(ProviderType, types.ProviderArgs{
-		SourceName: "inline-defaults",
+	prv, err := registry.Create(ProviderType, types.ProviderArgs{
 		Config: map[string]any{
 			"api_token": "secret",
 		},
 	})
 
 	require.NoError(t, err)
-	require.Equal(t, "inline-defaults", provider.Name())
-	require.Equal(t, ProviderType, provider.Type())
+	require.Equal(t, ProviderType, prv.Type())
 }

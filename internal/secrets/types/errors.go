@@ -20,6 +20,8 @@ import "errors"
 
 var (
 	ErrSecretNotFound            = errors.New("secret not found")
+	ErrSecretSetNotFound         = errors.New("secret set not found")
+	ErrCredentialsNotFound       = errors.New("credentials not found")
 	ErrUnsupportedOperation      = errors.New("unsupported secret operation")
 	ErrSecretKindMismatch        = errors.New("secret kind mismatch")
 	ErrInvalidCredentialsPayload = errors.New("invalid credentials payload")

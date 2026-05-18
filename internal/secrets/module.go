@@ -20,6 +20,9 @@ import (
 	"context"
 
 	"go.uber.org/fx"
+
+	_ "github.com/dadrus/heimdall/internal/secrets/providers/inline"
+	_ "github.com/dadrus/heimdall/internal/secrets/providers/pem"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals

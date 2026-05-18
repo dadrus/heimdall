@@ -125,7 +125,7 @@ func TestNewKeyStoreFromPEMFile(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ks, err := newKeyStoreFromPEMFile("test", tc.pemFile(t), "")
+			ks, err := newKeyStoreFromPEMFile(tc.pemFile(t), "")
 			tc.assert(t, ks, err)
 		})
 	}
@@ -445,7 +445,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ks, err := newKeyStoreFromPEMBytes("test", tc.pemBytes(t), tc.password)
+			ks, err := newKeyStoreFromPEMBytes(tc.pemBytes(t), tc.password)
 			tc.assert(t, ks, err)
 		})
 	}
@@ -576,7 +576,7 @@ func TestNewKeyStoreFromKey(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
-	ks, err := newKeyStoreFromKey("test", "test", key)
+	ks, err := newKeyStoreFromKey("test", key)
 	require.NoError(t, err)
 	require.Len(t, ks, 1)
 
@@ -598,7 +598,7 @@ func TestKeyStoreGet(t *testing.T) {
 	pemBytes, err := pemx.BuildPEM(pemx.WithRSAPrivateKey(key, pemx.WithHeader("X-Key-ID", "first")))
 	require.NoError(t, err)
 
-	ks, err := newKeyStoreFromPEMBytes("test", pemBytes, "")
+	ks, err := newKeyStoreFromPEMBytes(pemBytes, "")
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {

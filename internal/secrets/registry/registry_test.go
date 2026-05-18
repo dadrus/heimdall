@@ -31,7 +31,7 @@ func withCleanRegistry(t *testing.T) {
 
 	factoriesMu.Lock()
 	original := factories
-	factories = make(map[string]Factory)
+	factories = make(map[string]types.ProviderFactory)
 	factoriesMu.Unlock()
 
 	t.Cleanup(func() {
@@ -51,7 +51,7 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("registers factory", func(t *testing.T) {
-		factory := FactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
+		factory := types.ProviderFactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
 			return mocks.NewProviderMock(t), nil
 		})
 
@@ -71,7 +71,7 @@ func TestRegister(t *testing.T) {
 func TestCreate(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		typ     string
-		factory Factory
+		factory types.ProviderFactory
 		assert  func(t *testing.T, provider types.Provider, err error)
 	}{
 		"returns error for unsupported provider type": {
@@ -86,7 +86,7 @@ func TestCreate(t *testing.T) {
 		},
 		"returns factory creation error": {
 			typ: "foo",
-			factory: FactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
+			factory: types.ProviderFactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
 				return nil, assert.AnError
 			}),
 			assert: func(t *testing.T, provider types.Provider, err error) {
@@ -99,9 +99,8 @@ func TestCreate(t *testing.T) {
 		},
 		"creates provider with source name": {
 			typ: "foo",
-			factory: FactoryFunc(func(args types.ProviderArgs) (types.Provider, error) {
+			factory: types.ProviderFactoryFunc(func(args types.ProviderArgs) (types.Provider, error) {
 				provider := mocks.NewProviderMock(t)
-				provider.EXPECT().Name().Return(args.SourceName)
 				provider.EXPECT().Type().Return("foo")
 
 				return provider, nil
@@ -111,7 +110,6 @@ func TestCreate(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, provider)
-				require.Equal(t, "source-a", provider.Name())
 				require.Equal(t, "foo", provider.Type())
 			},
 		},
@@ -124,8 +122,7 @@ func TestCreate(t *testing.T) {
 			}
 
 			provider, err := Create(tc.typ, types.ProviderArgs{
-				SourceName: "source-a",
-				Config:     map[string]any{"x": "y"},
+				Config: map[string]any{"x": "y"},
 			})
 
 			tc.assert(t, provider, err)
