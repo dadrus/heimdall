@@ -43,7 +43,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := &x509.Certificate{Raw: []byte("cert")}
-	tlsSecret := secrettypes.NewAsymmetricKeySecret( "tls", "kid", privateKey, []*x509.Certificate{cert})
+	tlsSecret := secrettypes.NewAsymmetricKeySecret("tls", "kid", privateKey, []*x509.Certificate{cert})
 
 	for uc, tc := range map[string]struct {
 		cfg   baseConfig
@@ -62,7 +62,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
 				t.Helper()
 
-				secret := secrettypes.NewCredentials( "foo", map[string]any{
+				secret := secrettypes.NewCredentials("foo", map[string]any{
 					"username": "foo",
 					"password": "bar",
 				})

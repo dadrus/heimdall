@@ -37,8 +37,6 @@ func newManagerWithProviderMocks(t *testing.T, providers ...providerSetup) *mana
 	}
 
 	for _, provider := range providers {
-		provider := provider
-
 		sourceType := provider.sourceType
 		if sourceType == "" {
 			sourceType = uniqueProviderType(t, provider.sourceName)
@@ -52,10 +50,10 @@ func newManagerWithProviderMocks(t *testing.T, providers ...providerSetup) *mana
 
 		registry.Register(sourceType, types.ProviderFactoryFunc(func(args types.ProviderArgs) (types.Provider, error) {
 			if provider.setup == nil {
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
 
-				return p, nil
+				return prv, nil
 			}
 
 			return provider.setup(t, args), nil
@@ -101,10 +99,10 @@ func TestManagerNew(t *testing.T) {
 				require.NotNil(t, args.Observer)
 				require.NotNil(t, args.Resolver)
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
 
-				return p
+				return prv
 			},
 		})
 		defer mgr.dispatcher.stop()
@@ -163,10 +161,10 @@ func TestManagerNew(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return(nil)
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return(nil)
 
-					return p
+					return prv
 				},
 			},
 			providerSetup{
@@ -174,12 +172,12 @@ func TestManagerNew(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return([]types.Reference{
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return([]types.Reference{
 						{Source: "pem", Selector: "server"},
 					})
 
-					return p
+					return prv
 				},
 			},
 		)
@@ -195,12 +193,12 @@ func TestManagerNew(t *testing.T) {
 
 		providerType := uniqueProviderType(t, "vault")
 		registry.Register(providerType, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
-			p := typemocks.NewProviderMock(t)
-			p.EXPECT().Dependencies().Return([]types.Reference{
+			prv := typemocks.NewProviderMock(t)
+			prv.EXPECT().Dependencies().Return([]types.Reference{
 				{Source: "missing", Selector: "server"},
 			})
 
-			return p, nil
+			return prv, nil
 		}))
 		t.Cleanup(func() {
 			registry.Unregister(providerType)
@@ -226,36 +224,36 @@ func TestManagerNew(t *testing.T) {
 		typeC := uniqueProviderType(t, "c")
 
 		registry.Register(typeA, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
-			p := typemocks.NewProviderMock(t)
-			p.EXPECT().Dependencies().Return([]types.Reference{
+			prv := typemocks.NewProviderMock(t)
+			prv.EXPECT().Dependencies().Return([]types.Reference{
 				{Source: "b", Selector: "secret"},
 			})
 
-			return p, nil
+			return prv, nil
 		}))
 		t.Cleanup(func() {
 			registry.Unregister(typeA)
 		})
 
 		registry.Register(typeB, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
-			p := typemocks.NewProviderMock(t)
-			p.EXPECT().Dependencies().Return([]types.Reference{
+			prv := typemocks.NewProviderMock(t)
+			prv.EXPECT().Dependencies().Return([]types.Reference{
 				{Source: "c", Selector: "secret"},
 			})
 
-			return p, nil
+			return prv, nil
 		}))
 		t.Cleanup(func() {
 			registry.Unregister(typeB)
 		})
 
 		registry.Register(typeC, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
-			p := typemocks.NewProviderMock(t)
-			p.EXPECT().Dependencies().Return([]types.Reference{
+			prv := typemocks.NewProviderMock(t)
+			prv.EXPECT().Dependencies().Return([]types.Reference{
 				{Source: "a", Selector: "secret"},
 			})
 
-			return p, nil
+			return prv, nil
 		}))
 		t.Cleanup(func() {
 			registry.Unregister(typeC)
@@ -284,10 +282,10 @@ func TestManagerNew(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return(nil)
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return(nil)
 
-					return p
+					return prv
 				},
 			},
 			providerSetup{
@@ -295,13 +293,13 @@ func TestManagerNew(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return([]types.Reference{
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return([]types.Reference{
 						{Source: "a", Selector: "secret1"},
 						{Source: "a", Selector: "secret2"},
 					})
 
-					return p
+					return prv
 				},
 			},
 		)
@@ -328,13 +326,13 @@ func TestManagerResolveSecret(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
-				p.EXPECT().
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
+				prv.EXPECT().
 					GetSecret(mock.Anything, types.Selector{Value: "server"}).
 					Return(secret, nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got Secret, err error) {
 				t.Helper()
@@ -349,13 +347,13 @@ func TestManagerResolveSecret(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
-				p.EXPECT().
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
+				prv.EXPECT().
 					GetSecret(mock.Anything, types.Selector{Value: "server"}).
 					Return(secret, nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got Secret, err error) {
 				t.Helper()
@@ -370,10 +368,10 @@ func TestManagerResolveSecret(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got Secret, err error) {
 				t.Helper()
@@ -439,13 +437,13 @@ func TestManagerResolveSecretSet(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
-				p.EXPECT().
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
+				prv.EXPECT().
 					GetSecretSet(mock.Anything, types.Selector{Value: "keys"}).
 					Return(secretSet, nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got []Secret, err error) {
 				t.Helper()
@@ -460,13 +458,13 @@ func TestManagerResolveSecretSet(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
-				p.EXPECT().
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
+				prv.EXPECT().
 					GetSecretSet(mock.Anything, types.Selector{Value: "keys"}).
 					Return(secretSet, nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got []Secret, err error) {
 				t.Helper()
@@ -481,10 +479,10 @@ func TestManagerResolveSecretSet(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got []Secret, err error) {
 				t.Helper()
@@ -550,13 +548,13 @@ func TestManagerResolveCredentials(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
-				p.EXPECT().
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
+				prv.EXPECT().
 					GetCredentials(mock.Anything, types.Selector{Value: "github"}).
 					Return(credentials, nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got Credentials, err error) {
 				t.Helper()
@@ -571,13 +569,13 @@ func TestManagerResolveCredentials(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
-				p.EXPECT().
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
+				prv.EXPECT().
 					GetCredentials(mock.Anything, types.Selector{Value: "github"}).
 					Return(credentials, nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got Credentials, err error) {
 				t.Helper()
@@ -592,10 +590,10 @@ func TestManagerResolveCredentials(t *testing.T) {
 			setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 				t.Helper()
 
-				p := typemocks.NewProviderMock(t)
-				p.EXPECT().Dependencies().Return(nil)
+				prv := typemocks.NewProviderMock(t)
+				prv.EXPECT().Dependencies().Return(nil)
 
-				return p
+				return prv
 			},
 			assert: func(t *testing.T, got Credentials, err error) {
 				t.Helper()
@@ -667,16 +665,16 @@ func TestManagerLifecycle(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return(nil)
-					p.EXPECT().Start(mock.Anything).Run(func(context.Context) {
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return(nil)
+					prv.EXPECT().Start(mock.Anything).Run(func(context.Context) {
 						record("start:pem")
 					}).Return(nil)
-					p.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
+					prv.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
 						record("stop:pem")
 					}).Return(nil)
 
-					return p
+					return prv
 				},
 			},
 			providerSetup{
@@ -684,18 +682,18 @@ func TestManagerLifecycle(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return([]types.Reference{
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return([]types.Reference{
 						{Source: "pem", Selector: "server"},
 					})
-					p.EXPECT().Start(mock.Anything).Run(func(context.Context) {
+					prv.EXPECT().Start(mock.Anything).Run(func(context.Context) {
 						record("start:vault")
 					}).Return(nil)
-					p.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
+					prv.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
 						record("stop:vault")
 					}).Return(nil)
 
-					return p
+					return prv
 				},
 			},
 		)
@@ -722,14 +720,14 @@ func TestManagerLifecycle(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return(nil)
-					p.EXPECT().Start(mock.Anything).Return(nil)
-					p.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return(nil)
+					prv.EXPECT().Start(mock.Anything).Return(nil)
+					prv.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
 						stopped.Add(1)
 					}).Return(nil)
 
-					return p
+					return prv
 				},
 			},
 			providerSetup{
@@ -737,13 +735,13 @@ func TestManagerLifecycle(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return([]types.Reference{
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return([]types.Reference{
 						{Source: "first", Selector: "x"},
 					})
-					p.EXPECT().Start(mock.Anything).Return(assert.AnError)
+					prv.EXPECT().Start(mock.Anything).Return(assert.AnError)
 
-					return p
+					return prv
 				},
 			},
 		)
@@ -765,11 +763,11 @@ func TestManagerLifecycle(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return(nil)
-					p.EXPECT().Stop(mock.Anything).Return(errors.New("second stop error"))
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return(nil)
+					prv.EXPECT().Stop(mock.Anything).Return(errors.New("second stop error"))
 
-					return p
+					return prv
 				},
 			},
 			providerSetup{
@@ -777,13 +775,13 @@ func TestManagerLifecycle(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return([]types.Reference{
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return([]types.Reference{
 						{Source: "first", Selector: "x"},
 					})
-					p.EXPECT().Stop(mock.Anything).Return(assert.AnError)
+					prv.EXPECT().Stop(mock.Anything).Return(assert.AnError)
 
-					return p
+					return prv
 				},
 			},
 		)
@@ -803,11 +801,11 @@ func TestManagerLifecycle(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return(nil)
-					p.EXPECT().Stop(mock.Anything).Return(nil)
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return(nil)
+					prv.EXPECT().Stop(mock.Anything).Return(nil)
 
-					return p
+					return prv
 				},
 			},
 		)
@@ -820,6 +818,7 @@ func TestManagerLifecycle(t *testing.T) {
 			Reference{Source: "pem", Selector: "server"},
 			func(context.Context) error {
 				started <- struct{}{}
+
 				<-release
 
 				return nil
@@ -935,10 +934,12 @@ func TestManagerRestart(t *testing.T) {
 				Reference{Source: "vault", Selector: "server"},
 				func(context.Context) error {
 					called <- struct{}{}
+
 					return nil
 				},
 			)
 			require.NoError(t, err)
+
 			defer unsubscribe()
 
 			err = mgr.restart(context.Background(), tc.setup(t))
@@ -1048,10 +1049,12 @@ func TestManagerSubscribeNotify(t *testing.T) {
 			Reference{Source: "pem", Selector: "server"},
 			func(context.Context) error {
 				called <- struct{}{}
+
 				return nil
 			},
 		)
 		require.NoError(t, err)
+
 		defer unsubscribe()
 
 		mgr.Notify(source.Event{
@@ -1078,10 +1081,12 @@ func TestManagerSubscribeNotify(t *testing.T) {
 			Reference{Source: "pem", Selector: "server"},
 			func(context.Context) error {
 				called <- struct{}{}
+
 				return nil
 			},
 		)
 		require.NoError(t, err)
+
 		defer unsubscribe()
 
 		mgr.Notify(source.Event{
@@ -1109,20 +1114,24 @@ func TestManagerSubscribeNotify(t *testing.T) {
 			Reference{Source: "pem", Selector: "a"},
 			func(context.Context) error {
 				calledA <- struct{}{}
+
 				return nil
 			},
 		)
 		require.NoError(t, err)
+
 		defer unsubA()
 
 		unsubB, err := mgr.Subscribe(
 			Reference{Source: "pem", Selector: "b"},
 			func(context.Context) error {
 				calledB <- struct{}{}
+
 				return nil
 			},
 		)
 		require.NoError(t, err)
+
 		defer unsubB()
 
 		mgr.Notify(source.Event{Source: "pem"})
@@ -1153,20 +1162,24 @@ func TestManagerSubscribeNotify(t *testing.T) {
 			Reference{Source: "k8s", Namespace: "team-a", Selector: "secret"},
 			func(context.Context) error {
 				calledA <- struct{}{}
+
 				return nil
 			},
 		)
 		require.NoError(t, err)
+
 		defer unsubA()
 
 		unsubB, err := mgr.Subscribe(
 			Reference{Source: "k8s", Namespace: "team-b", Selector: "secret"},
 			func(context.Context) error {
 				calledB <- struct{}{}
+
 				return nil
 			},
 		)
 		require.NoError(t, err)
+
 		defer unsubB()
 
 		mgr.Notify(source.Event{
@@ -1201,6 +1214,7 @@ func TestManagerSubscribeNotify(t *testing.T) {
 			Reference{Source: "pem", Selector: "server"},
 			func(context.Context) error {
 				called <- struct{}{}
+
 				return nil
 			},
 		)
@@ -1231,10 +1245,10 @@ func TestManagerSubscribeNotify(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return(nil)
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return(nil)
 
-					return p
+					return prv
 				},
 			},
 			providerSetup{
@@ -1242,16 +1256,16 @@ func TestManagerSubscribeNotify(t *testing.T) {
 				setup: func(t *testing.T, _ types.ProviderArgs) types.Provider {
 					t.Helper()
 
-					p := typemocks.NewProviderMock(t)
-					p.EXPECT().Dependencies().Return([]types.Reference{
+					prv := typemocks.NewProviderMock(t)
+					prv.EXPECT().Dependencies().Return([]types.Reference{
 						{Source: "pem", Selector: "server"},
 					})
-					p.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
+					prv.EXPECT().Stop(mock.Anything).Run(func(context.Context) {
 						restarts.Add(1)
 					}).Return(nil)
-					p.EXPECT().Start(mock.Anything).Return(nil)
+					prv.EXPECT().Start(mock.Anything).Return(nil)
 
-					return p
+					return prv
 				},
 			},
 		)
@@ -1333,6 +1347,7 @@ func TestManagerSubscribeNotify(t *testing.T) {
 			Reference{Source: "pem", Selector: "server"},
 			func(context.Context) error {
 				firstCalled <- struct{}{}
+
 				return nil
 			},
 		)
@@ -1342,10 +1357,12 @@ func TestManagerSubscribeNotify(t *testing.T) {
 			Reference{Source: "pem", Selector: "server"},
 			func(context.Context) error {
 				secondCalled <- struct{}{}
+
 				return nil
 			},
 		)
 		require.NoError(t, err)
+
 		defer unsubSecond()
 
 		unsubFirst()

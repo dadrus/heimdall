@@ -176,7 +176,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				db := miniredis.RunT(t)
 
-				secret := secrettypes.NewCredentials( "foo", map[string]any{
+				secret := secrettypes.NewCredentials("foo", map[string]any{
 					"password": "foo",
 				})
 
@@ -275,7 +275,7 @@ func TestStandaloneCache(t *testing.T) {
 
 				t.Cleanup(db.Close)
 
-				secret := secrettypes.NewCredentials( "foo", map[string]any{
+				secret := secrettypes.NewCredentials("foo", map[string]any{
 					"password": "foo",
 				})
 
@@ -307,7 +307,7 @@ func TestStandaloneCache(t *testing.T) {
 			config: func(t *testing.T, sm *secretsmocks.ManagerMock, kr *keyregistrymocks.RegistryMock) []byte {
 				t.Helper()
 
-				secret := secrettypes.NewAsymmetricKeySecret( "tls", "key1", key, []*x509.Certificate{cert})
+				secret := secrettypes.NewAsymmetricKeySecret("tls", "key1", key, []*x509.Certificate{cert})
 
 				sm.EXPECT().
 					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).

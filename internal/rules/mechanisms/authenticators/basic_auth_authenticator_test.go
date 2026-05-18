@@ -124,7 +124,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials( "bar", map[string]any{
+					Return(types2.NewCredentials("bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -262,7 +262,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials( "bar", map[string]any{
+					Return(types2.NewCredentials("bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)

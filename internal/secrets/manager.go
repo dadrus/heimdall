@@ -211,6 +211,19 @@ func (m *manager) Subscribe(reference Reference, cb func(context.Context) error)
 	}, nil
 }
 
+func (m *manager) Notify(evt source.Event) {
+	bindings := m.matchingBindings(evt)
+	dependents := m.matchingProviderDependents(evt)
+
+	for _, bdg := range bindings {
+		m.dispatcher.schedule(bdg)
+	}
+
+	for _, src := range dependents {
+		m.dispatcher.schedule(src.b)
+	}
+}
+
 func (m *manager) getBinding(key bindingKey) *binding {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -236,19 +249,6 @@ func (m *manager) lookupSource(reference Reference) (secretSource, error) {
 	}
 
 	return ms.s, nil
-}
-
-func (m *manager) Notify(evt source.Event) {
-	bindings := m.matchingBindings(evt)
-	dependents := m.matchingProviderDependents(evt)
-
-	for _, bdg := range bindings {
-		m.dispatcher.schedule(bdg)
-	}
-
-	for _, src := range dependents {
-		m.dispatcher.schedule(src.b)
-	}
 }
 
 func (m *manager) matchingProviderDependents(evt source.Event) []*managedSource {
@@ -357,7 +357,7 @@ func (m *manager) restart(ctx context.Context, src secretSource) error {
 }
 
 func (m *manager) orderSources() error {
-	g := graph.New(
+	dag := graph.New(
 		func(source *managedSource) string { return source.s.Name() },
 		graph.Directed(),
 		graph.Acyclic(),
@@ -365,7 +365,7 @@ func (m *manager) orderSources() error {
 	)
 
 	for name, src := range m.sources {
-		if err := g.AddVertex(src); err != nil {
+		if err := dag.AddVertex(src); err != nil {
 			return errorchain.NewWithMessagef(
 				pipeline.ErrConfiguration,
 				"failed adding secret source '%s' to dependency graph", name,
@@ -375,7 +375,7 @@ func (m *manager) orderSources() error {
 
 	for name, src := range m.sources {
 		for _, dep := range src.s.Dependencies() {
-			if err := g.AddEdge(dep.Source, name); err != nil {
+			if err := dag.AddEdge(dep.Source, name); err != nil {
 				if errors.Is(err, graph.ErrEdgeAlreadyExists) {
 					continue
 				}
@@ -388,7 +388,7 @@ func (m *manager) orderSources() error {
 		}
 	}
 
-	order, err := graph.TopologicalSort(g)
+	order, err := graph.TopologicalSort(dag)
 	if err != nil {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,

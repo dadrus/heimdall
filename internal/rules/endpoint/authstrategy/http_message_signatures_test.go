@@ -79,7 +79,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(
-					secrettypes.NewAsymmetricKeySecret( "bar", "baz", privKey, nil),
+					secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil),
 					nil)
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Maybe().Return(func() {}, nil)
 			},
@@ -165,7 +165,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 	sm := secretsmocks.NewManagerMock(t)
 	sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Maybe().Return(func() {}, nil)
 	sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(
-		secrettypes.NewAsymmetricKeySecret( "bar", "kid-1", privKey, nil),
+		secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil),
 		nil,
 	)
 
@@ -237,7 +237,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 		assert     func(t *testing.T, err error, signer httpsig.Signer)
 	}{
 		"secret not suitable for signing": {
-			secret:     secrettypes.NewStringSecret( "bar", "baz"),
+			secret:     secrettypes.NewStringSecret("bar", "baz"),
 			components: []string{"@method"},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
 				t.Helper()
@@ -248,7 +248,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 			},
 		},
 		"certificate validation error": {
-			secret: secrettypes.NewAsymmetricKeySecret( "kid1", "kid1",
+			secret: secrettypes.NewAsymmetricKeySecret("kid1", "kid1",
 				privateKey, []*x509.Certificate{leafCert, rootCA.Certificate}),
 			components: []string{"@method"},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
@@ -259,7 +259,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 			},
 		},
 		"unsupported algorithm": {
-			secret:     secrettypes.NewAsymmetricKeySecret( "unsupported", "unsupported", unsupportedSigner{}, nil),
+			secret:     secrettypes.NewAsymmetricKeySecret("unsupported", "unsupported", unsupportedSigner{}, nil),
 			components: []string{"@method"},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
 				t.Helper()
@@ -269,7 +269,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 			},
 		},
 		"fails to create signer": {
-			secret:     secrettypes.NewAsymmetricKeySecret( "kid1", "kid1", privateKey, nil),
+			secret:     secrettypes.NewAsymmetricKeySecret("kid1", "kid1", privateKey, nil),
 			components: []string{"@foo"},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
 				t.Helper()
@@ -280,7 +280,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 			},
 		},
 		"successful configuration": {
-			secret: secrettypes.NewAsymmetricKeySecret( "kid1", "kid1",
+			secret: secrettypes.NewAsymmetricKeySecret("kid1", "kid1",
 				privateKey, []*x509.Certificate{leafCert, intermediateCert, rootCA.Certificate}),
 			components: []string{"@method"},
 			assert: func(t *testing.T, err error, sig httpsig.Signer) {
@@ -350,11 +350,11 @@ func TestToHTTPSigKey(t *testing.T) {
 		err    error
 	}{
 		"rsa1024": {
-			secret: secrettypes.NewAsymmetricKeySecret( "rsa", "rsa", rsa1024, nil),
+			secret: secrettypes.NewAsymmetricKeySecret("rsa", "rsa", rsa1024, nil),
 			err:    errUnsupportedKeySize,
 		},
 		"rsa2048": {
-			secret: secrettypes.NewAsymmetricKeySecret( "rsa", "rsa", rsa2048, nil),
+			secret: secrettypes.NewAsymmetricKeySecret("rsa", "rsa", rsa2048, nil),
 			alg:    httpsig.RsaPssSha256,
 		},
 		"rsa3072": {
@@ -370,23 +370,23 @@ func TestToHTTPSigKey(t *testing.T) {
 			err:    errUnsupportedKeySize,
 		},
 		"p256": {
-			secret: secrettypes.NewAsymmetricKeySecret( "ecdsa", "ecdsa", ecdsa256, nil),
+			secret: secrettypes.NewAsymmetricKeySecret("ecdsa", "ecdsa", ecdsa256, nil),
 			alg:    httpsig.EcdsaP256Sha256,
 		},
 		"p384": {
-			secret: secrettypes.NewAsymmetricKeySecret( "ecdsa", "ecdsa", ecdsa384, nil),
+			secret: secrettypes.NewAsymmetricKeySecret("ecdsa", "ecdsa", ecdsa384, nil),
 			alg:    httpsig.EcdsaP384Sha384,
 		},
 		"p521": {
-			secret: secrettypes.NewAsymmetricKeySecret( "ecdsa", "ecdsa", ecdsa521, nil),
+			secret: secrettypes.NewAsymmetricKeySecret("ecdsa", "ecdsa", ecdsa521, nil),
 			alg:    httpsig.EcdsaP521Sha512,
 		},
 		"ed25519": {
-			secret: secrettypes.NewAsymmetricKeySecret( "ed25519", "ed25519", ed25519PrKey, nil),
+			secret: secrettypes.NewAsymmetricKeySecret("ed25519", "ed25519", ed25519PrKey, nil),
 			alg:    httpsig.Ed25519,
 		},
 		"unsupported": {
-			secret: secrettypes.NewAsymmetricKeySecret( "unsupported", "unsupported", unsupportedSigner{}, nil),
+			secret: secrettypes.NewAsymmetricKeySecret("unsupported", "unsupported", unsupportedSigner{}, nil),
 			err:    errUnsupportedAlgorithm,
 		},
 	} {

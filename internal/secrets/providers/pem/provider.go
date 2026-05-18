@@ -85,7 +85,7 @@ func newProvider(args types.ProviderArgs) (types.Provider, error) {
 }
 
 func (p *provider) Dependencies() []types.Reference { return nil }
-func (p *provider) Type() string { return ProviderType }
+func (p *provider) Type() string                    { return ProviderType }
 
 func (p *provider) GetSecret(_ context.Context, selector types.Selector) (types.Secret, error) {
 	p.mu.RLock()

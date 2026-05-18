@@ -676,14 +676,14 @@ func (s *RegistryTestSuite) TestMetricsCollection() {
 			events: []KeyInfo{
 				{
 					Key: types.NewAsymmetricKeySecret(
-						 "kid-m-2", "kid-m-2",
+						"kid-m-2", "kid-m-2",
 						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate, s.ee1.Certificate},
 					),
 					Exportable: true,
 				},
 				{
 					Key: types.NewAsymmetricKeySecret(
-						 "kid-m-3", "kid-m-3",
+						"kid-m-3", "kid-m-3",
 						s.ee2.PrivKey, []*x509.Certificate{s.ee2.Certificate, s.intCA1.Certificate, s.rootCA1.Certificate, s.ee1.Certificate},
 					),
 					Exportable: true,
@@ -703,14 +703,14 @@ func (s *RegistryTestSuite) TestMetricsCollection() {
 			events: []KeyInfo{
 				{
 					Key: types.NewAsymmetricKeySecret(
-						 "kid-m-4", "kid-m-4",
+						"kid-m-4", "kid-m-4",
 						s.ee1.PrivKey, []*x509.Certificate{s.ee1.Certificate},
 					),
 					Exportable: false,
 				},
 				{
 					Key: types.NewAsymmetricKeySecret(
-						 "kid-m-4", "kid-m-4",
+						"kid-m-4", "kid-m-4",
 						s.ee2.PrivKey, []*x509.Certificate{s.ee2.Certificate},
 					),
 					Exportable: false,
@@ -728,7 +728,7 @@ func (s *RegistryTestSuite) TestMetricsCollection() {
 			events: []KeyInfo{
 				{
 					Key: types.NewAsymmetricKeySecret(
-						 "kid-m-5", "kid-m-5",
+						"kid-m-5", "kid-m-5",
 						s.ee4.PrivKey, []*x509.Certificate{s.ee4.Certificate},
 					),
 					Exportable: false,
