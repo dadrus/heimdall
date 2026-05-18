@@ -595,7 +595,7 @@ error_signaling:
 				Return(func() {}, nil)
 			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
 				Maybe().
-				Return(types2.NewCredentials("foo", "bar", map[string]any{
+				Return(types2.NewCredentials( "bar", map[string]any{
 					"client_id":     "bar",
 					"client_secret": "baz",
 				}), nil)
@@ -1135,10 +1135,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	ee3PrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
-	keyOnlyEntry := types2.NewAsymmetricKeySecret("test", "test", kidKeyWithoutCert, ee2PrivKey, nil)
-	keyAndCertEntry := types2.NewAsymmetricKeySecret("test", "test", kidKeyWithCert, ee1PrivKey,
+	keyOnlyEntry := types2.NewAsymmetricKeySecret( "test", kidKeyWithoutCert, ee2PrivKey, nil)
+	keyAndCertEntry := types2.NewAsymmetricKeySecret( "test", kidKeyWithCert, ee1PrivKey,
 		[]*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate})
-	keyRSAEntry := types2.NewAsymmetricKeySecret("test", "test", kidRSAKey, ee3PrivKey, nil)
+	keyRSAEntry := types2.NewAsymmetricKeySecret( "test", kidRSAKey, ee3PrivKey, nil)
 
 	jwksWithDuplicateEntries, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
 		mustToJWK(t, keyOnlyEntry), mustToJWK(t, keyOnlyEntry),

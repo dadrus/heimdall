@@ -97,7 +97,7 @@ func TestCreateJOSESigner(t *testing.T) {
 		assert func(t *testing.T, err error, signer jose.Signer)
 	}{
 		"secret not suitable for signing": {
-			secret: secrettypes.NewStringSecret("foo", "bar", "baz"),
+			secret: secrettypes.NewStringSecret( "bar", "baz"),
 			assert: func(t *testing.T, err error, _ jose.Signer) {
 				t.Helper()
 
@@ -107,7 +107,7 @@ func TestCreateJOSESigner(t *testing.T) {
 			},
 		},
 		"certificate validation error": {
-			secret: secrettypes.NewAsymmetricKeySecret("signer", "kid1", "kid1",
+			secret: secrettypes.NewAsymmetricKeySecret("kid1", "kid1",
 				privateKey, []*x509.Certificate{leafCert, rootCA.Certificate}),
 			assert: func(t *testing.T, err error, _ jose.Signer) {
 				t.Helper()
@@ -117,7 +117,7 @@ func TestCreateJOSESigner(t *testing.T) {
 			},
 		},
 		"unsupported algorithm": {
-			secret: secrettypes.NewAsymmetricKeySecret("signer", "unsupported", "unsupported",
+			secret: secrettypes.NewAsymmetricKeySecret( "unsupported", "unsupported",
 				unsupportedSigner{}, nil),
 			assert: func(t *testing.T, err error, _ jose.Signer) {
 				t.Helper()
@@ -128,7 +128,7 @@ func TestCreateJOSESigner(t *testing.T) {
 			},
 		},
 		"successful configuration": {
-			secret: secrettypes.NewAsymmetricKeySecret("signer", "kid1", "kid1",
+			secret: secrettypes.NewAsymmetricKeySecret( "kid1", "kid1",
 				privateKey, []*x509.Certificate{leafCert, intermediateCert, rootCA.Certificate}),
 			assert: func(t *testing.T, err error, sig jose.Signer) {
 				t.Helper()
@@ -182,7 +182,7 @@ func TestNewJWTSigner(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(
-					secrettypes.NewAsymmetricKeySecret("foo", "bar", "baz", privKey, nil),
+					secrettypes.NewAsymmetricKeySecret( "bar", "baz", privKey, nil),
 					nil,
 				)
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
@@ -223,7 +223,7 @@ func TestJWTSignerSign(t *testing.T) {
 	sm := secretsmocks.NewManagerMock(t)
 	sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
 		Return(
-			secrettypes.NewAsymmetricKeySecret("foo", "bar", "baz", privKey, nil),
+			secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil),
 			nil,
 		)
 	sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)

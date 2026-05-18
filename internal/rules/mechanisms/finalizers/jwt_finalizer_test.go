@@ -111,7 +111,7 @@ signer:
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
 					Return(
-						secrettypes.NewAsymmetricKeySecret("foo", "bar", "kid-1", privKey, nil),
+						secrettypes.NewAsymmetricKeySecret( "bar", "kid-1", privKey, nil),
 						nil,
 					)
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
@@ -153,7 +153,7 @@ values:
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
 					Return(
-						secrettypes.NewAsymmetricKeySecret("foo", "bar", "kid-1", privKey, nil),
+						secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil),
 						nil,
 					)
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
@@ -212,7 +212,7 @@ func TestJWTFinalizerCreateStep(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	secret := secrettypes.NewAsymmetricKeySecret("foo", "bar", "baz", privKey, nil)
+	secret := secrettypes.NewAsymmetricKeySecret( "bar", "baz", privKey, nil)
 
 	const expectedTTL = 5 * time.Second
 
@@ -504,7 +504,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	secret := secrettypes.NewAsymmetricKeySecret("foo", "bar", "baz", privKey, nil)
+	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
 	for uc, tc := range map[string]struct {
 		config         []byte

@@ -247,5 +247,5 @@ func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {
 		Build()
 	require.NoError(t, err)
 
-	return secrettypes.NewAsymmetricKeySecret("listener", "tls", "key1", privKey, []*x509.Certificate{cert})
+	return secrettypes.NewAsymmetricKeySecret("tls", "key1", privKey, []*x509.Certificate{cert})
 }

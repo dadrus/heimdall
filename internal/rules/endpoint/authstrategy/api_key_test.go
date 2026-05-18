@@ -63,7 +63,7 @@ func TestAPIKeyInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(types.NewSymmetricKeySecret("foo", "bar", "baz", []byte{}), nil)
+					Return(types.NewSymmetricKeySecret("bar", "baz", []byte{}), nil)
 			},
 			assert: func(t *testing.T, err error, ak *APIKey) {
 				t.Helper()
@@ -83,7 +83,7 @@ func TestAPIKeyInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(types.NewStringSecret( "bar", "baz"), nil)
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 			},
 			assert: func(t *testing.T, err error, ak *APIKey) {
@@ -161,7 +161,7 @@ func TestApiKeyApply(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(types.NewStringSecret("bar", "baz"), nil)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -177,7 +177,7 @@ func TestApiKeyApply(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(types.NewStringSecret( "bar", "baz"), nil)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -196,7 +196,7 @@ func TestApiKeyApply(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(types.NewStringSecret( "bar", "baz"), nil)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -216,7 +216,7 @@ func TestApiKeyApply(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(types.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(types.NewStringSecret("bar", "baz"), nil)
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()

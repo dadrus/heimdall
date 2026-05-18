@@ -81,7 +81,7 @@ func TestCreateResolver(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials("foo", "bar", map[string]any{
+					Return(types2.NewCredentials("bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -124,7 +124,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials("foo", "bar", map[string]any{
+					Return(types2.NewCredentials( "bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -159,7 +159,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials("foo", "bar", map[string]any{
+					Return(types2.NewCredentials("bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -194,7 +194,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials("foo", "bar", map[string]any{
+					Return(types2.NewCredentials("bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -262,7 +262,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials("foo", "bar", map[string]any{
+					Return(types2.NewCredentials( "bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -322,7 +322,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types2.NewCredentials("foo", "bar", map[string]any{
+					Return(types2.NewCredentials("bar", map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -351,12 +351,12 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().Subscribe(ref2, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
-					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+					Return(types2.NewCredentials(ref1.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref2).
-					Return(types2.NewCredentials(ref2.Source, ref2.Selector, map[string]any{
+					Return(types2.NewCredentials(ref2.Selector, map[string]any{
 						"user_id":  "baz",
 						"password": "bar",
 					}), nil)
@@ -395,7 +395,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 
 				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
-					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+					Return(types2.NewCredentials(ref1.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -424,7 +424,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 
 				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
-					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+					Return(types2.NewCredentials(ref1.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -449,7 +449,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 
 				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
-					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+					Return(types2.NewCredentials(ref1.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -489,7 +489,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 
 				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
-					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+					Return(types2.NewCredentials(ref1.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -536,7 +536,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 
 				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
-					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+					Return(types2.NewCredentials(ref1.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -614,7 +614,7 @@ func TestBasicAuthAuthenticatorCleanUp(t *testing.T) {
 
 				sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref).
-					Return(types2.NewCredentials(ref.Source, ref.Selector, map[string]any{
+					Return(types2.NewCredentials(ref.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -641,7 +641,7 @@ func TestBasicAuthAuthenticatorCleanUp(t *testing.T) {
 
 				sm.EXPECT().Subscribe(ref1, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref1).
-					Return(types2.NewCredentials(ref1.Source, ref1.Selector, map[string]any{
+					Return(types2.NewCredentials(ref1.Selector, map[string]any{
 						"user_id":  "bar",
 						"password": "baz",
 					}), nil)
@@ -649,7 +649,7 @@ func TestBasicAuthAuthenticatorCleanUp(t *testing.T) {
 				sm.EXPECT().Subscribe(ref2, mock.Anything).
 					Return(func() { unsubscribed = true }, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, ref2).
-					Return(types2.NewCredentials(ref2.Source, ref2.Selector, map[string]any{
+					Return(types2.NewCredentials(ref2.Selector, map[string]any{
 						"user_id":  "baz",
 						"password": "bar",
 					}), nil)
@@ -892,7 +892,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 			sm := secretsmocks.NewManagerMock(t)
 			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-				Return(types2.NewCredentials("foo", "bar", map[string]any{
+				Return(types2.NewCredentials("bar", map[string]any{
 					"user_id":  "bar",
 					"password": "baz",
 				}), nil)
@@ -978,7 +978,7 @@ func TestBasicAuthAuthenticatorDecorateErrorResponse(t *testing.T) {
 			sm := secretsmocks.NewManagerMock(t)
 			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-				Return(types2.NewCredentials("foo", "bar", map[string]any{
+				Return(types2.NewCredentials("bar", map[string]any{
 					"user_id":  "bar",
 					"password": "baz",
 				}), nil)

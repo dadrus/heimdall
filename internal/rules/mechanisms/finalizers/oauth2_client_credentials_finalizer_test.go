@@ -52,7 +52,7 @@ func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 	t.Parallel()
 
 	ref := secrets.InternalRef("oauth", "client-creds")
-	creds := secrettypes.NewCredentials("oauth", ref.Selector, map[string]any{
+	creds := secrettypes.NewCredentials(ref.Selector, map[string]any{
 		"client_id":     "foo",
 		"client_secret": "bar",
 	})
@@ -230,7 +230,7 @@ credentials:
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).Return(
-					secrettypes.NewCredentials("foo", "bar", map[string]any{
+					secrettypes.NewCredentials("bar", map[string]any{
 						"foo":           "foo",
 						"client_secret": "bar",
 					}),
@@ -498,7 +498,7 @@ cache_ttl: 11s
 
 			sm := secretsmocks.NewManagerMock(t)
 			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-				Return(secrettypes.NewCredentials("foo", "bar", map[string]any{
+				Return(secrettypes.NewCredentials("bar", map[string]any{
 					"client_id":     "foo",
 					"client_secret": "bar",
 				}), nil)
@@ -707,7 +707,7 @@ cache_ttl: 3m
 
 			sm := secretsmocks.NewManagerMock(t)
 			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-				Return(secrettypes.NewCredentials("foo", "bar", map[string]any{
+				Return(secrettypes.NewCredentials("bar", map[string]any{
 					"client_id":     "bar",
 					"client_secret": "baz",
 				}), nil)

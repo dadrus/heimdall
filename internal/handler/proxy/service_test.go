@@ -724,7 +724,6 @@ func TestProxyService(t *testing.T) {
 				).Return(backend, nil)
 
 				secret := secrettypes.NewAsymmetricKeySecret(
-					"proxy",
 					"server",
 					"proxy",
 					proxyKey,
@@ -840,7 +839,6 @@ func TestProxyService(t *testing.T) {
 				).Return(backend, nil)
 
 				secret := secrettypes.NewAsymmetricKeySecret(
-					"proxy",
 					"server",
 					"proxy",
 					proxyKey,

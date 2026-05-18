@@ -125,7 +125,6 @@ func TestControllerLifecycle(t *testing.T) {
 				t.Helper()
 
 				secret := secrettypes.NewAsymmetricKeySecret(
-					"webhooks",
 					"server",
 					"server",
 					serverKey,
@@ -200,7 +199,6 @@ func TestControllerLifecycle(t *testing.T) {
 				t.Helper()
 
 				secret := secrettypes.NewAsymmetricKeySecret(
-					"webhooks",
 					"server",
 					"server",
 					serverKey,

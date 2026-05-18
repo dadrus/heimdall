@@ -98,9 +98,9 @@ func (suite *ServiceTestSuite) SetupSuite() {
 	suite.Require().NoError(err)
 	suite.ee2 = &testsupport.EndEntity{PrivKey: ee2PrivKey}
 
-	suite.secret1 = types.NewAsymmetricKeySecret("foo", "bar", "foo", ee1PrivKey,
+	suite.secret1 = types.NewAsymmetricKeySecret( "bar", "foo", ee1PrivKey,
 		[]*x509.Certificate{ee1cert, intCA1Cert, suite.rootCA1.Certificate})
-	suite.secret2 = types.NewAsymmetricKeySecret("foo", "bar", "bar", ee2PrivKey, nil)
+	suite.secret2 = types.NewAsymmetricKeySecret( "bar", "bar", ee2PrivKey, nil)
 }
 
 func (suite *ServiceTestSuite) SetupTest() {

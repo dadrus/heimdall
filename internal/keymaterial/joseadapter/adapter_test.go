@@ -62,7 +62,7 @@ func TestToJWK(t *testing.T) {
 			},
 		},
 		"unsupported algorithm": {
-			secret: types.NewAsymmetricKeySecret("test", "test", "1", unsupportedSigner{key: ed25519PrivKey}, nil),
+			secret: types.NewAsymmetricKeySecret("test", "1", unsupportedSigner{key: ed25519PrivKey}, nil),
 			assert: func(t *testing.T, err error, _ jose.JSONWebKey) {
 				t.Helper()
 
@@ -70,7 +70,7 @@ func TestToJWK(t *testing.T) {
 			},
 		},
 		"unsupported rsa size": {
-			secret: types.NewAsymmetricKeySecret("test", "test", "1", rsaSmallPrivKey, nil),
+			secret: types.NewAsymmetricKeySecret("test", "1", rsaSmallPrivKey, nil),
 			assert: func(t *testing.T, err error, _ jose.JSONWebKey) {
 				t.Helper()
 
@@ -78,7 +78,7 @@ func TestToJWK(t *testing.T) {
 			},
 		},
 		"rsa from private key": {
-			secret: types.NewAsymmetricKeySecret("test", "test", "kid-rsa", rsaPrivKey, nil),
+			secret: types.NewAsymmetricKeySecret("test", "kid-rsa", rsaPrivKey, nil),
 			assert: func(t *testing.T, err error, jwk jose.JSONWebKey) {
 				t.Helper()
 
@@ -91,7 +91,7 @@ func TestToJWK(t *testing.T) {
 			},
 		},
 		"ecdsa from private key": {
-			secret: types.NewAsymmetricKeySecret("test", "test", "kid-ecdsa", ecdsaPrivKey, nil),
+			secret: types.NewAsymmetricKeySecret("test", "kid-ecdsa", ecdsaPrivKey, nil),
 			assert: func(t *testing.T, err error, jwk jose.JSONWebKey) {
 				t.Helper()
 

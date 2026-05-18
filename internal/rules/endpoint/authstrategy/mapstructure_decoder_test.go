@@ -71,7 +71,7 @@ auth:
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
 					Return(
-						secrettypes.NewCredentials("foo", "bar", map[string]any{
+						secrettypes.NewCredentials("bar", map[string]any{
 							"user_id":  "baz",
 							"password": "zab",
 						}),
@@ -200,7 +200,7 @@ auth:
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
 					Return(func() {}, nil)
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(secrettypes.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(secrettypes.NewStringSecret("bar", "baz"), nil)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -250,7 +250,7 @@ auth:
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
 					Return(func() {}, nil)
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(secrettypes.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(secrettypes.NewStringSecret("bar", "baz"), nil)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -280,7 +280,7 @@ auth:
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
 					Return(func() {}, nil)
 				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(secrettypes.NewStringSecret("foo", "bar", "baz"), nil)
+					Return(secrettypes.NewStringSecret("bar", "baz"), nil)
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -440,7 +440,7 @@ auth:
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
 					Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).Return(
-					secrettypes.NewCredentials("foo", "bar", map[string]any{
+					secrettypes.NewCredentials("bar", map[string]any{
 						"client_id":     "foo",
 						"client_secret": "bar",
 					}), nil)
@@ -503,7 +503,7 @@ auth:
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
 					Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).Return(
-					secrettypes.NewCredentials("foo", "bar", map[string]any{
+					secrettypes.NewCredentials("bar", map[string]any{
 						"client_id":     "foo",
 						"client_secret": "bar",
 					}), nil)
@@ -650,7 +650,7 @@ func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	secret := secrettypes.NewAsymmetricKeySecret("foo", "bar", "kid-1", privKey, nil)
+	secret := secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil)
 
 	type Type struct {
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`

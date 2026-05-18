@@ -177,7 +177,7 @@ func (s *HTTPMessageSignatures) updateHash(secret secrets.AsymmetricKeySecret) {
 	}
 
 	hash.Write(stringx.ToBytes(s.Signer.Name))
-	hash.Write(stringx.ToBytes(secret.Source()))
+	hash.Write(stringx.ToBytes(secret.KeyID()))
 	hash.Write(stringx.ToBytes(secret.Selector()))
 	hash.Write(stringx.ToBytes(string(secret.Kind())))
 

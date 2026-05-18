@@ -62,7 +62,7 @@ func TestBasicAuthInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("foo", "bar", map[string]any{
+					Return(types.NewCredentials( "bar", map[string]any{
 						"foo": "baz",
 						"bar": "foo",
 					}), nil)
@@ -85,7 +85,7 @@ func TestBasicAuthInit(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("foo", "bar", map[string]any{
+					Return(types.NewCredentials( "bar", map[string]any{
 						"user_id":  "baz",
 						"password": "foo",
 					}), nil)
@@ -156,7 +156,7 @@ func TestBasicAuthApply(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("foo", "bar", map[string]any{
+					Return(types.NewCredentials( "bar", map[string]any{
 						"user_id":  "baz",
 						"password": "foo",
 					}), nil)

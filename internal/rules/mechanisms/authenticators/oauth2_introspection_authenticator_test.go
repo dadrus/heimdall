@@ -452,7 +452,7 @@ error_signaling:
 				Return(func() {}, nil)
 			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
 				Maybe().
-				Return(types2.NewCredentials("foo", "bar", map[string]any{
+				Return(types2.NewCredentials( "bar", map[string]any{
 					"client_id":     "bar",
 					"client_secret": "baz",
 				}), nil)

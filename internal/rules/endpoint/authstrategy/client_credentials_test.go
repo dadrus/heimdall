@@ -72,7 +72,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 				t.Helper()
 
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("foo", "bar", map[string]any{
+					Return(types.NewCredentials( "bar", map[string]any{
 						"foo": "baz",
 						"bar": "foo",
 					}), nil)
@@ -94,7 +94,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("foo", "bar", map[string]any{
+					Return(types.NewCredentials("bar", map[string]any{
 						"client_id":     "baz",
 						"client_secret": "foo",
 					}), nil)
@@ -131,7 +131,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 
 				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
 				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("foo", "bar", map[string]any{
+					Return(types.NewCredentials( "bar", map[string]any{
 						"client_id":     "baz",
 						"client_secret": "foo",
 					}), nil)
@@ -354,7 +354,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			sm := secretsmock.NewManagerMock(t)
 			sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() {}, nil)
 			sm.EXPECT().ResolveCredentials(mock.Anything, ref).
-				Return(types.NewCredentials("foo", "bar", map[string]any{
+				Return(types.NewCredentials("bar", map[string]any{
 					"client_id":     "baz",
 					"client_secret": "foo",
 				}), nil)

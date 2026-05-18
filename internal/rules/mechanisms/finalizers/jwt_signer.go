@@ -140,9 +140,9 @@ func (s *jwtSigner) updateHash(secret secrets.AsymmetricKeySecret) {
 	hash := sha256.New()
 	hash.Write(stringx.ToBytes(s.iss))
 	hash.Write(ttlBytes[:])
-	hash.Write(stringx.ToBytes(secret.Source()))
 	hash.Write(stringx.ToBytes(secret.Selector()))
 	hash.Write(stringx.ToBytes(string(secret.Kind())))
+	hash.Write(stringx.ToBytes(secret.KeyID()))
 
 	s.hash.Store(hash.Sum(nil))
 }

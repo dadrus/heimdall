@@ -305,7 +305,7 @@ func TestToTLSCertificate(t *testing.T) {
 		assert func(t *testing.T, err error, cert *tls.Certificate)
 	}{
 		"fails for wrong secret type": {
-			secret: types.NewStringSecret("tls", "server", "key1"),
+			secret: types.NewStringSecret("server", "key1"),
 			assert: func(t *testing.T, err error, _ *tls.Certificate) {
 				t.Helper()
 
@@ -314,7 +314,7 @@ func TestToTLSCertificate(t *testing.T) {
 			},
 		},
 		"fails without certificate chain": {
-			secret: types.NewAsymmetricKeySecret("tls", "server", "key1", key, nil),
+			secret: types.NewAsymmetricKeySecret("server", "key1", key, nil),
 			assert: func(t *testing.T, err error, _ *tls.Certificate) {
 				t.Helper()
 
@@ -324,7 +324,6 @@ func TestToTLSCertificate(t *testing.T) {
 		},
 		"creates tls certificate from full chain": {
 			secret: types.NewAsymmetricKeySecret(
-				"tls",
 				"server",
 				"key1",
 				key,
@@ -372,5 +371,5 @@ func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {
 	).Build()
 	require.NoError(t, err)
 
-	return types.NewAsymmetricKeySecret("tls", "server", "key1", key, []*x509.Certificate{cert})
+	return types.NewAsymmetricKeySecret("server", "key1", key, []*x509.Certificate{cert})
 }
