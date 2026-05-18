@@ -69,10 +69,7 @@ func newManagerWithProviderMocks(t *testing.T, providers ...providerSetup) *mana
 	mgr, err := NewManager(cfg, zerolog.Nop(), nil)
 	require.NoError(t, err)
 
-	impl, ok := mgr.(*manager)
-	require.True(t, ok)
-
-	return impl
+	return mgr
 }
 
 func uniqueProviderType(t *testing.T, sourceName string) string {

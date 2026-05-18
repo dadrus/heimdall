@@ -113,5 +113,5 @@ func toStringSecret(secret secrets.Secret) (string, error) {
 		return "", secrets.ErrSecretKindMismatch
 	}
 
-	return ss.String(), nil
+	return ss.Value(), nil
 }

@@ -77,7 +77,7 @@ func NewManager(
 	cfg *config.Configuration,
 	logger zerolog.Logger,
 	df encoding.DecoderFactory,
-) (Manager, error) {
+) (*manager, error) {
 	dispatcher, err := newDispatcher(logger)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
