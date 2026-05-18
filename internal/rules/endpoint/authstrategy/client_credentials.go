@@ -29,7 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/cache"
+	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -46,7 +46,7 @@ type OAuth2ClientCredentials struct {
 	TTL         *time.Duration               `mapstructure:"cache_ttl"`
 	Header      *headerConfig                `mapstructure:"header"`
 
-	resolver *cache.CredentialsResolver[clientcredentials.Config]
+	resolver *informer.CredentialsInformer[clientcredentials.Config]
 	hash     atomic.Value
 }
 
@@ -91,7 +91,7 @@ func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) 
 		c.AuthMethod = clientcredentials.AuthMethodBasicAuth
 	}
 
-	c.resolver = &cache.CredentialsResolver[clientcredentials.Config]{
+	c.resolver = &informer.CredentialsInformer[clientcredentials.Config]{
 		Manager:   appCtx.SecretsManager(),
 		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
 		Converter: c.createClientCredentialsConfig,

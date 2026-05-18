@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/cache"
+	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -38,7 +38,7 @@ type APIKey struct {
 	Name   string        `mapstructure:"name"   validate:"required"`
 	Secret config.Secret `mapstructure:"secret" validate:"required"`
 
-	resolver *cache.SecretResolver[string]
+	resolver *informer.SecretInformer[string]
 	hash     atomic.Value
 }
 
@@ -80,7 +80,7 @@ func (c *APIKey) Hash() []byte {
 }
 
 func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
-	c.resolver = &cache.SecretResolver[string]{
+	c.resolver = &informer.SecretInformer[string]{
 		Manager:   appCtx.SecretsManager(),
 		Reference: secrets.InternalRef(c.Secret.Source, c.Secret.Selector),
 		Converter: toStringSecret,

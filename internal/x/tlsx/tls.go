@@ -9,7 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/cache"
+	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -20,7 +20,7 @@ type compatibilityChecker interface {
 }
 
 func getCertificate(
-	w *cache.SecretResolver[*tls.Certificate],
+	w *informer.SecretInformer[*tls.Certificate],
 	cc compatibilityChecker,
 ) (*tls.Certificate, error) {
 	cert, ok := w.Get()
@@ -84,8 +84,8 @@ func newCertificateResolver(
 	tlsCfg *config.TLS,
 	sm secrets.Manager,
 	ko keyregistry.KeyObserver,
-) (*cache.SecretResolver[*tls.Certificate], error) {
-	resolver := &cache.SecretResolver[*tls.Certificate]{
+) (*informer.SecretInformer[*tls.Certificate], error) {
+	resolver := &informer.SecretInformer[*tls.Certificate]{
 		Manager:   sm,
 		Reference: secrets.InternalRef(tlsCfg.Secret.Source, tlsCfg.Secret.Selector),
 		Converter: toTLSCertificate,

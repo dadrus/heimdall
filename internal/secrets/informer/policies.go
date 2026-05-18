@@ -1,4 +1,4 @@
-package cache
+package informer
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 )
 
 type MissingSecretPolicy[S any, T any] interface {
-	HandleMissingSecret(ctx context.Context, cch *Resolver[S, T], err error) error
+	HandleMissingSecret(ctx context.Context, cch *Informer[S, T], err error) error
 }
 
 type (
@@ -16,7 +16,7 @@ type (
 	KeepPreviousCredentials[T any] = KeepPrevious[secrets.Credentials, T]
 )
 
-func (KeepPrevious[S, T]) HandleMissingSecret(context.Context, *Resolver[S, T], error) error {
+func (KeepPrevious[S, T]) HandleMissingSecret(context.Context, *Informer[S, T], error) error {
 	return nil
 }
 
@@ -26,7 +26,7 @@ type (
 	ClearCredentials[T any] = Clear[secrets.Credentials, T]
 )
 
-func (Clear[S, T]) HandleMissingSecret(_ context.Context, w *Resolver[S, T], _ error) error {
+func (Clear[S, T]) HandleMissingSecret(_ context.Context, w *Informer[S, T], _ error) error {
 	w.clear()
 
 	return nil
@@ -38,6 +38,6 @@ type (
 	FailCredentials[T any] = Fail[secrets.Credentials, T]
 )
 
-func (Fail[S, T]) HandleMissingSecret(_ context.Context, _ *Resolver[S, T], err error) error {
+func (Fail[S, T]) HandleMissingSecret(_ context.Context, _ *Informer[S, T], err error) error {
 	return err
 }

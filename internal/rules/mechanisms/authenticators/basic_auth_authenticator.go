@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/cache"
+	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -107,7 +107,7 @@ type basicAuthAuthenticator struct {
 	id                    string
 	principalName         string
 	app                   app.Context
-	resolver              *cache.CredentialsResolver[credentialsChecker]
+	resolver              *informer.CredentialsInformer[credentialsChecker]
 	ownsResolver          bool
 	realm                 string
 	errorSignalingEnabled bool
@@ -161,7 +161,7 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 func createResolver(
 	app app.Context,
 	credentials *config.Secret,
-) (*cache.CredentialsResolver[credentialsChecker], error) {
+) (*informer.CredentialsInformer[credentialsChecker], error) {
 	if credentials == nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
@@ -169,7 +169,7 @@ func createResolver(
 		)
 	}
 
-	resolver := &cache.CredentialsResolver[credentialsChecker]{
+	resolver := &informer.CredentialsInformer[credentialsChecker]{
 		Manager:   app.SecretsManager(),
 		Reference: secrets.InternalRef(credentials.Source, credentials.Selector),
 		Converter: toCredentialsChecker,

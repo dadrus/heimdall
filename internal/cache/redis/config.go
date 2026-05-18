@@ -31,7 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/cache"
+	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
@@ -111,16 +111,16 @@ func (c baseConfig) tlsConfig(appCtx app.Context) (*tls.Config, error) {
 
 func (c baseConfig) credentialsResolver(
 	appCtx app.Context,
-) (*cache.CredentialsResolver[rueidis.AuthCredentials], error) {
+) (*informer.CredentialsInformer[rueidis.AuthCredentials], error) {
 	if c.Credentials == nil {
 		return nil, nil //nolint:nilnil
 	}
 
-	cr := &cache.CredentialsResolver[rueidis.AuthCredentials]{
+	cr := &informer.CredentialsInformer[rueidis.AuthCredentials]{
 		Manager:   appCtx.SecretsManager(),
 		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
 		Converter: toRedisCredentials,
-		MissingSecretPolicy: cache.KeepPrevious[
+		MissingSecretPolicy: informer.KeepPrevious[
 			secrets.Credentials,
 			rueidis.AuthCredentials,
 		]{},
@@ -153,7 +153,7 @@ func toRedisCredentials(creds secrets.Credentials) (rueidis.AuthCredentials, err
 }
 
 func authCredentials(
-	cr *cache.CredentialsResolver[rueidis.AuthCredentials],
+	cr *informer.CredentialsInformer[rueidis.AuthCredentials],
 ) func(credentialsContext rueidis.AuthCredentialsContext) (rueidis.AuthCredentials, error) {
 	return func(_ rueidis.AuthCredentialsContext) (rueidis.AuthCredentials, error) {
 		if cr == nil {

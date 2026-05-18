@@ -37,7 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/cache"
+	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -60,7 +60,7 @@ type HTTPMessageSignatures struct {
 	TTL        *time.Duration `mapstructure:"ttl"`
 	Label      string         `mapstructure:"label"`
 
-	resolver *cache.SecretResolver[httpsig.Signer]
+	resolver *informer.SecretInformer[httpsig.Signer]
 	hash     atomic.Value
 }
 
@@ -95,7 +95,7 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 }
 
 func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) error {
-	s.resolver = &cache.SecretResolver[httpsig.Signer]{
+	s.resolver = &informer.SecretInformer[httpsig.Signer]{
 		Manager:   appCtx.SecretsManager(),
 		Reference: secrets.InternalRef(s.Signer.Secret.Source, s.Signer.Secret.Selector),
 		Converter: s.createSigner,

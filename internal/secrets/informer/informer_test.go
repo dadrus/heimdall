@@ -1,4 +1,4 @@
-package cache
+package informer
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func TestSecretResolverStart(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
-		assert func(t *testing.T, err error, resolver *SecretResolver[string])
+		assert func(t *testing.T, err error, resolver *SecretInformer[string])
 	}{
 		"starts successfully": {
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
@@ -31,7 +31,7 @@ func TestSecretResolverStart(t *testing.T) {
 				sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(secret, nil)
 				sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() {}, nil)
 			},
-			assert: func(t *testing.T, err error, resolver *SecretResolver[string]) {
+			assert: func(t *testing.T, err error, resolver *SecretInformer[string]) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestSecretResolverStart(t *testing.T) {
 
 				sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(nil, secrets.ErrSecretNotFound)
 			},
-			assert: func(t *testing.T, err error, resolver *SecretResolver[string]) {
+			assert: func(t *testing.T, err error, resolver *SecretInformer[string]) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -65,7 +65,7 @@ func TestSecretResolverStart(t *testing.T) {
 				sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(secret, nil)
 				sm.EXPECT().Subscribe(ref, mock.Anything).Return(nil, assert.AnError)
 			},
-			assert: func(t *testing.T, err error, resolver *SecretResolver[string]) {
+			assert: func(t *testing.T, err error, resolver *SecretInformer[string]) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -83,7 +83,7 @@ func TestSecretResolverStart(t *testing.T) {
 			sm := secretsmocks.NewManagerMock(t)
 			tc.setup(t, sm)
 
-			resolver := &SecretResolver[string]{
+			resolver := &SecretInformer[string]{
 				Manager:   sm,
 				Reference: ref,
 				Converter: func(secret secrets.Secret) (string, error) {
@@ -112,7 +112,7 @@ func TestSecretResolverReload(t *testing.T) {
 		setup               func(t *testing.T, sm *secretsmocks.ManagerMock) func(context.Context) error
 		converter           Converter[secrets.Secret, string]
 		missingSecretPolicy MissingSecretPolicy[secrets.Secret, string]
-		assert              func(t *testing.T, err error, resolver *SecretResolver[string], updates []string, reported []error)
+		assert              func(t *testing.T, err error, resolver *SecretInformer[string], updates []string, reported []error)
 	}{
 		"updates cached value on change": {
 			converter: func(secret secrets.Secret) (string, error) {
@@ -156,7 +156,7 @@ func TestSecretResolverReload(t *testing.T) {
 					return callback(ctx)
 				}
 			},
-			assert: func(t *testing.T, err error, resolver *SecretResolver[string], updates []string, reported []error) {
+			assert: func(t *testing.T, err error, resolver *SecretInformer[string], updates []string, reported []error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -214,7 +214,7 @@ func TestSecretResolverReload(t *testing.T) {
 					return callback(ctx)
 				}
 			},
-			assert: func(t *testing.T, err error, resolver *SecretResolver[string], updates []string, reported []error) {
+			assert: func(t *testing.T, err error, resolver *SecretInformer[string], updates []string, reported []error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -270,7 +270,7 @@ func TestSecretResolverReload(t *testing.T) {
 					return callback(ctx)
 				}
 			},
-			assert: func(t *testing.T, err error, resolver *SecretResolver[string], updates []string, reported []error) {
+			assert: func(t *testing.T, err error, resolver *SecretInformer[string], updates []string, reported []error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -326,7 +326,7 @@ func TestSecretResolverReload(t *testing.T) {
 					return callback(ctx)
 				}
 			},
-			assert: func(t *testing.T, err error, resolver *SecretResolver[string], updates []string, reported []error) {
+			assert: func(t *testing.T, err error, resolver *SecretInformer[string], updates []string, reported []error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -371,7 +371,7 @@ func TestSecretResolverReload(t *testing.T) {
 
 			reload := tc.setup(t, sm)
 
-			resolver := &SecretResolver[string]{
+			resolver := &SecretInformer[string]{
 				Manager:             sm,
 				Reference:           ref,
 				Converter:           converter,
@@ -405,7 +405,7 @@ func TestSecretResolverStop(t *testing.T) {
 	sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(secret, nil)
 	sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() { stopped = true }, nil)
 
-	resolver := &SecretResolver[string]{
+	resolver := &SecretInformer[string]{
 		Manager:   sm,
 		Reference: ref,
 		Converter: func(secret secrets.Secret) (string, error) {
@@ -439,14 +439,14 @@ func TestResolverStartPanics(t *testing.T) {
 	}
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T) *Resolver[secrets.Secret, string]
+		setup  func(t *testing.T) *Informer[secrets.Secret, string]
 		assert func(t *testing.T, panicValue any)
 	}{
 		"panics if manager is nil": {
-			setup: func(t *testing.T) *Resolver[secrets.Secret, string] {
+			setup: func(t *testing.T) *Informer[secrets.Secret, string] {
 				t.Helper()
 
-				return &Resolver[secrets.Secret, string]{
+				return &Informer[secrets.Secret, string]{
 					Reference: ref,
 					Source:    SecretSource{},
 					Converter: converter,
@@ -459,10 +459,10 @@ func TestResolverStartPanics(t *testing.T) {
 			},
 		},
 		"panics if source is nil": {
-			setup: func(t *testing.T) *Resolver[secrets.Secret, string] {
+			setup: func(t *testing.T) *Informer[secrets.Secret, string] {
 				t.Helper()
 
-				return &Resolver[secrets.Secret, string]{
+				return &Informer[secrets.Secret, string]{
 					Manager:   secretsmocks.NewManagerMock(t),
 					Reference: ref,
 					Converter: converter,
@@ -475,10 +475,10 @@ func TestResolverStartPanics(t *testing.T) {
 			},
 		},
 		"panics if converter is nil": {
-			setup: func(t *testing.T) *Resolver[secrets.Secret, string] {
+			setup: func(t *testing.T) *Informer[secrets.Secret, string] {
 				t.Helper()
 
-				return &Resolver[secrets.Secret, string]{
+				return &Informer[secrets.Secret, string]{
 					Manager:   secretsmocks.NewManagerMock(t),
 					Reference: ref,
 					Source:    SecretSource{},
@@ -525,7 +525,7 @@ func TestCredentialsResolverStart(t *testing.T) {
 	sm.EXPECT().ResolveCredentials(mock.Anything, ref).Return(creds, nil)
 	sm.EXPECT().Subscribe(ref, mock.Anything).Return(func() {}, nil)
 
-	resolver := &CredentialsResolver[string]{
+	resolver := &CredentialsInformer[string]{
 		Manager:   sm,
 		Reference: ref,
 		Converter: func(credentials secrets.Credentials) (string, error) {
