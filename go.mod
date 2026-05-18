@@ -9,6 +9,7 @@ require (
 	github.com/ccoveille/go-safecast/v2 v2.0.0
 	github.com/dadrus/httpsig v0.0.0-20260320084101-37048551fc59
 	github.com/dlclark/regexp2 v1.12.0
+	github.com/dominikbraun/graph v0.23.0
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane/envoy v1.37.0
@@ -42,6 +43,7 @@ require (
 	github.com/knadh/koanf/providers/rawbytes v1.0.0
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.3.4
+	github.com/panjf2000/ants/v2 v2.12.0
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/rueidis v1.0.74
@@ -79,6 +81,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.43.0
 	go.uber.org/fx v1.24.0
 	gocloud.dev v0.45.0
+	golang.org/x/text v0.35.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
@@ -214,7 +217,6 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.41.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
