@@ -24,12 +24,17 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
-func decodeConfig(app app.Context, input map[string]any, output any) error {
+func decodeConfig(
+	app app.Context,
+	input map[string]any,
+	output any,
+	opts ...template.Option,
+) error {
 	dec := app.DecoderFactory().Decoder(
 		encoding.WithTagName("mapstructure"),
 		encoding.WithDecodeHooks(
 			mapstructure.StringToTimeDurationHookFunc(),
-			template.DecodeTemplateHookFunc(),
+			template.DecodeTemplateHookFunc(opts...),
 		),
 	)
 

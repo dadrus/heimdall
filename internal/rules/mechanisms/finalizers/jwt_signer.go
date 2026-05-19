@@ -34,7 +34,6 @@ import (
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -48,7 +47,7 @@ type SignerConfig struct {
 
 type jwtSigner struct {
 	iss      string
-	resolver *informer.SecretInformer[jose.Signer]
+	resolver *secrets.SecretInformer[jose.Signer]
 	hash     atomic.Value
 }
 
@@ -62,7 +61,7 @@ func newJWTSigner(
 		iss: x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
 	}
 
-	signer.resolver = &informer.SecretInformer[jose.Signer]{
+	signer.resolver = &secrets.SecretInformer[jose.Signer]{
 		Manager:   sm,
 		Reference: secrets.InternalRef(conf.Secret.Source, conf.Secret.Selector),
 		Converter: createJOSESigner,

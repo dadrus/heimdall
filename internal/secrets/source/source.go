@@ -31,11 +31,11 @@ func (o *providerObserver) Notify(evt types.ChangeEvent) {
 
 type secretsResolver struct {
 	name string
-	deps []types.Reference
+	deps []types.SecretRef
 	r    DependencyResolver
 }
 
-func (r *secretsResolver) ResolveSecret(ctx context.Context, ref types.Reference) (types.Secret, error) {
+func (r *secretsResolver) ResolveSecret(ctx context.Context, ref types.SecretRef) (types.Secret, error) {
 	if err := r.checkReference(ref); err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (r *secretsResolver) ResolveSecret(ctx context.Context, ref types.Reference
 	return r.r.ResolveSecret(ctx, ref)
 }
 
-func (r *secretsResolver) ResolveCredentials(ctx context.Context, ref types.Reference) (types.Credentials, error) {
+func (r *secretsResolver) ResolveCredentials(ctx context.Context, ref types.SecretRef) (types.Credentials, error) {
 	if err := r.checkReference(ref); err != nil {
 		return nil, err
 	}
@@ -51,8 +51,8 @@ func (r *secretsResolver) ResolveCredentials(ctx context.Context, ref types.Refe
 	return r.r.ResolveCredentials(ctx, ref)
 }
 
-func (r *secretsResolver) checkReference(ref types.Reference) error {
-	if !slices.ContainsFunc(r.deps, func(dep types.Reference) bool {
+func (r *secretsResolver) checkReference(ref types.SecretRef) error {
+	if !slices.ContainsFunc(r.deps, func(dep types.SecretRef) bool {
 		return dep.Source == ref.Source && dep.Selector == ref.Selector
 	}) {
 		return errorchain.NewWithMessagef(
@@ -133,7 +133,7 @@ func New(
 
 func (s *Source) Name() string                    { return s.name }
 func (s *Source) AccessFromRulesAllowed() bool    { return s.allowInRules }
-func (s *Source) Dependencies() []types.Reference { return s.sr.deps }
+func (s *Source) Dependencies() []types.SecretRef { return s.sr.deps }
 func (s *Source) Start(ctx context.Context) error { return s.p.Start(ctx) }
 func (s *Source) Stop(ctx context.Context) error  { return s.p.Stop(ctx) }
 func (s *Source) DependsOn(evt Event) bool        { return s.sr.dependsOn(evt) }

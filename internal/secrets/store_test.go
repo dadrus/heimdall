@@ -1,4 +1,4 @@
-package template
+package secrets
 
 import (
 	"sync/atomic"
@@ -9,29 +9,28 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/secrets"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
 
 func TestNewSecretStore(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		manager    secrets.Manager
-		refFactory SecretReferenceFactory
-		assert     func(t *testing.T, store SecretStore, err error)
+		manager    Manager
+		refFactory ReferenceFactory
+		assert     func(t *testing.T, store Store, err error)
 	}{
 		"creates secret store": {
 			manager:    secretsmocks.NewManagerMock(t),
-			refFactory: secrets.InternalRef,
-			assert: func(t *testing.T, store SecretStore, err error) {
+			refFactory: InternalRef,
+			assert: func(t *testing.T, ss Store, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, store)
+				require.NotNil(t, ss)
 
-				impl, ok := store.(*secretStore)
+				impl, ok := ss.(*store)
 				require.True(t, ok)
 
 				assert.NotNil(t, impl.manager)
@@ -41,8 +40,8 @@ func TestNewSecretStore(t *testing.T) {
 			},
 		},
 		"returns configuration error without manager": {
-			refFactory: secrets.InternalRef,
-			assert: func(t *testing.T, _ SecretStore, err error) {
+			refFactory: InternalRef,
+			assert: func(t *testing.T, _ Store, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -52,7 +51,7 @@ func TestNewSecretStore(t *testing.T) {
 		},
 		"returns configuration error without reference factory": {
 			manager: secretsmocks.NewManagerMock(t),
-			assert: func(t *testing.T, _ SecretStore, err error) {
+			assert: func(t *testing.T, _ Store, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -64,9 +63,9 @@ func TestNewSecretStore(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			store, err := NewSecretStore(tc.manager, tc.refFactory)
+			ss, err := NewStore(tc.manager, tc.refFactory)
 
-			tc.assert(t, store, err)
+			tc.assert(t, ss, err)
 		})
 	}
 }
@@ -74,21 +73,21 @@ func TestNewSecretStore(t *testing.T) {
 func TestSecretStoreRegisterSecret(t *testing.T) {
 	t.Parallel()
 
-	ref := SecretReference{
+	ref := Reference{
 		Source:   "k8s",
 		Selector: "api-key",
 	}
 
-	managerRef := secrets.InternalRef("k8s", "api-key")
+	managerRef := InternalRef("k8s", "api-key")
 	secret := types.NewStringSecret("api-key", "secret-value")
 
 	for uc, tc := range map[string]struct {
-		refFactory SecretReferenceFactory
+		refFactory ReferenceFactory
 		setup      func(t *testing.T, mgr *secretsmocks.ManagerMock)
-		assert     func(t *testing.T, store SecretStore, err error)
+		assert     func(t *testing.T, store Store, err error)
 	}{
 		"registers secret and makes it available": {
-			refFactory: secrets.InternalRef,
+			refFactory: InternalRef,
 			setup: func(t *testing.T, mgr *secretsmocks.ManagerMock) {
 				t.Helper()
 
@@ -99,7 +98,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 					Subscribe(managerRef, mock.Anything).
 					Return(func() {}, nil)
 			},
-			assert: func(t *testing.T, store SecretStore, err error) {
+			assert: func(t *testing.T, store Store, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -110,7 +109,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 			},
 		},
 		"returns start error from informer": {
-			refFactory: secrets.InternalRef,
+			refFactory: InternalRef,
 			setup: func(t *testing.T, mgr *secretsmocks.ManagerMock) {
 				t.Helper()
 
@@ -118,7 +117,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 					ResolveSecret(mock.Anything, managerRef).
 					Return(nil, assert.AnError)
 			},
-			assert: func(t *testing.T, _ SecretStore, err error) {
+			assert: func(t *testing.T, _ Store, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -126,7 +125,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 			},
 		},
 		"returns subscribe error from informer": {
-			refFactory: secrets.InternalRef,
+			refFactory: InternalRef,
 			setup: func(t *testing.T, mgr *secretsmocks.ManagerMock) {
 				t.Helper()
 
@@ -137,7 +136,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 					Subscribe(managerRef, mock.Anything).
 					Return(nil, assert.AnError)
 			},
-			assert: func(t *testing.T, _ SecretStore, err error) {
+			assert: func(t *testing.T, _ Store, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -151,7 +150,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 			mgr := secretsmocks.NewManagerMock(t)
 			tc.setup(t, mgr)
 
-			store, err := NewSecretStore(mgr, tc.refFactory)
+			store, err := NewStore(mgr, tc.refFactory)
 			require.NoError(t, err)
 
 			defer store.CleanUp()
@@ -166,12 +165,12 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 func TestSecretStoreRegisterSecretIsIdempotent(t *testing.T) {
 	t.Parallel()
 
-	ref := SecretReference{
+	ref := Reference{
 		Source:   "k8s",
 		Selector: "api-key",
 	}
 
-	managerRef := secrets.InternalRef("k8s", "api-key")
+	managerRef := InternalRef("k8s", "api-key")
 	secret := types.NewStringSecret("api-key", "secret-value")
 
 	var refFactoryCalls atomic.Int32
@@ -184,12 +183,12 @@ func TestSecretStoreRegisterSecretIsIdempotent(t *testing.T) {
 		Subscribe(managerRef, mock.Anything).
 		Return(func() {}, nil)
 
-	store, err := NewSecretStore(
+	store, err := NewStore(
 		mgr,
-		func(source, selector string) secrets.Reference {
+		func(source, selector string) Reference {
 			refFactoryCalls.Add(1)
 
-			return secrets.InternalRef(source, selector)
+			return InternalRef(source, selector)
 		},
 	)
 	require.NoError(t, err)
@@ -209,7 +208,7 @@ func TestSecretStoreRegisterSecretIsIdempotent(t *testing.T) {
 func TestSecretStoreGetSecret(t *testing.T) {
 	t.Parallel()
 
-	ref := SecretReference{
+	ref := Reference{
 		Source:   "k8s",
 		Selector: "api-key",
 	}
@@ -217,7 +216,7 @@ func TestSecretStoreGetSecret(t *testing.T) {
 	t.Run("returns not found for unknown reference", func(t *testing.T) {
 		t.Parallel()
 
-		store, err := NewSecretStore(secretsmocks.NewManagerMock(t), secrets.InternalRef)
+		store, err := NewStore(secretsmocks.NewManagerMock(t), InternalRef)
 		require.NoError(t, err)
 
 		defer store.CleanUp()
@@ -225,14 +224,14 @@ func TestSecretStoreGetSecret(t *testing.T) {
 		value, err := store.GetSecret(ref)
 
 		require.Error(t, err)
-		require.ErrorIs(t, err, secrets.ErrSecretNotFound)
+		require.ErrorIs(t, err, ErrSecretNotFound)
 		assert.Empty(t, value)
 	})
 
 	t.Run("returns not found after stop", func(t *testing.T) {
 		t.Parallel()
 
-		managerRef := secrets.InternalRef("k8s", "api-key")
+		managerRef := InternalRef("k8s", "api-key")
 		secret := types.NewStringSecret("api-key", "secret-value")
 
 		var unsubscribed atomic.Bool
@@ -247,7 +246,7 @@ func TestSecretStoreGetSecret(t *testing.T) {
 				unsubscribed.Store(true)
 			}, nil)
 
-		store, err := NewSecretStore(mgr, secrets.InternalRef)
+		store, err := NewStore(mgr, InternalRef)
 		require.NoError(t, err)
 
 		require.NoError(t, store.RegisterSecret(ref))
@@ -257,7 +256,7 @@ func TestSecretStoreGetSecret(t *testing.T) {
 		value, err := store.GetSecret(ref)
 
 		require.Error(t, err)
-		require.ErrorIs(t, err, secrets.ErrSecretNotFound)
+		require.ErrorIs(t, err, ErrSecretNotFound)
 		assert.Empty(t, value)
 		assert.True(t, unsubscribed.Load())
 	})
@@ -266,11 +265,11 @@ func TestSecretStoreGetSecret(t *testing.T) {
 func TestSecretStoreStop(t *testing.T) {
 	t.Parallel()
 
-	refA := SecretReference{Source: "k8s", Selector: "api-key-a"}
-	refB := SecretReference{Source: "k8s", Selector: "api-key-b"}
+	refA := Reference{Source: "k8s", Selector: "api-key-a"}
+	refB := Reference{Source: "k8s", Selector: "api-key-b"}
 
-	managerRefA := secrets.InternalRef("k8s", "api-key-a")
-	managerRefB := secrets.InternalRef("k8s", "api-key-b")
+	managerRefA := InternalRef("k8s", "api-key-a")
+	managerRefB := InternalRef("k8s", "api-key-b")
 
 	var unsubscribed atomic.Int32
 
@@ -293,22 +292,22 @@ func TestSecretStoreStop(t *testing.T) {
 			unsubscribed.Add(1)
 		}, nil)
 
-	store, err := NewSecretStore(mgr, secrets.InternalRef)
+	ss, err := NewStore(mgr, InternalRef)
 	require.NoError(t, err)
 
-	require.NoError(t, store.RegisterSecret(refA))
-	require.NoError(t, store.RegisterSecret(refB))
+	require.NoError(t, ss.RegisterSecret(refA))
+	require.NoError(t, ss.RegisterSecret(refB))
 
-	store.CleanUp()
+	ss.CleanUp()
 
-	impl := store.(*secretStore)
+	impl := ss.(*store)
 
 	assert.EqualValues(t, 2, unsubscribed.Load())
 	assert.Empty(t, impl.informers)
 
-	value, err := store.GetSecret(refA)
+	value, err := ss.GetSecret(refA)
 	require.Error(t, err)
-	require.ErrorIs(t, err, secrets.ErrSecretNotFound)
+	require.ErrorIs(t, err, ErrSecretNotFound)
 	assert.Empty(t, value)
 }
 
@@ -316,7 +315,7 @@ func TestStringSecretValue(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		secret secrets.Secret
+		secret Secret
 		assert func(t *testing.T, value string, err error)
 	}{
 		"returns string secret value": {
@@ -337,7 +336,7 @@ func TestStringSecretValue(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, secrets.ErrSecretKindMismatch)
+				require.ErrorIs(t, err, ErrSecretKindMismatch)
 				assert.Empty(t, value)
 			},
 		},

@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,26 +39,26 @@ func (_m *ManagerMock) EXPECT() *ManagerMock_Expecter {
 }
 
 // ResolveCredentials provides a mock function for the type ManagerMock
-func (_mock *ManagerMock) ResolveCredentials(ctx context.Context, reference secrets.Reference) (secrets.Credentials, error) {
+func (_mock *ManagerMock) ResolveCredentials(ctx context.Context, reference types.Reference) (types.Credentials, error) {
 	ret := _mock.Called(ctx, reference)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveCredentials")
 	}
 
-	var r0 secrets.Credentials
+	var r0 types.Credentials
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) (secrets.Credentials, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) (types.Credentials, error)); ok {
 		return returnFunc(ctx, reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) secrets.Credentials); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) types.Credentials); ok {
 		r0 = returnFunc(ctx, reference)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(secrets.Credentials)
+			r0 = ret.Get(0).(types.Credentials)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Reference) error); ok {
 		r1 = returnFunc(ctx, reference)
 	} else {
 		r1 = ret.Error(1)
@@ -73,20 +73,20 @@ type ManagerMock_ResolveCredentials_Call struct {
 
 // ResolveCredentials is a helper method to define mock.On call
 //   - ctx context.Context
-//   - reference secrets.Reference
+//   - reference types.Reference
 func (_e *ManagerMock_Expecter) ResolveCredentials(ctx interface{}, reference interface{}) *ManagerMock_ResolveCredentials_Call {
 	return &ManagerMock_ResolveCredentials_Call{Call: _e.mock.On("ResolveCredentials", ctx, reference)}
 }
 
-func (_c *ManagerMock_ResolveCredentials_Call) Run(run func(ctx context.Context, reference secrets.Reference)) *ManagerMock_ResolveCredentials_Call {
+func (_c *ManagerMock_ResolveCredentials_Call) Run(run func(ctx context.Context, reference types.Reference)) *ManagerMock_ResolveCredentials_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 secrets.Reference
+		var arg1 types.Reference
 		if args[1] != nil {
-			arg1 = args[1].(secrets.Reference)
+			arg1 = args[1].(types.Reference)
 		}
 		run(
 			arg0,
@@ -96,37 +96,37 @@ func (_c *ManagerMock_ResolveCredentials_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *ManagerMock_ResolveCredentials_Call) Return(v secrets.Credentials, err error) *ManagerMock_ResolveCredentials_Call {
-	_c.Call.Return(v, err)
+func (_c *ManagerMock_ResolveCredentials_Call) Return(credentials types.Credentials, err error) *ManagerMock_ResolveCredentials_Call {
+	_c.Call.Return(credentials, err)
 	return _c
 }
 
-func (_c *ManagerMock_ResolveCredentials_Call) RunAndReturn(run func(ctx context.Context, reference secrets.Reference) (secrets.Credentials, error)) *ManagerMock_ResolveCredentials_Call {
+func (_c *ManagerMock_ResolveCredentials_Call) RunAndReturn(run func(ctx context.Context, reference types.Reference) (types.Credentials, error)) *ManagerMock_ResolveCredentials_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ResolveSecret provides a mock function for the type ManagerMock
-func (_mock *ManagerMock) ResolveSecret(ctx context.Context, reference secrets.Reference) (secrets.Secret, error) {
+func (_mock *ManagerMock) ResolveSecret(ctx context.Context, reference types.Reference) (types.Secret, error) {
 	ret := _mock.Called(ctx, reference)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveSecret")
 	}
 
-	var r0 secrets.Secret
+	var r0 types.Secret
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) (secrets.Secret, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) (types.Secret, error)); ok {
 		return returnFunc(ctx, reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) secrets.Secret); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) types.Secret); ok {
 		r0 = returnFunc(ctx, reference)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(secrets.Secret)
+			r0 = ret.Get(0).(types.Secret)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Reference) error); ok {
 		r1 = returnFunc(ctx, reference)
 	} else {
 		r1 = ret.Error(1)
@@ -141,20 +141,20 @@ type ManagerMock_ResolveSecret_Call struct {
 
 // ResolveSecret is a helper method to define mock.On call
 //   - ctx context.Context
-//   - reference secrets.Reference
+//   - reference types.Reference
 func (_e *ManagerMock_Expecter) ResolveSecret(ctx interface{}, reference interface{}) *ManagerMock_ResolveSecret_Call {
 	return &ManagerMock_ResolveSecret_Call{Call: _e.mock.On("ResolveSecret", ctx, reference)}
 }
 
-func (_c *ManagerMock_ResolveSecret_Call) Run(run func(ctx context.Context, reference secrets.Reference)) *ManagerMock_ResolveSecret_Call {
+func (_c *ManagerMock_ResolveSecret_Call) Run(run func(ctx context.Context, reference types.Reference)) *ManagerMock_ResolveSecret_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 secrets.Reference
+		var arg1 types.Reference
 		if args[1] != nil {
-			arg1 = args[1].(secrets.Reference)
+			arg1 = args[1].(types.Reference)
 		}
 		run(
 			arg0,
@@ -164,37 +164,37 @@ func (_c *ManagerMock_ResolveSecret_Call) Run(run func(ctx context.Context, refe
 	return _c
 }
 
-func (_c *ManagerMock_ResolveSecret_Call) Return(v secrets.Secret, err error) *ManagerMock_ResolveSecret_Call {
-	_c.Call.Return(v, err)
+func (_c *ManagerMock_ResolveSecret_Call) Return(secret types.Secret, err error) *ManagerMock_ResolveSecret_Call {
+	_c.Call.Return(secret, err)
 	return _c
 }
 
-func (_c *ManagerMock_ResolveSecret_Call) RunAndReturn(run func(ctx context.Context, reference secrets.Reference) (secrets.Secret, error)) *ManagerMock_ResolveSecret_Call {
+func (_c *ManagerMock_ResolveSecret_Call) RunAndReturn(run func(ctx context.Context, reference types.Reference) (types.Secret, error)) *ManagerMock_ResolveSecret_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ResolveSecretSet provides a mock function for the type ManagerMock
-func (_mock *ManagerMock) ResolveSecretSet(ctx context.Context, reference secrets.Reference) ([]secrets.Secret, error) {
+func (_mock *ManagerMock) ResolveSecretSet(ctx context.Context, reference types.Reference) ([]types.Secret, error) {
 	ret := _mock.Called(ctx, reference)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveSecretSet")
 	}
 
-	var r0 []secrets.Secret
+	var r0 []types.Secret
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) ([]secrets.Secret, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) ([]types.Secret, error)); ok {
 		return returnFunc(ctx, reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) []secrets.Secret); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) []types.Secret); ok {
 		r0 = returnFunc(ctx, reference)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]secrets.Secret)
+			r0 = ret.Get(0).([]types.Secret)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Reference) error); ok {
 		r1 = returnFunc(ctx, reference)
 	} else {
 		r1 = ret.Error(1)
@@ -209,20 +209,20 @@ type ManagerMock_ResolveSecretSet_Call struct {
 
 // ResolveSecretSet is a helper method to define mock.On call
 //   - ctx context.Context
-//   - reference secrets.Reference
+//   - reference types.Reference
 func (_e *ManagerMock_Expecter) ResolveSecretSet(ctx interface{}, reference interface{}) *ManagerMock_ResolveSecretSet_Call {
 	return &ManagerMock_ResolveSecretSet_Call{Call: _e.mock.On("ResolveSecretSet", ctx, reference)}
 }
 
-func (_c *ManagerMock_ResolveSecretSet_Call) Run(run func(ctx context.Context, reference secrets.Reference)) *ManagerMock_ResolveSecretSet_Call {
+func (_c *ManagerMock_ResolveSecretSet_Call) Run(run func(ctx context.Context, reference types.Reference)) *ManagerMock_ResolveSecretSet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 secrets.Reference
+		var arg1 types.Reference
 		if args[1] != nil {
-			arg1 = args[1].(secrets.Reference)
+			arg1 = args[1].(types.Reference)
 		}
 		run(
 			arg0,
@@ -232,18 +232,18 @@ func (_c *ManagerMock_ResolveSecretSet_Call) Run(run func(ctx context.Context, r
 	return _c
 }
 
-func (_c *ManagerMock_ResolveSecretSet_Call) Return(vs []secrets.Secret, err error) *ManagerMock_ResolveSecretSet_Call {
-	_c.Call.Return(vs, err)
+func (_c *ManagerMock_ResolveSecretSet_Call) Return(secrets []types.Secret, err error) *ManagerMock_ResolveSecretSet_Call {
+	_c.Call.Return(secrets, err)
 	return _c
 }
 
-func (_c *ManagerMock_ResolveSecretSet_Call) RunAndReturn(run func(ctx context.Context, reference secrets.Reference) ([]secrets.Secret, error)) *ManagerMock_ResolveSecretSet_Call {
+func (_c *ManagerMock_ResolveSecretSet_Call) RunAndReturn(run func(ctx context.Context, reference types.Reference) ([]types.Secret, error)) *ManagerMock_ResolveSecretSet_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Subscribe provides a mock function for the type ManagerMock
-func (_mock *ManagerMock) Subscribe(reference secrets.Reference, cb func(context.Context) error) (func(), error) {
+func (_mock *ManagerMock) Subscribe(reference types.Reference, cb func(context.Context) error) (func(), error) {
 	ret := _mock.Called(reference, cb)
 
 	if len(ret) == 0 {
@@ -252,17 +252,17 @@ func (_mock *ManagerMock) Subscribe(reference secrets.Reference, cb func(context
 
 	var r0 func()
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(secrets.Reference, func(context.Context) error) (func(), error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(types.Reference, func(context.Context) error) (func(), error)); ok {
 		return returnFunc(reference, cb)
 	}
-	if returnFunc, ok := ret.Get(0).(func(secrets.Reference, func(context.Context) error) func()); ok {
+	if returnFunc, ok := ret.Get(0).(func(types.Reference, func(context.Context) error) func()); ok {
 		r0 = returnFunc(reference, cb)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(func())
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(secrets.Reference, func(context.Context) error) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(types.Reference, func(context.Context) error) error); ok {
 		r1 = returnFunc(reference, cb)
 	} else {
 		r1 = ret.Error(1)
@@ -276,17 +276,17 @@ type ManagerMock_Subscribe_Call struct {
 }
 
 // Subscribe is a helper method to define mock.On call
-//   - reference secrets.Reference
+//   - reference types.Reference
 //   - cb func(context.Context) error
 func (_e *ManagerMock_Expecter) Subscribe(reference interface{}, cb interface{}) *ManagerMock_Subscribe_Call {
 	return &ManagerMock_Subscribe_Call{Call: _e.mock.On("Subscribe", reference, cb)}
 }
 
-func (_c *ManagerMock_Subscribe_Call) Run(run func(reference secrets.Reference, cb func(context.Context) error)) *ManagerMock_Subscribe_Call {
+func (_c *ManagerMock_Subscribe_Call) Run(run func(reference types.Reference, cb func(context.Context) error)) *ManagerMock_Subscribe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 secrets.Reference
+		var arg0 types.Reference
 		if args[0] != nil {
-			arg0 = args[0].(secrets.Reference)
+			arg0 = args[0].(types.Reference)
 		}
 		var arg1 func(context.Context) error
 		if args[1] != nil {
@@ -305,7 +305,7 @@ func (_c *ManagerMock_Subscribe_Call) Return(unsubscribe func(), err error) *Man
 	return _c
 }
 
-func (_c *ManagerMock_Subscribe_Call) RunAndReturn(run func(reference secrets.Reference, cb func(context.Context) error) (func(), error)) *ManagerMock_Subscribe_Call {
+func (_c *ManagerMock_Subscribe_Call) RunAndReturn(run func(reference types.Reference, cb func(context.Context) error) (func(), error)) *ManagerMock_Subscribe_Call {
 	_c.Call.Return(run)
 	return _c
 }

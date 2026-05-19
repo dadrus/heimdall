@@ -1,12 +1,16 @@
 package template
 
+import (
+	store2 "github.com/dadrus/heimdall/internal/secrets"
+)
+
 const defaultTemplateName = "Heimdall"
 
 type Option func(*options)
 
 type options struct {
 	name  string
-	store SecretStore
+	store store2.Store
 }
 
 func WithName(name string) Option {
@@ -17,7 +21,7 @@ func WithName(name string) Option {
 	}
 }
 
-func WithSecretStore(store SecretStore) Option {
+func WithSecretStore(store store2.Store) Option {
 	return func(opts *options) {
 		opts.store = store
 	}

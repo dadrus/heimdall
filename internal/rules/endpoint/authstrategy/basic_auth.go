@@ -28,7 +28,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -52,7 +51,7 @@ func (c basicAuthCredentials) Hash() []byte {
 type BasicAuth struct {
 	Credentials config.Secret `mapstructure:"credentials" validate:"required"`
 
-	resolver *informer.CredentialsInformer[basicAuthCredentials]
+	resolver *secrets.CredentialsInformer[basicAuthCredentials]
 	hash     atomic.Value
 }
 
@@ -82,7 +81,7 @@ func (c *BasicAuth) Hash() []byte {
 }
 
 func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
-	c.resolver = &informer.CredentialsInformer[basicAuthCredentials]{
+	c.resolver = &secrets.CredentialsInformer[basicAuthCredentials]{
 		Manager:   appCtx.SecretsManager(),
 		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
 		Converter: toBasicAuthCredentials,

@@ -55,18 +55,18 @@ func TestProviderObserverNotify(t *testing.T) {
 func TestSecretsResolverResolveSecret(t *testing.T) {
 	t.Parallel()
 
-	declaredRef := types.Reference{Source: "pem", Selector: "server"}
+	declaredRef := types.SecretRef{Source: "pem", Selector: "server"}
 	secret := types.NewStringSecret("server", "value")
 
 	for uc, tc := range map[string]struct {
-		dependencies []types.Reference
-		ref          types.Reference
+		dependencies []types.SecretRef
+		ref          types.SecretRef
 		setup        func(*DependencyResolverMock)
 		wantSecret   types.Secret
 		wantErr      error
 	}{
 		"delegates declared dependency": {
-			dependencies: []types.Reference{declaredRef},
+			dependencies: []types.SecretRef{declaredRef},
 			ref:          declaredRef,
 			setup: func(resolver *DependencyResolverMock) {
 				resolver.EXPECT().
@@ -76,13 +76,13 @@ func TestSecretsResolverResolveSecret(t *testing.T) {
 			wantSecret: secret,
 		},
 		"returns dependency error for unknown selector": {
-			dependencies: []types.Reference{declaredRef},
-			ref:          types.Reference{Source: "pem", Selector: "client"},
+			dependencies: []types.SecretRef{declaredRef},
+			ref:          types.SecretRef{Source: "pem", Selector: "client"},
 			setup:        func(*DependencyResolverMock) {},
 			wantErr:      ErrProviderDependencyNotDeclared,
 		},
 		"propagates resolver error": {
-			dependencies: []types.Reference{declaredRef},
+			dependencies: []types.SecretRef{declaredRef},
 			ref:          declaredRef,
 			setup: func(resolver *DependencyResolverMock) {
 				resolver.EXPECT().
@@ -125,21 +125,21 @@ func TestSecretsResolverResolveSecret(t *testing.T) {
 func TestSecretsResolverResolveCredentials(t *testing.T) {
 	t.Parallel()
 
-	declaredRef := types.Reference{Source: "inline", Selector: "github"}
+	declaredRef := types.SecretRef{Source: "inline", Selector: "github"}
 	creds := types.NewCredentials("github", map[string]any{
 		"client_id":     "heimdall",
 		"client_secret": "secret",
 	})
 
 	for uc, tc := range map[string]struct {
-		dependencies []types.Reference
-		ref          types.Reference
+		dependencies []types.SecretRef
+		ref          types.SecretRef
 		setup        func(*DependencyResolverMock)
 		wantCreds    types.Credentials
 		wantErr      error
 	}{
 		"delegates declared dependency": {
-			dependencies: []types.Reference{declaredRef},
+			dependencies: []types.SecretRef{declaredRef},
 			ref:          declaredRef,
 			setup: func(resolver *DependencyResolverMock) {
 				resolver.EXPECT().
@@ -149,13 +149,13 @@ func TestSecretsResolverResolveCredentials(t *testing.T) {
 			wantCreds: creds,
 		},
 		"returns dependency error for undeclared reference": {
-			dependencies: []types.Reference{declaredRef},
-			ref:          types.Reference{Source: "inline", Selector: "other"},
+			dependencies: []types.SecretRef{declaredRef},
+			ref:          types.SecretRef{Source: "inline", Selector: "other"},
 			setup:        func(*DependencyResolverMock) {},
 			wantErr:      ErrProviderDependencyNotDeclared,
 		},
 		"propagates resolver error": {
-			dependencies: []types.Reference{declaredRef},
+			dependencies: []types.SecretRef{declaredRef},
 			ref:          declaredRef,
 			setup: func(resolver *DependencyResolverMock) {
 				resolver.EXPECT().
@@ -199,7 +199,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		dependencies []types.Reference
+		dependencies []types.SecretRef
 		event        Event
 		want         bool
 	}{
@@ -209,7 +209,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 			want:         false,
 		},
 		"returns false for different source": {
-			dependencies: []types.Reference{
+			dependencies: []types.SecretRef{
 				{Source: "pem", Selector: "server"},
 			},
 			event: Event{
@@ -218,7 +218,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 			want: false,
 		},
 		"returns true for source wide event": {
-			dependencies: []types.Reference{
+			dependencies: []types.SecretRef{
 				{Source: "pem", Selector: "server"},
 			},
 			event: Event{
@@ -227,7 +227,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 			want: true,
 		},
 		"returns true for matching selector": {
-			dependencies: []types.Reference{
+			dependencies: []types.SecretRef{
 				{Source: "pem", Selector: "server"},
 			},
 			event: Event{
@@ -239,7 +239,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 			want: true,
 		},
 		"returns true for one matching selector": {
-			dependencies: []types.Reference{
+			dependencies: []types.SecretRef{
 				{Source: "pem", Selector: "server"},
 			},
 			event: Event{
@@ -252,7 +252,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 			want: true,
 		},
 		"returns false for non matching selector": {
-			dependencies: []types.Reference{
+			dependencies: []types.SecretRef{
 				{Source: "pem", Selector: "server"},
 			},
 			event: Event{
@@ -264,7 +264,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 			want: false,
 		},
 		"ignores selector namespace": {
-			dependencies: []types.Reference{
+			dependencies: []types.SecretRef{
 				{Source: "k8s", Selector: "service-account"},
 			},
 			event: Event{
@@ -276,7 +276,7 @@ func TestSecretsResolverDependsOn(t *testing.T) {
 			want: true,
 		},
 		"returns true for one matching dependency": {
-			dependencies: []types.Reference{
+			dependencies: []types.SecretRef{
 				{Source: "pem", Selector: "server"},
 				{Source: "inline", Selector: "github"},
 			},
@@ -327,7 +327,7 @@ func TestNewSource(t *testing.T) {
 					provider := typemocks.NewProviderMock(t)
 					provider.EXPECT().
 						Dependencies().
-						Return([]types.Reference{
+						Return([]types.SecretRef{
 							{Source: "pem", Selector: "server"},
 						})
 
@@ -342,7 +342,7 @@ func TestNewSource(t *testing.T) {
 
 				require.Equal(t, "vault", src.Name())
 				require.True(t, src.AccessFromRulesAllowed())
-				require.Equal(t, []types.Reference{
+				require.Equal(t, []types.SecretRef{
 					{Source: "pem", Selector: "server"},
 				}, src.Dependencies())
 			},

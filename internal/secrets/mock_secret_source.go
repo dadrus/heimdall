@@ -84,19 +84,19 @@ func (_c *SecretSourceMock_AccessFromRulesAllowed_Call) RunAndReturn(run func() 
 }
 
 // Dependencies provides a mock function for the type SecretSourceMock
-func (_mock *SecretSourceMock) Dependencies() []types.Reference {
+func (_mock *SecretSourceMock) Dependencies() []types.SecretRef {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Dependencies")
 	}
 
-	var r0 []types.Reference
-	if returnFunc, ok := ret.Get(0).(func() []types.Reference); ok {
+	var r0 []types.SecretRef
+	if returnFunc, ok := ret.Get(0).(func() []types.SecretRef); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.Reference)
+			r0 = ret.Get(0).([]types.SecretRef)
 		}
 	}
 	return r0
@@ -119,12 +119,12 @@ func (_c *SecretSourceMock_Dependencies_Call) Run(run func()) *SecretSourceMock_
 	return _c
 }
 
-func (_c *SecretSourceMock_Dependencies_Call) Return(references []types.Reference) *SecretSourceMock_Dependencies_Call {
-	_c.Call.Return(references)
+func (_c *SecretSourceMock_Dependencies_Call) Return(secretRefs []types.SecretRef) *SecretSourceMock_Dependencies_Call {
+	_c.Call.Return(secretRefs)
 	return _c
 }
 
-func (_c *SecretSourceMock_Dependencies_Call) RunAndReturn(run func() []types.Reference) *SecretSourceMock_Dependencies_Call {
+func (_c *SecretSourceMock_Dependencies_Call) RunAndReturn(run func() []types.SecretRef) *SecretSourceMock_Dependencies_Call {
 	_c.Call.Return(run)
 	return _c
 }

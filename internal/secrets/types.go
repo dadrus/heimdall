@@ -17,9 +17,7 @@
 package secrets
 
 import (
-	"context"
 	"errors"
-	"strings"
 
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
@@ -33,20 +31,10 @@ type (
 	AsymmetricKeySecret = types.AsymmetricKeySecret
 	TrustStoreSecret    = types.TrustStoreSecret
 	Credentials         = types.Credentials
-
-	Reference struct {
-		Source      string
-		Selector    string
-		Namespace   string
-		RuleContext bool
-	}
-
-	Manager interface {
-		ResolveSecret(ctx context.Context, reference Reference) (Secret, error)
-		ResolveSecretSet(ctx context.Context, reference Reference) ([]Secret, error)
-		ResolveCredentials(ctx context.Context, reference Reference) (Credentials, error)
-		Subscribe(reference Reference, cb func(context.Context) error) (unsubscribe func(), err error)
-	}
+	Store               = types.Store
+	Manager             = types.Manager
+	Reference           = types.Reference
+	ReferenceFactory    = types.ReferenceFactory
 )
 
 var (
@@ -82,14 +70,4 @@ func RuleRef(source, selector, namespace string) Reference {
 		Namespace:   namespace,
 		RuleContext: true,
 	}
-}
-
-func (r Reference) Parent() Reference {
-	if idx := strings.LastIndex(r.Selector, "/"); idx < 0 {
-		r.Selector = ""
-	} else {
-		r.Selector = r.Selector[:idx]
-	}
-
-	return r
 }

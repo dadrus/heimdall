@@ -8,7 +8,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template/mocks"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
 
 type stringerValue string
@@ -98,20 +99,20 @@ func TestTemplateAtIndex(t *testing.T) {
 func TestTemplateSecret(t *testing.T) {
 	t.Parallel()
 
-	ref := template.SecretReference{
+	ref := secrets.Reference{
 		Source:   "k8s",
 		Selector: "api-key",
 	}
 
 	for uc, tc := range map[string]struct {
 		raw    string
-		setup  func(t *testing.T, sm *mocks.SecretStoreMock)
+		setup  func(t *testing.T, sm *mocks.StoreMock)
 		values map[string]any
 		assert func(t *testing.T, value string, err error)
 	}{
 		"renders registered secret": {
 			raw: `{{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -126,7 +127,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"registers duplicate secret only once": {
 			raw: `{{ secret "k8s" "api-key" }} {{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -144,7 +145,7 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Enabled": true,
 			},
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -162,7 +163,7 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Enabled": false,
 			},
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -180,7 +181,7 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Items": []string{"a", "b"},
 			},
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -198,7 +199,7 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Items": []string{},
 			},
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -216,7 +217,7 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Value": "present",
 			},
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -234,7 +235,7 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Value": "",
 			},
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -249,7 +250,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"registers secret inside named template": {
 			raw: `{{ define "apiKey" }}{{ secret "k8s" "api-key" }}{{ end }}{{ template "apiKey" . }}`,
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -264,7 +265,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"returns register secret error": {
 			raw: `{{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(assert.AnError)
@@ -279,7 +280,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"returns get secret error": {
 			raw: `{{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, sm *mocks.StoreMock) {
 				t.Helper()
 
 				sm.EXPECT().RegisterSecret(ref).Return(nil)
@@ -295,7 +296,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects dynamic source": {
 			raw: `{{ secret .Source "api-key" }}`,
-			setup: func(t *testing.T, _ *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, _ *mocks.StoreMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -307,7 +308,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects dynamic selector": {
 			raw: `{{ secret "k8s" .Selector }}`,
-			setup: func(t *testing.T, _ *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, _ *mocks.StoreMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -319,7 +320,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects piped source": {
 			raw: `{{ secret (print "k8s") "api-key" }}`,
-			setup: func(t *testing.T, _ *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, _ *mocks.StoreMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -331,7 +332,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects piped selector": {
 			raw: `{{ secret "k8s" (print "api-key") }}`,
-			setup: func(t *testing.T, _ *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, _ *mocks.StoreMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -343,7 +344,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects missing selector": {
 			raw: `{{ secret "k8s" }}`,
-			setup: func(t *testing.T, _ *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, _ *mocks.StoreMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -355,7 +356,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects additional argument": {
 			raw: `{{ secret "k8s" "api-key" "unexpected" }}`,
-			setup: func(t *testing.T, _ *mocks.SecretStoreMock) {
+			setup: func(t *testing.T, _ *mocks.StoreMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -369,7 +370,7 @@ func TestTemplateSecret(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			sm := mocks.NewSecretStoreMock(t)
+			sm := mocks.NewStoreMock(t)
 			tc.setup(t, sm)
 
 			tpl, err := template.New(tc.raw, template.WithSecretStore(sm))

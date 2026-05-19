@@ -173,7 +173,7 @@ func TestManagerNew(t *testing.T) {
 					t.Helper()
 
 					prv := typemocks.NewProviderMock(t)
-					prv.EXPECT().Dependencies().Return([]types.Reference{
+					prv.EXPECT().Dependencies().Return([]types.SecretRef{
 						{Source: "pem", Selector: "server"},
 					})
 
@@ -194,7 +194,7 @@ func TestManagerNew(t *testing.T) {
 		providerType := uniqueProviderType(t, "vault")
 		registry.Register(providerType, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
 			prv := typemocks.NewProviderMock(t)
-			prv.EXPECT().Dependencies().Return([]types.Reference{
+			prv.EXPECT().Dependencies().Return([]types.SecretRef{
 				{Source: "missing", Selector: "server"},
 			})
 
@@ -225,7 +225,7 @@ func TestManagerNew(t *testing.T) {
 
 		registry.Register(typeA, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
 			prv := typemocks.NewProviderMock(t)
-			prv.EXPECT().Dependencies().Return([]types.Reference{
+			prv.EXPECT().Dependencies().Return([]types.SecretRef{
 				{Source: "b", Selector: "secret"},
 			})
 
@@ -237,7 +237,7 @@ func TestManagerNew(t *testing.T) {
 
 		registry.Register(typeB, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
 			prv := typemocks.NewProviderMock(t)
-			prv.EXPECT().Dependencies().Return([]types.Reference{
+			prv.EXPECT().Dependencies().Return([]types.SecretRef{
 				{Source: "c", Selector: "secret"},
 			})
 
@@ -249,7 +249,7 @@ func TestManagerNew(t *testing.T) {
 
 		registry.Register(typeC, types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
 			prv := typemocks.NewProviderMock(t)
-			prv.EXPECT().Dependencies().Return([]types.Reference{
+			prv.EXPECT().Dependencies().Return([]types.SecretRef{
 				{Source: "a", Selector: "secret"},
 			})
 
@@ -294,7 +294,7 @@ func TestManagerNew(t *testing.T) {
 					t.Helper()
 
 					prv := typemocks.NewProviderMock(t)
-					prv.EXPECT().Dependencies().Return([]types.Reference{
+					prv.EXPECT().Dependencies().Return([]types.SecretRef{
 						{Source: "a", Selector: "secret1"},
 						{Source: "a", Selector: "secret2"},
 					})
@@ -683,7 +683,7 @@ func TestManagerLifecycle(t *testing.T) {
 					t.Helper()
 
 					prv := typemocks.NewProviderMock(t)
-					prv.EXPECT().Dependencies().Return([]types.Reference{
+					prv.EXPECT().Dependencies().Return([]types.SecretRef{
 						{Source: "pem", Selector: "server"},
 					})
 					prv.EXPECT().Start(mock.Anything).Run(func(context.Context) {
@@ -736,7 +736,7 @@ func TestManagerLifecycle(t *testing.T) {
 					t.Helper()
 
 					prv := typemocks.NewProviderMock(t)
-					prv.EXPECT().Dependencies().Return([]types.Reference{
+					prv.EXPECT().Dependencies().Return([]types.SecretRef{
 						{Source: "first", Selector: "x"},
 					})
 					prv.EXPECT().Start(mock.Anything).Return(assert.AnError)
@@ -776,7 +776,7 @@ func TestManagerLifecycle(t *testing.T) {
 					t.Helper()
 
 					prv := typemocks.NewProviderMock(t)
-					prv.EXPECT().Dependencies().Return([]types.Reference{
+					prv.EXPECT().Dependencies().Return([]types.SecretRef{
 						{Source: "first", Selector: "x"},
 					})
 					prv.EXPECT().Stop(mock.Anything).Return(assert.AnError)
@@ -1257,7 +1257,7 @@ func TestManagerSubscribeNotify(t *testing.T) {
 					t.Helper()
 
 					prv := typemocks.NewProviderMock(t)
-					prv.EXPECT().Dependencies().Return([]types.Reference{
+					prv.EXPECT().Dependencies().Return([]types.SecretRef{
 						{Source: "pem", Selector: "server"},
 					})
 					prv.EXPECT().Stop(mock.Anything).Run(func(context.Context) {

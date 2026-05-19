@@ -30,7 +30,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	cc "github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/informer"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -61,7 +60,7 @@ type oauth2ClientCredentialsFinalizer struct {
 	id           string
 	app          app.Context
 	cfg          cc.Config
-	resolver     *informer.CredentialsInformer[oauth2ClientCredentials]
+	resolver     *secrets.CredentialsInformer[oauth2ClientCredentials]
 	headerName   string
 	headerScheme string
 }
@@ -95,7 +94,7 @@ func newOAuth2ClientCredentialsFinalizer(
 		).CausedBy(err)
 	}
 
-	resolver := &informer.CredentialsInformer[oauth2ClientCredentials]{
+	resolver := &secrets.CredentialsInformer[oauth2ClientCredentials]{
 		Manager:   app.SecretsManager(),
 		Reference: secrets.InternalRef(conf.Credentials.Source, conf.Credentials.Selector),
 		Converter: toOAuth2ClientCredentials,

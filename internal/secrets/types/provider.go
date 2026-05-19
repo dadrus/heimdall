@@ -25,13 +25,13 @@ import (
 )
 
 type (
-	// Reference identifies a secret or credentials object required by a provider
+	// SecretRef identifies a secret or credentials object required by a provider
 	// to initialize its own runtime state.
 	//
-	// References returned by Provider.Dependencies are provider configuration
+	// SecretRefs returned by Provider.Dependencies are provider configuration
 	// dependencies. They are intentionally narrower than the manager-facing
-	// secrets.Reference type.
-	Reference struct {
+	// Reference type.
+	SecretRef struct {
 		// Source is the configured secret_management source name.
 		Source string
 		// Selector is the provider-local selector within that source.
@@ -81,9 +81,9 @@ type (
 	// The resolver is intended for provider runtime initialization and reload only.
 	SecretsResolver interface {
 		// ResolveSecret resolves a single secret.
-		ResolveSecret(ctx context.Context, ref Reference) (Secret, error)
+		ResolveSecret(ctx context.Context, ref SecretRef) (Secret, error)
 		// ResolveCredentials resolves one grouped credentials object.
-		ResolveCredentials(ctx context.Context, ref Reference) (Credentials, error)
+		ResolveCredentials(ctx context.Context, ref SecretRef) (Credentials, error)
 	}
 
 	// ProviderArgs contains the dependencies required to create a provider
@@ -139,7 +139,7 @@ type (
 		// The manager uses these references to validate the source dependency
 		// graph, reject cycles, start sources in dependency order, and schedule
 		// Reload when a dependency changes.
-		Dependencies() []Reference
+		Dependencies() []SecretRef
 
 		// Start starts the provider.
 		//

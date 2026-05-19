@@ -305,8 +305,8 @@ func (_c *ContextMock_SecretsManager_Call) Run(run func()) *ContextMock_SecretsM
 	return _c
 }
 
-func (_c *ContextMock_SecretsManager_Call) Return(manager secrets.Manager) *ContextMock_SecretsManager_Call {
-	_c.Call.Return(manager)
+func (_c *ContextMock_SecretsManager_Call) Return(v secrets.Manager) *ContextMock_SecretsManager_Call {
+	_c.Call.Return(v)
 	return _c
 }
 

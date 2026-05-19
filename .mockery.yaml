@@ -56,7 +56,6 @@ packages:
       Registry: {}
   github.com/dadrus/heimdall/internal/secrets:
     interfaces:
-      Manager: {}
       secretSource:
         config:
           dir: "{{ .InterfaceDir }}"
@@ -75,6 +74,8 @@ packages:
       Provider: {}
       ChangeObserver: {}
       SecretsResolver: {}
+      Manager: {}
+      Store: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}
@@ -85,9 +86,6 @@ packages:
     interfaces:
       Mechanism: {}
       Repository: {}
-  github.com/dadrus/heimdall/internal/rules/mechanisms/template:
-    interfaces:
-      SecretStore: {}
   github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/webhook:
     config:
       dir: "{{ .InterfaceDir }}"

@@ -39,7 +39,7 @@ func (_m *DependencyResolverMock) EXPECT() *DependencyResolverMock_Expecter {
 }
 
 // ResolveCredentials provides a mock function for the type DependencyResolverMock
-func (_mock *DependencyResolverMock) ResolveCredentials(ctx context.Context, reference types.Reference) (types.Credentials, error) {
+func (_mock *DependencyResolverMock) ResolveCredentials(ctx context.Context, reference types.SecretRef) (types.Credentials, error) {
 	ret := _mock.Called(ctx, reference)
 
 	if len(ret) == 0 {
@@ -48,17 +48,17 @@ func (_mock *DependencyResolverMock) ResolveCredentials(ctx context.Context, ref
 
 	var r0 types.Credentials
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) (types.Credentials, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.SecretRef) (types.Credentials, error)); ok {
 		return returnFunc(ctx, reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) types.Credentials); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.SecretRef) types.Credentials); ok {
 		r0 = returnFunc(ctx, reference)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(types.Credentials)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Reference) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.SecretRef) error); ok {
 		r1 = returnFunc(ctx, reference)
 	} else {
 		r1 = ret.Error(1)
@@ -73,20 +73,20 @@ type DependencyResolverMock_ResolveCredentials_Call struct {
 
 // ResolveCredentials is a helper method to define mock.On call
 //   - ctx context.Context
-//   - reference types.Reference
+//   - reference types.SecretRef
 func (_e *DependencyResolverMock_Expecter) ResolveCredentials(ctx interface{}, reference interface{}) *DependencyResolverMock_ResolveCredentials_Call {
 	return &DependencyResolverMock_ResolveCredentials_Call{Call: _e.mock.On("ResolveCredentials", ctx, reference)}
 }
 
-func (_c *DependencyResolverMock_ResolveCredentials_Call) Run(run func(ctx context.Context, reference types.Reference)) *DependencyResolverMock_ResolveCredentials_Call {
+func (_c *DependencyResolverMock_ResolveCredentials_Call) Run(run func(ctx context.Context, reference types.SecretRef)) *DependencyResolverMock_ResolveCredentials_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 types.Reference
+		var arg1 types.SecretRef
 		if args[1] != nil {
-			arg1 = args[1].(types.Reference)
+			arg1 = args[1].(types.SecretRef)
 		}
 		run(
 			arg0,
@@ -101,13 +101,13 @@ func (_c *DependencyResolverMock_ResolveCredentials_Call) Return(credentials typ
 	return _c
 }
 
-func (_c *DependencyResolverMock_ResolveCredentials_Call) RunAndReturn(run func(ctx context.Context, reference types.Reference) (types.Credentials, error)) *DependencyResolverMock_ResolveCredentials_Call {
+func (_c *DependencyResolverMock_ResolveCredentials_Call) RunAndReturn(run func(ctx context.Context, reference types.SecretRef) (types.Credentials, error)) *DependencyResolverMock_ResolveCredentials_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ResolveSecret provides a mock function for the type DependencyResolverMock
-func (_mock *DependencyResolverMock) ResolveSecret(ctx context.Context, reference types.Reference) (types.Secret, error) {
+func (_mock *DependencyResolverMock) ResolveSecret(ctx context.Context, reference types.SecretRef) (types.Secret, error) {
 	ret := _mock.Called(ctx, reference)
 
 	if len(ret) == 0 {
@@ -116,17 +116,17 @@ func (_mock *DependencyResolverMock) ResolveSecret(ctx context.Context, referenc
 
 	var r0 types.Secret
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) (types.Secret, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.SecretRef) (types.Secret, error)); ok {
 		return returnFunc(ctx, reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, types.Reference) types.Secret); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.SecretRef) types.Secret); ok {
 		r0 = returnFunc(ctx, reference)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(types.Secret)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, types.Reference) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, types.SecretRef) error); ok {
 		r1 = returnFunc(ctx, reference)
 	} else {
 		r1 = ret.Error(1)
@@ -141,20 +141,20 @@ type DependencyResolverMock_ResolveSecret_Call struct {
 
 // ResolveSecret is a helper method to define mock.On call
 //   - ctx context.Context
-//   - reference types.Reference
+//   - reference types.SecretRef
 func (_e *DependencyResolverMock_Expecter) ResolveSecret(ctx interface{}, reference interface{}) *DependencyResolverMock_ResolveSecret_Call {
 	return &DependencyResolverMock_ResolveSecret_Call{Call: _e.mock.On("ResolveSecret", ctx, reference)}
 }
 
-func (_c *DependencyResolverMock_ResolveSecret_Call) Run(run func(ctx context.Context, reference types.Reference)) *DependencyResolverMock_ResolveSecret_Call {
+func (_c *DependencyResolverMock_ResolveSecret_Call) Run(run func(ctx context.Context, reference types.SecretRef)) *DependencyResolverMock_ResolveSecret_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 types.Reference
+		var arg1 types.SecretRef
 		if args[1] != nil {
-			arg1 = args[1].(types.Reference)
+			arg1 = args[1].(types.SecretRef)
 		}
 		run(
 			arg0,
@@ -169,7 +169,7 @@ func (_c *DependencyResolverMock_ResolveSecret_Call) Return(secret types.Secret,
 	return _c
 }
 
-func (_c *DependencyResolverMock_ResolveSecret_Call) RunAndReturn(run func(ctx context.Context, reference types.Reference) (types.Secret, error)) *DependencyResolverMock_ResolveSecret_Call {
+func (_c *DependencyResolverMock_ResolveSecret_Call) RunAndReturn(run func(ctx context.Context, reference types.SecretRef) (types.Secret, error)) *DependencyResolverMock_ResolveSecret_Call {
 	_c.Call.Return(run)
 	return _c
 }

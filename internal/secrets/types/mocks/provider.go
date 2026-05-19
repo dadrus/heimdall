@@ -39,19 +39,19 @@ func (_m *ProviderMock) EXPECT() *ProviderMock_Expecter {
 }
 
 // Dependencies provides a mock function for the type ProviderMock
-func (_mock *ProviderMock) Dependencies() []types.Reference {
+func (_mock *ProviderMock) Dependencies() []types.SecretRef {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Dependencies")
 	}
 
-	var r0 []types.Reference
-	if returnFunc, ok := ret.Get(0).(func() []types.Reference); ok {
+	var r0 []types.SecretRef
+	if returnFunc, ok := ret.Get(0).(func() []types.SecretRef); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.Reference)
+			r0 = ret.Get(0).([]types.SecretRef)
 		}
 	}
 	return r0
@@ -74,12 +74,12 @@ func (_c *ProviderMock_Dependencies_Call) Run(run func()) *ProviderMock_Dependen
 	return _c
 }
 
-func (_c *ProviderMock_Dependencies_Call) Return(references []types.Reference) *ProviderMock_Dependencies_Call {
-	_c.Call.Return(references)
+func (_c *ProviderMock_Dependencies_Call) Return(secretRefs []types.SecretRef) *ProviderMock_Dependencies_Call {
+	_c.Call.Return(secretRefs)
 	return _c
 }
 
-func (_c *ProviderMock_Dependencies_Call) RunAndReturn(run func() []types.Reference) *ProviderMock_Dependencies_Call {
+func (_c *ProviderMock_Dependencies_Call) RunAndReturn(run func() []types.SecretRef) *ProviderMock_Dependencies_Call {
 	_c.Call.Return(run)
 	return _c
 }

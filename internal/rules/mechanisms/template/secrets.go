@@ -5,16 +5,17 @@ import (
 	"text/template/parse"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func registerSecretReferences(store SecretStore, tmpl *template.Template) error {
+func registerSecretReferences(store secrets.Store, tmpl *template.Template) error {
 	refs, err := extractSecretReferences(tmpl)
 	if err != nil {
 		return err
 	}
 
-	seen := make(map[SecretReference]struct{}, len(refs))
+	seen := make(map[secrets.Reference]struct{}, len(refs))
 	for _, ref := range refs {
 		if _, ok := seen[ref]; ok {
 			continue
@@ -33,8 +34,8 @@ func registerSecretReferences(store SecretStore, tmpl *template.Template) error 
 	return nil
 }
 
-func extractSecretReferences(tmpl *template.Template) ([]SecretReference, error) {
-	var refs []SecretReference
+func extractSecretReferences(tmpl *template.Template) ([]secrets.Reference, error) {
+	var refs []secrets.Reference
 
 	for _, tpl := range tmpl.Templates() {
 		if tpl == nil || tpl.Tree == nil {
@@ -50,7 +51,7 @@ func extractSecretReferences(tmpl *template.Template) ([]SecretReference, error)
 }
 
 //nolint:cyclop
-func walkNode(node parse.Node, refs *[]SecretReference) error {
+func walkNode(node parse.Node, refs *[]secrets.Reference) error {
 	if node == nil {
 		return nil
 	}
@@ -109,7 +110,7 @@ func walkNode(node parse.Node, refs *[]SecretReference) error {
 	return nil
 }
 
-func walkBranch(branch *parse.BranchNode, refs *[]SecretReference) error {
+func walkBranch(branch *parse.BranchNode, refs *[]secrets.Reference) error {
 	if branch == nil {
 		return nil
 	}
@@ -125,7 +126,7 @@ func walkBranch(branch *parse.BranchNode, refs *[]SecretReference) error {
 	return walkNode(branch.ElseList, refs)
 }
 
-func walkPipe(pipe *parse.PipeNode, refs *[]SecretReference) error {
+func walkPipe(pipe *parse.PipeNode, refs *[]secrets.Reference) error {
 	if pipe == nil {
 		return nil
 	}
@@ -139,7 +140,7 @@ func walkPipe(pipe *parse.PipeNode, refs *[]SecretReference) error {
 	return nil
 }
 
-func walkCommand(cmd *parse.CommandNode, refs *[]SecretReference) error {
+func walkCommand(cmd *parse.CommandNode, refs *[]secrets.Reference) error {
 	if cmd == nil || len(cmd.Args) == 0 {
 		return nil
 	}
@@ -166,9 +167,9 @@ func walkCommand(cmd *parse.CommandNode, refs *[]SecretReference) error {
 	return nil
 }
 
-func secretReferenceFromCommand(cmd *parse.CommandNode) (SecretReference, error) {
+func secretReferenceFromCommand(cmd *parse.CommandNode) (secrets.Reference, error) {
 	if len(cmd.Args) != 3 { //nolint:mnd
-		return SecretReference{}, errorchain.NewWithMessagef(
+		return secrets.Reference{}, errorchain.NewWithMessagef(
 			pipeline.ErrConfiguration,
 			"secret function expects exactly two string literal arguments",
 		)
@@ -176,7 +177,7 @@ func secretReferenceFromCommand(cmd *parse.CommandNode) (SecretReference, error)
 
 	source, ok := cmd.Args[1].(*parse.StringNode)
 	if !ok {
-		return SecretReference{}, errorchain.NewWithMessage(
+		return secrets.Reference{}, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"secret function source argument must be a string literal",
 		)
@@ -184,27 +185,27 @@ func secretReferenceFromCommand(cmd *parse.CommandNode) (SecretReference, error)
 
 	selector, ok := cmd.Args[2].(*parse.StringNode)
 	if !ok {
-		return SecretReference{}, errorchain.NewWithMessage(
+		return secrets.Reference{}, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"secret function selector argument must be a string literal",
 		)
 	}
 
 	if len(source.Text) == 0 {
-		return SecretReference{}, errorchain.NewWithMessage(
+		return secrets.Reference{}, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"secret function source argument must not be empty",
 		)
 	}
 
 	if len(selector.Text) == 0 {
-		return SecretReference{}, errorchain.NewWithMessage(
+		return secrets.Reference{}, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"secret function selector argument must not be empty",
 		)
 	}
 
-	return SecretReference{
+	return secrets.Reference{
 		Source:   source.Text,
 		Selector: selector.Text,
 	}, nil

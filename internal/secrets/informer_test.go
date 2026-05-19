@@ -1,4 +1,4 @@
-package informer
+package secrets
 
 import (
 	"context"
@@ -9,15 +9,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/secrets"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
 
 func TestSecretResolverStart(t *testing.T) {
 	t.Parallel()
 
-	ref := secrets.InternalRef("source", "selector")
+	ref := InternalRef("source", "selector")
 	secret := types.NewStringSecret("selector", "value")
 
 	for uc, tc := range map[string]struct {
@@ -45,13 +44,13 @@ func TestSecretResolverStart(t *testing.T) {
 			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(nil, secrets.ErrSecretNotFound)
+				sm.EXPECT().ResolveSecret(mock.Anything, ref).Return(nil, ErrSecretNotFound)
 			},
 			assert: func(t *testing.T, err error, resolver *SecretInformer[string]) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, secrets.ErrSecretNotFound)
+				require.ErrorIs(t, err, ErrSecretNotFound)
 
 				value, ok := resolver.Get()
 				require.False(t, ok)
@@ -69,7 +68,7 @@ func TestSecretResolverStart(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, secrets.ErrSubscribeFailed)
+				require.ErrorIs(t, err, ErrSubscribeFailed)
 
 				value, ok := resolver.Get()
 				require.True(t, ok)
@@ -86,10 +85,10 @@ func TestSecretResolverStart(t *testing.T) {
 			resolver := &SecretInformer[string]{
 				Manager:   sm,
 				Reference: ref,
-				Converter: func(secret secrets.Secret) (string, error) {
+				Converter: func(secret Secret) (string, error) {
 					t.Helper()
 
-					stringSecret, ok := secret.(secrets.StringSecret)
+					stringSecret, ok := secret.(StringSecret)
 					require.True(t, ok)
 
 					return stringSecret.Value(), nil
@@ -106,17 +105,17 @@ func TestSecretResolverStart(t *testing.T) {
 func TestSecretResolverReload(t *testing.T) {
 	t.Parallel()
 
-	ref := secrets.InternalRef("source", "selector")
+	ref := InternalRef("source", "selector")
 
 	for uc, tc := range map[string]struct {
 		setup               func(t *testing.T, sm *secretsmocks.ManagerMock) func(context.Context) error
-		converter           Converter[secrets.Secret, string]
-		missingSecretPolicy MissingSecretPolicy[secrets.Secret, string]
+		converter           Converter[Secret, string]
+		missingSecretPolicy MissingSecretPolicy[Secret, string]
 		assert              func(t *testing.T, err error, resolver *SecretInformer[string], updates []string, reported []error)
 	}{
 		"updates cached value on change": {
-			converter: func(secret secrets.Secret) (string, error) {
-				stringSecret, ok := secret.(secrets.StringSecret)
+			converter: func(secret Secret) (string, error) {
+				stringSecret, ok := secret.(StringSecret)
 				if !ok {
 					return "", errors.New("unexpected secret type")
 				}
@@ -138,7 +137,7 @@ func TestSecretResolverReload(t *testing.T) {
 
 				sm.EXPECT().
 					Subscribe(ref, mock.Anything).
-					RunAndReturn(func(_ secrets.Reference, cb func(context.Context) error) (func(), error) {
+					RunAndReturn(func(_ Reference, cb func(context.Context) error) (func(), error) {
 						callback = cb
 
 						sm.EXPECT().
@@ -169,8 +168,8 @@ func TestSecretResolverReload(t *testing.T) {
 			},
 		},
 		"keeps previous value on conversion error": {
-			converter: func(secret secrets.Secret) (string, error) {
-				stringSecret, ok := secret.(secrets.StringSecret)
+			converter: func(secret Secret) (string, error) {
+				stringSecret, ok := secret.(StringSecret)
 				if !ok {
 					return "", errors.New("unexpected secret type")
 				}
@@ -196,7 +195,7 @@ func TestSecretResolverReload(t *testing.T) {
 
 				sm.EXPECT().
 					Subscribe(ref, mock.Anything).
-					RunAndReturn(func(_ secrets.Reference, cb func(context.Context) error) (func(), error) {
+					RunAndReturn(func(_ Reference, cb func(context.Context) error) (func(), error) {
 						callback = cb
 
 						sm.EXPECT().
@@ -229,8 +228,8 @@ func TestSecretResolverReload(t *testing.T) {
 			},
 		},
 		"clears cached value if configured secret disappears": {
-			converter: func(secret secrets.Secret) (string, error) {
-				stringSecret, ok := secret.(secrets.StringSecret)
+			converter: func(secret Secret) (string, error) {
+				stringSecret, ok := secret.(StringSecret)
 				if !ok {
 					return "", errors.New("unexpected secret type")
 				}
@@ -252,12 +251,12 @@ func TestSecretResolverReload(t *testing.T) {
 
 				sm.EXPECT().
 					Subscribe(ref, mock.Anything).
-					RunAndReturn(func(_ secrets.Reference, cb func(context.Context) error) (func(), error) {
+					RunAndReturn(func(_ Reference, cb func(context.Context) error) (func(), error) {
 						callback = cb
 
 						sm.EXPECT().
 							ResolveSecret(mock.Anything, ref).
-							Return(nil, secrets.ErrSecretNotFound).
+							Return(nil, ErrSecretNotFound).
 							Once()
 
 						return func() {}, nil
@@ -277,7 +276,7 @@ func TestSecretResolverReload(t *testing.T) {
 				require.Len(t, updates, 1)
 				require.Equal(t, "initial", updates[0])
 				require.Len(t, reported, 1)
-				require.ErrorIs(t, reported[0], secrets.ErrSecretNotFound)
+				require.ErrorIs(t, reported[0], ErrSecretNotFound)
 
 				value, ok := resolver.Get()
 				require.False(t, ok)
@@ -285,8 +284,8 @@ func TestSecretResolverReload(t *testing.T) {
 			},
 		},
 		"returns error if configured to fail on missing secret": {
-			converter: func(secret secrets.Secret) (string, error) {
-				stringSecret, ok := secret.(secrets.StringSecret)
+			converter: func(secret Secret) (string, error) {
+				stringSecret, ok := secret.(StringSecret)
 				if !ok {
 					return "", errors.New("unexpected secret type")
 				}
@@ -308,12 +307,12 @@ func TestSecretResolverReload(t *testing.T) {
 
 				sm.EXPECT().
 					Subscribe(ref, mock.Anything).
-					RunAndReturn(func(_ secrets.Reference, cb func(context.Context) error) (func(), error) {
+					RunAndReturn(func(_ Reference, cb func(context.Context) error) (func(), error) {
 						callback = cb
 
 						sm.EXPECT().
 							ResolveSecret(mock.Anything, ref).
-							Return(nil, secrets.ErrSecretNotFound).
+							Return(nil, ErrSecretNotFound).
 							Once()
 
 						return func() {}, nil
@@ -330,11 +329,11 @@ func TestSecretResolverReload(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, secrets.ErrSecretNotFound)
+				require.ErrorIs(t, err, ErrSecretNotFound)
 				require.Len(t, updates, 1)
 				require.Equal(t, "initial", updates[0])
 				require.Len(t, reported, 1)
-				require.ErrorIs(t, reported[0], secrets.ErrSecretNotFound)
+				require.ErrorIs(t, reported[0], ErrSecretNotFound)
 
 				value, ok := resolver.Get()
 				require.True(t, ok)
@@ -359,10 +358,10 @@ func TestSecretResolverReload(t *testing.T) {
 
 			converter := tc.converter
 			if converter == nil {
-				converter = func(secret secrets.Secret) (string, error) {
+				converter = func(secret Secret) (string, error) {
 					t.Helper()
 
-					stringSecret, ok := secret.(secrets.StringSecret)
+					stringSecret, ok := secret.(StringSecret)
 					require.True(t, ok)
 
 					return stringSecret.Value(), nil
@@ -376,7 +375,7 @@ func TestSecretResolverReload(t *testing.T) {
 				Reference:           ref,
 				Converter:           converter,
 				MissingSecretPolicy: policy,
-				OnUpdate: func(_ context.Context, _ secrets.Secret, value string) {
+				OnUpdate: func(_ context.Context, _ Secret, value string) {
 					updates = append(updates, value)
 				},
 				OnError: func(_ context.Context, err error) {
@@ -397,7 +396,7 @@ func TestSecretResolverReload(t *testing.T) {
 func TestSecretResolverStop(t *testing.T) {
 	t.Parallel()
 
-	ref := secrets.InternalRef("source", "selector")
+	ref := InternalRef("source", "selector")
 	secret := types.NewStringSecret("selector", "value")
 	stopped := false
 
@@ -408,10 +407,10 @@ func TestSecretResolverStop(t *testing.T) {
 	resolver := &SecretInformer[string]{
 		Manager:   sm,
 		Reference: ref,
-		Converter: func(secret secrets.Secret) (string, error) {
+		Converter: func(secret Secret) (string, error) {
 			t.Helper()
 
-			stringSecret, ok := secret.(secrets.StringSecret)
+			stringSecret, ok := secret.(StringSecret)
 			require.True(t, ok)
 
 			return stringSecret.Value(), nil
@@ -428,9 +427,9 @@ func TestSecretResolverStop(t *testing.T) {
 func TestResolverStartPanics(t *testing.T) {
 	t.Parallel()
 
-	ref := secrets.InternalRef("source", "selector")
-	converter := func(secret secrets.Secret) (string, error) {
-		stringSecret, ok := secret.(secrets.StringSecret)
+	ref := InternalRef("source", "selector")
+	converter := func(secret Secret) (string, error) {
+		stringSecret, ok := secret.(StringSecret)
 		if !ok {
 			return "", errors.New("unexpected secret type")
 		}
@@ -439,14 +438,14 @@ func TestResolverStartPanics(t *testing.T) {
 	}
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T) *Informer[secrets.Secret, string]
+		setup  func(t *testing.T) *Informer[Secret, string]
 		assert func(t *testing.T, panicValue any)
 	}{
 		"panics if manager is nil": {
-			setup: func(t *testing.T) *Informer[secrets.Secret, string] {
+			setup: func(t *testing.T) *Informer[Secret, string] {
 				t.Helper()
 
-				return &Informer[secrets.Secret, string]{
+				return &Informer[Secret, string]{
 					Reference: ref,
 					Source:    SecretSource{},
 					Converter: converter,
@@ -459,10 +458,10 @@ func TestResolverStartPanics(t *testing.T) {
 			},
 		},
 		"panics if source is nil": {
-			setup: func(t *testing.T) *Informer[secrets.Secret, string] {
+			setup: func(t *testing.T) *Informer[Secret, string] {
 				t.Helper()
 
-				return &Informer[secrets.Secret, string]{
+				return &Informer[Secret, string]{
 					Manager:   secretsmocks.NewManagerMock(t),
 					Reference: ref,
 					Converter: converter,
@@ -475,10 +474,10 @@ func TestResolverStartPanics(t *testing.T) {
 			},
 		},
 		"panics if converter is nil": {
-			setup: func(t *testing.T) *Informer[secrets.Secret, string] {
+			setup: func(t *testing.T) *Informer[Secret, string] {
 				t.Helper()
 
-				return &Informer[secrets.Secret, string]{
+				return &Informer[Secret, string]{
 					Manager:   secretsmocks.NewManagerMock(t),
 					Reference: ref,
 					Source:    SecretSource{},
@@ -515,7 +514,7 @@ func TestResolverStartPanics(t *testing.T) {
 func TestCredentialsResolverStart(t *testing.T) {
 	t.Parallel()
 
-	ref := secrets.InternalRef("source", "redis")
+	ref := InternalRef("source", "redis")
 	creds := types.NewCredentials("redis", map[string]any{
 		"username": "foo",
 		"password": "bar",
@@ -528,7 +527,7 @@ func TestCredentialsResolverStart(t *testing.T) {
 	resolver := &CredentialsInformer[string]{
 		Manager:   sm,
 		Reference: ref,
-		Converter: func(credentials secrets.Credentials) (string, error) {
+		Converter: func(credentials Credentials) (string, error) {
 			t.Helper()
 
 			type decoded struct {

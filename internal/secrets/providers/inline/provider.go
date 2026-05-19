@@ -74,7 +74,7 @@ func newProvider(args types.ProviderArgs) (types.Provider, error) {
 	}, nil
 }
 
-func (p *provider) Dependencies() []types.Reference { return nil }
+func (p *provider) Dependencies() []types.SecretRef { return nil }
 func (p *provider) Type() string                    { return ProviderType }
 func (p *provider) Start(_ context.Context) error   { return nil }
 func (p *provider) Stop(_ context.Context) error    { return nil }

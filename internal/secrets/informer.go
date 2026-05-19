@@ -1,4 +1,4 @@
-package informer
+package secrets
 
 import (
 	"context"
@@ -6,11 +6,76 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
+type MissingSecretPolicy[S any, T any] interface {
+	HandleMissingSecret(ctx context.Context, cch *Informer[S, T], err error) error
+}
+
+type (
+	KeepPrevious[S any, T any]     struct{}
+	KeepPreviousSecret[T any]      = KeepPrevious[Secret, T]
+	KeepPreviousCredentials[T any] = KeepPrevious[Credentials, T]
+)
+
+func (KeepPrevious[S, T]) HandleMissingSecret(context.Context, *Informer[S, T], error) error {
+	return nil
+}
+
+type (
+	Clear[S any, T any]     struct{}
+	ClearSecret[T any]      = Clear[Secret, T]
+	ClearCredentials[T any] = Clear[Credentials, T]
+)
+
+func (Clear[S, T]) HandleMissingSecret(_ context.Context, w *Informer[S, T], _ error) error {
+	w.clear()
+
+	return nil
+}
+
+type (
+	Fail[S any, T any]     struct{}
+	FailSecret[T any]      = Fail[Secret, T]
+	FailCredentials[T any] = Fail[Credentials, T]
+)
+
+func (Fail[S, T]) HandleMissingSecret(_ context.Context, _ *Informer[S, T], err error) error {
+	return err
+}
+
 type Converter[S any, T any] func(S) (T, error)
+
+type Source[S any] interface {
+	Resolve(ctx context.Context, mgr Manager, ref Reference) (S, error)
+}
+
+type SecretSource struct{}
+
+func (SecretSource) Resolve(ctx context.Context, sm Manager, ref Reference) (Secret, error) {
+	return sm.ResolveSecret(ctx, ref)
+}
+
+type SecretSetSource struct{}
+
+func (SecretSetSource) Resolve(
+	ctx context.Context,
+	sm Manager,
+	ref Reference,
+) ([]Secret, error) {
+	return sm.ResolveSecretSet(ctx, ref)
+}
+
+type CredentialsSource struct{}
+
+func (CredentialsSource) Resolve(
+	ctx context.Context,
+	sm Manager,
+	ref Reference,
+) (Credentials, error) {
+	return sm.ResolveCredentials(ctx, ref)
+}
 
 type state[T any] struct {
 	value T
@@ -18,18 +83,18 @@ type state[T any] struct {
 }
 
 type SecretInformer[T any] struct {
-	Manager             secrets.Manager
-	Reference           secrets.Reference
-	Converter           Converter[secrets.Secret, T]
-	MissingSecretPolicy MissingSecretPolicy[secrets.Secret, T]
-	OnUpdate            func(context.Context, secrets.Secret, T)
+	Manager             Manager
+	Reference           Reference
+	Converter           Converter[Secret, T]
+	MissingSecretPolicy MissingSecretPolicy[Secret, T]
+	OnUpdate            func(context.Context, Secret, T)
 	OnError             func(context.Context, error)
 
-	i Informer[secrets.Secret, T]
+	i Informer[Secret, T]
 }
 
 func (i *SecretInformer[T]) Start(ctx context.Context) error {
-	i.i = Informer[secrets.Secret, T]{
+	i.i = Informer[Secret, T]{
 		Manager:             i.Manager,
 		Reference:           i.Reference,
 		Source:              SecretSource{},
@@ -46,18 +111,18 @@ func (i *SecretInformer[T]) Stop()          { i.i.Stop() }
 func (i *SecretInformer[T]) Get() (T, bool) { return i.i.Get() }
 
 type CredentialsInformer[T any] struct {
-	Manager             secrets.Manager
-	Reference           secrets.Reference
-	Converter           Converter[secrets.Credentials, T]
-	MissingSecretPolicy MissingSecretPolicy[secrets.Credentials, T]
-	OnUpdate            func(context.Context, secrets.Credentials, T)
+	Manager             Manager
+	Reference           Reference
+	Converter           Converter[Credentials, T]
+	MissingSecretPolicy MissingSecretPolicy[Credentials, T]
+	OnUpdate            func(context.Context, Credentials, T)
 	OnError             func(context.Context, error)
 
-	i Informer[secrets.Credentials, T]
+	i Informer[Credentials, T]
 }
 
 func (i *CredentialsInformer[T]) Start(ctx context.Context) error {
-	i.i = Informer[secrets.Credentials, T]{
+	i.i = Informer[Credentials, T]{
 		Manager:             i.Manager,
 		Reference:           i.Reference,
 		Source:              CredentialsSource{},
@@ -74,8 +139,8 @@ func (i *CredentialsInformer[T]) Stop()          { i.i.Stop() }
 func (i *CredentialsInformer[T]) Get() (T, bool) { return i.i.Get() }
 
 type Informer[S any, T any] struct {
-	Manager             secrets.Manager
-	Reference           secrets.Reference
+	Manager             Manager
+	Reference           Reference
 	Source              Source[S]
 	Converter           Converter[S, T]
 	MissingSecretPolicy MissingSecretPolicy[S, T]
@@ -111,7 +176,7 @@ func (i *Informer[S, T]) Start(ctx context.Context) error {
 		return i.reload(ctx, false)
 	})
 	if err != nil {
-		return fmt.Errorf("%w: %w", secrets.ErrSubscribeFailed, err)
+		return fmt.Errorf("%w: %w", ErrSubscribeFailed, err)
 	}
 
 	i.unsubscribe = unsubscribe
@@ -144,7 +209,7 @@ func (i *Informer[S, T]) reload(ctx context.Context, strict bool) error {
 			i.OnError(ctx, err)
 		}
 
-		if !strict && errors.Is(err, secrets.ErrSecretNotFound) {
+		if !strict && errors.Is(err, ErrSecretNotFound) {
 			return i.MissingSecretPolicy.HandleMissingSecret(ctx, i, err)
 		}
 

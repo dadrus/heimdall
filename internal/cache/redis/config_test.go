@@ -34,8 +34,8 @@ import (
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
 
 func TestBaseConfigClientOptions(t *testing.T) {

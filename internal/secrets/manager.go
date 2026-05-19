@@ -38,18 +38,18 @@ type dependencyResolver struct {
 	m *manager
 }
 
-func (r *dependencyResolver) ResolveSecret(ctx context.Context, ref types.Reference) (types.Secret, error) {
+func (r *dependencyResolver) ResolveSecret(ctx context.Context, ref types.SecretRef) (types.Secret, error) {
 	return r.m.ResolveSecret(ctx, InternalRef(ref.Source, ref.Selector))
 }
 
-func (r *dependencyResolver) ResolveCredentials(ctx context.Context, ref types.Reference) (types.Credentials, error) {
+func (r *dependencyResolver) ResolveCredentials(ctx context.Context, ref types.SecretRef) (types.Credentials, error) {
 	return r.m.ResolveCredentials(ctx, InternalRef(ref.Source, ref.Selector))
 }
 
 type secretSource interface {
 	Name() string
 	DependsOn(evt source.Event) bool
-	Dependencies() []types.Reference
+	Dependencies() []types.SecretRef
 	AccessFromRulesAllowed() bool
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error

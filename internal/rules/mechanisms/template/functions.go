@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 func urlEncode(value any) string {
@@ -50,9 +52,9 @@ func atIndex(pos int, list any) (any, error) {
 	}
 }
 
-func secret(store SecretStore) func(string, string) (string, error) {
+func secret(store secrets.Store) func(string, string) (string, error) {
 	return func(source, selector string) (string, error) {
-		return store.GetSecret(SecretReference{
+		return store.GetSecret(secrets.Reference{
 			Source:   source,
 			Selector: selector,
 		})

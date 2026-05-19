@@ -20,9 +20,8 @@ import (
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/informer"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -265,7 +264,7 @@ func TestGetCertificate(t *testing.T) {
 			cc := newCompatibilityCheckerMock(t)
 			tc.setup(t, sm, cc)
 
-			resolver := &informer.SecretInformer[*tls.Certificate]{
+			resolver := &secrets.SecretInformer[*tls.Certificate]{
 				Manager:   sm,
 				Reference: ref,
 				Converter: toTLSCertificate,
