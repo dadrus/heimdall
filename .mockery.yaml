@@ -85,6 +85,9 @@ packages:
     interfaces:
       Mechanism: {}
       Repository: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/template:
+    interfaces:
+      SecretStore: {}
   github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/webhook:
     config:
       dir: "{{ .InterfaceDir }}"
