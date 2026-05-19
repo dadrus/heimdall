@@ -24,7 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
-func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
+func DecodeEndpointHookFunc(opts ...template.Option) mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
 		var ep Endpoint
 
@@ -37,9 +37,7 @@ func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// Already checked above
-		// nolint: forcetypeassert
-		tpl, err := template.New(data.(string))
+		tpl, err := template.New(data.(string), opts...) //nolint:forcetypeassert
 		if err != nil {
 			return nil, err
 		}
