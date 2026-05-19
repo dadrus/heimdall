@@ -53,7 +53,7 @@ func New(val string, opts ...Option) (Template, error) {
 	delete(funcMap, "env")
 	delete(funcMap, "expandenv")
 
-	tmpl, err := template.New("Heimdall").
+	tmpl, err := template.New(cfg.name).
 		Funcs(funcMap).
 		Funcs(template.FuncMap{
 			"urlenc":  urlEncode,
@@ -78,8 +78,8 @@ func New(val string, opts ...Option) (Template, error) {
 	return templateImpl{t: tmpl, orig: val, hash: hash.Sum(result[:0])}, nil
 }
 
-func Must(value string) Template {
-	tpl, err := New(value)
+func Must(value string, opts ...Option) Template {
+	tpl, err := New(value, opts...)
 	if err != nil {
 		panic(err)
 	}

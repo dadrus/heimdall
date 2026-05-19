@@ -35,6 +35,7 @@ func TestNew(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		raw    string
+		opts   []template.Option
 		assert func(t *testing.T, tpl template.Template, err error)
 	}{
 		"creates template": {
@@ -54,6 +55,7 @@ func TestNew(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `template: Heimdall`)
 				require.Nil(t, tpl)
 			},
 		},
@@ -79,11 +81,25 @@ func TestNew(t *testing.T) {
 				require.Nil(t, tpl)
 			},
 		},
+		"uses configured template name in parse error": {
+			raw: `hello {{ .Name `,
+			opts: []template.Option{
+				template.WithName("test-template"),
+			},
+			assert: func(t *testing.T, tpl template.Template, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `template: test-template`)
+				require.Nil(t, tpl)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			tpl, err := template.New(tc.raw)
+			tpl, err := template.New(tc.raw, tc.opts...)
 
 			tc.assert(t, tpl, err)
 		})
