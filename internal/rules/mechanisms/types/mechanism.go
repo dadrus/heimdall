@@ -34,6 +34,7 @@ type Kind = pipeline.MechanismKind
 type StepDefinition struct {
 	ID        string
 	Principal string
+	Namespace string
 	Config    config.MechanismConfig
 }
 
