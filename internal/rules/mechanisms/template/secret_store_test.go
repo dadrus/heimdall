@@ -4,11 +4,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
@@ -23,7 +23,7 @@ func TestNewSecretStore(t *testing.T) {
 		assert     func(t *testing.T, store SecretStore, err error)
 	}{
 		"creates secret store": {
-			manager: secretsmocks.NewManagerMock(t),
+			manager:    secretsmocks.NewManagerMock(t),
 			refFactory: secrets.InternalRef,
 			assert: func(t *testing.T, store SecretStore, err error) {
 				t.Helper()
@@ -70,6 +70,7 @@ func TestNewSecretStore(t *testing.T) {
 		})
 	}
 }
+
 func TestSecretStoreRegisterSecret(t *testing.T) {
 	t.Parallel()
 

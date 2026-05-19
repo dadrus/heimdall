@@ -30,6 +30,7 @@ func (v urlValidator) AlwaysValidate() bool         { return false }
 func (v urlValidator) MessageTemplate() string      { return "{0} {1}" }
 func (v urlValidator) ErrorMessage(_ string) string { return "must be a valid URL" }
 
+//nolint:cyclop
 func (v urlValidator) Validate(_ string, field reflect.Value) bool {
 	if !field.IsValid() {
 		return false

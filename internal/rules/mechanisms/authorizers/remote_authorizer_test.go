@@ -623,8 +623,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub pipeline.Subject)
 		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any)
 	}{
-			"successful with payload and with header, without payload from server and without header " +
-				"forwarding and with disabled cache": {
+		"successful with payload and with header, without payload from server and without header " +
+			"forwarding and with disabled cache": {
 			authorizer: &remoteAuthorizer{
 				e: endpointtestsupport.EndpointValue(t, srv.URL,
 					endpoint.WithHeader("Foo-Bar", "{{ .Subject.Attributes.bar }}"),
@@ -682,8 +682,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Equal(t, "bar", outputs["foo"])
 			},
 		},
-			"successful with json payload and with header, with json payload from server and with header" +
-				" forwarding and with disabled cache": {
+		"successful with json payload and with header, with json payload from server and with header" +
+			" forwarding and with disabled cache": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL,

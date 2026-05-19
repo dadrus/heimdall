@@ -76,7 +76,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				return endpoint.Endpoint{
 					URL: metadataRenderFailingTemplate{
 						value: srv.URL + "/{{ Foo }}",
-						err:   errors.New(`create template: template: Heimdall:1: function "Foo" not defined`),
+						err:   errors.New("create template: Heimdall:1: function \"Foo\" not defined"),
 					},
 				}
 			},
@@ -455,6 +455,7 @@ func assertEndpointEqual(t *testing.T, expected, actual endpoint.Endpoint) {
 	assert.Equal(t, expected.HTTPCache, actual.HTTPCache)
 
 	require.Len(t, actual.Headers, len(expected.Headers))
+
 	for name, expectedValue := range expected.Headers {
 		actualValue, ok := actual.Headers[name]
 		require.True(t, ok)

@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
@@ -36,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
