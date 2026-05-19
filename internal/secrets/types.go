@@ -71,3 +71,9 @@ func RuleRef(source, selector, namespace string) Reference {
 		RuleContext: true,
 	}
 }
+
+func NamespacedRuleRef(namespace string) ReferenceFactory {
+	return func(source, selector string) Reference {
+		return RuleRef(source, selector, namespace)
+	}
+}
