@@ -36,6 +36,39 @@ func (_m *SecretStoreMock) EXPECT() *SecretStoreMock_Expecter {
 	return &SecretStoreMock_Expecter{mock: &_m.Mock}
 }
 
+// CleanUp provides a mock function for the type SecretStoreMock
+func (_mock *SecretStoreMock) CleanUp() {
+	_mock.Called()
+	return
+}
+
+// SecretStoreMock_CleanUp_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanUp'
+type SecretStoreMock_CleanUp_Call struct {
+	*mock.Call
+}
+
+// CleanUp is a helper method to define mock.On call
+func (_e *SecretStoreMock_Expecter) CleanUp() *SecretStoreMock_CleanUp_Call {
+	return &SecretStoreMock_CleanUp_Call{Call: _e.mock.On("CleanUp")}
+}
+
+func (_c *SecretStoreMock_CleanUp_Call) Run(run func()) *SecretStoreMock_CleanUp_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *SecretStoreMock_CleanUp_Call) Return() *SecretStoreMock_CleanUp_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *SecretStoreMock_CleanUp_Call) RunAndReturn(run func()) *SecretStoreMock_CleanUp_Call {
+	_c.Run(run)
+	return _c
+}
+
 // GetSecret provides a mock function for the type SecretStoreMock
 func (_mock *SecretStoreMock) GetSecret(ref template.SecretReference) (string, error) {
 	ret := _mock.Called(ref)

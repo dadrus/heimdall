@@ -136,7 +136,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo", value)
+				assert.Equal(t, "foo foo", value) //nolint:dupword
 			},
 		},
 		"registers secret inside if branch": {

@@ -18,6 +18,7 @@ type SecretReference struct {
 type SecretStore interface {
 	RegisterSecret(ref SecretReference) error
 	GetSecret(ref SecretReference) (string, error)
+	CleanUp()
 }
 
 type SecretReferenceFactory func(source, selector string) secrets.Reference
@@ -95,7 +96,7 @@ func (s *secretStore) GetSecret(ref SecretReference) (string, error) {
 	return value, nil
 }
 
-func (s *secretStore) Stop() {
+func (s *secretStore) CleanUp() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

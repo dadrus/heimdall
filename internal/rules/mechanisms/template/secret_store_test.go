@@ -85,7 +85,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		refFactory SecretReferenceFactory
 		setup      func(t *testing.T, mgr *secretsmocks.ManagerMock)
-		assert     func(t *testing.T, store *secretStore, err error)
+		assert     func(t *testing.T, store SecretStore, err error)
 	}{
 		"registers secret and makes it available": {
 			refFactory: secrets.InternalRef,
@@ -99,7 +99,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 					Subscribe(managerRef, mock.Anything).
 					Return(func() {}, nil)
 			},
-			assert: func(t *testing.T, store *secretStore, err error) {
+			assert: func(t *testing.T, store SecretStore, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 					ResolveSecret(mock.Anything, managerRef).
 					Return(nil, assert.AnError)
 			},
-			assert: func(t *testing.T, _ *secretStore, err error) {
+			assert: func(t *testing.T, _ SecretStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -137,7 +137,7 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 					Subscribe(managerRef, mock.Anything).
 					Return(nil, assert.AnError)
 			},
-			assert: func(t *testing.T, _ *secretStore, err error) {
+			assert: func(t *testing.T, _ SecretStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -154,12 +154,11 @@ func TestSecretStoreRegisterSecret(t *testing.T) {
 			store, err := NewSecretStore(mgr, tc.refFactory)
 			require.NoError(t, err)
 
-			impl := store.(*secretStore)
-			defer impl.Stop()
+			defer store.CleanUp()
 
 			err = store.RegisterSecret(ref)
 
-			tc.assert(t, impl, err)
+			tc.assert(t, store, err)
 		})
 	}
 }
@@ -195,8 +194,7 @@ func TestSecretStoreRegisterSecretIsIdempotent(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	impl := store.(*secretStore)
-	defer impl.Stop()
+	defer store.CleanUp()
 
 	require.NoError(t, store.RegisterSecret(ref))
 	require.NoError(t, store.RegisterSecret(ref))
@@ -222,8 +220,7 @@ func TestSecretStoreGetSecret(t *testing.T) {
 		store, err := NewSecretStore(secretsmocks.NewManagerMock(t), secrets.InternalRef)
 		require.NoError(t, err)
 
-		impl := store.(*secretStore)
-		defer impl.Stop()
+		defer store.CleanUp()
 
 		value, err := store.GetSecret(ref)
 
@@ -255,8 +252,7 @@ func TestSecretStoreGetSecret(t *testing.T) {
 
 		require.NoError(t, store.RegisterSecret(ref))
 
-		impl := store.(*secretStore)
-		impl.Stop()
+		store.CleanUp()
 
 		value, err := store.GetSecret(ref)
 
@@ -303,8 +299,9 @@ func TestSecretStoreStop(t *testing.T) {
 	require.NoError(t, store.RegisterSecret(refA))
 	require.NoError(t, store.RegisterSecret(refB))
 
+	store.CleanUp()
+
 	impl := store.(*secretStore)
-	impl.Stop()
 
 	assert.EqualValues(t, 2, unsubscribed.Load())
 	assert.Empty(t, impl.informers)
