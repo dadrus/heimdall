@@ -39,6 +39,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
@@ -95,7 +96,7 @@ payload: bar
 				require.NoError(t, err)
 				require.NotNil(t, contextualizer)
 
-				assert.Equal(t, "https://foo.bar", contextualizer.e.URL)
+				assert.Equal(t, "https://foo.bar", contextualizer.e.URL.String())
 				require.NotNil(t, contextualizer.payload)
 				val, err := contextualizer.payload.Render(map[string]any{
 					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
@@ -147,7 +148,7 @@ values:
 				require.NoError(t, err)
 				require.NotNil(t, contextualizer)
 
-				assert.Equal(t, "http://bar.foo", contextualizer.e.URL)
+				assert.Equal(t, "http://bar.foo", contextualizer.e.URL.String())
 				require.NotNil(t, contextualizer.payload)
 				val, err := contextualizer.payload.Render(map[string]any{
 					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
@@ -590,7 +591,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		"with successful cache hit": {
 			contextualizer: &genericContextualizer{
 				id:  "contextualizer",
-				e:   endpoint.Endpoint{URL: srv.URL},
+				e:   endpointtestsupport.EndpointValue(t, srv.URL),
 				ttl: 5 * time.Second,
 				payload: func() template.Template {
 					tpl, _ := template.New("foo")
@@ -636,7 +637,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		"with error in values rendering": {
 			contextualizer: &genericContextualizer{
 				id: "contextualizer1",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
 				v: func() values.Values {
 					tpl, err := template.New("{{ len .foo }}")
 					require.NoError(t, err)
@@ -672,7 +673,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		"with error in payload rendering": {
 			contextualizer: &genericContextualizer{
 				id: "contextualizer1",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
 				payload: func() template.Template {
 					tpl, err := template.New("{{ len .foo }}")
 					require.NoError(t, err)
@@ -708,7 +709,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		"with communication error (dns)": {
 			contextualizer: &genericContextualizer{
 				id: "contextualizer2",
-				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				e:  endpointtestsupport.EndpointValue(t, "http://heimdall.test.local"),
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
@@ -738,7 +739,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		"with unexpected response code from server": {
 			contextualizer: &genericContextualizer{
 				id: "contextualizer3",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
@@ -774,7 +775,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			contextualizer: &genericContextualizer{
 				id:  "test-contextualizer",
 				ttl: 5 * time.Second,
-				e:   endpoint.Endpoint{URL: srv.URL + "/{{ .Values.user_id }}"},
+				e:   endpointtestsupport.EndpointValue(t, srv.URL+"/{{ .Values.user_id }}"),
 				v: func() values.Values {
 					tpl, err := template.New("{{ .Subject.ID }}")
 					require.NoError(t, err)
@@ -826,7 +827,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		"without payload, but with cache": {
 			contextualizer: &genericContextualizer{
 				id:  "test-contextualizer",
-				e:   endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
+				e:   endpointtestsupport.EndpointValue(t, srv.URL+"/{{ .Subject.ID }}"),
 				ttl: 10 * time.Second,
 			},
 			subject: pipeline.Subject{
@@ -882,15 +883,12 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		"with rendered payload and headers, as well as forwarded headers and cookies": {
 			contextualizer: &genericContextualizer{
 				id: "test-contextualizer",
-				e: endpoint.Endpoint{
-					URL: srv.URL + "/{{ .Subject.ID }}/{{ .Outputs.foo }}",
-					Headers: map[string]string{
-						"Content-Type": "application/json",
-						"Accept":       "application/json",
-						"X-Bar":        "{{ .Subject.Attributes.bar }}",
-						"X-Foo":        "{{ .Outputs.foo }}",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL+"/{{ .Subject.ID }}/{{ .Outputs.foo }}",
+					endpoint.WithHeader("Content-Type", "application/json"),
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithHeader("X-Bar", "{{ .Subject.Attributes.bar }}"),
+					endpoint.WithHeader("X-Foo", "{{ .Outputs.foo }}"),
+				),
 				v: func() values.Values {
 					tpl, _ := template.New("bar")
 

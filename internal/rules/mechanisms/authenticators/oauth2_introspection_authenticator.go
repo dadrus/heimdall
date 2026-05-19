@@ -39,7 +39,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -99,14 +98,16 @@ func newOAuth2IntrospectionAuthenticator(
 			CausedBy(err)
 	}
 
-	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
+	if conf.IntrospectionEndpoint != nil &&
+		strings.HasPrefix(conf.IntrospectionEndpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorOAuth2Introspection).
 			Str("_name", name).
 			Msg("No TLS configured for the introspection endpoint used in authenticator")
 	}
 
-	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
+	if conf.MetadataEndpoint != nil &&
+		strings.HasPrefix(conf.MetadataEndpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorOAuth2Introspection).
 			Str("_name", name).
@@ -141,17 +142,8 @@ func newOAuth2IntrospectionAuthenticator(
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.IntrospectionEndpoint
 
-			if ep.Headers == nil {
-				ep.Headers = make(map[string]string)
-			}
-
-			if _, ok := ep.Headers["Content-Type"]; !ok {
-				ep.Headers["Content-Type"] = "application/x-www-form-urlencoded"
-			}
-
-			if _, ok := ep.Headers["Accept"]; !ok {
-				ep.Headers["Accept"] = "application/json"
-			}
+			ep.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+			ep.SetHeader("Accept", "application/json")
 
 			if len(ep.Method) == 0 {
 				ep.Method = http.MethodPost
@@ -386,23 +378,9 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 			url.Values{
 				"token":           []string{token},
 				"token_type_hint": []string{"access_token"},
-			}.Encode()),
-		endpoint.RenderFunc(func(value string) (string, error) {
-			// ignoring closing braces here as it would anyway result in a broken template leading to an error
-			// if the token is not in a JWT format, there is nothing to render as well
-			if len(claims) == 0 || !strings.Contains(value, "{{") {
-				return value, nil
-			}
-
-			tpl, err := template.New(value)
-			if err != nil {
-				return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-					WithErrorContext(a).
-					CausedBy(err)
-			}
-
-			return tpl.Render(map[string]any{"TokenIssuer": claims["iss"]})
-		}),
+			}.Encode(),
+		),
+		map[string]any{"TokenIssuer": claims["iss"]},
 	)
 	if err != nil {
 		return nil, errorchain.

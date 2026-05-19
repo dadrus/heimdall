@@ -38,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -161,7 +162,7 @@ principal:
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "http://test.com", auth.e.URL.String())
 				assert.Equal(t, http.MethodGet, auth.e.Method)
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
@@ -198,7 +199,7 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Equal(t, "https://test.com", auth.e.URL)
+				assert.Equal(t, "https://test.com", auth.e.URL.String())
 				assert.Equal(t, http.MethodPost, auth.e.Method)
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
@@ -242,7 +243,7 @@ session_lifespan:
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "http://test.com", auth.e.URL.String())
 				assert.Equal(t, http.MethodPatch, auth.e.Method)
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
@@ -819,7 +820,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"with error while rendering payload": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
 				payload: func() template.Template {
 					tpl, err := template.New("foo={{ len .Foobar }}")
 					require.NoError(t, err)
@@ -854,7 +855,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"with error while rendering query parameter": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
-				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
+				e:  newRenderFailingEndpointValue(srv.URL+"?foo={{ urlenc foobar }}", assert.AnError),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -883,7 +884,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"with endpoint communication error (dns)": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
-				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				e:  endpointtestsupport.EndpointValue(t, "http://heimdall.test.local"),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -912,7 +913,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"with unexpected response code from server": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -946,14 +947,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"with error while extracting principal information": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept":      "application/json",
-						"X-User-Data": "{{ .AuthenticationData }}",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithHeader("X-User-Data", "{{ .AuthenticationData }}"),
+				),
 				sf: &PrincipalInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
@@ -997,14 +995,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		},
 		"successful execution without cache usage, forwarding auth data in payload, header & query": {
 			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL + "?foo={{ .AuthenticationData }}",
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept":      "application/json",
-						"X-Auth-Data": "{{ .AuthenticationData }}",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL+"?foo={{ .AuthenticationData }}",
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithHeader("X-Auth-Data", "{{ .AuthenticationData }}"),
+				),
 				sf: &PrincipalInfo{IDFrom: "user_id"},
 				payload: func() template.Template {
 					tpl, err := template.New("foo={{ .AuthenticationData }}")
@@ -1059,14 +1054,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		},
 		"successful execution with positive cache hit": {
 			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept":      "application/json",
-						"X-Auth-Data": "{{ .AuthenticationData }}",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithHeader("X-User-Data", "{{ .AuthenticationData }}"),
+				),
 				sf:            &PrincipalInfo{IDFrom: "user_id"},
 				ttl:           5 * time.Second,
 				principalName: DefaultPrincipalName,
@@ -1096,13 +1088,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		},
 		"successful execution with negative cache hit and header forwarding": {
 			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept": "application/json",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+				),
 				sf:            &PrincipalInfo{IDFrom: "user_id"},
 				fwdHeaders:    []string{"X-Original-Auth"},
 				ttl:           5 * time.Second,
@@ -1155,13 +1144,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"execution with not active session and cookie forwarding": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept": "application/json",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+				),
 				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				fwdCookies:          []string{"original-auth"},
 				ttl:                 5 * time.Second,
@@ -1219,13 +1205,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		"execution with error while parsing session lifespan": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:    srv.URL + "?foo={{ .AuthenticationData }}",
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept": "application/json",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL+"?foo={{ .AuthenticationData }}",
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+				),
 				sf:                  &PrincipalInfo{IDFrom: "user_id"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
@@ -1273,13 +1256,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		},
 		"execution with session lifespan ttl limiting the configured ttl": {
 			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept": "application/json",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+				),
 				payload: func() template.Template {
 					tpl, err := template.New("foo={{ .AuthenticationData }}")
 					require.NoError(t, err)
@@ -1339,13 +1319,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		},
 		"execution with custom principal": {
 			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept": "application/json",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+				),
 				payload: func() template.Template {
 					tpl, err := template.New("foo={{ .AuthenticationData }}")
 					require.NoError(t, err)

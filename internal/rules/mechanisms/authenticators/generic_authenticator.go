@@ -92,7 +92,7 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name).CausedBy(err)
 	}
 
-	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+	if strings.HasPrefix(conf.Endpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorGeneric).
 			Str("_name", name).
@@ -300,25 +300,18 @@ func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData stri
 	if a.payload != nil {
 		value, err := a.payload.Render(templateData)
 		if err != nil {
-			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
-				"failed to render payload for the authenticator endpoint").
-				WithErrorContext(a).CausedBy(err)
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrInternal,
+				"failed to render payload for the authenticator endpoint",
+			).
+				WithErrorContext(a).
+				CausedBy(err)
 		}
 
 		body = strings.NewReader(value)
 	}
 
-	req, err := a.e.CreateRequest(ctx.Context(), body,
-		endpoint.RenderFunc(func(value string) (string, error) {
-			tpl, err := template.New(value)
-			if err != nil {
-				return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-					WithErrorContext(a).
-					CausedBy(err)
-			}
-
-			return tpl.Render(templateData)
-		}))
+	req, err := a.e.CreateRequest(ctx.Context(), body, templateData)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").

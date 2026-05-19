@@ -32,7 +32,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/httpcache"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -49,15 +49,44 @@ type Retry struct {
 }
 
 type Endpoint struct {
-	URL          string                 `mapstructure:"url"        validate:"required,url,enforced=istls"`
-	Method       string                 `mapstructure:"method"`
-	Retry        *Retry                 `mapstructure:"retry"`
-	AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
-	Headers      map[string]string      `mapstructure:"headers"`
-	HTTPCache    *HTTPCache             `mapstructure:"http_cache"`
+	URL          template.Template            `mapstructure:"url"        validate:"required,url,enforced=istls"`
+	Method       string                       `mapstructure:"method"`
+	Retry        *Retry                       `mapstructure:"retry"`
+	AuthStrategy AuthenticationStrategy       `mapstructure:"auth"`
+	Headers      map[string]template.Template `mapstructure:"headers"`
+	HTTPCache    *HTTPCache                   `mapstructure:"http_cache"`
 }
 
-func (e Endpoint) CreateClient(peerName string) *http.Client {
+func New(url string, opts ...Option) (*Endpoint, error) {
+	tpl, err := template.New(url)
+	if err != nil {
+		return nil, err
+	}
+
+	ep := &Endpoint{
+		URL: tpl,
+	}
+
+	for _, opt := range opts {
+		opt(ep)
+	}
+
+	return ep, nil
+}
+
+func (e *Endpoint) SetHeader(name, value string) {
+	if e.Headers == nil {
+		e.Headers = make(map[string]template.Template)
+	}
+
+	if _, ok := e.Headers[name]; ok {
+		return
+	}
+
+	e.Headers[name] = template.Must(value)
+}
+
+func (e *Endpoint) CreateClient(peerName string) *http.Client {
 	client := &http.Client{
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(http.DefaultTransport),
@@ -83,16 +112,15 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 	return client
 }
 
-func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Renderer) (*http.Request, error) {
+func (e *Endpoint) CreateRequest(ctx context.Context, body io.Reader, vals map[string]any) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx)
-	tpl := x.IfThenElse[Renderer](rndr != nil, rndr, noopRenderer{})
 
 	method := http.MethodPost
 	if len(e.Method) != 0 {
 		method = e.Method
 	}
 
-	endpointURL, err := tpl.Render(e.URL)
+	endpointURL, err := e.URL.Render(vals)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render URL for the endpoint").CausedBy(err)
@@ -117,7 +145,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	}
 
 	for headerName, valueTemplate := range e.Headers {
-		headerValue, err := tpl.Render(valueTemplate)
+		headerValue, err := valueTemplate.Render(vals)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"failed to render %s header value", headerName).CausedBy(err)
@@ -131,13 +159,13 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 
 type ResponseReader func(resp *http.Response) ([]byte, error)
 
-func (e Endpoint) SendRequest(
+func (e *Endpoint) SendRequest(
 	ctx context.Context,
 	body io.Reader,
-	renderer Renderer,
+	vals map[string]any,
 	reader ...ResponseReader,
 ) ([]byte, error) {
-	req, err := e.CreateRequest(ctx, body, renderer)
+	req, err := e.CreateRequest(ctx, body, vals)
 	if err != nil {
 		return nil, err
 	}
@@ -161,16 +189,16 @@ func (e Endpoint) SendRequest(
 	return e.readResponse(resp)
 }
 
-func (e Endpoint) Hash() []byte {
+func (e *Endpoint) Hash() []byte {
 	hash := sha256.New()
 
-	hash.Write(stringx.ToBytes(e.URL))
+	hash.Write(stringx.ToBytes(e.URL.String()))
 	hash.Write(stringx.ToBytes(e.Method))
 
 	buf := bytes.NewBufferString("")
 	for k, v := range e.Headers {
 		buf.Write(stringx.ToBytes(k))
-		buf.Write(stringx.ToBytes(v))
+		buf.Write(stringx.ToBytes(v.String()))
 	}
 
 	hash.Write(buf.Bytes())
@@ -184,7 +212,7 @@ func (e Endpoint) Hash() []byte {
 	return hash.Sum(result[:0])
 }
 
-func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
+func (e *Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		rawData, err := io.ReadAll(resp.Body)
 		if err != nil {

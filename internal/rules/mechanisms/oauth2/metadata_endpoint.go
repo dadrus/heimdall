@@ -28,7 +28,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -48,15 +47,7 @@ type MetadataEndpoint struct {
 func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (ServerMetadata, error) {
 	e.init()
 
-	req, err := e.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				CausedBy(err)
-		}
-
-		return tpl.Render(args)
-	}))
+	req, err := e.CreateRequest(ctx, nil, args)
 	if err != nil {
 		return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed creating oauth2 server metadata request").CausedBy(err)
@@ -96,20 +87,17 @@ func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (Server
 }
 
 func (e *MetadataEndpoint) init() {
-	if e.Headers == nil {
-		e.Headers = make(map[string]string)
-	}
-
-	if _, ok := e.Headers["Accept"]; !ok {
-		e.Headers["Accept"] = "application/json"
-	}
+	e.SetHeader("Accept", "application/json")
 
 	if len(e.Method) == 0 {
 		e.Method = http.MethodGet
 	}
 
 	if e.HTTPCache == nil {
-		e.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute} //nolint:mnd
+		e.HTTPCache = &endpoint.HTTPCache{
+			Enabled:    true,
+			DefaultTTL: 30 * time.Minute, //nolint:mnd
+		}
 	}
 }
 
@@ -141,32 +129,45 @@ func (e *MetadataEndpoint) decodeResponse(resp *http.Response) (ServerMetadata, 
 	var (
 		jwksEP          *endpoint.Endpoint
 		introspectionEP *endpoint.Endpoint
+		err             error
 	)
 
 	if len(spec.JWKSEndpointURL) != 0 {
 		epSettings := e.ResolvedEndpoints["jwks_uri"]
-		jwksEP = &endpoint.Endpoint{
-			URL:          spec.JWKSEndpointURL,
-			Method:       http.MethodGet,
-			Headers:      map[string]string{"Accept": "application/json"},
-			AuthStrategy: epSettings.AuthStrategy,
-			Retry:        epSettings.Retry,
-			HTTPCache:    epSettings.HTTPCache,
+
+		jwksEP, err = endpoint.New(
+			spec.JWKSEndpointURL,
+			endpoint.WithMethod(http.MethodGet),
+			endpoint.WithHeader("Accept", "application/json"),
+			endpoint.WithAuthStrategy(epSettings.AuthStrategy),
+			endpoint.WithRetry(epSettings.Retry),
+			endpoint.WithHTTPCache(epSettings.HTTPCache),
+		)
+		if err != nil {
+			return ServerMetadata{}, errorchain.NewWithMessage(
+				pipeline.ErrInternal,
+				"failed creating jwks endpoint",
+			).CausedBy(err)
 		}
 	}
 
 	if len(spec.IntrospectionEndpointURL) != 0 {
 		epSettings := e.ResolvedEndpoints["introspection_endpoint"]
-		introspectionEP = &endpoint.Endpoint{
-			URL:    spec.IntrospectionEndpointURL,
-			Method: http.MethodPost,
-			Headers: map[string]string{
-				"Content-Type": "application/x-www-form-urlencoded",
-				"Accept":       "application/json",
-			},
-			AuthStrategy: epSettings.AuthStrategy,
-			Retry:        epSettings.Retry,
-			HTTPCache:    epSettings.HTTPCache,
+
+		introspectionEP, err = endpoint.New(
+			spec.IntrospectionEndpointURL,
+			endpoint.WithMethod(http.MethodPost),
+			endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+			endpoint.WithHeader("Accept", "application/json"),
+			endpoint.WithAuthStrategy(epSettings.AuthStrategy),
+			endpoint.WithRetry(epSettings.Retry),
+			endpoint.WithHTTPCache(epSettings.HTTPCache),
+		)
+		if err != nil {
+			return ServerMetadata{}, errorchain.NewWithMessage(
+				pipeline.ErrInternal,
+				"failed creating introspection endpoint",
+			).CausedBy(err)
 		}
 	}
 

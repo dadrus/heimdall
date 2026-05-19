@@ -20,10 +20,12 @@ import (
 	"testing"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/knadh/koanf/maps"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/x/testsupport"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
 func TestDecodeEndpointHookFunc(t *testing.T) {
@@ -45,7 +47,7 @@ func TestDecodeEndpointHookFunc(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "http://foo.bar", ep.URL)
+				assert.Equal(t, "http://foo.bar", ep.URL.String())
 			},
 		},
 		"can still decode from structured definition": {
@@ -58,14 +60,14 @@ endpoint:
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "http://foo.bar", ep.URL)
+				assert.Equal(t, "http://foo.bar", ep.URL.String())
 				assert.Equal(t, "PATCH", ep.Method)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			conf, err := decodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			var typ Type
@@ -73,6 +75,7 @@ endpoint:
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
 					DecodeEndpointHookFunc(),
+					template.DecodeTemplateHookFunc(),
 				),
 				Result: &typ,
 			})
@@ -85,4 +88,13 @@ endpoint:
 			tc.assert(t, err, typ.EP)
 		})
 	}
+}
+
+func decodeTestConfig(data []byte) (map[string]any, error) {
+	var out map[string]any
+
+	err := yaml.Unmarshal(data, &out)
+	maps.IntfaceKeysToStrings(out)
+
+	return out, err
 }

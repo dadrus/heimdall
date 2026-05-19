@@ -49,6 +49,7 @@ import (
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
+	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
@@ -173,11 +174,11 @@ assertions:
 				require.True(t, ok)
 				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
-				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
+				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL.String())
 				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
 				assert.Len(t, md.JWKSEndpoint.Headers, 1)
 				assert.Contains(t, md.JWKSEndpoint.Headers, "Accept")
-				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"])
+				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"].String())
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -236,11 +237,11 @@ cache_ttl: 5s`),
 				require.True(t, ok)
 				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
-				assert.Equal(t, "https://test.com", md.JWKSEndpoint.URL)
+				assert.Equal(t, "https://test.com", md.JWKSEndpoint.URL.String())
 				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
 				assert.Len(t, md.JWKSEndpoint.Headers, 1)
 				assert.Contains(t, md.JWKSEndpoint.Headers, "Accept")
-				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"])
+				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"].String())
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -332,11 +333,11 @@ trust_store: ` + trustStorePath),
 				require.True(t, ok)
 				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
-				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
+				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL.String())
 				assert.Equal(t, "POST", md.JWKSEndpoint.Method)
 				assert.Len(t, md.JWKSEndpoint.Headers, 1)
 				assert.Contains(t, md.JWKSEndpoint.Headers, "Accept")
-				assert.Equal(t, "application/foobar", md.JWKSEndpoint.Headers["Accept"])
+				assert.Equal(t, "application/foobar", md.JWKSEndpoint.Headers["Accept"].String())
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -492,7 +493,7 @@ cache_ttl: 5s`),
 				mdep, ok := auth.r.(*oauth2.MetadataEndpoint)
 				require.True(t, ok)
 
-				assert.Equal(t, "https://test.com", mdep.URL)
+				assert.Equal(t, "https://test.com", mdep.URL.String())
 				require.Len(t, mdep.ResolvedEndpoints, 1)
 				reps, ok := mdep.ResolvedEndpoints["jwks_uri"]
 				require.True(t, ok)
@@ -1297,7 +1298,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL + "{{ Foo }}"}}, nil
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: newRenderFailingEndpoint(jwksSrv.URL+"{{ Foo }}", assert.AnError),
+					}, nil
 				}),
 				ttl: new(0 * time.Second),
 			},
@@ -1319,7 +1322,6 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "render URL")
 
 				var identifier HandlerIdentifier
@@ -1331,7 +1333,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: "http://jwks.heimdall.test.local"}}, nil
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, "http://jwks.heimdall.test.local"),
+					}, nil
 				}),
 				ttl: new(0 * time.Second),
 			},
@@ -1365,7 +1369,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL}}, nil
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL),
+					}, nil
 				}),
 				ttl: new(0 * time.Second),
 			},
@@ -1405,10 +1411,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				ttl: new(0 * time.Second),
@@ -1455,10 +1460,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				ttl: new(0 * time.Second),
@@ -1503,7 +1507,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"with error while communicating to the metadata endpoint": {
 			authenticator: &jwtAuthenticator{
 				id:  "auth3",
-				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
+				r:   &oauth2.MetadataEndpoint{Endpoint: endpointtestsupport.EndpointValue(t, oidcSrv.URL)},
 				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
@@ -1544,7 +1548,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"with no entry for jwks_uri from the metadata endpoint": {
 			authenticator: &jwtAuthenticator{
 				id:  "auth3",
-				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
+				r:   &oauth2.MetadataEndpoint{Endpoint: endpointtestsupport.EndpointValue(t, oidcSrv.URL)},
 				ttl: new(0 * time.Second),
 			},
 			configureMocks: func(t *testing.T,
@@ -1594,10 +1598,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"foo"}},
@@ -1611,10 +1614,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
@@ -1651,10 +1653,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
@@ -1668,10 +1669,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
@@ -1708,10 +1708,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
@@ -1725,10 +1724,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
@@ -1765,10 +1763,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a: oauth2.Expectation{
@@ -1787,10 +1784,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
@@ -1826,10 +1822,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a: oauth2.Expectation{
@@ -1849,10 +1844,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
@@ -1894,10 +1888,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL + "/{{ .TokenIssuer }}",
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL+"/{{ .TokenIssuer }}",
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a: oauth2.Expectation{
@@ -1917,10 +1910,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL + "/{{ .TokenIssuer }}",
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL+"/{{ .TokenIssuer }}",
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, fmt.Sprintf("%s/%s", jwksSrv.URL, issuer), kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
@@ -1975,10 +1967,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a: oauth2.Expectation{
@@ -1998,10 +1989,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
@@ -2054,7 +2044,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"successful without cache hit using key & cert with disabled jwk validation using metadata discovery": {
 			authenticator: &jwtAuthenticator{
 				r: &oauth2.MetadataEndpoint{
-					Endpoint:                            endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .TokenIssuer }}"},
+					Endpoint:                            endpointtestsupport.EndpointValue(t, oidcSrv.URL+"/{{ .TokenIssuer }}"),
 					DisableIssuerIdentifierVerification: true,
 				},
 				a: oauth2.Expectation{
@@ -2073,11 +2063,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-					Method:  http.MethodGet,
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithMethod(http.MethodGet),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
@@ -2149,10 +2138,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a: oauth2.Expectation{
@@ -2173,10 +2161,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
@@ -2218,10 +2205,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a: oauth2.Expectation{
@@ -2243,10 +2229,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
@@ -2300,10 +2285,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				a: oauth2.Expectation{
@@ -2364,10 +2348,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				principalName: DefaultPrincipalName,
@@ -2413,10 +2396,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				principalName: DefaultPrincipalName,
@@ -2462,10 +2444,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
 					}, nil
 				}),
 				validateJWKCert: true,
@@ -2510,7 +2491,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"custom provided assertions take precedence over those coming from the metadata": {
 			authenticator: &jwtAuthenticator{
 				r: &oauth2.MetadataEndpoint{
-					Endpoint:                            endpoint.Endpoint{URL: oidcSrv.URL},
+					Endpoint:                            endpointtestsupport.EndpointValue(t, oidcSrv.URL),
 					DisableIssuerIdentifierVerification: true,
 				},
 				a: oauth2.Expectation{
@@ -2575,7 +2556,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		"custom principal created": {
 			authenticator: &jwtAuthenticator{
 				r: &oauth2.MetadataEndpoint{
-					Endpoint:                            endpoint.Endpoint{URL: oidcSrv.URL},
+					Endpoint:                            endpointtestsupport.EndpointValue(t, oidcSrv.URL),
 					DisableIssuerIdentifierVerification: true,
 				},
 				a: oauth2.Expectation{

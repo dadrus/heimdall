@@ -75,7 +75,8 @@ func NewValidator(opts ...Option) (Validator, error) {
 		TagValidator
 		ErrorTranslator
 	}{
-		notAllowed{},
+		notAllowedValidator{},
+		urlValidator{},
 	} {
 		opts = append(opts, WithTagValidator(buildIn), WithErrorTranslator(buildIn))
 	}

@@ -41,6 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -156,7 +157,7 @@ endpoint:
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				require.Equal(t, "Foo", auth.e.Headers["X-My-Header"])
+				require.Equal(t, "Foo", auth.e.Headers["X-My-Header"].String())
 				assert.Nil(t, auth.payload)
 				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
@@ -622,13 +623,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub pipeline.Subject)
 		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any)
 	}{
-		"successful with payload and with header, without payload from server and without header " +
-			"forwarding and with disabled cache": {
+			"successful with payload and with header, without payload from server and without header " +
+				"forwarding and with disabled cache": {
 			authorizer: &remoteAuthorizer{
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Foo-Bar": "{{ .Subject.Attributes.bar }}"},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("Foo-Bar", "{{ .Subject.Attributes.bar }}"),
+				),
 				v: func() values.Values {
 					tpl, _ := template.New("bar")
 
@@ -682,18 +682,15 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Equal(t, "bar", outputs["foo"])
 			},
 		},
-		"successful with json payload and with header, with json payload from server and with header" +
-			" forwarding and with disabled cache": {
+			"successful with json payload and with header, with json payload from server and with header" +
+				" forwarding and with disabled cache": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
-				e: endpoint.Endpoint{
-					URL: srv.URL,
-					Headers: map[string]string{
-						"Content-Type": "application/json",
-						"Accept":       "application/json",
-						"Foo-Bar":      "{{ .Subject.Attributes.bar }}",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("Content-Type", "application/json"),
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithHeader("Foo-Bar", "{{ .Subject.Attributes.bar }}"),
+				),
 				payload: func() template.Template {
 					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
 
@@ -776,12 +773,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			"and with header forwarding and with failing cache hit": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
-				e: endpoint.Endpoint{
-					URL: srv.URL,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+				),
 				v: func() values.Values {
 					tpl, _ := template.New("foo")
 
@@ -859,10 +853,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"successful without headers and payload and with cache": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
-				e: endpoint.Endpoint{
-					URL:     srv.URL + "/{{ .Subject.ID }}",
-					Headers: map[string]string{"Accept": "application/x-www-form-urlencoded"},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL+"/{{ .Subject.ID }}",
+					endpoint.WithHeader("Accept", "application/x-www-form-urlencoded"),
+				),
 				ttl: 10 * time.Second,
 			},
 			subject: pipeline.Subject{
@@ -913,13 +906,10 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"successfully reuse cache": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
-				e: endpoint.Endpoint{
-					URL: srv.URL,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Foo-Bar":      "{{ .Subject.Attributes.bar }}",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+					endpoint.WithHeader("Foo-Bar", "{{ .Subject.Attributes.bar }}"),
+				),
 				payload: func() template.Template {
 					tpl, _ := template.New(`user_id={{ urlenc .Subject.ID }}&{{ urlenc .Subject.Attributes.bar }}=foo`)
 
@@ -977,10 +967,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"with failed authorization": {
 			authorizer: &remoteAuthorizer{
 				id: "authz",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("X-User-ID", "{{ .Subject.ID }}"),
+				),
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
@@ -1017,10 +1006,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"with unsupported response content type": {
 			authorizer: &remoteAuthorizer{
 				id: "foo",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("X-User-ID", "{{ .Subject.ID }}"),
+				),
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
@@ -1054,7 +1042,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"with communication error (dns)": {
 			authorizer: &remoteAuthorizer{
 				id: "authz",
-				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				e:  endpointtestsupport.EndpointValue(t, "http://heimdall.test.local"),
 				payload: func() template.Template {
 					tpl, _ := template.New("bar")
 
@@ -1088,13 +1076,10 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"with expression, which returns false": {
 			authorizer: &remoteAuthorizer{
 				id: "authz",
-				e: endpoint.Endpoint{
-					URL: srv.URL,
-					Headers: map[string]string{
-						"Content-Type": "application/json",
-						"Accept":       "application/json",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("Content-Type", "application/json"),
+					endpoint.WithHeader("Accept", "application/json"),
+				),
 				payload: func() template.Template {
 					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
 
@@ -1168,13 +1153,10 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"with expression, which succeeds": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
-				e: endpoint.Endpoint{
-					URL: srv.URL,
-					Headers: map[string]string{
-						"Content-Type": "application/json",
-						"Accept":       "application/json",
-					},
-				},
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithHeader("Content-Type", "application/json"),
+					endpoint.WithHeader("Accept", "application/json"),
+				),
 				payload: func() template.Template {
 					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
 
@@ -1257,7 +1239,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"with payload rendering error": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
 				payload: func() template.Template {
 					tpl, err := template.New("{{ len .foo }}")
 					require.NoError(t, err)
@@ -1293,7 +1275,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		"with error in values rendering": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
 				v: func() values.Values {
 					tpl, err := template.New("{{ len .foo }}")
 					require.NoError(t, err)

@@ -100,7 +100,7 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 			"failed decoding config for generic contextualizer '%s'", name).CausedBy(err)
 	}
 
-	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+	if strings.HasPrefix(conf.Endpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", ContextualizerGeneric).
 			Str("_name", name).
@@ -278,22 +278,11 @@ func (c *genericContextualizer) createRequest(
 ) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
-	endpointRenderer := endpoint.RenderFunc(func(value string) (string, error) {
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				WithErrorContext(c).
-				CausedBy(err)
-		}
-
-		return tpl.Render(map[string]any{
-			"Subject": sub,
-			"Values":  values,
-			"Outputs": ctx.Outputs(),
-		})
+	req, err := c.e.CreateRequest(ctx.Context(), strings.NewReader(payload), map[string]any{
+		"Subject": sub,
+		"Values":  values,
+		"Outputs": ctx.Outputs(),
 	})
-
-	req, err := c.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithErrorContext(c).

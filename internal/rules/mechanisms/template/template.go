@@ -69,10 +69,19 @@ func New(val string) (Template, error) {
 	hash := sha256.New()
 	hash.Write(stringx.ToBytes(val))
 
-	return &templateImpl{t: tmpl, orig: val, hash: hash.Sum(nil)}, nil
+	return templateImpl{t: tmpl, orig: val, hash: hash.Sum(nil)}, nil
 }
 
-func (t *templateImpl) Render(values map[string]any) (string, error) {
+func Must(value string) Template {
+	tpl, err := New(value)
+	if err != nil {
+		panic(err)
+	}
+
+	return tpl
+}
+
+func (t templateImpl) Render(values map[string]any) (string, error) {
 	var buf bytes.Buffer
 
 	err := t.t.Execute(&buf, values)
@@ -83,7 +92,7 @@ func (t *templateImpl) Render(values map[string]any) (string, error) {
 	return buf.String(), nil
 }
 
-func (t *templateImpl) Hash() []byte { return t.hash }
+func (t templateImpl) Hash() []byte { return t.hash }
 
 func (t templateImpl) String() string { return t.orig }
 

@@ -35,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
@@ -44,13 +45,13 @@ func TestRuleSetEndpointInit(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ep := &ruleSetEndpoint{Endpoint: endpoint.Endpoint{URL: "http://foo.bar"}}
+	ep := &ruleSetEndpoint{Endpoint: endpointtestsupport.EndpointValue(t, "http://foo.bar")}
 
 	// WHEN
 	ep.init()
 
 	// THEN
-	assert.Equal(t, "http://foo.bar", ep.URL)
+	assert.Equal(t, "http://foo.bar", ep.URL.String())
 	assert.Equal(t, http.MethodGet, ep.Method)
 	require.NotNil(t, ep.HTTPCache)
 	assert.True(t, ep.HTTPCache.Enabled)
@@ -85,10 +86,9 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 	}{
 		"rule set loading error due to DNS error": {
 			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    "https://foo.bar.local/rules.yaml",
-					Method: http.MethodGet,
-				},
+				Endpoint: endpointtestsupport.EndpointValue(t, "https://foo.bar.local/rules.yaml",
+					endpoint.WithMethod(http.MethodGet),
+				),
 			},
 			assert: func(t *testing.T, err error, _ v1beta1.RuleSet) {
 				t.Helper()
@@ -100,10 +100,9 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 		},
 		"rule set loading error due to server error response": {
 			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
+				Endpoint: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+				),
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -120,10 +119,9 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 		},
 		"rule set loading error due to not set Content-Type for a not empty body": {
 			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
+				Endpoint: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+				),
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -149,10 +147,9 @@ rules:
 		},
 		"empty rule set is returned on response with empty body": {
 			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
+				Endpoint: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+				),
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -169,10 +166,9 @@ rules:
 		},
 		"valid rule set without path prefix from yaml": {
 			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
+				Endpoint: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+				),
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -217,10 +213,9 @@ rules:
 		},
 		"valid rule set without path prefix from json": {
 			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
+				Endpoint: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+				),
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -253,10 +248,9 @@ rules:
 		},
 		"valid rule set with full url glob": {
 			ep: &ruleSetEndpoint{
-				Endpoint: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-				},
+				Endpoint: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+				),
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()

@@ -39,7 +39,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
@@ -108,7 +107,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 				NewWithMessage(pipeline.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
 		}
 
-		if strings.HasPrefix(conf.JWKSEndpoint.URL, "http://") {
+		if strings.HasPrefix(conf.JWKSEndpoint.URL.String(), "http://") {
 			logger.Warn().
 				Str("_type", AuthenticatorJWT).
 				Str("_name", name).
@@ -116,7 +115,8 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		}
 	}
 
-	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
+	if conf.MetadataEndpoint != nil &&
+		strings.HasPrefix(conf.MetadataEndpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorJWT).
 			Str("_name", name).
@@ -154,14 +154,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.JWKSEndpoint
-
-			if ep.Headers == nil {
-				ep.Headers = make(map[string]string)
-			}
-
-			if _, ok := ep.Headers["Accept"]; !ok {
-				ep.Headers["Accept"] = "application/json"
-			}
+			ep.SetHeader("Accept", "application/json")
 
 			if len(ep.Method) == 0 {
 				ep.Method = http.MethodGet
@@ -531,20 +524,7 @@ func (a *jwtAuthenticator) fetchJWKS(
 func (a *jwtAuthenticator) createRequest(
 	ctx context.Context, ep *endpoint.Endpoint, claims map[string]any,
 ) (*http.Request, error) {
-	req, err := ep.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
-		// ignoring closing braces here as it would anyway result in a broken template leading to an error
-		if !strings.Contains(value, "{{") {
-			return value, nil
-		}
-
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				CausedBy(err)
-		}
-
-		return tpl.Render(map[string]any{"TokenIssuer": claims["iss"]})
-	}))
+	req, err := ep.CreateRequest(ctx, nil, map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").

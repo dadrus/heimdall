@@ -37,7 +37,7 @@ type ruleSetEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
 }
 
-func (e *ruleSetEndpoint) ID() string { return e.URL }
+func (e *ruleSetEndpoint) ID() string { return e.URL.String() }
 
 func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (v1beta1.RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)

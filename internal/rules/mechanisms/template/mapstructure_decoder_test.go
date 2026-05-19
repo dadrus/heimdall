@@ -50,7 +50,7 @@ func TestDecodeTemplateHookFunc(t *testing.T) {
 			require.NotNil(t, res)
 
 			if tc.decoded {
-				require.IsType(t, &templateImpl{}, res)
+				require.IsType(t, templateImpl{}, res)
 			}
 		})
 	}

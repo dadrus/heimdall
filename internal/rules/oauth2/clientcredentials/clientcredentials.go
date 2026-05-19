@@ -189,19 +189,16 @@ func (c Config) isCacheEnabled() bool {
 }
 
 func (c Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
-	ept := endpoint.Endpoint{
-		URL:    c.TokenURL,
-		Method: http.MethodPost,
-		AuthStrategy: clientCredentialsAuthStrategy{
+	ept, _ := endpoint.New(c.TokenURL,
+		endpoint.WithMethod(http.MethodPost),
+		endpoint.WithAuthStrategy(clientCredentialsAuthStrategy{
 			AuthMethod:   c.AuthMethod,
 			ClientID:     c.ClientID,
 			ClientSecret: c.ClientSecret,
-		},
-		Headers: map[string]string{
-			"Content-Type": "application/x-www-form-urlencoded",
-			"Accept":       "application/json",
-		},
-	}
+		}),
+		endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+		endpoint.WithHeader("Accept", "application/json"),
+	)
 
 	data := url.Values{"grant_type": []string{"client_credentials"}}
 	if len(c.Scopes) != 0 {

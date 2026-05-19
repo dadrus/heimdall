@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"text/template"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -34,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/httpcache"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -47,7 +47,7 @@ func TestEndpointCreateClient(t *testing.T) {
 		assert   func(t *testing.T, client *http.Client)
 	}{
 		"for endpoint without configured retry policy and without http cache": {
-			endpoint: Endpoint{URL: "http://foo.bar"},
+			endpoint: endpointValue(t, "http://foo.bar"),
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
 
@@ -56,7 +56,9 @@ func TestEndpointCreateClient(t *testing.T) {
 			},
 		},
 		"for endpoint without configured retry policy, but with http cache": {
-			endpoint: Endpoint{URL: "http://foo.bar", HTTPCache: &HTTPCache{Enabled: true}},
+			endpoint: endpointValue(t, "http://foo.bar",
+				WithHTTPCache(&HTTPCache{Enabled: true}),
+			),
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
 
@@ -69,10 +71,9 @@ func TestEndpointCreateClient(t *testing.T) {
 			},
 		},
 		"for endpoint with configured retry policy and without http cache": {
-			endpoint: Endpoint{
-				URL:   "http://foo.bar",
-				Retry: &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
-			},
+			endpoint: endpointValue(t, "http://foo.bar",
+				WithRetry(&Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second}),
+			),
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
 
@@ -87,11 +88,10 @@ func TestEndpointCreateClient(t *testing.T) {
 			},
 		},
 		"for endpoint with configured retry policy and with http cache with default cache ttl": {
-			endpoint: Endpoint{
-				URL:       "http://foo.bar",
-				Retry:     &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
-				HTTPCache: &HTTPCache{Enabled: true, DefaultTTL: 15 * time.Minute},
-			},
+			endpoint: endpointValue(t, "http://foo.bar",
+				WithRetry(&Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second}),
+				WithHTTPCache(&HTTPCache{Enabled: true, DefaultTTL: 15 * time.Minute}),
+			),
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
 
@@ -120,32 +120,14 @@ func TestEndpointCreateClient(t *testing.T) {
 func TestEndpointCreateRequest(t *testing.T) {
 	t.Parallel()
 
-	renderer := func(values map[string]any) RenderFunc {
-		return func(tpl string) (string, error) {
-			tmpl, err := template.New("test").Parse(tpl)
-			if err != nil {
-				return "", err
-			}
-
-			var buf bytes.Buffer
-
-			err = tmpl.Execute(&buf, map[string]any{"Values": values})
-			if err != nil {
-				return "", err
-			}
-
-			return buf.String(), nil
-		}
-	}
-
 	for uc, tc := range map[string]struct {
 		endpoint Endpoint
-		renderer Renderer
+		values   map[string]any
 		body     []byte
 		assert   func(t *testing.T, request *http.Request, err error)
 	}{
 		"with only URL set": {
-			endpoint: Endpoint{URL: "http://foo.bar"},
+			endpoint: endpointValue(t, "http://foo.bar"),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
@@ -158,20 +140,20 @@ func TestEndpointCreateRequest(t *testing.T) {
 			},
 		},
 		"with only URL and valid method set": {
-			endpoint: Endpoint{URL: "http://test.org", Method: "GET"},
+			endpoint: endpointValue(t, "http://test.org", WithMethod(http.MethodGet)),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "GET", request.Method)
+				assert.Equal(t, http.MethodGet, request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.Nil(t, request.Body)
 				assert.Empty(t, request.Header)
 			},
 		},
 		"with invalid URL": {
-			endpoint: Endpoint{URL: "://test.org"},
+			endpoint: endpointValue(t, "://test.org"),
 			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
@@ -181,23 +163,22 @@ func TestEndpointCreateRequest(t *testing.T) {
 			},
 		},
 		"with only URL, method and body set": {
-			endpoint: Endpoint{URL: "http://test.org", Method: "GET"},
+			endpoint: endpointValue(t, "http://test.org", WithMethod(http.MethodGet)),
 			body:     []byte(`foobar`),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "GET", request.Method)
+				assert.Equal(t, http.MethodGet, request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.NotNil(t, request.Body)
 				assert.Empty(t, request.Header)
 			},
 		},
 		"with auth strategy, applied successfully": {
-			endpoint: Endpoint{
-				URL: "http://test.org",
-				AuthStrategy: func() AuthenticationStrategy {
+			endpoint: endpointValue(t, "http://test.org",
+				WithAuthStrategy(func() AuthenticationStrategy {
 					as := mocks.NewAuthenticationStrategyMock(t)
 					as.EXPECT().Apply(
 						mock.MatchedBy(func(req *http.Request) bool {
@@ -208,29 +189,28 @@ func TestEndpointCreateRequest(t *testing.T) {
 					).Return(nil)
 
 					return as
-				}(),
-			},
+				}()),
+			),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "POST", request.Method)
+				assert.Equal(t, http.MethodPost, request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.Len(t, request.Header, 1)
 				assert.Equal(t, "test", request.Header.Get("X-Test"))
 			},
 		},
 		"with failing auth strategy": {
-			endpoint: Endpoint{
-				URL: "http://test.org",
-				AuthStrategy: func() AuthenticationStrategy {
+			endpoint: endpointValue(t, "http://test.org",
+				WithAuthStrategy(func() AuthenticationStrategy {
 					as := mocks.NewAuthenticationStrategyMock(t)
 					as.EXPECT().Apply(mock.Anything).Return(assert.AnError)
 
 					return as
-				}(),
-			},
+				}()),
+			),
 			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
@@ -240,10 +220,9 @@ func TestEndpointCreateRequest(t *testing.T) {
 			},
 		},
 		"with auth strategy and additional header": {
-			endpoint: Endpoint{
-				URL:    "http://test.org",
-				Method: "PATCH",
-				AuthStrategy: func() AuthenticationStrategy {
+			endpoint: endpointValue(t, "http://test.org",
+				WithMethod(http.MethodPatch),
+				WithAuthStrategy(func() AuthenticationStrategy {
 					as := mocks.NewAuthenticationStrategyMock(t)
 					as.EXPECT().Apply(mock.MatchedBy(func(req *http.Request) bool {
 						req.Header.Set("X-Test", "test")
@@ -252,15 +231,15 @@ func TestEndpointCreateRequest(t *testing.T) {
 					})).Return(nil)
 
 					return as
-				}(),
-				Headers: map[string]string{"Foo-Bar": "baz"},
-			},
+				}()),
+				WithHeader("Foo-Bar", "baz"),
+			),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "PATCH", request.Method)
+				assert.Equal(t, http.MethodPatch, request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 
 				assert.Len(t, request.Header, 2)
@@ -269,10 +248,8 @@ func TestEndpointCreateRequest(t *testing.T) {
 			},
 		},
 		"with templated url": {
-			endpoint: Endpoint{
-				URL: "http://test.org/{{ .Values.key }}",
-			},
-			renderer: renderer(map[string]any{"key": "foo"}),
+			endpoint: endpointValue(t, "http://test.org/{{ .key }}"),
+			values:   map[string]any{"key": "foo"},
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
@@ -282,9 +259,10 @@ func TestEndpointCreateRequest(t *testing.T) {
 		},
 		"with error while rendering templated url": {
 			endpoint: Endpoint{
-				URL: "http://test.org/{{ .Values.foo }",
+				URL: failingTemplate{
+					value: "http://test.org/{{ .foo }}",
+				},
 			},
-			renderer: renderer(nil),
 			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
@@ -294,14 +272,11 @@ func TestEndpointCreateRequest(t *testing.T) {
 			},
 		},
 		"with templated header": {
-			endpoint: Endpoint{
-				URL: "http://test.org",
-				Headers: map[string]string{
-					"X-My-Header-1": "{{ .Values.key }}",
-					"X-My-Header-2": "bar",
-				},
-			},
-			renderer: renderer(map[string]any{"key": "foo"}),
+			endpoint: endpointValue(t, "http://test.org",
+				WithHeader("X-My-Header-1", "{{ .key }}"),
+				WithHeader("X-My-Header-2", "bar"),
+			),
+			values: map[string]any{"key": "foo"},
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
@@ -314,10 +289,11 @@ func TestEndpointCreateRequest(t *testing.T) {
 		},
 		"with error while rendering templated header": {
 			endpoint: Endpoint{
-				URL:     "http://test.org",
-				Headers: map[string]string{"X-My-Header-1": "{{ .Values.key }"},
+				URL: template.Must("http://test.org"),
+				Headers: map[string]template.Template{
+					"X-My-Header-1": failingTemplate{value: "{{ .key }}"},
+				},
 			},
-			renderer: renderer(nil),
 			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
@@ -334,7 +310,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 			}
 
 			// WHEN
-			req, err := tc.endpoint.CreateRequest(t.Context(), body, tc.renderer)
+			req, err := tc.endpoint.CreateRequest(t.Context(), body, tc.values)
 
 			// THEN
 			tc.assert(t, req, err)
@@ -373,7 +349,7 @@ func TestEndpointSendRequest(t *testing.T) {
 			endpoint: func(t *testing.T) Endpoint {
 				t.Helper()
 
-				return Endpoint{URL: "://test.org"}
+				return endpointValue(t, "://test.org")
 			},
 			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
@@ -387,7 +363,7 @@ func TestEndpointSendRequest(t *testing.T) {
 			endpoint: func(t *testing.T) Endpoint {
 				t.Helper()
 
-				return Endpoint{URL: "http://heimdall.test.local"}
+				return endpointValue(t, "http://heimdall.test.local")
 			},
 			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
@@ -401,7 +377,7 @@ func TestEndpointSendRequest(t *testing.T) {
 			endpoint: func(t *testing.T) Endpoint {
 				t.Helper()
 
-				return Endpoint{URL: srv.URL}
+				return endpointValue(t, srv.URL)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -427,12 +403,11 @@ func TestEndpointSendRequest(t *testing.T) {
 					return true
 				})).Return(nil)
 
-				return Endpoint{
-					URL:          srv.URL,
-					Method:       "PATCH",
-					AuthStrategy: as,
-					Headers:      map[string]string{"Foo-Bar": "baz"},
-				}
+				return endpointValue(t, srv.URL,
+					WithMethod("PATCH"),
+					WithAuthStrategy(as),
+					WithHeader("Foo-Bar", "baz"),
+				)
 			},
 			body: []byte(`{"hello":"world"}`),
 			instructServer: func(t *testing.T) {
@@ -494,15 +469,15 @@ func TestEndpointHash(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	e1 := Endpoint{URL: "foo.bar"}
-	e2 := Endpoint{URL: "foo.bar", Method: "FOO", Headers: map[string]string{"baz": "foo"}}
-	e3 := Endpoint{URL: "foo.bar", Method: "FOO", AuthStrategy: func() AuthenticationStrategy {
+	e1 := endpointValue(t, "foo.bar")
+	e2 := endpointValue(t, "foo.bar", WithMethod("FOO"), WithHeader("baz", "foo"))
+	e3 := endpointValue(t, "foo.bar", WithMethod("FOO"), WithAuthStrategy(func() AuthenticationStrategy {
 		as := mocks.NewAuthenticationStrategyMock(t)
 		as.EXPECT().Hash().Return([]byte{1, 2, 3})
 
 		return as
-	}()}
-	e4 := Endpoint{URL: "foo.bar", Retry: &Retry{GiveUpAfter: 2}}
+	}()))
+	e4 := endpointValue(t, "foo.bar", WithRetry(&Retry{GiveUpAfter: 2}))
 
 	// WHEN
 	hash1 := e1.Hash()
@@ -523,3 +498,22 @@ func TestEndpointHash(t *testing.T) {
 	assert.NotEqual(t, hash2, hash4)
 	assert.NotEqual(t, hash3, hash4)
 }
+
+func endpointValue(t *testing.T, rawURL string, opts ...Option) Endpoint {
+	t.Helper()
+
+	ep, err := New(rawURL, opts...)
+	require.NoError(t, err)
+
+	return *ep
+}
+
+type failingTemplate struct {
+	value string
+}
+
+func (t failingTemplate) Render(map[string]any) (string, error) { return "", assert.AnError }
+
+func (t failingTemplate) Hash() []byte { return []byte(t.value) }
+
+func (t failingTemplate) String() string { return t.value }

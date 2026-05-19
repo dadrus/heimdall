@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
@@ -63,6 +64,7 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 		encoding.WithDecodeHooks(
 			authstrategy.DecodeAuthenticationStrategyHookFunc(app),
 			endpoint.DecodeEndpointHookFunc(),
+			template.DecodeTemplateHookFunc(),
 			mapstructure.StringToTimeDurationHookFunc(),
 		),
 	)

@@ -126,7 +126,7 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 		return nil, err
 	}
 
-	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+	if strings.HasPrefix(conf.Endpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthorizerRemote).
 			Str("_name", name).
@@ -264,22 +264,11 @@ func (a *remoteAuthorizer) doAuthorize(
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling remote authorization endpoint")
 
-	endpointRenderer := endpoint.RenderFunc(func(tplString string) (string, error) {
-		tpl, err := template.New(tplString)
-		if err != nil {
-			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		return tpl.Render(map[string]any{
-			"Subject": sub,
-			"Values":  values,
-			"Outputs": ctx.Outputs(),
-		})
+	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), map[string]any{
+		"Subject": sub,
+		"Values":  values,
+		"Outputs": ctx.Outputs(),
 	})
-
-	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithErrorContext(a).
