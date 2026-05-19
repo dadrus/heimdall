@@ -31,6 +31,7 @@ const (
 	SecretKindSymmetricKey  SecretKind = "symmetric_key"  //nolint:gosec
 	SecretKindAsymmetricKey SecretKind = "asymmetric_key" //nolint:gosec
 	SecretKindTrustStore    SecretKind = "trust_store"
+	SecretKindCredentials   SecretKind = "credentials"
 )
 
 type Secret interface {
@@ -62,7 +63,7 @@ type TrustStoreSecret interface {
 }
 
 type Credentials interface {
-	Selector() string
+	Secret
 	Decode(out any) error
 }
 
@@ -165,14 +166,18 @@ func NewTrustStoreSecret(selector string, certs []*x509.Certificate) TrustStoreS
 func (s *trustStoreSecret) CertPool() *x509.CertPool { return s.certPool }
 
 type credentials struct {
-	selector string
-	values   map[string]any
+	baseSecret
+
+	values map[string]any
 }
 
 func NewCredentials(selector string, values map[string]any) Credentials {
 	return &credentials{
-		selector: selector,
-		values:   values,
+		baseSecret: baseSecret{
+			kind:     SecretKindCredentials,
+			selector: selector,
+		},
+		values: values,
 	}
 }
 
