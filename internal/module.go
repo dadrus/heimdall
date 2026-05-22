@@ -37,7 +37,7 @@ import (
 
 type appContext struct {
 	kr keyregistry.Registry
-	sm secrets.Manager
+	sr secrets.Resolver
 	d  encoding.DecoderFactory
 	l  zerolog.Logger
 	m  metric.Meter
@@ -45,7 +45,7 @@ type appContext struct {
 }
 
 func (c *appContext) KeyRegistry() keyregistry.Registry       { return c.kr }
-func (c *appContext) SecretsManager() secrets.Manager         { return c.sm }
+func (c *appContext) SecretResolver() secrets.Resolver        { return c.sr }
 func (c *appContext) DecoderFactory() encoding.DecoderFactory { return c.d }
 func (c *appContext) Logger() zerolog.Logger                  { return c.l }
 func (c *appContext) Meter() metric.Meter                     { return c.m }
@@ -57,7 +57,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	secrets.Module,
 	fx.Provide(func(
 		kr keyregistry.Registry,
-		sm secrets.Manager,
+		sr secrets.Resolver,
 		decoderFactory encoding.DecoderFactory,
 		logger zerolog.Logger,
 		meter metric.Meter,
@@ -65,7 +65,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	) app.Context {
 		return &appContext{
 			kr: kr,
-			sm: sm,
+			sr: sr,
 			d:  decoderFactory,
 			l:  logger,
 			m:  meter,
