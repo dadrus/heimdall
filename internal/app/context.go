@@ -28,7 +28,7 @@ import (
 
 type Context interface {
 	KeyRegistry() keyregistry.Registry
-	SecretsManager() secrets.Manager
+	SecretResolver() secrets.Resolver
 	DecoderFactory() encoding.DecoderFactory
 	Config() *config.Configuration
 	Logger() zerolog.Logger

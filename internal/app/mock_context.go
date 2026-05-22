@@ -269,48 +269,48 @@ func (_c *ContextMock_Meter_Call) RunAndReturn(run func() metric.Meter) *Context
 	return _c
 }
 
-// SecretsManager provides a mock function for the type ContextMock
-func (_mock *ContextMock) SecretsManager() secrets.Manager {
+// SecretResolver provides a mock function for the type ContextMock
+func (_mock *ContextMock) SecretResolver() secrets.Resolver {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for SecretsManager")
+		panic("no return value specified for SecretResolver")
 	}
 
-	var r0 secrets.Manager
-	if returnFunc, ok := ret.Get(0).(func() secrets.Manager); ok {
+	var r0 secrets.Resolver
+	if returnFunc, ok := ret.Get(0).(func() secrets.Resolver); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(secrets.Manager)
+			r0 = ret.Get(0).(secrets.Resolver)
 		}
 	}
 	return r0
 }
 
-// ContextMock_SecretsManager_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SecretsManager'
-type ContextMock_SecretsManager_Call struct {
+// ContextMock_SecretResolver_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SecretResolver'
+type ContextMock_SecretResolver_Call struct {
 	*mock.Call
 }
 
-// SecretsManager is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) SecretsManager() *ContextMock_SecretsManager_Call {
-	return &ContextMock_SecretsManager_Call{Call: _e.mock.On("SecretsManager")}
+// SecretResolver is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) SecretResolver() *ContextMock_SecretResolver_Call {
+	return &ContextMock_SecretResolver_Call{Call: _e.mock.On("SecretResolver")}
 }
 
-func (_c *ContextMock_SecretsManager_Call) Run(run func()) *ContextMock_SecretsManager_Call {
+func (_c *ContextMock_SecretResolver_Call) Run(run func()) *ContextMock_SecretResolver_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *ContextMock_SecretsManager_Call) Return(v secrets.Manager) *ContextMock_SecretsManager_Call {
-	_c.Call.Return(v)
+func (_c *ContextMock_SecretResolver_Call) Return(resolver secrets.Resolver) *ContextMock_SecretResolver_Call {
+	_c.Call.Return(resolver)
 	return _c
 }
 
-func (_c *ContextMock_SecretsManager_Call) RunAndReturn(run func() secrets.Manager) *ContextMock_SecretsManager_Call {
+func (_c *ContextMock_SecretResolver_Call) RunAndReturn(run func() secrets.Resolver) *ContextMock_SecretResolver_Call {
 	_c.Call.Return(run)
 	return _c
 }
