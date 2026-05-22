@@ -1,0 +1,219 @@
+package secrets
+
+import (
+	"context"
+	"maps"
+	"sync"
+)
+
+type bindingProvider interface {
+	secretBinding(
+		ctx context.Context,
+		reference scopedReference,
+		opts ...ResolveOption,
+	) (*binding[Secret], bindingKey, error)
+
+	secretSetBinding(
+		ctx context.Context,
+		reference scopedReference,
+		opts ...ResolveOption,
+	) (*binding[[]Secret], bindingKey, error)
+
+	credentialsBinding(
+		ctx context.Context,
+		reference scopedReference,
+		opts ...ResolveOption,
+	) (*binding[Credentials], bindingKey, error)
+
+	certificateBundleBinding(
+		ctx context.Context,
+		reference scopedReference,
+		opts ...ResolveOption,
+	) (*binding[CertificateBundle], bindingKey, error)
+
+	releaseBinding(key bindingKey, count int)
+}
+
+type scopeOption func(*scope)
+
+func withNamespace(namespace string) scopeOption {
+	return func(s *scope) {
+		s.namespace = namespace
+		s.refFactory = namespacedRuleRef(namespace)
+	}
+}
+
+func withID(id string) scopeOption {
+	return func(s *scope) {
+		s.id = id
+	}
+}
+
+type scope struct {
+	bindings   bindingProvider
+	refFactory referenceFactory
+
+	id        string
+	namespace string
+
+	mu       sync.Mutex
+	leases   map[bindingKey]int
+	cleanups []func()
+	closed   bool
+}
+
+func newScope(
+	bindings bindingProvider,
+	opts ...scopeOption,
+) *scope {
+	scp := &scope{
+		bindings:   bindings,
+		refFactory: internalRef,
+		leases:     make(map[bindingKey]int),
+	}
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(scp)
+		}
+	}
+
+	return scp
+}
+
+func (s *scope) Secret(
+	ctx context.Context,
+	ref Reference,
+	opts ...ResolveOption,
+) (SecretHandle, error) {
+	bdg, key, err := s.bindings.secretBinding(ctx, s.refFactory(ref), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.trackLease(key) {
+		s.bindings.releaseBinding(key, 1)
+
+		return nil, ErrResolverScopeClosed
+	}
+
+	return newHandle[Secret](bdg, s), nil
+}
+
+func (s *scope) SecretSet(
+	ctx context.Context,
+	ref Reference,
+	opts ...ResolveOption,
+) (SecretSetHandle, error) {
+	bdg, key, err := s.bindings.secretSetBinding(ctx, s.refFactory(ref), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.trackLease(key) {
+		s.bindings.releaseBinding(key, 1)
+
+		return nil, ErrResolverScopeClosed
+	}
+
+	return newHandle[[]Secret](bdg, s), nil
+}
+
+func (s *scope) Credentials(
+	ctx context.Context,
+	ref Reference,
+	opts ...ResolveOption,
+) (CredentialsHandle, error) {
+	bdg, key, err := s.bindings.credentialsBinding(ctx, s.refFactory(ref), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.trackLease(key) {
+		s.bindings.releaseBinding(key, 1)
+
+		return nil, ErrResolverScopeClosed
+	}
+
+	return newHandle[Credentials](bdg, s), nil
+}
+
+func (s *scope) CertificateBundle(
+	ctx context.Context,
+	ref Reference,
+	opts ...ResolveOption,
+) (CertificateBundleHandle, error) {
+	bdg, key, err := s.bindings.certificateBundleBinding(ctx, s.refFactory(ref), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.trackLease(key) {
+		s.bindings.releaseBinding(key, 1)
+
+		return nil, ErrResolverScopeClosed
+	}
+
+	return newHandle[CertificateBundle](bdg, s), nil
+}
+
+func (s *scope) Release() {
+	s.mu.Lock()
+
+	if s.closed {
+		s.mu.Unlock()
+
+		return
+	}
+
+	leases := maps.Clone(s.leases)
+	clear(s.leases)
+
+	cleanups := append([]func(){}, s.cleanups...)
+	s.cleanups = nil
+
+	s.closed = true
+
+	s.mu.Unlock()
+
+	for _, cleanup := range cleanups {
+		cleanup()
+	}
+
+	for key, count := range leases {
+		s.bindings.releaseBinding(key, count)
+	}
+}
+
+func (s *scope) trackLease(key bindingKey) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return false
+	}
+
+	s.leases[key]++
+
+	return true
+}
+
+func (s *scope) registerCleanup(cleanup func()) {
+	s.mu.Lock()
+
+	if s.closed {
+		s.mu.Unlock()
+		cleanup()
+
+		return
+	}
+
+	s.cleanups = append(s.cleanups, cleanup)
+	s.mu.Unlock()
+}
+
+var (
+	_ Resolver        = (*scope)(nil)
+	_ ScopedResolver  = (*scope)(nil)
+	_ cleanupRegistry = (*scope)(nil)
+)

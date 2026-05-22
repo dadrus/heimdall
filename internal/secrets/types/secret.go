@@ -27,11 +27,11 @@ import (
 type SecretKind string
 
 const (
-	SecretKindString        SecretKind = "string"
-	SecretKindSymmetricKey  SecretKind = "symmetric_key"  //nolint:gosec
-	SecretKindAsymmetricKey SecretKind = "asymmetric_key" //nolint:gosec
-	SecretKindTrustStore    SecretKind = "trust_store"
-	SecretKindCredentials   SecretKind = "credentials"
+	SecretKindString            SecretKind = "string"
+	SecretKindSymmetricKey      SecretKind = "symmetric_key"  //nolint:gosec
+	SecretKindAsymmetricKey     SecretKind = "asymmetric_key" //nolint:gosec
+	SecretKindCertificateBundle SecretKind = "certificate_bundle"
+	SecretKindCredentials       SecretKind = "credentials"
 )
 
 type Secret interface {
@@ -57,7 +57,7 @@ type AsymmetricKeySecret interface {
 	CertChain() []*x509.Certificate
 }
 
-type TrustStoreSecret interface {
+type CertificateBundle interface {
 	Secret
 	CertPool() *x509.CertPool
 }
@@ -142,28 +142,28 @@ func (s *asymmetricKeySecret) KeyID() string                  { return s.keyID }
 func (s *asymmetricKeySecret) PrivateKey() crypto.Signer      { return s.signer }
 func (s *asymmetricKeySecret) CertChain() []*x509.Certificate { return s.certChain }
 
-type trustStoreSecret struct {
+type certificateBundle struct {
 	baseSecret
 
 	certPool *x509.CertPool
 }
 
-func NewTrustStoreSecret(selector string, certs []*x509.Certificate) TrustStoreSecret {
+func NewCertificateBundle(selector string, certs []*x509.Certificate) CertificateBundle {
 	pool := x509.NewCertPool()
 	for _, cert := range certs {
 		pool.AddCert(cert)
 	}
 
-	return &trustStoreSecret{
+	return &certificateBundle{
 		baseSecret: baseSecret{
 			selector: selector,
-			kind:     SecretKindTrustStore,
+			kind:     SecretKindCertificateBundle,
 		},
 		certPool: pool,
 	}
 }
 
-func (s *trustStoreSecret) CertPool() *x509.CertPool { return s.certPool }
+func (s *certificateBundle) CertPool() *x509.CertPool { return s.certPool }
 
 type credentials struct {
 	baseSecret

@@ -16,13 +16,22 @@
 
 package types //nolint:revive
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/dadrus/heimdall/internal/pipeline"
+)
 
 var (
+	ErrUnsupportedProviderType   = errors.New("secret provider type unsupported")
 	ErrSecretNotFound            = errors.New("secret not found")
 	ErrSecretSetNotFound         = errors.New("secret set not found")
 	ErrCredentialsNotFound       = errors.New("credentials not found")
-	ErrUnsupportedOperation      = errors.New("unsupported secret operation")
-	ErrSecretKindMismatch        = errors.New("secret kind mismatch")
+	ErrCertificateBundleNotFound = errors.New("certificate bundle not found")
 	ErrInvalidCredentialsPayload = errors.New("invalid credentials payload")
+	ErrSourceNotFound            = errors.New("secret source not found")
+	ErrDependencyNotDeclared     = errors.New("source dependency not declared")
+	ErrUnsupportedOperation      = errors.New("unsupported operation")
+	ErrConfiguration             = pipeline.ErrConfiguration
+	ErrInternal                  = pipeline.ErrInternal
 )

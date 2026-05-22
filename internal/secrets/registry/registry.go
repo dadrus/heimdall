@@ -17,22 +17,20 @@
 package registry
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/secrets/provider"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
-var ErrUnsupportedProviderType = errors.New("secret provider type unsupported")
-
 var (
 	// by intention. Used only during application bootstrap.
-	factories   = make(map[string]types.ProviderFactory) //nolint:gochecknoglobals
-	factoriesMu sync.RWMutex                             //nolint:gochecknoglobals
+	factories   = make(map[string]provider.Factory) //nolint:gochecknoglobals
+	factoriesMu sync.RWMutex                        //nolint:gochecknoglobals
 )
 
-func Register(typ string, factory types.ProviderFactory) {
+func Register(typ string, factory provider.Factory) {
 	factoriesMu.Lock()
 	defer factoriesMu.Unlock()
 
@@ -50,13 +48,13 @@ func Unregister(typ string) {
 	delete(factories, typ)
 }
 
-func Create(typ string, args types.ProviderArgs) (types.Provider, error) {
+func Create(typ string, args provider.Args) (provider.Provider, error) {
 	factoriesMu.RLock()
 	factory, ok := factories[typ] //nolint:wsl_v5
 	factoriesMu.RUnlock()         //nolint:wsl_v5
 
 	if !ok {
-		return nil, fmt.Errorf("%w: '%s'", ErrUnsupportedProviderType, typ)
+		return nil, fmt.Errorf("%w: '%s'", types.ErrUnsupportedProviderType, typ)
 	}
 
 	return factory.Create(args)

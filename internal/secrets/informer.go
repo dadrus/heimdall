@@ -1,251 +1,275 @@
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package secrets
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
-	"fmt"
-	"sync/atomic"
-
-	"github.com/dadrus/heimdall/internal/x"
 )
 
-type MissingSecretPolicy[S any, T any] interface {
-	HandleMissingSecret(ctx context.Context, cch *Informer[S, T], err error) error
-}
+var ErrTooManyInformerOptions = errors.New("too many informer options provided")
 
 type (
-	KeepPrevious[S any, T any]     struct{}
-	KeepPreviousSecret[T any]      = KeepPrevious[Secret, T]
-	KeepPreviousCredentials[T any] = KeepPrevious[Credentials, T]
+	SecretConverter[T any]      func(Secret) (T, error)
+	CredentialsConverter[T any] func(Credentials) (T, error)
 )
-
-func (KeepPrevious[S, T]) HandleMissingSecret(context.Context, *Informer[S, T], error) error {
-	return nil
-}
 
 type (
-	Clear[S any, T any]     struct{}
-	ClearSecret[T any]      = Clear[Secret, T]
-	ClearCredentials[T any] = Clear[Credentials, T]
+	SecretUpdateFunc[T any]      func(context.Context, Secret, T)
+	CredentialsUpdateFunc[T any] func(context.Context, Credentials, T)
+	CertificateBundleUpdateFunc  func(context.Context, CertificateBundle, *x509.CertPool)
 )
 
-func (Clear[S, T]) HandleMissingSecret(_ context.Context, w *Informer[S, T], _ error) error {
-	w.clear()
-
-	return nil
-}
-
-type (
-	Fail[S any, T any]     struct{}
-	FailSecret[T any]      = Fail[Secret, T]
-	FailCredentials[T any] = Fail[Credentials, T]
-)
-
-func (Fail[S, T]) HandleMissingSecret(_ context.Context, _ *Informer[S, T], err error) error {
-	return err
-}
-
-type Converter[S any, T any] func(S) (T, error)
-
-type Source[S any] interface {
-	Resolve(ctx context.Context, mgr Manager, ref Reference) (S, error)
-}
-
-type SecretSource struct{}
-
-func (SecretSource) Resolve(ctx context.Context, sm Manager, ref Reference) (Secret, error) {
-	return sm.ResolveSecret(ctx, ref)
-}
-
-type SecretSetSource struct{}
-
-func (SecretSetSource) Resolve(
-	ctx context.Context,
-	sm Manager,
-	ref Reference,
-) ([]Secret, error) {
-	return sm.ResolveSecretSet(ctx, ref)
-}
-
-type CredentialsSource struct{}
-
-func (CredentialsSource) Resolve(
-	ctx context.Context,
-	sm Manager,
-	ref Reference,
-) (Credentials, error) {
-	return sm.ResolveCredentials(ctx, ref)
-}
-
-type state[T any] struct {
-	value T
-	ok    bool
+type InformerOptions[T any] struct {
+	Converter   SecretConverter[T]
+	ResolveMode ResolveMode
+	OnUpdate    SecretUpdateFunc[T]
 }
 
 type SecretInformer[T any] struct {
-	Manager             Manager
-	Reference           Reference
-	Converter           Converter[Secret, T]
-	MissingSecretPolicy MissingSecretPolicy[Secret, T]
-	OnUpdate            func(context.Context, Secret, T)
-	OnError             func(context.Context, error)
-
-	i Informer[Secret, T]
+	handle    SecretHandle
+	converter SecretConverter[T]
 }
 
-func (i *SecretInformer[T]) Start(ctx context.Context) error {
-	i.i = Informer[Secret, T]{
-		Manager:             i.Manager,
-		Reference:           i.Reference,
-		Source:              SecretSource{},
-		Converter:           i.Converter,
-		MissingSecretPolicy: i.MissingSecretPolicy,
-		OnUpdate:            i.OnUpdate,
-		OnError:             i.OnError,
-	}
-
-	return i.i.Start(ctx)
-}
-
-func (i *SecretInformer[T]) Stop()          { i.i.Stop() }
-func (i *SecretInformer[T]) Get() (T, bool) { return i.i.Get() }
-
-type CredentialsInformer[T any] struct {
-	Manager             Manager
-	Reference           Reference
-	Converter           Converter[Credentials, T]
-	MissingSecretPolicy MissingSecretPolicy[Credentials, T]
-	OnUpdate            func(context.Context, Credentials, T)
-	OnError             func(context.Context, error)
-
-	i Informer[Credentials, T]
-}
-
-func (i *CredentialsInformer[T]) Start(ctx context.Context) error {
-	i.i = Informer[Credentials, T]{
-		Manager:             i.Manager,
-		Reference:           i.Reference,
-		Source:              CredentialsSource{},
-		Converter:           i.Converter,
-		MissingSecretPolicy: i.MissingSecretPolicy,
-		OnUpdate:            i.OnUpdate,
-		OnError:             i.OnError,
-	}
-
-	return i.i.Start(ctx)
-}
-
-func (i *CredentialsInformer[T]) Stop()          { i.i.Stop() }
-func (i *CredentialsInformer[T]) Get() (T, bool) { return i.i.Get() }
-
-type Informer[S any, T any] struct {
-	Manager             Manager
-	Reference           Reference
-	Source              Source[S]
-	Converter           Converter[S, T]
-	MissingSecretPolicy MissingSecretPolicy[S, T]
-	OnUpdate            func(context.Context, S, T)
-	OnError             func(context.Context, error)
-
-	state       atomic.Pointer[state[T]]
-	unsubscribe func()
-}
-
-func (i *Informer[S, T]) Start(ctx context.Context) error {
-	if i.Manager == nil {
-		panic("secret cache: manager is nil")
-	}
-
-	if i.Source == nil {
-		panic("secret cache: resolver is nil")
-	}
-
-	if i.Converter == nil {
-		panic("secret cache: converter is nil")
-	}
-
-	if i.MissingSecretPolicy == nil {
-		i.MissingSecretPolicy = KeepPrevious[S, T]{}
-	}
-
-	if err := i.reload(ctx, true); err != nil {
-		return err
-	}
-
-	unsubscribe, err := i.Manager.Subscribe(i.Reference, func(ctx context.Context) error {
-		return i.reload(ctx, false)
-	})
+func NewSecretInformer[T any](
+	ctx context.Context,
+	resolver Resolver,
+	reference Reference,
+	opts ...InformerOptions[T],
+) (*SecretInformer[T], error) {
+	cfg, err := singleInformerOption(opts)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrSubscribeFailed, err)
+		return nil, err
 	}
 
-	i.unsubscribe = unsubscribe
-
-	return nil
-}
-
-func (i *Informer[S, T]) Stop() {
-	if i.unsubscribe != nil {
-		i.unsubscribe()
-		i.unsubscribe = nil
+	converter := cfg.Converter
+	if converter == nil {
+		converter = identitySecretConverter[T]
 	}
+
+	hdl, err := resolver.Secret(ctx, reference, resolveOptionsForMode(cfg.ResolveMode)...)
+	if err != nil {
+		return nil, err
+	}
+
+	informer := &SecretInformer[T]{
+		handle:    hdl,
+		converter: converter,
+	}
+
+	if cfg.OnUpdate != nil {
+		hdl.OnUpdate(func(ctx context.Context, secret Secret) error {
+			value, err := converter(secret)
+			if err != nil {
+				return errors.Join(ErrSecretConversionFailed, err)
+			}
+
+			cfg.OnUpdate(ctx, secret, value)
+
+			return nil
+		})
+	}
+
+	return informer, nil
 }
 
-func (i *Informer[S, T]) Get() (T, bool) {
-	st := i.state.Load()
-	if st == nil || !st.ok {
+func (i *SecretInformer[T]) Get(ctx context.Context) (T, bool) {
+	secret, ok := i.handle.Get(ctx)
+	if !ok {
 		var zero T
 
 		return zero, false
 	}
 
-	return st.value, true
-}
-
-func (i *Informer[S, T]) reload(ctx context.Context, strict bool) error {
-	raw, err := i.Source.Resolve(ctx, i.Manager, i.Reference)
+	value, err := i.converter(secret)
 	if err != nil {
-		if !strict && i.OnError != nil {
-			i.OnError(ctx, err)
-		}
+		var zero T
 
-		if !strict && errors.Is(err, ErrSecretNotFound) {
-			return i.MissingSecretPolicy.HandleMissingSecret(ctx, i, err)
-		}
-
-		return x.IfThenElse(strict, err, nil)
+		return zero, false
 	}
 
-	value, err := i.Converter(raw)
+	return value, true
+}
+
+type CredentialsInformerOptions[T any] struct {
+	Converter   CredentialsConverter[T]
+	ResolveMode ResolveMode
+	OnUpdate    CredentialsUpdateFunc[T]
+}
+
+type CredentialsInformer[T any] struct {
+	handle    CredentialsHandle
+	converter CredentialsConverter[T]
+}
+
+func NewCredentialsInformer[T any](
+	ctx context.Context,
+	resolver Resolver,
+	reference Reference,
+	opts ...CredentialsInformerOptions[T],
+) (*CredentialsInformer[T], error) {
+	cfg, err := singleInformerOption(opts)
 	if err != nil {
-		if !strict && i.OnError != nil {
-			i.OnError(ctx, err)
-		}
-
-		return x.IfThenElse(strict, err, nil)
+		return nil, err
 	}
 
-	i.set(value)
-
-	if i.OnUpdate != nil {
-		i.OnUpdate(ctx, raw, value)
+	converter := cfg.Converter
+	if converter == nil {
+		converter = identityCredentialsConverter[T]
 	}
 
-	return nil
+	hdl, err := resolver.Credentials(ctx, reference, resolveOptionsForMode(cfg.ResolveMode)...)
+	if err != nil {
+		return nil, err
+	}
+
+	informer := &CredentialsInformer[T]{
+		handle:    hdl,
+		converter: converter,
+	}
+
+	if cfg.OnUpdate != nil {
+		hdl.OnUpdate(func(ctx context.Context, credentials Credentials) error {
+			value, err := converter(credentials)
+			if err != nil {
+				return errors.Join(ErrSecretConversionFailed, err)
+			}
+
+			cfg.OnUpdate(ctx, credentials, value)
+
+			return nil
+		})
+	}
+
+	return informer, nil
 }
 
-func (i *Informer[S, T]) set(value T) {
-	i.state.Store(&state[T]{
-		value: value,
-		ok:    true,
-	})
+func (i *CredentialsInformer[T]) Get(ctx context.Context) (T, bool) {
+	credentials, ok := i.handle.Get(ctx)
+	if !ok {
+		var zero T
+
+		return zero, false
+	}
+
+	value, err := i.converter(credentials)
+	if err != nil {
+		var zero T
+
+		return zero, false
+	}
+
+	return value, true
 }
 
-func (i *Informer[S, T]) clear() {
-	var zero T
+type CertificateBundleInformerOptions struct {
+	ResolveMode ResolveMode
+	OnUpdate    CertificateBundleUpdateFunc
+}
 
-	i.state.Store(&state[T]{
-		value: zero,
-		ok:    false,
-	})
+type CertificateBundleInformer struct {
+	handle CertificateBundleHandle
+}
+
+func NewCertificateBundleInformer(
+	ctx context.Context,
+	resolver Resolver,
+	reference Reference,
+	opts ...CertificateBundleInformerOptions,
+) (*CertificateBundleInformer, error) {
+	cfg, err := singleInformerOption(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	hdl, err := resolver.CertificateBundle(ctx, reference, resolveOptionsForMode(cfg.ResolveMode)...)
+	if err != nil {
+		return nil, err
+	}
+
+	informer := &CertificateBundleInformer{
+		handle: hdl,
+	}
+
+	if cfg.OnUpdate != nil {
+		hdl.OnUpdate(func(ctx context.Context, bundle CertificateBundle) error {
+			cfg.OnUpdate(ctx, bundle, bundle.CertPool())
+
+			return nil
+		})
+	}
+
+	return informer, nil
+}
+
+func (i *CertificateBundleInformer) Get(ctx context.Context) (*x509.CertPool, bool) {
+	bundle, ok := i.handle.Get(ctx)
+	if !ok {
+		return nil, false
+	}
+
+	return bundle.CertPool(), true
+}
+
+func singleInformerOption[T any](opts []T) (T, error) {
+	switch len(opts) {
+	case 0:
+		var zero T
+
+		return zero, nil
+	case 1:
+		return opts[0], nil
+	default:
+		var zero T
+
+		return zero, ErrTooManyInformerOptions
+	}
+}
+
+func resolveOptionsForMode(mode ResolveMode) []ResolveOption {
+	switch mode {
+	case ResolveLazy:
+		return []ResolveOption{Lazy()}
+	case ResolveEager:
+		return []ResolveOption{Eager()}
+	default:
+		return nil
+	}
+}
+
+func identitySecretConverter[T any](secret Secret) (T, error) {
+	value, ok := any(secret).(T)
+	if !ok {
+		var zero T
+
+		return zero, ErrSecretConversionFailed
+	}
+
+	return value, nil
+}
+
+func identityCredentialsConverter[T any](credentials Credentials) (T, error) {
+	value, ok := any(credentials).(T)
+	if !ok {
+		var zero T
+
+		return zero, ErrSecretConversionFailed
+	}
+
+	return value, nil
 }

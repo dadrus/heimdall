@@ -1,6 +1,7 @@
 package source
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"testing"
@@ -11,9 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/secrets/provider"
+	providermocks "github.com/dadrus/heimdall/internal/secrets/provider/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/secrets/types"
-	typemocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
 
 func TestProviderObserverNotify(t *testing.T) {
@@ -21,22 +23,22 @@ func TestProviderObserverNotify(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		sourceName string
-		event      types.ChangeEvent
+		event      provider.ChangeEvent
 		want       Event
 	}{
 		"adds source name to source wide event": {
 			sourceName: "vault",
-			event:      types.ChangeEvent{},
+			event:      provider.ChangeEvent{},
 			want:       Event{Source: "vault"},
 		},
 		"adds source name to selector event": {
 			sourceName: "k8s",
-			event: types.ChangeEvent{
-				Selectors: []types.Selector{{Value: "service-account", Namespace: "team-a"}},
+			event: provider.ChangeEvent{
+				Selectors: []provider.Selector{{Value: "service-account", Namespace: "team-a"}},
 			},
 			want: Event{
 				Source:    "k8s",
-				Selectors: []types.Selector{{Value: "service-account", Namespace: "team-a"}},
+				Selectors: []provider.Selector{{Value: "service-account", Namespace: "team-a"}},
 			},
 		},
 	} {
@@ -52,289 +54,39 @@ func TestProviderObserverNotify(t *testing.T) {
 	}
 }
 
-func TestSecretsResolverResolveSecret(t *testing.T) {
-	t.Parallel()
-
-	declaredRef := types.SecretRef{Source: "pem", Selector: "server"}
-	secret := types.NewStringSecret("server", "value")
-
-	for uc, tc := range map[string]struct {
-		dependencies []types.SecretRef
-		ref          types.SecretRef
-		setup        func(*DependencyResolverMock)
-		wantSecret   types.Secret
-		wantErr      error
-	}{
-		"delegates declared dependency": {
-			dependencies: []types.SecretRef{declaredRef},
-			ref:          declaredRef,
-			setup: func(resolver *DependencyResolverMock) {
-				resolver.EXPECT().
-					ResolveSecret(mock.Anything, declaredRef).
-					Return(secret, nil)
-			},
-			wantSecret: secret,
-		},
-		"returns dependency error for unknown selector": {
-			dependencies: []types.SecretRef{declaredRef},
-			ref:          types.SecretRef{Source: "pem", Selector: "client"},
-			setup:        func(*DependencyResolverMock) {},
-			wantErr:      ErrProviderDependencyNotDeclared,
-		},
-		"propagates resolver error": {
-			dependencies: []types.SecretRef{declaredRef},
-			ref:          declaredRef,
-			setup: func(resolver *DependencyResolverMock) {
-				resolver.EXPECT().
-					ResolveSecret(mock.Anything, declaredRef).
-					Return(nil, assert.AnError)
-			},
-			wantErr: assert.AnError,
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			resolverMock := NewDependencyResolverMock(t)
-			if tc.setup != nil {
-				tc.setup(resolverMock)
-			}
-
-			resolver := &secretsResolver{
-				name: "vault",
-				deps: tc.dependencies,
-				r:    resolverMock,
-			}
-
-			got, err := resolver.ResolveSecret(context.Background(), tc.ref)
-
-			if tc.wantErr != nil {
-				require.Error(t, err)
-				require.ErrorIs(t, err, tc.wantErr)
-				require.Nil(t, got)
-
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tc.wantSecret, got)
-		})
-	}
-}
-
-func TestSecretsResolverResolveCredentials(t *testing.T) {
-	t.Parallel()
-
-	declaredRef := types.SecretRef{Source: "inline", Selector: "github"}
-	creds := types.NewCredentials("github", map[string]any{
-		"client_id":     "heimdall",
-		"client_secret": "secret",
-	})
-
-	for uc, tc := range map[string]struct {
-		dependencies []types.SecretRef
-		ref          types.SecretRef
-		setup        func(*DependencyResolverMock)
-		wantCreds    types.Credentials
-		wantErr      error
-	}{
-		"delegates declared dependency": {
-			dependencies: []types.SecretRef{declaredRef},
-			ref:          declaredRef,
-			setup: func(resolver *DependencyResolverMock) {
-				resolver.EXPECT().
-					ResolveCredentials(mock.Anything, declaredRef).
-					Return(creds, nil)
-			},
-			wantCreds: creds,
-		},
-		"returns dependency error for undeclared reference": {
-			dependencies: []types.SecretRef{declaredRef},
-			ref:          types.SecretRef{Source: "inline", Selector: "other"},
-			setup:        func(*DependencyResolverMock) {},
-			wantErr:      ErrProviderDependencyNotDeclared,
-		},
-		"propagates resolver error": {
-			dependencies: []types.SecretRef{declaredRef},
-			ref:          declaredRef,
-			setup: func(resolver *DependencyResolverMock) {
-				resolver.EXPECT().
-					ResolveCredentials(mock.Anything, declaredRef).
-					Return(nil, assert.AnError)
-			},
-			wantErr: assert.AnError,
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			resolverMock := NewDependencyResolverMock(t)
-			if tc.setup != nil {
-				tc.setup(resolverMock)
-			}
-
-			resolver := &secretsResolver{
-				name: "vault",
-				deps: tc.dependencies,
-				r:    resolverMock,
-			}
-
-			got, err := resolver.ResolveCredentials(context.Background(), tc.ref)
-
-			if tc.wantErr != nil {
-				require.Error(t, err)
-				require.ErrorIs(t, err, tc.wantErr)
-				require.Nil(t, got)
-
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tc.wantCreds, got)
-		})
-	}
-}
-
-func TestSecretsResolverDependsOn(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		dependencies []types.SecretRef
-		event        Event
-		want         bool
-	}{
-		"returns false without dependencies": {
-			dependencies: nil,
-			event:        Event{Source: "pem"},
-			want:         false,
-		},
-		"returns false for different source": {
-			dependencies: []types.SecretRef{
-				{Source: "pem", Selector: "server"},
-			},
-			event: Event{
-				Source: "inline",
-			},
-			want: false,
-		},
-		"returns true for source wide event": {
-			dependencies: []types.SecretRef{
-				{Source: "pem", Selector: "server"},
-			},
-			event: Event{
-				Source: "pem",
-			},
-			want: true,
-		},
-		"returns true for matching selector": {
-			dependencies: []types.SecretRef{
-				{Source: "pem", Selector: "server"},
-			},
-			event: Event{
-				Source: "pem",
-				Selectors: []types.Selector{
-					{Value: "server"},
-				},
-			},
-			want: true,
-		},
-		"returns true for one matching selector": {
-			dependencies: []types.SecretRef{
-				{Source: "pem", Selector: "server"},
-			},
-			event: Event{
-				Source: "pem",
-				Selectors: []types.Selector{
-					{Value: "client"},
-					{Value: "server"},
-				},
-			},
-			want: true,
-		},
-		"returns false for non matching selector": {
-			dependencies: []types.SecretRef{
-				{Source: "pem", Selector: "server"},
-			},
-			event: Event{
-				Source: "pem",
-				Selectors: []types.Selector{
-					{Value: "client"},
-				},
-			},
-			want: false,
-		},
-		"ignores selector namespace": {
-			dependencies: []types.SecretRef{
-				{Source: "k8s", Selector: "service-account"},
-			},
-			event: Event{
-				Source: "k8s",
-				Selectors: []types.Selector{
-					{Value: "service-account", Namespace: "team-a"},
-				},
-			},
-			want: true,
-		},
-		"returns true for one matching dependency": {
-			dependencies: []types.SecretRef{
-				{Source: "pem", Selector: "server"},
-				{Source: "inline", Selector: "github"},
-			},
-			event: Event{
-				Source: "inline",
-				Selectors: []types.Selector{
-					{Value: "github"},
-				},
-			},
-			want: true,
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			resolver := &secretsResolver{
-				name: "vault",
-				deps: tc.dependencies,
-			}
-
-			require.Equal(t, tc.want, resolver.dependsOn(tc.event))
-		})
-	}
-}
-
-func TestNewSource(t *testing.T) {
+func TestNewSecretSource(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
 		conf   config.SecretSourceConfig
-		setup  func(t *testing.T, providerType string) types.ProviderFactory
-		assert func(t *testing.T, src *Source, err error)
+		setup  func(t *testing.T, providerType string) provider.Factory
+		assert func(t *testing.T, src *secretSource, err error)
 	}{
 		"creates source from registered provider": {
 			conf: config.SecretSourceConfig{
 				AllowInRules: true,
 				Config:       map[string]any{"foo": "bar"},
 			},
-			setup: func(t *testing.T, providerType string) types.ProviderFactory {
+			setup: func(t *testing.T, _ string) provider.Factory {
 				t.Helper()
 
-				return types.ProviderFactoryFunc(func(args types.ProviderArgs) (types.Provider, error) {
+				return provider.FactoryFunc(func(args provider.Args) (provider.Provider, error) {
 					require.Equal(t, map[string]any{"foo": "bar"}, args.Config)
 					require.NotNil(t, args.Logger)
 					require.NotNil(t, args.Observer)
 					require.NotNil(t, args.Resolver)
 
-					provider := typemocks.NewProviderMock(t)
-					provider.EXPECT().
+					prv := providermocks.NewProviderMock(t)
+					prv.EXPECT().
 						Dependencies().
-						Return([]types.SecretRef{
+						Return([]types.Reference{
 							{Source: "pem", Selector: "server"},
 						})
 
-					return provider, nil
+					return prv, nil
 				})
 			},
-			assert: func(t *testing.T, src *Source, err error) {
+			assert: func(t *testing.T, src *secretSource, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -342,7 +94,7 @@ func TestNewSource(t *testing.T) {
 
 				require.Equal(t, "vault", src.Name())
 				require.True(t, src.AccessFromRulesAllowed())
-				require.Equal(t, []types.SecretRef{
+				require.Equal(t, []types.Reference{
 					{Source: "pem", Selector: "server"},
 				}, src.Dependencies())
 			},
@@ -351,28 +103,28 @@ func TestNewSource(t *testing.T) {
 			conf: config.SecretSourceConfig{
 				Type: "does-not-exist",
 			},
-			setup: func(t *testing.T, providerType string) types.ProviderFactory {
+			setup: func(t *testing.T, _ string) provider.Factory {
 				t.Helper()
 
 				return nil
 			},
-			assert: func(t *testing.T, src *Source, err error) {
+			assert: func(t *testing.T, src *secretSource, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, registry.ErrUnsupportedProviderType)
+				require.ErrorIs(t, err, types.ErrUnsupportedProviderType)
 				require.Nil(t, src)
 			},
 		},
 		"returns provider creation error": {
-			setup: func(t *testing.T, providerType string) types.ProviderFactory {
+			setup: func(t *testing.T, _ string) provider.Factory {
 				t.Helper()
 
-				return types.ProviderFactoryFunc(func(types.ProviderArgs) (types.Provider, error) {
+				return provider.FactoryFunc(func(provider.Args) (provider.Provider, error) {
 					return nil, assert.AnError
 				})
 			},
-			assert: func(t *testing.T, src *Source, err error) {
+			assert: func(t *testing.T, src *secretSource, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -384,7 +136,7 @@ func TestNewSource(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			providerType := uniqueProviderType(t)
+			providerType := uniqueProviderType(t, uc)
 			conf := tc.conf
 
 			if conf.Type == "" {
@@ -394,15 +146,16 @@ func TestNewSource(t *testing.T) {
 			factory := tc.setup(t, providerType)
 			if factory != nil {
 				registry.Register(providerType, factory)
+
 				t.Cleanup(func() {
 					registry.Unregister(providerType)
 				})
 			}
 
 			observer := NewObserverMock(t)
-			resolver := NewDependencyResolverMock(t)
+			resolver := providermocks.NewDependenciesResolverMock(t)
 
-			src, err := New(
+			src, err := newSecretSource(
 				"vault",
 				conf,
 				zerolog.Nop(),
@@ -416,7 +169,7 @@ func TestNewSource(t *testing.T) {
 	}
 }
 
-func TestSourceDelegatesToProvider(t *testing.T) {
+func TestSecretSourceDelegatesToProvider(t *testing.T) {
 	t.Parallel()
 
 	secret := types.NewStringSecret("server", "value")
@@ -427,15 +180,15 @@ func TestSourceDelegatesToProvider(t *testing.T) {
 	})
 
 	for uc, tc := range map[string]struct {
-		setup  func(*typemocks.ProviderMock)
-		call   func(*Source) (any, error)
+		setup  func(*providermocks.ProviderMock)
+		call   func(*secretSource) (any, error)
 		assert func(t *testing.T, result any, err error)
 	}{
 		"start": {
-			setup: func(provider *typemocks.ProviderMock) {
-				provider.EXPECT().Start(mock.Anything).Return(nil)
+			setup: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().Start(mock.Anything).Return(nil)
 			},
-			call: func(src *Source) (any, error) {
+			call: func(src *secretSource) (any, error) {
 				return nil, src.Start(context.Background())
 			},
 			assert: func(t *testing.T, _ any, err error) {
@@ -445,10 +198,10 @@ func TestSourceDelegatesToProvider(t *testing.T) {
 			},
 		},
 		"stop": {
-			setup: func(provider *typemocks.ProviderMock) {
-				provider.EXPECT().Stop(mock.Anything).Return(nil)
+			setup: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().Stop(mock.Anything).Return(nil)
 			},
-			call: func(src *Source) (any, error) {
+			call: func(src *secretSource) (any, error) {
 				return nil, src.Stop(context.Background())
 			},
 			assert: func(t *testing.T, _ any, err error) {
@@ -457,14 +210,28 @@ func TestSourceDelegatesToProvider(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		"is namespace aware": {
+			setup: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().IsNamespaceAware().Return(true)
+			},
+			call: func(src *secretSource) (any, error) {
+				return src.IsNamespaceAware(), nil
+			},
+			assert: func(t *testing.T, result any, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, result.(bool))
+			},
+		},
 		"get secret": {
-			setup: func(provider *typemocks.ProviderMock) {
-				provider.EXPECT().
-					GetSecret(mock.Anything, types.Selector{Value: "server"}).
+			setup: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().
+					GetSecret(mock.Anything, provider.Selector{Value: "server"}).
 					Return(secret, nil)
 			},
-			call: func(src *Source) (any, error) {
-				return src.GetSecret(context.Background(), types.Selector{Value: "server"})
+			call: func(src *secretSource) (any, error) {
+				return src.GetSecret(context.Background(), provider.Selector{Value: "server"})
 			},
 			assert: func(t *testing.T, result any, err error) {
 				t.Helper()
@@ -474,13 +241,13 @@ func TestSourceDelegatesToProvider(t *testing.T) {
 			},
 		},
 		"get secret set": {
-			setup: func(provider *typemocks.ProviderMock) {
-				provider.EXPECT().
-					GetSecretSet(mock.Anything, types.Selector{Value: "server"}).
+			setup: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().
+					GetSecretSet(mock.Anything, provider.Selector{Value: "server"}).
 					Return(secretSet, nil)
 			},
-			call: func(src *Source) (any, error) {
-				return src.GetSecretSet(context.Background(), types.Selector{Value: "server"})
+			call: func(src *secretSource) (any, error) {
+				return src.GetSecretSet(context.Background(), provider.Selector{Value: "server"})
 			},
 			assert: func(t *testing.T, result any, err error) {
 				t.Helper()
@@ -490,13 +257,13 @@ func TestSourceDelegatesToProvider(t *testing.T) {
 			},
 		},
 		"get credentials": {
-			setup: func(provider *typemocks.ProviderMock) {
-				provider.EXPECT().
-					GetCredentials(mock.Anything, types.Selector{Value: "github"}).
+			setup: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().
+					GetCredentials(mock.Anything, provider.Selector{Value: "github"}).
 					Return(creds, nil)
 			},
-			call: func(src *Source) (any, error) {
-				return src.GetCredentials(context.Background(), types.Selector{Value: "github"})
+			call: func(src *secretSource) (any, error) {
+				return src.GetCredentials(context.Background(), provider.Selector{Value: "github"})
 			},
 			assert: func(t *testing.T, result any, err error) {
 				t.Helper()
@@ -509,14 +276,15 @@ func TestSourceDelegatesToProvider(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			provider := typemocks.NewProviderMock(t)
-			tc.setup(provider)
+			prv := providermocks.NewProviderMock(t)
+			tc.setup(prv)
 
-			src := &Source{
+			src := &secretSource{
 				name:         "test",
 				allowInRules: true,
 				sr:           &secretsResolver{},
-				p:            provider,
+				p:            prv,
+				logger:       zerolog.Nop(),
 			}
 
 			result, err := tc.call(src)
@@ -525,7 +293,107 @@ func TestSourceDelegatesToProvider(t *testing.T) {
 	}
 }
 
-func uniqueProviderType(t *testing.T) string {
+func TestSecretSourceRun(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		setupProvider func(*providermocks.ProviderMock)
+		setupObserver func(*ObserverMock)
+		wantLog       string
+	}{
+		"restarts provider and notifies source wide event": {
+			setupProvider: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().Stop(mock.Anything).Return(nil)
+				prv.EXPECT().Start(mock.Anything).Return(nil)
+			},
+			setupObserver: func(observer *ObserverMock) {
+				observer.EXPECT().Notify(Event{Source: "vault"})
+			},
+			wantLog: "Secret source restarted after dependency change",
+		},
+		"does not start or notify if stop fails": {
+			setupProvider: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().Stop(mock.Anything).Return(assert.AnError)
+			},
+			setupObserver: func(*ObserverMock) {},
+			wantLog:       "Stopping secret source failed",
+		},
+		"does not notify if start fails": {
+			setupProvider: func(prv *providermocks.ProviderMock) {
+				prv.EXPECT().Stop(mock.Anything).Return(nil)
+				prv.EXPECT().Start(mock.Anything).Return(assert.AnError)
+			},
+			setupObserver: func(*ObserverMock) {},
+			wantLog:       "Starting secret source failed",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			var logs bytes.Buffer
+
+			logger := zerolog.New(&logs)
+
+			prv := providermocks.NewProviderMock(t)
+			tc.setupProvider(prv)
+
+			observer := NewObserverMock(t)
+			tc.setupObserver(observer)
+
+			src := &secretSource{
+				name:     "vault",
+				sr:       &secretsResolver{},
+				p:        prv,
+				logger:   logger,
+				observer: observer,
+			}
+
+			src.Run()
+
+			require.Contains(t, logs.String(), tc.wantLog)
+		})
+	}
+}
+
+func TestSecretSourceUnschedule(t *testing.T) {
+	t.Parallel()
+
+	t.Run("cancels scheduled restart task", func(t *testing.T) {
+		t.Parallel()
+
+		var logs bytes.Buffer
+
+		src := &secretSource{
+			name:   "vault",
+			logger: zerolog.New(&logs),
+		}
+
+		require.True(t, src.Schedule())
+
+		src.Unschedule(assert.AnError)
+
+		require.False(t, src.BeginRun())
+		require.Contains(t, logs.String(), "Failed scheduling secret source restart task")
+	})
+}
+
+func TestSecretSourceStopTask(t *testing.T) {
+	t.Parallel()
+
+	src := &secretSource{
+		name:   "vault",
+		logger: zerolog.Nop(),
+	}
+
+	require.True(t, src.Schedule())
+
+	src.stopTask()
+
+	require.False(t, src.Schedule())
+	require.False(t, src.BeginRun())
+}
+
+func uniqueProviderType(t *testing.T, suffix string) string {
 	t.Helper()
 
 	replacer := strings.NewReplacer(
@@ -534,5 +402,5 @@ func uniqueProviderType(t *testing.T) string {
 		"_", "-",
 	)
 
-	return "test-" + strings.ToLower(replacer.Replace(t.Name()))
+	return "test-" + strings.ToLower(replacer.Replace(t.Name())) + "-" + suffix
 }

@@ -60,10 +60,10 @@ func TestNewSignerSecret(t *testing.T) {
 
 func TestNewTrustStoreSecret(t *testing.T) {
 	cert := &x509.Certificate{}
-	secret := NewTrustStoreSecret("trust", []*x509.Certificate{cert})
+	secret := NewCertificateBundle("trust", []*x509.Certificate{cert})
 
 	assert.Equal(t, "trust", secret.Selector())
-	assert.Equal(t, SecretKindTrustStore, secret.Kind())
+	assert.Equal(t, SecretKindCertificateBundle, secret.Kind())
 	assert.NotNil(t, secret.CertPool())
 }
 

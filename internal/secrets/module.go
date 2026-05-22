@@ -19,19 +19,102 @@ package secrets
 import (
 	"context"
 
+	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	_ "github.com/dadrus/heimdall/internal/secrets/providers/inline"
-	_ "github.com/dadrus/heimdall/internal/secrets/providers/pem"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
+	"github.com/dadrus/heimdall/internal/secrets/source"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(
+		newDependencyResolverProxy,
+		func(proxy *dependencyResolverProxy) source.DependenciesResolver { return proxy },
+		newRepository,
+		newResolver,
 		fx.Annotate(
-			NewManager,
-			fx.OnStart(func(ctx context.Context, mgr *manager) error { return mgr.Start(ctx) }),
-			fx.OnStop(func(ctx context.Context, mgr *manager) error { return mgr.Stop(ctx) }),
+			newRuntime,
+			fx.OnStart(func(ctx context.Context, rt *runtime) error { return rt.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, rt *runtime) error { return rt.Stop(ctx) }),
 		),
-		func(mr *manager) Manager { return mr },
+		func(rt *runtime) Resolver {
+			return rt.resolver.globalResolver()
+		},
+		func(rt *runtime) ScopedResolverFactory {
+			return scopedResolverFactoryFunc(rt.resolver.scopedResolver)
+		},
 	),
 )
+
+type scopedResolverFactoryFunc func(id string, opts ...ScopeOption) ScopedResolver
+
+func (f scopedResolverFactoryFunc) Create(id string, opts ...ScopeOption) ScopedResolver {
+	return f(id, opts...)
+}
+
+type dependencyResolverProxy struct {
+	resolver source.DependenciesResolver
+}
+
+func newDependencyResolverProxy() *dependencyResolverProxy {
+	return &dependencyResolverProxy{}
+}
+
+func (p *dependencyResolverProxy) ResolveSecret(
+	ctx context.Context,
+	ref Reference,
+) (Secret, error) {
+	return p.resolver.ResolveSecret(ctx, ref)
+}
+
+func (p *dependencyResolverProxy) ResolveCredentials(
+	ctx context.Context,
+	ref Reference,
+) (Credentials, error) {
+	return p.resolver.ResolveCredentials(ctx, ref)
+}
+
+func (p *dependencyResolverProxy) ResolveCertificateBundle(
+	ctx context.Context,
+	ref Reference,
+) (CertificateBundle, error) {
+	return p.resolver.ResolveCertificateBundle(ctx, ref)
+}
+
+func newRepository(
+	cfg *config.Configuration,
+	logger zerolog.Logger,
+	df encoding.DecoderFactory,
+	resolver source.DependenciesResolver,
+) (source.Repository, error) {
+	return source.NewRepository(cfg, logger, df, resolver)
+}
+
+func newRuntime(
+	repository source.Repository,
+	resolver *resolver,
+	proxy *dependencyResolverProxy,
+) *runtime {
+	proxy.resolver = resolver
+
+	return &runtime{
+		repository: repository,
+		resolver:   resolver,
+	}
+}
+
+type runtime struct {
+	repository source.Repository
+	resolver   *resolver
+}
+
+func (r *runtime) Start(ctx context.Context) error {
+	return r.repository.Start(ctx)
+}
+
+func (r *runtime) Stop(ctx context.Context) error {
+	r.resolver.Stop()
+
+	return r.repository.Stop(ctx)
+}

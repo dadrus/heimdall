@@ -22,8 +22,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/secrets/provider"
+	"github.com/dadrus/heimdall/internal/secrets/provider/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
-	"github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
 
 func withCleanRegistry(t *testing.T) {
@@ -31,7 +32,7 @@ func withCleanRegistry(t *testing.T) {
 
 	factoriesMu.Lock()
 	original := factories
-	factories = make(map[string]types.ProviderFactory)
+	factories = make(map[string]provider.Factory)
 	factoriesMu.Unlock()
 
 	t.Cleanup(func() {
@@ -51,7 +52,7 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("registers factory", func(t *testing.T) {
-		factory := types.ProviderFactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
+		factory := provider.FactoryFunc(func(_ provider.Args) (provider.Provider, error) {
 			return mocks.NewProviderMock(t), nil
 		})
 
@@ -71,41 +72,39 @@ func TestRegister(t *testing.T) {
 func TestCreate(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		typ     string
-		factory types.ProviderFactory
-		assert  func(t *testing.T, provider types.Provider, err error)
+		factory provider.Factory
+		assert  func(t *testing.T, prv provider.Provider, err error)
 	}{
 		"returns error for unsupported provider type": {
 			typ: "foo",
-			assert: func(t *testing.T, provider types.Provider, err error) {
+			assert: func(t *testing.T, _ provider.Provider, err error) {
 				t.Helper()
 
-				require.Nil(t, provider)
 				require.Error(t, err)
-				require.ErrorIs(t, err, ErrUnsupportedProviderType)
+				require.ErrorIs(t, err, types.ErrUnsupportedProviderType)
 			},
 		},
 		"returns factory creation error": {
 			typ: "foo",
-			factory: types.ProviderFactoryFunc(func(_ types.ProviderArgs) (types.Provider, error) {
+			factory: provider.FactoryFunc(func(_ provider.Args) (provider.Provider, error) {
 				return nil, assert.AnError
 			}),
-			assert: func(t *testing.T, provider types.Provider, err error) {
+			assert: func(t *testing.T, _ provider.Provider, err error) {
 				t.Helper()
 
-				require.Nil(t, provider)
 				require.Error(t, err)
 				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"creates provider with source name": {
 			typ: "foo",
-			factory: types.ProviderFactoryFunc(func(args types.ProviderArgs) (types.Provider, error) {
-				provider := mocks.NewProviderMock(t)
-				provider.EXPECT().Type().Return("foo")
+			factory: provider.FactoryFunc(func(args provider.Args) (provider.Provider, error) {
+				prv := mocks.NewProviderMock(t)
+				prv.EXPECT().Type().Return("foo")
 
-				return provider, nil
+				return prv, nil
 			}),
-			assert: func(t *testing.T, provider types.Provider, err error) {
+			assert: func(t *testing.T, provider provider.Provider, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -121,11 +120,11 @@ func TestCreate(t *testing.T) {
 				Register(tc.typ, tc.factory)
 			}
 
-			provider, err := Create(tc.typ, types.ProviderArgs{
+			prv, err := Create(tc.typ, provider.Args{
 				Config: map[string]any{"x": "y"},
 			})
 
-			tc.assert(t, provider, err)
+			tc.assert(t, prv, err)
 		})
 	}
 }
