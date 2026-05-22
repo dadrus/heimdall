@@ -37,9 +37,10 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
+	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -84,11 +85,11 @@ func TestSentinelCache(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
-		config     func(t *testing.T, sm *secretsmocks.ManagerMock) []byte
+		config     func(t *testing.T, sr *secretsmocks.ResolverMock) []byte
 		assert     func(t *testing.T, err error, cch types.Cache)
 	}{
 		"empty config": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(``)
@@ -102,7 +103,7 @@ func TestSentinelCache(t *testing.T) {
 			},
 		},
 		"empty nodes config provided": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(`nodes: [""]`)
@@ -116,7 +117,7 @@ func TestSentinelCache(t *testing.T) {
 			},
 		},
 		"no sentinel master set provided": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(`nodes: ["foo:1234"]`)
@@ -130,7 +131,7 @@ func TestSentinelCache(t *testing.T) {
 			},
 		},
 		"config contains unsupported properties": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(`foo: bar`)
@@ -144,7 +145,7 @@ func TestSentinelCache(t *testing.T) {
 			},
 		},
 		"not existing address provided": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(`{nodes: ["foo.local:12345"], master: foo}`)
@@ -158,11 +159,15 @@ func TestSentinelCache(t *testing.T) {
 			},
 		},
 		"with failing TLS config": {
-			config: func(t *testing.T, sm *secretsmocks.ManagerMock) []byte {
+			config: func(t *testing.T, sr *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "redis", Selector: "tls"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 
 				return []byte(
@@ -178,7 +183,7 @@ func TestSentinelCache(t *testing.T) {
 		},
 		"with TLS enforced, but disabled": {
 			enforceTLS: true,
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(
@@ -200,7 +205,7 @@ func TestSentinelCache(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			sm := secretsmocks.NewManagerMock(t)
+			sr := secretsmocks.NewResolverMock(t)
 			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
 			validator, err := validation.NewValidator(
 				validation.WithTagValidator(es),
@@ -208,14 +213,16 @@ func TestSentinelCache(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			conf, err := testsupport.DecodeTestConfig(tc.config(t, sm))
+			conf, err := testsupport.DecodeTestConfig(tc.config(t, sr))
 			require.NoError(t, err)
+
+			kr := keyregistrymocks.NewRegistryMock(t)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
-			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(kr)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			// WHEN
 			cch, err := NewSentinelCache(appCtx, conf)

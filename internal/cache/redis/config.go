@@ -70,7 +70,7 @@ func (c baseConfig) clientOptions(app app.Context) (rueidis.ClientOption, error)
 		return rueidis.ClientOption{}, err
 	}
 
-	cr, err := c.credentialsResolver(app)
+	informer, err := c.credentialsInformer(app)
 	if err != nil {
 		return rueidis.ClientOption{}, err
 	}
@@ -83,7 +83,7 @@ func (c baseConfig) clientOptions(app app.Context) (rueidis.ClientOption, error)
 		ReadBufferEachConn:  safecast.MustConvert[int](uint64(c.BufferLimit.Read)),
 		ConnWriteTimeout:    c.Timeout.Write,
 		MaxFlushDelay:       c.MaxFlushDelay,
-		AuthCredentialsFn:   authCredentials(cr),
+		AuthCredentialsFn:   authCredentials(informer),
 		DialCtxFn:           dialCtx(tlsCfg),
 	}, nil
 }
@@ -95,7 +95,7 @@ func (c baseConfig) tlsConfig(appCtx app.Context) (*tls.Config, error) {
 
 	tlsCfg, err := tlsx.ToClientTLSConfig(
 		context.Background(),
-		appCtx.SecretsManager(),
+		appCtx.SecretResolver(),
 		&c.TLS.TLS,
 		appCtx.KeyRegistry(),
 	)
@@ -108,31 +108,30 @@ func (c baseConfig) tlsConfig(appCtx app.Context) (*tls.Config, error) {
 	return tlsCfg, nil
 }
 
-func (c baseConfig) credentialsResolver(
+func (c baseConfig) credentialsInformer(
 	appCtx app.Context,
 ) (*secrets.CredentialsInformer[rueidis.AuthCredentials], error) {
 	if c.Credentials == nil {
 		return nil, nil //nolint:nilnil
 	}
 
-	cr := &secrets.CredentialsInformer[rueidis.AuthCredentials]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
-		Converter: toRedisCredentials,
-		MissingSecretPolicy: secrets.KeepPrevious[
-			secrets.Credentials,
-			rueidis.AuthCredentials,
-		]{},
-	}
-
-	if err := cr.Start(context.Background()); err != nil {
+	informer, err := secrets.NewCredentialsInformer(
+		context.Background(),
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
+		secrets.CredentialsInformerOptions[rueidis.AuthCredentials]{
+			Converter:   toRedisCredentials,
+			ResolveMode: secrets.ResolveEager,
+		},
+	)
+	if err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed resolving redis credentials",
 		).CausedBy(err)
 	}
 
-	return cr, nil
+	return informer, nil
 }
 
 func toRedisCredentials(creds secrets.Credentials) (rueidis.AuthCredentials, error) {
@@ -159,7 +158,7 @@ func authCredentials(
 			return rueidis.AuthCredentials{}, nil
 		}
 
-		creds, ok := cr.Get()
+		creds, ok := cr.Get(context.Background())
 		if !ok {
 			return rueidis.AuthCredentials{}, errorchain.NewWithMessage(
 				pipeline.ErrConfiguration,

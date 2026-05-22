@@ -17,6 +17,7 @@
 package redis
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -42,8 +43,8 @@ import (
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -88,11 +89,23 @@ func TestStandaloneCache(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
-		config     func(t *testing.T, sm *secretsmocks.ManagerMock, kr *keyregistrymocks.RegistryMock) []byte
-		assert     func(t *testing.T, err error, cch types.Cache)
+		config     func(
+			t *testing.T,
+			sr *secretsmocks.ResolverMock,
+			credentialsHandle *secretsmocks.CredentialsHandleMock,
+			secretHandle *secretsmocks.SecretHandleMock,
+			kr *keyregistrymocks.RegistryMock,
+		) []byte
+		assert func(t *testing.T, err error, cch types.Cache)
 	}{
 		"empty config": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				return []byte(``)
@@ -106,7 +119,13 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"empty address provided": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				return []byte(`address: ""`)
@@ -120,7 +139,13 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"config contains unsupported properties": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				return []byte(`foo: bar`)
@@ -134,7 +159,13 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"not existing address provided": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				return []byte(`address: "foo.local:12345"`)
@@ -148,7 +179,13 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation without TLS and without credentials": {
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				db := miniredis.RunT(t)
@@ -171,21 +208,33 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation without TLS but with credentials": {
-			config: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				credentialsHandle *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				db := miniredis.RunT(t)
 
-				secret := secrettypes.NewCredentials("foo", map[string]any{
+				creds := secrettypes.NewCredentials("foo", map[string]any{
 					"password": "foo",
 				})
 
-				sm.EXPECT().
-					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
-					Return(secret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("creds", "redis"), mock.Anything).
-					Return(func() {}, nil)
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "creds", Selector: "redis"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(credentialsHandle, nil)
+
+				credentialsHandle.EXPECT().
+					Get(mock.Anything).
+					Return(creds, true).
+					Maybe()
 
 				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, tls: {disabled: true}, credentials: {source: creds, selector: redis}}")
 			},
@@ -205,11 +254,21 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"cache creation fails due to failing credentials resolution": {
-			config: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
-				sm.EXPECT().
-					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "creds", Selector: "redis"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 
 				return []byte("{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: { source: creds, selector: redis }}")
@@ -222,11 +281,21 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"with failing TLS config": {
-			config: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "redis", Selector: "tls"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 
 				return []byte(`{ tls: { secret: { source: redis, selector: tls } }, address: "foo.local:12345"}`)
@@ -240,7 +309,13 @@ func TestStandaloneCache(t *testing.T) {
 		},
 		"with TLS enforced, but disabled": {
 			enforceTLS: true,
-			config: func(t *testing.T, _ *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				return []byte(
@@ -256,7 +331,13 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation with TLS and credentials": {
-			config: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				credentialsHandle *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				rootCertPool = x509.NewCertPool()
@@ -275,16 +356,22 @@ func TestStandaloneCache(t *testing.T) {
 
 				t.Cleanup(db.Close)
 
-				secret := secrettypes.NewCredentials("foo", map[string]any{
+				creds := secrettypes.NewCredentials("foo", map[string]any{
 					"password": "foo",
 				})
 
-				sm.EXPECT().
-					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
-					Return(secret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("creds", "redis"), mock.Anything).
-					Return(func() {}, nil)
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "creds", Selector: "redis"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(credentialsHandle, nil)
+
+				credentialsHandle.EXPECT().
+					Get(mock.Anything).
+					Return(creds, true).
+					Maybe()
 
 				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, credentials: { source: creds, selector: redis }}")
 			},
@@ -304,18 +391,38 @@ func TestStandaloneCache(t *testing.T) {
 			},
 		},
 		"successful cache creation with mutual TLS": {
-			config: func(t *testing.T, sm *secretsmocks.ManagerMock, kr *keyregistrymocks.RegistryMock) []byte {
+			config: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				secretHandle *secretsmocks.SecretHandleMock,
+				kr *keyregistrymocks.RegistryMock,
+			) []byte {
 				t.Helper()
 
 				secret := secrettypes.NewAsymmetricKeySecret("tls", "key1", key, []*x509.Certificate{cert})
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
-					Return(secret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("redis", "tls"), mock.Anything).
-					Return(func() {}, nil)
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "redis", Selector: "tls"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(secretHandle, nil)
+
 				kr.EXPECT().Notify(mock.Anything)
+
+				secretHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				secretHandle.EXPECT().
+					Get(mock.Anything).
+					Return(secret, true)
 
 				rootCertPool = x509.NewCertPool()
 				rootCertPool.AddCert(cert)
@@ -355,7 +462,9 @@ func TestStandaloneCache(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			sm := secretsmocks.NewManagerMock(t)
+			sr := secretsmocks.NewResolverMock(t)
+			credentialsHandle := secretsmocks.NewCredentialsHandleMock(t)
+			secretHandle := secretsmocks.NewSecretHandleMock(t)
 			kr := keyregistrymocks.NewRegistryMock(t)
 			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
 
@@ -365,14 +474,14 @@ func TestStandaloneCache(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			conf, err := testsupport.DecodeTestConfig(tc.config(t, sm, kr))
+			conf, err := testsupport.DecodeTestConfig(tc.config(t, sr, credentialsHandle, secretHandle, kr))
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(kr)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			// WHEN
 			cch, err := NewStandaloneCache(appCtx, conf)

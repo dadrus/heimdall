@@ -17,6 +17,7 @@
 package redis
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -34,8 +35,8 @@ import (
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
 func TestBaseConfigClientOptions(t *testing.T) {
@@ -43,13 +44,15 @@ func TestBaseConfigClientOptions(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := &x509.Certificate{Raw: []byte("cert")}
-	tlsSecret := secrettypes.NewAsymmetricKeySecret("tls", "kid", privateKey, []*x509.Certificate{cert})
+	tlsSecret := types.NewAsymmetricKeySecret("tls", "kid", privateKey, []*x509.Certificate{cert})
 
 	for uc, tc := range map[string]struct {
 		cfg   baseConfig
 		setup func(
 			t *testing.T,
-			sm *secretsmocks.ManagerMock,
+			sr *secretsmocks.ResolverMock,
+			credentialsHandle *secretsmocks.CredentialsHandleMock,
+			secretHandle *secretsmocks.SecretHandleMock,
 			observer *keyregistrymocks.RegistryMock,
 		)
 		assert func(t *testing.T, err error, opts rueidis.ClientOption)
@@ -59,20 +62,31 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				TLS:         tlsConfig{Disabled: true},
 				Credentials: &config.Secret{Source: "creds", Selector: "redis"},
 			},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				credentialsHandle *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) {
 				t.Helper()
 
-				secret := secrettypes.NewCredentials("foo", map[string]any{
+				creds := types.NewCredentials("redis", map[string]any{
 					"username": "foo",
 					"password": "bar",
 				})
 
-				sm.EXPECT().
-					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
-					Return(secret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("creds", "redis"), mock.Anything).
-					Return(func() {}, nil)
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "creds", Selector: "redis"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(credentialsHandle, nil)
+
+				credentialsHandle.EXPECT().
+					Get(mock.Anything).
+					Return(creds, true)
 			},
 			assert: func(t *testing.T, err error, opts rueidis.ClientOption) {
 				t.Helper()
@@ -91,11 +105,21 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				TLS:         tlsConfig{Disabled: true},
 				Credentials: &config.Secret{Source: "creds", Selector: "redis"},
 			},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) {
 				t.Helper()
 
-				sm.EXPECT().
-					ResolveCredentials(mock.Anything, secrets.InternalRef("creds", "redis")).
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "creds", Selector: "redis"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ rueidis.ClientOption) {
@@ -103,6 +127,45 @@ func TestBaseConfigClientOptions(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "failed resolving redis credentials")
+			},
+		},
+		"fails if credentials are not available": {
+			cfg: baseConfig{
+				TLS:         tlsConfig{Disabled: true},
+				Credentials: &config.Secret{Source: "creds", Selector: "redis"},
+			},
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				credentialsHandle *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "creds", Selector: "redis"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(credentialsHandle, nil)
+
+				credentialsHandle.EXPECT().
+					Get(mock.Anything).
+					Return(nil, false)
+			},
+			assert: func(t *testing.T, err error, opts rueidis.ClientOption) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				creds, err := opts.AuthCredentialsFn(rueidis.AuthCredentialsContext{})
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "redis credentials are not available")
+				require.Empty(t, creds)
 			},
 		},
 		"fails if tls secret cannot be resolved": {
@@ -113,11 +176,21 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					},
 				},
 			},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.RegistryMock) {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.RegistryMock,
+			) {
 				t.Helper()
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "redis", Selector: "tls"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ rueidis.ClientOption) {
@@ -136,15 +209,22 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					},
 				},
 			},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, observer *keyregistrymocks.RegistryMock) {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.CredentialsHandleMock,
+				secretHandle *secretsmocks.SecretHandleMock,
+				observer *keyregistrymocks.RegistryMock,
+			) {
 				t.Helper()
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("redis", "tls")).
-					Return(tlsSecret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("redis", "tls"), mock.Anything).
-					Return(func() {}, nil)
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "redis", Selector: "tls"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(secretHandle, nil)
 
 				observer.EXPECT().Keys().Maybe().Return(nil)
 				observer.EXPECT().
@@ -155,6 +235,14 @@ func TestBaseConfigClientOptions(t *testing.T) {
 							!ki.Exportable
 					})).
 					Return()
+
+				secretHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), tlsSecret)
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, opts rueidis.ClientOption) {
 				t.Helper()
@@ -165,15 +253,17 @@ func TestBaseConfigClientOptions(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			sm := secretsmocks.NewManagerMock(t)
+			sr := secretsmocks.NewResolverMock(t)
+			credentialsHandle := secretsmocks.NewCredentialsHandleMock(t)
+			secretHandle := secretsmocks.NewSecretHandleMock(t)
 			observer := keyregistrymocks.NewRegistryMock(t)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(observer)
 
 			if tc.setup != nil {
-				tc.setup(t, sm, observer)
+				tc.setup(t, sr, credentialsHandle, secretHandle, observer)
 			}
 
 			opts, err := tc.cfg.clientOptions(appCtx)
