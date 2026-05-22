@@ -76,15 +76,27 @@ packages:
       Provider: {}
       DependenciesResolver: {}
   github.com/dadrus/heimdall/internal/secrets2:
-    config:
-      dir: "{{ .InterfaceDir }}"
-      filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
-      pkgname: "{{ .SrcPackageName }}"
     interfaces:
-      handleBinding: {}
-      cleanupRegistry: {}
-      bindingProvider: {}
-      scopeReleaser: {}
+      handleBinding:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      cleanupRegistry:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      bindingProvider:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      Resolver: {}
+      SecretHandle: {}
+      SecretSetHandle: {}
+      CredentialsHandle: {}
+      CertificateBundleHandle: {}
   github.com/dadrus/heimdall/internal/secrets/types:
     interfaces:
       Provider: {}
@@ -140,7 +152,7 @@ packages:
           structname: RuleSetProcessorMock
   github.com/dadrus/heimdall/internal/x/tlsx:
     interfaces:
-      compatibilityChecker:
+      certificateRequest:
         config:
           dir: "{{ .InterfaceDir }}"
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
