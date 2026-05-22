@@ -61,14 +61,30 @@ packages:
           dir: "{{ .InterfaceDir }}"
           filename: "mock_{{ snakecase .InterfaceName | lower }}.go"
           pkgname: "{{ .SrcPackageName }}"
-  github.com/dadrus/heimdall/internal/secrets/source:
+  github.com/dadrus/heimdall/internal/secrets2/source:
+    interfaces:
+      Observer:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      Source: {}
+      DependenciesResolver: {}
+      Repository: {}
+  github.com/dadrus/heimdall/internal/secrets2/provider:
+    interfaces:
+      Provider: {}
+      DependenciesResolver: {}
+  github.com/dadrus/heimdall/internal/secrets2:
     config:
       dir: "{{ .InterfaceDir }}"
       filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
       pkgname: "{{ .SrcPackageName }}"
     interfaces:
-      Observer: { }
-      DependencyResolver: {}
+      handleBinding: {}
+      cleanupRegistry: {}
+      bindingProvider: {}
+      scopeReleaser: {}
   github.com/dadrus/heimdall/internal/secrets/types:
     interfaces:
       Provider: {}
