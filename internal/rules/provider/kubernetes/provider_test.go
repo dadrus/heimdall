@@ -52,7 +52,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
@@ -115,13 +115,13 @@ func TestNewProvider(t *testing.T) {
 			}
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
-			sm := secretsmocks.NewManagerMock(t)
+			sr := secretsmocks.NewResolverMock(t)
 			ko := mocks3.NewRegistryMock(t)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 			// WHEN
@@ -1143,12 +1143,12 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor(t, processor)
 
 			ko := mocks3.NewRegistryMock(t)
-			sm := secretsmocks.NewManagerMock(t)
+			sr := secretsmocks.NewResolverMock(t)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Config().Return(conf)
 			appCtx.EXPECT().Logger().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 			prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
@@ -1198,12 +1198,12 @@ func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
 	k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: srv.URL}, nil }
 	processor := mocks.NewRuleSetProcessorMock(t)
 	ko := mocks3.NewRegistryMock(t)
-	sm := secretsmocks.NewManagerMock(t)
+	sr := secretsmocks.NewResolverMock(t)
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().Config().Return(conf)
 	appCtx.EXPECT().Logger().Return(logger)
-	appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+	appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 	appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 	prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))

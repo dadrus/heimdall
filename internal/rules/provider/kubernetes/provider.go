@@ -129,7 +129,7 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 	instanceID, _ := os.Hostname()
 	adc := webhooks.New(
 		providerConf.TLS,
-		app.SecretsManager(),
+		app.SecretResolver(),
 		app.KeyRegistry(),
 		logger,
 		authClass,

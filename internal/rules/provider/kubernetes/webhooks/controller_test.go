@@ -18,6 +18,7 @@ package webhooks
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -47,8 +48,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -94,7 +95,7 @@ func TestControllerLifecycle(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		tls     *config.TLS
-		setup   func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup   func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		request func(t *testing.T, baseURL string) *http.Request
 		assert  func(t *testing.T, err error, resp *http.Response)
 	}{
@@ -121,7 +122,7 @@ func TestControllerLifecycle(t *testing.T) {
 		},
 		"/validate endpoint is exposed": {
 			tls: &config.TLS{Secret: config.Secret{Source: "webhooks", Selector: "server"}},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
 				secret := secrettypes.NewAsymmetricKeySecret(
@@ -131,12 +132,26 @@ func TestControllerLifecycle(t *testing.T) {
 					[]*x509.Certificate{serverCert},
 				)
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("webhooks", "server")).
-					Return(secret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("webhooks", "server"), mock.Anything).
-					Return(func() {}, nil)
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "webhooks", Selector: "server"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(secret, true).
+					Maybe()
 			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
@@ -195,7 +210,7 @@ func TestControllerLifecycle(t *testing.T) {
 		},
 		"/convert endpoint is exposed": {
 			tls: &config.TLS{Secret: config.Secret{Source: "webhooks", Selector: "server"}},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
 				secret := secrettypes.NewAsymmetricKeySecret(
@@ -205,12 +220,26 @@ func TestControllerLifecycle(t *testing.T) {
 					[]*x509.Certificate{serverCert},
 				)
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("webhooks", "server")).
-					Return(secret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("webhooks", "server"), mock.Anything).
-					Return(func() {}, nil)
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "webhooks", Selector: "server"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(secret, true).
+					Maybe()
 			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
@@ -272,20 +301,24 @@ func TestControllerLifecycle(t *testing.T) {
 			ko := mocks2.NewKeyObserverMock(t)
 			ko.EXPECT().Notify(mock.Anything).Maybe()
 
-			sm := secretsmocks.NewManagerMock(t)
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+
 			setup := x.IfThenElse(
 				tc.setup != nil,
 				tc.setup,
-				func(t *testing.T, sm *secretsmocks.ManagerMock) { t.Helper() },
+				func(t *testing.T, _ *secretsmocks.ResolverMock, _ *secretsmocks.SecretHandleMock) {
+					t.Helper()
+				},
 			)
 
-			setup(t, sm)
+			setup(t, sr, handle)
 
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
-			controller := New(tc.tls, sm, ko, log.Logger, "", mocks.NewFactoryMock(t))
+			controller := New(tc.tls, sr, ko, log.Logger, "", mocks.NewFactoryMock(t))
 			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,

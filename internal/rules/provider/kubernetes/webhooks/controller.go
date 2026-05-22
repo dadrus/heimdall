@@ -45,7 +45,7 @@ func (noopController) Stop(context.Context) error  { return nil }
 
 func New(
 	tlsConf *config.TLS,
-	sm secrets.Manager,
+	sm secrets.Resolver,
 	ko keyregistry.KeyObserver,
 	logger zerolog.Logger,
 	authClass string,
@@ -61,7 +61,7 @@ func New(
 		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
 		Logger:         logger,
 		TLSConf:        tlsConf,
-		SecretsManager: sm,
+		SecretResolver: sm,
 		KeyObserver:    ko,
 	}
 }
