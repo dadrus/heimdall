@@ -1,7 +1,7 @@
 package template
 
 import (
-	store2 "github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 const defaultTemplateName = "Heimdall"
@@ -9,8 +9,9 @@ const defaultTemplateName = "Heimdall"
 type Option func(*options)
 
 type options struct {
-	name  string
-	store store2.Store
+	name             string
+	resolver         secrets.Resolver
+	secretsForbidden bool
 }
 
 func WithName(name string) Option {
@@ -21,9 +22,17 @@ func WithName(name string) Option {
 	}
 }
 
-func WithSecretStore(store store2.Store) Option {
+func WithSecretResolver(resolver secrets.Resolver) Option {
 	return func(opts *options) {
-		opts.store = store
+		if resolver != nil {
+			opts.resolver = resolver
+		}
+	}
+}
+
+func WithSecretsForbidden() Option {
+	return func(opts *options) {
+		opts.secretsForbidden = true
 	}
 }
 

@@ -4,12 +4,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/types/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
 type stringerValue string
@@ -81,6 +83,8 @@ func TestTemplateAtIndex(t *testing.T) {
 		{val: []string{}, expr: "{{ atIndex 0 .Slice }}", res: "<no value>"},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
+			t.Parallel()
+
 			tmpl, err := template.New(tc.expr)
 			require.NoError(t, err)
 
@@ -89,9 +93,12 @@ func TestTemplateAtIndex(t *testing.T) {
 			if len(tc.err) != 0 {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.err)
-			} else {
-				require.Equal(t, tc.res, res)
+
+				return
 			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.res, res)
 		})
 	}
 }
@@ -105,18 +112,29 @@ func TestTemplateSecret(t *testing.T) {
 	}
 
 	for uc, tc := range map[string]struct {
-		raw    string
-		setup  func(t *testing.T, sm *mocks.StoreMock)
-		values map[string]any
-		assert func(t *testing.T, value string, err error)
+		raw        string
+		noResolver bool
+		opts       []template.Option
+		setup      func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock)
+		values     map[string]any
+		assert     func(t *testing.T, value string, err error)
 	}{
 		"renders registered secret": {
 			raw: `{{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true)
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -125,13 +143,54 @@ func TestTemplateSecret(t *testing.T) {
 				assert.Equal(t, "foo", value)
 			},
 		},
-		"registers duplicate secret only once": {
-			raw: `{{ secret "k8s" "api-key" }} {{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+		"rejects secret when secrets are forbidden": {
+			raw:        `{{ secret "k8s" "api-key" }}`,
+			opts:       []template.Option{template.WithSecretsForbidden()},
+			noResolver: true,
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil).Twice()
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				assert.Empty(t, value)
+			},
+		},
+		"allows non secret template when secrets are forbidden": {
+			raw:        `hello {{ .Name }}`,
+			opts:       []template.Option{template.WithSecretsForbidden()},
+			noResolver: true,
+			values:     map[string]any{"Name": "foo"},
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, value string, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "hello foo", value)
+			},
+		},
+		"duplicate secrets reuse one informer": {
+			raw: `{{ secret "k8s" "api-key" }} {{ secret "k8s" "api-key" }}`,
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
+				t.Helper()
+
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil).
+					Once()
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true).
+					Twice()
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -145,11 +204,20 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Enabled": true,
 			},
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true)
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -163,11 +231,20 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Enabled": false,
 			},
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true)
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -181,11 +258,21 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Items": []string{"a", "b"},
 			},
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil).Twice()
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true).
+					Twice()
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -199,11 +286,20 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Items": []string{},
 			},
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true)
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -217,11 +313,20 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Value": "present",
 			},
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true)
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -235,11 +340,20 @@ func TestTemplateSecret(t *testing.T) {
 			values: map[string]any{
 				"Value": "",
 			},
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true)
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -250,11 +364,20 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"registers secret inside named template": {
 			raw: `{{ define "apiKey" }}{{ secret "k8s" "api-key" }}{{ end }}{{ template "apiKey" . }}`,
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("foo", nil)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(types.NewStringSecret("api-key", "foo"), true)
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -263,12 +386,18 @@ func TestTemplateSecret(t *testing.T) {
 				assert.Equal(t, "foo", value)
 			},
 		},
-		"returns register secret error": {
+		"returns resolver error": {
 			raw: `{{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(assert.AnError)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, _ string, err error) {
 				t.Helper()
@@ -278,25 +407,35 @@ func TestTemplateSecret(t *testing.T) {
 				require.ErrorIs(t, err, assert.AnError)
 			},
 		},
-		"returns get secret error": {
+		"returns render error if secret is not available": {
 			raw: `{{ secret "k8s" "api-key" }}`,
-			setup: func(t *testing.T, sm *mocks.StoreMock) {
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().RegisterSecret(ref).Return(nil)
-				sm.EXPECT().GetSecret(ref).Return("", assert.AnError)
+				resolver.EXPECT().
+					Secret(
+						mock.Anything,
+						ref,
+						mock.AnythingOfType("secrets.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(nil, false)
 			},
 			assert: func(t *testing.T, _ string, err error) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, template.ErrTemplateRender)
-				require.ErrorIs(t, err, assert.AnError)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "secret reference 'k8s/api-key' is not available")
 			},
 		},
 		"rejects dynamic source": {
 			raw: `{{ secret .Source "api-key" }}`,
-			setup: func(t *testing.T, _ *mocks.StoreMock) {
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -308,7 +447,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects dynamic selector": {
 			raw: `{{ secret "k8s" .Selector }}`,
-			setup: func(t *testing.T, _ *mocks.StoreMock) {
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -320,7 +459,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects piped source": {
 			raw: `{{ secret (print "k8s") "api-key" }}`,
-			setup: func(t *testing.T, _ *mocks.StoreMock) {
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -332,7 +471,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects piped selector": {
 			raw: `{{ secret "k8s" (print "api-key") }}`,
-			setup: func(t *testing.T, _ *mocks.StoreMock) {
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -344,7 +483,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects missing selector": {
 			raw: `{{ secret "k8s" }}`,
-			setup: func(t *testing.T, _ *mocks.StoreMock) {
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -356,7 +495,7 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects additional argument": {
 			raw: `{{ secret "k8s" "api-key" "unexpected" }}`,
-			setup: func(t *testing.T, _ *mocks.StoreMock) {
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -370,10 +509,20 @@ func TestTemplateSecret(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			sm := mocks.NewStoreMock(t)
-			tc.setup(t, sm)
+			opts := append([]template.Option{}, tc.opts...)
 
-			tpl, err := template.New(tc.raw, template.WithSecretStore(sm))
+			if !tc.noResolver {
+				resolver := mocks.NewResolverMock(t)
+				handle := mocks.NewSecretHandleMock(t)
+
+				tc.setup(t, resolver, handle)
+
+				opts = append(opts, template.WithSecretResolver(resolver))
+			} else {
+				tc.setup(t, nil, nil)
+			}
+
+			tpl, err := template.New(tc.raw, opts...)
 
 			var rendered string
 			if err == nil {
@@ -384,15 +533,7 @@ func TestTemplateSecret(t *testing.T) {
 		})
 	}
 
-	t.Run("panics when secret function is used without secret store", func(t *testing.T) {
-		t.Parallel()
-
-		require.Panics(t, func() {
-			_, _ = template.New(`{{ secret "k8s" "api-key" }}`)
-		})
-	})
-
-	t.Run("does not panic when secrets are not used", func(t *testing.T) {
+	t.Run("does not require resolver when secrets are not used", func(t *testing.T) {
 		t.Parallel()
 
 		tpl, err := template.New(`hello {{ .Name }}`)

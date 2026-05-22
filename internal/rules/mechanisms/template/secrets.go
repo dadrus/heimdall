@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"text/template"
 	"text/template/parse"
 
@@ -9,29 +10,64 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func registerSecretReferences(store secrets.Store, tmpl *template.Template) error {
-	refs, err := extractSecretReferences(tmpl)
-	if err != nil {
-		return err
+func toStringSecret(secret secrets.Secret) (string, error) {
+	ss, ok := secret.(secrets.StringSecret)
+	if !ok {
+		return "", secrets.ErrSecretKindMismatch
 	}
 
-	seen := make(map[secrets.Reference]struct{}, len(refs))
+	return ss.Value(), nil
+}
+
+func createSecretInformers(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	tmpl *template.Template,
+	forbidden bool,
+) (map[secrets.Reference]*secrets.SecretInformer[string], error) {
+	refs, err := extractSecretReferences(tmpl)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(refs) == 0 {
+		return nil, nil //nolint:nilnil
+	}
+
+	if forbidden {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"secret template function is not allowed in this context",
+		)
+	}
+
+	informers := make(map[secrets.Reference]*secrets.SecretInformer[string], len(refs))
+
 	for _, ref := range refs {
-		if _, ok := seen[ref]; ok {
+		if _, ok := informers[ref]; ok {
 			continue
 		}
 
-		seen[ref] = struct{}{}
-
-		if err := store.RegisterSecret(ref); err != nil {
-			return errorchain.NewWithMessagef(
+		informer, err := secrets.NewSecretInformer(
+			ctx,
+			resolver,
+			ref,
+			secrets.InformerOptions[string]{
+				Converter:   toStringSecret,
+				ResolveMode: secrets.ResolveLazy,
+			},
+		)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(
 				pipeline.ErrConfiguration,
 				"failed registering secret reference '%s/%s'", ref.Source, ref.Selector,
 			).CausedBy(err)
 		}
+
+		informers[ref] = informer
 	}
 
-	return nil
+	return informers, nil
 }
 
 func extractSecretReferences(tmpl *template.Template) ([]secrets.Reference, error) {
@@ -169,7 +205,7 @@ func walkCommand(cmd *parse.CommandNode, refs *[]secrets.Reference) error {
 
 func secretReferenceFromCommand(cmd *parse.CommandNode) (secrets.Reference, error) {
 	if len(cmd.Args) != 3 { //nolint:mnd
-		return secrets.Reference{}, errorchain.NewWithMessagef(
+		return secrets.Reference{}, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"secret function expects exactly two string literal arguments",
 		)

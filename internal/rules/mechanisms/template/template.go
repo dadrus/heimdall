@@ -18,6 +18,7 @@ package template
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"errors"
 	"text/template"
@@ -25,6 +26,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -41,24 +43,34 @@ type templateImpl struct { //nolint:recvcheck
 	// recvcheck disabled by intention, as otherwise validations, which require Stringer implementation,
 	// but receive a value (not a pointer) do not work
 
-	t    *template.Template
-	orig string
-	hash []byte
+	t         *template.Template
+	orig      string
+	hash      []byte
+	informers map[secrets.Reference]*secrets.SecretInformer[string]
 }
 
 func New(val string, opts ...Option) (Template, error) {
 	cfg := applyOptions(opts...)
 
+	if cfg.secretsForbidden && cfg.resolver != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"secret template options are inconsistent",
+		)
+	}
+
 	funcMap := sprig.TxtFuncMap()
 	delete(funcMap, "env")
 	delete(funcMap, "expandenv")
+
+	informers := make(map[secrets.Reference]*secrets.SecretInformer[string])
 
 	tmpl, err := template.New(cfg.name).
 		Funcs(funcMap).
 		Funcs(template.FuncMap{
 			"urlenc":  urlEncode,
 			"atIndex": atIndex,
-			"secret":  secret(cfg.store),
+			"secret":  secret(informers),
 		}).
 		Parse(val)
 	if err != nil {
@@ -66,8 +78,18 @@ func New(val string, opts ...Option) (Template, error) {
 			CausedBy(err)
 	}
 
-	if err = registerSecretReferences(cfg.store, tmpl); err != nil {
+	createdInformers, err := createSecretInformers(
+		context.Background(),
+		cfg.resolver,
+		tmpl,
+		cfg.secretsForbidden,
+	)
+	if err != nil {
 		return nil, err
+	}
+
+	for ref, informer := range createdInformers {
+		informers[ref] = informer
 	}
 
 	hash := sha256.New()
@@ -75,7 +97,12 @@ func New(val string, opts ...Option) (Template, error) {
 
 	var result [sha256.Size]byte
 
-	return templateImpl{t: tmpl, orig: val, hash: hash.Sum(result[:0])}, nil
+	return templateImpl{
+		t:         tmpl,
+		orig:      val,
+		hash:      hash.Sum(result[:0]),
+		informers: informers,
+	}, nil
 }
 
 func Must(value string, opts ...Option) Template {
