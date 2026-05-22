@@ -46,7 +46,7 @@ func newLifecycleManager(app app.Context, cch cache.Cache, executor pipeline.Exe
 		Server:         newService(conf, cch, logger, executor),
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
-		SecretsManager: app.SecretsManager(),
+		SecretResolver: app.SecretResolver(),
 		KeyObserver:    app.KeyRegistry(),
 	}
 }

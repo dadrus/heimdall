@@ -43,7 +43,7 @@ type LifecycleManager struct {
 	Server         Server
 	Logger         zerolog.Logger
 	TLSConf        *config.TLS
-	SecretsManager secrets.Manager
+	SecretResolver secrets.Resolver
 	KeyObserver    keyregistry.KeyObserver
 }
 
@@ -52,7 +52,7 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 		ctx,
 		m.ServiceAddress,
 		m.TLSConf,
-		m.SecretsManager,
+		m.SecretResolver,
 		m.KeyObserver,
 	)
 	if err != nil {

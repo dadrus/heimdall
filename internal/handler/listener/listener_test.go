@@ -38,8 +38,8 @@ import (
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -49,10 +49,15 @@ func TestNew(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		serviceConf config.ServeConfig
-		setup       func(t *testing.T, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock)
-		listener    net.Listener
-		listenErr   error
-		assert      func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string)
+		setup       func(
+			t *testing.T,
+			sr *secretsmocks.ResolverMock,
+			handle *secretsmocks.SecretHandleMock,
+			ko *keyregistrymocks.KeyObserverMock,
+		)
+		listener  net.Listener
+		listenErr error
+		assert    func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string)
 	}{
 		"creation fails": {
 			serviceConf: config.ServeConfig{
@@ -89,11 +94,20 @@ func TestNew(t *testing.T) {
 				},
 			},
 			listener: &acceptRecorder{},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, _ *keyregistrymocks.KeyObserverMock) {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.KeyObserverMock,
+			) {
 				t.Helper()
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("listener", "tls")).
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "listener", Selector: "tls"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ net.Listener, _ net.Listener, capturedAddress string) {
@@ -113,8 +127,21 @@ func TestNew(t *testing.T) {
 				},
 			},
 			listener: &acceptRecorder{},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock, ko *keyregistrymocks.KeyObserverMock) {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				ko *keyregistrymocks.KeyObserverMock,
+			) {
 				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "listener", Selector: "tls"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
 
 				ko.EXPECT().
 					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
@@ -125,12 +152,13 @@ func TestNew(t *testing.T) {
 					})).
 					Return()
 
-				sm.EXPECT().
-					ResolveSecret(mock.Anything, secrets.InternalRef("listener", "tls")).
-					Return(secret, nil)
-				sm.EXPECT().
-					Subscribe(secrets.InternalRef("listener", "tls"), mock.Anything).
-					Return(func() {}, nil)
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string) {
 				t.Helper()
@@ -159,18 +187,19 @@ func TestNew(t *testing.T) {
 				return tc.listener, nil
 			}
 
-			sm := secretsmocks.NewManagerMock(t)
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
 			ko := keyregistrymocks.NewKeyObserverMock(t)
 
 			if tc.setup != nil {
-				tc.setup(t, sm, ko)
+				tc.setup(t, sr, handle, ko)
 			}
 
-			ln, err := New(t.Context(), address, tc.serviceConf.TLS, sm, ko)
+			ln, err := New(t.Context(), address, tc.serviceConf.TLS, sr, ko)
 
 			defer func() {
 				if ln != nil {
-					ln.Close()
+					_ = ln.Close()
 				}
 			}()
 
@@ -234,7 +263,8 @@ func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+	cert, err := testsupport.NewCertificateBuilder(
+		testsupport.WithValidity(time.Now(), 10*time.Hour),
 		testsupport.WithSerialNumber(big.NewInt(1)),
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "test cert",
@@ -243,9 +273,9 @@ func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {
 		}),
 		testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithSelfSigned(),
-		testsupport.WithSignaturePrivKey(privKey)).
-		Build()
+		testsupport.WithSignaturePrivKey(privKey),
+	).Build()
 	require.NoError(t, err)
 
-	return secrettypes.NewAsymmetricKeySecret("tls", "key1", privKey, []*x509.Certificate{cert})
+	return types.NewAsymmetricKeySecret("tls", "key1", privKey, []*x509.Certificate{cert})
 }

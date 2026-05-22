@@ -51,7 +51,7 @@ func New(
 	ctx context.Context,
 	address string,
 	tlsConf *config.TLS,
-	sm secrets.Manager,
+	sm secrets.Resolver,
 	ko keyregistry.KeyObserver,
 ) (net.Listener, error) {
 	listnr, err := listen(ctx, address)
