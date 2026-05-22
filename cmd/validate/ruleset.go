@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
@@ -29,13 +28,9 @@ import (
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
-	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
@@ -99,16 +94,11 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	manager, err := secrets.NewManager(conf, logger, df)
-	if err != nil {
-		return err
-	}
-
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	appCtx := &appContext{
-		kr: &noopRegistry{},
-		sm: manager,
+		kr: noopRegistry{},
+		sr: noopResolver{},
 		d:  df,
 		l:  logger,
 		c:  conf,
@@ -145,22 +135,3 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-
-type noopRepository struct{}
-
-func (*noopRepository) FindRule(_ pipeline.Context) (rule.Rule, error) {
-	return nil, errFunctionNotSupported
-}
-func (*noopRepository) AddRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) error { return nil }
-func (*noopRepository) UpdateRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) ([]rule.Rule, error) {
-	return nil, errFunctionNotSupported
-}
-
-func (*noopRepository) DeleteRuleSet(_ context.Context, _ rule.RuleSet) ([]rule.Rule, error) {
-	return nil, errFunctionNotSupported
-}
-
-type noopRegistry struct{}
-
-func (*noopRegistry) Notify(_ keyregistry.KeyInfo) {}
-func (*noopRegistry) Keys() []jose.JSONWebKey      { return nil }

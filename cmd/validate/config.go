@@ -33,7 +33,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
-	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -82,14 +81,9 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	manager, err := secrets.NewManager(conf, logger, df)
-	if err != nil {
-		return err
-	}
-
 	appCtx := &appContext{
-		kr: &noopRegistry{},
-		sm: manager,
+		kr: noopRegistry{},
+		sr: noopResolver{},
 		d:  df,
 		l:  logger,
 		c:  conf,
