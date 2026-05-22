@@ -14,20 +14,21 @@ import (
 
 var errNoCertificatePresent = errors.New("no certificate present")
 
-type compatibilityChecker interface {
+type certificateRequest interface {
 	SupportsCertificate(c *tls.Certificate) error
+	Context() context.Context
 }
 
 func getCertificate(
 	w *secrets.SecretInformer[*tls.Certificate],
-	cc compatibilityChecker,
+	cr certificateRequest,
 ) (*tls.Certificate, error) {
-	cert, ok := w.Get()
+	cert, ok := w.Get(cr.Context())
 	if !ok {
 		return nil, errNoCertificatePresent
 	}
 
-	if err := cc.SupportsCertificate(cert); err != nil {
+	if err := cr.SupportsCertificate(cert); err != nil {
 		return nil, err
 	}
 
@@ -78,37 +79,40 @@ func newBaseTLSConfig(tlsCfg *config.TLS) *tls.Config {
 	return cfg
 }
 
-func newCertificateResolver(
+func newCertificateInformer(
 	ctx context.Context,
 	tlsCfg *config.TLS,
-	sm secrets.Manager,
+	sr secrets.Resolver,
 	ko keyregistry.KeyObserver,
 ) (*secrets.SecretInformer[*tls.Certificate], error) {
-	resolver := &secrets.SecretInformer[*tls.Certificate]{
-		Manager:   sm,
-		Reference: secrets.InternalRef(tlsCfg.Secret.Source, tlsCfg.Secret.Selector),
-		Converter: toTLSCertificate,
-		OnUpdate: func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) {
-			ko.Notify(keyregistry.KeyInfo{
-				Key:        secret.(secrets.AsymmetricKeySecret), //nolint:forcetypeassert
-				Exportable: false,
-			})
+	informer, err := secrets.NewSecretInformer(
+		ctx,
+		sr,
+		secrets.Reference{Source: tlsCfg.Secret.Source, Selector: tlsCfg.Secret.Selector},
+		secrets.InformerOptions[*tls.Certificate]{
+			Converter:   toTLSCertificate,
+			ResolveMode: secrets.ResolveEager,
+			OnUpdate: func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) {
+				ko.Notify(keyregistry.KeyInfo{
+					Key:        secret.(secrets.AsymmetricKeySecret), //nolint:forcetypeassert
+					Exportable: false,
+				})
+			},
 		},
-	}
-
-	if err := resolver.Start(ctx); err != nil {
+	)
+	if err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed resolving TLS secret",
 		).CausedBy(err)
 	}
 
-	return resolver, nil
+	return informer, nil
 }
 
 func ToClientTLSConfig(
 	ctx context.Context,
-	sm secrets.Manager,
+	sr secrets.Resolver,
 	tlsCfg *config.TLS,
 	ko keyregistry.KeyObserver,
 ) (*tls.Config, error) {
@@ -118,7 +122,7 @@ func ToClientTLSConfig(
 		return cfg, nil
 	}
 
-	certResolver, err := newCertificateResolver(ctx, tlsCfg, sm, ko)
+	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr, ko)
 	if err != nil {
 		return nil, err
 	}
@@ -132,11 +136,11 @@ func ToClientTLSConfig(
 
 func ToServerTLSConfig(
 	ctx context.Context,
-	sm secrets.Manager,
+	sr secrets.Resolver,
 	tlsCfg *config.TLS,
 	ko keyregistry.KeyObserver,
 ) (*tls.Config, error) {
-	certResolver, err := newCertificateResolver(ctx, tlsCfg, sm, ko)
+	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr, ko)
 	if err != nil {
 		return nil, err
 	}
